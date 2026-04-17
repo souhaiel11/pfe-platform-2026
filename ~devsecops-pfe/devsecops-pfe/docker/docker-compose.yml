@@ -1,0 +1,168 @@
+version: "3.9"
+
+networks:
+  devsecops-net:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  sonarqube_data:
+  sonarqube_logs:
+  jenkins_home:
+  prometheus_data:
+  grafana_data:
+
+services:
+
+  # ═══════════════════════════════════════════════════════════
+  # APPLICATION SPRING BOOT
+  # ═══════════════════════════════════════════════════════════
+  app:
+    build:
+      context: ../app
+      dockerfile: Dockerfile
+      args:
+        BUILD_DATE: ${BUILD_DATE:-unknown}
+        GIT_COMMIT: ${GIT_COMMIT:-unknown}
+    container_name: devsecops-app
+    restart: unless-stopped
+    environment:
+      DB_HOST:     postgres
+      DB_PORT:     5432
+      DB_NAME:     devsecops
+      DB_USER:     devsecops
+      DB_PASSWORD: devsecops123
+      SPRING_PROFILES_ACTIVE: default
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - devsecops-net
+
+  # ═══════════════════════════════════════════════════════════
+  # POSTGRESQL
+  # ═══════════════════════════════════════════════════════════
+  postgres:
+    image: postgres:15-alpine
+    container_name: devsecops-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB:       devsecops
+      POSTGRES_USER:     devsecops
+      POSTGRES_PASSWORD: devsecops123
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U devsecops -d devsecops"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - devsecops-net
+
+  # ═══════════════════════════════════════════════════════════
+  # SONARQUBE — SAST
+  # ═══════════════════════════════════════════════════════════
+  sonarqube:
+    image: sonarqube:10.3-community
+    container_name: devsecops-sonarqube
+    restart: unless-stopped
+    environment:
+      SONAR_JDBC_URL:      jdbc:postgresql://postgres:5432/devsecops
+      SONAR_JDBC_USERNAME: devsecops
+      SONAR_JDBC_PASSWORD: devsecops123
+      SONAR_ES_BOOTSTRAP_CHECKS_DISABLE: "true"
+    volumes:
+      - sonarqube_data:/opt/sonarqube/data
+      - sonarqube_logs:/opt/sonarqube/logs
+    ports:
+      - "9000:9000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - devsecops-net
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+      nproc:
+        soft: 4096
+        hard: 4096
+
+  # ═══════════════════════════════════════════════════════════
+  # JENKINS — CI/CD
+  # ═══════════════════════════════════════════════════════════
+  jenkins:
+    image: jenkins/jenkins:lts-jdk17
+    container_name: devsecops-jenkins
+    restart: unless-stopped
+    user: root
+    environment:
+      JAVA_OPTS: >-
+        -Djenkins.install.runSetupWizard=false
+        -Xmx1g
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ../jenkins/Jenkinsfile:/var/jenkins_home/Jenkinsfile:ro
+    ports:
+      - "8090:8080"
+      - "50000:50000"
+    networks:
+      - devsecops-net
+
+  # ═══════════════════════════════════════════════════════════
+  # PROMETHEUS — MONITORING
+  # ═══════════════════════════════════════════════════════════
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: devsecops-prometheus
+    restart: unless-stopped
+    volumes:
+      - ../monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ../monitoring/prometheus/alert-rules.yml:/etc/prometheus/alert-rules.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=15d"
+      - "--web.enable-lifecycle"
+    networks:
+      - devsecops-net
+
+  # ═══════════════════════════════════════════════════════════
+  # GRAFANA — DASHBOARDS
+  # ═══════════════════════════════════════════════════════════
+  grafana:
+    image: grafana/grafana:latest
+    container_name: devsecops-grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER:     admin
+      GF_SECURITY_ADMIN_PASSWORD: admin123
+      GF_USERS_ALLOW_SIGN_UP:     "false"
+      GF_PATHS_PROVISIONING:      /etc/grafana/provisioning
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ../monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ../monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+    networks:
+      - devsecops-net

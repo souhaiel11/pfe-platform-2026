@@ -1,0 +1,44 @@
+{
+  "name": "DevSecOps - ChatOps AI Assistant",
+  "nodes": [
+    {
+      "parameters": { "path": "chatops", "responseMode": "responseNode" },
+      "name": "Webhook - ChatOps",
+      "type": "n8n-nodes-base.webhook",
+      "position": [240, 300],
+      "id": "webhook-chat"
+    },
+    {
+      "parameters": {
+        "model": "gpt-4",
+        "messages": {
+          "values": [{
+            "role": "system",
+            "content": "Tu es un assistant DevSecOps expert. Tu aides les équipes à comprendre les vulnérabilités, interpréter les rapports SonarQube/Trivy/Jenkins, et proposer des actions correctives. Réponds en français, de façon concise et professionnelle. Tu peux utiliser du markdown HTML basique (bold, etc)."
+          }, {
+            "role": "user",
+            "content": "{{ $json.message }}"
+          }]
+        }
+      },
+      "name": "OpenAI - ChatOps",
+      "type": "n8n-nodes-base.openAi",
+      "position": [480, 300],
+      "id": "openai-chat"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { reply: $json.message.content } }}"
+      },
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [720, 300],
+      "id": "respond"
+    }
+  ],
+  "connections": {
+    "Webhook - ChatOps": { "main": [[{ "node": "OpenAI - ChatOps", "type": "main", "index": 0 }]] },
+    "OpenAI - ChatOps": { "main": [[{ "node": "Respond", "type": "main", "index": 0 }]] }
+  }
+}

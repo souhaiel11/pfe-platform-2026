@@ -1,0 +1,56 @@
+networks:
+  devsecops-net:
+    driver: bridge
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: devsecops
+      POSTGRES_USER: devsecops
+      POSTGRES_PASSWORD: devsecops123
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    networks:
+      - devsecops-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U devsecops"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: ./backend
+    ports:
+      - "3001:3000"
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: devsecops
+      DB_PASS: devsecops123
+      DB_NAME: devsecops
+      JWT_SECRET: devsecops-super-secret-2024
+      N8N_URL: http://host.docker.internal:5678
+    networks:
+      - devsecops-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  frontend:
+    image: nginx:alpine
+    ports:
+      - "4200:80"
+    volumes:
+      - ./frontend:/usr/share/nginx/html:ro
+      - ./docker/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    networks:
+      - devsecops-net
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:

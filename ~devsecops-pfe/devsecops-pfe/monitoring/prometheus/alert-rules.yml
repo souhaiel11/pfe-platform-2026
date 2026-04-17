@@ -1,0 +1,63 @@
+groups:
+  - name: devsecops-pfe-alerts
+    interval: 30s
+    rules:
+
+      # Application down
+      - alert: ApplicationDown
+        expr: up{job="spring-boot-app"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Application Spring Boot DOWN"
+          description: "L'application devsecops-pfe n'est plus accessible depuis {{ $value }} secondes."
+
+      # High error rate
+      - alert: HighErrorRate
+        expr: |
+          rate(http_server_requests_seconds_count{status=~"5..",job="spring-boot-app"}[5m])
+          /
+          rate(http_server_requests_seconds_count{job="spring-boot-app"}[5m]) > 0.05
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Taux d'erreurs HTTP élevé"
+          description: "Plus de 5% des requêtes retournent une erreur 5xx."
+
+      # High latency
+      - alert: HighLatency
+        expr: |
+          histogram_quantile(0.95,
+            rate(http_server_requests_seconds_bucket{job="spring-boot-app"}[5m])
+          ) > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Latence HTTP élevée (p95 > 2s)"
+          description: "Le 95e percentile de latence dépasse 2 secondes."
+
+      # JVM heap pressure
+      - alert: JvmHeapPressure
+        expr: |
+          jvm_memory_used_bytes{area="heap",job="spring-boot-app"}
+          /
+          jvm_memory_max_bytes{area="heap",job="spring-boot-app"} > 0.85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "JVM Heap utilisé à plus de 85%"
+          description: "Risque d'OutOfMemoryError imminent."
+
+      # Jenkins pipeline failure (via metrics)
+      - alert: JenkinsDown
+        expr: up{job="jenkins"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Jenkins CI/CD DOWN"
+          description: "Le serveur Jenkins n'est plus accessible."

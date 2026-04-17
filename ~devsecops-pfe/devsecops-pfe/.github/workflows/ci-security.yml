@@ -1,0 +1,150 @@
+name: CI/CD DevSecOps Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  JAVA_VERSION: '17'
+  DOCKER_IMAGE: devsecops-pfe
+
+jobs:
+
+  # ── JOB 1: Build & Tests ────────────────────────────────────
+  build-test:
+    name: Build & Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Required for SonarQube
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Build
+        run: mvn clean compile -q
+        working-directory: app
+
+      - name: Unit Tests + Coverage
+        run: mvn test jacoco:report
+        working-directory: app
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-report
+          path: app/target/site/jacoco/
+
+  # ── JOB 2: SAST SonarQube ───────────────────────────────────
+  sast-sonarqube:
+    name: SAST — SonarQube
+    needs: build-test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+
+      - uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+          cache: maven
+
+      - name: SonarQube Analysis
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+        run: |
+          mvn verify sonar:sonar \
+            -Dsonar.projectKey=devsecops-pfe \
+            -Dsonar.host.url=${{ secrets.SONAR_HOST_URL }} \
+            -Dsonar.login=${{ secrets.SONAR_TOKEN }}
+        working-directory: app
+
+  # ── JOB 3: SCA OWASP Dependency Check ───────────────────────
+  sca-owasp:
+    name: SCA — OWASP Dependency Check
+    needs: build-test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+          cache: maven
+
+      - name: OWASP Dependency Check
+        run: |
+          mvn org.owasp:dependency-check-maven:check \
+            -DfailBuildOnCVSS=7 \
+            -DsuppressionFiles=owasp-suppressions.xml
+        working-directory: app
+
+      - name: Upload OWASP report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: owasp-report
+          path: app/target/dependency-check-report/
+
+  # ── JOB 4: Docker Build + Trivy Scan ────────────────────────
+  container-security:
+    name: Container Scan — Trivy
+    needs: build-test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build -t ${{ env.DOCKER_IMAGE }}:${{ github.sha }} .
+        working-directory: app
+
+      - name: Trivy vulnerability scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.DOCKER_IMAGE }}:${{ github.sha }}
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'HIGH,CRITICAL'
+          exit-code: '1'
+
+      - name: Upload Trivy results
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+  # ── JOB 5: Deploy Staging ────────────────────────────────────
+  deploy-staging:
+    name: Deploy — Staging
+    needs: [sast-sonarqube, sca-owasp, container-security]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/develop'
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy to staging
+        run: echo "Déploiement staging via SSH / Docker Compose..."
+
+  # ── JOB 6: Deploy Production (manuel) ───────────────────────
+  deploy-production:
+    name: Deploy — Production
+    needs: deploy-staging
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    environment:
+      name: production
+      url: https://app.devsecops-pfe.com
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy to production
+        run: echo "Déploiement production validé et déclenché."

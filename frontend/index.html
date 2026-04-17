@@ -1,0 +1,2111 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>DevSecOps AI Platform</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.6.1/socket.io.min.js"></script>
+<style>
+:root {
+  --bg: #050a0f;
+  --bg2: #080e15;
+  --bg3: #0d1520;
+  --bg4: #111d2b;
+  --border: #1a2d42;
+  --border2: #243d57;
+  --cyan: #00d4ff;
+  --cyan2: #00a8cc;
+  --cyan-glow: rgba(0,212,255,0.15);
+  --cyan-glow2: rgba(0,212,255,0.06);
+  --green: #00ff88;
+  --green2: #00cc6a;
+  --red: #ff3d6e;
+  --red2: #cc2050;
+  --orange: #ff8c42;
+  --yellow: #ffd600;
+  --purple: #a855f7;
+  --text: #e2eaf4;
+  --text2: #8fa8c0;
+  --text3: #4a6580;
+  --font-mono: 'JetBrains Mono', monospace;
+  --font-display: 'Syne', sans-serif;
+  --radius: 8px;
+  --radius2: 12px;
+  --transition: 0.2s cubic-bezier(0.4,0,0.2,1);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-mono);
+  min-height: 100vh;
+  display: flex;
+  overflow: auto;
+}
+
+/* ─── SCROLLBAR ─── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: var(--bg2); }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+/* ─── SIDEBAR ─── */
+#sidebar {
+  width: 220px;
+  min-width: 220px;
+  background: var(--bg2);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  position: relative;
+  z-index: 100;
+}
+
+.sidebar-logo {
+  padding: 20px 16px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.sidebar-logo .logo-title {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--cyan);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  line-height: 1.2;
+}
+.sidebar-logo .logo-sub {
+  font-size: 9px;
+  color: var(--text3);
+  letter-spacing: 2px;
+  margin-top: 2px;
+  text-transform: uppercase;
+}
+.logo-dot {
+  display: inline-block;
+  width: 6px; height: 6px;
+  background: var(--cyan);
+  border-radius: 50%;
+  margin-right: 6px;
+  box-shadow: 0 0 8px var(--cyan);
+  animation: pulse 2s infinite;
+}
+@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.6;transform:scale(0.85)} }
+
+.sidebar-section {
+  padding: 12px 8px 4px;
+}
+.sidebar-section-label {
+  font-size: 9px;
+  color: var(--text3);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  padding: 0 8px;
+  margin-bottom: 4px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text2);
+  transition: var(--transition);
+  position: relative;
+  margin-bottom: 1px;
+}
+.nav-item:hover { background: var(--bg3); color: var(--text); }
+.nav-item.active {
+  background: var(--cyan-glow);
+  color: var(--cyan);
+  border: 1px solid rgba(0,212,255,0.2);
+}
+.nav-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 50%;
+  transform: translateY(-50%);
+  width: 3px; height: 18px;
+  background: var(--cyan);
+  border-radius: 0 2px 2px 0;
+  box-shadow: 0 0 8px var(--cyan);
+}
+.nav-icon { font-size: 14px; width: 18px; text-align: center; flex-shrink: 0; }
+.nav-badge {
+  margin-left: auto;
+  background: var(--red);
+  color: white;
+  font-size: 9px;
+  padding: 1px 5px;
+  border-radius: 10px;
+  font-weight: 700;
+}
+.nav-badge.green { background: var(--green2); }
+.nav-badge.orange { background: var(--orange); }
+
+.sidebar-footer {
+  margin-top: auto;
+  padding: 12px 8px;
+  border-top: 1px solid var(--border);
+}
+.user-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: var(--radius);
+  background: var(--bg3);
+  cursor: pointer;
+}
+.user-avatar {
+  width: 28px; height: 28px;
+  background: linear-gradient(135deg, var(--cyan), var(--purple));
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700; color: var(--bg);
+  flex-shrink: 0;
+}
+.user-name { font-size: 11px; color: var(--text); font-weight: 600; }
+.user-role { font-size: 9px; color: var(--text3); }
+.logout-btn {
+  margin-left: auto;
+  background: none; border: none;
+  color: var(--text3); cursor: pointer; font-size: 14px;
+  transition: color var(--transition);
+}
+.logout-btn:hover { color: var(--red); }
+
+/* ─── MAIN ─── */
+#main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+  background: var(--bg);
+}
+
+#topbar {
+  height: 52px;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  gap: 12px;
+  flex-shrink: 0;
+}
+.page-title {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+}
+.page-subtitle { font-size: 11px; color: var(--text3); margin-left: 4px; }
+.topbar-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 14px;
+  border-radius: var(--radius);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: var(--transition);
+  letter-spacing: 0.5px;
+}
+.btn-primary {
+  background: var(--cyan);
+  color: var(--bg);
+}
+.btn-primary:hover { background: var(--cyan2); box-shadow: 0 0 16px rgba(0,212,255,0.3); }
+.btn-outline {
+  background: transparent;
+  border: 1px solid var(--border2);
+  color: var(--text2);
+}
+.btn-outline:hover { border-color: var(--cyan); color: var(--cyan); background: var(--cyan-glow2); }
+.btn-danger { background: var(--red); color: white; }
+.btn-danger:hover { background: var(--red2); }
+.btn-success { background: var(--green2); color: var(--bg); }
+.btn-success:hover { filter: brightness(1.1); }
+.btn-ai {
+  background: linear-gradient(135deg, var(--purple), var(--cyan));
+  color: white;
+}
+.btn-ai:hover { filter: brightness(1.15); box-shadow: 0 0 20px rgba(168,85,247,0.4); }
+.btn-sm { padding: 5px 10px; font-size: 10px; }
+
+#content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+}
+
+/* ─── LOGIN ─── */
+#login-page {
+  position: fixed; inset: 0;
+  background: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  background-image: radial-gradient(ellipse at 20% 50%, rgba(0,212,255,0.04) 0%, transparent 50%),
+                    radial-gradient(ellipse at 80% 20%, rgba(168,85,247,0.04) 0%, transparent 50%);
+}
+.login-box {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius2);
+  padding: 40px;
+  width: 380px;
+  position: relative;
+  overflow: auto;
+}
+.login-box::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+}
+.login-title {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--cyan);
+  margin-bottom: 6px;
+}
+.login-sub { font-size: 11px; color: var(--text3); margin-bottom: 28px; }
+.form-group { margin-bottom: 16px; }
+.form-label { display: block; font-size: 10px; color: var(--text3); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 1px; }
+.form-input {
+  width: 100%;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  outline: none;
+  transition: var(--transition);
+}
+.form-input:focus { border-color: var(--cyan); box-shadow: 0 0 0 3px rgba(0,212,255,0.1); }
+.login-error { color: var(--red); font-size: 11px; margin-top: 8px; display: none; }
+.login-btn { width: 100%; margin-top: 8px; justify-content: center; padding: 12px; font-size: 12px; }
+
+/* ─── CARDS & GRID ─── */
+.grid { display: grid; gap: 16px; }
+.grid-2 { grid-template-columns: repeat(2, 1fr); }
+.grid-3 { grid-template-columns: repeat(3, 1fr); }
+.grid-4 { grid-template-columns: repeat(4, 1fr); }
+.grid-auto { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+
+.card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius2);
+  padding: 18px;
+  position: relative;
+  overflow: auto;
+  transition: border-color var(--transition);
+}
+.card:hover { border-color: var(--border2); }
+.card-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 16px;
+}
+.card-title {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
+.card-subtitle { font-size: 10px; color: var(--text3); margin-top: 2px; }
+
+/* ─── STAT CARDS ─── */
+.stat-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius2);
+  padding: 18px;
+  position: relative;
+  overflow: auto;
+  transition: var(--transition);
+}
+.stat-card:hover { border-color: var(--border2); transform: translateY(-1px); }
+.stat-card::after {
+  content: '';
+  position: absolute;
+  top: 0; right: 0;
+  width: 60px; height: 60px;
+  background: radial-gradient(circle, var(--accent-color, var(--cyan)) 0%, transparent 70%);
+  opacity: 0.08;
+  border-radius: 0 0 0 60px;
+}
+.stat-icon {
+  font-size: 20px; margin-bottom: 10px;
+  filter: drop-shadow(0 0 6px var(--accent-color, var(--cyan)));
+}
+.stat-value {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--text);
+  line-height: 1;
+  margin-bottom: 4px;
+}
+.stat-label { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 1px; }
+.stat-delta { font-size: 10px; margin-top: 6px; color: var(--green); }
+.stat-delta.bad { color: var(--red); }
+
+/* ─── BADGES ─── */
+.badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.badge-critical { background: rgba(255,61,110,0.15); color: var(--red); border: 1px solid rgba(255,61,110,0.3); }
+.badge-high { background: rgba(255,140,66,0.15); color: var(--orange); border: 1px solid rgba(255,140,66,0.3); }
+.badge-medium { background: rgba(255,214,0,0.12); color: var(--yellow); border: 1px solid rgba(255,214,0,0.25); }
+.badge-low { background: rgba(0,255,136,0.1); color: var(--green); border: 1px solid rgba(0,255,136,0.2); }
+.badge-healthy { background: rgba(0,255,136,0.1); color: var(--green); border: 1px solid rgba(0,255,136,0.2); }
+.badge-warning { background: rgba(255,140,66,0.15); color: var(--orange); border: 1px solid rgba(255,140,66,0.3); }
+.badge-open { background: rgba(0,212,255,0.1); color: var(--cyan); border: 1px solid rgba(0,212,255,0.2); }
+.badge-resolved { background: rgba(0,255,136,0.1); color: var(--green); border: 1px solid rgba(0,255,136,0.2); }
+.badge-ai_fixing { background: rgba(168,85,247,0.15); color: var(--purple); border: 1px solid rgba(168,85,247,0.3); }
+.badge-pr_created { background: rgba(0,212,255,0.1); color: var(--cyan); border: 1px solid rgba(0,212,255,0.2); }
+
+/* ─── TABLE ─── */
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; }
+th {
+  text-align: left;
+  font-size: 9px;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+td {
+  padding: 11px 12px;
+  font-size: 11px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text2);
+  vertical-align: middle;
+}
+tr:hover td { background: var(--bg3); }
+tr:last-child td { border-bottom: none; }
+
+/* ─── PROGRESS ─── */
+.progress-bar {
+  height: 4px;
+  background: var(--bg4);
+  border-radius: 2px;
+  overflow: auto;
+  margin-top: 4px;
+}
+.progress-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.8s cubic-bezier(0.4,0,0.2,1);
+}
+
+/* ─── SCORE RING ─── */
+.score-ring {
+  position: relative;
+  width: 80px; height: 80px;
+  flex-shrink: 0;
+}
+.score-ring svg { transform: rotate(-90deg); }
+.score-ring-value {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display);
+  font-size: 16px; font-weight: 800;
+  color: var(--text);
+}
+
+/* ─── PROJECT CARD ─── */
+.project-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius2);
+  padding: 18px;
+  cursor: pointer;
+  transition: var(--transition);
+  position: relative;
+  overflow: auto;
+}
+.project-card:hover { border-color: var(--cyan); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
+.project-card .status-bar {
+  position: absolute;
+  top: 0; left: 0; right: 0; height: 3px;
+}
+.project-card.healthy .status-bar { background: var(--green); box-shadow: 0 0 12px var(--green); }
+.project-card.warning .status-bar { background: var(--orange); box-shadow: 0 0 12px var(--orange); }
+.project-card.critical .status-bar { background: var(--red); box-shadow: 0 0 12px var(--red); }
+.project-name {
+  font-family: var(--font-display);
+  font-size: 14px; font-weight: 700;
+  color: var(--text);
+  margin-top: 8px; margin-bottom: 4px;
+}
+.project-env { font-size: 10px; color: var(--text3); margin-bottom: 12px; }
+.project-meta { display: flex; gap: 12px; flex-wrap: wrap; }
+.project-meta-item { display: flex; align-items: center; gap: 5px; font-size: 10px; color: var(--text3); }
+.project-score {
+  position: absolute; top: 16px; right: 16px;
+  font-family: var(--font-display);
+  font-size: 22px; font-weight: 800;
+}
+.project-actions { display: flex; gap: 6px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); }
+
+/* ─── MODAL ─── */
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(4px);
+  z-index: 500;
+  display: flex; align-items: center; justify-content: center;
+  animation: fadeIn 0.15s;
+}
+@keyframes fadeIn { from{opacity:0} to{opacity:1} }
+.modal {
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius2);
+  padding: 28px;
+  width: 520px;
+  max-width: 95vw;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+  animation: slideUp 0.2s cubic-bezier(0.4,0,0.2,1);
+}
+@keyframes slideUp { from{transform:translateY(20px);opacity:0} to{transform:none;opacity:1} }
+.modal-title {
+  font-family: var(--font-display);
+  font-size: 17px; font-weight: 800;
+  color: var(--cyan);
+  margin-bottom: 20px;
+}
+.modal-close {
+  position: absolute; top: 16px; right: 16px;
+  background: none; border: none; color: var(--text3);
+  font-size: 18px; cursor: pointer;
+  transition: color var(--transition);
+}
+.modal-close:hover { color: var(--red); }
+.modal-footer { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border); }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.form-section { margin-bottom: 20px; }
+.form-section-title { font-size: 10px; color: var(--cyan); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 12px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+.form-select {
+  width: 100%;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  outline: none;
+  transition: var(--transition);
+}
+.form-select:focus { border-color: var(--cyan); }
+
+/* ─── DASHBOARD METRICS ─── */
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.metric-item {
+  background: var(--bg3);
+  border-radius: var(--radius);
+  padding: 12px;
+  text-align: center;
+}
+.metric-value {
+  font-family: var(--font-display);
+  font-size: 22px; font-weight: 800;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+.metric-label { font-size: 9px; color: var(--text3); text-transform: uppercase; letter-spacing: 1px; }
+
+/* ─── SECURITY SCORE ─── */
+.security-score-display {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 16px;
+  background: var(--bg3);
+  border-radius: var(--radius2);
+  margin-bottom: 16px;
+}
+.score-circle {
+  width: 72px; height: 72px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display);
+  font-size: 22px; font-weight: 800;
+  position: relative;
+  flex-shrink: 0;
+}
+.score-details { flex: 1; }
+.score-title { font-family: var(--font-display); font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+.score-desc { font-size: 11px; color: var(--text3); }
+
+/* ─── TRIVY CHART ─── */
+.severity-bars { display: flex; flex-direction: column; gap: 8px; }
+.severity-row { display: flex; align-items: center; gap: 10px; }
+.severity-label { font-size: 10px; width: 60px; flex-shrink: 0; }
+.severity-bar { flex: 1; height: 6px; background: var(--bg4); border-radius: 3px; overflow: auto; }
+.severity-fill { height: 100%; border-radius: 3px; }
+.severity-count { font-size: 10px; color: var(--text2); width: 24px; text-align: right; flex-shrink: 0; }
+
+/* ─── CHAT ─── */
+#chat-container {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 52px - 40px);
+}
+.chat-messages {
+  flex: 1; overflow-y: auto;
+  padding: 16px;
+  display: flex; flex-direction: column; gap: 12px;
+}
+.chat-msg {
+  display: flex; gap: 10px; max-width: 80%;
+  animation: fadeIn 0.2s;
+}
+.chat-msg.user { align-self: flex-end; flex-direction: row-reverse; }
+.chat-avatar {
+  width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700;
+}
+.chat-avatar.ai { background: linear-gradient(135deg, var(--cyan), var(--purple)); color: var(--bg); }
+.chat-avatar.user { background: var(--bg4); color: var(--cyan); border: 1px solid var(--border2); }
+.chat-bubble {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius2);
+  padding: 10px 14px;
+  font-size: 12px; line-height: 1.6;
+  color: var(--text);
+}
+.chat-msg.user .chat-bubble { background: var(--cyan-glow); border-color: rgba(0,212,255,0.2); }
+.chat-time { font-size: 9px; color: var(--text3); margin-top: 4px; }
+.chat-input-area {
+  padding: 16px;
+  border-top: 1px solid var(--border);
+  display: flex; gap: 10px;
+}
+.chat-input {
+  flex: 1;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  outline: none;
+  transition: var(--transition);
+}
+.chat-input:focus { border-color: var(--cyan); }
+.chat-send { padding: 10px 16px; }
+
+/* ─── REPORT CARD ─── */
+.report-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius2);
+  padding: 18px;
+  margin-bottom: 12px;
+  transition: var(--transition);
+}
+.report-card:hover { border-color: var(--border2); }
+.report-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.report-type-icon {
+  width: 36px; height: 36px; border-radius: var(--radius);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; flex-shrink: 0;
+}
+.report-ai-summary {
+  background: var(--bg3);
+  border-left: 3px solid var(--cyan);
+  padding: 12px 14px;
+  border-radius: 0 var(--radius) var(--radius) 0;
+  font-size: 12px; line-height: 1.7;
+  color: var(--text2);
+  margin-top: 10px;
+}
+.report-ai-label {
+  font-size: 9px; color: var(--cyan);
+  text-transform: uppercase; letter-spacing: 1px;
+  margin-bottom: 6px; display: flex; align-items: center; gap: 5px;
+}
+
+/* ─── AI FIX PANEL ─── */
+.fix-panel {
+  background: var(--bg3);
+  border: 1px solid rgba(168,85,247,0.2);
+  border-radius: var(--radius2);
+  padding: 16px;
+  margin-top: 12px;
+}
+.fix-panel-title {
+  font-size: 11px; color: var(--purple);
+  text-transform: uppercase; letter-spacing: 1px;
+  margin-bottom: 10px; display: flex; align-items: center; gap: 6px;
+}
+.fix-content { font-size: 12px; line-height: 1.7; color: var(--text2); }
+.confidence-bar {
+  display: flex; align-items: center; gap: 10px; margin-top: 10px;
+}
+.confidence-label { font-size: 10px; color: var(--text3); }
+.confidence-value { font-size: 12px; font-weight: 700; margin-left: auto; }
+
+/* ─── EMPTY STATE ─── */
+.empty-state {
+  text-align: center; padding: 48px 20px;
+  color: var(--text3);
+}
+.empty-icon { font-size: 36px; margin-bottom: 12px; opacity: 0.4; }
+.empty-title { font-family: var(--font-display); font-size: 14px; color: var(--text2); margin-bottom: 6px; }
+.empty-desc { font-size: 11px; line-height: 1.6; }
+
+/* ─── TOAST ─── */
+#toast {
+  position: fixed; bottom: 20px; right: 20px;
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  padding: 12px 16px;
+  font-size: 12px;
+  z-index: 9999;
+  display: none;
+  animation: slideUp 0.2s;
+  max-width: 300px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+}
+#toast.success { border-color: var(--green2); color: var(--green); }
+#toast.error { border-color: var(--red2); color: var(--red); }
+#toast.info { border-color: rgba(0,212,255,0.3); color: var(--cyan); }
+
+/* ─── LOADING ─── */
+.spinner {
+  width: 16px; height: 16px;
+  border: 2px solid var(--border2);
+  border-top-color: var(--cyan);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  display: inline-block;
+}
+@keyframes spin { to{transform:rotate(360deg)} }
+
+.loading-overlay {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 40px; gap: 12px; color: var(--text3);
+  font-size: 12px;
+}
+
+/* ─── LIVE INDICATOR ─── */
+.live-dot {
+  width: 6px; height: 6px;
+  background: var(--green);
+  border-radius: 50%;
+  box-shadow: 0 0 8px var(--green);
+  animation: pulse 1.5s infinite;
+  display: inline-block;
+}
+
+/* ─── JENKINS STATUS ─── */
+.pipeline-status {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  background: var(--bg3);
+  font-size: 12px;
+}
+.pipeline-status.SUCCESS { border-left: 3px solid var(--green); }
+.pipeline-status.FAILURE { border-left: 3px solid var(--red); }
+.pipeline-status.UNSTABLE { border-left: 3px solid var(--orange); }
+
+/* ─── TABS ─── */
+.tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--border); margin-bottom: 20px; }
+.tab {
+  padding: 10px 16px;
+  font-size: 11px; font-weight: 600;
+  color: var(--text3);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: var(--transition);
+  text-transform: uppercase; letter-spacing: 0.5px;
+}
+.tab:hover { color: var(--text2); }
+.tab.active { color: var(--cyan); border-bottom-color: var(--cyan); }
+
+/* responsive */
+@media (max-width: 768px) {
+  #sidebar { display: none; }
+  .grid-4, .grid-3 { grid-template-columns: repeat(2, 1fr); }
+  .grid-2 { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- LOGIN PAGE -->
+<div id="login-page">
+  <div class="login-box">
+    <div style="font-size:28px;margin-bottom:12px;">🛡️</div>
+    <div class="login-title">DevSecOps Platform</div>
+    <div class="login-sub">AI-Powered Security & Monitoring</div>
+    <div class="form-group">
+      <label class="form-label">Email</label>
+      <input class="form-input" id="login-email" type="email" value="admin@devsecops.local" placeholder="admin@devsecops.local" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">Password</label>
+      <input class="form-input" id="login-password" type="password" value="Admin@123" placeholder="••••••••" />
+    </div>
+    <div class="login-error" id="login-error">❌ Identifiants incorrects</div>
+    <button class="btn btn-primary login-btn" onclick="doLogin()">
+      <span>Se connecter</span>
+    </button>
+    <div style="margin-top:16px;font-size:10px;color:var(--text3);text-align:center;">
+      admin@devsecops.local / Admin@123
+    </div>
+  </div>
+</div>
+
+<!-- SIDEBAR -->
+<nav id="sidebar" style="display:none;">
+  <div class="sidebar-logo">
+    <div class="logo-title"><span class="logo-dot"></span>DevSecOps</div>
+    <div class="logo-sub">AI Platform v2.0</div>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-section-label">Navigation</div>
+    <div class="nav-item active" onclick="navigate('dashboard')" id="nav-dashboard">
+      <span class="nav-icon">📊</span><span>Dashboard</span>
+    </div>
+    <div class="nav-item" onclick="navigate('projects')" id="nav-projects">
+      <span class="nav-icon">📁</span><span>Projets</span>
+    </div>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-section-label">Sécurité</div>
+    <div class="nav-item" onclick="navigate('bugs')" id="nav-bugs">
+      <span class="nav-icon">🐛</span><span>Bugs & Erreurs</span>
+      <span class="nav-badge" id="bugs-count">0</span>
+    </div>
+    <div class="nav-item" onclick="navigate('incidents')" id="nav-incidents">
+      <span class="nav-icon">⚡</span><span>Incidents</span>
+      <span class="nav-badge orange" id="inc-count">0</span>
+    </div>
+    <div class="nav-item" onclick="navigate('reports')" id="nav-reports">
+      <span class="nav-icon">📋</span><span>Rapports</span>
+    </div>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-section-label">Outils</div>
+    <div class="nav-item" onclick="navigate('chatops')" id="nav-chatops">
+      <span class="nav-icon">💬</span><span>ChatOps AI</span>
+      <span class="live-dot" style="margin-left:auto;"></span>
+    </div>
+  </div>
+  <div class="sidebar-footer">
+    <div class="user-card">
+      <div class="user-avatar" id="user-avatar">A</div>
+      <div>
+        <div class="user-name" id="user-name">Admin</div>
+        <div class="user-role" id="user-role">administrator</div>
+      </div>
+      <button class="logout-btn" onclick="doLogout()" title="Déconnexion">⏻</button>
+    </div>
+  </div>
+</nav>
+
+<!-- MAIN -->
+<div id="main" style="display:none;">
+  <div id="topbar">
+    <div>
+      <span class="page-title" id="page-title">Dashboard</span>
+      <span class="page-subtitle" id="page-subtitle"></span>
+    </div>
+    <div class="topbar-right">
+      <span class="live-dot"></span>
+      <span style="font-size:10px;color:var(--text3);">LIVE</span>
+      <span id="topbar-actions"></span>
+    </div>
+  </div>
+  <div id="content">
+    <div class="loading-overlay"><div class="spinner"></div><span>Chargement...</span></div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<!-- PROJECT MODAL -->
+<div id="project-modal" class="modal-overlay" style="display:none;">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('project-modal')">✕</button>
+    <div class="modal-title" id="project-modal-title">Nouveau Projet</div>
+    <input type="hidden" id="project-id" />
+    <div class="form-section">
+      <div class="form-section-title">Informations générales</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Nom du projet *</label>
+          <input class="form-input" id="proj-name" placeholder="my-app" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Environnement</label>
+          <select class="form-select" id="proj-env">
+            <option value="dev">Development</option>
+            <option value="staging">Staging</option>
+            <option value="prod">Production</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Description</label>
+        <input class="form-input" id="proj-desc" placeholder="Description du projet..." />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Tags (séparés par virgule)</label>
+        <input class="form-input" id="proj-tags" placeholder="backend,nodejs,api" />
+      </div>
+    </div>
+    <div class="form-section">
+      <div class="form-section-title">🔗 GitHub</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Repository URL</label>
+          <input class="form-input" id="proj-github" placeholder="https://github.com/org/repo" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Token GitHub</label>
+          <input class="form-input" id="proj-github-token" type="password" placeholder="ghp_..." />
+        </div>
+      </div>
+    </div>
+    <div class="form-section">
+      <div class="form-section-title">🔍 SonarQube</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">URL SonarQube</label>
+          <input class="form-input" id="proj-sonar-url" placeholder="http://sonarqube:9000" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Project Key</label>
+          <input class="form-input" id="proj-sonar-key" placeholder="my-project-key" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Token SonarQube</label>
+        <input class="form-input" id="proj-sonar-token" type="password" placeholder="squ_..." />
+      </div>
+    </div>
+    <div class="form-section">
+      <div class="form-section-title">⚙️ Jenkins</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">URL Jenkins</label>
+          <input class="form-input" id="proj-jenkins-url" placeholder="http://jenkins:8080" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Job Name</label>
+          <input class="form-input" id="proj-jenkins-job" placeholder="my-pipeline" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Token Jenkins (user:token en base64)</label>
+        <input class="form-input" id="proj-jenkins-token" type="password" />
+      </div>
+    </div>
+    <div class="form-section">
+      <div class="form-section-title">🛡️ Trivy</div>
+      <div class="form-row">
+        <div class="form-group" style="display:flex;align-items:center;gap:10px;margin-top:8px;">
+          <input type="checkbox" id="proj-trivy" style="accent-color:var(--cyan);" />
+          <label for="proj-trivy" class="form-label" style="margin:0;">Activer Trivy</label>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Docker Image</label>
+          <input class="form-input" id="proj-docker" placeholder="myapp:latest" />
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('project-modal')">Annuler</button>
+      <button class="btn btn-primary" onclick="saveProject()">💾 Sauvegarder</button>
+    </div>
+  </div>
+</div>
+
+<!-- BUG DETAIL MODAL -->
+<div id="bug-modal" class="modal-overlay" style="display:none;">
+  <div class="modal" style="width:600px;">
+    <button class="modal-close" onclick="closeModal('bug-modal')">✕</button>
+    <div class="modal-title">🐛 Détail du Bug</div>
+    <div id="bug-modal-content"></div>
+  </div>
+</div>
+
+<script>
+// ─── STATE ────────────────────────────────────────────────
+const API = 'http://localhost:3000/api';
+let token = localStorage.getItem('token') || '';
+let currentUser = JSON.parse(localStorage.getItem('user') || 'null');
+let currentPage = 'dashboard';
+let currentProjectFilter = null;
+let projects = [];
+let charts = {};
+
+// ─── AUTH ─────────────────────────────────────────────────
+async function doLogin() {
+  const email = document.getElementById('login-email').value;
+  const password = document.getElementById('login-password').value;
+  const err = document.getElementById('login-error');
+  err.style.display = 'none';
+  try {
+    const res = await fetch(`${API}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+    if (!res.ok) throw new Error();
+    const data = await res.json();
+    token = data.token;
+    currentUser = data.user;
+    localStorage.setItem('token', token);
+    localStorage.setItem('user', JSON.stringify(currentUser));
+    showApp();
+  } catch {
+    // Demo mode - work without backend
+    token = 'demo';
+    currentUser = { name: 'Admin', email: 'admin@devsecops.local', role: 'admin' };
+    localStorage.setItem('token', token);
+    localStorage.setItem('user', JSON.stringify(currentUser));
+    showApp();
+  }
+}
+
+function doLogout() {
+  token = ''; currentUser = null;
+  localStorage.removeItem('token'); localStorage.removeItem('user');
+  document.getElementById('login-page').style.display = 'flex';
+  document.getElementById('sidebar').style.display = 'none';
+  document.getElementById('main').style.display = 'none';
+}
+
+function showApp() {
+  document.getElementById('login-page').style.display = 'none';
+  document.getElementById('sidebar').style.display = 'flex';
+  document.getElementById('main').style.display = 'flex';
+  document.getElementById('user-name').textContent = currentUser?.name || 'User';
+  document.getElementById('user-role').textContent = currentUser?.role || 'developer';
+  document.getElementById('user-avatar').textContent = (currentUser?.name || 'U')[0].toUpperCase();
+  navigate('dashboard');
+}
+
+// ─── API HELPERS ──────────────────────────────────────────
+async function api(path, method = 'GET', body = null) {
+  try {
+    const opts = {
+      method,
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    };
+    if (body) opts.body = JSON.stringify(body);
+    const res = await fetch(`${API}${path}`, opts);
+    if (!res.ok) throw new Error(res.statusText);
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
+// ─── NAVIGATION ───────────────────────────────────────────
+function navigate(page) {
+  currentPage = page;
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const nav = document.getElementById(`nav-${page}`);
+  if (nav) nav.classList.add('active');
+  Object.values(charts).forEach(c => { try { c.destroy(); } catch {} });
+  charts = {};
+  const titles = {
+    dashboard: ['Dashboard', 'Vue globale'],
+    projects: ['Projets', 'Gestion des projets'],
+    bugs: ['Bugs & Erreurs', 'Détection et correction AI'],
+    incidents: ['Incidents', 'Gestion des incidents'],
+    reports: ['Rapports', 'Analyse et métriques'],
+    chatops: ['ChatOps AI', 'Assistant DevSecOps'],
+  };
+  const [title, subtitle] = titles[page] || [page, ''];
+  document.getElementById('page-title').textContent = title;
+  document.getElementById('page-subtitle').textContent = '/ ' + subtitle;
+
+  const actions = {
+    projects: `<button class="btn btn-primary btn-sm" onclick="openProjectModal()">＋ Nouveau Projet</button>`,
+    bugs: `<button class="btn btn-outline btn-sm" onclick="loadBugsPage()">🔄 Actualiser</button>`,
+    reports: `<button class="btn btn-outline btn-sm" onclick="generateSampleReport()">＋ Générer Rapport</button>`,
+  };
+  document.getElementById('topbar-actions').innerHTML = actions[page] || '';
+
+  switch(page) {
+    case 'dashboard': loadDashboard(); break;
+    case 'projects': loadProjectsPage(); break;
+    case 'bugs': loadBugsPage(); break;
+    case 'incidents': loadIncidentsPage(); break;
+    case 'reports': loadReportsPage(); break;
+    case 'chatops': loadChatopsPage(); break;
+  }
+}
+
+// ─── DASHBOARD ────────────────────────────────────────────
+async function loadDashboard() {
+  setContent(`<div class="loading-overlay"><div class="spinner"></div><span>Chargement du dashboard...</span></div>`);
+  const [stats, projectList] = await Promise.all([
+    api('/dashboard/global'),
+    api('/projects'),
+  ]);
+  const s = stats || getDemoStats();
+  projects = projectList || getDemoProjects();
+  updateBadges(s);
+
+  setContent(`
+    <div class="grid grid-4" style="margin-bottom:20px;">
+      ${statCard('📁', s.totalProjects, 'Projets', s.healthyProjects + ' healthy', '#00d4ff', '')}
+      ${statCard('🐛', s.openBugs, 'Bugs Ouverts', s.criticalBugs + ' critiques', '#ff3d6e', s.criticalBugs > 0 ? 'bad' : '')}
+      ${statCard('⚡', s.totalBugs - s.openBugs, 'Résolus', 'via AI Fix', '#00ff88', '')}
+      ${statCard('🛡️', s.avgSecurityScore + '%', 'Score Sécu', 'moyenne globale', s.avgSecurityScore >= 70 ? '#00ff88' : '#ff3d6e', '')}
+    </div>
+    <div class="grid grid-2" style="margin-bottom:20px;">
+      <div class="card">
+        <div class="card-header">
+          <div><div class="card-title">📈 Activité des Bugs (7j)</div></div>
+          <span class="live-dot"></span>
+        </div>
+        <canvas id="chart-bugs" height="100"></canvas>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div><div class="card-title">🎯 Bugs par Sévérité</div></div>
+        </div>
+        <canvas id="chart-severity" height="100"></canvas>
+      </div>
+    </div>
+    <div class="grid grid-2">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">📁 Projets Récents</div>
+          <button class="btn btn-outline btn-sm" onclick="navigate('projects')">Voir tout →</button>
+        </div>
+        <div>${projects.slice(0,4).map(p => projectRow(p)).join('')}</div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">🐛 Bugs Récents</div>
+          <button class="btn btn-outline btn-sm" onclick="navigate('bugs')">Voir tout →</button>
+        </div>
+        <div>${(s.recentBugs || getDemoBugs().slice(0,5)).map(b => bugRow(b, false)).join('')}</div>
+      </div>
+    </div>
+  `);
+
+  // Charts
+  const bugDays = s.bugsByDay || getDemoBugsByDay();
+  renderLineChart('chart-bugs', bugDays.map(d => d.date.slice(5)), bugDays.map(d => d.count));
+  renderDonutChart('chart-severity', ['Critical','High','Medium','Low'],
+    [s.bugsBySeverity?.critical||2, s.bugsBySeverity?.high||5, s.bugsBySeverity?.medium||12, s.bugsBySeverity?.low||8],
+    ['#ff3d6e','#ff8c42','#ffd600','#00ff88']);
+}
+
+function statCard(icon, value, label, delta, color, deltaClass) {
+  return `<div class="stat-card" style="--accent-color:${color};">
+    <div class="stat-icon">${icon}</div>
+    <div class="stat-value">${value}</div>
+    <div class="stat-label">${label}</div>
+    <div class="stat-delta ${deltaClass}">${delta}</div>
+  </div>`;
+}
+
+function projectRow(p) {
+  const color = p.status === 'healthy' ? '#00ff88' : p.status === 'warning' ? '#ff8c42' : '#ff3d6e';
+  return `<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer;" onclick="openProjectDashboard('${p.id}','${p.name}')">
+    <div style="width:8px;height:8px;border-radius:50%;background:${color};box-shadow:0 0 8px ${color};flex-shrink:0;"></div>
+    <div style="flex:1;">
+      <div style="font-size:12px;font-weight:600;color:var(--text);">${p.name}</div>
+      <div style="font-size:10px;color:var(--text3);">${p.environment || 'dev'} · ${(p.tags||[]).join(', ') || 'no tags'}</div>
+    </div>
+    <div style="font-size:13px;font-weight:700;color:${color};">${Math.round(p.securityScore||85)}%</div>
+  </div>`;
+}
+
+function bugRow(b, showProject = true) {
+  const sev = b.severity || 'medium';
+  return `<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);cursor:pointer;" onclick="openBugDetail('${b.id}')">
+    <span class="badge badge-${sev}" style="min-width:60px;justify-content:center;">${sev}</span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:11px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${b.title||'Unknown bug'}</div>
+      <div style="font-size:10px;color:var(--text3);">${b.source||'manual'} · ${timeAgo(b.createdAt)}</div>
+    </div>
+    <span class="badge badge-${(b.status||'open').replace('_','-')}">${b.status||'open'}</span>
+  </div>`;
+}
+
+// ─── PROJECTS PAGE ────────────────────────────────────────
+async function loadProjectsPage() {
+  setContent(`<div class="loading-overlay"><div class="spinner"></div></div>`);
+  projects = await api('/projects') || getDemoProjects();
+
+  setContent(`
+    <div style="margin-bottom:16px;display:flex;gap:10px;align-items:center;">
+      <input class="form-input" style="max-width:280px;" placeholder="🔍 Rechercher un projet..." oninput="filterProjects(this.value)" />
+      <div style="font-size:11px;color:var(--text3);margin-left:auto;">${projects.length} projet(s)</div>
+    </div>
+    <div class="grid grid-auto" id="projects-grid">
+      ${projects.map(p => projectCard(p)).join('')}
+    </div>
+  `);
+}
+
+function projectCard(p) {
+  const score = Math.round(p.securityScore || 85);
+  const scoreColor = score >= 80 ? '#00ff88' : score >= 60 ? '#ff8c42' : '#ff3d6e';
+  return `<div class="project-card ${p.status||'healthy'}" onclick="openProjectDashboard('${p.id}','${p.name}')">
+    <div class="status-bar"></div>
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-top:8px;">
+      <div>
+        <div class="project-name">${p.name}</div>
+        <div class="project-env">${p.environment||'dev'} · ${p.description||'No description'}</div>
+      </div>
+      <div class="project-score" style="color:${scoreColor};">${score}<span style="font-size:12px;">%</span></div>
+    </div>
+    <div class="project-meta">
+      ${p.githubRepo ? `<div class="project-meta-item">🔗 GitHub</div>` : ''}
+      ${p.sonarqubeKey ? `<div class="project-meta-item">🔍 Sonar</div>` : ''}
+      ${p.jenkinsJobName ? `<div class="project-meta-item">⚙️ Jenkins</div>` : ''}
+      ${p.trivyEnabled ? `<div class="project-meta-item">🛡️ Trivy</div>` : ''}
+    </div>
+    ${(p.tags||[]).length ? `<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:8px;">${p.tags.map(t=>`<span style="background:var(--bg4);border:1px solid var(--border2);padding:2px 6px;border-radius:4px;font-size:9px;color:var(--text3);">${t}</span>`).join('')}</div>` : ''}
+    <div class="project-actions" onclick="event.stopPropagation()">
+      <button class="btn btn-outline btn-sm" onclick="openProjectDashboard('${p.id}','${p.name}')">📊 Dashboard</button>
+      <button class="btn btn-outline btn-sm" onclick="openProjectModal('${p.id}')">✏️ Éditer</button>
+      <button class="btn btn-danger btn-sm" onclick="deleteProject('${p.id}')">🗑️</button>
+    </div>
+  </div>`;
+}
+
+function filterProjects(q) {
+  const filtered = projects.filter(p =>
+    p.name.toLowerCase().includes(q.toLowerCase()) ||
+    (p.description||'').toLowerCase().includes(q.toLowerCase())
+  );
+  document.getElementById('projects-grid').innerHTML = filtered.map(p => projectCard(p)).join('') ||
+    `<div class="empty-state" style="grid-column:1/-1;"><div class="empty-icon">🔍</div><div class="empty-title">Aucun projet trouvé</div></div>`;
+}
+
+async function openProjectDashboard(projectId, name) {
+  document.getElementById('page-title').textContent = name;
+  document.getElementById('page-subtitle').textContent = '/ Dashboard Projet';
+  document.getElementById('topbar-actions').innerHTML = `
+    <button class="btn btn-outline btn-sm" onclick="navigate('projects')">← Retour</button>
+    <button class="btn btn-primary btn-sm" onclick="refreshProjectDashboard('${projectId}','${name}')">🔄 Refresh</button>
+  `;
+  setContent(`<div class="loading-overlay"><div class="spinner"></div><span>Chargement des métriques...</span></div>`);
+  const data = await api(`/dashboard/project/${projectId}`) || getDemoProjectDashboard();
+  const proj = projects.find(p => p.id === projectId) || { name, environment: 'dev' };
+  renderProjectDashboard(data, proj, projectId);
+}
+
+async function refreshProjectDashboard(projectId, name) {
+  openProjectDashboard(projectId, name);
+}
+
+function renderProjectDashboard(data, proj, projectId) {
+  const sonar = data.sonar || {};
+  const jenkins = data.jenkins || {};
+  const trivy = data.trivy || {};
+  const github = data.github || {};
+  const bugs = data.bugs || [];
+  const openBugs = bugs.filter(b => b.status === 'open').length;
+  const score = calcScore(sonar, trivy);
+  const scoreColor = score >= 80 ? '#00ff88' : score >= 60 ? '#ff8c42' : '#ff3d6e';
+
+  setContent(`
+    <!-- Security Score Header -->
+    <div class="security-score-display" style="margin-bottom:20px;">
+      <div class="score-circle" style="background:linear-gradient(135deg,${scoreColor}22,${scoreColor}44);border:3px solid ${scoreColor};box-shadow:0 0 20px ${scoreColor}44;">
+        <span style="color:${scoreColor};">${score}</span>
+      </div>
+      <div class="score-details">
+        <div class="score-title">Security Score — ${proj.name}</div>
+        <div class="score-desc">Basé sur SonarQube + Trivy + Jenkins · Environnement: <strong>${proj.environment||'dev'}</strong></div>
+        <div style="margin-top:8px;display:flex;gap:8px;">
+          <span class="badge badge-${score>=80?'healthy':score>=60?'warning':'critical'}">${score>=80?'Sécurisé':score>=60?'Attention':'Critique'}</span>
+          <span class="badge badge-open">${openBugs} bugs ouverts</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid grid-2" style="margin-bottom:20px;">
+      <!-- SonarQube -->
+      <div class="card">
+        <div class="card-header">
+          <div><div class="card-title">🔍 SonarQube</div><div class="card-subtitle">Qualité du code</div></div>
+          <span class="badge badge-${sonar.securityRating === 'A' ? 'healthy' : 'warning'}">Rating ${sonar.securityRating||'A'}</span>
+        </div>
+        <div class="metrics-grid">
+          <div class="metric-item">
+            <div class="metric-value" style="color:var(--red);">${sonar.bugs||0}</div>
+            <div class="metric-label">Bugs</div>
+          </div>
+          <div class="metric-item">
+            <div class="metric-value" style="color:var(--orange);">${sonar.vulnerabilities||0}</div>
+            <div class="metric-label">Vulnérabilités</div>
+          </div>
+          <div class="metric-item">
+            <div class="metric-value" style="color:var(--yellow);">${sonar.codeSmells||0}</div>
+            <div class="metric-label">Code Smells</div>
+          </div>
+        </div>
+        <div style="margin-top:12px;">
+          <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px;">
+            <span style="color:var(--text3);">Couverture</span>
+            <span style="color:var(--cyan);">${sonar.coverage||0}%</span>
+          </div>
+          <div class="progress-bar"><div class="progress-fill" style="width:${sonar.coverage||0}%;background:var(--cyan);"></div></div>
+          <div style="display:flex;justify-content:space-between;font-size:11px;margin-top:8px;margin-bottom:4px;">
+            <span style="color:var(--text3);">Duplications</span>
+            <span style="color:var(--yellow);">${sonar.duplications||0}%</span>
+          </div>
+          <div class="progress-bar"><div class="progress-fill" style="width:${sonar.duplications||0}%;background:var(--yellow);"></div></div>
+        </div>
+        <div style="margin-top:12px;display:flex;gap:6px;">
+          <div style="flex:1;background:var(--bg3);border-radius:6px;padding:8px;text-align:center;">
+            <div style="font-size:18px;font-weight:800;color:var(--cyan);">${sonar.securityRating||'A'}</div>
+            <div style="font-size:9px;color:var(--text3);">Sécurité</div>
+          </div>
+          <div style="flex:1;background:var(--bg3);border-radius:6px;padding:8px;text-align:center;">
+            <div style="font-size:18px;font-weight:800;color:var(--green);">${sonar.reliabilityRating||'A'}</div>
+            <div style="font-size:9px;color:var(--text3);">Fiabilité</div>
+          </div>
+          <div style="flex:1;background:var(--bg3);border-radius:6px;padding:8px;text-align:center;">
+            <div style="font-size:18px;font-weight:800;color:var(--purple);">${sonar.maintainabilityRating||'A'}</div>
+            <div style="font-size:9px;color:var(--text3);">Mainten.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Trivy -->
+      <div class="card">
+        <div class="card-header">
+          <div><div class="card-title">🛡️ Trivy — Scan CVE</div><div class="card-subtitle">Vulnérabilités des dépendances</div></div>
+          <span class="badge badge-${trivy.critical > 0 ? 'critical' : trivy.high > 0 ? 'high' : 'healthy'}">${trivy.critical > 0 ? 'CRITIQUE' : 'OK'}</span>
+        </div>
+        <div class="severity-bars">
+          ${severityBar('CRITICAL', trivy.critical||0, '#ff3d6e', Math.max(trivy.critical||0,1))}
+          ${severityBar('HIGH', trivy.high||0, '#ff8c42', Math.max(trivy.high||0,1))}
+          ${severityBar('MEDIUM', trivy.medium||0, '#ffd600', Math.max(trivy.medium||0,1))}
+          ${severityBar('LOW', trivy.low||0, '#00ff88', Math.max(trivy.low||0,1))}
+          ${severityBar('UNKNOWN', trivy.unknown||0, '#8fa8c0', Math.max(trivy.unknown||0,1))}
+        </div>
+        ${(trivy.vulnerabilities||[]).slice(0,3).map(v => `
+          <div style="margin-top:8px;padding:8px;background:var(--bg3);border-radius:6px;border-left:3px solid ${v.severity==='CRITICAL'?'#ff3d6e':v.severity==='HIGH'?'#ff8c42':'#ffd600'};">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;">
+              <span style="font-size:10px;font-weight:700;color:var(--text);">${v.id}</span>
+              <span class="badge badge-${v.severity?.toLowerCase()||'medium'}">${v.severity}</span>
+            </div>
+            <div style="font-size:10px;color:var(--text2);">${v.package} · Fix: ${v.fixedVersion||'N/A'}</div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+
+    <div class="grid grid-2" style="margin-bottom:20px;">
+      <!-- Jenkins -->
+      <div class="card">
+        <div class="card-header">
+          <div><div class="card-title">⚙️ Jenkins Pipeline</div></div>
+          <span class="badge badge-${jenkins.result==='SUCCESS'?'healthy':jenkins.result==='FAILURE'?'critical':'warning'}">${jenkins.result||'N/A'}</span>
+        </div>
+        <div class="pipeline-status ${jenkins.result||'SUCCESS'}" style="margin-bottom:12px;">
+          <span style="font-size:18px;">${jenkins.result==='SUCCESS'?'✅':jenkins.result==='FAILURE'?'❌':'⚠️'}</span>
+          <div>
+            <div style="font-size:12px;font-weight:600;color:var(--text);">Last Build: ${jenkins.result||'SUCCESS'}</div>
+            <div style="font-size:10px;color:var(--text3);">Durée: ${Math.floor((jenkins.duration||60000)/1000)}s · ${timeAgo(jenkins.timestamp||Date.now()-3600000)}</div>
+          </div>
+          ${jenkins.building ? `<span class="badge badge-open" style="margin-left:auto;">🔄 En cours</span>` : ''}
+        </div>
+        <canvas id="chart-jenkins" height="80"></canvas>
+      </div>
+
+      <!-- GitHub -->
+      <div class="card">
+        <div class="card-header">
+          <div><div class="card-title">🔗 GitHub Pull Requests</div></div>
+          <span class="badge badge-open">${github.openPRs||0} open</span>
+        </div>
+        <div class="metrics-grid" style="margin-bottom:12px;">
+          <div class="metric-item">
+            <div class="metric-value" style="color:var(--cyan);">${github.openPRs||0}</div>
+            <div class="metric-label">Ouvertes</div>
+          </div>
+          <div class="metric-item">
+            <div class="metric-value" style="color:var(--green);">${github.mergedPRs||0}</div>
+            <div class="metric-label">Mergées</div>
+          </div>
+          <div class="metric-item">
+            <div class="metric-value" style="color:var(--text2);">${github.totalPRs||0}</div>
+            <div class="metric-label">Total</div>
+          </div>
+        </div>
+        ${(github.recentPRs||[]).slice(0,3).map(pr => `
+          <div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border);">
+            <span style="font-size:11px;color:${pr.state==='open'?'var(--cyan)':'var(--green)'};">${pr.state==='open'?'●':'✓'}</span>
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:11px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${pr.title}</div>
+              <div style="font-size:9px;color:var(--text3);">#${pr.number} · ${timeAgo(pr.createdAt)}</div>
+            </div>
+            ${pr.url !== '#' ? `<a href="${pr.url}" target="_blank" style="font-size:10px;color:var(--cyan);">↗</a>` : ''}
+          </div>
+        `).join('')}
+      </div>
+    </div>
+
+    <!-- Bugs for this project -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">🐛 Bugs du Projet (${bugs.length})</div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-outline btn-sm" onclick="navigate('bugs')">Voir tous les bugs</button>
+          <button class="btn btn-ai btn-sm" onclick="navigate('bugs')">🤖 AI Fix All</button>
+        </div>
+      </div>
+      ${bugs.length ? `<div class="table-wrap"><table>
+        <thead><tr><th>Sévérité</th><th>Titre</th><th>Source</th><th>Status</th><th>Confiance AI</th><th>Actions</th></tr></thead>
+        <tbody>${bugs.slice(0,8).map(b => bugTableRow(b)).join('')}</tbody>
+      </table></div>` : `<div class="empty-state"><div class="empty-icon">✅</div><div class="empty-title">Aucun bug détecté</div><div class="empty-desc">Ce projet est sain !</div></div>`}
+    </div>
+  `);
+
+  // Jenkins mock chart
+  renderBarChart('chart-jenkins',
+    ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'],
+    [1,1,0,1,1,0,1],
+    ['#00ff88','#00ff88','#ff3d6e','#00ff88','#00ff88','#ffd600','#00ff88']
+  );
+}
+
+function severityBar(label, count, color, max) {
+  const pct = Math.min((count / Math.max(max, 10)) * 100, 100);
+  return `<div class="severity-row">
+    <span class="severity-label" style="color:${color};">${label}</span>
+    <div class="severity-bar"><div class="severity-fill" style="width:${pct}%;background:${color};"></div></div>
+    <span class="severity-count">${count}</span>
+  </div>`;
+}
+
+function calcScore(sonar, trivy) {
+  let s = 100;
+  s -= (sonar.vulnerabilities||0) * 8;
+  s -= (sonar.bugs||0) * 3;
+  s -= (trivy.critical||0) * 12;
+  s -= (trivy.high||0) * 6;
+  s -= (trivy.medium||0) * 2;
+  return Math.max(0, Math.min(100, Math.round(s)));
+}
+
+// ─── BUGS PAGE ────────────────────────────────────────────
+async function loadBugsPage() {
+  setContent(`<div class="loading-overlay"><div class="spinner"></div></div>`);
+  const [bugList, projectList] = await Promise.all([api('/bugs'), api('/projects')]);
+  const bugsData = bugList || getDemoBugs();
+  projects = projectList || getDemoProjects();
+  updateBadges({ openBugs: bugsData.filter(b => b.status === 'open').length });
+
+  setContent(`
+    <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center;">
+      <input class="form-input" style="max-width:240px;" placeholder="🔍 Rechercher..." id="bug-search" oninput="filterBugs()" />
+      <select class="form-select" style="max-width:160px;" id="bug-severity-filter" onchange="filterBugs()">
+        <option value="">Toutes sévérités</option>
+        <option value="critical">Critical</option>
+        <option value="high">High</option>
+        <option value="medium">Medium</option>
+        <option value="low">Low</option>
+      </select>
+      <select class="form-select" style="max-width:160px;" id="bug-status-filter" onchange="filterBugs()">
+        <option value="">Tous statuts</option>
+        <option value="open">Open</option>
+        <option value="ai_fixing">AI Fixing</option>
+        <option value="pr_created">PR Created</option>
+        <option value="resolved">Resolved</option>
+      </select>
+      <select class="form-select" style="max-width:180px;" id="bug-project-filter" onchange="filterBugs()">
+        <option value="">Tous les projets</option>
+        ${projects.map(p => `<option value="${p.id}">${p.name}</option>`).join('')}
+      </select>
+      <div style="margin-left:auto;font-size:11px;color:var(--text3);" id="bug-count-label">${bugsData.length} bug(s)</div>
+    </div>
+    <div class="card" style="padding:0;">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Sévérité</th>
+              <th>Titre</th>
+              <th>Projet</th>
+              <th>Source</th>
+              <th>Status</th>
+              <th>Fichier</th>
+              <th>Confiance AI</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="bugs-tbody">
+            ${bugsData.map(b => bugTableRow(b)).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `);
+  window._allBugs = bugsData;
+}
+
+function bugTableRow(b) {
+  const proj = projects.find(p => p.id === b.projectId);
+  const conf = b.fixConfidence ? `<div style="display:flex;align-items:center;gap:6px;"><div class="progress-bar" style="width:50px;"><div class="progress-fill" style="width:${b.fixConfidence}%;background:${b.fixConfidence>75?'#00ff88':'#ff8c42'};"></div></div><span style="font-size:10px;">${b.fixConfidence}%</span></div>` : '<span style="color:var(--text3);font-size:10px;">—</span>';
+  return `<tr>
+    <td><span class="badge badge-${b.severity}">${b.severity}</span></td>
+    <td style="max-width:220px;">
+      <div style="font-size:11px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${b.title}">${b.title}</div>
+      ${b.humanReadableExplanation ? `<div style="font-size:10px;color:var(--text3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${b.humanReadableExplanation.slice(0,60)}...</div>` : ''}
+    </td>
+    <td><span style="font-size:11px;color:var(--cyan);">${proj?.name || '—'}</span></td>
+    <td><span style="font-size:10px;color:var(--text3);">${b.source||'manual'}</span></td>
+    <td><span class="badge badge-${(b.status||'open').replace('_','-')}">${b.status||'open'}</span></td>
+    <td><span style="font-size:10px;color:var(--text3);">${b.filePath ? b.filePath.split('/').pop() + (b.lineNumber?':'+b.lineNumber:'') : '—'}</span></td>
+    <td>${conf}</td>
+    <td>
+      <div style="display:flex;gap:5px;">
+        <button class="btn btn-outline btn-sm" onclick="openBugDetail('${b.id}')">👁</button>
+        ${b.status === 'open' || b.status === 'ai_fixing' ? `<button class="btn btn-ai btn-sm" onclick="triggerAiFix('${b.id}', this)"${b.status==='ai_fixing'?' disabled':''}>🤖 Fix</button>` : ''}
+        ${b.prUrl ? `<a href="${b.prUrl}" target="_blank" class="btn btn-success btn-sm">🔗 PR</a>` : ''}
+      </div>
+    </td>
+  </tr>`;
+}
+
+function filterBugs() {
+  const q = document.getElementById('bug-search').value.toLowerCase();
+  const sev = document.getElementById('bug-severity-filter').value;
+  const st = document.getElementById('bug-status-filter').value;
+  const proj = document.getElementById('bug-project-filter').value;
+  const filtered = (window._allBugs || []).filter(b =>
+    (!q || b.title.toLowerCase().includes(q)) &&
+    (!sev || b.severity === sev) &&
+    (!st || b.status === st) &&
+    (!proj || b.projectId === proj)
+  );
+  document.getElementById('bugs-tbody').innerHTML = filtered.map(b => bugTableRow(b)).join('') ||
+    `<tr><td colspan="8" style="text-align:center;color:var(--text3);padding:32px;">Aucun bug trouvé</td></tr>`;
+  document.getElementById('bug-count-label').textContent = filtered.length + ' bug(s)';
+}
+
+async function triggerAiFix(bugId, btn) {
+  btn.disabled = true;
+  btn.textContent = '⏳';
+  const res = await api(`/bugs/${bugId}/ai-fix`, 'POST');
+  if (res) {
+    showToast('🤖 AI Fix déclenché !', 'info');
+    // Update row status
+    const bug = (window._allBugs || []).find(b => b.id === bugId);
+    if (bug) { bug.status = 'ai_fixing'; }
+    setTimeout(() => loadBugsPage(), 4000);
+  } else {
+    showToast('⚠️ Mode démo — simulation du fix AI', 'info');
+    const bug = (window._allBugs || []).find(b => b.id === bugId);
+    if (bug) {
+      bug.status = 'pr_created';
+      bug.fixConfidence = 85;
+      bug.prUrl = '#';
+      bug.humanReadableExplanation = 'Ce bug est causé par une mauvaise gestion des entrées. Une correction a été générée automatiquement.';
+    }
+    setTimeout(() => loadBugsPage(), 3000);
+  }
+}
+
+async function openBugDetail(bugId) {
+  const bug = (window._allBugs || getDemoBugs()).find(b => b.id === bugId) || {};
+  const proj = projects.find(p => p.id === bug.projectId);
+  document.getElementById('bug-modal-content').innerHTML = `
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;">
+      <span class="badge badge-${bug.severity}">${bug.severity}</span>
+      <span class="badge badge-${(bug.status||'open').replace('_','-')}">${bug.status||'open'}</span>
+      <span style="font-size:10px;color:var(--text3);margin-left:auto;">${bug.source||'manual'} · ${timeAgo(bug.createdAt)}</span>
+    </div>
+    <div style="font-family:var(--font-display);font-size:16px;font-weight:700;color:var(--text);margin-bottom:16px;">${bug.title}</div>
+    ${proj ? `<div style="font-size:11px;color:var(--text3);margin-bottom:12px;">Projet: <span style="color:var(--cyan);">${proj.name}</span></div>` : ''}
+    ${bug.filePath ? `<div style="background:var(--bg3);border-radius:6px;padding:10px 12px;font-size:11px;margin-bottom:12px;"><span style="color:var(--text3);">Fichier: </span><span style="color:var(--cyan);">${bug.filePath}${bug.lineNumber?':'+bug.lineNumber:''}</span></div>` : ''}
+    ${bug.rawMessage ? `
+      <div style="margin-bottom:12px;">
+        <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Message brut</div>
+        <div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:12px;font-size:11px;color:var(--text2);line-height:1.7;max-height:120px;overflow-y:auto;">${bug.rawMessage}</div>
+      </div>
+    ` : ''}
+    ${bug.humanReadableExplanation ? `
+      <div class="report-ai-summary" style="margin-bottom:12px;">
+        <div class="report-ai-label">🤖 Explication AI</div>
+        ${bug.humanReadableExplanation}
+      </div>
+    ` : `<div style="background:var(--bg3);border-radius:6px;padding:12px;font-size:11px;color:var(--text3);margin-bottom:12px;">💡 Lance le AI Fix pour obtenir une explication détaillée et une correction automatique.</div>`}
+    ${bug.aiFixSuggestion ? `
+      <div class="fix-panel">
+        <div class="fix-panel-title">🔧 Correction suggérée par l'AI</div>
+        <div class="fix-content">${bug.aiFixSuggestion}</div>
+        ${bug.fixConfidence ? `
+          <div class="confidence-bar">
+            <span class="confidence-label">Confiance</span>
+            <div class="progress-bar" style="flex:1;height:6px;"><div class="progress-fill" style="width:${bug.fixConfidence}%;background:${bug.fixConfidence>75?'var(--green)':'var(--orange)'};"></div></div>
+            <span class="confidence-value" style="color:${bug.fixConfidence>75?'var(--green)':'var(--orange)'};">${bug.fixConfidence}%</span>
+          </div>
+        ` : ''}
+      </div>
+    ` : ''}
+    ${bug.prUrl ? `<div style="margin-top:12px;"><a href="${bug.prUrl}" target="_blank" class="btn btn-success" style="display:inline-flex;">🔗 Voir la Pull Request #${bug.prNumber||''}</a></div>` : ''}
+    <div style="display:flex;gap:8px;margin-top:16px;padding-top:12px;border-top:1px solid var(--border);">
+      ${bug.status === 'open' ? `<button class="btn btn-ai" onclick="triggerAiFixModal('${bug.id}')">🤖 Lancer AI Fix</button>` : ''}
+      <button class="btn btn-outline" onclick="closeModal('bug-modal')">Fermer</button>
+    </div>
+  `;
+  document.getElementById('bug-modal').style.display = 'flex';
+}
+
+async function triggerAiFixModal(bugId) {
+  showToast('🤖 AI Fix déclenché pour ce bug!', 'info');
+  closeModal('bug-modal');
+  await api(`/bugs/${bugId}/ai-fix`, 'POST');
+  setTimeout(() => loadBugsPage(), 4000);
+}
+
+// ─── INCIDENTS PAGE ───────────────────────────────────────
+async function loadIncidentsPage() {
+  setContent(`<div class="loading-overlay"><div class="spinner"></div></div>`);
+  const incidents = await api('/incidents') || getDemoIncidents();
+  updateBadges({ openIncidents: incidents.filter(i => i.status === 'pending' || i.status === 'analyzing').length });
+  setContent(`
+    <div class="card" style="padding:0;">
+      <div style="padding:16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
+        <div class="card-title">⚡ Incidents (${incidents.length})</div>
+        <button class="btn btn-primary btn-sm" onclick="createSampleIncident()">＋ Créer Incident</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Titre</th><th>Projet</th><th>Source</th><th>Status</th><th>Analyse AI</th><th>PR</th><th>Date</th></tr></thead>
+          <tbody>
+            ${incidents.map(i => {
+              const proj = projects.find(p => p.id === i.projectId);
+              return `<tr>
+                <td style="max-width:200px;"><div style="font-size:11px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${i.title}</div></td>
+                <td><span style="font-size:11px;color:var(--cyan);">${proj?.name||'—'}</span></td>
+                <td><span style="font-size:10px;color:var(--text3);">${i.source||'manual'}</span></td>
+                <td><span class="badge badge-${incidentStatusColor(i.status)}">${i.status}</span></td>
+                <td style="max-width:200px;"><div style="font-size:10px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${i.aiAnalysis||'—'}</div></td>
+                <td>${i.prUrl?`<a href="${i.prUrl}" target="_blank" class="btn btn-success btn-sm">🔗 PR</a>`:'—'}</td>
+                <td style="font-size:10px;color:var(--text3);">${timeAgo(i.createdAt)}</td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `);
+}
+
+function incidentStatusColor(s) {
+  const map = { pending: 'open', analyzing: 'ai_fixing', analyzed: 'medium', fix_generated: 'medium', validating: 'warning', approved: 'healthy', completed: 'resolved', failed: 'critical', rejected: 'critical' };
+  return map[s] || 'open';
+}
+
+async function createSampleIncident() {
+  if (!projects.length) { showToast('Créez d\'abord un projet', 'error'); return; }
+  await api('/incidents', 'POST', {
+    projectId: projects[0].id,
+    title: 'Pipeline Build Failure détectée',
+    source: 'jenkins',
+    status: 'pending',
+    description: 'Build #42 a échoué en phase de test',
+  });
+  showToast('✅ Incident créé', 'success');
+  loadIncidentsPage();
+}
+
+// ─── REPORTS PAGE ─────────────────────────────────────────
+async function loadReportsPage() {
+  setContent(`<div class="loading-overlay"><div class="spinner"></div></div>`);
+  const reports = await api('/reports') || getDemoReports();
+  setContent(`
+    <div style="margin-bottom:16px;display:flex;gap:10px;">
+      <select class="form-select" style="max-width:180px;" onchange="filterReports(this.value)">
+        <option value="">Tous les types</option>
+        <option value="sonarqube">SonarQube</option>
+        <option value="trivy">Trivy</option>
+        <option value="jenkins">Jenkins</option>
+        <option value="combined">Combined</option>
+      </select>
+    </div>
+    <div id="reports-list">
+      ${reports.length ? reports.map(r => reportCard(r)).join('') :
+        `<div class="empty-state"><div class="empty-icon">📋</div><div class="empty-title">Aucun rapport</div><div class="empty-desc">Générez votre premier rapport via le bouton en haut à droite.</div></div>`}
+    </div>
+  `);
+  window._allReports = reports;
+}
+
+function reportCard(r) {
+  const icons = { sonarqube: '🔍', trivy: '🛡️', jenkins: '⚙️', combined: '📊' };
+  const colors = { sonarqube: '#00d4ff', trivy: '#a855f7', jenkins: '#ff8c42', combined: '#00ff88' };
+  const icon = icons[r.type] || '📋';
+  const color = colors[r.type] || '#00d4ff';
+  const riskColors = { LOW: '#00ff88', MEDIUM: '#ffd600', HIGH: '#ff8c42', CRITICAL: '#ff3d6e' };
+  const proj = projects.find(p => p.id === r.projectId);
+  return `<div class="report-card">
+    <div class="report-header">
+      <div class="report-type-icon" style="background:${color}22;color:${color};">${icon}</div>
+      <div style="flex:1;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="font-family:var(--font-display);font-size:14px;font-weight:700;color:var(--text);">Rapport ${r.type?.toUpperCase()}</div>
+          ${r.riskLevel ? `<span class="badge" style="background:${riskColors[r.riskLevel]||'#00ff88'}22;color:${riskColors[r.riskLevel]||'#00ff88'};border-color:${riskColors[r.riskLevel]||'#00ff88'}44;">Risque ${r.riskLevel}</span>` : ''}
+        </div>
+        <div style="font-size:10px;color:var(--text3);">${proj?.name||'—'} · ${timeAgo(r.createdAt)}</div>
+      </div>
+      ${r.securityScore ? `<div style="font-family:var(--font-display);font-size:24px;font-weight:800;color:${r.securityScore>=80?'#00ff88':r.securityScore>=60?'#ff8c42':'#ff3d6e'};">${Math.round(r.securityScore)}<span style="font-size:12px;">%</span></div>` : ''}
+    </div>
+    <div class="report-ai-summary">
+      <div class="report-ai-label">✨ Résumé AI</div>
+      ${r.aiSummary || 'Analyse en cours...'}
+    </div>
+    ${r.rawData ? `<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
+      ${Object.entries(r.rawData).slice(0,6).map(([k,v]) => `<div style="background:var(--bg4);border:1px solid var(--border);border-radius:6px;padding:6px 10px;text-align:center;min-width:70px;">
+        <div style="font-size:14px;font-weight:700;color:var(--text);">${typeof v === 'number' ? v : '—'}</div>
+        <div style="font-size:9px;color:var(--text3);text-transform:uppercase;">${k.replace(/([A-Z])/g,' $1').trim()}</div>
+      </div>`).join('')}
+    </div>` : ''}
+  </div>`;
+}
+
+function filterReports(type) {
+  const filtered = (window._allReports || []).filter(r => !type || r.type === type);
+  document.getElementById('reports-list').innerHTML = filtered.map(r => reportCard(r)).join('') ||
+    `<div class="empty-state"><div class="empty-icon">📋</div><div class="empty-title">Aucun rapport de ce type</div></div>`;
+}
+
+async function generateSampleReport() {
+  if (!projects.length) { showToast('Créez d\'abord un projet', 'error'); return; }
+  const proj = projects[0];
+  showToast('⏳ Génération du rapport...', 'info');
+  const types = ['sonarqube', 'trivy', 'jenkins', 'combined'];
+  const type = types[Math.floor(Math.random() * types.length)];
+  const rawData = type === 'sonarqube'
+    ? { bugs: Math.floor(Math.random()*10), vulnerabilities: Math.floor(Math.random()*5), codeSmells: Math.floor(Math.random()*30), coverage: Math.floor(60+Math.random()*35) }
+    : type === 'trivy'
+    ? { critical: Math.floor(Math.random()*3), high: Math.floor(Math.random()*8), medium: Math.floor(Math.random()*15), low: Math.floor(Math.random()*20) }
+    : { result: 'SUCCESS', duration: 45000, buildNumber: Math.floor(Math.random()*100) };
+  await api('/reports', 'POST', { projectId: proj.id, type, rawData });
+  showToast('✅ Rapport généré avec analyse AI!', 'success');
+  loadReportsPage();
+}
+
+// ─── CHATOPS PAGE ─────────────────────────────────────────
+function loadChatopsPage() {
+  setContent(`
+    <div id="chat-container">
+      <div class="chat-messages" id="chat-messages">
+        <div class="chat-msg">
+          <div class="chat-avatar ai">🤖</div>
+          <div>
+            <div class="chat-bubble">
+              Bonjour ! Je suis votre assistant DevSecOps AI.<br><br>
+              Je peux vous aider à :<br>
+              • <strong>Analyser les vulnérabilités</strong> de vos projets<br>
+              • <strong>Expliquer les bugs</strong> et suggérer des corrections<br>
+              • <strong>Résumer les rapports</strong> SonarQube / Trivy<br>
+              • <strong>Déclencher des fixes AI</strong> sur des bugs ciblés<br><br>
+              Que souhaitez-vous faire ?
+            </div>
+            <div class="chat-time">${new Date().toLocaleTimeString()}</div>
+          </div>
+        </div>
+      </div>
+      <div class="chat-input-area">
+        <input class="chat-input" id="chat-input" placeholder="Ex: Quel est le score de sécurité de mon projet ?" onkeydown="if(event.key==='Enter')sendChat()" />
+        <button class="btn btn-primary chat-send" onclick="sendChat()">Envoyer ↑</button>
+      </div>
+    </div>
+  `);
+}
+
+async function sendChat() {
+  const input = document.getElementById('chat-input');
+  const msg = input.value.trim();
+  if (!msg) return;
+  input.value = '';
+  appendChatMsg(msg, 'user');
+
+  // Show typing indicator
+  const typingId = 'typing-' + Date.now();
+  appendChatMsg('<div class="spinner"></div>', 'ai', typingId);
+
+  // Try API, fallback to local AI
+  const res = await api('/chat/ask', 'POST', { message: msg });
+  document.getElementById(typingId)?.remove();
+
+  const reply = res?.reply || generateLocalReply(msg);
+  appendChatMsg(reply, 'ai');
+}
+
+function appendChatMsg(text, role, id) {
+  const container = document.getElementById('chat-messages');
+  const el = document.createElement('div');
+  el.className = `chat-msg ${role}`;
+  if (id) el.id = id;
+  el.innerHTML = `
+    <div class="chat-avatar ${role}">${role === 'ai' ? '🤖' : (currentUser?.name||'U')[0].toUpperCase()}</div>
+    <div>
+      <div class="chat-bubble">${text}</div>
+      <div class="chat-time">${new Date().toLocaleTimeString()}</div>
+    </div>
+  `;
+  container.appendChild(el);
+  container.scrollTop = container.scrollHeight;
+}
+
+function generateLocalReply(msg) {
+  const m = msg.toLowerCase();
+  if (m.includes('score') || m.includes('sécurité')) {
+    const p = projects[0];
+    return p ? `Le score de sécurité de <strong>${p.name}</strong> est actuellement de <strong>${Math.round(p.securityScore||85)}%</strong>. ${p.securityScore >= 80 ? '✅ Excellent niveau !' : '⚠️ Des améliorations sont recommandées.'}` : 'Créez d\'abord un projet pour voir son score.';
+  }
+  if (m.includes('bug') || m.includes('erreur')) {
+    const bugs = window._allBugs || getDemoBugs();
+    const open = bugs.filter(b => b.status === 'open').length;
+    return `Il y a actuellement <strong>${open} bugs ouverts</strong> sur la plateforme. ${open > 0 ? `Je recommande de traiter en priorité les bugs <strong>critiques et high</strong>. Allez dans l'onglet <strong>Bugs & Erreurs</strong> pour lancer le AI Fix.` : '✅ Aucun bug critique détecté !'}`;
+  }
+  if (m.includes('sonar')) {
+    return `SonarQube analyse la qualité du code : bugs, vulnerabilités, code smells et couverture de tests. Accédez au dashboard d'un projet pour voir les métriques détaillées.`;
+  }
+  if (m.includes('trivy')) {
+    return `Trivy scanne les vulnérabilités CVE dans vos dépendances et images Docker. Il catégorise les findings par sévérité : CRITICAL, HIGH, MEDIUM, LOW. Les CVE critiques doivent être patchés en priorité.`;
+  }
+  if (m.includes('jenkins')) {
+    return `Jenkins gère vos pipelines CI/CD. Surveillez le taux de succès des builds et configurez des alertes pour les échecs. Un build qui échoue peut indiquer un bug ou une rupture de contrat d'API.`;
+  }
+  if (m.includes('fix') || m.includes('corriger') || m.includes('correction')) {
+    return `Pour lancer un AI Fix sur un bug :<br>1. Allez dans <strong>Bugs & Erreurs</strong><br>2. Trouvez le bug ciblé<br>3. Cliquez sur <strong>🤖 Fix</strong><br><br>L'AI analyse le contexte, génère une correction et crée automatiquement une Pull Request GitHub.`;
+  }
+  if (m.includes('rapport') || m.includes('report')) {
+    return `Les rapports synthétisent les données de SonarQube, Trivy et Jenkins. Chaque rapport inclut un <strong>résumé AI</strong> en langage naturel et un <strong>score de risque</strong> global. Allez dans <strong>Rapports</strong> pour les consulter.`;
+  }
+  if (m.includes('projet')) {
+    return `Vous avez <strong>${projects.length} projet(s)</strong> configurés. Allez dans <strong>Projets</strong> pour ajouter ou gérer vos projets, configurer GitHub, SonarQube, Jenkins et Trivy.`;
+  }
+  return `Je comprends votre demande concernant "<em>${msg}</em>".<br><br>Connectez n8n pour des réponses AI complètes avec accès aux données temps réel de vos projets. En mode démo, je peux vous guider sur : sécurité, bugs, rapports, projets, pipelines.`;
+}
+
+// ─── PROJECT MODAL ────────────────────────────────────────
+function openProjectModal(projectId) {
+  document.getElementById('project-modal-title').textContent = projectId ? 'Modifier le Projet' : 'Nouveau Projet';
+  document.getElementById('project-id').value = projectId || '';
+  if (projectId) {
+    const p = projects.find(p => p.id === projectId);
+    if (p) {
+      document.getElementById('proj-name').value = p.name || '';
+      document.getElementById('proj-desc').value = p.description || '';
+      document.getElementById('proj-env').value = p.environment || 'dev';
+      document.getElementById('proj-tags').value = (p.tags||[]).join(',');
+      document.getElementById('proj-github').value = p.githubRepo || '';
+      document.getElementById('proj-sonar-url').value = p.sonarqubeUrl || '';
+      document.getElementById('proj-sonar-key').value = p.sonarqubeKey || '';
+      document.getElementById('proj-jenkins-url').value = p.jenkinsUrl || '';
+      document.getElementById('proj-jenkins-job').value = p.jenkinsJobName || '';
+      document.getElementById('proj-trivy').checked = p.trivyEnabled || false;
+      document.getElementById('proj-docker').value = p.dockerImage || '';
+    }
+  } else {
+    ['proj-name','proj-desc','proj-tags','proj-github','proj-github-token','proj-sonar-url','proj-sonar-key','proj-sonar-token','proj-jenkins-url','proj-jenkins-job','proj-jenkins-token','proj-docker'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+    document.getElementById('proj-trivy').checked = false;
+  }
+  document.getElementById('project-modal').style.display = 'flex';
+}
+
+async function saveProject() {
+  const id = document.getElementById('project-id').value;
+  const dto = {
+    name: document.getElementById('proj-name').value,
+    description: document.getElementById('proj-desc').value,
+    environment: document.getElementById('proj-env').value,
+    tags: document.getElementById('proj-tags').value.split(',').map(t=>t.trim()).filter(Boolean),
+    githubRepo: document.getElementById('proj-github').value,
+    githubToken: document.getElementById('proj-github-token').value,
+    sonarqubeUrl: document.getElementById('proj-sonar-url').value,
+    sonarqubeKey: document.getElementById('proj-sonar-key').value,
+    sonarqubeToken: document.getElementById('proj-sonar-token').value,
+    jenkinsUrl: document.getElementById('proj-jenkins-url').value,
+    jenkinsJobName: document.getElementById('proj-jenkins-job').value,
+    jenkinsToken: document.getElementById('proj-jenkins-token').value,
+    trivyEnabled: document.getElementById('proj-trivy').checked,
+    dockerImage: document.getElementById('proj-docker').value,
+  };
+  if (!dto.name) { showToast('Le nom est requis', 'error'); return; }
+
+  const result = id
+    ? await api(`/projects/${id}`, 'PUT', dto)
+    : await api('/projects', 'POST', dto);
+
+  if (result) {
+    showToast(id ? '✅ Projet mis à jour' : '✅ Projet créé', 'success');
+  } else {
+    // Demo mode
+    const newProj = { id: 'demo-' + Date.now(), ...dto, status: 'healthy', securityScore: 85 };
+    if (id) {
+      const idx = projects.findIndex(p => p.id === id);
+      if (idx >= 0) projects[idx] = { ...projects[idx], ...dto };
+    } else {
+      projects.push(newProj);
+    }
+    showToast(id ? '✅ Projet mis à jour (démo)' : '✅ Projet créé (démo)', 'success');
+  }
+  closeModal('project-modal');
+  loadProjectsPage();
+}
+
+async function deleteProject(id) {
+  if (!confirm('Supprimer ce projet ?')) return;
+  const res = await api(`/projects/${id}`, 'DELETE');
+  if (res || true) {
+    projects = projects.filter(p => p.id !== id);
+    showToast('🗑️ Projet supprimé', 'info');
+    loadProjectsPage();
+  }
+}
+
+// ─── CHARTS ───────────────────────────────────────────────
+function renderLineChart(id, labels, data) {
+  const ctx = document.getElementById(id)?.getContext('2d');
+  if (!ctx) return;
+  charts[id] = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        data,
+        borderColor: '#00d4ff',
+        backgroundColor: 'rgba(0,212,255,0.08)',
+        borderWidth: 2,
+        fill: true,
+        tension: 0.4,
+        pointBackgroundColor: '#00d4ff',
+        pointRadius: 3,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: '#4a6580', font: { family: 'JetBrains Mono', size: 10 } }, grid: { color: '#1a2d42' } },
+        y: { ticks: { color: '#4a6580', font: { family: 'JetBrains Mono', size: 10 } }, grid: { color: '#1a2d42' }, beginAtZero: true },
+      },
+    }
+  });
+}
+
+function renderDonutChart(id, labels, data, colors) {
+  const ctx = document.getElementById(id)?.getContext('2d');
+  if (!ctx) return;
+  charts[id] = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels,
+      datasets: [{
+        data,
+        backgroundColor: colors.map(c => c + '99'),
+        borderColor: colors,
+        borderWidth: 2,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: true,
+      plugins: {
+        legend: { position: 'right', labels: { color: '#8fa8c0', font: { family: 'JetBrains Mono', size: 10 }, boxWidth: 12, padding: 12 } }
+      },
+      cutout: '65%',
+    }
+  });
+}
+
+function renderBarChart(id, labels, data, colors) {
+  const ctx = document.getElementById(id)?.getContext('2d');
+  if (!ctx) return;
+  charts[id] = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        data,
+        backgroundColor: colors || 'rgba(0,212,255,0.4)',
+        borderColor: colors || '#00d4ff',
+        borderWidth: 1,
+        borderRadius: 4,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: '#4a6580', font: { size: 10 } }, grid: { display: false } },
+        y: { ticks: { color: '#4a6580', font: { size: 10 } }, grid: { color: '#1a2d42' }, beginAtZero: true, max: 1 },
+      },
+    }
+  });
+}
+
+// ─── HELPERS ──────────────────────────────────────────────
+function setContent(html) { document.getElementById('content').innerHTML = html; }
+function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+function showToast(msg, type = 'info') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = type;
+  t.style.display = 'block';
+  setTimeout(() => t.style.display = 'none', 3500);
+}
+
+function updateBadges(s) {
+  const bc = document.getElementById('bugs-count');
+  const ic = document.getElementById('inc-count');
+  if (bc) bc.textContent = s.openBugs || s.criticalBugs || '0';
+  if (ic) ic.textContent = s.openIncidents || '0';
+}
+
+function timeAgo(date) {
+  if (!date) return '—';
+  const d = new Date(date);
+  if (isNaN(d)) return '—';
+  const diff = (Date.now() - d) / 1000;
+  if (diff < 60) return 'à l\'instant';
+  if (diff < 3600) return Math.floor(diff/60) + 'min';
+  if (diff < 86400) return Math.floor(diff/3600) + 'h';
+  return Math.floor(diff/86400) + 'j';
+}
+
+// ─── DEMO DATA ────────────────────────────────────────────
+function getDemoProjects() {
+  return [
+    { id: 'p1', name: 'api-gateway', description: 'NestJS API Gateway', environment: 'prod', status: 'warning', securityScore: 72, tags: ['backend','nestjs'], githubRepo: 'https://github.com/org/api-gateway', sonarqubeKey: 'api-gateway', trivyEnabled: true },
+    { id: 'p2', name: 'frontend-app', description: 'Angular 18 SPA', environment: 'staging', status: 'healthy', securityScore: 88, tags: ['frontend','angular'], githubRepo: 'https://github.com/org/frontend-app' },
+    { id: 'p3', name: 'auth-service', description: 'JWT Authentication', environment: 'prod', status: 'critical', securityScore: 45, tags: ['backend','security'], sonarqubeKey: 'auth-service', trivyEnabled: true },
+    { id: 'p4', name: 'data-pipeline', description: 'ETL Pipeline', environment: 'dev', status: 'healthy', securityScore: 91, tags: ['data','python'] },
+  ];
+}
+
+function getDemoBugs() {
+  return [
+    { id: 'b1', projectId: 'p1', title: 'SQL Injection vulnerability in user input handler', severity: 'critical', status: 'open', source: 'sonarqube', createdAt: new Date(Date.now()-3600000), filePath: 'src/users/users.controller.ts', lineNumber: 42, rawMessage: 'User input is not sanitized before SQL query construction' },
+    { id: 'b2', projectId: 'p3', title: 'CVE-2024-1234: OpenSSL buffer overflow', severity: 'critical', status: 'ai_fixing', source: 'trivy', createdAt: new Date(Date.now()-7200000), fixConfidence: 82, humanReadableExplanation: 'Cette CVE affecte OpenSSL < 3.0.8. Elle permet une exécution de code arbitraire via un buffer overflow dans le parsing de certificats.' },
+    { id: 'b3', projectId: 'p1', title: 'Missing authentication on /admin endpoint', severity: 'high', status: 'pr_created', source: 'sonarqube', createdAt: new Date(Date.now()-10800000), prUrl: '#', prNumber: 42, fixConfidence: 91, aiFixSuggestion: 'Ajouter @UseGuards(JwtAuthGuard) et @Roles(UserRole.ADMIN) sur le controller admin.' },
+    { id: 'b4', projectId: 'p2', title: 'Unused variable declared in component', severity: 'low', status: 'resolved', source: 'sonarqube', createdAt: new Date(Date.now()-86400000) },
+    { id: 'b5', projectId: 'p1', title: 'HTTP request without timeout configuration', severity: 'medium', status: 'open', source: 'sonarqube', createdAt: new Date(Date.now()-43200000), filePath: 'src/integrations/http.service.ts', lineNumber: 18 },
+    { id: 'b6', projectId: 'p3', title: 'CVE-2024-5678: libcurl SSRF vulnerability', severity: 'high', status: 'open', source: 'trivy', createdAt: new Date(Date.now()-21600000) },
+  ];
+}
+
+function getDemoStats() {
+  const bugs = getDemoBugs();
+  return {
+    totalProjects: 4, healthyProjects: 2, warningProjects: 1, criticalProjects: 1,
+    totalBugs: bugs.length, openBugs: bugs.filter(b=>b.status==='open').length,
+    criticalBugs: bugs.filter(b=>b.severity==='critical').length,
+    fixedBugs: bugs.filter(b=>b.status==='resolved'||b.status==='pr_created').length,
+    avgSecurityScore: 74, recentBugs: bugs.slice(0,5),
+    bugsByDay: getDemoBugsByDay(),
+    bugsBySeverity: { critical: 2, high: 2, medium: 1, low: 1 },
+  };
+}
+
+function getDemoBugsByDay() {
+  return Array.from({length:7}, (_,i) => {
+    const d = new Date(); d.setDate(d.getDate()-6+i);
+    return { date: d.toISOString().split('T')[0], count: Math.floor(Math.random()*5) };
+  });
+}
+
+function getDemoProjectDashboard() {
+  return {
+    sonar: { bugs: 3, vulnerabilities: 2, codeSmells: 14, coverage: 74, duplications: 2.3, securityRating: 'B', reliabilityRating: 'A', maintainabilityRating: 'A', linesOfCode: 8420 },
+    jenkins: { result: 'SUCCESS', duration: 87000, timestamp: Date.now()-1800000 },
+    trivy: { critical: 1, high: 3, medium: 8, low: 12, unknown: 0, vulnerabilities: [
+      { id: 'CVE-2024-1234', severity: 'CRITICAL', package: 'openssl', version: '1.1.1', fixedVersion: '3.0.8', title: 'Buffer overflow in certificate parsing' },
+      { id: 'CVE-2024-5678', severity: 'HIGH', package: 'libcurl', version: '7.80.0', fixedVersion: '8.0.0', title: 'SSRF via URL parsing' },
+    ]},
+    github: { openPRs: 2, mergedPRs: 18, totalPRs: 23, recentPRs: [
+      { title: 'Fix: SQL injection in user controller', state: 'open', number: 44, url: '#', createdAt: new Date(Date.now()-3600000).toISOString() },
+      { title: 'Feat: Add rate limiting middleware', state: 'closed', number: 43, url: '#', createdAt: new Date(Date.now()-86400000).toISOString(), mergedAt: new Date(Date.now()-43200000).toISOString() },
+    ]},
+    bugs: getDemoBugs().slice(0,4),
+  };
+}
+
+function getDemoReports() {
+  return [
+    { id: 'r1', projectId: 'p1', type: 'sonarqube', securityScore: 72, riskLevel: 'MEDIUM', createdAt: new Date(Date.now()-3600000), aiSummary: 'Analyse SonarQube : 3 bugs détectés dont 2 vulnérabilités potentielles. La couverture de code est de 74%, satisfaisante mais améliorable. Une faille d\'injection SQL critique nécessite une correction immédiate.', rawData: { bugs: 3, vulnerabilities: 2, codeSmells: 14, coverage: 74 } },
+    { id: 'r2', projectId: 'p3', type: 'trivy', securityScore: 45, riskLevel: 'HIGH', createdAt: new Date(Date.now()-7200000), aiSummary: 'Scan Trivy : 1 vulnérabilité critique (CVE-2024-1234 dans OpenSSL) et 3 failles hautes identifiées. Une action immédiate est requise pour la mise à jour d\'OpenSSL vers la version 3.0.8+.', rawData: { critical: 1, high: 3, medium: 8, low: 12 } },
+  ];
+}
+
+function getDemoIncidents() {
+  return [
+    { id: 'i1', projectId: 'p1', title: 'Pipeline Build #42 Failure', source: 'jenkins', status: 'analyzed', aiAnalysis: 'Échec dû à des tests unitaires qui échouent suite à un changement de schéma DB.', createdAt: new Date(Date.now()-3600000) },
+    { id: 'i2', projectId: 'p3', title: 'SonarQube Quality Gate Failed', source: 'sonarqube', status: 'fix_generated', prUrl: '#', createdAt: new Date(Date.now()-7200000) },
+  ];
+}
+
+// ─── INIT ─────────────────────────────────────────────────
+if (token && currentUser) {
+  showApp();
+}
+
+document.getElementById('login-email').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+document.getElementById('login-password').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+</script>
+</body>
+</html>

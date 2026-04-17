@@ -1,0 +1,49 @@
+{
+  "title": "Spring Boot JVM — DevSecOps PFE",
+  "uid": "devsecops-jvm",
+  "schemaVersion": 38,
+  "version": 1,
+  "refresh": "30s",
+  "panels": [
+    {
+      "id": 1, "type": "stat", "title": "App Status",
+      "gridPos": {"h":4,"w":4,"x":0,"y":0},
+      "targets": [{"expr": "up{job=\"spring-boot-app\"}", "legendFormat": "Status"}],
+      "options": {"colorMode":"background","graphMode":"none"},
+      "fieldConfig": {"defaults":{"mappings":[{"type":"value","options":{"0":{"text":"DOWN","color":"red"},"1":{"text":"UP","color":"green"}}}]}}
+    },
+    {
+      "id": 2, "type": "stat", "title": "HTTP Requests/s",
+      "gridPos": {"h":4,"w":4,"x":4,"y":0},
+      "targets": [{"expr": "rate(http_server_requests_seconds_count{job=\"spring-boot-app\"}[1m])", "legendFormat": "req/s"}]
+    },
+    {
+      "id": 3, "type": "stat", "title": "JVM Heap Used (MB)",
+      "gridPos": {"h":4,"w":4,"x":8,"y":0},
+      "targets": [{"expr": "jvm_memory_used_bytes{area=\"heap\",job=\"spring-boot-app\"} / 1024 / 1024", "legendFormat": "MB"}]
+    },
+    {
+      "id": 4, "type": "stat", "title": "Active Threads",
+      "gridPos": {"h":4,"w":4,"x":12,"y":0},
+      "targets": [{"expr": "jvm_threads_live_threads{job=\"spring-boot-app\"}", "legendFormat": "threads"}]
+    },
+    {
+      "id": 5, "type": "timeseries", "title": "HTTP Requests Rate",
+      "gridPos": {"h":8,"w":12,"x":0,"y":4},
+      "targets": [
+        {"expr": "rate(http_server_requests_seconds_count{job=\"spring-boot-app\",status=~\"2..\"}[1m])", "legendFormat": "2xx"},
+        {"expr": "rate(http_server_requests_seconds_count{job=\"spring-boot-app\",status=~\"4..\"}[1m])", "legendFormat": "4xx"},
+        {"expr": "rate(http_server_requests_seconds_count{job=\"spring-boot-app\",status=~\"5..\"}[1m])", "legendFormat": "5xx"}
+      ]
+    },
+    {
+      "id": 6, "type": "timeseries", "title": "JVM Memory Usage",
+      "gridPos": {"h":8,"w":12,"x":12,"y":4},
+      "targets": [
+        {"expr": "jvm_memory_used_bytes{area=\"heap\",job=\"spring-boot-app\"}/1024/1024", "legendFormat": "Heap Used"},
+        {"expr": "jvm_memory_max_bytes{area=\"heap\",job=\"spring-boot-app\"}/1024/1024", "legendFormat": "Heap Max"}
+      ]
+    }
+  ],
+  "time": {"from": "now-1h", "to": "now"}
+}

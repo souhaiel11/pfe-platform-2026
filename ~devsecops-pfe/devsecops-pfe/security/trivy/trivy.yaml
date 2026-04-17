@@ -1,0 +1,12 @@
+# Trivy configuration
+severity: HIGH,CRITICAL
+exit-code: 1
+format: template
+ignore-unfixed: false
+vuln-type:
+  - os
+  - library
+security-checks:
+  - vuln
+  - secret
+  - config

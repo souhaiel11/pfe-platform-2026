@@ -1,0 +1,185 @@
+pipeline {
+    agent any
+
+    environment {
+        APP_NAME     = 'devsecops-pfe'
+        DOCKER_IMAGE = "devsecops-pfe:${BUILD_NUMBER}"
+        SONAR_HOST   = 'http://sonarqube:9000'
+        SONAR_TOKEN  = credentials('sonar-token')
+        REGISTRY     = 'localhost:5000'
+    }
+
+    options {
+        buildDiscarder(logRotator(numToKeepStr: '10'))
+        timeout(time: 60, unit: 'MINUTES')
+        timestamps()
+    }
+
+    stages {
+
+        stage('1 - Checkout') {
+            steps {
+                checkout scm
+                echo "Branch: ${env.BRANCH_NAME} | Build: ${BUILD_NUMBER}"
+            }
+        }
+
+        stage('2 - Build') {
+            steps {
+                dir('app') {
+                    sh 'mvn clean compile -q'
+                }
+            }
+        }
+
+        stage('3 - Tests Unitaires + Couverture') {
+            steps {
+                dir('app') {
+                    sh 'mvn test jacoco:report'
+                }
+            }
+            post {
+                always {
+                    junit 'app/target/surefire-reports/*.xml'
+                    jacoco(
+                        execPattern: 'app/target/jacoco.exec',
+                        classPattern: 'app/target/classes',
+                        sourcePattern: 'app/src/main/java',
+                        minimumLineCoverage: '70'
+                    )
+                }
+            }
+        }
+
+        stage('4 - SAST - SonarQube') {
+            steps {
+                dir('app') {
+                    sh """
+                        mvn sonar:sonar \
+                          -Dsonar.host.url=${SONAR_HOST} \
+                          -Dsonar.login=${SONAR_TOKEN} \
+                          -Dsonar.projectKey=${APP_NAME} \
+                          -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
+                    """
+                }
+            }
+            post {
+                always {
+                    script {
+                        def qg = waitForQualityGate()
+                        if (qg.status != 'OK') {
+                            error "SonarQube Quality Gate FAILED: ${qg.status}"
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('5 - SCA - OWASP Dependency Check') {
+            steps {
+                dir('app') {
+                    sh 'mvn org.owasp:dependency-check-maven:check -DfailBuildOnCVSS=7'
+                }
+            }
+            post {
+                always {
+                    publishHTML(target: [
+                        reportDir:   'app/target/dependency-check-report',
+                        reportFiles: 'dependency-check-report.html',
+                        reportName:  'OWASP Dependency Check'
+                    ])
+                }
+            }
+        }
+
+        stage('6 - Package Docker') {
+            steps {
+                dir('app') {
+                    sh "docker build -t ${DOCKER_IMAGE} ."
+                }
+            }
+        }
+
+        stage('7 - Container Scan - Trivy') {
+            steps {
+                sh """
+                    docker run --rm \
+                      -v /var/run/docker.sock:/var/run/docker.sock \
+                      -v ${WORKSPACE}/security/trivy:/reports \
+                      aquasec/trivy:latest image \
+                      --exit-code 1 \
+                      --severity HIGH,CRITICAL \
+                      --format template \
+                      --template '@/contrib/html.tpl' \
+                      --output /reports/trivy-report.html \
+                      ${DOCKER_IMAGE}
+                """
+            }
+            post {
+                always {
+                    publishHTML(target: [
+                        reportDir:   'security/trivy',
+                        reportFiles: 'trivy-report.html',
+                        reportName:  'Trivy Container Scan'
+                    ])
+                }
+            }
+        }
+
+        stage('8 - Deploy Staging') {
+            when { branch 'develop' }
+            steps {
+                dir('docker') {
+                    sh 'docker compose up -d app postgres'
+                    sh 'sleep 20'
+                }
+            }
+        }
+
+        stage('9 - DAST - OWASP ZAP') {
+            when { branch 'develop' }
+            steps {
+                sh """
+                    docker run --rm \
+                      --network devsecops-net \
+                      -v ${WORKSPACE}/security/zap:/zap/wrk \
+                      ghcr.io/zaproxy/zaproxy:stable \
+                      zap-api-scan.py \
+                      -t http://devsecops-app:8080/v3/api-docs \
+                      -f openapi \
+                      -r /zap/wrk/zap-report.html \
+                      -I
+                """
+            }
+            post {
+                always {
+                    publishHTML(target: [
+                        reportDir:   'security/zap',
+                        reportFiles: 'zap-report.html',
+                        reportName:  'OWASP ZAP DAST'
+                    ])
+                }
+            }
+        }
+
+        stage('10 - Deploy Production') {
+            when { branch 'main' }
+            input {
+                message "Confirmer le deploiement en PRODUCTION ?"
+                ok "Deployer"
+            }
+            steps {
+                dir('docker') {
+                    sh 'docker compose up -d'
+                }
+                echo "Production deployed — Build #${BUILD_NUMBER}"
+            }
+        }
+    }
+
+    post {
+        success { echo "Pipeline SUCCESS — Build #${BUILD_NUMBER}" }
+        failure { echo "Pipeline FAILED  — Build #${BUILD_NUMBER}" }
+        always  { cleanWs() }
+    }
+}

@@ -1,0 +1,73 @@
+{
+  "name": "DevSecOps - AI Bug Fix Workflow",
+  "nodes": [
+    {
+      "parameters": { "path": "bug-fix", "responseMode": "responseNode", "options": {} },
+      "name": "Webhook - Bug Fix Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "position": [240, 300],
+      "id": "webhook-bug-fix"
+    },
+    {
+      "parameters": {
+        "model": "gpt-4",
+        "messages": {
+          "values": [{
+            "role": "system",
+            "content": "Tu es un expert DevSecOps. Analyse le bug fourni et génère:\n1. Une explication simple en français (2-3 phrases)\n2. Une suggestion de correction concrète\n3. Un score de confiance (0-100)\n\nRéponds UNIQUEMENT en JSON: {\"explanation\": \"...\", \"fix\": \"...\", \"confidence\": 85}"
+          }, {
+            "role": "user",
+            "content": "Bug: {{ $json.title }}\nSource: {{ $json.source }}\nFichier: {{ $json.filePath }}:{{ $json.lineNumber }}\nMessage: {{ $json.rawMessage }}\nSévérité: {{ $json.severity }}"
+          }]
+        }
+      },
+      "name": "OpenAI - Analyze Bug",
+      "type": "n8n-nodes-base.openAi",
+      "position": [480, 300],
+      "id": "openai-analyze"
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $input.first().json.message.content;\nlet parsed;\ntry { parsed = JSON.parse(raw); } catch { parsed = { explanation: raw, fix: 'Voir analyse complète', confidence: 70 }; }\nreturn [{ json: { ...parsed, bugId: $('Webhook - Bug Fix Trigger').first().json.bugId, projectId: $('Webhook - Bug Fix Trigger').first().json.projectId } }];"
+      },
+      "name": "Parse AI Response",
+      "type": "n8n-nodes-base.code",
+      "position": [720, 300],
+      "id": "parse-response"
+    },
+    {
+      "parameters": {
+        "url": "http://backend:3000/api/bugs/{{ $json.bugId }}/n8n-result",
+        "sendHeaders": true,
+        "headerParameters": { "parameters": [{ "name": "Content-Type", "value": "application/json" }] },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "humanReadableExplanation", "value": "={{ $json.explanation }}" },
+            { "name": "aiFixSuggestion", "value": "={{ $json.fix }}" },
+            { "name": "fixConfidence", "value": "={{ $json.confidence }}" },
+            { "name": "status", "value": "pr_created" }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Update Bug in Platform",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [960, 300],
+      "id": "update-bug"
+    },
+    {
+      "parameters": { "respondWith": "json", "responseBody": "={{ { success: true, bugId: $json.bugId } }}" },
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [1200, 300],
+      "id": "respond"
+    }
+  ],
+  "connections": {
+    "Webhook - Bug Fix Trigger": { "main": [[{ "node": "OpenAI - Analyze Bug", "type": "main", "index": 0 }]] },
+    "OpenAI - Analyze Bug": { "main": [[{ "node": "Parse AI Response", "type": "main", "index": 0 }]] },
+    "Parse AI Response": { "main": [[{ "node": "Update Bug in Platform", "type": "main", "index": 0 }]] },
+    "Update Bug in Platform": { "main": [[{ "node": "Respond", "type": "main", "index": 0 }]] }
+  }
+}
