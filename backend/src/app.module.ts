@@ -10,6 +10,7 @@ import { ReportsModule } from './reports/reports.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { WebhooksModule } from './webhooks/webhooks.module';
 import { ChatModule } from './chat/chat.module';
+import { IntegrationsModule } from './integrations/integrations.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { ChatModule } from './chat/chat.module';
     DashboardModule,
     WebhooksModule,
     ChatModule,
+    IntegrationsModule,
   ],
 })
 export class AppModule {}

@@ -1,0 +1,375 @@
+import { Component, OnInit, OnDestroy, ViewChild, ElementRef } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { Subscription } from 'rxjs';
+import { ChatService, ChatMessage } from '../../core/services/chat.service';
+
+@Component({
+  selector: 'app-chat-widget',
+  standalone: true,
+  // FIX: No HttpClientModule here — already provided globally in app.config.ts
+  imports: [CommonModule, FormsModule],
+  template: `
+    <div class="chat-wrapper">
+
+      <!-- Panel -->
+      <div class="chat-panel" [class.open]="isOpen">
+        <div class="chat-header">
+          <div class="chat-agent-info">
+            <div class="agent-avatar">IA</div>
+            <div>
+              <div class="agent-name">Assistant DevSecOps</div>
+              <div class="agent-status">
+                <span class="status-dot"></span> En ligne
+              </div>
+            </div>
+          </div>
+          <div style="display:flex;gap:6px;">
+            <button class="header-btn" (click)="clearChat()" title="Effacer">↺</button>
+            <button class="header-btn" (click)="close()" title="Fermer">✕</button>
+          </div>
+        </div>
+
+        <div class="chat-messages" #messagesContainer>
+          <div *ngFor="let msg of messages" class="message" [class.user]="msg.role === 'user'">
+            <div class="message-bubble" [class.user-bubble]="msg.role === 'user'">
+              <pre class="message-content">{{msg.content}}</pre>
+              <div class="message-time">{{msg.timestamp | date:'HH:mm'}}</div>
+            </div>
+          </div>
+
+          <!-- Loading indicator -->
+          <div *ngIf="loading" class="message">
+            <div class="message-bubble">
+              <div class="typing-indicator">
+                <span></span><span></span><span></span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Suggestions -->
+        <div class="suggestions" *ngIf="messages.length <= 1 && !loading">
+          <button class="suggestion-chip" *ngFor="let s of suggestions" (click)="send(s)">
+            {{s}}
+          </button>
+        </div>
+
+        <div class="chat-input-area">
+          <input
+            class="chat-input"
+            [(ngModel)]="inputText"
+            (keydown)="onKeydown($event)"
+            placeholder="Posez votre question..."
+            [disabled]="loading"
+          />
+          <button class="send-btn" (click)="send()" [disabled]="!inputText.trim() || loading">
+            ▶
+          </button>
+        </div>
+      </div>
+
+      <!-- FAB Button -->
+      <button class="chat-fab" (click)="toggle()" [class.open]="isOpen">
+        <span *ngIf="!isOpen">💬</span>
+        <span *ngIf="isOpen">✕</span>
+      </button>
+
+    </div>
+  `,
+  styles: [`
+    .chat-wrapper {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 1000;
+    }
+
+    .chat-fab {
+      width: 52px; height: 52px;
+      border-radius: 50%;
+      background: var(--accent-blue);
+      border: none;
+      color: #080c14;
+      font-size: 20px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-left: auto;
+      box-shadow: 0 0 0 4px #38bdf822;
+      transition: all 0.2s;
+
+      &:hover { transform: scale(1.05); }
+      &.open  { background: var(--bg-secondary); color: var(--text-secondary); border: 1px solid var(--border); }
+    }
+
+    .chat-panel {
+      position: absolute;
+      bottom: 64px;
+      right: 0;
+      width: 360px;
+      height: 520px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      transform: scale(0.9) translateY(20px);
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+      transform-origin: bottom right;
+
+      &.open {
+        transform: scale(1) translateY(0);
+        opacity: 1;
+        pointer-events: all;
+      }
+    }
+
+    .chat-header {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+
+    .chat-agent-info {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .agent-avatar {
+      width: 34px; height: 34px;
+      border-radius: 50%;
+      background: var(--accent-blue-bg);
+      border: 1px solid var(--accent-blue);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--accent-blue);
+      font-family: var(--font-mono);
+    }
+
+    .agent-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .agent-status {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 10px;
+      color: var(--accent-green);
+    }
+
+    .status-dot {
+      width: 5px; height: 5px;
+      border-radius: 50%;
+      background: var(--accent-green);
+      animation: pulse-live 2s infinite;
+    }
+
+    .header-btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-muted);
+      padding: 4px 8px;
+      cursor: pointer;
+      font-size: 12px;
+      transition: all 0.15s;
+
+      &:hover { border-color: var(--border-light); color: var(--text-secondary); }
+    }
+
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .message { display: flex; }
+    .message.user { justify-content: flex-end; }
+
+    .message-bubble {
+      max-width: 80%;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 10px 12px;
+    }
+
+    .user-bubble {
+      background: var(--accent-blue-bg);
+      border-color: var(--accent-blue);
+    }
+
+    .message-content {
+      font-size: 12px;
+      color: var(--text-primary);
+      white-space: pre-wrap;
+      font-family: var(--font-sans);
+      line-height: 1.5;
+      margin: 0;
+    }
+
+    .user-bubble .message-content { color: var(--accent-blue); }
+
+    .message-time {
+      font-size: 10px;
+      color: var(--text-faint);
+      margin-top: 4px;
+      font-family: var(--font-mono);
+    }
+
+    .typing-indicator {
+      display: flex;
+      gap: 4px;
+      padding: 4px 0;
+
+      span {
+        width: 6px; height: 6px;
+        border-radius: 50%;
+        background: var(--accent-blue);
+        animation: typing 1.4s infinite;
+
+        &:nth-child(2) { animation-delay: 0.2s; }
+        &:nth-child(3) { animation-delay: 0.4s; }
+      }
+    }
+
+    @keyframes typing {
+      0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+      30% { transform: translateY(-4px); opacity: 1; }
+    }
+
+    .suggestions {
+      padding: 8px 12px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .suggestion-chip {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      color: var(--text-secondary);
+      font-size: 11px;
+      padding: 4px 10px;
+      cursor: pointer;
+      transition: all 0.15s;
+
+      &:hover { border-color: var(--accent-blue); color: var(--accent-blue); background: var(--accent-blue-bg); }
+    }
+
+    .chat-input-area {
+      padding: 12px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .chat-input {
+      flex: 1;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      color: var(--text-primary);
+      padding: 9px 12px;
+      font-size: 12px;
+      font-family: var(--font-sans);
+      outline: none;
+      transition: border-color 0.15s;
+
+      &:focus { border-color: var(--accent-blue); }
+      &::placeholder { color: var(--text-faint); }
+      &:disabled { opacity: 0.5; }
+    }
+
+    .send-btn {
+      background: var(--accent-blue);
+      border: none;
+      border-radius: var(--radius-md);
+      color: #080c14;
+      padding: 9px 14px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.15s;
+
+      &:hover:not(:disabled) { filter: brightness(1.1); }
+      &:disabled { opacity: 0.4; cursor: not-allowed; }
+    }
+  `]
+})
+export class ChatWidgetComponent implements OnInit, OnDestroy {
+  messages: ChatMessage[] = [];
+  loading  = false;
+  isOpen   = false;
+  inputText = '';
+
+  suggestions = [
+    'Incidents en cours ?',
+    'Dernières corrections ?',
+    'Santé du projet ?',
+    'Incidents Jenkins ?'
+  ];
+
+  private subs: Subscription[] = [];
+
+  @ViewChild('messagesContainer') private container!: ElementRef;
+
+  // FIX: Only inject ChatService — no direct HttpClient here
+  constructor(private chatService: ChatService) {}
+
+  ngOnInit() {
+    this.subs.push(
+      this.chatService.isOpen$.subscribe(v => this.isOpen = v),
+      this.chatService.messages$.subscribe(m => {
+        this.messages = m;
+        setTimeout(() => this.scrollToBottom(), 50);
+      }),
+      this.chatService.loading$.subscribe(v => this.loading = v)
+    );
+  }
+
+  toggle()      { this.chatService.toggle(); }
+  close()       { this.chatService.close(); }
+  clearChat()   { this.chatService.clearHistory(); }
+
+  send(text?: string) {
+    const q = text || this.inputText.trim();
+    if (!q) return;
+    this.inputText = '';
+    this.chatService.sendMessage(q);
+  }
+
+  onKeydown(event: KeyboardEvent) {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault();
+      this.send();
+    }
+  }
+
+  private scrollToBottom() {
+    if (this.container?.nativeElement) {
+      this.container.nativeElement.scrollTop = this.container.nativeElement.scrollHeight;
+    }
+  }
+
+  ngOnDestroy() { this.subs.forEach(s => s.unsubscribe()); }
+}

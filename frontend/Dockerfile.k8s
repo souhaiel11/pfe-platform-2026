@@ -1,0 +1,2 @@
+FROM nginx:alpine
+COPY dist/devsecops-frontend/browser /usr/share/nginx/html

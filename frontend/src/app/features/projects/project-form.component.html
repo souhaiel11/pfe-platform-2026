@@ -1,0 +1,247 @@
+<div class="pf-container">
+
+  <!-- Header -->
+  <div class="pf-header">
+    <button class="btn-back" (click)="goBack()">← Retour</button>
+    <h1>{{ isEdit ? '✏️ Modifier le projet' : '➕ Nouveau projet' }}</h1>
+    <div class="pf-actions">
+      <button class="btn-validate" (click)="validateProject()" [disabled]="!projectId || validating">
+        {{ validating ? '⏳ Vérification...' : '🔍 Vérifier la config' }}
+      </button>
+      <button class="btn-save" (click)="save()" [disabled]="loading">
+        {{ loading ? '⏳ Sauvegarde...' : '💾 Sauvegarder' }}
+      </button>
+    </div>
+  </div>
+
+  <!-- Alerts -->
+  <div class="alert success" *ngIf="saveSuccess">✅ Projet sauvegardé avec succès</div>
+  <div class="alert error"   *ngIf="saveError">❌ {{ saveError }}</div>
+
+  <!-- Validation résultats -->
+  <div class="validation-box" *ngIf="validationResult">
+    <div class="vbox-title" [class.ok]="validationResult.overallValid">
+      {{ validationResult.overallValid ? '✅ Configuration valide' : '⚠️ Problèmes détectés' }}
+    </div>
+    <div class="vbox-items">
+      <div class="vbox-item" *ngIf="validationResult.results?.jenkins">
+        <span>{{ getValidIcon('jenkins') }}</span>
+        <span class="vbox-label">Jenkins</span>
+        <span class="vbox-msg">{{ getValidMsg('jenkins') }}</span>
+      </div>
+      <div class="vbox-item" *ngIf="validationResult.results?.sonarqube">
+        <span>{{ getValidIcon('sonarqube') }}</span>
+        <span class="vbox-label">SonarQube</span>
+        <span class="vbox-msg">{{ getValidMsg('sonarqube') }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sections nav -->
+  <div class="section-nav">
+    <button *ngFor="let s of sections"
+      class="snav-btn" [class.active]="activeSection === s.id"
+      (click)="setSection(s.id)">
+      {{ s.icon }} {{ s.label }}
+    </button>
+  </div>
+
+  <form [formGroup]="form">
+
+    <!-- ── GÉNÉRAL ─────────────────────────────────────────── -->
+    <div class="section" *ngIf="activeSection === 'general'">
+      <div class="field" [class.err]="isInvalid('name')">
+        <label>Nom du projet <span class="req">*</span></label>
+        <input formControlName="name" placeholder="ex: pfe-devsecops-2026">
+        <span class="errmsg" *ngIf="isInvalid('name')">Nom requis (min 3 caractères)</span>
+      </div>
+      <div class="field">
+        <label>Description</label>
+        <textarea formControlName="description" rows="3" placeholder="Description du projet..."></textarea>
+      </div>
+      <div class="field">
+        <label>Environnement</label>
+        <select formControlName="environment">
+          <option value="dev">Développement</option>
+          <option value="staging">Staging</option>
+          <option value="prod">Production</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- ── CI/CD ───────────────────────────────────────────── -->
+    <div class="section" *ngIf="activeSection === 'cicd'">
+      <div class="field">
+        <label>Outil CI/CD <span class="req">*</span></label>
+        <div class="tool-grid">
+          <label class="tool-card" *ngFor="let t of [
+            {value:'jenkins', label:'Jenkins',          icon:'🔧'},
+            {value:'gitlab',  label:'GitLab CI',        icon:'🦊'},
+            {value:'github',  label:'GitHub Actions',   icon:'🐙'},
+            {value:'azure',   label:'Azure DevOps',     icon:'☁️'}
+          ]">
+            <input type="radio" formControlName="cicdTool" [value]="t.value">
+            <span class="tool-name">{{ t.icon }} {{ t.label }}</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="divider">🔧 Jenkins</div>
+      <div class="field-row">
+        <div class="field">
+          <label>Jenkins URL</label>
+          <input formControlName="jenkinsUrl" placeholder="http://172.31.172.61:8082">
+        </div>
+        <div class="field">
+          <label>Job Name</label>
+          <input formControlName="jenkinsJobName" placeholder="pfe-devsecops-pipeline">
+        </div>
+      </div>
+      <div class="field">
+        <label>Jenkins Token <span class="hint">(format: user:token)</span></label>
+        <input formControlName="jenkinsToken" type="password" placeholder="souhaiel.amri:11f686...">
+      </div>
+
+      <div class="divider">🐙 GitHub</div>
+      <div class="field-row">
+        <div class="field">
+          <label>Repository <span class="hint">(owner/repo)</span></label>
+          <input formControlName="githubRepo" placeholder="souhaiel11/pfe-app-test">
+        </div>
+        <div class="field">
+          <label>GitHub Token <span class="hint">(optionnel)</span></label>
+          <input formControlName="githubToken" type="password" placeholder="ghp_xxx">
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SONARQUBE ───────────────────────────────────────── -->
+    <div class="section" *ngIf="activeSection === 'sonarqube'">
+      <div class="field-row">
+        <div class="field">
+          <label>SonarQube URL</label>
+          <input formControlName="sonarqubeUrl" placeholder="http://172.31.172.61:9000">
+        </div>
+        <div class="field">
+          <label>Project Key</label>
+          <input formControlName="sonarqubeKey" placeholder="pfe-devsecops-2026">
+        </div>
+      </div>
+      <div class="field">
+        <label>SonarQube Token</label>
+        <input formControlName="sonarqubeToken" type="password" placeholder="squ_xxx">
+        <span class="hint">SonarQube → My Account → Security → Generate Token</span>
+      </div>
+      <div class="valid-inline" *ngIf="validationResult?.results?.sonarqube">
+        {{ getValidIcon('sonarqube') }} {{ getValidMsg('sonarqube') }}
+      </div>
+    </div>
+
+    <!-- ── NOTIFICATIONS ──────────────────────────────────── -->
+    <div class="section" *ngIf="activeSection === 'notifications'">
+
+      <div class="notif-row">
+        <div class="notif-header">
+          <span>📧 Email</span>
+          <label class="toggle">
+            <input type="checkbox" formControlName="emailEnabled">
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div class="notif-body" *ngIf="form.get('emailEnabled')?.value">
+          <div class="field">
+            <label>Destinataire</label>
+            <input formControlName="emailRecipient" type="email" placeholder="souhaiel.amri@esprit.tn">
+          </div>
+        </div>
+      </div>
+
+      <div class="notif-row">
+        <div class="notif-header">
+          <span>💬 Slack</span>
+          <label class="toggle">
+            <input type="checkbox" formControlName="slackEnabled">
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div class="notif-body" *ngIf="form.get('slackEnabled')?.value">
+          <div class="field-row">
+            <div class="field">
+              <label>Channel</label>
+              <input formControlName="slackChannel" placeholder="#souhaiel">
+            </div>
+            <div class="field">
+              <label>Token</label>
+              <input formControlName="slackToken" type="password" placeholder="xoxb-xxx">
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </form>
+
+  <!-- Footer -->
+  <div class="pf-footer">
+    <button class="btn-back" (click)="goBack()">Annuler</button>
+    <button class="btn-validate" (click)="validateProject()" [disabled]="!projectId || validating">
+      {{ validating ? '⏳' : '🔍 Vérifier' }}
+    </button>
+    <button class="btn-save" (click)="save()" [disabled]="loading">
+      {{ loading ? '⏳' : '💾 Sauvegarder' }}
+    </button>
+  </div>
+
+</div>
+
+<style>
+* { box-sizing: border-box; }
+.pf-container { max-width: 800px; margin: 0 auto; padding: 24px; background: #0d1117; color: #e6edf3; font-family: 'Inter', sans-serif; min-height: 100vh; }
+.pf-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+.pf-header h1 { flex: 1; margin: 0; font-size: 1.4rem; }
+.pf-actions { display: flex; gap: 8px; }
+.btn-back     { background: transparent; border: 1px solid #30363d; color: #8b949e; padding: 8px 16px; border-radius: 6px; cursor: pointer; white-space: nowrap; }
+.btn-save     { background: #238636; border: none; color: #fff; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: 600; }
+.btn-validate { background: #1f6feb; border: none; color: #fff; padding: 10px 20px; border-radius: 6px; cursor: pointer; }
+.btn-save:disabled, .btn-validate:disabled { opacity: 0.5; cursor: not-allowed; }
+.alert { padding: 10px 16px; border-radius: 6px; margin-bottom: 12px; font-size: 0.875rem; }
+.alert.success { background: #0d4429; border: 1px solid #238636; }
+.alert.error   { background: #3d1212; border: 1px solid #f85149; }
+.validation-box { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 14px; margin-bottom: 16px; }
+.vbox-title { font-weight: 600; margin-bottom: 10px; }
+.vbox-title.ok { color: #3fb950; }
+.vbox-items { display: flex; flex-direction: column; gap: 6px; }
+.vbox-item  { display: flex; gap: 10px; font-size: 0.85rem; align-items: center; }
+.vbox-label { font-weight: 600; min-width: 90px; }
+.vbox-msg   { color: #8b949e; }
+.section-nav { display: flex; gap: 2px; margin-bottom: 20px; border-bottom: 1px solid #21262d; }
+.snav-btn { background: transparent; border: none; color: #8b949e; padding: 10px 16px; cursor: pointer; border-bottom: 2px solid transparent; font-size: 0.875rem; white-space: nowrap; }
+.snav-btn.active { color: #58a6ff; border-bottom-color: #58a6ff; }
+.section { background: #161b22; border: 1px solid #21262d; border-radius: 8px; padding: 20px; }
+.field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 14px; }
+.field label { font-size: 0.85rem; color: #8b949e; font-weight: 500; }
+.field input, .field select, .field textarea { background: #0d1117; border: 1px solid #30363d; color: #e6edf3; padding: 8px 12px; border-radius: 6px; font-size: 0.875rem; }
+.field input:focus, .field select:focus, .field textarea:focus { outline: none; border-color: #58a6ff; }
+.field.err input { border-color: #f85149; }
+.errmsg { color: #f85149; font-size: 0.75rem; }
+.hint { color: #8b949e; font-size: 0.75rem; }
+.req { color: #f85149; }
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.divider { color: #8b949e; font-size: 0.85rem; font-weight: 600; padding: 10px 0 6px; border-bottom: 1px solid #21262d; margin-bottom: 12px; }
+.tool-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.tool-card { display: flex; align-items: center; gap: 8px; cursor: pointer; background: #0d1117; border: 1px solid #30363d; border-radius: 6px; padding: 10px 14px; }
+.tool-card input { display: none; }
+.tool-card:has(input:checked) { border-color: #58a6ff; background: #1a2d4a; }
+.tool-name { font-size: 0.875rem; }
+.notif-row { background: #0d1117; border: 1px solid #21262d; border-radius: 6px; padding: 14px; margin-bottom: 12px; }
+.notif-header { display: flex; justify-content: space-between; align-items: center; font-weight: 600; }
+.notif-body { margin-top: 12px; }
+.toggle { position: relative; display: inline-block; width: 40px; height: 22px; }
+.toggle input { opacity: 0; width: 0; height: 0; }
+.slider { position: absolute; cursor: pointer; top:0; left:0; right:0; bottom:0; background: #21262d; border-radius: 22px; transition: .3s; }
+.slider:before { position: absolute; content:''; height:16px; width:16px; left:3px; bottom:3px; background:#fff; border-radius:50%; transition:.3s; }
+.toggle input:checked + .slider { background: #238636; }
+.toggle input:checked + .slider:before { transform: translateX(18px); }
+.valid-inline { margin-top: 8px; font-size: 0.85rem; color: #8b949e; }
+.pf-footer { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; padding-top: 20px; border-top: 1px solid #21262d; }
+</style>

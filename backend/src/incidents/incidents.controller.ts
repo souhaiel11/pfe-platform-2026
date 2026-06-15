@@ -5,13 +5,15 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @ApiTags('Incidents')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
 @Controller('incidents')
 export class IncidentsController {
   constructor(private readonly service: IncidentsService) {}
+  @UseGuards(JwtAuthGuard)
   @Get() findAll(@Query('projectId') projectId?: string) { return this.service.findAll(projectId); }
+  @UseGuards(JwtAuthGuard)
   @Get(':id') findOne(@Param('id') id: string) { return this.service.findOne(id); }
   @Post() create(@Body() dto: any) { return this.service.create(dto); }
   @Put(':id') update(@Param('id') id: string, @Body() dto: any) { return this.service.update(id, dto); }
+  @UseGuards(JwtAuthGuard)
   @Delete(':id') remove(@Param('id') id: string) { return this.service.remove(id); }
 }

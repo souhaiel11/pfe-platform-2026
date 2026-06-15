@@ -1,15 +1,25 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany } from 'typeorm';
+import {
+  Entity, PrimaryGeneratedColumn, Column,
+  CreateDateColumn, UpdateDateColumn
+} from 'typeorm';
 
 export enum ProjectStatus {
-  HEALTHY = 'healthy',
-  WARNING = 'warning',
+  HEALTHY  = 'healthy',
+  WARNING  = 'warning',
   CRITICAL = 'critical',
 }
 
 export enum ProjectEnvironment {
-  DEV = 'dev',
+  DEV     = 'dev',
   STAGING = 'staging',
-  PROD = 'prod',
+  PROD    = 'prod',
+}
+
+export enum CicdTool {
+  JENKINS = 'jenkins',
+  GITLAB  = 'gitlab',
+  GITHUB  = 'github',
+  AZURE   = 'azure',
 }
 
 @Entity('projects')
@@ -17,26 +27,31 @@ export class Project {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
+  // ── Général ───────────────────────────────────────────────
   @Column({ unique: true })
   name: string;
 
   @Column({ nullable: true })
   description: string;
 
-  @Column({ nullable: true })
-  githubRepo: string;
+  @Column({ type: 'enum', enum: ProjectEnvironment, default: ProjectEnvironment.DEV })
+  environment: ProjectEnvironment;
 
-  @Column({ nullable: true })
-  githubToken: string;
+  @Column({ type: 'enum', enum: ProjectStatus, default: ProjectStatus.HEALTHY })
+  status: ProjectStatus;
 
-  @Column({ nullable: true })
-  sonarqubeKey: string;
+  @Column({ type: 'float', default: 100 })
+  securityScore: number;
 
-  @Column({ nullable: true })
-  sonarqubeUrl: string;
+  @Column({ default: true })
+  isActive: boolean;
 
-  @Column({ nullable: true })
-  sonarqubeToken: string;
+  @Column({ type: 'simple-array', nullable: true })
+  tags: string[];
+
+  // ── CI/CD ─────────────────────────────────────────────────
+  @Column({ type: 'enum', enum: CicdTool, default: CicdTool.JENKINS })
+  cicdTool: CicdTool;
 
   @Column({ nullable: true })
   jenkinsUrl: string;
@@ -47,26 +62,45 @@ export class Project {
   @Column({ nullable: true })
   jenkinsToken: string;
 
+  // ── GitHub ────────────────────────────────────────────────
   @Column({ nullable: true })
-  trivyEnabled: boolean;
+  githubRepo: string;
 
   @Column({ nullable: true })
-  dockerImage: string;
+  githubToken: string;
 
-  @Column({ type: 'enum', enum: ProjectEnvironment, default: ProjectEnvironment.DEV })
-  environment: ProjectEnvironment;
+  // ── SonarQube ─────────────────────────────────────────────
+  @Column({ nullable: true })
+  sonarqubeUrl: string;
 
-  @Column({ type: 'enum', enum: ProjectStatus, default: ProjectStatus.HEALTHY })
-  status: ProjectStatus;
+  @Column({ nullable: true })
+  sonarqubeKey: string;
 
-  @Column({ type: 'simple-array', nullable: true })
-  tags: string[];
+  @Column({ nullable: true })
+  sonarqubeToken: string;
 
-  @Column({ type: 'float', default: 100 })
-  securityScore: number;
+  // ── Notifications ─────────────────────────────────────────
+  @Column({ default: false })
+  emailEnabled: boolean;
 
-  @Column({ default: true })
-  isActive: boolean;
+  @Column({ nullable: true })
+  emailRecipient: string;
+
+  @Column({ default: false })
+  slackEnabled: boolean;
+
+  @Column({ nullable: true })
+  slackChannel: string;
+
+  @Column({ nullable: true })
+  slackToken: string;
+
+  // ── Validation status (calculé automatiquement) ───────────
+  @Column({ type: 'jsonb', nullable: true })
+  validationStatus: {
+    sonarqube?: { valid: boolean; message: string; checkedAt: string };
+    jenkins?:   { valid: boolean; message: string; checkedAt: string };
+  };
 
   @CreateDateColumn()
   createdAt: Date;

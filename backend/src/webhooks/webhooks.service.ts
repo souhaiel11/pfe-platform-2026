@@ -30,16 +30,17 @@ export class WebhooksService {
   }
 
   async handleJenkins(projectId: string, payload: any) {
-    if (payload?.build?.phase === 'FINALIZED' && payload?.build?.status === 'FAILURE') {
-      await this.incidents.create({
+    if (payload?.build?.phase === 'FINALIZED') {
+      const incident = await this.incidents.create({
         projectId,
-        title: `Jenkins Build Failed: ${payload?.name}`,
-        description: `Build #${payload?.build?.number} failed`,
+        title: `Jenkins Build #${payload?.build?.number}: ${payload?.build?.status}`,
+        description: `Build #${payload?.build?.number} - ${payload?.build?.status}`,
         source: 'jenkins',
         metadata: payload,
       });
+      return { received: true, incidentId: incident.id };
     }
-    return { received: true };
+    return { received: true, incidentId: null };
   }
 
   async handleTrivy(projectId: string, payload: any) {

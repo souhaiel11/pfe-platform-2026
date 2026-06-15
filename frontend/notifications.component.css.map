@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["notifications.component.ts"],
+  "sourcesContent": ["\n    .notif-row {\n      display: flex;\n      align-items: flex-start;\n      gap: 12px;\n      padding: 14px 20px;\n      border-bottom: 1px solid var(--border);\n      cursor: pointer;\n      transition: background 0.1s;\n\n      &:last-child { border-bottom: none; }\n      &:hover { background: var(--bg-hover); }\n      &.unread { background: var(--accent-blue-bg); }\n      &.unread:hover { background: var(--bg-hover); }\n    }\n\n    .notif-dot {\n      width: 8px; height: 8px;\n      border-radius: 50%;\n      margin-top: 5px;\n      flex-shrink: 0;\n    }\n\n    .notif-title {\n      font-size: 13px;\n      font-weight: 500;\n      color: var(--text-primary);\n      margin-bottom: 3px;\n    }\n\n    .notif-message {\n      font-size: 12px;\n      color: var(--text-muted);\n      margin-bottom: 4px;\n    }\n\n    .notif-time {\n      font-size: 10px;\n      color: var(--text-faint);\n      font-family: var(--font-mono);\n    }\n  "],
+  "mappings": ";AACI,CAAA;AACE,WAAA;AACA,eAAA;AACA,OAAA;AACA,WAAA,KAAA;AACA,iBAAA,IAAA,MAAA,IAAA;AACA,UAAA;AACA,cAAA,WAAA;;AAEA,CATF,SASE;AAAe,iBAAA;;AACf,CAVF,SAUE;AAAU,cAAA,IAAA;;AACV,CAXF,SAWE,CAAA;AAAW,cAAA,IAAA;;AACX,CAZF,SAYE,CADA,MACA;AAAiB,cAAA,IAAA;;AAGnB,CAAA;AACE,SAAA;AAAY,UAAA;AACZ,iBAAA;AACA,cAAA;AACA,eAAA;;AAGF,CAAA;AACE,aAAA;AACA,eAAA;AACA,SAAA,IAAA;AACA,iBAAA;;AAGF,CAAA;AACE,aAAA;AACA,SAAA,IAAA;AACA,iBAAA;;AAGF,CAAA;AACE,aAAA;AACA,SAAA,IAAA;AACA,eAAA,IAAA;;",
+  "names": []
+}

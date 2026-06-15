@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["src/environments/environment.ts"],
+  "sourcesContent": ["export const environment = {\n  production: false,\n  apiUrl: 'http://172.31.172.61:3001/api',\n  wsUrl: 'ws://172.31.172.61:3001/ws',\n  n8nUrl: 'http://172.31.172.61:5678',\n  defaultProjectId: '54192eca-43da-4d8f-9b49-30c143983fdd'\n};\n"],
+  "mappings": ";AAAO,IAAM,cAAc;EACzB,YAAY;EACZ,QAAQ;EACR,OAAO;EACP,QAAQ;EACR,kBAAkB;;",
+  "names": []
+}

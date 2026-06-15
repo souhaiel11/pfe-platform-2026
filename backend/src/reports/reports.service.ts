@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Report, ReportType } from './report.entity';
+import { Project } from '../projects/project.entity';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { firstValueFrom } from 'rxjs';
@@ -10,6 +11,7 @@ import { firstValueFrom } from 'rxjs';
 export class ReportsService {
   constructor(
     @InjectRepository(Report) private readonly repo: Repository<Report>,
+    @InjectRepository(Project) private readonly projectRepo: Repository<Project>,
     private readonly http: HttpService,
     private readonly config: ConfigService,
   ) {}
@@ -27,10 +29,29 @@ export class ReportsService {
   async create(dto: Partial<Report>) {
     const report = this.repo.create(dto);
     // Generate AI summary
-    report.aiSummary = await this.generateAiSummary(dto.type, dto.rawData);
-    report.securityScore = this.calculateSecurityScore(dto.rawData);
-    report.riskLevel = this.getRiskLevel(report.securityScore);
-    return this.repo.save(report);
+    report.aiSummary = (dto as any).aiSummary || await this.generateAiSummary(dto.type, dto.rawData);
+    report.securityScore = (dto as any).securityScore ?? this.calculateSecurityScore(dto.rawData, (dto as any).aiSummary);
+    report.riskLevel = (dto as any).riskLevel || this.getRiskLevel(report.securityScore);
+    const saved = await this.repo.save(report);
+
+    // Garder seulement les 3 derniers rapports combined par projet
+    if (dto.type === 'combined' && dto.projectId) {
+      const allCombined = await this.repo.find({
+        where: { projectId: dto.projectId, type: 'combined' as any },
+        order: { createdAt: 'DESC' }
+      });
+      // Mettre à jour le score du projet
+      await this.projectRepo.update(dto.projectId, {
+        securityScore: report.securityScore,
+        status: (report.securityScore >= 80 ? 'healthy' : report.securityScore >= 40 ? 'warning' : 'critical') as any,
+      });
+      if (allCombined.length > 3) {
+        const toDelete = allCombined.slice(3);
+        await this.repo.remove(toDelete);
+      }
+    }
+
+    return saved;
   }
 
   async remove(id: string) {
@@ -73,15 +94,65 @@ export class ReportsService {
     return 'Rapport généré et analysé par le système DevSecOps.';
   }
 
-  private calculateSecurityScore(data: any): number {
-    if (!data) return 50;
-    let score = 100;
-    score -= (data.critical || 0) * 15;
-    score -= (data.high || 0) * 8;
-    score -= (data.vulnerabilities || 0) * 5;
-    score -= (data.bugs || 0) * 2;
-    score -= (data.medium || 0) * 3;
-    return Math.max(0, Math.min(100, score));
+  private calculateSecurityScore(data: any, aiSummary?: string): number {
+    if (!data) return 100;
+
+    // Lire depuis enrichedData (format n8n v2.1)
+    const enriched = data.enrichedData || data;
+    const trivy  = enriched.trivy  || {};
+    const owasp  = enriched.owasp  || {};
+    const zap    = enriched.zap    || {};
+    const sonar  = enriched.sonar  || {};
+    const tests  = enriched.tests  || {};
+    const deploy = enriched.deploy || {};
+
+    // ── Score technique (70%) ─────────────────────────────
+    let techScore = 100;
+
+    // Trivy CVEs
+    const trivyCritical = trivy.cves?.filter((c: any) => c.severity === 'CRITICAL').length || trivy.critical || 0;
+    const trivyHigh     = trivy.cves?.filter((c: any) => c.severity === 'HIGH').length     || trivy.high     || 0;
+    const trivyMedium   = trivy.cves?.filter((c: any) => c.severity === 'MEDIUM').length   || 0;
+    techScore -= trivyCritical * 15;
+    techScore -= trivyHigh     * 5;
+    techScore -= trivyMedium   * 2;
+
+    // OWASP
+    techScore -= (owasp.critical || 0) * 15;
+    techScore -= (owasp.high     || 0) * 5;
+
+    // ZAP
+    techScore -= (zap.alerts_high   || 0) * 8;
+    techScore -= (zap.alerts_medium || 0) * 3;
+
+    // SonarQube
+    techScore -= (sonar.vulnerabilities || 0) * 10;
+    techScore -= (sonar.bugs            || 0) * 3;
+    techScore -= Math.min(sonar.code_smells || 0, 10) * 1;
+    if (sonar.quality_gate === 'ERROR' || sonar.quality_gate === 'FAILED') techScore -= 15;
+
+    // Pipeline
+    techScore -= (tests.failures || 0) * 5;
+    if (deploy.status === 'FAILED') techScore -= 20;
+
+    techScore = Math.max(0, Math.min(100, techScore));
+
+    // ── Score IA (30%) ────────────────────────────────────
+    let aiScore = techScore; // fallback si pas de Judge
+    if (aiSummary) {
+      try {
+        const judge = JSON.parse(aiSummary);
+        const decision  = judge.decision      || 'NOTIFY_ONLY';
+        const confidence = judge.confidenceScore || 50;
+        if      (decision === 'BLOCK')     aiScore = 0;
+        else if (decision === 'AUTO_FIX')  aiScore = 50;
+        else                               aiScore = confidence;
+      } catch(e) {}
+    }
+
+    // ── Score final combiné ───────────────────────────────
+    const finalScore = Math.round((techScore * 0.7) + (aiScore * 0.3));
+    return Math.max(0, Math.min(100, finalScore));
   }
 
   private getRiskLevel(score: number): string {
