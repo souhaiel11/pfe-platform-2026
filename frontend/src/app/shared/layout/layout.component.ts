@@ -4,16 +4,19 @@ import { RouterModule, Router, NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs';
 import { AuthService } from '../../core/services/auth.service';
 import { ApiService } from '../../core/services/api.service';
+import { ThemeService } from '../../core/services/theme.service';
+import { RiskStateService } from '../../core/services/risk-state.service';
+import { ChatWidgetComponent } from '../chat-widget/chat-widget.component';
 
 @Component({
   selector: 'app-layout',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, ChatWidgetComponent],
   template: `
     <div class="app-shell">
-      <aside class="sidebar">
+      <aside class="sidebar" [ngStyle]="sidebarRiskStyle">
         <div class="sb-logo">
-          <div class="logo-mark">D</div>
+          <div class="logo-mark">V</div>
           <div>
             <div class="logo-title">DevSecOps AI</div>
             <div class="logo-sub">Vermeg · PFE 2026</div>
@@ -51,77 +54,319 @@ import { ApiService } from '../../core/services/api.service';
           </div>
         </div>
       </aside>
+
       <div class="main-content">
         <header class="topbar">
+          <!-- Vermeg logo -->
+          <div class="vermeg-logo">
+            <span class="logo-v">V</span><span class="logo-ermeg">ERMEG</span><span class="logo-product">DevSecOps</span>
+          </div>
+
           <div class="topbar-title">{{pageTitle}}</div>
+
           <div class="topbar-right">
             <div class="live-badge"><span class="live-dot"></span> LIVE</div>
+
+            <!-- Theme toggle -->
+            <button class="theme-btn" (click)="themeService.toggleTheme()"
+                    [title]="themeService.theme() === 'light' ? 'Passer en mode sombre' : 'Passer en mode clair'">
+              <i class="ti ti-moon" *ngIf="themeService.theme() === 'light'"></i>
+              <i class="ti ti-sun"  *ngIf="themeService.theme() === 'dark'"></i>
+            </button>
+
             <div class="uav">{{userInitials}}</div>
           </div>
         </header>
         <div class="page-wrap"><router-outlet></router-outlet></div>
       </div>
     </div>
+    <app-chat-widget></app-chat-widget>
   `,
   styles: [`
-    :host{display:block}
-    .app-shell{display:flex;min-height:100vh;background:#0d1117;color:#e6edf3;font-family:'JetBrains Mono',monospace}
-    .sidebar{width:210px;background:#161b22;border-right:1px solid #30363d;display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:100}
-    .sb-logo{display:flex;align-items:center;gap:9px;padding:13px 11px;border-bottom:1px solid #30363d}
-    .logo-mark{width:26px;height:26px;background:#58a6ff;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:12px}
-    .logo-title{font-size:12px;font-weight:600;color:#e6edf3}
-    .logo-sub{font-size:9px;color:#8b949e}
-    .sb-nav{flex:1;padding:5px 0;overflow-y:auto}
-    .nav-section{padding:7px 10px 2px;font-size:9px;color:#484f58;text-transform:uppercase;letter-spacing:.7px;font-weight:600}
-    .nav-item{display:flex;align-items:center;gap:7px;padding:6px 10px;font-size:11px;color:#8b949e;text-decoration:none;border-right:2px solid transparent;transition:all .12s}
-    .nav-item i{font-size:13px;width:14px}
-    .nav-item:hover{background:#21262d;color:#e6edf3}
-    .nav-item.active{background:#0c1c2e;color:#58a6ff;border-right-color:#58a6ff}
-    .nav-badge{margin-left:auto;border-radius:8px;padding:1px 5px;font-size:9px;font-weight:700}
-    .nav-badge.red{background:#2d1117;color:#f85149}
-    .sb-footer{padding:9px;border-top:1px solid #30363d}
-    .user-row{display:flex;align-items:center;gap:7px}
-    .user-av{width:26px;height:26px;background:#0c1c2e;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#58a6ff}
-    .user-info{flex:1;min-width:0}
-    .user-name{font-size:11px;color:#e6edf3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-    .user-role{font-size:9px;color:#8b949e}
-    .logout-btn{background:none;border:1px solid #30363d;border-radius:5px;color:#8b949e;cursor:pointer;padding:4px 6px;font-size:12px}
-    .logout-btn:hover{border-color:#f85149;color:#f85149}
-    .main-content{margin-left:210px;flex:1;display:flex;flex-direction:column;min-height:100vh}
-    .topbar{height:44px;background:#161b22;border-bottom:1px solid #30363d;display:flex;align-items:center;padding:0 16px;gap:10px;position:sticky;top:0;z-index:50}
-    .topbar-title{font-size:13px;font-weight:600;flex:1;color:#e6edf3}
-    .topbar-right{display:flex;align-items:center;gap:8px}
-    .live-badge{display:flex;align-items:center;gap:5px;padding:3px 9px;background:#0d2119;border:1px solid #3fb950;border-radius:12px;font-size:10px;font-weight:700;color:#3fb950}
-    .live-dot{width:6px;height:6px;background:#3fb950;border-radius:50%;animation:pulse 1.5s infinite}
-    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
-    .uav{width:28px;height:28px;background:#0c1c2e;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#58a6ff}
-    .page-wrap{flex:1;overflow:auto}
+    :host { display: block }
+
+    .app-shell {
+      display: flex;
+      min-height: 100vh;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      font-family: var(--font-sans, 'Inter', sans-serif);
+    }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      width: 210px;
+      background: var(--sidebar-bg);
+      border-right: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      position: fixed;
+      top: 0; left: 0; bottom: 0;
+      z-index: 100;
+    }
+
+    .sb-logo {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 13px 11px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .logo-mark {
+      width: 26px; height: 26px;
+      background: var(--accent-primary);
+      border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--accent-text-on);
+      font-weight: 700; font-size: 12px;
+    }
+
+    .logo-title { font-size: 12px; font-weight: 600; color: var(--text-primary); }
+    .logo-sub   { font-size: 9px; color: var(--text-secondary); }
+
+    .sb-nav { flex: 1; padding: 5px 0; overflow-y: auto; }
+
+    .nav-section {
+      padding: 7px 10px 2px;
+      font-size: 9px;
+      color: var(--text-tertiary);
+      text-transform: uppercase;
+      letter-spacing: .7px;
+      font-weight: 600;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 6px 10px;
+      font-size: 11px;
+      color: var(--text-secondary);
+      text-decoration: none;
+      border-right: 2px solid transparent;
+      transition: all .12s;
+    }
+
+    .nav-item i { font-size: 13px; width: 14px; }
+
+    .nav-item:hover {
+      background: var(--bg-hover);
+      color: var(--text-primary);
+    }
+
+    .nav-item.active {
+      background: var(--accent-blue-bg);
+      color: var(--accent-primary);
+      border-right-color: var(--accent-primary);
+    }
+
+    .nav-badge {
+      margin-left: auto;
+      border-radius: 8px;
+      padding: 1px 5px;
+      font-size: 9px;
+      font-weight: 700;
+    }
+
+    .nav-badge.red {
+      background: var(--color-critical-bg);
+      color: var(--color-critical);
+    }
+
+    .sb-footer {
+      padding: 9px;
+      border-top: 1px solid var(--border-color);
+    }
+
+    .user-row { display: flex; align-items: center; gap: 7px; }
+
+    .user-av {
+      width: 26px; height: 26px;
+      background: var(--accent-blue-bg);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px; font-weight: 700;
+      color: var(--accent-primary);
+    }
+
+    .user-info { flex: 1; min-width: 0; }
+    .user-name { font-size: 11px; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .user-role { font-size: 9px; color: var(--text-secondary); }
+
+    .logout-btn {
+      background: none;
+      border: 1px solid var(--border-color);
+      border-radius: 5px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      padding: 4px 6px;
+      font-size: 12px;
+      transition: all .15s;
+    }
+
+    .logout-btn:hover {
+      border-color: var(--color-critical);
+      color: var(--color-critical);
+    }
+
+    /* ── Main content ── */
+    .main-content {
+      margin-left: 210px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    /* ── Topbar ── */
+    .topbar {
+      height: 44px;
+      background: var(--header-bg);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      gap: 10px;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+
+    /* Vermeg logo */
+    .vermeg-logo {
+      display: flex;
+      align-items: baseline;
+      gap: 0;
+      flex-shrink: 0;
+      user-select: none;
+    }
+
+    .logo-v {
+      color: var(--accent-primary);
+      font-weight: 500;
+      font-size: 15px;
+      font-family: var(--font-sans, 'Inter', sans-serif);
+    }
+
+    .logo-ermeg {
+      color: var(--text-primary);
+      font-weight: 500;
+      font-size: 15px;
+      font-family: var(--font-sans, 'Inter', sans-serif);
+    }
+
+    .logo-product {
+      color: var(--text-tertiary);
+      font-size: 10px;
+      font-weight: 400;
+      margin-left: 7px;
+      letter-spacing: .3px;
+    }
+
+    .topbar-title {
+      font-size: 13px;
+      font-weight: 600;
+      flex: 1;
+      color: var(--text-primary);
+      font-family: var(--font-sans, 'Inter', sans-serif);
+    }
+
+    .topbar-right { display: flex; align-items: center; gap: 8px; }
+
+    .live-badge {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 9px;
+      background: var(--color-success-bg);
+      border: 1px solid var(--color-success);
+      border-radius: 12px;
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--color-success);
+    }
+
+    .live-dot {
+      width: 6px; height: 6px;
+      background: var(--color-success);
+      border-radius: 50%;
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+    /* Theme toggle button */
+    .theme-btn {
+      width: 28px; height: 28px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px;
+      transition: all .2s;
+    }
+
+    .theme-btn:hover {
+      color: var(--accent-primary);
+      border-color: var(--accent-primary);
+    }
+
+    .uav {
+      width: 28px; height: 28px;
+      background: var(--accent-blue-bg);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px; font-weight: 700;
+      color: var(--accent-primary);
+    }
+
+    .page-wrap { flex: 1; overflow: auto; }
   `]
 })
 export class LayoutComponent implements OnInit {
   openCount = 0;
   notifCount = 0;
   pageTitle = "Vue d'ensemble";
-  isDark = true;
 
   private pageTitles: Record<string, string> = {
-    '/dashboard': "Vue d'ensemble",
-    '/projects': 'Projets',
-    '/incidents': 'Incidents',
-    '/analysis': 'Agents IA',
+    '/dashboard':     "Vue d'ensemble",
+    '/projects':      'Projets',
+    '/incidents':     'Incidents',
+    '/analysis':      'Agents IA',
     '/notifications': 'Notifications',
-    '/settings': 'Paramètres',
-    '/admin': 'Administration',
+    '/settings':      'Paramètres',
+    '/admin':         'Administration',
   };
 
-  constructor(private auth: AuthService, private api: ApiService, private router: Router) {}
+  constructor(
+    private auth: AuthService,
+    private api: ApiService,
+    private router: Router,
+    public themeService: ThemeService,
+    public riskState: RiskStateService,
+  ) {}
+
+  get sidebarRiskStyle() {
+    const map = {
+      CRITICAL: { background: 'rgba(226,75,74,0.08)', 'border-right': '3px solid rgba(226,75,74,0.4)' },
+      HIGH:     { background: 'rgba(239,159,39,0.08)', 'border-right': '3px solid rgba(239,159,39,0.4)' },
+      MEDIUM:   { background: 'rgba(250,199,117,0.08)', 'border-right': '3px solid rgba(250,199,117,0.4)' },
+      LOW:      { background: '', 'border-right': '' },
+    };
+    return map[this.riskState.level() as keyof typeof map] || map.LOW;
+  }
 
   ngOnInit() {
     this.loadCounts();
-    this.router.events.pipe(filter(e => e instanceof NavigationEnd)).subscribe((e: any) => {
-      const path = '/' + e.urlAfterRedirects.split('/')[1];
-      this.pageTitle = this.pageTitles[path] || 'DevSecOps IA';
-    });
+    this.router.events
+      .pipe(filter(e => e instanceof NavigationEnd))
+      .subscribe((e: any) => {
+        const path = '/' + e.urlAfterRedirects.split('/')[1];
+        this.pageTitle = this.pageTitles[path] || 'DevSecOps IA';
+      });
     const path = '/' + this.router.url.split('/')[1];
     this.pageTitle = this.pageTitles[path] || 'DevSecOps IA';
   }

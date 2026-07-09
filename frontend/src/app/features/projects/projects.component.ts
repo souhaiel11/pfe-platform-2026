@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../core/services/api.service';
 import { ToastService } from '../../core/services/toast.service';
@@ -16,7 +16,7 @@ import { ToastService } from '../../core/services/toast.service';
           <h1 class="page-title">// projets</h1>
           <p class="page-subtitle">Gestion des projets sous surveillance DevSecOps IA</p>
         </div>
-        <button class="btn btn-primary" (click)="showModal = true">+ Nouveau projet</button>
+        <button class="btn btn-primary" (click)="goToNewProject()">+ Nouveau projet</button>
       </div>
 
       <div *ngIf="loading" class="loading-overlay"><div class="spinner"></div><span>Chargement...</span></div>
@@ -249,9 +249,11 @@ export class ProjectsComponent implements OnInit {
   showModal = false;
   newProject = { name: '', description: '', sonarKey: '', githubRepo: '', jenkinsJobName: '' };
 
-  constructor(private api: ApiService, private toast: ToastService) {}
+  constructor(private api: ApiService, private toast: ToastService, private router: Router) {}
 
   ngOnInit() { this.load(); }
+
+  goToNewProject() { this.router.navigate(['/projects/new']); }
 
   load() {
     this.loading = true;

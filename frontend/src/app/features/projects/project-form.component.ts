@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
-import { ApiService } from '../../../core/services/api.service';
+import { ApiService } from '../../core/services/api.service';
 
 @Component({
   selector: 'app-project-form',
@@ -80,7 +80,7 @@ export class ProjectFormComponent implements OnInit {
 
   private loadProject() {
     this.loading = true;
-    this.api.get(`/api/projects/${this.projectId}`).subscribe({
+    this.api.getProject(this.projectId).subscribe({
       next: (p: any) => {
         this.form.patchValue(p);
         if (p.emailEnabled) this.form.get('emailRecipient')?.enable();
@@ -103,8 +103,8 @@ export class ProjectFormComponent implements OnInit {
     const payload = this.form.getRawValue();
 
     const req = this.isEdit
-      ? this.api.put(`/api/projects/${this.projectId}`, payload)
-      : this.api.post('/api/projects', payload);
+      ? this.api.updateProject(this.projectId, payload)
+      : this.api.createProject(payload);
 
     req.subscribe({
       next: (p: any) => {
@@ -124,14 +124,14 @@ export class ProjectFormComponent implements OnInit {
     if (!this.projectId) return;
     this.validating = true;
     this.validationResult = null;
-    this.api.post(`/api/projects/${this.projectId}/validate`, {}).subscribe({
+    this.api.validateProject(this.projectId).subscribe({
       next:  (r: any) => { this.validating = false; this.validationResult = r; },
       error: ()       => { this.validating = false; this.validationResult = { overallValid: false, results: {} }; }
     });
   }
 
   goBack()            { this.router.navigate(['/projects']); }
-  setSection(id: str) { this.activeSection = id; }
+  setSection(id: string) { this.activeSection = id; }
   get f()             { return this.form.controls; }
   isInvalid(field: string) { const c = this.form.get(field); return !!(c?.invalid && (c.dirty || c.touched)); }
   getValidIcon(key: string)  { if (!this.validationResult?.results?.[key]) return ''; return this.validationResult.results[key].valid ? '✅' : '❌'; }

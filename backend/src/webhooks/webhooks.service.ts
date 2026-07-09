@@ -30,17 +30,24 @@ export class WebhooksService {
   }
 
   async handleJenkins(projectId: string, payload: any) {
-    if (payload?.build?.phase === 'FINALIZED') {
-      const incident = await this.incidents.create({
-        projectId,
-        title: `Jenkins Build #${payload?.build?.number}: ${payload?.build?.status}`,
-        description: `Build #${payload?.build?.number} - ${payload?.build?.status}`,
-        source: 'jenkins',
-        metadata: payload,
-      });
-      return { received: true, incidentId: incident.id };
-    }
-    return { received: true, incidentId: null };
+    // Créer un incident pour tout payload Jenkins valide
+    const buildNumber = payload?.build_number || payload?.build?.number || payload?.buildNumber || null;
+    const buildStatus = payload?.status || payload?.build?.status || 'UNKNOWN';
+    const jobName     = payload?.job || payload?.jenkinsJobName || null;
+    const title       = payload?.title
+                      || (jobName ? `Jenkins Build #${buildNumber}: ${buildStatus}` : 'Jenkins Build');
+
+    const incident = await this.incidents.create({
+      projectId,
+      title,
+      description: payload?.build_url || payload?.build?.url || payload?.metadata?.buildUrl || '',
+      source: 'jenkins',
+      jenkinsJobName: jobName,
+      buildNumber: buildNumber ? parseInt(buildNumber) : null,
+      status: 'pending' as any,
+      metadata: payload,
+    });
+    return { received: true, incidentId: incident.id, id: incident.id };
   }
 
   async handleTrivy(projectId: string, payload: any) {

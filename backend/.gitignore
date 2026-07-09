@@ -1,0 +1,10 @@
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Build
+dist/
+
+# Deps
+node_modules/

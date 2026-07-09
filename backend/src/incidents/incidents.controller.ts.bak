@@ -16,12 +16,4 @@ export class IncidentsController {
   @Put(':id') update(@Param('id') id: string, @Body() dto: any) { return this.service.update(id, dto); }
   @UseGuards(JwtAuthGuard)
   @Delete(':id') remove(@Param('id') id: string) { return this.service.remove(id); }
-
-  @UseGuards(JwtAuthGuard)
-  @Post(':id/approve') approveFix(@Param('id') id: string) { return this.service.approveFix(id); }
-  @UseGuards(JwtAuthGuard)
-  @Post(':id/reject') rejectFix(@Param('id') id: string) { return this.service.rejectFix(id); }
-
-  @UseGuards(JwtAuthGuard)
-  @Post(':id/trigger-build') triggerBuild(@Param('id') id: string) { return this.service.triggerBuild(id); }
 }

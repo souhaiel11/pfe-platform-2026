@@ -24,10 +24,8 @@ export class WebhooksController {
   @Post('jenkins/by-job/:jobName')
   async jenkinsByJob(@Param('jobName') jobName: string, @Body() body: any) {
     const all = await this.projects.findAll();
-    const project = all.find((p: any) => p.jenkinsJobName === jobName)
-                 || all.find((p: any) => p.isActive)
-                 || all[0];
-    if (!project) return { error: 'No project found' };
+    const project = all.find((p: any) => p.jenkinsJobName === jobName);
+    if (!project) return { error: `No project found for job: ${jobName}` };
     return this.service.handleJenkins(project.id, body);
   }
 

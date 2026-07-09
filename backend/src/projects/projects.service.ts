@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Project } from './project.entity';
@@ -45,7 +45,11 @@ export class ProjectsService {
     return p;
   }
 
-  create(dto: CreateProjectDto) {
+  async create(dto: CreateProjectDto) {
+    if (dto.jenkinsJobName) {
+      const existing = await this.repo.findOne({ where: { jenkinsJobName: dto.jenkinsJobName } });
+      if (existing) throw new ConflictException(`Un projet avec le job Jenkins "${dto.jenkinsJobName}" existe déjà`);
+    }
     const p = this.repo.create(dto);
     return this.repo.save(p);
   }

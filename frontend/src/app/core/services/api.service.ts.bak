@@ -65,10 +65,5 @@ export class ApiService {
   createIntegration(data: any)                   { return this.http.post<any>(`${this.base}/integrations`, data); }
   updateIntegration(id: string, data: any)       { return this.http.put<any>(`${this.base}/integrations/${id}`, data); }
   testIntegration(id: string)                    { return this.http.post<any>(`${this.base}/integrations/${id}/test`, {}); }
-
-  approveFix(id: string) { return this.http.post(`${this.base}/incidents/${id}/approve`, {}); }
-  rejectFix(id: string) { return this.http.post(`${this.base}/incidents/${id}/reject`, {}); }
-
-  triggerBuild(projectId: string) { return this.http.post(`${this.base}/incidents/${projectId}/trigger-build`, {}); }
 }
 

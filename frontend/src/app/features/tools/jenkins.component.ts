@@ -10,7 +10,7 @@ import { HttpClientModule } from '@angular/common/http';
   template: `
     <div class="page">
       <div class="page-header">
-        <div class="page-icon" style="background:#0d2119"><i class="ti ti-git-branch" style="color:#3fb950"></i></div>
+        <div class="page-icon" style="background:var(--accent-green-bg)"><i class="ti ti-git-branch" style="color:var(--accent-green)"></i></div>
         <div>
           <h2>Jenkins CI/CD</h2>
           <div class="page-sub">{{jobName}} · Build #{{lastBuild?.buildNumber || '...'}}</div>
@@ -22,7 +22,7 @@ import { HttpClientModule } from '@angular/common/http';
         <div class="kpi" [class.r]="lastBuild?.result!=='SUCCESS'" [class.g]="lastBuild?.result==='SUCCESS'">
           <div class="kpi-l">Build actuel</div>
           <div class="kpi-v">#{{lastBuild?.buildNumber || '...'}}</div>
-          <div class="kpi-s" [style.color]="lastBuild?.result==='SUCCESS'?'#3fb950':'#f85149'">{{lastBuild?.result || '...'}}</div>
+          <div class="kpi-s" [style.color]="lastBuild?.result==='SUCCESS'?'var(--accent-green)':'var(--accent-red)'">{{lastBuild?.result || '...'}}</div>
         </div>
         <div class="kpi g"><div class="kpi-l">Taux succès</div><div class="kpi-v">{{successRate}}%</div><div class="kpi-s">{{builds.length}} derniers builds</div></div>
         <div class="kpi b"><div class="kpi-l">Durée moy.</div><div class="kpi-v">{{avgDuration}}s</div></div>
@@ -38,12 +38,12 @@ import { HttpClientModule } from '@angular/common/http';
         <div class="card-title"><i class="ti ti-list"></i> Derniers builds</div>
         <div class="build-list">
           <div class="build-item" *ngFor="let b of builds">
-            <div class="build-dot" [style.background]="b.status==='SUCCESS'?'#3fb950':'#f85149'"></div>
+            <div class="build-dot" [style.background]="b.status==='SUCCESS'?'var(--accent-green)':'var(--accent-red)'"></div>
             <div class="build-num">#{{b.num}}</div>
             <div class="build-msg">{{b.msg}}</div>
             <div class="build-dur">{{b.dur}}</div>
             <div class="build-time">{{b.time}}</div>
-            <span class="build-badge" [style.background]="b.status==='SUCCESS'?'#0d2119':'#2d1117'" [style.color]="b.status==='SUCCESS'?'#3fb950':'#f85149'">{{b.status}}</span>
+            <span class="build-badge" [style.background]="b.status==='SUCCESS'?'var(--accent-green-bg)':'var(--accent-red-bg)'" [style.color]="b.status==='SUCCESS'?'var(--accent-green)':'var(--accent-red)'">{{b.status}}</span>
           </div>
         </div>
       </div>
@@ -61,33 +61,33 @@ import { HttpClientModule } from '@angular/common/http';
   `,
   styles: [`
     :host{display:block}
-    .page{padding:18px 20px;background:#0d1117;min-height:100vh;color:#e6edf3;font-family:'JetBrains Mono',monospace}
+    .page{padding:18px 20px;background:var(--bg-primary);min-height:100vh;color:var(--text-primary);font-family:'JetBrains Mono',monospace}
     .page-header{display:flex;align-items:center;gap:12px;margin-bottom:18px}
     .page-icon{width:40px;height:40px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px}
     h2{font-size:16px;font-weight:700;margin:0}
-    .page-sub{font-size:10px;color:#8b949e;margin-top:2px}
-    .ext-btn{margin-left:auto;display:flex;align-items:center;gap:5px;padding:6px 12px;background:#21262d;border:1px solid #30363d;border-radius:6px;color:#58a6ff;font-size:11px;text-decoration:none}
+    .page-sub{font-size:10px;color:var(--text-secondary);margin-top:2px}
+    .ext-btn{margin-left:auto;display:flex;align-items:center;gap:5px;padding:6px 12px;background:var(--bg-tertiary);border:1px solid var(--border-color);border-radius:6px;color:var(--accent-blue);font-size:11px;text-decoration:none}
     .kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px}
-    .kpi{background:#161b22;border:1px solid #30363d;border-radius:7px;padding:10px 12px}
-    .kpi-l{font-size:9px;color:#8b949e;margin-bottom:4px}
+    .kpi{background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:7px;padding:10px 12px}
+    .kpi-l{font-size:9px;color:var(--text-secondary);margin-bottom:4px}
     .kpi-v{font-size:20px;font-weight:700}
     .kpi-s{font-size:9px;margin-top:2px}
-    .kpi.r .kpi-v{color:#f85149}.kpi.g .kpi-v{color:#3fb950}.kpi.b .kpi-v{color:#58a6ff}.kpi.o .kpi-v{color:#d29922}
-    .card{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:14px;margin-bottom:12px}
-    .card-title{display:flex;align-items:center;gap:5px;font-size:10px;font-weight:600;color:#8b949e;text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px}
+    .kpi.r .kpi-v{color:var(--accent-red)}.kpi.g .kpi-v{color:var(--accent-green)}.kpi.b .kpi-v{color:var(--accent-blue)}.kpi.o .kpi-v{color:var(--accent-orange)}
+    .card{background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:8px;padding:14px;margin-bottom:12px}
+    .card-title{display:flex;align-items:center;gap:5px;font-size:10px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px}
     .build-list{display:flex;flex-direction:column;gap:5px}
-    .build-item{display:flex;align-items:center;gap:10px;padding:8px 10px;background:#21262d;border-radius:5px;font-size:10px}
+    .build-item{display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--bg-tertiary);border-radius:5px;font-size:10px}
     .build-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
-    .build-num{font-weight:600;color:#58a6ff;width:30px}
-    .build-msg{flex:1;color:#e6edf3}
-    .build-dur{color:#8b949e;width:50px}
-    .build-time{color:#8b949e;width:80px}
+    .build-num{font-weight:600;color:var(--accent-blue);width:30px}
+    .build-msg{flex:1;color:var(--text-primary)}
+    .build-dur{color:var(--text-secondary);width:50px}
+    .build-time{color:var(--text-secondary);width:80px}
     .build-badge{padding:2px 7px;border-radius:4px;font-size:9px;font-weight:700}
     .conf-list{display:flex;flex-direction:column;gap:6px}
-    .conf-row{display:flex;gap:12px;padding:6px 0;border-bottom:1px solid #30363d;font-size:11px}
+    .conf-row{display:flex;gap:12px;padding:6px 0;border-bottom:1px solid var(--border-color);font-size:11px}
     .conf-row:last-child{border:none}
-    .conf-k{color:#8b949e;width:120px;flex-shrink:0}
-    .conf-v{color:#e6edf3;font-family:monospace}
+    .conf-k{color:var(--text-secondary);width:120px;flex-shrink:0}
+    .conf-v{color:var(--text-primary);font-family:monospace}
   `]
 })
 export class JenkinsComponent implements OnInit, AfterViewInit, OnDestroy {
@@ -141,13 +141,16 @@ export class JenkinsComponent implements OnInit, AfterViewInit, OnDestroy {
     if (!c || !(window as any).Chart) return;
     if (this.chart) this.chart.destroy();
     const rev = this.builds.slice().reverse();
+    const green = getComputedStyle(document.body).getPropertyValue('--accent-green').trim() || '#3fb950';
+    const red = getComputedStyle(document.body).getPropertyValue('--accent-red').trim() || '#f85149';
+    const muted = getComputedStyle(document.body).getPropertyValue('--text-secondary').trim() || '#8b949e';
     this.chart = new (window as any).Chart(c, {
       type: 'bar',
       data: {
         labels: rev.map(b => '#' + b.num),
-        datasets: [{ data: rev.map(b => b.status === 'SUCCESS' ? 200 : 60), backgroundColor: rev.map(b => b.status === 'SUCCESS' ? '#3fb950' : '#f85149'), borderRadius: 4 }]
+        datasets: [{ data: rev.map(b => b.status === 'SUCCESS' ? 200 : 60), backgroundColor: rev.map(b => b.status === 'SUCCESS' ? green : red), borderRadius: 4 }]
       },
-      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { ticks: { color: '#8b949e', font: { size: 9 } }, grid: { color: 'rgba(255,255,255,.04)' } }, y: { display: false } } }
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { ticks: { color: muted, font: { size: 9 } }, grid: { color: 'rgba(128,128,128,.1)' } }, y: { display: false } } }
     });
   }
 

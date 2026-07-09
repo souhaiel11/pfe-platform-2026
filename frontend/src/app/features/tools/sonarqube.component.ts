@@ -8,7 +8,7 @@ import { CommonModule } from '@angular/common';
   template: `
     <div class="page">
       <div class="page-header">
-        <div class="page-icon" style="background:#0c1c2e"><i class="ti ti-wave-sine" style="color:#58a6ff"></i></div>
+        <div class="page-icon" style="background:var(--accent-blue-bg)"><i class="ti ti-wave-sine" style="color:var(--accent-blue)"></i></div>
         <div><h2>SonarQube SAST</h2><div class="page-sub">pfe-devsecops-2026 · Build #132</div></div>
         <a href="http://172.31.172.61:9000" target="_blank" class="ext-btn"><i class="ti ti-external-link"></i> Ouvrir SonarQube</a>
       </div>
@@ -46,36 +46,36 @@ import { CommonModule } from '@angular/common';
   `,
   styles: [`
     :host{display:block}
-    .page{padding:18px 20px;background:#0d1117;min-height:100vh;color:#e6edf3;font-family:'JetBrains Mono',monospace}
+    .page{padding:18px 20px;background:var(--bg-primary);min-height:100vh;color:var(--text-primary);font-family:'JetBrains Mono',monospace}
     .page-header{display:flex;align-items:center;gap:12px;margin-bottom:18px}
     .page-icon{width:40px;height:40px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px}
     h2{font-size:16px;font-weight:700;margin:0}
-    .page-sub{font-size:10px;color:#8b949e;margin-top:2px}
-    .ext-btn{margin-left:auto;display:flex;align-items:center;gap:5px;padding:6px 12px;background:#21262d;border:1px solid #30363d;border-radius:6px;color:#58a6ff;font-size:11px;text-decoration:none}
-    .gate-banner{display:flex;align-items:center;gap:12px;background:#0d2119;border:1px solid #3fb950;border-radius:8px;padding:12px 16px;margin-bottom:14px}
-    .gate-icon{font-size:24px;color:#3fb950}
-    .gate-title{font-size:13px;font-weight:600;color:#3fb950}
-    .gate-sub{font-size:10px;color:#8b949e;margin-top:2px}
+    .page-sub{font-size:10px;color:var(--text-secondary);margin-top:2px}
+    .ext-btn{margin-left:auto;display:flex;align-items:center;gap:5px;padding:6px 12px;background:var(--bg-tertiary);border:1px solid var(--border-color);border-radius:6px;color:var(--accent-blue);font-size:11px;text-decoration:none}
+    .gate-banner{display:flex;align-items:center;gap:12px;background:var(--accent-green-bg);border:1px solid var(--accent-green);border-radius:8px;padding:12px 16px;margin-bottom:14px}
+    .gate-icon{font-size:24px;color:var(--accent-green)}
+    .gate-title{font-size:13px;font-weight:600;color:var(--accent-green)}
+    .gate-sub{font-size:10px;color:var(--text-secondary);margin-top:2px}
     .kpi-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:14px}
-    .kpi{background:#161b22;border:1px solid #30363d;border-radius:7px;padding:10px 12px}
-    .kpi-l{font-size:9px;color:#8b949e;margin-bottom:4px}
+    .kpi{background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:7px;padding:10px 12px}
+    .kpi-l{font-size:9px;color:var(--text-secondary);margin-bottom:4px}
     .kpi-v{font-size:20px;font-weight:700}
-    .kpi.g .kpi-v{color:#3fb950}.kpi.o .kpi-v{color:#d29922}.kpi.b .kpi-v{color:#58a6ff}
-    .card{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:14px;margin-bottom:12px}
-    .card-title{display:flex;align-items:center;gap:5px;font-size:10px;font-weight:600;color:#8b949e;text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px}
+    .kpi.g .kpi-v{color:var(--accent-green)}.kpi.o .kpi-v{color:var(--accent-orange)}.kpi.b .kpi-v{color:var(--accent-blue)}
+    .card{background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:8px;padding:14px;margin-bottom:12px}
+    .card-title{display:flex;align-items:center;gap:5px;font-size:10px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px}
     .issue-list{display:flex;flex-direction:column;gap:5px}
-    .issue-item{display:flex;align-items:center;gap:10px;padding:8px 10px;background:#21262d;border-radius:5px;font-size:10px}
+    .issue-item{display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--bg-tertiary);border-radius:5px;font-size:10px}
     .issue-sev{padding:2px 6px;border-radius:3px;font-size:9px;font-weight:700;flex-shrink:0}
     .issue-msg{flex:1}
-    .issue-file{color:#8b949e;font-size:9px;font-family:monospace}
+    .issue-file{color:var(--text-secondary);font-size:9px;font-family:monospace}
   `]
 })
 export class SonarqubeComponent implements AfterViewInit, OnDestroy {
   issues = [
-    { sev: 'MINOR', sevBg: '#0c1c2e', sevColor: '#58a6ff', msg: 'Remove unused import', file: 'TaskService.java:12' },
-    { sev: 'MINOR', sevBg: '#0c1c2e', sevColor: '#58a6ff', msg: 'Add missing javadoc', file: 'TaskController.java:34' },
-    { sev: 'MINOR', sevBg: '#271d0a', sevColor: '#d29922', msg: 'Cognitive complexity too high', file: 'DevSecOpsApplication.java:8' },
-    { sev: 'MINOR', sevBg: '#0c1c2e', sevColor: '#58a6ff', msg: 'Use StringBuilder instead of concatenation', file: 'TaskRepository.java:67' },
+    { sev: 'MINOR', sevBg: 'var(--accent-blue-bg)', sevColor: 'var(--accent-blue)', msg: 'Remove unused import', file: 'TaskService.java:12' },
+    { sev: 'MINOR', sevBg: 'var(--accent-blue-bg)', sevColor: 'var(--accent-blue)', msg: 'Add missing javadoc', file: 'TaskController.java:34' },
+    { sev: 'MINOR', sevBg: 'var(--accent-orange-bg)', sevColor: 'var(--accent-orange)', msg: 'Cognitive complexity too high', file: 'DevSecOpsApplication.java:8' },
+    { sev: 'MINOR', sevBg: 'var(--accent-blue-bg)', sevColor: 'var(--accent-blue)', msg: 'Use StringBuilder instead of concatenation', file: 'TaskRepository.java:67' },
   ];
 
   private chart: any;
@@ -88,10 +88,12 @@ export class SonarqubeComponent implements AfterViewInit, OnDestroy {
       if (!c || !(window as any).Chart) return;
       const ex = (window as any).Chart.getChart(c);
       if (ex) ex.destroy();
+      const blue = getComputedStyle(document.body).getPropertyValue('--accent-blue').trim() || '#58a6ff';
+      const muted = getComputedStyle(document.body).getPropertyValue('--text-secondary').trim() || '#8b949e';
       this.chart = new (window as any).Chart(c, {
         type: 'line',
-        data: { labels: ['#128','#129','#130','#131','#132'], datasets: [{ label: 'Coverage %', data: [68,70,72,71,74], borderColor: '#58a6ff', borderWidth: 2, pointRadius: 3, fill: true, backgroundColor: 'rgba(88,166,255,.1)', tension: .4 }] },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { ticks: { color: '#8b949e', font: { size: 9 } }, grid: { color: 'rgba(255,255,255,.04)' } }, y: { ticks: { color: '#8b949e', font: { size: 9 } }, grid: { color: 'rgba(255,255,255,.04)' } } } }
+        data: { labels: ['#128','#129','#130','#131','#132'], datasets: [{ label: 'Coverage %', data: [68,70,72,71,74], borderColor: blue, borderWidth: 2, pointRadius: 3, fill: true, backgroundColor: 'rgba(88,166,255,.1)', tension: .4 }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { ticks: { color: muted, font: { size: 9 } }, grid: { color: 'rgba(128,128,128,.1)' } }, y: { ticks: { color: muted, font: { size: 9 } }, grid: { color: 'rgba(128,128,128,.1)' } } } }
       });
     }, 100);
   }
