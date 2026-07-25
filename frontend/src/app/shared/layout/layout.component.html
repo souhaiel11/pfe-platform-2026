@@ -1,0 +1,67 @@
+    <div class="app-shell">
+      <aside class="sidebar" [ngStyle]="sidebarRiskStyle">
+        <div class="sb-logo">
+          <div class="logo-mark">V</div>
+          <div>
+            <div class="logo-title">DevSecOps AI</div>
+            <div class="logo-sub">Vermeg · PFE 2026</div>
+          </div>
+        </div>
+        <nav class="sb-nav">
+          <div class="nav-section">Plateforme</div>
+          <a class="nav-item" routerLink="/dashboard" routerLinkActive="active"><i class="ti ti-layout-dashboard"></i> Dashboard</a>
+          <a class="nav-item" routerLink="/projects" routerLinkActive="active"><i class="ti ti-folder"></i> Projets</a>
+          <a class="nav-item" routerLink="/analysis" routerLinkActive="active"><i class="ti ti-robot"></i> Agents IA</a>
+          <div class="nav-section">CI/CD & Sécurité</div>
+          <a class="nav-item" routerLink="/jenkins" routerLinkActive="active"><i class="ti ti-git-branch"></i> Jenkins</a>
+          <a class="nav-item" routerLink="/sonarqube" routerLinkActive="active"><i class="ti ti-wave-sine"></i> SonarQube</a>
+          <a class="nav-item" routerLink="/security" routerLinkActive="active"><i class="ti ti-bug"></i> Trivy / OWASP</a>
+          <div class="nav-section">Infrastructure</div>
+          <a class="nav-item" routerLink="/kubernetes" routerLinkActive="active"><i class="ti ti-ship"></i> Kubernetes</a>
+          <a class="nav-item" routerLink="/monitoring" routerLinkActive="active"><i class="ti ti-activity"></i> Grafana</a>
+          <div class="nav-section">Analytics</div>
+          <a class="nav-item" routerLink="/dora" routerLinkActive="active"><i class="ti ti-chart-bar"></i> DORA</a>
+          <a class="nav-item" routerLink="/prediction" routerLinkActive="active"><i class="ti ti-brain"></i> Prédiction IA</a>
+          <div class="nav-section">Système</div>
+          <a class="nav-item" routerLink="/notifications" routerLinkActive="active"><i class="ti ti-bell"></i> Notifications</a>
+          <a class="nav-item" routerLink="/settings" routerLinkActive="active"><i class="ti ti-settings"></i> Paramètres</a>
+          <a class="nav-item" routerLink="/admin" routerLinkActive="active" *ngIf="isAdmin"><i class="ti ti-shield"></i> Admin</a>
+        </nav>
+        <div class="sb-footer">
+          <div class="user-row">
+            <div class="user-av">{{userInitials}}</div>
+            <div class="user-info">
+              <div class="user-name">{{currentUser?.username}}</div>
+              <div class="user-role">{{currentUser?.role}}</div>
+            </div>
+            <button class="logout-btn" (click)="logout()"><i class="ti ti-logout"></i></button>
+          </div>
+        </div>
+      </aside>
+
+      <div class="main-content">
+        <header class="topbar">
+          <!-- Vermeg logo -->
+          <div class="vermeg-logo">
+            <span class="logo-v">V</span><span class="logo-ermeg">ERMEG</span><span class="logo-product">DevSecOps</span>
+          </div>
+
+          <div class="topbar-title">{{pageTitle}}</div>
+
+          <div class="topbar-right">
+            <div class="live-badge"><span class="live-dot"></span> LIVE</div>
+
+            <!-- Theme toggle -->
+            <button class="theme-btn" (click)="themeService.toggleTheme()"
+                    [title]="themeService.theme() === 'light' ? 'Passer en mode sombre' : 'Passer en mode clair'">
+              <i class="ti ti-moon" *ngIf="themeService.theme() === 'light'"></i>
+              <i class="ti ti-sun"  *ngIf="themeService.theme() === 'dark'"></i>
+            </button>
+
+            <div class="uav">{{userInitials}}</div>
+          </div>
+        </header>
+        <div class="page-wrap"><router-outlet></router-outlet></div>
+      </div>
+    </div>
+    <app-chat-widget></app-chat-widget>
