@@ -15,7 +15,11 @@ export const jwtInterceptor: HttpInterceptorFn = (req, next) => {
 
   return next(cloned).pipe(
     catchError((err: HttpErrorResponse) => {
-      if (err.status === 401) {
+      // Only purge the session on a real JWT problem (expired/invalid token),
+      // as reported explicitly by the backend. A generic 401 (e.g. a
+      // misconfigured guard on some route) must not log the user out.
+      const code = err.error?.code;
+      if (err.status === 401 && (code === 'TOKEN_EXPIRED' || code === 'TOKEN_INVALID')) {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         router.navigate(['/login']);

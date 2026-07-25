@@ -5,7 +5,7 @@ import { Project } from '../projects/project.entity';
 export enum IncidentStatus {
   PENDING = 'pending', ANALYZING = 'analyzing', ANALYZED = 'analyzed',
   FIX_GENERATED = 'fix_generated', VALIDATING = 'validating',
-  APPROVED = 'approved', COMPLETED = 'completed', FAILED = 'failed', REJECTED = 'rejected',
+  APPROVED = 'approved', COMPLETED = 'completed', BLOCKED = 'blocked', FAILED = 'failed', REJECTED = 'rejected',
 }
 
 @Entity('incidents')
@@ -19,6 +19,8 @@ export class Incident {
   @Column({ nullable: true }) source: string;
   @Column({ type: 'jsonb', nullable: true }) metadata: Record<string, any>;
   @Column({ nullable: true }) prUrl: string;
+  @Column({ nullable: true }) jenkinsJobName: string;
+  @Column({ nullable: true }) buildNumber: number;
   @Column({ nullable: true }) aiAnalysis: string;
   @CreateDateColumn() createdAt: Date;
   @UpdateDateColumn() updatedAt: Date;

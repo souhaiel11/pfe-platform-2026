@@ -19,7 +19,8 @@ async function bootstrap() {
     .build();
   SwaggerModule.setup('api/docs', app, SwaggerModule.createDocument(app, config));
 
-  await app.listen(3000);
-  console.log('🚀 DevSecOps Platform API running on port 3000');
+  const port = parseInt(process.env.PORT ?? '3001', 10);
+  await app.listen(port);
+  console.log(`🚀 DevSecOps Platform API running on port ${port}`);
 }
 bootstrap();

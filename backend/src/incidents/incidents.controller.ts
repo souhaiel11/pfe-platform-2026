@@ -9,11 +9,20 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 export class IncidentsController {
   constructor(private readonly service: IncidentsService) {}
   @UseGuards(JwtAuthGuard)
-  @Get() findAll(@Query('projectId') projectId?: string) { return this.service.findAll(projectId); }
+  @Get() findAll(@Query('projectId') projectId?: string, @Query('status') status?: string, @Query('size') size?: number) { return this.service.findAll(projectId, status, size); }
   @UseGuards(JwtAuthGuard)
   @Get(':id') findOne(@Param('id') id: string) { return this.service.findOne(id); }
   @Post() create(@Body() dto: any) { return this.service.create(dto); }
   @Put(':id') update(@Param('id') id: string, @Body() dto: any) { return this.service.update(id, dto); }
+  @Post(':id/validation') saveValidation(@Param('id') id: string, @Body() validation: any) { return this.service.saveValidation(id, validation); }
   @UseGuards(JwtAuthGuard)
   @Delete(':id') remove(@Param('id') id: string) { return this.service.remove(id); }
+
+  @UseGuards(JwtAuthGuard)
+  @Post(':id/approve') approveFix(@Param('id') id: string) { return this.service.approveFix(id); }
+  @UseGuards(JwtAuthGuard)
+  @Post(':id/reject') rejectFix(@Param('id') id: string) { return this.service.rejectFix(id); }
+
+  @UseGuards(JwtAuthGuard)
+  @Post(':id/trigger-build') triggerBuild(@Param('id') id: string) { return this.service.triggerBuild(id); }
 }

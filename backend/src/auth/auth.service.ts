@@ -3,7 +3,7 @@ import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/co
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
-import * as bcrypt from 'bcrypt';
+import * as bcrypt from 'bcryptjs';
 import { User, UserRole } from './user.entity';
 
 @Injectable()
@@ -31,7 +31,7 @@ export class AuthService {
     return { token, user: { id: saved.id, email: saved.email, name: saved.name, role: saved.role } };
   }
 
-  async seed() {
+  async seed() { return; // DISABLED
     const exists = await this.repo.findOne({ where: { email: 'admin@devsecops.local' } });
     if (!exists) {
       await this.register('admin@devsecops.local', 'Admin@123', 'Administrator', UserRole.ADMIN);

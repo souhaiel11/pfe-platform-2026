@@ -8,7 +8,7 @@ import { CommonModule } from '@angular/common';
   template: `
     <div class="page">
       <div class="page-header">
-        <div class="page-icon" style="background:#0c1c2e"><i class="ti ti-chart-bar" style="color:#58a6ff"></i></div>
+        <div class="page-icon" style="background:var(--accent-blue-bg)"><i class="ti ti-chart-bar" style="color:var(--accent-blue)"></i></div>
         <div><h2>Métriques DORA</h2><div class="page-sub">DevOps Research & Assessment · 4 indicateurs clés</div></div>
       </div>
 
@@ -48,44 +48,44 @@ import { CommonModule } from '@angular/common';
   `,
   styles: [`
     :host{display:block}
-    .page{padding:18px 20px;background:#0d1117;min-height:100vh;color:#e6edf3;font-family:'JetBrains Mono',monospace}
+    .page{padding:18px 20px;background:var(--bg-primary);min-height:100vh;color:var(--text-primary);font-family:'JetBrains Mono',monospace}
     .page-header{display:flex;align-items:center;gap:12px;margin-bottom:18px}
     .page-icon{width:40px;height:40px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px}
     h2{font-size:16px;font-weight:700;margin:0}
-    .page-sub{font-size:10px;color:#8b949e;margin-top:2px}
-    .info-banner{display:flex;align-items:flex-start;gap:10px;background:#0c1c2e;border:1px solid #58a6ff;border-radius:8px;padding:12px 14px;margin-bottom:16px;font-size:11px;color:#8b949e;line-height:1.5}
-    .info-banner i{color:#58a6ff;font-size:16px;flex-shrink:0;margin-top:1px}
-    .info-banner strong{color:#e6edf3}
+    .page-sub{font-size:10px;color:var(--text-secondary);margin-top:2px}
+    .info-banner{display:flex;align-items:flex-start;gap:10px;background:var(--accent-blue-bg);border:1px solid var(--accent-blue);border-radius:8px;padding:12px 14px;margin-bottom:16px;font-size:11px;color:var(--text-secondary);line-height:1.5}
+    .info-banner i{color:var(--accent-blue);font-size:16px;flex-shrink:0;margin-top:1px}
+    .info-banner strong{color:var(--text-primary)}
     .dora-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
-    .dora-card{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:14px;text-align:center}
+    .dora-card{background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:8px;padding:14px;text-align:center}
     .dora-icon{font-size:24px;margin-bottom:6px}
     .dora-val{font-size:22px;font-weight:700;margin-bottom:3px}
-    .dora-label{font-size:10px;font-weight:600;color:#e6edf3;margin-bottom:4px}
-    .dora-desc{font-size:9px;color:#8b949e;margin-bottom:6px;line-height:1.4}
+    .dora-label{font-size:10px;font-weight:600;color:var(--text-primary);margin-bottom:4px}
+    .dora-desc{font-size:9px;color:var(--text-secondary);margin-bottom:6px;line-height:1.4}
     .dora-badge{display:inline-block;padding:2px 8px;border-radius:8px;font-size:9px;font-weight:700}
-    .card{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:14px;margin-bottom:12px}
-    .card-title{display:flex;align-items:center;gap:5px;font-size:10px;font-weight:600;color:#8b949e;text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px}
+    .card{background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:8px;padding:14px;margin-bottom:12px}
+    .card-title{display:flex;align-items:center;gap:5px;font-size:10px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px}
     .goal-list{display:flex;flex-direction:column;gap:6px}
-    .goal-item{display:flex;align-items:center;gap:10px;padding:8px 10px;background:#21262d;border-radius:5px;font-size:10px}
-    .goal-metric{width:160px;font-weight:600;color:#e6edf3}
+    .goal-item{display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--bg-tertiary);border-radius:5px;font-size:10px}
+    .goal-metric{width:160px;font-weight:600;color:var(--text-primary)}
     .goal-current{width:60px;font-weight:700}
-    .goal-arrow{color:#8b949e}
-    .goal-target{color:#8b949e;flex:1}
-    .goal-action{font-size:9px;color:#58a6ff}
+    .goal-arrow{color:var(--text-secondary)}
+    .goal-target{color:var(--text-secondary);flex:1}
+    .goal-action{font-size:9px;color:var(--accent-blue)}
   `]
 })
 export class DoraComponent implements AfterViewInit, OnDestroy {
   doraMetrics = [
-    { icon: '🚀', value: '3.2/j', label: 'Deployment Frequency', desc: 'Fréquence de déploiement en production', level: 'ELITE', color: '#3fb950', badgeBg: '#0d2119' },
-    { icon: '⏱️', value: '4h20', label: 'Lead Time for Changes', desc: 'Du commit au déploiement K8s', level: 'HIGH', color: '#3fb950', badgeBg: '#0d2119' },
-    { icon: '📉', value: '18%', label: 'Change Failure Rate', desc: '% de déploiements causant un incident', level: 'MEDIUM', color: '#d29922', badgeBg: '#271d0a' },
-    { icon: '🔧', value: '45min', label: 'MTTR', desc: 'Temps moyen pour corriger un incident', level: 'ELITE', color: '#3fb950', badgeBg: '#0d2119' },
+    { icon: '🚀', value: '3.2/j', label: 'Deployment Frequency', desc: 'Fréquence de déploiement en production', level: 'ELITE', color: 'var(--accent-green)', badgeBg: 'var(--accent-green-bg)' },
+    { icon: '⏱️', value: '4h20', label: 'Lead Time for Changes', desc: 'Du commit au déploiement K8s', level: 'HIGH', color: 'var(--accent-green)', badgeBg: 'var(--accent-green-bg)' },
+    { icon: '📉', value: '18%', label: 'Change Failure Rate', desc: '% de déploiements causant un incident', level: 'MEDIUM', color: 'var(--accent-orange)', badgeBg: 'var(--accent-orange-bg)' },
+    { icon: '🔧', value: '45min', label: 'MTTR', desc: 'Temps moyen pour corriger un incident', level: 'ELITE', color: 'var(--accent-green)', badgeBg: 'var(--accent-green-bg)' },
   ];
 
   goals = [
-    { metric: 'Change Failure Rate', current: '18%', target: '< 15%', color: '#d29922', action: 'Améliorer les tests unitaires' },
-    { metric: 'Lead Time', current: '4h20', target: '< 1h', color: '#3fb950', action: 'Optimiser le pipeline Jenkins' },
-    { metric: 'Deployment Frequency', current: '3.2/j', target: '> 5/j', color: '#3fb950', action: 'Automatiser les déploiements' },
+    { metric: 'Change Failure Rate', current: '18%', target: '< 15%', color: 'var(--accent-orange)', action: 'Améliorer les tests unitaires' },
+    { metric: 'Lead Time', current: '4h20', target: '< 1h', color: 'var(--accent-green)', action: 'Optimiser le pipeline Jenkins' },
+    { metric: 'Deployment Frequency', current: '3.2/j', target: '> 5/j', color: 'var(--accent-green)', action: 'Automatiser les déploiements' },
   ];
 
   private chart: any;
@@ -98,16 +98,19 @@ export class DoraComponent implements AfterViewInit, OnDestroy {
       if (!c || !(window as any).Chart) return;
       const ex = (window as any).Chart.getChart(c);
       if (ex) ex.destroy();
+      const blue = getComputedStyle(document.body).getPropertyValue('--accent-blue').trim() || '#58a6ff';
+      const orange = getComputedStyle(document.body).getPropertyValue('--accent-orange').trim() || '#d29922';
+      const muted = getComputedStyle(document.body).getPropertyValue('--text-secondary').trim() || '#8b949e';
       this.chart = new (window as any).Chart(c, {
         type: 'line',
         data: {
           labels: ['#128','#129','#130','#131','#132'],
           datasets: [
-            { label: 'Lead Time (min)', data: [280,260,270,240,260], borderColor: '#58a6ff', borderWidth: 2, pointRadius: 3, fill: false, tension: .4 },
-            { label: 'CFR %', data: [20,15,18,22,18], borderColor: '#d29922', borderWidth: 2, pointRadius: 3, fill: false, tension: .4 },
+            { label: 'Lead Time (min)', data: [280,260,270,240,260], borderColor: blue, borderWidth: 2, pointRadius: 3, fill: false, tension: .4 },
+            { label: 'CFR %', data: [20,15,18,22,18], borderColor: orange, borderWidth: 2, pointRadius: 3, fill: false, tension: .4 },
           ]
         },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true, labels: { color: '#8b949e', font: { size: 9 } } } }, scales: { x: { ticks: { color: '#8b949e', font: { size: 9 } }, grid: { color: 'rgba(255,255,255,.04)' } }, y: { ticks: { color: '#8b949e', font: { size: 9 } }, grid: { color: 'rgba(255,255,255,.04)' } } } }
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true, labels: { color: muted, font: { size: 9 } } } }, scales: { x: { ticks: { color: muted, font: { size: 9 } }, grid: { color: 'rgba(128,128,128,.1)' } }, y: { ticks: { color: muted, font: { size: 9 } }, grid: { color: 'rgba(128,128,128,.1)' } } } }
       });
     }, 100);
   }

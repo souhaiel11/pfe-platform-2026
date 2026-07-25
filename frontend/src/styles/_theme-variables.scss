@@ -1,0 +1,101 @@
+/* ── Vermeg Design System — Light / Dark theme variables ──────────────── */
+
+/* === LIGHT (default) ======================================================= */
+:root {
+  /* Backgrounds */
+  --bg-primary:   #FFFFFF;
+  --bg-secondary: #F8FAFC;
+  --bg-tertiary:  #F1F4F9;
+  --bg-hover:     #E5E9F0;
+
+  /* Borders */
+  --border-color: #E5E9F0;
+  --border:       #E5E9F0;        /* alias — used by legacy components */
+  --border-light: #D0D7E3;
+
+  /* Text */
+  --text-primary:   #1A1D29;
+  --text-secondary: #475467;
+  --text-tertiary:  #8A93A6;
+  --text-muted:     #8A93A6;      /* alias */
+  --text-faint:     #B0BAC9;
+
+  /* Brand */
+  --accent-primary:  #1F4E8A;
+  --accent-text-on:  #FFFFFF;
+
+  /* Layout slots */
+  --sidebar-bg: #F8FAFC;
+  --header-bg:  #FFFFFF;
+
+  /* Semantic accent colours (used by shared classes & existing components) */
+  --accent-blue:      #1F4E8A;
+  --accent-blue-bg:   rgba(31, 78, 138, 0.10);
+  --accent-green:     #3B6D11;
+  --accent-green-bg:  rgba(59, 109, 17, 0.10);
+  --accent-red:       #E24B4A;
+  --accent-red-bg:    rgba(226, 75, 74, 0.10);
+  --accent-orange:    #EF9F27;
+  --accent-orange-bg: rgba(239, 159, 39, 0.10);
+  --accent-purple:    #7C6AF7;
+  --accent-purple-bg: rgba(124, 106, 247, 0.10);
+
+  /* Semantic status colours */
+  --color-critical:    #E24B4A;
+  --color-critical-bg: #FCEBEB;
+  --color-high:        #F0997B;
+  --color-success:     #3B6D11;
+  --color-success-bg:  rgba(59, 109, 17, 0.10);
+  --color-warning:     #EF9F27;
+  --color-warning-bg:  rgba(239, 159, 39, 0.10);
+}
+
+/* === DARK (.dark-theme on <body>) ========================================== */
+.dark-theme {
+  /* Backgrounds */
+  --bg-primary:   #101A2C;
+  --bg-secondary: #0F1B2E;
+  --bg-tertiary:  #0B1320;
+  --bg-hover:     #1A2840;
+
+  /* Borders */
+  --border-color: #1E2A3D;
+  --border:       #1E2A3D;
+  --border-light: #263548;
+
+  /* Text */
+  --text-primary:   #FFFFFF;
+  --text-secondary: #8AA4C4;
+  --text-tertiary:  #6B84A8;
+  --text-muted:     #6B84A8;
+  --text-faint:     #4A6080;
+
+  /* Brand */
+  --accent-primary:  #4A8FE0;
+  --accent-text-on:  #0B1320;
+
+  /* Layout slots */
+  --sidebar-bg: #0F1B2E;
+  --header-bg:  #0B1320;
+
+  /* Semantic accent colours */
+  --accent-blue:      #4A8FE0;
+  --accent-blue-bg:   rgba(74, 143, 224, 0.12);
+  --accent-green:     #5DCAA5;
+  --accent-green-bg:  rgba(93, 202, 165, 0.12);
+  --accent-red:       #E24B4A;
+  --accent-red-bg:    rgba(226, 75, 74, 0.12);
+  --accent-orange:    #EF9F27;
+  --accent-orange-bg: rgba(239, 159, 39, 0.12);
+  --accent-purple:    #A78BFA;
+  --accent-purple-bg: rgba(167, 139, 250, 0.12);
+
+  /* Semantic status colours */
+  --color-critical:    #E24B4A;
+  --color-critical-bg: #3A1418;
+  --color-high:        #F0997B;
+  --color-success:     #5DCAA5;
+  --color-success-bg:  rgba(93, 202, 165, 0.12);
+  --color-warning:     #EF9F27;
+  --color-warning-bg:  rgba(239, 159, 39, 0.12);
+}
