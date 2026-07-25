@@ -1,0 +1,248 @@
+    <div class="dashboard">
+
+      <!-- TOP BAR -->
+      <div class="topbar">
+        <div class="topbar-left">
+          <div class="logo-mark">D</div>
+          <div>
+            <div class="logo-title">DevSecOps AI</div>
+            <div class="logo-sub">Vermeg · PFE 2026</div>
+          </div>
+        </div>
+        <div class="topbar-right">
+          <div class="live-badge">
+            <span class="live-dot"></span>
+            LIVE
+          </div>
+          <button class="icon-btn notif-btn" (click)="toggleNotif()">
+            <i class="ti ti-bell"></i>
+            <span class="notif-count" *ngIf="notifications.length">{{notifications.length}}</span>
+          </button>
+          <button class="icon-btn" (click)="exportPDF()">
+            <i class="ti ti-file-type-pdf"></i>
+          </button>
+          <button class="icon-btn" (click)="toggleTheme()">
+            <i class="ti ti-sun"  *ngIf="themeService.theme() === 'dark'"></i>
+            <i class="ti ti-moon" *ngIf="themeService.theme() === 'light'"></i>
+          </button>
+          <div class="user-av">SA</div>
+        </div>
+      </div>
+
+      <!-- NOTIF PANEL -->
+      <div class="notif-panel" [class.open]="notifOpen">
+        <div class="notif-header">
+          <span>Notifications</span>
+          <button class="close-btn" (click)="toggleNotif()"><i class="ti ti-x"></i></button>
+        </div>
+        <div class="notif-list">
+          <div class="notif-item" *ngFor="let n of notifications" [class]="n.level">
+            <div class="notif-dot"></div>
+            <div>
+              <div class="notif-title">{{n.title}}</div>
+              <div class="notif-meta">{{n.meta}}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CONTENT -->
+      <div class="content">
+
+        <!-- KPIs -->
+        <div class="kpi-grid">
+          <div class="kpi-card" [class]="k.color" *ngFor="let k of kpis">
+            <div class="kpi-icon"><i [class]="'ti ' + k.icon"></i></div>
+            <div class="kpi-body">
+              <div class="kpi-val">{{k.value}}</div>
+              <div class="kpi-label">{{k.label}}</div>
+              <div class="kpi-sub">{{k.sub}}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- RISK + HEATMAP ROW -->
+        <div class="two-col" style="margin-bottom:20px">
+
+          <!-- RISK SCORES -->
+          <div class="card">
+            <div class="card-title">
+              <i class="ti ti-shield-half"></i>
+              Score de risque global
+            </div>
+            <div class="loading-overlay" *ngIf="projectsLoading"><div class="spinner"></div><span>Chargement...</span></div>
+            <div class="empty-state" *ngIf="!projectsLoading && projects.length === 0">
+              <div class="empty-icon">◧</div>
+              <div class="empty-title">Aucun projet</div>
+              <div class="empty-sub">Ajoutez un projet pour voir son score de risque</div>
+            </div>
+            <div class="risk-list" *ngIf="!projectsLoading && projects.length > 0">
+              <div class="risk-item" *ngFor="let p of projects">
+                <div class="risk-proj-info">
+                  <div class="risk-av" [style.background]="p.avatarBg" [style.color]="p.avatarColor">{{p.initials}}</div>
+                  <div>
+                    <div class="risk-name">{{p.name}}</div>
+                    <div class="risk-tech">{{p.tech}}</div>
+                  </div>
+                </div>
+                <div class="risk-ring-wrap">
+                  <canvas [id]="'risk-' + p.id" width="70" height="70"></canvas>
+                  <div class="risk-center-txt" [style.color]="getRiskColor(p.riskScore)">
+                    {{p.riskScore}}
+                  </div>
+                </div>
+                <div class="risk-breakdown">
+                  <div class="rb-row" *ngFor="let r of p.riskBreakdown">
+                    <span class="rb-lbl">{{r.label}}</span>
+                    <div class="rb-bar-bg">
+                      <div class="rb-bar" [style.width]="r.value + '%'" [style.background]="getBarColor(r.value)"></div>
+                    </div>
+                    <span class="rb-val" [style.color]="getBarColor(r.value)">{{r.value}}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- HEATMAP -->
+          <div class="card">
+            <div class="card-title">
+              <i class="ti ti-calendar-stats"></i>
+              Heatmap builds — 8 semaines
+            </div>
+            <div class="heatmap-wrap" id="heatmap"></div>
+            <div class="heatmap-legend">
+              <span>Moins</span>
+              <div class="hm-swatch" style="background:var(--bg-tertiary);border:1px solid var(--border-color)"></div>
+              <div class="hm-swatch" style="background:var(--accent-green-bg)"></div>
+              <div class="hm-swatch" style="background:var(--color-success)"></div>
+              <div class="hm-swatch" style="background:var(--accent-green)"></div>
+              <div class="hm-swatch" style="background:var(--accent-red)"></div>
+              <span>Échec</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- PROJECTS -->
+        <div class="section-title">
+          <i class="ti ti-folder"></i>
+          Projets surveillés
+          <span class="section-count">{{projects.length}}</span>
+        </div>
+        <div class="loading-overlay" *ngIf="projectsLoading"><div class="spinner"></div><span>Chargement...</span></div>
+        <div class="empty-state" *ngIf="!projectsLoading && projects.length === 0">
+          <div class="empty-icon">◧</div>
+          <div class="empty-title">Aucun projet</div>
+          <div class="empty-sub">Créez votre premier projet pour commencer</div>
+        </div>
+        <div class="proj-grid" *ngIf="!projectsLoading && projects.length > 0">
+          <a class="proj-card" *ngFor="let p of projects" [routerLink]="['/projects', p.id]">
+            <div class="proj-card-header">
+              <div class="proj-av" [style.background]="p.avatarBg" [style.color]="p.avatarColor">{{p.initials}}</div>
+              <div class="proj-info">
+                <div class="proj-name">{{p.name}}</div>
+                <div class="proj-tech">{{p.tech}}</div>
+              </div>
+            </div>
+            <div class="proj-pills">
+              <span class="pill red" *ngIf="p.incidents > 0">{{p.incidents}} incident{{p.incidents > 1 ? 's' : ''}}</span>
+              <span class="pill green" *ngIf="p.incidents === 0">0 incidents</span>
+              <span class="pill" [class]="p.buildStatus === 'SUCCESS' ? 'green' : 'red'">Build {{p.buildStatus}}</span>
+            </div>
+            <div class="health-bar-wrap">
+              <div class="health-bar" [style.width]="p.health + '%'" [style.background]="getBarColor(p.health)"></div>
+            </div>
+            <div class="health-label">
+              <span>Santé globale</span>
+              <span [style.color]="getBarColor(p.health)" style="font-weight:600">{{p.health}}%</span>
+            </div>
+            <div class="proj-footer">
+              <span>{{p.lastUpdate}}</span>
+              <span class="risk-badge" [style.color]="getRiskColor(p.riskScore)">Risque : {{p.riskScore}}/100</span>
+            </div>
+          </a>
+        </div>
+
+        <!-- DORA + ACTIVITY ROW -->
+        <div class="two-col">
+
+          <!-- DORA -->
+          <div class="card">
+            <div class="card-title">
+              <i class="ti ti-chart-bar"></i>
+              Métriques DORA
+            </div>
+            <div class="dora-grid">
+              <div class="dora-card" *ngFor="let d of doraMetrics">
+                <div class="dora-icon">{{d.icon}}</div>
+                <div class="dora-val" [style.color]="d.color">{{d.value}}</div>
+                <div class="dora-label">{{d.label}}</div>
+                <span class="dora-badge" [style.background]="d.badgeBg" [style.color]="d.color">{{d.level}}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- ACTIVITY -->
+          <div class="card">
+            <div class="card-title">
+              <i class="ti ti-activity"></i>
+              Activité récente
+            </div>
+            <div class="activity-list">
+              <div class="activity-item" *ngFor="let a of activities">
+                <div class="act-dot" [style.background]="a.color"></div>
+                <div class="act-body">
+                  <div class="act-title">{{a.title}}</div>
+                  <div class="act-meta">{{a.meta}}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- PREDICTION BANNER -->
+        <div class="pred-banner" *ngIf="showPrediction">
+          <div class="pred-left">
+            <i class="ti ti-brain pred-icon"></i>
+            <div>
+              <div class="pred-title">⚠️ Prédiction IA — Risque détecté</div>
+              <div class="pred-desc">Le Judge Agent prédit <strong>73% de probabilité d'incident</strong> dans les 48h sur <strong>pfe-app-test</strong> — 2 CVE HIGH non corrigées.</div>
+            </div>
+          </div>
+          <div class="pred-right">
+            <a routerLink="/prediction" class="pred-btn">Voir l'analyse</a>
+            <button class="close-btn" (click)="showPrediction=false"><i class="ti ti-x"></i></button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- CHAT FAB -->
+      <div class="chat-fab" (click)="toggleChat()">
+        <i class="ti ti-message-chatbot"></i>
+        <span class="fab-badge" *ngIf="unreadChat">{{unreadChat}}</span>
+      </div>
+
+      <!-- CHAT POPUP -->
+      <div class="chat-popup" [class.open]="chatOpen">
+        <div class="cp-header">
+          <div class="cp-title"><i class="ti ti-robot"></i> DevSecOps AI</div>
+          <span class="online-dot">● En ligne</span>
+          <button class="close-btn" (click)="toggleChat()"><i class="ti ti-x"></i></button>
+        </div>
+        <div class="cp-messages" id="cp-msgs">
+          <div class="cp-msg ai" *ngFor="let m of chatMessages; let i = index" [class]="m.role">
+            {{m.content}}
+          </div>
+        </div>
+        <div class="cp-suggestions">
+          <button class="cp-sug" *ngFor="let s of chatSuggestions" (click)="sendSuggestion(s)">{{s}}</button>
+        </div>
+        <div class="cp-input-row">
+          <input class="cp-input" [(ngModel)]="chatInput" placeholder="Question..."
+            (keydown.enter)="sendChat()" [ngModelOptions]="{standalone: true}">
+          <button class="cp-send" (click)="sendChat()"><i class="ti ti-send"></i></button>
+        </div>
+      </div>
+
+    </div>
