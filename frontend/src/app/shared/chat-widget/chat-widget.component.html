@@ -1,0 +1,66 @@
+    <div class="chat-wrapper">
+
+      <!-- Panel -->
+      <div class="chat-panel" [class.open]="isOpen">
+        <div class="chat-header">
+          <div class="chat-agent-info">
+            <div class="agent-avatar">IA</div>
+            <div>
+              <div class="agent-name">Assistant DevSecOps</div>
+              <div class="agent-status">
+                <span class="status-dot"></span> En ligne
+              </div>
+            </div>
+          </div>
+          <div style="display:flex;gap:6px;">
+            <button class="header-btn" (click)="clearChat()" title="Effacer">↺</button>
+            <button class="header-btn" (click)="close()" title="Fermer">✕</button>
+          </div>
+        </div>
+
+        <div class="chat-messages" #messagesContainer>
+          <div *ngFor="let msg of messages" class="message" [class.user]="msg.role === 'user'">
+            <div class="message-bubble" [class.user-bubble]="msg.role === 'user'">
+              <pre class="message-content">{{msg.content}}</pre>
+              <div class="message-time">{{msg.timestamp | date:'HH:mm'}}</div>
+            </div>
+          </div>
+
+          <!-- Loading indicator -->
+          <div *ngIf="loading" class="message">
+            <div class="message-bubble">
+              <div class="typing-indicator">
+                <span></span><span></span><span></span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Suggestions -->
+        <div class="suggestions" *ngIf="messages.length <= 1 && !loading">
+          <button class="suggestion-chip" *ngFor="let s of suggestions" (click)="send(s)">
+            {{s}}
+          </button>
+        </div>
+
+        <div class="chat-input-area">
+          <input
+            class="chat-input"
+            [(ngModel)]="inputText"
+            (keydown)="onKeydown($event)"
+            placeholder="Posez votre question..."
+            [disabled]="loading"
+          />
+          <button class="send-btn" (click)="send()" [disabled]="!inputText.trim() || loading">
+            ▶
+          </button>
+        </div>
+      </div>
+
+      <!-- FAB Button -->
+      <button class="chat-fab" (click)="toggle()" [class.open]="isOpen">
+        <span *ngIf="!isOpen">💬</span>
+        <span *ngIf="isOpen">✕</span>
+      </button>
+
+    </div>
