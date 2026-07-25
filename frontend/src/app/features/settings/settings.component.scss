@@ -1,0 +1,138 @@
+    .settings-layout { display: flex; flex-direction: column; gap: 24px; max-width: 760px; }
+
+    .section-label {
+      font-size: 10px; font-weight: 600; letter-spacing: 1.5px;
+      text-transform: uppercase; color: var(--text-muted);
+      font-family: var(--font-mono); margin-bottom: 10px;
+    }
+
+    /* ── Tool list ── */
+    .tool-list { display: flex; flex-direction: column; gap: 2px; }
+
+    .tool-item {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      transition: border-color .15s;
+      &:hover { border-color: var(--border-light); }
+    }
+
+    .tool-header {
+      display: flex; align-items: center; gap: 12px;
+      padding: 14px 16px; cursor: pointer; user-select: none;
+    }
+
+    .tool-icon {
+      width: 36px; height: 36px; border-radius: var(--radius-md);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px; font-weight: 700; flex-shrink: 0;
+      font-family: var(--font-mono);
+    }
+
+    .tool-meta { flex: 1; min-width: 0; }
+    .tool-name { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+    .tool-desc { font-size: 10px; color: var(--text-muted); margin-top: 1px; }
+
+    .conn-status {
+      display: flex; align-items: center; gap: 5px;
+      font-size: 11px; font-family: var(--font-mono);
+      padding: 3px 10px; border-radius: 20px; border: 1px solid var(--border);
+      color: var(--text-muted); white-space: nowrap;
+      &.connected  { color: var(--accent-green);  border-color: var(--accent-green);  background: var(--accent-green-bg); }
+      &.error      { color: var(--accent-red);     border-color: var(--accent-red);    background: var(--accent-red-bg); }
+      &.disconnected { color: var(--text-muted); }
+    }
+    .conn-dot { font-size: 8px; }
+
+    .chevron {
+      color: var(--text-faint); font-size: 12px;
+      transition: transform .2s; flex-shrink: 0;
+      &.open { transform: rotate(90deg); }
+    }
+
+    /* ── Tool body ── */
+    .tool-body {
+      padding: 0 16px 16px;
+      border-top: 1px solid var(--border);
+      animation: slideDown .15s ease;
+    }
+    @keyframes slideDown { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+
+    .field-row { display: flex; flex-direction: column; gap: 5px; margin-top: 12px; }
+    .field-label { font-size: 10px; color: var(--text-muted); letter-spacing: .8px; text-transform: uppercase; font-family: var(--font-mono); }
+    .field-input {
+      background: var(--bg-primary); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 7px 10px;
+      color: var(--text-primary); font-size: 12px; font-family: var(--font-mono);
+      outline: none; transition: border-color .15s; width: 100%;
+      &:focus { border-color: var(--accent-blue); }
+      &.accent-blue { color: var(--accent-blue); }
+    }
+    .field-hint { font-size: 10px; color: var(--text-faint); margin-top: 3px; }
+
+    .range-row { display: flex; align-items: center; gap: 12px; }
+    .range-input { flex: 1; accent-color: var(--accent-blue); }
+    .range-val { font-size: 13px; font-family: var(--font-mono); color: var(--accent-orange); min-width: 38px; }
+
+    /* ── Metadata ── */
+    .meta-block {
+      margin-top: 12px; background: var(--bg-primary);
+      border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 12px;
+    }
+    .meta-title { font-size: 9px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-faint); margin-bottom: 8px; }
+    .meta-grid { display: grid; grid-template-columns: 110px 1fr; gap: 4px 12px; }
+    .meta-key { font-size: 11px; color: var(--text-muted); font-family: var(--font-mono); }
+    .meta-val { font-size: 11px; color: var(--text-secondary); font-family: var(--font-mono); }
+    .meta-val.err-text { color: var(--accent-red); }
+    .meta-checked { font-size: 9px; color: var(--text-faint); margin-top: 8px; }
+
+    /* ── Actions ── */
+    .tool-actions { display: flex; gap: 8px; margin-top: 14px; justify-content: flex-end; }
+
+    .btn-test {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 6px 14px; border-radius: var(--radius-sm);
+      font-size: 11px; font-family: var(--font-mono); cursor: pointer;
+      background: var(--accent-blue-bg); border: 1px solid var(--accent-blue);
+      color: var(--accent-blue); transition: all .15s;
+      &:hover:not(:disabled) { background: #38bdf822; }
+      &:disabled { opacity: 0.4; cursor: not-allowed; }
+    }
+
+    .btn-save {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 6px 14px; border-radius: var(--radius-sm);
+      font-size: 11px; font-family: var(--font-mono); cursor: pointer;
+      background: transparent; border: 1px solid; transition: all .15s;
+      &:hover:not(:disabled) { opacity: 0.8; }
+      &:disabled { opacity: 0.4; cursor: not-allowed; }
+    }
+
+    .spin { display: inline-block; animation: rotate .7s linear infinite; }
+    @keyframes rotate { to { transform: rotate(360deg); } }
+
+    /* ── Card ── */
+    .card {
+      background: var(--bg-secondary); border: 1px solid var(--border);
+      border-radius: var(--radius-md); padding: 16px;
+    }
+
+    .btn-save-primary {
+      margin-top: 14px; padding: 7px 16px;
+      background: var(--accent-blue-bg); border: 1px solid var(--accent-blue);
+      border-radius: var(--radius-sm); color: var(--accent-blue);
+      font-size: 12px; font-family: var(--font-mono); cursor: pointer;
+      &:hover { background: #38bdf822; }
+    }
+
+    /* ── Info table ── */
+    .info-row {
+      display: flex; gap: 16px; padding: 7px 0;
+      border-bottom: 1px solid var(--border);
+      &:last-child { border-bottom: none; }
+    }
+    .info-key { font-size: 11px; color: var(--text-faint); width: 180px; flex-shrink: 0; }
+    .info-val { font-size: 12px; color: var(--text-secondary); font-family: var(--font-mono); }
+
+    .mono { font-family: var(--font-mono) !important; font-size: 11px !important; }

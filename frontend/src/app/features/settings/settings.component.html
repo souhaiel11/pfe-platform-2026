@@ -1,0 +1,138 @@
+    <div class="page-container">
+      <div class="page-header">
+        <h1 class="page-title">// paramètres</h1>
+        <p class="page-subtitle">Configuration de la plateforme DevSecOps IA</p>
+      </div>
+
+      <div class="settings-layout">
+
+        <!-- ═══ INTÉGRATIONS ═══ -->
+        <div class="section-block">
+          <div class="section-label">Intégrations Infrastructure</div>
+
+          <div class="tool-list">
+            <div class="tool-item" *ngFor="let tool of tools">
+
+              <!-- Header accordion -->
+              <div class="tool-header" (click)="toggle(tool)">
+                <div class="tool-icon" [style.color]="tool.color" [style.background]="tool.color+'1a'">
+                  {{tool.icon}}
+                </div>
+                <div class="tool-meta">
+                  <div class="tool-name">{{tool.name}}</div>
+                  <div class="tool-desc">{{tool.description}}</div>
+                </div>
+                <div class="conn-status"
+                     [class.connected]="tool.status === 'connected'"
+                     [class.error]="tool.status === 'error'"
+                     [class.disconnected]="tool.status === 'disconnected'">
+                  <span class="conn-dot">{{tool.status === 'connected' ? '●' : tool.status === 'error' ? '✕' : '○'}}</span>
+                  <span>{{tool.status === 'connected' ? 'Connecté' : tool.status === 'error' ? 'Erreur' : 'Non configuré'}}</span>
+                </div>
+                <div class="chevron" [class.open]="tool.expanded">▸</div>
+              </div>
+
+              <!-- Body accordion -->
+              <div class="tool-body" *ngIf="tool.expanded">
+
+                <!-- URL -->
+                <div class="field-row">
+                  <label class="field-label">URL</label>
+                  <input class="field-input" type="text" [(ngModel)]="tool.url"
+                         [placeholder]="getUrlPlaceholder(tool.toolType)" />
+                </div>
+
+                <!-- Token (Grafana, Kubernetes) -->
+                <div class="field-row" *ngIf="tool.authType === 'token'">
+                  <label class="field-label">{{tool.tokenLabel}}</label>
+                  <input class="field-input" type="password" [(ngModel)]="tool.token"
+                         placeholder="••••••••••••••••" />
+                </div>
+
+                <!-- Basic auth (Nexus) -->
+                <ng-container *ngIf="tool.authType === 'basic'">
+                  <div class="field-row">
+                    <label class="field-label">Utilisateur</label>
+                    <input class="field-input" type="text" [(ngModel)]="tool.username"
+                           placeholder="admin" />
+                  </div>
+                  <div class="field-row">
+                    <label class="field-label">Mot de passe</label>
+                    <input class="field-input" type="password" [(ngModel)]="tool.password"
+                           placeholder="••••••••" />
+                  </div>
+                </ng-container>
+
+                <!-- Metadata display -->
+                <div class="meta-block" *ngIf="tool.metadata && tool.status !== 'disconnected'">
+                  <div class="meta-title">Réponse serveur</div>
+                  <div class="meta-grid">
+                    <ng-container *ngFor="let entry of getMetaEntries(tool.metadata)">
+                      <span class="meta-key">{{entry.key}}</span>
+                      <span class="meta-val" [class.err-text]="entry.key === 'error'">{{entry.val}}</span>
+                    </ng-container>
+                  </div>
+                  <div class="meta-checked" *ngIf="tool.lastChecked">
+                    Vérifié le {{tool.lastChecked | date:'dd/MM/yyyy à HH:mm'}}
+                  </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="tool-actions">
+                  <button class="btn-test" (click)="testTool(tool)"
+                          [disabled]="tool.testing || tool.saving || !tool.url">
+                    <span *ngIf="!tool.testing">⚡ Tester la connexion</span>
+                    <span *ngIf="tool.testing" class="spin">↻</span>
+                    <span *ngIf="tool.testing"> Test en cours…</span>
+                  </button>
+                  <button class="btn-save" [style.border-color]="tool.color" [style.color]="tool.color"
+                          (click)="saveTool(tool)"
+                          [disabled]="tool.saving || tool.testing || !tool.url">
+                    <span *ngIf="!tool.saving">Enregistrer</span>
+                    <span *ngIf="tool.saving" class="spin">↻</span>
+                    <span *ngIf="tool.saving"> Sauvegarde…</span>
+                  </button>
+                </div>
+
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ═══ CONFIG IA ═══ -->
+        <div class="section-block">
+          <div class="section-label">Configuration IA</div>
+          <div class="card">
+            <div class="field-row">
+              <label class="field-label">Modèle Ollama</label>
+              <input class="field-input mono accent-blue" value="llama3.2:3b" readonly />
+            </div>
+            <div class="field-row">
+              <label class="field-label">Seuil de confiance Judge</label>
+              <div class="range-row">
+                <input type="range" min="50" max="95" step="5" [(ngModel)]="confidenceThreshold" class="range-input" />
+                <span class="range-val">{{confidenceThreshold}}%</span>
+              </div>
+              <div class="field-hint">Seuil en dessous duquel le Judge refuse une correction automatique.</div>
+            </div>
+            <div class="field-row">
+              <label class="field-label">URL Webhook n8n</label>
+              <input class="field-input mono" [value]="n8nUrl" readonly />
+            </div>
+            <button class="btn-save-primary" (click)="saveConfig()">Sauvegarder</button>
+          </div>
+        </div>
+
+        <!-- ═══ INFOS PLATEFORME ═══ -->
+        <div class="section-block">
+          <div class="section-label">Informations plateforme</div>
+          <div class="card">
+            <div class="info-row" *ngFor="let info of platformInfo">
+              <span class="info-key">{{info.label}}</span>
+              <span class="info-val">{{info.value}}</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
