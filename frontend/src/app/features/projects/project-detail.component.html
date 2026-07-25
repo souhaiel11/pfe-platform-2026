@@ -1,0 +1,562 @@
+    <div class="page" *ngIf="!loading && project">
+
+      <!-- ═══ HEADER ═══ -->
+      <div class="page-header">
+        <div class="project-avatar" [style.background]="getAvatarBg(project.name)">
+          {{project.name?.substring(0,2)?.toUpperCase()}}
+        </div>
+        <div class="header-info">
+          <h1>{{project.name}}</h1>
+          <div class="header-meta">
+            <span class="badge-env">{{project.environment || 'dev'}}</span>
+            <span class="sep">·</span>
+            <span>{{project.githubRepo || 'No repo'}}</span>
+            <span class="sep">·</span>
+            <span>{{project.jenkinsJobName || 'No job'}}</span>
+          </div>
+        </div>
+        <div class="header-actions">
+          <div class="score-ring" [class.critical]="lastScore < 40" [class.high]="lastScore >= 40 && lastScore < 60"
+               [class.medium]="lastScore >= 60 && lastScore < 80" [class.low]="lastScore >= 80">
+            <span class="score-num">{{lastScore}}</span>
+            <span class="score-lbl">SCORE</span>
+          </div>
+          <div class="risk-pill" [class.critical]="lastRisk==='critical'" [class.high]="lastRisk==='high'"
+               [class.medium]="lastRisk==='medium'" [class.low]="lastRisk==='low'">
+            {{lastRisk?.toUpperCase() || 'N/A'}}
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ TABS ═══ -->
+      <div class="tabs-row">
+        <button class="tab-btn" [class.active]="activeTab==='rapport'"   (click)="activeTab='rapport'">
+          🤖 Rapport IA <span class="tab-badge" *ngIf="allReports.length">{{allReports.length}}</span>
+        </button>
+        <button class="tab-btn" [class.active]="activeTab==='jenkins'"   (click)="activeTab='jenkins'">
+          ⚙️ Jenkins
+        </button>
+        <button class="tab-btn" [class.active]="activeTab==='sonarqube'" (click)="activeTab='sonarqube'">
+          🔍 SonarQube
+        </button>
+        <button class="tab-btn" [class.active]="activeTab==='securite'"  (click)="activeTab='securite'">
+          🔒 Sécurité
+        </button>
+        <button class="tab-btn" [class.active]="activeTab==='incidents'" (click)="activeTab='incidents'">
+          ⚠️ Incidents <span class="tab-badge danger" *ngIf="incidents.length">{{incidents.length}}</span>
+        </button>
+        <button class="tab-btn" [class.active]="activeTab==='config'"    (click)="activeTab='config'">
+          ⚙️ Config
+        </button>
+      </div>
+
+      <!-- ═══════════════════════════════════════════ -->
+      <!-- ONGLET RAPPORT IA                           -->
+      <!-- ═══════════════════════════════════════════ -->
+      <div *ngIf="activeTab === 'rapport'">
+        <div *ngIf="!latestReport" class="empty-state">
+          <div class="empty-icon">🤖</div>
+          <div class="empty-title">Aucun rapport IA disponible</div>
+          <div class="empty-sub">Lancez un build Jenkins pour générer une analyse</div>
+        </div>
+
+        <div *ngIf="latestReport">
+
+          <!-- Section 1 : en-tête du rapport -->
+          <div class="ai-hero">
+            <div>
+              <div class="ai-hero-tag">Build #{{rp.build || '?'}} — {{latestReport.createdAt | date:'dd/MM/yyyy HH:mm'}}</div>
+              <div class="ai-hero-title">Analyse DevSecOps IA</div>
+              <div class="ai-hero-sub">{{rp.job || 'N/A'}} — {{rp.status || 'N/A'}}</div>
+            </div>
+            <div class="ai-hero-right">
+              <span class="ai-decision-badge" [style.color]="getDecisionColor(rp.decision)"
+                    [style.border-color]="getDecisionColor(rp.decision)">{{rp.decision || 'N/A'}}</span>
+              <div class="ai-confidence">
+                <div class="ai-conf-bar"><div class="ai-conf-fill" [style.width]="rp.confidence" [style.background]="getDecisionColor(rp.decision)"></div></div>
+                <span class="ai-conf-text">Confiance : {{rp.confidence || '0%'}}</span>
+              </div>
+              <span class="ai-sec-badge" [style.color]="getSecColor(rp.security)"
+                    [style.border-color]="getSecColor(rp.security)">🔒 {{rp.security || 'UNKNOWN'}}</span>
+            </div>
+          </div>
+
+          <!-- Section 2 : problèmes détectés -->
+          <div class="ai-section">
+            <div class="ai-section-title">Problèmes détectés</div>
+            <div class="sev-count-grid">
+              <div class="sev-count-card blocker">
+                <div class="sev-count-num">{{countIssues('BLOCKER')}}</div>
+                <div class="sev-count-lbl">BLOCKER</div>
+                <div class="sev-count-sub">passwords, leaks</div>
+              </div>
+              <div class="sev-count-card critical">
+                <div class="sev-count-num">{{countIssues('CRITICAL')}}</div>
+                <div class="sev-count-lbl">CRITICAL</div>
+                <div class="sev-count-sub">vulns, smells</div>
+              </div>
+              <div class="sev-count-card major">
+                <div class="sev-count-num">{{countIssues('MAJOR')}}</div>
+                <div class="sev-count-lbl">MAJOR</div>
+              </div>
+              <div class="sev-count-card bug">
+                <div class="sev-count-num">{{countIssues('BUG')}}</div>
+                <div class="sev-count-lbl">BUG</div>
+              </div>
+            </div>
+
+            <div class="ai-justif" *ngIf="rp.justification">
+              <div class="ai-justif-lbl">Justification IA</div>
+              <p class="ai-justif-text">{{rp.justification}}</p>
+            </div>
+
+            <div class="ai-cicd-summary" *ngIf="rp.cicdIssues">
+              <span class="ai-cicd-lbl">CI/CD :</span>
+              <span class="ai-cicd-text">{{splitItems(rp.cicdIssues).join(' · ')}}</span>
+            </div>
+          </div>
+
+          <!-- Section 3 : solutions proposées -->
+          <div class="solutions-grid">
+
+            <!-- Colonne gauche : correction agent IA -->
+            <div class="solution-card">
+              <div class="solution-header"><span class="solution-icon">🤖</span><span>Correction agent IA</span></div>
+
+              <ol class="ai-action-list" *ngIf="devTasks.length">
+                <li *ngFor="let t of devTasks; let i = index" class="ai-action-item" [class.done]="t.done" (click)="toggleTask(i)">
+                  <span class="ai-action-num">{{i+1}}</span>
+                  <span class="ai-action-txt">
+                    <span class="task-pri" *ngIf="t.priority" [style.color]="getPriColor(t.priority)">[{{t.priority}}]</span>{{t.text}}
+                  </span>
+                </li>
+              </ol>
+
+              <div class="review-points" *ngIf="rp.developerReviewPoints?.length">
+                <div class="review-points-lbl">Points de revue</div>
+                <ul>
+                  <li *ngFor="let pt of rp.developerReviewPoints">{{pt}}</li>
+                </ul>
+              </div>
+
+              <div class="judge-warning" *ngIf="rp.warning">
+                ⚠️ <strong>Avertissement du Judge :</strong> {{rp.warning}}
+              </div>
+
+              <div class="approval-box" *ngIf="(latestReport.status === 'analyzed' || latestReport.status === 'blocked') && (rp.decision === 'FIX_PROPOSED' || rp.decision === 'BLOCK' || rp.decision === 'AUTO_FIX')">
+                <div class="approval-msg">Cette correction nécessite votre validation avant génération de la Pull Request.</div>
+                <div class="approval-actions">
+                  <button class="btn btn-action green" (click)="approveFix(latestReport.id)" [disabled]="approving">✓ Approuver la correction</button>
+                  <button class="btn btn-action gray" (click)="rejectFix(latestReport.id)" [disabled]="approving">✗ Rejeter</button>
+                </div>
+              </div>
+              <div class="approval-status info"     *ngIf="latestReport.status === 'approved'">⏳ Génération de la PR en cours...</div>
+              <div class="approval-status success"  *ngIf="latestReport.status === 'fix_generated'">✅ PR créée : <a [href]="latestReport.prUrl" target="_blank">{{latestReport.prUrl}}</a></div>
+              <div class="approval-status rejected" *ngIf="latestReport.status === 'rejected'">✗ Rejetée par le développeur</div>
+            </div>
+
+            <!-- Colonne droite : correction manuelle -->
+            <div class="solution-card">
+              <div class="solution-header"><span class="solution-icon">👤</span><span>Correction manuelle</span></div>
+
+              <ng-container *ngIf="manualHigh.length">
+                <div class="manual-group-lbl high">Priorité haute</div>
+                <div class="manual-item" *ngFor="let m of manualHigh">
+                  <span class="manual-chk">☐</span>
+                  <div class="manual-body">
+                    <span class="manual-txt">{{m.text}}</span>
+                    <div class="manual-cmd" (click)="copyText(m.text)">
+                      <span class="manual-cmd-text">{{m.text}}</span>
+                      <span class="manual-copy-icon">📋</span>
+                    </div>
+                  </div>
+                </div>
+              </ng-container>
+
+              <ng-container *ngIf="manualNormal.length">
+                <div class="manual-group-lbl normal">Recommandé</div>
+                <div class="manual-item" *ngFor="let m of manualNormal">
+                  <span class="manual-chk">☐</span>
+                  <div class="manual-body">
+                    <span class="manual-txt">{{m.text}}</span>
+                    <div class="manual-cmd" (click)="copyText(m.text)">
+                      <span class="manual-cmd-text">{{m.text}}</span>
+                      <span class="manual-copy-icon">📋</span>
+                    </div>
+                  </div>
+                </div>
+              </ng-container>
+
+              <div class="empty-sub" *ngIf="!manualHigh.length && !manualNormal.length">Aucune recommandation manuelle</div>
+            </div>
+
+          </div><!-- /solutions-grid -->
+
+          <!-- Section 4 : détail sécurité -->
+          <div class="card mt-10" *ngIf="rp.securityIssues || ed.trivy?.cves?.length || ed.zap?.alerts?.length">
+            <div class="card-title">🔒 Détail sécurité</div>
+
+            <div class="zone-body" style="padding:0 0 10px" *ngIf="rp.securityIssues">
+              <div *ngFor="let item of splitItems(rp.securityIssues)" class="zone-item">
+                <span class="item-dot red">▸</span><span class="item-text">{{item}}</span>
+              </div>
+            </div>
+
+            <table class="data-table mt-10" *ngIf="ed.trivy?.cves?.length">
+              <thead><tr><th>CVE ID</th><th>Sévérité</th><th>Package</th><th>Version</th><th>Fix disponible</th></tr></thead>
+              <tbody>
+                <tr *ngFor="let cve of ed.trivy.cves">
+                  <td style="font-family:var(--font-mono);font-size:10px;color:var(--accent-blue)">{{cve.id}}</td>
+                  <td><span class="sev-badge" [style.background]="getSevColor(cve.severity)">{{cve.severity}}</span></td>
+                  <td style="font-size:11px;font-family:var(--font-mono)">{{cve.package}}</td>
+                  <td style="font-size:11px;color:var(--accent-red)">{{cve.version}}</td>
+                  <td style="font-size:11px;color:var(--accent-green)">{{cve.fixedIn || 'Aucun fix'}}</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <table class="data-table mt-10" *ngIf="ed.zap?.alerts?.length">
+              <thead><tr><th>Alerte</th><th>Risque</th><th>URL</th><th>Solution</th></tr></thead>
+              <tbody>
+                <tr *ngFor="let alert of ed.zap.alerts">
+                  <td style="font-size:11px;font-weight:600">{{alert.name}}</td>
+                  <td><span class="sev-badge" [style.background]="getSevColor(alert.risk)">{{alert.risk?.split(' ')[0]}}</span></td>
+                  <td style="font-size:10px;color:var(--text-muted);max-width:150px;overflow:hidden;text-overflow:ellipsis">{{alert.url}}</td>
+                  <td style="font-size:10px;color:var(--accent-green);max-width:200px">{{alert.solution?.substring(0,100)}}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Section 5 : analyse des agents -->
+          <div class="agents-grid" *ngIf="rp.agentActions">
+            <div class="agent-card">
+              <div class="agent-card-hd"><span>🔎</span> Root Cause Agent</div>
+              <p class="agent-card-txt">{{getAgentText('root') || '—'}}</p>
+            </div>
+            <div class="agent-card">
+              <div class="agent-card-hd"><span>🛡️</span> Security Risk Agent</div>
+              <p class="agent-card-txt">{{getAgentText('security') || '—'}}</p>
+            </div>
+            <div class="agent-card">
+              <div class="agent-card-hd"><span>🛠️</span> Remediation Agent</div>
+              <p class="agent-card-txt">{{getAgentText('remediation') || '—'}}</p>
+            </div>
+            <div class="judge-warning full" *ngIf="rp.warning">
+              ⚠️ <strong>Avertissement du Judge :</strong> {{rp.warning}}
+            </div>
+          </div>
+
+          <!-- Section 6 : historique des rapports -->
+          <div class="history-box" *ngIf="allReports.length > 1">
+            <div class="history-title">📋 Historique des rapports</div>
+            <div class="history-list">
+              <div *ngFor="let r of allReports" class="history-item"
+                   [class.selected]="r.id === latestReport.id" (click)="selectReport(r)">
+                <span class="h-dot" [style.background]="getDecisionColor(parseReport(r.aiAnalysis).decision)"></span>
+                <span class="h-build">Build #{{parseReport(r.aiAnalysis).build || '?'}}</span>
+                <span class="h-date">{{r.createdAt | date:'dd/MM HH:mm'}}</span>
+                <span class="h-dec" [style.color]="getDecisionColor(parseReport(r.aiAnalysis).decision)">{{parseReport(r.aiAnalysis).decision || 'N/A'}}</span>
+                <span class="h-score" [class.critical]="r.securityScore < 40">{{r.securityScore}}/100</span>
+              </div>
+            </div>
+          </div>
+
+          <div style="text-align:right;margin-top:8px">
+            <button class="btn btn-secondary btn-sm" (click)="copyReport()">📋 Copier le rapport</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════ -->
+      <!-- ONGLET JENKINS                              -->
+      <!-- ═══════════════════════════════════════════ -->
+      <div *ngIf="activeTab === 'jenkins'">
+        <!-- KPIs depuis enrichedData du dernier rapport -->
+        <div class="kpi-grid" *ngIf="ed.build">
+          <div class="kpi-card">
+            <div class="kpi-label">Build</div>
+            <div class="kpi-value" [style.color]="ed.build.status==='SUCCESS'?'var(--accent-green)':'var(--accent-red)'">#{{ed.build.number || '?'}}</div>
+            <div class="kpi-sub" [style.color]="ed.build.status==='SUCCESS'?'var(--accent-green)':'var(--accent-red)'">{{ed.build.status || 'N/A'}}</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Tests</div>
+            <div class="kpi-value" [style.color]="ed.tests?.failures>0?'var(--accent-red)':'var(--accent-green)'">
+              {{ed.tests?.total || 0}}
+            </div>
+            <div class="kpi-sub">{{ed.tests?.failures || 0}} échecs</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Coverage</div>
+            <div class="kpi-value" style="color:var(--accent-blue)">{{ed.tests?.coverage || '0'}}%</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Docker</div>
+            <div class="kpi-value" style="font-size:12px" [style.color]="ed.docker?.build_status==='SUCCESS'?'var(--accent-green)':'var(--accent-red)'">
+              {{ed.docker?.build_status || 'N/A'}}
+            </div>
+            <div class="kpi-sub">{{ed.docker?.image_tag || 'N/A'}}</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Deploy</div>
+            <div class="kpi-value" style="font-size:14px" [style.color]="ed.deploy?.status==='SUCCESS'?'var(--accent-green)':'var(--accent-red)'">
+              {{ed.deploy?.status || 'N/A'}}
+            </div>
+            <div class="kpi-sub">{{ed.deploy?.namespace || 'N/A'}}</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Nexus</div>
+            <div class="kpi-value" style="font-size:14px" [style.color]="ed.docker?.push_status==='SUCCESS'?'var(--accent-green)':'var(--accent-red)'">
+              {{ed.docker?.push_status || 'N/A'}}
+            </div>
+          </div>
+        </div>
+
+        <!-- Analyse IA Jenkins -->
+        <div class="zone-card zone-cicd mt-10" *ngIf="rp.cicdIssues">
+          <div class="zone-header"><span>🤖</span><span class="zone-title">ANALYSE IA — PIPELINE CI/CD</span></div>
+          <div class="zone-body">
+            <div *ngFor="let item of splitItems(rp.cicdIssues)" class="zone-item">
+              <span class="item-dot orange">▸</span><span class="item-text">{{item}}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Actions Jenkins -->
+        <div class="action-row mt-10">
+          <button class="btn btn-action green" (click)="triggerBuild()">
+            🔄 Déclencher un build
+          </button>
+          <a [href]="'http://172.31.172.61:8082/job/'+(project.jenkinsJobName||'')" target="_blank" class="btn btn-action">
+            🔗 Ouvrir Jenkins
+          </a>
+          <a [href]="ed.build?.url?.replace('jenkins:8080','172.31.172.61:8082')" target="_blank" class="btn btn-action" *ngIf="ed.build?.url">
+            📋 Voir les logs
+          </a>
+        </div>
+
+        <!-- Historique builds depuis Jenkins API -->
+        <div class="card mt-10" *ngIf="jenkinsBuilds.length">
+          <div class="card-title">📊 Derniers builds</div>
+          <div class="build-list">
+            <div *ngFor="let b of jenkinsBuilds" class="build-item">
+              <div class="build-dot" [style.background]="b.result==='SUCCESS'?'var(--accent-green)':'var(--accent-red)'"></div>
+              <span class="build-num" style="color:var(--accent-blue)">#{{b.number}}</span>
+              <span class="build-result" [style.color]="b.result==='SUCCESS'?'var(--accent-green)':'var(--accent-red)'">{{b.result || 'RUNNING'}}</span>
+              <span class="build-dur">{{b.duration}}s</span>
+              <span class="build-time">{{b.timestamp | date:'dd/MM HH:mm'}}</span>
+              <a [href]="b.url?.replace('jenkins:8080','172.31.172.61:8082')" target="_blank" class="build-link">→</a>
+            </div>
+          </div>
+        </div>
+
+        <div class="empty-state" *ngIf="!ed.build && !jenkinsBuilds.length">
+          <div class="empty-icon">⚙️</div>
+          <div class="empty-title">Aucune donnée Jenkins</div>
+          <div class="empty-sub">Lancez un build pour voir les données</div>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════ -->
+      <!-- ONGLET SONARQUBE                            -->
+      <!-- ═══════════════════════════════════════════ -->
+      <div *ngIf="activeTab === 'sonarqube'">
+        <!-- KPIs SonarQube -->
+        <div class="kpi-grid" *ngIf="ed.sonar">
+          <div class="kpi-card" [style.border-color]="ed.sonar.quality_gate==='OK'?'var(--accent-green)':'var(--accent-red)'">
+            <div class="kpi-label">Quality Gate</div>
+            <div class="kpi-value" [style.color]="ed.sonar.quality_gate==='OK'?'var(--accent-green)':'var(--accent-red)'">
+              {{ed.sonar.quality_gate==='OK'?'✅ PASSED':'❌ FAILED'}}
+            </div>
+          </div>
+          <div class="kpi-card"><div class="kpi-label">Bugs</div>
+            <div class="kpi-value" [style.color]="ed.sonar.bugs>0?'var(--accent-red)':'var(--accent-green)'">{{ed.sonar.bugs || 0}}</div>
+          </div>
+          <div class="kpi-card"><div class="kpi-label">Vulnérabilités</div>
+            <div class="kpi-value" [style.color]="ed.sonar.vulnerabilities>0?'var(--accent-orange)':'var(--accent-green)'">{{ed.sonar.vulnerabilities || 0}}</div>
+          </div>
+          <div class="kpi-card"><div class="kpi-label">Code Smells</div>
+            <div class="kpi-value" style="color:var(--accent-yellow,#f59e0b)">{{ed.sonar.code_smells || 0}}</div>
+          </div>
+          <div class="kpi-card"><div class="kpi-label">Coverage</div>
+            <div class="kpi-value" style="color:var(--accent-blue)">{{ed.sonar.coverage || '0'}}%</div>
+          </div>
+          <div class="kpi-card"><div class="kpi-label">Status</div>
+            <div class="kpi-value" style="font-size:14px" [style.color]="ed.sonar.status==='SUCCESS'?'var(--accent-green)':'var(--accent-orange)'">
+              {{ed.sonar.status || 'N/A'}}
+            </div>
+          </div>
+        </div>
+
+        <!-- Issues SonarQube détaillées -->
+        <div class="card mt-10" *ngIf="ed.sonar?.issues?.length">
+          <div class="card-title">🐛 Issues détectées ({{ed.sonar.issues.length}})</div>
+          <table class="data-table">
+            <thead>
+              <tr><th>Sévérité</th><th>Type</th><th>Message</th><th>Fichier</th><th>Ligne</th><th>Effort</th></tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let issue of ed.sonar.issues">
+                <td><span class="sev-badge" [style.background]="getSevColor(issue.severity)">{{issue.severity}}</span></td>
+                <td style="font-size:10px;color:var(--text-muted)">{{issue.type}}</td>
+                <td style="max-width:280px;font-size:11px">{{issue.message}}</td>
+                <td style="font-size:10px;color:var(--text-muted);font-family:var(--font-mono)">{{issue.component}}</td>
+                <td style="font-size:10px;text-align:center">{{issue.line || '-'}}</td>
+                <td style="font-size:10px;color:var(--accent-orange)">{{issue.effort || '-'}}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Analyse IA SonarQube -->
+        <div class="zone-card mt-10" style="border-left:3px solid var(--accent-blue)" *ngIf="sonarAiAnalysis">
+          <div class="zone-header"><span>🤖</span><span class="zone-title">ANALYSE IA — QUALITÉ CODE</span></div>
+          <div class="zone-body">
+            <p style="font-size:12px;color:var(--text-secondary)">{{sonarAiAnalysis}}</p>
+          </div>
+        </div>
+
+        <!-- Actions SonarQube -->
+        <div class="action-row mt-10">
+          <a href="http://172.31.172.61:9000" target="_blank" class="btn btn-action">🔗 Ouvrir SonarQube</a>
+          <a [href]="'http://172.31.172.61:9000/project/issues?id='+(project.sonarqubeKey||'')" target="_blank" class="btn btn-action">📋 Voir toutes les issues</a>
+        </div>
+
+        <div class="empty-state" *ngIf="!ed.sonar">
+          <div class="empty-icon">🔍</div>
+          <div class="empty-title">Aucune donnée SonarQube</div>
+          <div class="empty-sub">Lancez un build pour voir l'analyse</div>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════ -->
+      <!-- ONGLET SÉCURITÉ                             -->
+      <!-- ═══════════════════════════════════════════ -->
+      <div *ngIf="activeTab === 'securite'">
+        <!-- KPIs sécurité -->
+        <div class="kpi-grid">
+          <div class="kpi-card" [style.border-color]="(ed.trivy?.critical||0)>0?'var(--accent-red)':'var(--border)'">
+            <div class="kpi-label">Trivy CRITICAL</div>
+            <div class="kpi-value" [style.color]="(ed.trivy?.critical||0)>0?'var(--accent-red)':'var(--accent-green)'">{{ed.trivy?.cves_count || ed.trivy?.critical || 0}}</div>
+            <div class="kpi-sub">{{ed.trivy?.status || 'N/A'}}</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">OWASP</div>
+            <div class="kpi-value" style="font-size:13px" [style.color]="ed.owasp?.status==='SUCCESS'?'var(--accent-green)':'var(--accent-orange)'">{{ed.owasp?.status || 'N/A'}}</div>
+            <div class="kpi-sub" style="color:var(--accent-red);font-size:9px">{{ed.owasp?.error || ''}}</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">ZAP DAST</div>
+            <div class="kpi-value" style="font-size:13px" [style.color]="ed.zap?.status==='SUCCESS'?'var(--accent-green)':'var(--accent-orange)'">{{ed.zap?.status || 'N/A'}}</div>
+            <div class="kpi-sub" style="color:var(--accent-red);font-size:9px">{{ed.zap?.error || ''}}</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">ZAP Alertes High</div>
+            <div class="kpi-value" [style.color]="(ed.zap?.alerts_high||0)>0?'var(--accent-red)':'var(--accent-green)'">{{ed.zap?.alerts_high || 0}}</div>
+          </div>
+        </div>
+
+        <!-- CVEs Trivy détaillées -->
+        <div class="card mt-10" *ngIf="ed.trivy?.cves?.length">
+          <div class="card-title">🛡️ CVEs Trivy ({{ed.trivy.cves.length}})</div>
+          <table class="data-table">
+            <thead>
+              <tr><th>CVE ID</th><th>Sévérité</th><th>Package</th><th>Version</th><th>Fix disponible</th></tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let cve of ed.trivy.cves">
+                <td style="font-family:var(--font-mono);font-size:10px;color:var(--accent-blue)">{{cve.id}}</td>
+                <td><span class="sev-badge" [style.background]="getSevColor(cve.severity)">{{cve.severity}}</span></td>
+                <td style="font-size:11px;font-family:var(--font-mono)">{{cve.package}}</td>
+                <td style="font-size:11px;color:var(--accent-red)">{{cve.version}}</td>
+                <td style="font-size:11px;color:var(--accent-green)">{{cve.fixedIn || 'Aucun fix'}}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Alertes ZAP -->
+        <div class="card mt-10" *ngIf="ed.zap?.alerts?.length">
+          <div class="card-title">🌐 Alertes ZAP DAST ({{ed.zap.alerts.length}})</div>
+          <table class="data-table">
+            <thead>
+              <tr><th>Alerte</th><th>Risque</th><th>URL</th><th>Solution</th></tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let alert of ed.zap.alerts">
+                <td style="font-size:11px;font-weight:600">{{alert.name}}</td>
+                <td><span class="sev-badge" [style.background]="getSevColor(alert.risk)">{{alert.risk?.split(' ')[0]}}</span></td>
+                <td style="font-size:10px;color:var(--text-muted);max-width:150px;overflow:hidden;text-overflow:ellipsis">{{alert.url}}</td>
+                <td style="font-size:10px;color:var(--accent-green);max-width:200px">{{alert.solution?.substring(0,100)}}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Analyse IA sécurité -->
+        <div class="zone-card zone-sec mt-10" *ngIf="rp.securityIssues">
+          <div class="zone-header"><span>🤖</span><span class="zone-title">ANALYSE IA — RISQUES SÉCURITÉ</span></div>
+          <div class="zone-body">
+            <div *ngFor="let item of splitItems(rp.securityIssues)" class="zone-item">
+              <span class="item-dot red">▸</span><span class="item-text">{{item}}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Actions sécurité -->
+        <div class="action-row mt-10">
+          <button class="btn btn-action red" (click)="rollbackDeployment()" *ngIf="rp.decision==='BLOCK'">
+            🚫 Rollback déploiement
+          </button>
+          <button class="btn btn-action green" (click)="createFixPR()" *ngIf="project.githubRepo">
+            🔧 Créer PR de correction
+          </button>
+        </div>
+
+        <div class="empty-state" *ngIf="!ed.trivy && !ed.zap && !ed.owasp">
+          <div class="empty-icon">🛡️</div>
+          <div class="empty-title">Aucune donnée de sécurité</div>
+          <div class="empty-sub">Lancez un build avec Trivy et ZAP activés</div>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════ -->
+      <!-- ONGLET INCIDENTS                            -->
+      <!-- ═══════════════════════════════════════════ -->
+      <div *ngIf="activeTab === 'incidents'">
+        <div class="card" style="padding:0;overflow:hidden">
+          <table class="data-table">
+            <thead><tr><th>Titre</th><th>Statut</th><th>Source</th><th>Date</th><th></th></tr></thead>
+            <tbody>
+              <tr *ngIf="incidents.length === 0">
+                <td colspan="5" style="text-align:center;padding:30px;color:var(--text-faint)">Aucun incident</td>
+              </tr>
+              <tr *ngFor="let i of incidents">
+                <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{i.title}}</td>
+                <td><span class="badge" [class.info]="i.status==='analyzed'" [class.danger]="i.status==='failed'">{{i.status}}</span></td>
+                <td><span class="badge">{{i.source}}</span></td>
+                <td style="font-size:10px;font-family:var(--font-mono)">{{i.createdAt | date:'dd/MM HH:mm'}}</td>
+                <td><a [routerLink]="['/incidents', i.id]" class="btn btn-secondary btn-sm">→</a></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════ -->
+      <!-- ONGLET CONFIG                               -->
+      <!-- ═══════════════════════════════════════════ -->
+      <div *ngIf="activeTab === 'config'">
+        <div class="card">
+          <div class="card-title">⚙️ Configuration du projet</div>
+          <table style="width:100%;border-collapse:collapse">
+            <tr *ngFor="let row of getInfoRows()" style="border-bottom:1px solid var(--border)">
+              <td style="padding:10px;color:var(--text-muted);font-size:12px;width:160px">{{row.label}}</td>
+              <td style="padding:10px;font-size:12px;font-family:var(--font-mono)">{{row.value}}</td>
+            </tr>
+          </table>
+        </div>
+      </div>
+
+    </div>
+    <div *ngIf="loading" class="loading-state">Chargement...</div>
