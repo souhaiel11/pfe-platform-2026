@@ -95,6 +95,7 @@
         <div class="field">
           <label>Job Name</label>
           <input formControlName="jenkinsJobName" placeholder="pfe-devsecops-pipeline">
+          <div class="field-error" *ngIf="isInvalid('jenkinsJobName')">Requis. Lettres, chiffres, points, tirets et underscores uniquement.</div>
         </div>
       </div>
       <div class="field">
@@ -107,6 +108,7 @@
         <div class="field">
           <label>Repository <span class="hint">(owner/repo)</span></label>
           <input formControlName="githubRepo" placeholder="souhaiel11/pfe-app-test">
+          <div class="field-error" *ngIf="isInvalid('githubRepo')">Requis, format owner/repo (ex: souhaiel11/devsecops-testbed).</div>
         </div>
         <div class="field">
           <label>GitHub Token <span class="hint">(optionnel)</span></label>
@@ -204,6 +206,7 @@
 .btn-save     { background: #238636; border: none; color: #fff; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: 600; }
 .btn-validate { background: #1f6feb; border: none; color: #fff; padding: 10px 20px; border-radius: 6px; cursor: pointer; }
 .btn-save:disabled, .btn-validate:disabled { opacity: 0.5; cursor: not-allowed; }
+.field-error { color: #f85149; font-size: 0.8rem; margin-top: 4px; }
 .alert { padding: 10px 16px; border-radius: 6px; margin-bottom: 12px; font-size: 0.875rem; }
 .alert.success { background: #0d4429; border: 1px solid #238636; }
 .alert.error   { background: #3d1212; border: 1px solid #f85149; }

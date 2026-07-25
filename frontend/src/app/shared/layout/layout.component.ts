@@ -26,7 +26,6 @@ import { ChatWidgetComponent } from '../chat-widget/chat-widget.component';
           <div class="nav-section">Plateforme</div>
           <a class="nav-item" routerLink="/dashboard" routerLinkActive="active"><i class="ti ti-layout-dashboard"></i> Dashboard</a>
           <a class="nav-item" routerLink="/projects" routerLinkActive="active"><i class="ti ti-folder"></i> Projets</a>
-          <a class="nav-item" routerLink="/incidents" routerLinkActive="active"><i class="ti ti-alert-triangle"></i> Incidents<span class="nav-badge red" *ngIf="openCount > 0">{{openCount}}</span></a>
           <a class="nav-item" routerLink="/analysis" routerLinkActive="active"><i class="ti ti-robot"></i> Agents IA</a>
           <div class="nav-section">CI/CD & Sécurité</div>
           <a class="nav-item" routerLink="/jenkins" routerLinkActive="active"><i class="ti ti-git-branch"></i> Jenkins</a>

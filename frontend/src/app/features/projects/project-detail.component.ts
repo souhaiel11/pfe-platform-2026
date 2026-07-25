@@ -155,7 +155,7 @@ import { RiskStateService } from '../../core/services/risk-state.service';
                 ⚠️ <strong>Avertissement du Judge :</strong> {{rp.warning}}
               </div>
 
-              <div class="approval-box" *ngIf="latestReport.status === 'analyzed' && rp.decision === 'FIX_PROPOSED'">
+              <div class="approval-box" *ngIf="(latestReport.status === 'analyzed' || latestReport.status === 'blocked') && (rp.decision === 'FIX_PROPOSED' || rp.decision === 'BLOCK' || rp.decision === 'AUTO_FIX')">
                 <div class="approval-msg">Cette correction nécessite votre validation avant génération de la Pull Request.</div>
                 <div class="approval-actions">
                   <button class="btn btn-action green" (click)="approveFix(latestReport.id)" [disabled]="approving">✓ Approuver la correction</button>

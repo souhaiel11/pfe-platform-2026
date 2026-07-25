@@ -82,7 +82,13 @@ import { ThemeService } from '../../core/services/theme.service';
               <i class="ti ti-shield-half"></i>
               Score de risque global
             </div>
-            <div class="risk-list">
+            <div class="loading-overlay" *ngIf="projectsLoading"><div class="spinner"></div><span>Chargement...</span></div>
+            <div class="empty-state" *ngIf="!projectsLoading && projects.length === 0">
+              <div class="empty-icon">◧</div>
+              <div class="empty-title">Aucun projet</div>
+              <div class="empty-sub">Ajoutez un projet pour voir son score de risque</div>
+            </div>
+            <div class="risk-list" *ngIf="!projectsLoading && projects.length > 0">
               <div class="risk-item" *ngFor="let p of projects">
                 <div class="risk-proj-info">
                   <div class="risk-av" [style.background]="p.avatarBg" [style.color]="p.avatarColor">{{p.initials}}</div>
@@ -135,7 +141,13 @@ import { ThemeService } from '../../core/services/theme.service';
           Projets surveillés
           <span class="section-count">{{projects.length}}</span>
         </div>
-        <div class="proj-grid">
+        <div class="loading-overlay" *ngIf="projectsLoading"><div class="spinner"></div><span>Chargement...</span></div>
+        <div class="empty-state" *ngIf="!projectsLoading && projects.length === 0">
+          <div class="empty-icon">◧</div>
+          <div class="empty-title">Aucun projet</div>
+          <div class="empty-sub">Créez votre premier projet pour commencer</div>
+        </div>
+        <div class="proj-grid" *ngIf="!projectsLoading && projects.length > 0">
           <a class="proj-card" *ngFor="let p of projects" [routerLink]="['/projects', p.id]">
             <div class="proj-card-header">
               <div class="proj-av" [style.background]="p.avatarBg" [style.color]="p.avatarColor">{{p.initials}}</div>
@@ -143,15 +155,11 @@ import { ThemeService } from '../../core/services/theme.service';
                 <div class="proj-name">{{p.name}}</div>
                 <div class="proj-tech">{{p.tech}}</div>
               </div>
-              <span class="decision-badge" [class]="p.lastDecision.toLowerCase()">{{p.lastDecision}}</span>
             </div>
             <div class="proj-pills">
               <span class="pill red" *ngIf="p.incidents > 0">{{p.incidents}} incident{{p.incidents > 1 ? 's' : ''}}</span>
               <span class="pill green" *ngIf="p.incidents === 0">0 incidents</span>
               <span class="pill" [class]="p.buildStatus === 'SUCCESS' ? 'green' : 'red'">Build {{p.buildStatus}}</span>
-            </div>
-            <div class="proj-sparkline">
-              <canvas [id]="'spark-' + p.id" height="30"></canvas>
             </div>
             <div class="health-bar-wrap">
               <div class="health-bar" [style.width]="p.health + '%'" [style.background]="getBarColor(p.health)"></div>
@@ -637,49 +645,14 @@ export class DashboardComponent implements OnInit, AfterViewInit {
     { label: 'CVE HIGH',         value: '2',  sub: 'en attente',     icon: 'ti-shield-exclamation',  color: 'orange' },
   ];
 
-  projects = [
-    {
-      id: '54192eca-43da-4d8f-9b49-30c143983fdd',
-      name: 'pfe-app-test',
-      tech: 'Spring Boot · Jenkins · K8s',
-      initials: 'AT',
-      avatarBg: 'var(--accent-blue-bg)',
-      avatarColor: 'var(--accent-primary)',
-      incidents: 2,
-      buildStatus: 'SUCCESS',
-      health: 78,
-      riskScore: 62,
-      lastDecision: 'NOTIFY_ONLY',
-      lastUpdate: 'il y a 2h',
-      sparkData: [78, 82, 75, 70, 85, 79, 78],
-      riskBreakdown: [
-        { label: 'Jenkins',   value: 80 },
-        { label: 'SonarQube', value: 74 },
-        { label: 'Trivy',     value: 45 },
-        { label: 'OWASP',     value: 60 },
-      ]
-    },
-    {
-      id: '1b16b8d5-8115-4a79-9558-00486a460cc8',
-      name: 'pfe-devsecops-platform',
-      tech: 'Angular · NestJS · PostgreSQL',
-      initials: 'PF',
-      avatarBg: 'var(--accent-purple-bg)',
-      avatarColor: 'var(--accent-purple)',
-      incidents: 0,
-      buildStatus: 'SUCCESS',
-      health: 94,
-      riskScore: 91,
-      lastDecision: 'AUTO_FIX',
-      lastUpdate: 'il y a 5h',
-      sparkData: [90, 92, 88, 94, 93, 95, 94],
-      riskBreakdown: [
-        { label: 'Jenkins',   value: 96 },
-        { label: 'SonarQube', value: 88 },
-        { label: 'Trivy',     value: 90 },
-        { label: 'OWASP',     value: 89 },
-      ]
-    }
+  projects: any[] = [];
+  projectsLoading = true;
+
+  private readonly avatarPalette = [
+    { bg: 'var(--accent-blue-bg)',   color: 'var(--accent-primary)' },
+    { bg: 'var(--accent-purple-bg)', color: 'var(--accent-purple)' },
+    { bg: 'var(--accent-green-bg)',  color: 'var(--accent-green)' },
+    { bg: 'var(--accent-orange-bg)', color: 'var(--accent-orange)' },
   ];
 
   doraMetrics = [
@@ -713,14 +686,51 @@ export class DashboardComponent implements OnInit, AfterViewInit {
 
   constructor(private api: ApiService, public themeService: ThemeService) {}
 
-  ngOnInit() {}
+  ngOnInit() { this.loadProjects(); }
 
   ngAfterViewInit() {
-    setTimeout(() => {
-      this.buildHeatmap();
-      this.buildSparklines();
-      this.buildRiskRings();
-    }, 100);
+    setTimeout(() => this.buildHeatmap(), 100);
+  }
+
+  loadProjects() {
+    this.projectsLoading = true;
+    this.api.getProjects().subscribe({
+      next: (data: any[]) => {
+        this.projects = (data || []).map((p, i) => this.mapProject(p, i));
+        this.projectsLoading = false;
+        setTimeout(() => this.buildRiskRings(), 50);
+      },
+      error: () => { this.projects = []; this.projectsLoading = false; },
+    });
+  }
+
+  private mapProject(p: any, index: number) {
+    const initials = (p.name || '?').substring(0, 2).toUpperCase();
+    const avatar = this.avatarPalette[index % this.avatarPalette.length];
+    const score = Math.round(p.securityScore ?? 0);
+    return {
+      id: p.id,
+      name: p.name,
+      tech: `${p.cicdTool || 'jenkins'} · ${p.environment || 'dev'}`,
+      initials,
+      avatarBg: avatar.bg,
+      avatarColor: avatar.color,
+      incidents: (p.openIncidents || 0) + (p.analyzingIncidents || 0),
+      buildStatus: p.status === 'healthy' ? 'SUCCESS' : 'FAILURE',
+      health: score,
+      riskScore: score,
+      lastUpdate: p.updatedAt ? this.timeAgo(new Date(p.updatedAt).getTime()) : '—',
+      riskBreakdown: [{ label: 'Score sécurité', value: score }],
+    };
+  }
+
+  private timeAgo(ts: number): string {
+    const diff = Date.now() - ts;
+    const h = Math.floor(diff / 3600000);
+    const m = Math.floor(diff / 60000);
+    if (h > 24) return 'il y a ' + Math.floor(h / 24) + 'j';
+    if (h > 0) return 'il y a ' + h + 'h';
+    return 'il y a ' + m + 'min';
   }
 
   /* Resolve a CSS custom property to a concrete colour string (for Chart.js) */
@@ -740,24 +750,6 @@ export class DashboardComponent implements OnInit, AfterViewInit {
         type: 'doughnut',
         data: { datasets: [{ data: [p.riskScore, 100 - p.riskScore], backgroundColor: [color, bg], borderWidth: 0 }] },
         options: { responsive: false, cutout: '72%', plugins: { legend: { display: false } } }
-      });
-    });
-  }
-
-  buildSparklines() {
-    const green = this.cssVar('--accent-green') || '#5DCAA5';
-    this.projects.forEach(p => {
-      const canvas = document.getElementById('spark-' + p.id) as HTMLCanvasElement;
-      if (!canvas || !(window as any).Chart) return;
-      const ex = (window as any).Chart.getChart(canvas);
-      if (ex) ex.destroy();
-      new (window as any).Chart(canvas, {
-        type: 'line',
-        data: {
-          labels: p.sparkData.map((_, i) => i),
-          datasets: [{ data: p.sparkData, borderColor: green, borderWidth: 1.5, pointRadius: 0, fill: true, backgroundColor: this.cssVar('--accent-green-bg') || 'rgba(93,202,165,.15)', tension: .4 }]
-        },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { display: false } } }
       });
     });
   }
@@ -814,7 +806,7 @@ export class DashboardComponent implements OnInit, AfterViewInit {
   toggleTheme() {
     this.themeService.toggleTheme();
     /* Rebuild chart colours after the theme class is applied */
-    setTimeout(() => { this.buildRiskRings(); this.buildSparklines(); }, 50);
+    setTimeout(() => this.buildRiskRings(), 50);
   }
 
   sendSuggestion(s: string) { this.chatInput = s; this.sendChat(); }

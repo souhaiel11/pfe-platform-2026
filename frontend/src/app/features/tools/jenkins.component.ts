@@ -93,19 +93,19 @@ import { HttpClientModule } from '@angular/common/http';
 export class JenkinsComponent implements OnInit, AfterViewInit, OnDestroy {
   builds: any[] = [];
   lastBuild: any = {};
-  jobName = 'pfe-devsecops-pipeline';
+  jobName = 'pfe-app-test';
   successRate = 0;
   avgDuration = 0;
   consecutiveFails = 0;
-  private projectId = '54192eca-43da-4d8f-9b49-30c143983fdd';
+  private projectId = '3aa1c9b9-e114-40e4-884b-ebc7aa32e002';
   private chart: any;
 
   constructor(private http: HttpClient) {}
 
   ngOnInit() {
-    this.http.get<any>(`http://172.31.172.61:3001/api/projects/${this.projectId}/jenkins`, { headers: { Authorization: 'Bearer ' + localStorage.getItem('token') } }).subscribe((data: any) => {
+    this.http.get<any>(`http://172.31.172.61:3001/api/projects/${this.projectId}/jenkins-status`, { headers: { Authorization: 'Bearer ' + localStorage.getItem('token') } }).subscribe((data: any) => {
       this.lastBuild = data;
-      this.jobName = data.jobName || 'pfe-devsecops-pipeline';
+      this.jobName = data.jobName || 'pfe-app-test';
       this.builds = (data.builds || []).map((b: any) => ({
         num: b.number,
         msg: b.result === 'SUCCESS' ? 'Build réussi · Deploy K8s' : 'Build échoué',

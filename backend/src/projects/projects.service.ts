@@ -2,16 +2,23 @@ import { Injectable, NotFoundException, ConflictException } from '@nestjs/common
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Project } from './project.entity';
+import { Incident, IncidentStatus } from '../incidents/incident.entity';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
+
+const OPEN_STATUSES = [IncidentStatus.PENDING, IncidentStatus.BLOCKED, IncidentStatus.FAILED];
+const ANALYZING_STATUSES = [IncidentStatus.ANALYZING, IncidentStatus.ANALYZED, IncidentStatus.FIX_GENERATED, IncidentStatus.VALIDATING];
+const RESOLVED_STATUSES = [IncidentStatus.APPROVED, IncidentStatus.COMPLETED];
 
 @Injectable()
 export class ProjectsService {
   constructor(
     @InjectRepository(Project)
     private readonly repo: Repository<Project>,
+    @InjectRepository(Incident)
+    private readonly incidentRepo: Repository<Incident>,
     private readonly http: HttpService,
   ) {}
 
@@ -30,7 +37,36 @@ export class ProjectsService {
   async findAll(jenkinsJobName?: string) {
     const where = jenkinsJobName ? { jenkinsJobName } : {};
     const projects = await this.repo.find({ where, order: { createdAt: "DESC" } });
-    return projects;
+    const counts = await this.getIncidentCountsByProject(projects.map(p => p.id));
+    return projects.map(p => ({
+      ...this.sanitizeProject(p),
+      ...(counts.get(p.id) ?? { openIncidents: 0, analyzingIncidents: 0, resolvedIncidents: 0 }),
+    }));
+  }
+
+  private async getIncidentCountsByProject(projectIds: string[]) {
+    const counts = new Map<string, { openIncidents: number; analyzingIncidents: number; resolvedIncidents: number }>();
+    if (projectIds.length === 0) return counts;
+
+    const rows = await this.incidentRepo
+      .createQueryBuilder('incident')
+      .select('incident.projectId', 'projectId')
+      .addSelect('incident.status', 'status')
+      .addSelect('COUNT(*)', 'count')
+      .where('incident.projectId IN (:...projectIds)', { projectIds })
+      .groupBy('incident.projectId')
+      .addGroupBy('incident.status')
+      .getRawMany<{ projectId: string; status: IncidentStatus; count: string }>();
+
+    for (const row of rows) {
+      const entry = counts.get(row.projectId) ?? { openIncidents: 0, analyzingIncidents: 0, resolvedIncidents: 0 };
+      const n = parseInt(row.count, 10);
+      if (OPEN_STATUSES.includes(row.status)) entry.openIncidents += n;
+      else if (ANALYZING_STATUSES.includes(row.status)) entry.analyzingIncidents += n;
+      else if (RESOLVED_STATUSES.includes(row.status)) entry.resolvedIncidents += n;
+      counts.set(row.projectId, entry);
+    }
+    return counts;
   }
 
   async findOne(id: string) {
@@ -51,12 +87,24 @@ export class ProjectsService {
       if (existing) throw new ConflictException(`Un projet avec le job Jenkins "${dto.jenkinsJobName}" existe déjà`);
     }
     const p = this.repo.create(dto);
-    return this.repo.save(p);
+    const saved = await this.repo.save(p);
+    return this.sanitizeProject(saved);
   }
 
   async update(id: string, dto: UpdateProjectDto) {
     await this.findOneInternal(id);
-    await this.repo.update(id, dto);
+
+    // Un champ token vide signifie "ne pas modifier", pas "effacer".
+    // Le frontend ne recoit jamais les tokens en clair : il enverrait
+    // sinon des chaines vides qui ecraseraient les vraies valeurs.
+    const payload: any = { ...dto };
+    for (const field of ['jenkinsToken', 'sonarqubeToken', 'githubToken', 'slackToken']) {
+      if (payload[field] === '' || payload[field] === null || payload[field] === undefined) {
+        delete payload[field];
+      }
+    }
+
+    await this.repo.update(id, payload);
     return this.findOne(id);
   }
 
@@ -233,6 +281,12 @@ export class ProjectsService {
     return { openPRs: 2, mergedPRs: 18, totalPRs: 25, recentPRs: [] };
   }
 
+  /**
+   * Usage INTERNE uniquement (n8n via /api/projects/internal/by-job/:jobName).
+   * Retourne volontairement les tokens : la plateforme doit s'authentifier
+   * aupres de Jenkins/Sonar/GitHub au nom du projet.
+   * Cette route ne doit jamais etre exposee publiquement.
+   */
   async findByJobNameInternal(jenkinsJobName: string) {
     return this.repo.find({ where: { jenkinsJobName }, order: { createdAt: "DESC" } });
   }

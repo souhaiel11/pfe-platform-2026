@@ -61,9 +61,9 @@ export class ProjectFormComponent implements OnInit {
       // CI/CD
       cicdTool:       ['jenkins'],
       jenkinsUrl:     [''],
-      jenkinsJobName: [''],
+      jenkinsJobName: ['', [Validators.required, Validators.pattern(/^[a-zA-Z0-9._-]+$/)]],
       jenkinsToken:   [''],
-      githubRepo:     [''],
+      githubRepo:     ['', [Validators.required, Validators.pattern(/^[\w-]+\/[\w.-]+$/)]],
       githubToken:    [''],
       // SonarQube
       sonarqubeUrl:   [''],

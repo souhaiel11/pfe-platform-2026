@@ -14,6 +14,7 @@ export class IncidentsController {
   @Get(':id') findOne(@Param('id') id: string) { return this.service.findOne(id); }
   @Post() create(@Body() dto: any) { return this.service.create(dto); }
   @Put(':id') update(@Param('id') id: string, @Body() dto: any) { return this.service.update(id, dto); }
+  @Post(':id/validation') saveValidation(@Param('id') id: string, @Body() validation: any) { return this.service.saveValidation(id, validation); }
   @UseGuards(JwtAuthGuard)
   @Delete(':id') remove(@Param('id') id: string) { return this.service.remove(id); }
 

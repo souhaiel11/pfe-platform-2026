@@ -14,24 +14,42 @@ export class IncidentsService {
     private readonly gateway: IncidentsGateway,
   ) {}
 
-  findAll(projectId?: string, status?: string, size?: number) {
+  /**
+   * Retire les secrets du projet lie avant de renvoyer un incident.
+   * Les incidents sont charges avec relations: ['project'], ce qui
+   * exposerait sinon les tokens Jenkins/Sonar/GitHub dans l'API.
+   */
+  private sanitizeIncident(incident: any) {
+    if (!incident?.project) return incident;
+    const {
+      jenkinsToken,
+      sonarqubeToken,
+      githubToken,
+      slackToken,
+      ...safeProject
+    } = incident.project as any;
+    return { ...incident, project: safeProject };
+  }
+
+  async findAll(projectId?: string, status?: string, size?: number) {
     const where: any = {};
     if (projectId) where.projectId = projectId;
     const validStatuses = ["pending","analyzing","analyzed","fix_generated","validating","approved","completed","failed","rejected"];
     const normalizedStatus = status?.toLowerCase();
     if (normalizedStatus && validStatuses.includes(normalizedStatus)) where.status = normalizedStatus;
-    return this.repo.find({
+    const incidents = await this.repo.find({
       where,
       order: { createdAt: 'DESC' },
       relations: ['project'],
       take: size || undefined,
     });
+    return incidents.map(i => this.sanitizeIncident(i));
   }
 
   async findOne(id: string) {
     const i = await this.repo.findOne({ where: { id }, relations: ['project'] });
     if (!i) throw new NotFoundException('Incident not found');
-    return i;
+    return this.sanitizeIncident(i);
   }
 
   async create(dto: Partial<Incident> & { jenkinsJobName?: string; buildNumber?: number }) {
@@ -72,6 +90,30 @@ export class IncidentsService {
     return { message: 'Incident deleted' };
   }
 
+  async saveValidation(id: string, validation: any) {
+    const incident = await this.findOne(id);
+    const currentMeta = (incident as any).metadata || {};
+
+    const mergedMeta = {
+      ...currentMeta,
+      validation: {
+        ...validation,
+        validatedAt: new Date().toISOString(),
+      },
+    };
+
+    const newStatus = validation.passed ? 'approved' : 'failed';
+
+    await this.repo.update(id, {
+      metadata: mergedMeta,
+      status: newStatus as IncidentStatus,
+    } as any);
+
+    const updated = await this.findOne(id);
+    this.gateway.emit('incident:updated', updated);
+    return updated;
+  }
+
   async approveFix(id: string) {
     const incident = await this.findOne(id);
     await this.repo.update(id, { status: 'approved' as IncidentStatus });
@@ -94,6 +136,7 @@ export class IncidentsService {
 
   async triggerBuild(projectId: string) {
     const project = await this.projectRepo.findOne({ where: { id: projectId } });
+    if (!project || !project.jenkinsToken) {
       throw new BadRequestException('Jenkins non configuré pour ce projet');
     }
     const jenkinsUrl = project.jenkinsUrl || 'http://172.31.172.61:8082';
