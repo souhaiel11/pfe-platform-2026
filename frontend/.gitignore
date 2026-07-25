@@ -20,3 +20,14 @@ out-tsc/
 # OS
 .DS_Store
 Thumbs.db
+
+# Artefacts de build Angular, ne doivent jamais être versionnés
+chunk-*.js
+chunk-*.js.map
+main.js
+main.js.map
+polyfills.js
+polyfills.js.map
+styles.css
+styles.css.map
+*.component.css.map
