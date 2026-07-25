@@ -1,0 +1,115 @@
+    <div class="page-container">
+      <div class="page-header">
+        <h1 class="page-title">// agents_ia</h1>
+        <p class="page-subtitle">Performance et activité des agents IA — Root Cause, Security, Remediation, Judge</p>
+      </div>
+
+      <div *ngIf="loading" class="loading-overlay"><div class="spinner"></div></div>
+
+      <ng-container *ngIf="!loading">
+
+        <!-- ─── KPIs ─── -->
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-icon" style="background:#a78bfa22;color:#a78bfa;">📊</div>
+            <div>
+              <div class="kpi-value">{{ stats.total }}</div>
+              <div class="kpi-label">Analyses effectuées</div>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-icon" style="background:#22c55e22;color:#22c55e;">◈</div>
+            <div>
+              <div class="kpi-value">{{ stats.avgConfidence }}%</div>
+              <div class="kpi-label">Confiance moyenne IA</div>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-icon" style="background:#38bdf822;color:#38bdf8;">◆</div>
+            <div>
+              <div class="kpi-value">{{ stats.autoFixablePct }}%</div>
+              <div class="kpi-label">Correctifs auto-proposés</div>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-icon" style="background:#e24b4a22;color:#e24b4a;">⬡</div>
+            <div>
+              <div class="kpi-value">{{ stats.criticalCount }}</div>
+              <div class="kpi-label">Incidents CRITICAL</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ─── GRAPHIQUES ─── -->
+        <div class="charts-grid">
+
+          <!-- Décisions du Judge -->
+          <div class="card">
+            <div class="card-header" style="margin-bottom:14px;">
+              <span class="card-title">▣ Décisions du Judge Agent</span>
+            </div>
+            <div class="bar-chart">
+              <div *ngFor="let d of decisionBars" class="bar-row">
+                <div class="bar-label">{{ d.label }}</div>
+                <div class="bar-track">
+                  <div class="bar-fill" [style.width]="d.pct + '%'" [style.background]="d.color"></div>
+                </div>
+                <div class="bar-value">{{ d.count }}</div>
+              </div>
+              <div *ngIf="decisionBars.length === 0" class="empty-mini">Aucune donnée</div>
+            </div>
+          </div>
+
+          <!-- Niveaux de sévérité -->
+          <div class="card">
+            <div class="card-header" style="margin-bottom:14px;">
+              <span class="card-title">⬡ Niveaux de sévérité détectés</span>
+            </div>
+            <div class="bar-chart">
+              <div *ngFor="let s of severityBars" class="bar-row">
+                <div class="bar-label">{{ s.label }}</div>
+                <div class="bar-track">
+                  <div class="bar-fill" [style.width]="s.pct + '%'" [style.background]="s.color"></div>
+                </div>
+                <div class="bar-value">{{ s.count }}</div>
+              </div>
+              <div *ngIf="severityBars.length === 0" class="empty-mini">Aucune donnée</div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- ─── ACTIVITÉ RÉCENTE ─── -->
+        <div style="margin-top:20px;">
+          <div class="card-header" style="margin-bottom:12px;">
+            <span class="card-title">Activité récente des agents</span>
+            <span style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono);">
+              {{ recentReports.length }} derniers rapports
+            </span>
+          </div>
+
+          <div *ngIf="recentReports.length === 0" class="empty-state">
+            <div class="empty-icon">📋</div>
+            <div class="empty-title">Aucun rapport disponible</div>
+            <div class="empty-sub">Lancez un build Jenkins pour générer une analyse IA</div>
+          </div>
+
+          <div class="activity-list">
+            <a *ngFor="let r of recentReports" [routerLink]="['/incidents', r.id]" class="activity-row">
+              <span class="badge" [class]="getDecisionBadgeClass(r.decision)" style="min-width:110px;text-align:center;">
+                {{ r.decision || 'N/A' }}
+              </span>
+              <div class="activity-main">
+                <div class="activity-title">{{ r.title }}</div>
+                <div class="activity-sub">{{ r.projectName }} · {{ r.securityLevel }} · confiance {{ r.confidence }}%</div>
+              </div>
+              <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-faint);">
+                {{ r.createdAt | date:'dd/MM HH:mm' }}
+              </span>
+              <span style="color:var(--text-muted);">→</span>
+            </a>
+          </div>
+        </div>
+
+      </ng-container>
+    </div>
