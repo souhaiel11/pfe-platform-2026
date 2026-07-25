@@ -1,0 +1,104 @@
+    <div class="page-container">
+      <div class="page-header" style="display:flex;align-items:center;justify-content:space-between;">
+        <div>
+          <h1 class="page-title">// projets</h1>
+          <p class="page-subtitle">Gestion des projets sous surveillance DevSecOps IA</p>
+        </div>
+        <button class="btn btn-primary" (click)="goToNewProject()">+ Nouveau projet</button>
+      </div>
+
+      <div *ngIf="loading" class="loading-overlay"><div class="spinner"></div><span>Chargement...</span></div>
+
+      <!-- Projects grid -->
+      <div class="projects-grid" *ngIf="!loading">
+        <div *ngIf="projects.length === 0" class="empty-state" style="grid-column:1/-1;">
+          <div class="empty-icon">◧</div>
+          <div class="empty-title">Aucun projet</div>
+          <div class="empty-sub">Créez votre premier projet pour commencer</div>
+        </div>
+
+        <div *ngFor="let p of projects" class="project-card">
+          <div class="project-card-header">
+            <div class="project-avatar" [style.border-color]="getHealthColor(p.securityScore)">
+              {{p.name?.substring(0,2).toUpperCase()}}
+            </div>
+            <div style="flex:1;min-width:0;">
+              <div class="project-name">{{p.name}}</div>
+              <div class="project-id">{{p.id?.substring(0,8)}}...</div>
+            </div>
+            <div class="health-badge" [style.color]="getHealthColor(p.securityScore)"
+                 [style.background]="getHealthColor(p.securityScore)+'11'">
+              {{p.securityScore | number:'1.0-0'}}%
+            </div>
+          </div>
+
+          <div class="project-stats">
+            <div class="stat">
+              <div class="stat-val red">{{p.openIncidents || 0}}</div>
+              <div class="stat-label">ouverts</div>
+            </div>
+            <div class="stat">
+              <div class="stat-val orange">{{p.analyzingIncidents || 0}}</div>
+              <div class="stat-label">analyse</div>
+            </div>
+            <div class="stat">
+              <div class="stat-val green">{{p.resolvedIncidents || 0}}</div>
+              <div class="stat-label">résolus</div>
+            </div>
+          </div>
+
+          <div class="health-bar-wrap">
+            <div class="health-bar">
+              <div [style.width]="(p.securityScore||0)+'%'"
+                   [style.background]="getHealthColor(p.securityScore)"></div>
+            </div>
+          </div>
+
+          <div class="project-footer">
+            <span style="font-size:10px;color:var(--text-faint);font-family:var(--font-mono);">
+              Créé le {{p.createdAt | date:'dd/MM/yyyy'}}
+            </span>
+            <div style="display:flex;gap:6px;">
+              <a [routerLink]="['/projects', p.id]" class="btn btn-secondary btn-sm">Voir →</a>
+              <button class="btn btn-danger btn-sm" (click)="confirmDelete(p)">✕</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Create Modal -->
+      <div class="modal-overlay" *ngIf="showModal" (click)="showModal=false">
+        <div class="modal" (click)="$event.stopPropagation()">
+          <div class="modal-header">
+            <span class="card-title">Nouveau projet</span>
+            <button class="btn btn-secondary btn-sm" (click)="showModal=false">✕</button>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Nom du projet *</label>
+            <input class="form-control" [(ngModel)]="newProject.name" placeholder="ex: PFE-VERMEG" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Description</label>
+            <input class="form-control" [(ngModel)]="newProject.description" placeholder="Description optionnelle" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Clé SonarQube</label>
+            <input class="form-control" [(ngModel)]="newProject.sonarKey" placeholder="ex: equipe1-3arctic1-2425" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">GitHub Repository</label>
+            <input class="form-control" [(ngModel)]="newProject.githubRepo" placeholder="ex: souhaiel11/pfe-devsecops-2026" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Jenkins Job Name</label>
+            <input class="form-control" [(ngModel)]="newProject.jenkinsJobName" placeholder="ex: pfe-devsecops-pipeline" />
+          </div>
+          <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:20px;">
+            <button class="btn btn-secondary" (click)="showModal=false">Annuler</button>
+            <button class="btn btn-primary" (click)="createProject()" [disabled]="!newProject.name">
+              Créer le projet
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
