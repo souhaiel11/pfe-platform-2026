@@ -190,3 +190,302 @@
     .empty-title { font-size:15px; font-weight:600; color:var(--text-secondary); margin-bottom:6px }
     .empty-sub { font-size:12px; color:var(--text-muted) }
     .loading-state { text-align:center; padding:40px; color:var(--text-muted); font-size:13px }
+    .error-state { text-align:center; padding:40px; color:var(--text-muted); font-size:13px }
+    .error-state p { color:var(--color-critical, var(--accent-red)); font-weight:600; margin-bottom:14px }
+/* ── À AJOUTER dans project-detail.component.scss ── */
+
+/* Justification repliable */
+.justif-details {
+  margin-top: 14px;
+  border: 1px solid var(--border, rgba(127,127,127,.2));
+  border-radius: 10px;
+  overflow: hidden;
+}
+.justif-summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 11px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+  list-style: none;
+}
+.justif-summary::-webkit-details-marker { display: none; }
+.justif-details[open] .justif-chevron { transform: rotate(90deg); }
+.justif-chevron { transition: transform .18s; opacity: .5; }
+.justif-body {
+  padding: 0 16px 14px;
+  font-size: 13px;
+  line-height: 1.6;
+  opacity: .85;
+}
+
+/* tabMap helper — ajouter dans le .ts :
+   readonly tabMap: Record<string, string> = {
+     jenkins: 'jenkins', sonar: 'sonarqube',
+     security: 'securite', guide: 'incidents'
+   }; */
+
+/* Sections sécurité */
+.sec-section {
+  margin-top: 18px;
+  border: 1px solid var(--border, rgba(127,127,127,.2));
+  border-radius: 12px;
+  overflow: hidden;
+}
+.sec-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border, rgba(127,127,127,.12));
+  background: rgba(127,127,127,.04);
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.sec-section-title {
+  font-size: 15px;
+  font-weight: 700;
+}
+.sec-section-sub {
+  font-size: 11px;
+  opacity: .6;
+  margin-top: 2px;
+}
+.sec-section-badges {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.sec-badge {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .06em;
+  padding: 3px 9px;
+  border-radius: 4px;
+}
+.sec-badge.red    { background: rgba(220,38,38,.15);  color: #dc2626; }
+.sec-badge.orange { background: rgba(234,88,12,.15);  color: #ea580c; }
+
+.sec-filter-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 9px 16px;
+  border: 1px solid var(--accent-blue, #2563eb);
+  border-radius: 8px;
+  background: var(--accent-blue-bg, rgba(37,99,235,.08));
+  color: var(--accent-blue, #2563eb);
+  font-size: 12px;
+  font-weight: 600;
+}
+.sec-filter-clear {
+  background: none;
+  border: 1px solid currentColor;
+  border-radius: 6px;
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  color: inherit;
+  cursor: pointer;
+}
+.sec-filter-clear:hover { background: rgba(37,99,235,.12); }
+.sec-badge.yellow { background: rgba(234,179,8,.2);   color: #a16207; }
+
+/* KPI alert state */
+.kpi-card.kpi-alert {
+  border-color: rgba(220,38,38,.4) !important;
+}
+
+/* Espace utilitaire */
+.mt-10 { margin-top: 10px; }
+/* ═══════════════════════════════════════════════════════════════
+   COUCHE DE FINITION — project-detail.component.scss
+   Appliquée en fin de fichier : les règles ci-dessous priment.
+   Principes : une seule échelle de sévérité, monospace pour les
+   identifiants, hairlines discrètes, rythme d'espacement 8px.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Rythme général de l'onglet ── */
+.tab-content, [class*='tab-'] { font-variant-numeric: tabular-nums; }
+
+/* ── Hero du rapport : hiérarchie nette ── */
+.ai-hero {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  gap: 20px; flex-wrap: wrap;
+  border: 1px solid var(--border, rgba(127,127,127,.18));
+  border-radius: 12px; padding: 18px 22px; margin-bottom: 14px;
+  background: rgba(127,127,127,.04);
+}
+.ai-hero-tag {
+  font-family: var(--font-mono, monospace); font-size: 10.5px;
+  letter-spacing: .1em; text-transform: uppercase; opacity: .5;
+}
+.ai-hero-title { font-size: 21px; font-weight: 750; letter-spacing: -.01em; margin: 3px 0 2px; }
+.ai-hero-sub { font-size: 12.5px; opacity: .6; font-family: var(--font-mono, monospace); }
+.ai-hero-right { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+.ai-decision-badge {
+  font-family: var(--font-mono, monospace); font-size: 14px; font-weight: 800;
+  letter-spacing: .1em; padding: 5px 14px; border: 1.5px solid; border-radius: 8px;
+}
+.ai-sec-badge {
+  font-size: 10.5px; font-weight: 700; letter-spacing: .06em;
+  padding: 3px 10px; border: 1px solid; border-radius: 999px;
+}
+.ai-conf-bar {
+  width: 130px; height: 5px; border-radius: 3px;
+  background: rgba(127,127,127,.15); overflow: hidden;
+}
+.ai-conf-fill { display: block; height: 100%; border-radius: 3px; }
+.ai-conf-text { font-size: 11px; opacity: .6; }
+.ai-confidence { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+
+/* ── Justification repliable ── */
+.justif-details {
+  margin-top: 14px;
+  border: 1px solid var(--border, rgba(127,127,127,.18));
+  border-radius: 10px; overflow: hidden;
+}
+.justif-summary {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 11px 16px; font-size: 13px; font-weight: 600;
+  cursor: pointer; user-select: none; list-style: none;
+}
+.justif-summary::-webkit-details-marker { display: none; }
+.justif-summary:hover { background: rgba(127,127,127,.05); }
+.justif-details[open] .justif-chevron { transform: rotate(90deg); }
+.justif-chevron { transition: transform .18s; opacity: .45; font-size: 12px; }
+.justif-body { padding: 2px 16px 14px; font-size: 13px; line-height: 1.65; opacity: .85; }
+
+/* ── Grille des agents IA ── */
+.agents-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 10px; margin-top: 14px;
+}
+.agent-card {
+  border: 1px solid var(--border, rgba(127,127,127,.18));
+  border-radius: 10px; padding: 13px 15px;
+}
+.agent-card-hd {
+  display: flex; align-items: center; gap: 7px;
+  font-size: 12px; font-weight: 700; letter-spacing: .02em; margin-bottom: 6px;
+}
+.agent-card-txt { margin: 0; font-size: 12px; line-height: 1.55; opacity: .75; }
+.judge-warning.full { grid-column: 1 / -1; }
+.judge-warning {
+  border: 1px solid rgba(234,88,12,.35); border-radius: 10px;
+  background: rgba(234,88,12,.07); padding: 11px 15px;
+  font-size: 12.5px; line-height: 1.5;
+}
+
+/* ── Historique ── */
+.history-box {
+  margin-top: 18px;
+  border: 1px solid var(--border, rgba(127,127,127,.18));
+  border-radius: 12px; overflow: hidden;
+}
+.history-title {
+  padding: 12px 16px; font-size: 12px; font-weight: 700;
+  letter-spacing: .04em; border-bottom: 1px solid var(--border, rgba(127,127,127,.12));
+  background: rgba(127,127,127,.04);
+}
+.history-list { max-height: 260px; overflow-y: auto; }
+.history-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 9px 16px; cursor: pointer; font-size: 12px;
+}
+.history-item + .history-item { border-top: 1px solid var(--border, rgba(127,127,127,.1)); }
+.history-item:hover { background: rgba(127,127,127,.06); }
+.history-item.selected { background: rgba(37,99,235,.08); }
+.h-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.h-build { font-family: var(--font-mono, monospace); font-weight: 700; min-width: 76px; }
+.h-date { opacity: .55; min-width: 84px; }
+.h-dec { font-weight: 700; font-size: 11px; letter-spacing: .04em; flex: 1; }
+.h-score { font-family: var(--font-mono, monospace); font-weight: 700; opacity: .8; }
+.h-score.critical { color: var(--accent-red, #dc2626); }
+
+/* ── KPI sécurité ── */
+.kpi-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px; margin-bottom: 6px;
+}
+.kpi-card {
+  border: 1px solid var(--border, rgba(127,127,127,.18));
+  border-radius: 12px; padding: 14px 16px;
+}
+.kpi-card.kpi-alert { border-color: rgba(220,38,38,.45); background: rgba(220,38,38,.03); }
+.kpi-label {
+  font-family: var(--font-mono, monospace); font-size: 10px; font-weight: 700;
+  letter-spacing: .12em; text-transform: uppercase; opacity: .5; margin-bottom: 6px;
+}
+.kpi-value { font-size: 24px; font-weight: 750; line-height: 1.1; font-family: var(--font-mono, monospace); }
+.kpi-sub { font-size: 11px; opacity: .55; margin-top: 4px; }
+
+/* ── Sections sécurité ── */
+.sec-section {
+  margin-top: 16px;
+  border: 1px solid var(--border, rgba(127,127,127,.18));
+  border-radius: 12px; overflow: hidden;
+}
+.sec-section-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 13px 18px; flex-wrap: wrap; gap: 10px;
+  border-bottom: 1px solid var(--border, rgba(127,127,127,.12));
+  background: rgba(127,127,127,.04);
+}
+.sec-section-title { font-size: 14.5px; font-weight: 700; }
+.sec-section-sub {
+  font-size: 11px; opacity: .55; margin-top: 2px;
+  font-family: var(--font-mono, monospace);
+}
+.sec-section-badges { display: flex; gap: 7px; flex-wrap: wrap; }
+.sec-badge {
+  font-size: 10px; font-weight: 800; letter-spacing: .07em;
+  padding: 3px 9px; border-radius: 4px;
+}
+.sec-badge.red    { background: rgba(220,38,38,.13); color: var(--accent-red, #dc2626); }
+.sec-badge.orange { background: rgba(234,88,12,.13); color: var(--accent-orange, #ea580c); }
+.sec-badge.yellow { background: rgba(202,138,4,.16);  color: #ca8a04; }
+.sec-section app-cve-table,
+.sec-section .data-table { margin: 0; }
+.sec-section > app-cve-table { display: block; padding: 12px 14px; }
+
+/* ── Tables de données : lisibilité ── */
+.data-table { border-collapse: collapse; width: 100%; }
+.data-table thead th {
+  font-family: var(--font-mono, monospace); font-size: 10px; font-weight: 700;
+  letter-spacing: .1em; text-transform: uppercase; opacity: .55;
+  text-align: left; padding: 10px 12px;
+  border-bottom: 1px solid var(--border, rgba(127,127,127,.15));
+}
+.data-table tbody td {
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--border, rgba(127,127,127,.08));
+  vertical-align: top;
+}
+.data-table tbody tr:hover { background: rgba(127,127,127,.04); }
+
+/* ── Badges de sévérité unifiés (partout) ── */
+.sev-badge {
+  display: inline-block; font-size: 9.5px; font-weight: 800;
+  letter-spacing: .06em; text-transform: uppercase;
+  padding: 2px 7px; border-radius: 3px; color: #fff;
+}
+
+/* ── Actions ── */
+.action-row { display: flex; gap: 10px; flex-wrap: wrap; }
+.mt-10 { margin-top: 10px; }
+
+/* ── États vides : direction, pas décoration ── */
+.empty-state { text-align: center; padding: 46px 20px; }
+.empty-icon { font-size: 30px; opacity: .5; margin-bottom: 8px; }
+.empty-title { font-size: 15px; font-weight: 700; }
+.empty-sub { font-size: 12.5px; opacity: .6; margin-top: 4px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .justif-chevron, .history-item, .tool { transition: none !important; }
+}

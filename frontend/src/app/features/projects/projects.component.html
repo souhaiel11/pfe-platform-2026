@@ -28,7 +28,7 @@
             </div>
             <div class="health-badge" [style.color]="getHealthColor(p.securityScore)"
                  [style.background]="getHealthColor(p.securityScore)+'11'">
-              {{p.securityScore | number:'1.0-0'}}%
+              {{p.securityScore !== null ? (p.securityScore | number:'1.0-0') + '%' : 'indisponible'}}
             </div>
           </div>
 
@@ -49,7 +49,7 @@
 
           <div class="health-bar-wrap">
             <div class="health-bar">
-              <div [style.width]="(p.securityScore||0)+'%'"
+              <div [style.width]="(p.securityScore ?? 0)+'%'"
                    [style.background]="getHealthColor(p.securityScore)"></div>
             </div>
           </div>

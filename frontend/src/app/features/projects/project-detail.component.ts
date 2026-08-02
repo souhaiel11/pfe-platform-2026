@@ -1,6 +1,9 @@
 import { Component, OnInit, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+import { CveTableComponent } from './cve-table.component';
+import { ProjectOverviewComponent } from './project-overview.component';
+import { JenkinsfileOptimizerComponent } from './jenkinsfile-optimizer.component';
 import { ApiService } from '../../core/services/api.service';
 import { ToastService } from '../../core/services/toast.service';
 import { RiskStateService } from '../../core/services/risk-state.service';
@@ -8,7 +11,7 @@ import { RiskStateService } from '../../core/services/risk-state.service';
 @Component({
   selector: 'app-project-detail',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, CveTableComponent, ProjectOverviewComponent, JenkinsfileOptimizerComponent],
   templateUrl: './project-detail.component.html',
   styleUrls: ['./project-detail.component.scss'],
 })
@@ -21,11 +24,31 @@ export class ProjectDetailComponent implements OnInit {
   allReports: any[] = [];
   latestReport: any = null;
   loading = true;
+  loadError = false;
+  readonly tabMap: Record<string,string> = {
+    jenkins: 'jenkins', sonar: 'sonarqube',
+    security: 'securite'
+  };
+  readonly VALID_TABS = ['rapport', 'jenkins', 'sonarqube', 'securite', 'incidents', 'config'];
   activeTab = 'rapport';
+  securityFilter: 'all' | 'trivy' | 'owasp' | 'zap' = 'all';
 
   // Parsed report
   rp: any = {};
   ed: any = {}; // enrichedData du dernier rapport
+
+  // Décision du Judge Agent — colonnes structurées du dernier Report
+  // (judgeDecision/judgeConfidence), PAS rp.decision (qui vient de
+  // Incident.aiAnalysis, gardé pour l'onglet Rapport IA uniquement).
+  // Fail-CLOSED : decision null/absente => "EN ATTENTE", jamais "AUTORISÉ" par défaut.
+  judge: { decision: string | null; confidence: number | null } = { decision: null, confidence: null };
+
+  allCves(ed: any): any[] {
+    return [ ...(ed?.trivy?.cves || []), ...(ed?.owasp?.cves || []) ];
+  }
+  devGuide(_ed: any): any {
+    return this.rp?.developerGuide ?? null;
+  }
   devTasks: any[] = [];
   checkedTasks = 0;
 
@@ -43,9 +66,82 @@ export class ProjectDetailComponent implements OnInit {
   manualHigh: { text: string; high: boolean }[] = [];
   manualNormal: { text: string; high: boolean }[] = [];
 
-  constructor(private api: ApiService, private toast: ToastService, private riskState: RiskStateService) {}
+  constructor(
+    private api: ApiService,
+    private toast: ToastService,
+    private riskState: RiskStateService,
+    private router: Router,
+    private route: ActivatedRoute,
+  ) {}
+
+  // Source unique de vérité pour changer d'onglet : met à jour activeTab ET
+  // reflète le choix dans l'URL (?tab=xxx) sans recharger la page, pour que
+  // l'onglet actif survive à un F5. replaceUrl:true pour ne pas polluer
+  // l'historique/bouton retour à chaque clic d'onglet.
+  setActiveTab(tab: string) {
+    this.activeTab = this.VALID_TABS.includes(tab) ? tab : 'rapport';
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { tab: this.activeTab },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
+  }
+
+  onGoToTab(event: string) {
+    if (event === 'guide') {
+      // Pas un onglet de cette page — navigation vers /incidents/:id, ne
+      // passe donc pas par setActiveTab.
+      if (!this.latestReport?.id) {
+        this.toast.info('Guide de correction', 'Aucun incident disponible pour ce projet');
+        return;
+      }
+      this.router.navigate(['/incidents', this.latestReport.id], { queryParams: { tab: 'guide' } });
+      return;
+    }
+    const [key, filter] = event.split(':');
+    this.setActiveTab(this.tabMap[key]);
+    if (key === 'security') {
+      this.securityFilter = (filter as 'trivy' | 'owasp' | 'zap') || 'all';
+    }
+  }
+
+  goBack(): void {
+    if (this.activeTab === 'securite' && this.securityFilter !== 'all') {
+      this.securityFilter = 'all';
+      return;
+    }
+    if (this.activeTab !== 'rapport') {
+      this.setActiveTab('rapport');
+      return;
+    }
+    this.router.navigate(['/projects']);
+  }
+
+  // Clic direct sur un onglet (barre d'onglets) — réinitialise le filtre sécurité
+  selectTab(tab: string) {
+    this.setActiveTab(tab);
+    if (tab === 'securite') this.securityFilter = 'all';
+  }
+
+  securityFilterLabel(): string {
+    const labels: Record<string, string> = {
+      trivy: 'Conteneur (Trivy)',
+      owasp: 'Dépendances (OWASP)',
+      zap: 'DAST (ZAP)',
+    };
+    return labels[this.securityFilter] || '';
+  }
 
   ngOnInit() {
+    const tab = this.route.snapshot.queryParamMap.get('tab');
+    this.activeTab = tab && this.VALID_TABS.includes(tab) ? tab : 'rapport';
+    this.loadProject();
+  }
+
+  loadProject() {
+    this.loading = true;
+    this.loadError = false;
     this.api.getProject(this.id).subscribe({
       next: p => {
         this.project = p;
@@ -53,10 +149,12 @@ export class ProjectDetailComponent implements OnInit {
         this.loadIncidents();
         this.loadReports();
         this.loadJenkinsBuilds();
+        this.loadJudgeStatus();
       },
       error: () => {
         this.toast.error('Erreur', 'Projet introuvable');
         this.loading = false;
+        this.loadError = true;
       }
     });
   }
@@ -77,6 +175,22 @@ export class ProjectDetailComponent implements OnInit {
         if (this.allReports.length > 0) this.selectReport(this.allReports[0]);
       },
       error: () => {}
+    });
+  }
+
+  // Dernier Report réel (colonnes judgeDecision/judgeConfidence) — sert
+  // UNIQUEMENT le badge Déploiement fail-closed, n'affecte pas l'onglet
+  // Rapport IA (qui reste sur /incidents, allReports/rp inchangés).
+  loadJudgeStatus() {
+    this.api.getProjectReports({ projectId: this.id }).subscribe({
+      next: (list: any[]) => {
+        const latest = Array.isArray(list) && list.length > 0 ? list[0] : null;
+        this.judge = {
+          decision: latest?.judgeDecision ?? null,
+          confidence: latest?.judgeConfidence ?? null,
+        };
+      },
+      error: () => { this.judge = { decision: null, confidence: null }; },
     });
   }
 

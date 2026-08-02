@@ -5,6 +5,7 @@ import { Repository } from 'typeorm';
 import { Incident, IncidentStatus } from './incident.entity';
 import { IncidentsGateway } from './incidents.gateway';
 import { Project } from '../projects/project.entity';
+import { sanitizeEntityProject } from '../common/sanitize-project';
 
 @Injectable()
 export class IncidentsService {
@@ -20,15 +21,7 @@ export class IncidentsService {
    * exposerait sinon les tokens Jenkins/Sonar/GitHub dans l'API.
    */
   private sanitizeIncident(incident: any) {
-    if (!incident?.project) return incident;
-    const {
-      jenkinsToken,
-      sonarqubeToken,
-      githubToken,
-      slackToken,
-      ...safeProject
-    } = incident.project as any;
-    return { ...incident, project: safeProject };
+    return sanitizeEntityProject(incident);
   }
 
   async findAll(projectId?: string, status?: string, size?: number) {

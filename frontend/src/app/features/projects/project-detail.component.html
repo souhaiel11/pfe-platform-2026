@@ -1,4 +1,7 @@
-    <div class="page" *ngIf="!loading && project">
+    <div class="page" *ngIf="project">
+
+      <!-- ═══ RETOUR ═══ -->
+      <button class="btn btn-back" (click)="goBack()">← Retour aux projets</button>
 
       <!-- ═══ HEADER ═══ -->
       <div class="page-header">
@@ -23,29 +26,29 @@
           </div>
           <div class="risk-pill" [class.critical]="lastRisk==='critical'" [class.high]="lastRisk==='high'"
                [class.medium]="lastRisk==='medium'" [class.low]="lastRisk==='low'">
-            {{lastRisk?.toUpperCase() || 'N/A'}}
+            {{lastRisk.toUpperCase() || 'N/A'}}
           </div>
         </div>
       </div>
 
       <!-- ═══ TABS ═══ -->
       <div class="tabs-row">
-        <button class="tab-btn" [class.active]="activeTab==='rapport'"   (click)="activeTab='rapport'">
+        <button class="tab-btn" [class.active]="activeTab==='rapport'"   (click)="setActiveTab('rapport')">
           🤖 Rapport IA <span class="tab-badge" *ngIf="allReports.length">{{allReports.length}}</span>
         </button>
-        <button class="tab-btn" [class.active]="activeTab==='jenkins'"   (click)="activeTab='jenkins'">
+        <button class="tab-btn" [class.active]="activeTab==='jenkins'"   (click)="setActiveTab('jenkins')">
           ⚙️ Jenkins
         </button>
-        <button class="tab-btn" [class.active]="activeTab==='sonarqube'" (click)="activeTab='sonarqube'">
+        <button class="tab-btn" [class.active]="activeTab==='sonarqube'" (click)="setActiveTab('sonarqube')">
           🔍 SonarQube
         </button>
-        <button class="tab-btn" [class.active]="activeTab==='securite'"  (click)="activeTab='securite'">
+        <button class="tab-btn" [class.active]="activeTab==='securite'"  (click)="selectTab('securite')">
           🔒 Sécurité
         </button>
-        <button class="tab-btn" [class.active]="activeTab==='incidents'" (click)="activeTab='incidents'">
+        <button class="tab-btn" [class.active]="activeTab==='incidents'" (click)="setActiveTab('incidents')">
           ⚠️ Incidents <span class="tab-badge danger" *ngIf="incidents.length">{{incidents.length}}</span>
         </button>
-        <button class="tab-btn" [class.active]="activeTab==='config'"    (click)="activeTab='config'">
+        <button class="tab-btn" [class.active]="activeTab==='config'"    (click)="setActiveTab('config')">
           ⚙️ Config
         </button>
       </div>
@@ -62,7 +65,7 @@
 
         <div *ngIf="latestReport">
 
-          <!-- Section 1 : en-tête du rapport -->
+          <!-- ── En-tête : verdict + build ── -->
           <div class="ai-hero">
             <div>
               <div class="ai-hero-tag">Build #{{rp.build || '?'}} — {{latestReport.createdAt | date:'dd/MM/yyyy HH:mm'}}</div>
@@ -81,154 +84,22 @@
             </div>
           </div>
 
-          <!-- Section 2 : problèmes détectés -->
-          <div class="ai-section">
-            <div class="ai-section-title">Problèmes détectés</div>
-            <div class="sev-count-grid">
-              <div class="sev-count-card blocker">
-                <div class="sev-count-num">{{countIssues('BLOCKER')}}</div>
-                <div class="sev-count-lbl">BLOCKER</div>
-                <div class="sev-count-sub">passwords, leaks</div>
-              </div>
-              <div class="sev-count-card critical">
-                <div class="sev-count-num">{{countIssues('CRITICAL')}}</div>
-                <div class="sev-count-lbl">CRITICAL</div>
-                <div class="sev-count-sub">vulns, smells</div>
-              </div>
-              <div class="sev-count-card major">
-                <div class="sev-count-num">{{countIssues('MAJOR')}}</div>
-                <div class="sev-count-lbl">MAJOR</div>
-              </div>
-              <div class="sev-count-card bug">
-                <div class="sev-count-num">{{countIssues('BUG')}}</div>
-                <div class="sev-count-lbl">BUG</div>
-              </div>
-            </div>
+          <!-- ── Vue globale : chaîne de contrôle + répartition + actions ── -->
+          <app-project-overview
+            [ed]="ed" [rp]="rp"
+            (goToTab)="onGoToTab($event)">
+          </app-project-overview>
 
-            <div class="ai-justif" *ngIf="rp.justification">
-              <div class="ai-justif-lbl">Justification IA</div>
-              <p class="ai-justif-text">{{rp.justification}}</p>
-            </div>
+          <!-- ── Justification IA repliable ── -->
+          <details class="justif-details" *ngIf="rp.justification">
+            <summary class="justif-summary">
+              <span>Raisonnement complet du Judge IA</span>
+              <span class="justif-chevron">▸</span>
+            </summary>
+            <p class="justif-body">{{rp.justification}}</p>
+          </details>
 
-            <div class="ai-cicd-summary" *ngIf="rp.cicdIssues">
-              <span class="ai-cicd-lbl">CI/CD :</span>
-              <span class="ai-cicd-text">{{splitItems(rp.cicdIssues).join(' · ')}}</span>
-            </div>
-          </div>
-
-          <!-- Section 3 : solutions proposées -->
-          <div class="solutions-grid">
-
-            <!-- Colonne gauche : correction agent IA -->
-            <div class="solution-card">
-              <div class="solution-header"><span class="solution-icon">🤖</span><span>Correction agent IA</span></div>
-
-              <ol class="ai-action-list" *ngIf="devTasks.length">
-                <li *ngFor="let t of devTasks; let i = index" class="ai-action-item" [class.done]="t.done" (click)="toggleTask(i)">
-                  <span class="ai-action-num">{{i+1}}</span>
-                  <span class="ai-action-txt">
-                    <span class="task-pri" *ngIf="t.priority" [style.color]="getPriColor(t.priority)">[{{t.priority}}]</span>{{t.text}}
-                  </span>
-                </li>
-              </ol>
-
-              <div class="review-points" *ngIf="rp.developerReviewPoints?.length">
-                <div class="review-points-lbl">Points de revue</div>
-                <ul>
-                  <li *ngFor="let pt of rp.developerReviewPoints">{{pt}}</li>
-                </ul>
-              </div>
-
-              <div class="judge-warning" *ngIf="rp.warning">
-                ⚠️ <strong>Avertissement du Judge :</strong> {{rp.warning}}
-              </div>
-
-              <div class="approval-box" *ngIf="(latestReport.status === 'analyzed' || latestReport.status === 'blocked') && (rp.decision === 'FIX_PROPOSED' || rp.decision === 'BLOCK' || rp.decision === 'AUTO_FIX')">
-                <div class="approval-msg">Cette correction nécessite votre validation avant génération de la Pull Request.</div>
-                <div class="approval-actions">
-                  <button class="btn btn-action green" (click)="approveFix(latestReport.id)" [disabled]="approving">✓ Approuver la correction</button>
-                  <button class="btn btn-action gray" (click)="rejectFix(latestReport.id)" [disabled]="approving">✗ Rejeter</button>
-                </div>
-              </div>
-              <div class="approval-status info"     *ngIf="latestReport.status === 'approved'">⏳ Génération de la PR en cours...</div>
-              <div class="approval-status success"  *ngIf="latestReport.status === 'fix_generated'">✅ PR créée : <a [href]="latestReport.prUrl" target="_blank">{{latestReport.prUrl}}</a></div>
-              <div class="approval-status rejected" *ngIf="latestReport.status === 'rejected'">✗ Rejetée par le développeur</div>
-            </div>
-
-            <!-- Colonne droite : correction manuelle -->
-            <div class="solution-card">
-              <div class="solution-header"><span class="solution-icon">👤</span><span>Correction manuelle</span></div>
-
-              <ng-container *ngIf="manualHigh.length">
-                <div class="manual-group-lbl high">Priorité haute</div>
-                <div class="manual-item" *ngFor="let m of manualHigh">
-                  <span class="manual-chk">☐</span>
-                  <div class="manual-body">
-                    <span class="manual-txt">{{m.text}}</span>
-                    <div class="manual-cmd" (click)="copyText(m.text)">
-                      <span class="manual-cmd-text">{{m.text}}</span>
-                      <span class="manual-copy-icon">📋</span>
-                    </div>
-                  </div>
-                </div>
-              </ng-container>
-
-              <ng-container *ngIf="manualNormal.length">
-                <div class="manual-group-lbl normal">Recommandé</div>
-                <div class="manual-item" *ngFor="let m of manualNormal">
-                  <span class="manual-chk">☐</span>
-                  <div class="manual-body">
-                    <span class="manual-txt">{{m.text}}</span>
-                    <div class="manual-cmd" (click)="copyText(m.text)">
-                      <span class="manual-cmd-text">{{m.text}}</span>
-                      <span class="manual-copy-icon">📋</span>
-                    </div>
-                  </div>
-                </div>
-              </ng-container>
-
-              <div class="empty-sub" *ngIf="!manualHigh.length && !manualNormal.length">Aucune recommandation manuelle</div>
-            </div>
-
-          </div><!-- /solutions-grid -->
-
-          <!-- Section 4 : détail sécurité -->
-          <div class="card mt-10" *ngIf="rp.securityIssues || ed.trivy?.cves?.length || ed.zap?.alerts?.length">
-            <div class="card-title">🔒 Détail sécurité</div>
-
-            <div class="zone-body" style="padding:0 0 10px" *ngIf="rp.securityIssues">
-              <div *ngFor="let item of splitItems(rp.securityIssues)" class="zone-item">
-                <span class="item-dot red">▸</span><span class="item-text">{{item}}</span>
-              </div>
-            </div>
-
-            <table class="data-table mt-10" *ngIf="ed.trivy?.cves?.length">
-              <thead><tr><th>CVE ID</th><th>Sévérité</th><th>Package</th><th>Version</th><th>Fix disponible</th></tr></thead>
-              <tbody>
-                <tr *ngFor="let cve of ed.trivy.cves">
-                  <td style="font-family:var(--font-mono);font-size:10px;color:var(--accent-blue)">{{cve.id}}</td>
-                  <td><span class="sev-badge" [style.background]="getSevColor(cve.severity)">{{cve.severity}}</span></td>
-                  <td style="font-size:11px;font-family:var(--font-mono)">{{cve.package}}</td>
-                  <td style="font-size:11px;color:var(--accent-red)">{{cve.version}}</td>
-                  <td style="font-size:11px;color:var(--accent-green)">{{cve.fixedIn || 'Aucun fix'}}</td>
-                </tr>
-              </tbody>
-            </table>
-
-            <table class="data-table mt-10" *ngIf="ed.zap?.alerts?.length">
-              <thead><tr><th>Alerte</th><th>Risque</th><th>URL</th><th>Solution</th></tr></thead>
-              <tbody>
-                <tr *ngFor="let alert of ed.zap.alerts">
-                  <td style="font-size:11px;font-weight:600">{{alert.name}}</td>
-                  <td><span class="sev-badge" [style.background]="getSevColor(alert.risk)">{{alert.risk?.split(' ')[0]}}</span></td>
-                  <td style="font-size:10px;color:var(--text-muted);max-width:150px;overflow:hidden;text-overflow:ellipsis">{{alert.url}}</td>
-                  <td style="font-size:10px;color:var(--accent-green);max-width:200px">{{alert.solution?.substring(0,100)}}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          <!-- Section 5 : analyse des agents -->
+          <!-- ── Agents IA ── -->
           <div class="agents-grid" *ngIf="rp.agentActions">
             <div class="agent-card">
               <div class="agent-card-hd"><span>🔎</span> Root Cause Agent</div>
@@ -247,7 +118,7 @@
             </div>
           </div>
 
-          <!-- Section 6 : historique des rapports -->
+          <!-- ── Historique des rapports ── -->
           <div class="history-box" *ngIf="allReports.length > 1">
             <div class="history-title">📋 Historique des rapports</div>
             <div class="history-list">
@@ -272,6 +143,12 @@
       <!-- ONGLET JENKINS                              -->
       <!-- ═══════════════════════════════════════════ -->
       <div *ngIf="activeTab === 'jenkins'">
+        <app-jenkinsfile-optimizer
+          [projectId]="project?.id"
+          [projectName]="project?.name"
+          [repo]="project?.githubRepo">
+        </app-jenkinsfile-optimizer>
+
         <!-- KPIs depuis enrichedData du dernier rapport -->
         <div class="kpi-grid" *ngIf="ed.build">
           <div class="kpi-card">
@@ -433,77 +310,117 @@
       <!-- ONGLET SÉCURITÉ                             -->
       <!-- ═══════════════════════════════════════════ -->
       <div *ngIf="activeTab === 'securite'">
-        <!-- KPIs sécurité -->
+
+        <!-- ── KPIs vue d'ensemble ── -->
         <div class="kpi-grid">
-          <div class="kpi-card" [style.border-color]="(ed.trivy?.critical||0)>0?'var(--accent-red)':'var(--border)'">
-            <div class="kpi-label">Trivy CRITICAL</div>
-            <div class="kpi-value" [style.color]="(ed.trivy?.critical||0)>0?'var(--accent-red)':'var(--accent-green)'">{{ed.trivy?.cves_count || ed.trivy?.critical || 0}}</div>
-            <div class="kpi-sub">{{ed.trivy?.status || 'N/A'}}</div>
+          <div class="kpi-card" [class.kpi-alert]="(ed.trivy?.critical||0)>0">
+            <div class="kpi-label">Conteneur (Trivy)</div>
+            <div class="kpi-value" [style.color]="(ed.trivy?.critical||0)>0?'var(--accent-red)':'var(--accent-green)'">
+              {{ed.trivy?.critical || 0}} <span style="font-size:13px;opacity:.6">critique(s)</span>
+            </div>
+            <div class="kpi-sub">{{ed.trivy?.high || 0}} élevée(s) · {{ed.trivy?.cves_count || 0}} total</div>
+          </div>
+          <div class="kpi-card" [class.kpi-alert]="(ed.owasp?.critical||0)>0">
+            <div class="kpi-label">Dépendances (OWASP)</div>
+            <div class="kpi-value" [style.color]="(ed.owasp?.critical||0)>0?'var(--accent-red)':'var(--accent-green)'">
+              {{ed.owasp?.critical || 0}} <span style="font-size:13px;opacity:.6">critique(s)</span>
+            </div>
+            <div class="kpi-sub">{{ed.owasp?.high || 0}} élevée(s) · {{ed.owasp?.cves_count || 0}} total</div>
+          </div>
+          <div class="kpi-card" [class.kpi-alert]="(ed.zap?.alerts_high||0)>0">
+            <div class="kpi-label">DAST (ZAP)</div>
+            <div class="kpi-value" [style.color]="(ed.zap?.alerts_high||0)>0?'var(--accent-red)':((ed.zap?.alerts_medium||0)>0?'var(--accent-orange)':'var(--accent-green)')">
+              {{ed.zap?.alerts_high || 0}} <span style="font-size:13px;opacity:.6">élevée(s)</span>
+            </div>
+            <div class="kpi-sub">{{ed.zap?.alerts_medium || 0}} moyenne(s) · {{ed.zap?.alerts_count || 0}} total</div>
           </div>
           <div class="kpi-card">
-            <div class="kpi-label">OWASP</div>
-            <div class="kpi-value" style="font-size:13px" [style.color]="ed.owasp?.status==='SUCCESS'?'var(--accent-green)':'var(--accent-orange)'">{{ed.owasp?.status || 'N/A'}}</div>
-            <div class="kpi-sub" style="color:var(--accent-red);font-size:9px">{{ed.owasp?.error || ''}}</div>
-          </div>
-          <div class="kpi-card">
-            <div class="kpi-label">ZAP DAST</div>
-            <div class="kpi-value" style="font-size:13px" [style.color]="ed.zap?.status==='SUCCESS'?'var(--accent-green)':'var(--accent-orange)'">{{ed.zap?.status || 'N/A'}}</div>
-            <div class="kpi-sub" style="color:var(--accent-red);font-size:9px">{{ed.zap?.error || ''}}</div>
-          </div>
-          <div class="kpi-card">
-            <div class="kpi-label">ZAP Alertes High</div>
-            <div class="kpi-value" [style.color]="(ed.zap?.alerts_high||0)>0?'var(--accent-red)':'var(--accent-green)'">{{ed.zap?.alerts_high || 0}}</div>
+            <div class="kpi-label">Déploiement</div>
+            <div class="kpi-value"
+                 [style.color]="judge.decision === 'BLOCK' ? 'var(--accent-red)' : (judge.decision ? 'var(--accent-green)' : 'var(--text-secondary)')">
+              {{judge.decision === 'BLOCK' ? 'BLOQUÉ' : (judge.decision ? 'AUTORISÉ' : 'EN ATTENTE')}}
+            </div>
+            <div class="kpi-sub">{{judge.confidence !== null ? 'Confiance ' + judge.confidence + '%' : 'Décision Judge indéterminée'}}</div>
           </div>
         </div>
 
-        <!-- CVEs Trivy détaillées -->
-        <div class="card mt-10" *ngIf="ed.trivy?.cves?.length">
-          <div class="card-title">🛡️ CVEs Trivy ({{ed.trivy.cves.length}})</div>
-          <table class="data-table">
-            <thead>
-              <tr><th>CVE ID</th><th>Sévérité</th><th>Package</th><th>Version</th><th>Fix disponible</th></tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let cve of ed.trivy.cves">
-                <td style="font-family:var(--font-mono);font-size:10px;color:var(--accent-blue)">{{cve.id}}</td>
-                <td><span class="sev-badge" [style.background]="getSevColor(cve.severity)">{{cve.severity}}</span></td>
-                <td style="font-size:11px;font-family:var(--font-mono)">{{cve.package}}</td>
-                <td style="font-size:11px;color:var(--accent-red)">{{cve.version}}</td>
-                <td style="font-size:11px;color:var(--accent-green)">{{cve.fixedIn || 'Aucun fix'}}</td>
-              </tr>
-            </tbody>
-          </table>
+        <!-- ── Filtre actif ── -->
+        <div class="sec-filter-banner" *ngIf="securityFilter !== 'all'">
+          <span>Filtré sur : {{ securityFilterLabel() }}</span>
+          <button class="sec-filter-clear" (click)="securityFilter = 'all'">✕ Tout afficher</button>
         </div>
 
-        <!-- Alertes ZAP -->
-        <div class="card mt-10" *ngIf="ed.zap?.alerts?.length">
-          <div class="card-title">🌐 Alertes ZAP DAST ({{ed.zap.alerts.length}})</div>
+        <!-- ── Section 1 : CVE conteneur (Trivy) ── -->
+        <div class="sec-section" *ngIf="(securityFilter === 'all' || securityFilter === 'trivy') && ed.trivy?.cves?.length">
+          <div class="sec-section-head">
+            <div>
+              <div class="sec-section-title">🐳 Vulnérabilités conteneur</div>
+              <div class="sec-section-sub">Source : Trivy · image {{ed.docker?.image_tag || 'inconnue'}}</div>
+            </div>
+            <div class="sec-section-badges">
+              <span class="sec-badge red" *ngIf="ed.trivy?.critical">{{ed.trivy.critical}} CRITIQUE</span>
+              <span class="sec-badge orange" *ngIf="ed.trivy?.high">{{ed.trivy.high}} ÉLEVÉ</span>
+            </div>
+          </div>
+          <app-cve-table [cves]="ed.trivy.cves" [guide]="devGuide(ed)"></app-cve-table>
+        </div>
+
+        <!-- ── Section 2 : CVE dépendances (OWASP) ── -->
+        <div class="sec-section" *ngIf="(securityFilter === 'all' || securityFilter === 'owasp') && ed.owasp?.cves?.length">
+          <div class="sec-section-head">
+            <div>
+              <div class="sec-section-title">📦 Vulnérabilités de dépendances</div>
+              <div class="sec-section-sub">Source : OWASP Dependency-Check · pom.xml / package.json</div>
+            </div>
+            <div class="sec-section-badges">
+              <span class="sec-badge red" *ngIf="ed.owasp?.critical">{{ed.owasp.critical}} CRITIQUE</span>
+              <span class="sec-badge orange" *ngIf="ed.owasp?.high">{{ed.owasp.high}} ÉLEVÉ</span>
+            </div>
+          </div>
+          <app-cve-table [cves]="ed.owasp.cves" [guide]="devGuide(ed)"></app-cve-table>
+        </div>
+
+        <!-- ── Section 3 : alertes DAST (ZAP) ── -->
+        <div class="sec-section" *ngIf="(securityFilter === 'all' || securityFilter === 'zap') && ed.zap?.alerts?.length">
+          <div class="sec-section-head">
+            <div>
+              <div class="sec-section-title">🌐 Alertes DAST</div>
+              <div class="sec-section-sub">Source : OWASP ZAP · cible {{ed.zap?.target_url || 'inconnue'}}</div>
+            </div>
+            <div class="sec-section-badges">
+              <span class="sec-badge red" *ngIf="ed.zap?.alerts_high">{{ed.zap.alerts_high}} ÉLEVÉ</span>
+              <span class="sec-badge yellow" *ngIf="ed.zap?.alerts_medium">{{ed.zap.alerts_medium}} MOYEN</span>
+            </div>
+          </div>
           <table class="data-table">
             <thead>
-              <tr><th>Alerte</th><th>Risque</th><th>URL</th><th>Solution</th></tr>
+              <tr><th>Alerte</th><th>Risque</th><th>Description</th><th>Solution</th></tr>
             </thead>
             <tbody>
               <tr *ngFor="let alert of ed.zap.alerts">
-                <td style="font-size:11px;font-weight:600">{{alert.name}}</td>
+                <td style="font-size:11px;font-weight:600;max-width:140px">{{alert.name}}</td>
                 <td><span class="sev-badge" [style.background]="getSevColor(alert.risk)">{{alert.risk?.split(' ')[0]}}</span></td>
-                <td style="font-size:10px;color:var(--text-muted);max-width:150px;overflow:hidden;text-overflow:ellipsis">{{alert.url}}</td>
+                <td style="font-size:10px;color:var(--text-muted);max-width:200px">{{(alert.desc || alert.description || '')?.substring(0,120)}}</td>
                 <td style="font-size:10px;color:var(--accent-green);max-width:200px">{{alert.solution?.substring(0,100)}}</td>
               </tr>
             </tbody>
           </table>
         </div>
 
-        <!-- Analyse IA sécurité -->
-        <div class="zone-card zone-sec mt-10" *ngIf="rp.securityIssues">
-          <div class="zone-header"><span>🤖</span><span class="zone-title">ANALYSE IA — RISQUES SÉCURITÉ</span></div>
-          <div class="zone-body">
+        <!-- ── Analyse IA sécurité ── -->
+        <details class="justif-details mt-10" *ngIf="rp.securityIssues">
+          <summary class="justif-summary">
+            <span>🤖 Analyse IA — risques identifiés</span>
+            <span class="justif-chevron">▸</span>
+          </summary>
+          <div class="justif-body">
             <div *ngFor="let item of splitItems(rp.securityIssues)" class="zone-item">
               <span class="item-dot red">▸</span><span class="item-text">{{item}}</span>
             </div>
           </div>
-        </div>
+        </details>
 
-        <!-- Actions sécurité -->
+        <!-- ── Actions ── -->
         <div class="action-row mt-10">
           <button class="btn btn-action red" (click)="rollbackDeployment()" *ngIf="rp.decision==='BLOCK'">
             🚫 Rollback déploiement
@@ -560,3 +477,7 @@
 
     </div>
     <div *ngIf="loading" class="loading-state">Chargement...</div>
+    <div *ngIf="!loading && loadError" class="error-state">
+      <p>Impossible de charger le projet</p>
+      <button class="btn btn-secondary" (click)="loadProject()">Réessayer</button>
+    </div>

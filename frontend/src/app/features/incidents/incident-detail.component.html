@@ -1,6 +1,6 @@
     <div class="page-container">
       <div class="page-header">
-        <a routerLink="/incidents" style="font-size:12px;color:var(--text-muted);">← Retour aux incidents</a>
+        <button class="btn btn-back" (click)="goBack()">← Retour</button>
         <h1 class="page-title" style="margin-top:8px;">// incident_detail</h1>
       </div>
 
@@ -133,11 +133,11 @@
                 <div style="display:flex;gap:12px;">
                   <div style="text-align:center;">
                     <div style="font-size:18px;font-weight:700;color:var(--accent-red);">{{enrichedData.trivy?.critical || 0}}</div>
-                    <div style="font-size:9px;color:var(--text-muted);">CRITICAL</div>
+                    <div style="font-size:9px;color:var(--text-muted);">CRITIQUE</div>
                   </div>
                   <div style="text-align:center;">
                     <div style="font-size:18px;font-weight:700;color:var(--accent-orange);">{{enrichedData.trivy?.high || 0}}</div>
-                    <div style="font-size:9px;color:var(--text-muted);">HIGH</div>
+                    <div style="font-size:9px;color:var(--text-muted);">ÉLEVÉ</div>
                   </div>
                 </div>
                 <div class="scanner-status" [class]="enrichedData.trivy?.status?.toLowerCase()">
@@ -151,11 +151,11 @@
                 <div style="display:flex;gap:12px;">
                   <div style="text-align:center;">
                     <div style="font-size:18px;font-weight:700;color:var(--accent-red);">{{enrichedData.owasp?.critical || 0}}</div>
-                    <div style="font-size:9px;color:var(--text-muted);">CRITICAL</div>
+                    <div style="font-size:9px;color:var(--text-muted);">CRITIQUE</div>
                   </div>
                   <div style="text-align:center;">
                     <div style="font-size:18px;font-weight:700;color:var(--accent-orange);">{{enrichedData.owasp?.high || 0}}</div>
-                    <div style="font-size:9px;color:var(--text-muted);">HIGH</div>
+                    <div style="font-size:9px;color:var(--text-muted);">ÉLEVÉ</div>
                   </div>
                 </div>
                 <div class="scanner-status" [class]="enrichedData.owasp?.status?.toLowerCase()">
@@ -169,11 +169,11 @@
                 <div style="display:flex;gap:12px;">
                   <div style="text-align:center;">
                     <div style="font-size:18px;font-weight:700;color:var(--accent-red);">{{enrichedData.zap?.alerts_high || 0}}</div>
-                    <div style="font-size:9px;color:var(--text-muted);">HIGH</div>
+                    <div style="font-size:9px;color:var(--text-muted);">ÉLEVÉ</div>
                   </div>
                   <div style="text-align:center;">
                     <div style="font-size:18px;font-weight:700;color:var(--accent-orange);">{{enrichedData.zap?.alerts_medium || 0}}</div>
-                    <div style="font-size:9px;color:var(--text-muted);">MEDIUM</div>
+                    <div style="font-size:9px;color:var(--text-muted);">MOYEN</div>
                   </div>
                 </div>
                 <div class="scanner-status" [class]="enrichedData.zap?.status?.toLowerCase()">
@@ -348,6 +348,11 @@
             <span class="card-title">Données brutes</span>
           </div>
           <pre class="code-block" style="margin-top:12px;">{{incident | json}}</pre>
+        </div>
+
+        <!-- ══ ONGLET : GUIDE DE CORRECTION ══ -->
+        <div *ngIf="activeTab === 'guide'">
+          <app-developer-guide-tab [guide]="developerGuide"></app-developer-guide-tab>
         </div>
 
       </ng-container>

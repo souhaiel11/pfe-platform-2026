@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { ApiService } from '../../core/services/api.service';
+import { ProjectEventsService } from '../../core/services/project-events.service';
 
 @Component({
   selector: 'app-project-form',
@@ -33,6 +34,7 @@ export class ProjectFormComponent implements OnInit {
     private api: ApiService,
     private router: Router,
     private route: ActivatedRoute,
+    private projectEvents: ProjectEventsService,
   ) {}
 
   ngOnInit() {
@@ -106,11 +108,13 @@ export class ProjectFormComponent implements OnInit {
       ? this.api.updateProject(this.projectId, payload)
       : this.api.createProject(payload);
 
+    const wasCreate = !this.isEdit;
     req.subscribe({
       next: (p: any) => {
         this.loading = false;
         this.saveSuccess = true;
         if (!this.isEdit) { this.projectId = p.id; this.isEdit = true; }
+        if (wasCreate) this.projectEvents.notifyChanged();
         this.validateProject();
       },
       error: (e: any) => {

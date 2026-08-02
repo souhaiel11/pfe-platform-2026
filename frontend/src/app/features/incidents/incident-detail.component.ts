@@ -1,8 +1,10 @@
 import { Component, OnInit, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { ApiService } from '../../core/services/api.service';
 import { ToastService } from '../../core/services/toast.service';
+import { DeveloperGuideTabComponent } from './developer-guide/developer-guide-tab.component';
+import { DeveloperGuide } from './developer-guide/developer-guide.model';
 
 // ═══════════════════════════════════════════════════════════════════
 //  INCIDENT DETAIL — v2.0
@@ -14,7 +16,7 @@ import { ToastService } from '../../core/services/toast.service';
 @Component({
   selector: 'app-incident-detail',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, DeveloperGuideTabComponent],
   templateUrl: './incident-detail.component.html',
   styleUrls: ['./incident-detail.component.scss'],
 })
@@ -24,6 +26,7 @@ export class IncidentDetailComponent implements OnInit {
   incident:    any  = null;
   reports:     any[] = [];
   aiAnalysis:  any  = null;   // colonne aiAnalysis (WF1)
+  developerGuide: DeveloperGuide | null = null;
   enrichedData: any = null;   // metadata.enrichedData (WF1)
   validation:  any  = null;   // metadata.validation (WF3)
   decision:    any  = null;   // legacy
@@ -36,6 +39,7 @@ export class IncidentDetailComponent implements OnInit {
   private updateTabs() {
     this.tabs = [
       { id: 'analysis',   label: 'Analyse IA', dot: null },
+      { id: 'guide', label: 'Guide correction', dot: this.developerGuide?.issues?.length ? '#3b82f6' : null },
       { id: 'validation', label: 'Validation PR',
         dot: this.validation ? (this.validation.passed ? '#22c55e' : '#e24b4a') : null },
       { id: 'raw',        label: 'Données brutes', dot: null },
@@ -48,19 +52,54 @@ export class IncidentDetailComponent implements OnInit {
   private updateLifecycle() {
     const s = this.incident?.status || '';
     const ORDER = ['pending','analyzing','analyzed','fix_generated','validating','approved','completed'];
-    const idx   = ORDER.indexOf(s);
+
+    // Etats terminaux qui interrompent le chemin normal apres l'analyse.
+    // Le Judge a tranche (Detecte + Analyse sont donc acquis), mais la suite
+    // ne suit pas la sequence standard fix_generated -> validating -> approved.
+    const TERMINAL_AFTER_ANALYSIS = ['blocked', 'rejected', 'failed'];
+    const isTerminal = TERMINAL_AFTER_ANALYSIS.includes(s);
+
+    const idx = isTerminal ? 2 : ORDER.indexOf(s);
+
     this.lifecycleSteps = [
-      { label: 'Détecté',    sub: 'WF1',  done: idx >= 0, active: idx === 0 },
-      { label: 'Analysé',    sub: 'WF1',  done: idx >= 2, active: idx === 1 || idx === 2 },
-      { label: 'Fix proposé',sub: 'WF2',  done: idx >= 3, active: idx === 3 },
-      { label: 'Validé',     sub: 'WF3',  done: idx >= 5, active: idx === 4 || idx === 5 },
-      { label: 'Résolu',     sub: 'merge',done: idx >= 6, active: idx === 6 },
+      { label: 'Détecté',     sub: 'WF1',   done: idx >= 0, active: idx === 0 },
+      { label: 'Analysé',     sub: 'WF1',   done: idx >= 2, active: idx === 1 || idx === 2 },
+      {
+        label: isTerminal ? 'Bloqué' : 'Fix proposé',
+        sub: isTerminal ? 'judge' : 'WF2',
+        done: isTerminal ? false : idx >= 3,
+        active: isTerminal ? true : idx === 3,
+        terminal: isTerminal,
+      },
+      { label: 'Validé',      sub: 'WF3',   done: !isTerminal && idx >= 5, active: !isTerminal && (idx === 4 || idx === 5) },
+      { label: 'Résolu',      sub: 'merge', done: !isTerminal && idx >= 6, active: !isTerminal && idx === 6 },
     ];
   }
 
-  constructor(private api: ApiService, private toast: ToastService) {}
+  // Onglet demandé explicitement via ?tab=... (ex: lien depuis le Rapport IA d'un projet)
+  private requestedTab: string | null = null;
 
-  ngOnInit() { this.load(); }
+  constructor(
+    private api: ApiService,
+    private toast: ToastService,
+    private route: ActivatedRoute,
+    private router: Router,
+  ) {}
+
+  goBack(): void {
+    const projectId = this.incident?.projectId;
+    this.router.navigate(projectId ? ['/projects', projectId] : ['/projects']);
+  }
+
+  ngOnInit() {
+    const tabParam = this.route.snapshot.queryParamMap.get('tab');
+    const validTabs = ['analysis', 'guide', 'validation', 'raw'];
+    if (tabParam && validTabs.includes(tabParam)) {
+      this.requestedTab = tabParam;
+      this.activeTab = tabParam;
+    }
+    this.load();
+  }
 
   load() {
     this.loading = true;
@@ -93,14 +132,15 @@ export class IncidentDetailComponent implements OnInit {
         } else {
           this.aiAnalysis = inc.aiAnalysis || null;
         }
+        this.developerGuide = this.aiAnalysis?.developerGuide ?? null;
         this.enrichedData = inc.metadata?.enrichedData || null;
         // ── Données WF3 ──
         this.validation   = inc.metadata?.validation || null;
         this.updateLifecycle();
         this.updateTabs();
         this.loading = false;
-        // Si validé, ouvrir directement l'onglet validation
-        if (this.validation) this.activeTab = 'validation';
+        // Si validé, ouvrir directement l'onglet validation — sauf si un onglet a été demandé explicitement via l'URL
+        if (!this.requestedTab && this.validation) this.activeTab = 'validation';
       },
       error: () => { this.toast.error('Erreur', 'Incident introuvable'); this.loading = false; }
     });

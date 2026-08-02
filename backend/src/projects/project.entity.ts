@@ -49,6 +49,10 @@ export class Project {
   @Column({ type: 'simple-array', nullable: true })
   tags: string[];
 
+  // Origine des données ('demo' pour les projets de démo seedés ; null pour les projets réels)
+  @Column({ nullable: true })
+  source: string;
+
   // ── CI/CD ─────────────────────────────────────────────────
   @Column({ type: 'enum', enum: CicdTool, default: CicdTool.JENKINS })
   cicdTool: CicdTool;
@@ -56,8 +60,19 @@ export class Project {
   @Column({ nullable: true })
   jenkinsUrl: string;
 
+  // Identité du job — utilisée pour le lookup webhook/n8n
+  // (findByJobNameInternal, exact match), toujours la forme COURTE que
+  // Jenkins envoie dans son payload. Ne jamais y mettre un chemin multibranch.
   @Column({ nullable: true })
   jenkinsJobName: string;
+
+  // Chemin URL pour interroger le statut Jenkins (getJenkinsStatus) —
+  // distinct de jenkinsJobName. Nécessaire pour un job multibranch
+  // ("<dossier>/job/<branche>"), où l'identité du job (court, utilisée pour
+  // le lookup) diffère du chemin réel de l'API Jenkins. Vide = fallback sur
+  // jenkinsJobName (comportement inchangé pour un job non-multibranch).
+  @Column({ nullable: true })
+  jenkinsJobPath: string;
 
   @Column({ nullable: true })
   jenkinsToken: string;

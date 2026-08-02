@@ -11,6 +11,7 @@ import { DashboardModule } from './dashboard/dashboard.module';
 import { WebhooksModule } from './webhooks/webhooks.module';
 import { ChatModule } from './chat/chat.module';
 import { IntegrationsModule } from './integrations/integrations.module';
+import { JenkinsOptimizerModule } from './jenkins-optimizer/jenkins-optimizer.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { IntegrationsModule } from './integrations/integrations.module';
     WebhooksModule,
     ChatModule,
     IntegrationsModule,
+    JenkinsOptimizerModule,
   ],
 })
 export class AppModule {}

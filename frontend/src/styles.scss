@@ -234,6 +234,14 @@ h3 { font-size: 14px; font-weight: 500; color: var(--text-secondary); }
 
 .btn-sm { padding: 4px 10px; font-size: 11px; }
 
+.btn-back {
+  background: transparent;
+  color: var(--text-muted);
+  border-color: var(--border);
+  margin-bottom: 12px;
+  &:hover:not(:disabled) { color: var(--accent-blue); border-color: var(--accent-blue); }
+}
+
 /* ── Forms ─────────────────────────────────────────────── */
 .form-group { margin-bottom: 16px; }
 

@@ -4,7 +4,9 @@
   "scripts": {
     "build": "nest build",
     "start": "node dist/main",
-    "start:dev": "nest start --watch"
+    "start:dev": "nest start --watch",
+    "seed": "ts-node src/seed/seed.ts",
+    "seed:clean": "ts-node src/seed/seed-clean.ts"
   },
   "dependencies": {
     "@nestjs/axios": "^3.0.0",

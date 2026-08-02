@@ -1,6 +1,27 @@
-import { Component, AfterViewInit, OnDestroy } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { ApiService } from '../../core/services/api.service';
 
+interface RiskRule {
+  label: string;
+  points: number;
+}
+
+interface ProjectRisk {
+  projectId: string;
+  projectName: string;
+  score: number;
+  level: string;
+  levelClass: string;
+  rules: RiskRule[];
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Indicateur de risque par projet — calculé côté backend
+// (GET /dashboard/risk-indicators, common/risk-score.ts), affiché ici
+// tel quel. Aucun calcul de scoring côté frontend : une seule source
+// de vérité, réutilisée partout.
+// ─────────────────────────────────────────────────────────────────
 @Component({
   selector: 'app-prediction',
   standalone: true,
@@ -8,41 +29,31 @@ import { CommonModule } from '@angular/common';
   templateUrl: './prediction.component.html',
   styleUrls: ['./prediction.component.scss'],
 })
-export class PredictionComponent implements AfterViewInit, OnDestroy {
-  factors = [
-    { name: '2 CVE HIGH non corrigées', detail: 'eclipse-temurin:17 + alpine:3.18', weight: 35, color: 'var(--accent-orange)' },
-    { name: 'Taux d\'échec builds : 18%', detail: '2 failures sur 10 derniers builds', weight: 28, color: 'var(--accent-orange)' },
-    { name: 'OWASP ZAP non configuré', detail: 'Scan DAST absent sur K8s NodePort', weight: 20, color: 'var(--accent-blue)' },
-    { name: '4 code smells SonarQube', detail: 'Complexité cognitive élevée', weight: 17, color: 'var(--accent-green)' },
-  ];
+export class PredictionComponent implements OnInit {
+  projects: ProjectRisk[] = [];
+  loading = true;
 
-  actions = [
-    { priority: 'URGENT', priBg: 'var(--accent-red-bg)', priColor: 'var(--accent-red)', text: 'Mettre à jour eclipse-temurin vers version patchée', impact: '-22% risque' },
-    { priority: 'HAUTE', priBg: 'var(--accent-orange-bg)', priColor: 'var(--accent-orange)', text: 'Configurer OWASP ZAP sur http://192.168.49.2:30003', impact: '-15% risque' },
-    { priority: 'MOYENNE', priBg: 'var(--accent-blue-bg)', priColor: 'var(--accent-blue)', text: 'Corriger les 4 code smells SonarQube', impact: '-8% risque' },
-    { priority: 'BASSE', priBg: 'var(--accent-green-bg)', priColor: 'var(--accent-green)', text: 'Améliorer la couverture tests de 74% → 80%', impact: '-5% risque' },
-  ];
+  constructor(private api: ApiService) {}
 
-  private chart: any;
+  ngOnInit() {
+    this.load();
+  }
 
-  ngOnDestroy() { if (this.chart) this.chart.destroy(); }
-
-  ngAfterViewInit() {
-    setTimeout(() => {
-      const c = document.getElementById('pred-chart') as HTMLCanvasElement;
-      if (!c || !(window as any).Chart) return;
-      const ex = (window as any).Chart.getChart(c);
-      if (ex) ex.destroy();
-      const purple = getComputedStyle(document.body).getPropertyValue('--accent-purple').trim() || '#bc8cff';
-      const muted = getComputedStyle(document.body).getPropertyValue('--text-secondary').trim() || '#8b949e';
-      this.chart = new (window as any).Chart(c, {
-        type: 'line',
-        data: {
-          labels: ['#128','#129','#130','#131','#132'],
-          datasets: [{ label: 'Score risque %', data: [45,52,38,71,73], borderColor: purple, borderWidth: 2, pointRadius: 3, fill: true, backgroundColor: 'rgba(188,140,255,.1)', tension: .4 }]
-        },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { ticks: { color: muted, font: { size: 9 } }, grid: { color: 'rgba(128,128,128,.1)' } }, y: { min: 0, max: 100, ticks: { color: muted, font: { size: 9 } }, grid: { color: 'rgba(128,128,128,.1)' } } } }
-      });
-    }, 100);
+  load() {
+    this.loading = true;
+    this.api.getRiskIndicators().subscribe({
+      next: (data: any) => {
+        this.projects = (data.projects || []).map((p: any) => ({
+          projectId: p.projectId,
+          projectName: p.projectName,
+          score: p.risk,
+          level: p.level,
+          levelClass: p.levelClass,
+          rules: p.rules || [],
+        }));
+        this.loading = false;
+      },
+      error: () => { this.projects = []; this.loading = false; },
+    });
   }
 }

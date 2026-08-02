@@ -22,6 +22,7 @@ export class Incident {
   @Column({ nullable: true }) jenkinsJobName: string;
   @Column({ nullable: true }) buildNumber: number;
   @Column({ nullable: true }) aiAnalysis: string;
+  @Column({ type: 'timestamp', nullable: true }) resolvedAt: Date;
   @CreateDateColumn() createdAt: Date;
   @UpdateDateColumn() updatedAt: Date;
 }

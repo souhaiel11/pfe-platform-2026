@@ -6,6 +6,7 @@ import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { firstValueFrom } from 'rxjs';
 import { BugsGateway } from './bugs.gateway';
+import { sanitizeEntityProject } from '../common/sanitize-project';
 
 @Injectable()
 export class BugsService {
@@ -16,16 +17,17 @@ export class BugsService {
     private readonly gateway: BugsGateway,
   ) {}
 
-  findAll(projectId?: string) {
+  async findAll(projectId?: string) {
     const where: any = {};
     if (projectId) where.projectId = projectId;
-    return this.repo.find({ where, order: { createdAt: 'DESC' }, relations: ['project'] });
+    const bugs = await this.repo.find({ where, order: { createdAt: 'DESC' }, relations: ['project'] });
+    return bugs.map(b => sanitizeEntityProject(b));
   }
 
   async findOne(id: string) {
     const bug = await this.repo.findOne({ where: { id }, relations: ['project'] });
     if (!bug) throw new NotFoundException('Bug not found');
-    return bug;
+    return sanitizeEntityProject(bug);
   }
 
   async create(dto: Partial<Bug>) {

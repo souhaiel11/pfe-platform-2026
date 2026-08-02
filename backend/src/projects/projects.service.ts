@@ -1,12 +1,13 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Project } from './project.entity';
+import { Project, ProjectStatus } from './project.entity';
 import { Incident, IncidentStatus } from '../incidents/incident.entity';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
+import { sanitizeProject } from '../common/sanitize-project';
 
 const OPEN_STATUSES = [IncidentStatus.PENDING, IncidentStatus.BLOCKED, IncidentStatus.FAILED];
 const ANALYZING_STATUSES = [IncidentStatus.ANALYZING, IncidentStatus.ANALYZED, IncidentStatus.FIX_GENERATED, IncidentStatus.VALIDATING];
@@ -23,15 +24,7 @@ export class ProjectsService {
   ) {}
 
   private sanitizeProject(project: Project) {
-    const {
-      jenkinsToken,
-      sonarqubeToken,
-      githubToken,
-      slackToken,
-      ...safeProject
-    } = project as any;
-
-    return safeProject;
+    return sanitizeProject(project);
   }
 
   async findAll(jenkinsJobName?: string) {
@@ -192,16 +185,20 @@ export class ProjectsService {
   async getJenkinsStatus(id: string) {
     const project = await this.findOneInternal(id);
     if (!project.jenkinsUrl || !project.jenkinsJobName) {
-      return this.getMockJenkinsStatus();
+      return this.getMockJenkinsStatus(project);
     }
     try {
       const [user, token] = (project.jenkinsToken || ':').split(':');
       const headers = project.jenkinsToken
         ? { Authorization: `Basic ${Buffer.from(`${user}:${token}`).toString('base64')}` }
         : {};
-      const lastUrl = `${project.jenkinsUrl}/job/${project.jenkinsJobName}/lastBuild/api/json`;
+      // Chemin URL du job (multibranch : "<dossier>/job/<branche>") — distinct
+      // de jenkinsJobName (identité du job, utilisée pour le lookup webhook).
+      // Vide = fallback sur jenkinsJobName, comportement inchangé.
+      const jobPath = project.jenkinsJobPath || project.jenkinsJobName;
+      const lastUrl = `${project.jenkinsUrl}/job/${jobPath}/lastBuild/api/json`;
       const { data: last } = await firstValueFrom(this.http.get(lastUrl, { headers }));
-      const histUrl = `${project.jenkinsUrl}/job/${project.jenkinsJobName}/api/json?tree=builds[number,result,duration,timestamp,url]{0,10}`;
+      const histUrl = `${project.jenkinsUrl}/job/${jobPath}/api/json?tree=builds[number,result,duration,timestamp,url]{0,10}`;
       const { data: hist } = await firstValueFrom(this.http.get(histUrl, { headers }));
       const builds = (hist.builds || []).map((b: any) => ({
         number: b.number, result: b.result,
@@ -215,7 +212,7 @@ export class ProjectsService {
         jobName: project.jenkinsJobName, builds,
       };
     } catch {
-      return this.getMockJenkinsStatus();
+      return this.getMockJenkinsStatus(project);
     }
   }
 
@@ -269,8 +266,91 @@ export class ProjectsService {
     return { bugs: 0, vulnerabilities: 0, codeSmells: 12, coverage: 85, duplications: 0.5, securityRating: 'A', reliabilityRating: 'A', maintainabilityRating: 'A', linesOfCode: 1500 };
   }
 
-  private getMockJenkinsStatus() {
-    return { result: 'SUCCESS', duration: 45000, timestamp: Date.now() - 3600000, url: '#', building: false };
+  // Historique Jenkins simulé, déterministe par projet (même projectId => même historique
+  // à chaque appel). La répartition succès/échec/aborted dépend du statut du projet, ce
+  // qui reproduit la matrice de démo (healthy=9✓/1✗, warning=7✓/2✗/1 aborted, critical=4✓/6✗)
+  // sans coder les noms de projets en dur.
+  private static readonly JENKINS_MOCK_RATIOS: Record<string, { success: number; failure: number; aborted: number; lastResult: string }> = {
+    [ProjectStatus.HEALTHY]:  { success: 9, failure: 1, aborted: 0, lastResult: 'SUCCESS' },
+    [ProjectStatus.WARNING]:  { success: 7, failure: 2, aborted: 1, lastResult: 'SUCCESS' },
+    [ProjectStatus.CRITICAL]: { success: 4, failure: 6, aborted: 0, lastResult: 'FAILURE' },
+  };
+
+  private hashSeed(str: string): number {
+    let h = 2166136261;
+    for (let i = 0; i < str.length; i++) {
+      h ^= str.charCodeAt(i);
+      h = Math.imul(h, 16777619);
+    }
+    return h >>> 0;
+  }
+
+  private mulberry32(seed: number): () => number {
+    let a = seed;
+    return () => {
+      a |= 0; a = (a + 0x6d2b79f5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  private getMockJenkinsStatus(project: Project) {
+    const rng = this.mulberry32(this.hashSeed(project.id));
+    const ratio = ProjectsService.JENKINS_MOCK_RATIOS[project.status] || ProjectsService.JENKINS_MOCK_RATIOS[ProjectStatus.HEALTHY];
+
+    // Slot 0 (le plus récent) est forcé au résultat attendu ; le reste de la répartition
+    // est mélangé de façon déterministe (Fisher-Yates seedé par projectId).
+    const pool: string[] = [];
+    const remaining = {
+      SUCCESS: ratio.success - (ratio.lastResult === 'SUCCESS' ? 1 : 0),
+      FAILURE: ratio.failure - (ratio.lastResult === 'FAILURE' ? 1 : 0),
+      ABORTED: ratio.aborted - (ratio.lastResult === 'ABORTED' ? 1 : 0),
+    };
+    for (const [result, count] of Object.entries(remaining)) {
+      for (let i = 0; i < count; i++) pool.push(result);
+    }
+    for (let i = pool.length - 1; i > 0; i--) {
+      const j = Math.floor(rng() * (i + 1));
+      [pool[i], pool[j]] = [pool[j], pool[i]];
+    }
+    const results = [ratio.lastResult, ...pool]; // 10 entrées, index 0 = plus récent
+
+    const now = Date.now();
+    const totalSpanMs = 21 * 24 * 60 * 60 * 1000; // ~3 semaines
+    const baseGap = totalSpanMs / 10;
+    const baseNumber = 50 + Math.floor(rng() * 400);
+    let cumulativeGap = 0;
+
+    const builds = results.map((result, i) => {
+      if (i > 0) cumulativeGap += baseGap * (0.6 + rng() * 0.8); // espacement avec jitter déterministe
+      const timestamp = Math.round(now - cumulativeGap - (i === 0 ? Math.floor(rng() * 3 * 60 * 60 * 1000) : 0));
+      const isFast = result !== 'SUCCESS';
+      const durationMs = isFast
+        ? Math.round((90 + rng() * 150) * 1000)   // échecs/aborted plus courts : 90–240s
+        : Math.round((180 + rng() * 420) * 1000); // succès : 180–600s
+      return {
+        number: baseNumber + (9 - i),
+        result,
+        durationMs,
+        duration: Math.round(durationMs / 1000),
+        timestamp,
+        url: `http://jenkins.demo.local/job/${project.jenkinsJobName || project.name}/${baseNumber + (9 - i)}/`,
+      };
+    });
+
+    const last = builds[0];
+    return {
+      result: last.result,
+      duration: last.durationMs, // racine en ms, cohérent avec le format live (last.duration brut Jenkins)
+      timestamp: last.timestamp,
+      url: last.url,
+      building: false,
+      buildNumber: last.number,
+      jobName: project.jenkinsJobName,
+      builds: builds.map(({ durationMs, ...b }) => b), // builds[].duration en secondes, comme le format live
+      source: 'demo',
+    };
   }
 
   private getMockTrivyReport(name: string) {

@@ -4,25 +4,26 @@
     .page-icon{width:40px;height:40px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px}
     h2{font-size:16px;font-weight:700;margin:0}
     .page-sub{font-size:10px;color:var(--text-secondary);margin-top:2px}
-    .pred-hero{display:flex;align-items:center;gap:20px;background:var(--accent-purple-bg);border:1px solid var(--accent-purple);border-radius:10px;padding:18px;margin-bottom:16px}
-    .pred-pct{font-size:48px;font-weight:700;color:var(--accent-orange);line-height:1}
-    .pred-pct-label{font-size:10px;color:var(--text-secondary);margin-top:4px;line-height:1.4}
-    .pred-info{flex:1}
-    .pred-level{font-size:13px;font-weight:600;color:var(--accent-orange);margin-bottom:6px}
-    .pred-desc{font-size:11px;color:var(--text-secondary);line-height:1.6;margin-bottom:6px}
-    .pred-conf{font-size:11px;color:var(--text-secondary)}
+
     .card{background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:8px;padding:14px;margin-bottom:12px}
     .card-title{display:flex;align-items:center;gap:5px;font-size:10px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px}
-    .factor-list{display:flex;flex-direction:column;gap:8px}
-    .factor-item{display:flex;align-items:center;gap:12px}
-    .factor-bar-wrap{width:120px;height:4px;background:var(--bg-tertiary);border-radius:2px;overflow:hidden;flex-shrink:0}
-    .factor-bar{height:100%;border-radius:2px}
-    .factor-info{flex:1}
-    .factor-name{font-size:11px;font-weight:500}
-    .factor-detail{font-size:9px;color:var(--text-secondary);margin-top:1px}
-    .factor-weight{font-size:12px;font-weight:700;width:35px;text-align:right}
-    .action-list{display:flex;flex-direction:column;gap:6px}
-    .action-item{display:flex;align-items:center;gap:10px;padding:9px 11px;background:var(--bg-tertiary);border-radius:6px;font-size:10px}
-    .action-pri{padding:2px 6px;border-radius:3px;font-size:9px;font-weight:700;flex-shrink:0}
-    .action-text{flex:1}
-    .action-impact{font-size:9px;color:var(--text-secondary)}
+
+    .rules-legend{display:flex;flex-wrap:wrap;gap:8px}
+    .rule-chip{font-size:10px;padding:5px 9px;background:var(--bg-tertiary);border-radius:5px;color:var(--text-secondary)}
+
+    .empty{font-size:11px;color:var(--text-secondary);padding:10px 0}
+
+    .risk-card{background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:8px;padding:14px;margin-bottom:10px}
+    .risk-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+    .risk-name{font-size:13px;font-weight:600}
+    .risk-badge{font-size:11px;font-weight:700;padding:4px 10px;border-radius:5px}
+    .risk-badge.faible   { background: var(--accent-green-bg);  color: var(--accent-green); }
+    .risk-badge.modere   { background: var(--accent-orange-bg); color: var(--accent-orange); }
+    .risk-badge.eleve    { background: rgba(232, 89, 12, .15); color: #e8590c; }
+    .risk-badge.critique { background: var(--accent-red-bg);    color: var(--accent-red); }
+
+    .risk-rules{display:flex;flex-direction:column;gap:5px}
+    .rule-row{display:flex;align-items:center;justify-content:space-between;padding:6px 9px;background:var(--bg-tertiary);border-radius:5px;font-size:11px}
+    .rule-label{color:var(--text-primary)}
+    .rule-points{font-weight:700;color:var(--accent-orange)}
+    .rule-none{color:var(--text-secondary);justify-content:flex-start}

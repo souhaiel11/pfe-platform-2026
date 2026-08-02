@@ -1,9 +1,11 @@
-import { Component, OnInit, AfterViewInit } from '@angular/core';
+import { Component, OnInit, OnDestroy, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import { Subscription, forkJoin, of, catchError } from 'rxjs';
 import { ApiService } from '../../core/services/api.service';
 import { ThemeService } from '../../core/services/theme.service';
+import { ProjectEventsService } from '../../core/services/project-events.service';
 
 @Component({
   selector: 'app-dashboard',
@@ -12,19 +14,15 @@ import { ThemeService } from '../../core/services/theme.service';
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.scss'],
 })
-export class DashboardComponent implements OnInit, AfterViewInit {
+export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
 
   notifOpen = false;
   chatOpen = false;
   chatInput = '';
   unreadChat = 1;
-  showPrediction = true;
 
-  notifications = [
-    { level: 'error', title: 'CRITICAL — Pod app-test CrashLoopBackOff', meta: 'il y a 6h · Corrigé → DB_HOST=postgres' },
-    { level: 'warn',  title: 'WARN — 2 CVE HIGH Trivy · eclipse-temurin', meta: 'il y a 5h · Patch recommandé' },
-    { level: 'info',  title: 'INFO — Build #132 SUCCESS · Deploy K8s OK', meta: 'il y a 2h · main-132 déployé' },
-  ];
+  // ── Notifications — incidents ouverts réels (plus de données inventées) ──
+  notifications: Array<{ level: string; title: string; meta: string }> = [];
 
   kpis = [
     { label: 'Incidents actifs', value: '3', sub: '+2 depuis hier',  icon: 'ti-alert-circle',       color: 'red' },
@@ -35,6 +33,11 @@ export class DashboardComponent implements OnInit, AfterViewInit {
 
   projects: any[] = [];
   projectsLoading = true;
+
+  // ── Synthèse sécurité plateforme (security-global) ────────
+  securitySummary: any = null;
+  securitySummaryLoading = true;
+  private projectEventsSub?: Subscription;
 
   private readonly avatarPalette = [
     { bg: 'var(--accent-blue-bg)',   color: 'var(--accent-primary)' },
@@ -50,13 +53,9 @@ export class DashboardComponent implements OnInit, AfterViewInit {
     { icon: '🔧', value: '45min',  label: 'MTTR',                  level: 'ELITE',  color: 'var(--accent-green)',  badgeBg: 'var(--accent-green-bg)' },
   ];
 
-  activities = [
-    { color: 'var(--accent-green)',  title: 'Build #132 — pfe-app-test — SUCCESS',        meta: 'il y a 2h · kubectl rollout OK' },
-    { color: 'var(--accent-orange)', title: 'Incident #45 — Tests cassés — NOTIFY_ONLY',  meta: 'il y a 3h · Judge Agent Claude' },
-    { color: 'var(--accent-red)',    title: 'CVE-2024-1234 HIGH — eclipse-temurin:17',    meta: 'il y a 5h · Trivy scan' },
-    { color: 'var(--accent-green)',  title: 'Quality Gate SonarQube — PASSED',            meta: 'il y a 5h · Coverage 74%' },
-    { color: 'var(--accent-primary)',title: 'DB_HOST corrigé — kubectl set env',          meta: 'il y a 6h · K8s pod Running' },
-  ];
+  // ── Activité récente — incidents réels (plus de données inventées) ──
+  activities: Array<{ color: string; title: string; meta: string }> = [];
+  activitiesLoading = true;
 
   chatMessages: { role: string; content: string }[] = [
     { role: 'ai', content: "Bonjour Souhaiel ! 3 incidents actifs · Build #132 OK · Score risque 62/100. Comment puis-je t'aider ?" }
@@ -67,24 +66,103 @@ export class DashboardComponent implements OnInit, AfterViewInit {
   private chatReplies: Record<string, string> = {
     'score risque': 'pfe-app-test : 62/100 MEDIUM\npfe-platform : 91/100 LOW\nScore = Jenkins 40% + SonarQube 30% + Trivy 20% + OWASP 10%',
     'pods k8s':     '4/4 pods Running :\n• frontend :30002 ✓\n• backend :30001 ✓\n• app-test :30003 ✓\n• postgres ClusterIP ✓',
-    'cve trivy':    '0 CRITICAL · 2 HIGH\n• CVE-2024-1234 eclipse-temurin (CVSS 7.5)\n• CVE-2024-5678 alpine:3.18 (CVSS 7.1)',
     'dora':         'Deployment: 3.2/j (ELITE)\nLead Time: 4h20 (HIGH)\nCFR: 18% (MEDIUM)\nMTTR: 45min (ELITE)',
     'incidents':    '3 incidents actifs :\n• Tests cassés → NOTIFY_ONLY\n• OWASP ZAP → OPEN\n• CVE HIGH → en attente',
   };
 
-  constructor(private api: ApiService, public themeService: ThemeService) {}
+  constructor(
+    private api: ApiService,
+    public themeService: ThemeService,
+    private router: Router,
+    private projectEvents: ProjectEventsService,
+  ) {}
 
-  ngOnInit() { this.loadProjects(); }
+  ngOnInit() {
+    this.loadProjects();
+    this.loadSecuritySummary();
+    this.loadIncidentFeeds();
+    // Re-fetch les vues globales après création/suppression d'un projet,
+    // sans reload manuel de la page.
+    this.projectEventsSub = this.projectEvents.projectsChanged$.subscribe(() => {
+      this.loadProjects();
+      this.loadSecuritySummary();
+      this.loadIncidentFeeds();
+    });
+  }
 
   ngAfterViewInit() {
     setTimeout(() => this.buildHeatmap(), 100);
   }
 
+  ngOnDestroy() {
+    this.projectEventsSub?.unsubscribe();
+  }
+
+  loadSecuritySummary() {
+    this.securitySummaryLoading = true;
+    this.api.getSecurityGlobal().subscribe({
+      next: (data: any) => { this.securitySummary = data.summary; this.securitySummaryLoading = false; },
+      error: () => { this.securitySummary = null; this.securitySummaryLoading = false; },
+    });
+  }
+
+  goToSecurity() { this.router.navigate(['/security']); }
+
+  // Un seul fetch d'incidents alimente à la fois "Activité récente" (les
+  // plus récents, tous statuts) et la cloche de notifications (uniquement
+  // les incidents ouverts — même définition "ouvert" que ProjectsService :
+  // pending / blocked / failed — donc de vraies alertes actionnables).
+  loadIncidentFeeds() {
+    this.activitiesLoading = true;
+    this.api.getIncidents({ size: 20 }).subscribe({
+      next: (data: any[]) => {
+        const incidents = data || [];
+
+        this.activities = incidents.slice(0, 5).map(i => ({
+          color: this.getIncidentColor(i.status),
+          title: i.title,
+          meta: `${this.timeAgo(new Date(i.createdAt).getTime())} · ${i.project?.name || 'projet inconnu'} · ${i.status}`,
+        }));
+
+        const OPEN_STATUSES = ['pending', 'blocked', 'failed'];
+        this.notifications = incidents
+          .filter(i => OPEN_STATUSES.includes(i.status))
+          .slice(0, 5)
+          .map(i => ({
+            level: i.status === 'failed' ? 'error' : 'warn',
+            title: `${i.status.toUpperCase()} — ${i.title}`,
+            meta: `${this.timeAgo(new Date(i.createdAt).getTime())} · ${i.project?.name || 'projet inconnu'}`,
+          }));
+
+        this.activitiesLoading = false;
+      },
+      error: () => { this.activities = []; this.notifications = []; this.activitiesLoading = false; },
+    });
+  }
+
+  private getIncidentColor(status: string): string {
+    if (['completed', 'approved'].includes(status)) return 'var(--accent-green)';
+    if (['failed', 'blocked', 'rejected'].includes(status)) return 'var(--accent-red)';
+    return 'var(--accent-orange)'; // pending / analyzing / analyzed / fix_generated / validating
+  }
+
+  // Le score affiché par projet vient TOUJOURS de security-global (live,
+  // recalculé depuis le dernier report). Si cet appel échoue, on n'affiche
+  // JAMAIS Project.securityScore en repli silencieux (il peut être
+  // désynchronisé sans alerte) — le projet passe en état neutre ("—").
   loadProjects() {
     this.projectsLoading = true;
-    this.api.getProjects().subscribe({
-      next: (data: any[]) => {
-        this.projects = (data || []).map((p, i) => this.mapProject(p, i));
+    forkJoin({
+      projects: this.api.getProjects(),
+      // Ne fait jamais échouer le forkJoin : si security-global tombe, on
+      // dégrade en neutre (byProject: []), la liste des projets reste affichée.
+      security: this.api.getSecurityGlobal().pipe(catchError(() => of({ byProject: [] }))),
+    }).subscribe({
+      next: ({ projects, security }) => {
+        const liveScores = new Map<string, number>(
+          (security?.byProject || []).map((p: any) => [p.projectId, p.securityScore]),
+        );
+        this.projects = (projects || []).map((p, i) => this.mapProject(p, i, liveScores));
         this.projectsLoading = false;
         setTimeout(() => this.buildRiskRings(), 50);
       },
@@ -92,10 +170,12 @@ export class DashboardComponent implements OnInit, AfterViewInit {
     });
   }
 
-  private mapProject(p: any, index: number) {
+  private mapProject(p: any, index: number, liveScores: Map<string, number>) {
     const initials = (p.name || '?').substring(0, 2).toUpperCase();
     const avatar = this.avatarPalette[index % this.avatarPalette.length];
-    const score = Math.round(p.securityScore ?? 0);
+    // null = security-global n'a pas répondu pour ce projet → état neutre,
+    // jamais un repli sur p.securityScore (potentiellement figé/faux).
+    const score = liveScores.has(p.id) ? Math.round(liveScores.get(p.id)!) : null;
     return {
       id: p.id,
       name: p.name,
@@ -108,7 +188,7 @@ export class DashboardComponent implements OnInit, AfterViewInit {
       health: score,
       riskScore: score,
       lastUpdate: p.updatedAt ? this.timeAgo(new Date(p.updatedAt).getTime()) : '—',
-      riskBreakdown: [{ label: 'Score sécurité', value: score }],
+      riskBreakdown: score !== null ? [{ label: 'Score sécurité', value: score }] : [],
     };
   }
 
@@ -132,6 +212,9 @@ export class DashboardComponent implements OnInit, AfterViewInit {
       if (!canvas || !(window as any).Chart) return;
       const ex = (window as any).Chart.getChart(canvas);
       if (ex) ex.destroy();
+      // riskScore null = security-global indisponible pour ce projet — pas
+      // d'anneau trompeur, on laisse le canvas vide (le "—" du template suffit).
+      if (p.riskScore === null) return;
       const color = this.cssVar(this.getRiskCssVar(p.riskScore));
       const bg    = this.cssVar('--bg-tertiary') || '#F1F4F9';
       new (window as any).Chart(canvas, {
@@ -205,8 +288,16 @@ export class DashboardComponent implements OnInit, AfterViewInit {
     this.chatMessages.push({ role: 'user', content: q });
     this.chatInput = '';
     const key   = q.toLowerCase();
-    const reply = this.chatReplies[key] || `Connecte le vrai endpoint n8n+Claude pour des réponses live sur "${q}".`;
+    const reply = key === 'cve trivy'
+      ? this.buildCveTrivyReply()
+      : this.chatReplies[key] || `Connecte le vrai endpoint n8n+Claude pour des réponses live sur "${q}".`;
     setTimeout(() => { this.chatMessages.push({ role: 'ai', content: reply }); }, 500);
+  }
+
+  private buildCveTrivyReply(): string {
+    if (!this.securitySummary) return 'Données sécurité indisponibles pour le moment.';
+    const s = this.securitySummary;
+    return `${s.totalCriticalCves} CRITICAL · ${s.totalHighCves} HIGH (plateforme, ${s.totalProjects} projet(s))\nDétail par projet → page Sécurité`;
   }
 
   exportPDF() {

@@ -1,50 +1,36 @@
     <div class="page">
       <div class="page-header">
-        <div class="page-icon" style="background:var(--accent-purple-bg)"><i class="ti ti-brain" style="color:var(--accent-purple)"></i></div>
-        <div><h2>Prédiction IA — Analyse de risque</h2><div class="page-sub">Judge Agent Claude · Basé sur les 10 derniers builds</div></div>
-      </div>
-
-      <div class="pred-hero">
-        <div class="pred-pct-wrap">
-          <div class="pred-pct">73%</div>
-          <div class="pred-pct-label">Probabilité d'incident<br>dans les 48h</div>
-        </div>
-        <div class="pred-info">
-          <div class="pred-level">⚠️ Risque ÉLEVÉ détecté sur pfe-app-test</div>
-          <div class="pred-desc">Le Judge Agent a analysé les 10 derniers builds et les incidents historiques. Basé sur les patterns détectés, un incident est probable si les CVE HIGH ne sont pas corrigées dans les 48h.</div>
-          <div class="pred-conf">Confiance de la prédiction : <strong style="color:var(--accent-purple)">87%</strong></div>
-        </div>
+        <div class="page-icon" style="background:var(--accent-blue-bg)"><i class="ti ti-gauge" style="color:var(--accent-blue)"></i></div>
+        <div><h2>Indicateurs de risque</h2><div class="page-sub">Score par règles explicites — dérivé des vraies données (CVE, builds, incidents, SonarQube)</div></div>
       </div>
 
       <div class="card">
-        <div class="card-title"><i class="ti ti-list-check"></i> Facteurs de risque identifiés</div>
-        <div class="factor-list">
-          <div class="factor-item" *ngFor="let f of factors">
-            <div class="factor-bar-wrap">
-              <div class="factor-bar" [style.width]="f.weight+'%'" [style.background]="f.color"></div>
-            </div>
-            <div class="factor-info">
-              <div class="factor-name">{{f.name}}</div>
-              <div class="factor-detail">{{f.detail}}</div>
-            </div>
-            <div class="factor-weight" [style.color]="f.color">{{f.weight}}%</div>
+        <div class="card-title"><i class="ti ti-list-check"></i> Barème appliqué</div>
+        <div class="rules-legend">
+          <span class="rule-chip">CVE critiques : +2/CVE (max 40)</span>
+          <span class="rule-chip">Dernier build FAILURE : +25</span>
+          <span class="rule-chip">Incidents ouverts : +5/incident (max 15)</span>
+          <span class="rule-chip">Quality Gate ERROR : +10</span>
+          <span class="rule-chip">Couverture &lt; 50% : +10</span>
+        </div>
+      </div>
+
+      <div class="empty" *ngIf="!loading && !projects.length">Aucun projet à afficher.</div>
+
+      <div class="risk-card" *ngFor="let p of projects">
+        <div class="risk-head">
+          <div class="risk-name">{{p.projectName}}</div>
+          <div class="risk-badge" [class]="p.levelClass">{{p.level}} — {{p.score}}</div>
+        </div>
+
+        <div class="risk-rules" *ngIf="p.rules.length; else noRule">
+          <div class="rule-row" *ngFor="let r of p.rules">
+            <span class="rule-label">{{r.label}}</span>
+            <span class="rule-points">+{{r.points}}</span>
           </div>
         </div>
-      </div>
-
-      <div class="card">
-        <div class="card-title"><i class="ti ti-chart-line"></i> Évolution du risque — 5 builds</div>
-        <canvas style="max-height:120px" id="pred-chart" height="100"></canvas>
-      </div>
-
-      <div class="card">
-        <div class="card-title"><i class="ti ti-shield-check"></i> Actions recommandées</div>
-        <div class="action-list">
-          <div class="action-item" *ngFor="let a of actions">
-            <span class="action-pri" [style.background]="a.priBg" [style.color]="a.priColor">{{a.priority}}</span>
-            <div class="action-text">{{a.text}}</div>
-            <div class="action-impact">Impact : {{a.impact}}</div>
-          </div>
-        </div>
+        <ng-template #noRule>
+          <div class="rule-row rule-none">Aucune règle déclenchée — projet sain sur les critères suivis.</div>
+        </ng-template>
       </div>
     </div>

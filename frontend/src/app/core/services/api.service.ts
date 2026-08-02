@@ -11,6 +11,9 @@ export class ApiService {
   // ── Dashboard ────────────────────────────────────────────
   getGlobalStats()  { return this.http.get<any>(`${this.base}/dashboard/global`); }
   getAgentStats()   { return this.http.get<any>(`${this.base}/dashboard/global`); }
+  getSecurityGlobal() { return this.http.get<any>(`${this.base}/dashboard/security-global`); }
+  getJenkinsGlobal()  { return this.http.get<any>(`${this.base}/dashboard/jenkins-global`); }
+  getRiskIndicators() { return this.http.get<any>(`${this.base}/dashboard/risk-indicators`); }
 
   // ── Projects ─────────────────────────────────────────────
   getProjects()                          { return this.http.get<any[]>(`${this.base}/projects`); }
@@ -41,6 +44,13 @@ export class ApiService {
     let p = new HttpParams();
     if (params) Object.keys(params).forEach(k => params[k] && (p = p.set(k, params[k])));
     return this.http.get<any[]>(`${this.base}/incidents`, { params: p });
+  }
+  // Vrais Report (rawData, judgeDecision/judgeConfidence) — distinct de
+  // getDecisions() (/incidents) et de getReports() (/bugs, mal nommé).
+  getProjectReports(params?: any) {
+    let p = new HttpParams();
+    if (params) Object.keys(params).forEach(k => params[k] && (p = p.set(k, params[k])));
+    return this.http.get<any[]>(`${this.base}/reports`, { params: p });
   }
 
   // ── Notifications — utilise incidents récents ─────────────
