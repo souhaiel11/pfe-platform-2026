@@ -1,0 +1,503 @@
+{
+  "name": "WF3 - Post-PR Validation v4",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "payload"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -1728,
+        128
+      ],
+      "id": "4200503d-a782-49a2-973a-8d8fac526508",
+      "name": "WF3 Trigger"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ══════════════════════════════════════════════════════════════\n//  EXTRACT VALIDATION CONTEXT\n//  Reçoit le payload Jenkins (event: pr_validation) via WF1 ou test manuel\n//  Multi-projets : owner/repo/projectKey déduits du payload, pas codés en dur\n// ══════════════════════════════════════════════════════════════\n\n// ── CONFIG INFRA (secrets & URLs partagés — statiques par nature) ──\nconst infra = {\n  backendUrl:  'http://172.31.172.61:3001',\n  sonarUrl:    'http://sonarqube:9000',\n  sonarToken:  '__SONARQUBE_TOKEN__',\n  githubToken: '__GITHUB_TOKEN__',  // Remplacer par votre token GitHub\n};\n\n// ── Déballage du payload (gère toutes les enveloppes possibles) ──\nlet payload = $input.first().json;\n\nif (typeof payload === 'string') {\n  try { payload = JSON.parse(payload); } catch (e) { payload = {}; }\n}\nif (payload && payload.payload) payload = payload.payload;\nif (payload && payload.body)    payload = payload.body;\nif (typeof payload === 'string') {\n  try { payload = JSON.parse(payload); } catch (e) { payload = {}; }\n}\nif (!payload || typeof payload !== 'object') payload = {};\n\n// ── Extraction PR ──\nconst pr = payload.pull_request || {};\n\n// ── DYNAMIQUE : déduire owner + repo depuis l'URL de la PR ──\n// Ex: https://github.com/souhaiel11/pfe-app-test/pull/18\nlet repoOwner = '';\nlet repoName  = '';\nif (pr.url) {\n  const m = pr.url.match(/github\\.com\\/([^\\/]+)\\/([^\\/]+)\\/pull\\//);\n  if (m) {\n    repoOwner = m[1];\n    repoName  = m[2];\n  }\n}\n\n// ── DYNAMIQUE : project key Sonar depuis le payload ──\nconst sonarProjectKey = (payload.sonar && payload.sonar.project_key)\n  || repoName\n  || '';\n\n// ── Config finale (infra statique + projet dynamique) ──\nconst config = {\n  ...infra,\n  repoOwner,\n  repoName,\n  sonarProjectKey,\n};\n\nconst ctx = {\n  config,\n\n  job:         payload.job || '',\n  buildNumber: payload.build_number || '',\n  buildUrl:    payload.build_url || '',\n  buildStatus: payload.status || 'UNKNOWN',\n\n  prNumber: pr.number || null,\n  prBranch: pr.branch || '',\n  prTarget: pr.target || 'main',\n  prUrl:    pr.url || '',\n  prTitle:  pr.title || '',\n\n  reports: payload.reports || {},\n};\n\n// ── Garde-fous ──\nif (!ctx.prNumber) {\n  throw new Error('WF3: payload sans pull_request.number — event pr_validation attendu');\n}\nif (!config.repoOwner || !config.repoName) {\n  throw new Error('WF3: impossible de déduire owner/repo depuis pull_request.url = ' + (pr.url || 'vide'));\n}\n\nreturn [{ json: ctx }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1488,
+        128
+      ],
+      "id": "2c269fb4-a7f8-48c2-b789-1b2fb5e73278",
+      "name": "Extract Validation Context"
+    },
+    {
+      "parameters": {
+        "amount": 60
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        -1248,
+        128
+      ],
+      "id": "77acb9aa-a4c9-42cf-a51e-1b235e32eebb",
+      "name": "Wait Sonar Processing",
+      "webhookId": "83fadac4-8657-43e9-9582-2fad272b7f8e"
+    },
+    {
+      "parameters": {
+        "url": "={{ $('Extract Validation Context').first().json.config.sonarUrl }}/api/qualitygates/project_status?projectKey={{ $('Extract Validation Context').first().json.config.sonarProjectKey }}&pullRequest={{ $('Extract Validation Context').first().json.prNumber }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Extract Validation Context').first().json.config.sonarToken }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -1008,
+        128
+      ],
+      "id": "d01c0218-7f24-47ba-88ef-fd72ef3f7e48",
+      "name": "Get SonarQube PR Quality Gate",
+      "retryOnFail": true,
+      "maxTries": 5,
+      "waitBetweenTries": 10000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, \"prUrl\", \"jenkinsJobName\", \"createdAt\"\nFROM incidents\nWHERE \"prUrl\" LIKE '%/pull/{{ $('Extract Validation Context').first().json.prNumber }}'\n   OR \"prUrl\" LIKE '%/pull/{{ $('Extract Validation Context').first().json.prNumber }}/%'\nORDER BY \"createdAt\" DESC\nLIMIT 1;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        -768,
+        128
+      ],
+      "id": "ecac5010-71af-40cd-bbda-c92b7005e9e1",
+      "name": "Get Incident From DB",
+      "credentials": {
+        "postgres": {
+          "id": "QbldelWaygwFqFUL",
+          "name": "Postgres account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ══════════════════════════════════════════════════════════════\n//  CONSOLIDATE VALIDATION RESULT\n//  Sources : build Jenkins (payload) + SonarQube QG (PR) + incidents backend\n// ══════════════════════════════════════════════════════════════\n\nconst ctx = $('Extract Validation Context').first().json;\nconst config = ctx.config;\n\n// ── 1. Jenkins : le statut du build PR est DANS le payload ──\nconst buildStatus = ctx.buildStatus;\nconst jenkinsPassed = (buildStatus === 'SUCCESS' || buildStatus === 'UNSTABLE');\nconst jenkinsWarning = (buildStatus === 'UNSTABLE');\n\n// ── 2. SonarQube Quality Gate (PR) — tolère l'absence (Community Edition) ──\nlet sonarStatus = 'SKIPPED';\nlet sonarPassed = true;   // non bloquant si indisponible\nlet sonarDetail = 'PR analysis unavailable (SonarQube Community) — non-blocking';\n\ntry {\n  const s = $('Get SonarQube PR Quality Gate').first().json;\n  const qg = s.projectStatus && s.projectStatus.status;\n  if (qg === 'OK') {\n    sonarStatus = 'OK'; sonarPassed = true;\n    sonarDetail = 'Quality Gate PASSED on PR';\n  } else if (qg === 'ERROR' || qg === 'WARN') {\n    sonarStatus = qg; sonarPassed = (qg !== 'ERROR');\n    const conds = (s.projectStatus.conditions || [])\n      .filter(c => c.status === 'ERROR')\n      .map(c => `${c.metricKey}: ${c.actualValue} (seuil ${c.errorThreshold})`)\n      .slice(0, 5);\n    sonarDetail = qg === 'ERROR'\n      ? 'Quality Gate FAILED: ' + (conds.join(' | ') || 'conditions non satisfaites')\n      : 'Quality Gate WARN';\n  }\n} catch (e) { /* nœud en erreur → SKIPPED, non bloquant */ }\n\n// ── 3. Retrouver l'incident lié à cette PR (requête SQL directe) ──\nlet incidentId = null;\ntry {\n  const row = $('Get Incident From DB').first().json;\n  if (row && row.id) incidentId = row.id;\n} catch (e) { /* aucun incident trouvé → incidentId reste null */ }\n\n// ── 4. Verdict global ──\nconst validationPassed = jenkinsPassed && sonarPassed;\n\n// ── 5. Commentaire GitHub (markdown) ──\nconst icon = validationPassed ? '✅' : '❌';\nconst lines = [\n  `## ${icon} Validation automatique du patch IA — ${validationPassed ? 'RÉUSSIE' : 'ÉCHOUÉE'}`,\n  '',\n  `| Contrôle | Résultat |`,\n  `|---|---|`,\n  `| Build Jenkins (PR) | ${buildStatus}${jenkinsWarning ? ' ⚠️ (stages en warning)' : ''} — [logs](${ctx.buildUrl}) |`,\n  `| SonarQube Quality Gate | ${sonarStatus} — ${sonarDetail} |`,\n  '',\n  validationPassed\n    ? '**Le correctif a passé la validation automatique.** Il est prêt pour la revue humaine avant merge.'\n    : '**Le correctif a échoué à la validation automatique.** Ne pas merger en l\\'état — consulter les logs du build.',\n  '',\n  `_WF3 · Post-PR Validation · Build #${ctx.buildNumber} · ${new Date().toISOString()}_`\n];\n\nreturn [{\n  json: {\n    validationPassed,\n    jenkinsPassed,\n    jenkinsWarning,\n    buildStatus,\n    sonarStatus,\n    sonarDetail,\n    incidentId,\n    prNumber: ctx.prNumber,\n    prUrl: ctx.prUrl,\n    prBranch: ctx.prBranch,\n    buildUrl: ctx.buildUrl,\n    job: ctx.job,\n    buildNumber: ctx.buildNumber,\n    commentBody: lines.join('\\n'),\n    config,\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -528,
+        128
+      ],
+      "id": "38d6151c-6ca8-413d-9cd1-7fea15405da4",
+      "name": "Consolidate Validation Result"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cond-1",
+              "leftValue": "={{ $json.validationPassed }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -288,
+        128
+      ],
+      "id": "f213564c-37c5-4db3-afaa-370f621ce218",
+      "name": "Validation Passed?"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.github.com/repos/{{ $('Extract Validation Context').first().json.config.repoOwner }}/{{ $('Extract Validation Context').first().json.config.repoName }}/issues/{{ $json.prNumber }}/comments",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Extract Validation Context').first().json.config.githubToken }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-GitHub-Api-Version",
+              "value": "2022-11-28"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ body: $json.commentBody }) }}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "4c6625a5-d30e-4bc0-8212-c3171fffe5e8",
+      "name": "Comment PR - Success",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Consolidate Validation Result').first().json.config.backendUrl }}/api/incidents/{{ $('Consolidate Validation Result').first().json.incidentId }}/validation",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  passed: true,\n  prNumber: $('Consolidate Validation Result').first().json.prNumber,\n  prUrl: $('Consolidate Validation Result').first().json.prUrl,\n  prBranch: $('Consolidate Validation Result').first().json.prBranch,\n  build: {\n    status: $('Consolidate Validation Result').first().json.buildStatus,\n    buildUrl: $('Consolidate Validation Result').first().json.buildUrl,\n    buildNumber: $('Consolidate Validation Result').first().json.buildNumber\n  },\n  sonarQualityGate: {\n    status: $('Consolidate Validation Result').first().json.sonarStatus,\n    detail: $('Consolidate Validation Result').first().json.sonarDetail\n  },\n  commentPosted: true,\n  verdict: 'Le patch a passé la validation automatique'\n}) }}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        272,
+        0
+      ],
+      "id": "0b96257e-f9f4-442e-bf95-ba69a550585c",
+      "name": "Update Incident - Validated",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.github.com/repos/{{ $('Extract Validation Context').first().json.config.repoOwner }}/{{ $('Extract Validation Context').first().json.config.repoName }}/issues/{{ $json.prNumber }}/comments",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Extract Validation Context').first().json.config.githubToken }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-GitHub-Api-Version",
+              "value": "2022-11-28"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ body: $json.commentBody }) }}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        0,
+        272
+      ],
+      "id": "127f8ded-0be6-475e-94cd-7731edd7d657",
+      "name": "Comment PR - Failure",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "={{ $('Consolidate Validation Result').first().json.config.backendUrl }}/api/incidents/{{ $('Consolidate Validation Result').first().json.incidentId }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ status: 'failed' }) }}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        272,
+        272
+      ],
+      "id": "5480c837-ab80-4b7f-850a-f858529b6fcd",
+      "name": "Update Incident - Validation Failed",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "59066712-0591-4111-a692-6a8576fed5ad",
+              "leftValue": "={{ $('Judge - Parse Output').first().json.decision }}",
+              "rightValue": "FIX_PROPOSED",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        592,
+        128
+      ],
+      "id": "3115c779-4a42-48fe-9253-f02ee37b05e3",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "fromEmail": "amrisouhail96@gmail.com",
+        "toEmail": "souhaiel.amri@esprit.tn",
+        "subject": "=={{ ($json.validationPassed ? '✅' : '❌') + ' Validation PR #' + $json.prNumber + ' — ' + ($json.validationPassed ? 'RÉUSSIE' : 'ÉCHOUÉE') }}",
+        "html": "=={{ \n'<h2>' + ($json.validationPassed ? '✅ Validation automatique réussie' : '❌ Validation automatique échouée') + '</h2>' +\n'<p><b>PR :</b> #' + $json.prNumber + '</p>' +\n'<p><b>Build Jenkins :</b> ' + $json.buildStatus + '</p>' +\n'<p><b>SonarQube :</b> ' + $json.sonarStatus + '</p>' +\n'<hr>' +\n'<p>👉 <a href=\"http://172.31.172.61:4200/incidents/' + $json.incidentId + '\">Voir sur la plateforme</a></p>' +\n'<p>👉 <a href=\"' + $json.prUrl + '\">Voir la Pull Request</a></p>'\n}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        784,
+        112
+      ],
+      "id": "5eab05aa-6417-43af-aa85-9b23fb2a9d76",
+      "name": "Send an Email",
+      "webhookId": "bbfe92dd-7a70-423d-a499-202aac1cb526",
+      "credentials": {
+        "smtp": {
+          "id": "Mr2rXybH3Y1xw2ge",
+          "name": "Gmail SMTP DevSecOps"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "WF3 Trigger": {
+      "main": [
+        [
+          {
+            "node": "Extract Validation Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Validation Context": {
+      "main": [
+        [
+          {
+            "node": "Wait Sonar Processing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait Sonar Processing": {
+      "main": [
+        [
+          {
+            "node": "Get SonarQube PR Quality Gate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get SonarQube PR Quality Gate": {
+      "main": [
+        [
+          {
+            "node": "Get Incident From DB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Consolidate Validation Result": {
+      "main": [
+        [
+          {
+            "node": "Validation Passed?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validation Passed?": {
+      "main": [
+        [
+          {
+            "node": "Comment PR - Success",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Comment PR - Failure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Comment PR - Success": {
+      "main": [
+        [
+          {
+            "node": "Update Incident - Validated",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Comment PR - Failure": {
+      "main": [
+        [
+          {
+            "node": "Update Incident - Validation Failed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Incident From DB": {
+      "main": [
+        [
+          {
+            "node": "Consolidate Validation Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Send an Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Incident - Validated": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Incident - Validation Failed": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "id": "4JiOKpyHhx1znTYw",
+  "meta": {},
+  "pinData": {
+    "WF3 Trigger": [
+      {
+        "json": {
+          "payload": "{\"event\":\"pr_validation\",\"job\":\"pfe-app-test-multibranch/PR-18\",\"build_number\":\"1\",\"build_url\":\"http://172.31.172.61:8082/job/pfe-app-test-multibranch/job/PR-18/1/\",\"logs_url\":\"http://172.31.172.61:8082/job/pfe-app-test-multibranch/job/PR-18/1/consoleText\",\"branch\":\"PR-18\",\"commit\":\"5089198f\",\"status\":\"SUCCESS\",\"severity\":\"LOW\",\"duration_ms\":402902,\"pull_request\":{\"number\":\"18\",\"branch\":\"fix/ai-devsecops-1783935617658\",\"target\":\"main\",\"url\":\"https://github.com/souhaiel11/pfe-app-test/pull/18\",\"title\":\"fix: AI security patch - resolve 2 SONAR + 3 TRIVY + 5 OWASP issues in TaskController.java\"},\"reports\":{\"jenkinsBasePath\":\"/shared/reports/pfe-app-test/1\",\"basePath\":\"/home/node/.n8n-files/reports/pfe-app-test/1\",\"trivyPath\":\"/home/node/.n8n-files/reports/pfe-app-test/1/trivy-report.json\",\"zapPath\":\"/home/node/.n8n-files/reports/pfe-app-test/1/zap-report.json\",\"owaspPath\":\"/home/node/.n8n-files/reports/pfe-app-test/1/dependency-check-report.json\",\"available\":{\"trivy\":true,\"zap\":false,\"owasp\":true}},\"sonar\":{\"project_key\":\"pfe-app-test\",\"dashboard_url\":\"http://sonarqube:9000/dashboard?id=pfe-app-test\"},\"trivy\":{\"report_path\":\"/home/node/.n8n-files/reports/pfe-app-test/1/trivy-report.json\"},\"zap\":{\"target_url\":\"http://app-test:8080\",\"report_path\":\"/home/node/.n8n-files/reports/pfe-app-test/1/zap-report.json\"},\"owasp\":{\"report_path\":\"/home/node/.n8n-files/reports/pfe-app-test/1/dependency-check-report.json\"},\"docker\":{\"image\":\"pfe-app-test:1\"},\"kubernetes\":{\"namespace\":\"pfe-devsecops\",\"target\":\"http://app-test:8080\"}}"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  }
+}

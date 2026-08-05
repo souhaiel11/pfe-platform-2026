@@ -1,0 +1,775 @@
+{
+  "name": "WF2 - Git Patch & PR v2.5 FIXED",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "incidentData"
+            }
+          ]
+        }
+      },
+      "id": "5eb8dd77-7995-4f85-bb7c-f6a13852a87e",
+      "name": "WF2 Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -1360,
+        784
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst results = [];\n\nfunction parseJsonSafely(value, fallback = {}) {\n  if (value === null || value === undefined || value === '') {\n    return fallback;\n  }\n\n  if (typeof value === 'object') {\n    return value;\n  }\n\n  if (typeof value !== 'string') {\n    return fallback;\n  }\n\n  const cleaned = value.trim().replace(/^=/, '');\n\n  if (!cleaned) {\n    return fallback;\n  }\n\n  try {\n    return JSON.parse(cleaned);\n  } catch {\n    return fallback;\n  }\n}\n\nfunction unwrapInput(raw) {\n  let value = raw;\n\n  // Handle a JSON string, including n8n values beginning with \"=\".\n  if (typeof value === 'string') {\n    const parsed = parseJsonSafely(value, null);\n    value = parsed ?? { githubRepo: value.trim().replace(/^=/, '') };\n  }\n\n  // Handle an API response supplied as a one-element array.\n  if (Array.isArray(value)) {\n    return value.length > 0 ? unwrapInput(value[0]) : {};\n  }\n\n  if (!value || typeof value !== 'object') {\n    return {};\n  }\n\n  // Handle objects reconstructed as {\"0\":\"{\", \"1\":\"\\\"\", ...}.\n  const numericKeys = Object.keys(value)\n    .filter((key) => /^\\d+$/.test(key))\n    .sort((a, b) => Number(a) - Number(b));\n\n  if (numericKeys.length > 0) {\n    const reconstructed = numericKeys\n      .map((key) => value[key])\n      .join('')\n      .trim()\n      .replace(/^=/, '');\n\n    const parsed = parseJsonSafely(reconstructed, null);\n    return parsed ? unwrapInput(parsed) : { githubRepo: reconstructed };\n  }\n\n  // Common wrappers returned by HTTP/API nodes.\n  if (Array.isArray(value.data)) {\n    return value.data.length > 0 ? unwrapInput(value.data[0]) : {};\n  }\n\n  if (\n    value.data &&\n    typeof value.data === 'object' &&\n    Object.keys(value).length === 1\n  ) {\n    return unwrapInput(value.data);\n  }\n\n  if (Array.isArray(value.body)) {\n    return value.body.length > 0 ? unwrapInput(value.body[0]) : {};\n  }\n\n  return value;\n}\n\nfunction parseRepository(value) {\n  const raw = String(value ?? '')\n    .trim()\n    .replace(/^=/, '')\n    .replace(/^https?:\\/\\/github\\.com\\//i, '')\n    .replace(/^git@github\\.com:/i, '')\n    .replace(/\\.git$/i, '')\n    .replace(/^\\/+|\\/+$/g, '');\n\n  const parts = raw.split('/').filter(Boolean);\n\n  return {\n    owner: parts[0] ?? '',\n    name: parts[1] ?? '',\n  };\n}\n\nfunction cleanPath(value) {\n  return String(value ?? '')\n    .trim()\n    .replace(/^\\/+/, '')\n    .replace(/\\\\/g, '/');\n}\n\nfunction selectTargetFile(explicitPath, filesTargeted, sonarIssues) {\n  const explicit = cleanPath(explicitPath);\n\n  if (explicit) {\n    return explicit;\n  }\n\n  const declaredFiles = Array.isArray(filesTargeted)\n    ? filesTargeted.map(cleanPath).filter(Boolean)\n    : [];\n\n  if (declaredFiles.length > 0) {\n    return declaredFiles[0];\n  }\n\n  const severityWeight = {\n    BLOCKER: 500,\n    CRITICAL: 400,\n    HIGH: 350,\n    MAJOR: 300,\n    MEDIUM: 200,\n    MINOR: 100,\n    LOW: 50,\n    INFO: 10,\n  };\n\n  const typeWeight = {\n    VULNERABILITY: 30,\n    BUG: 20,\n    SECURITY_HOTSPOT: 15,\n    CODE_SMELL: 10,\n  };\n\n  const candidates = (Array.isArray(sonarIssues) ? sonarIssues : [])\n    .map((issue, index) => ({\n      issue,\n      index,\n      path: cleanPath(issue?.component),\n      score:\n        (severityWeight[String(issue?.severity ?? '').toUpperCase()] ?? 0) +\n        (typeWeight[String(issue?.type ?? '').toUpperCase()] ?? 0),\n    }))\n    .filter((entry) => entry.path)\n    .sort((a, b) => {\n      if (b.score !== a.score) {\n        return b.score - a.score;\n      }\n      return a.index - b.index;\n    });\n\n  return candidates[0]?.path ?? 'ci-cd/Jenkinsfile';\n}\n\nfor (const item of items) {\n  const itemJson = item.json ?? {};\n\n  // Prefer incidentData when it is populated. Otherwise accept the whole item.\n  const source =\n    itemJson.incidentData !== null &&\n    itemJson.incidentData !== undefined\n      ? itemJson.incidentData\n      : itemJson;\n\n  const d = unwrapInput(source);\n  const project = d.project && typeof d.project === 'object'\n    ? d.project\n    : {};\n\n  const parsedAiAnalysis = parseJsonSafely(d.aiAnalysis, {});\n  const aiAnalysis =\n    parsedAiAnalysis &&\n    typeof parsedAiAnalysis === 'object' &&\n    !Array.isArray(parsedAiAnalysis)\n      ? parsedAiAnalysis\n      : {};\n\n  const sonarIssues = Array.isArray(d.sonarIssues)\n    ? d.sonarIssues\n    : Array.isArray(d.metadata?.enrichedData?.sonar?.issues)\n      ? d.metadata.enrichedData.sonar.issues\n      : [];\n\n  const filesTargeted = Array.isArray(d.files_targeted)\n    ? d.files_targeted\n    : [];\n\n  const decision = String(\n    d.decision ??\n    aiAnalysis.decision ??\n    ''\n  ).trim().toUpperCase();\n\n  const riskLevel = String(\n    d.riskLevel ??\n    aiAnalysis.securityLevel ??\n    'low'\n  ).trim().toLowerCase();\n\n  const confidenceRaw = Number(\n    d.confidenceScore ??\n    aiAnalysis.confidenceScore ??\n    1\n  );\n\n  const confidenceScore = Number.isFinite(confidenceRaw)\n    ? (confidenceRaw > 1 ? confidenceRaw / 100 : confidenceRaw)\n    : 0;\n\n  const parsedRepo = parseRepository(\n    d.githubRepo ??\n    d.repository ??\n    project.githubRepo ??\n    ''\n  );\n\n  const repositoryOwner = String(\n    d.repository_owner ??\n    parsedRepo.owner\n  ).trim();\n\n  const repositoryName = String(\n    d.repository_name ??\n    parsedRepo.name\n  ).trim().replace(/\\.git$/i, '');\n\n  const targetFilePath = selectTargetFile(\n    d.target_file_path,\n    filesTargeted,\n    sonarIssues\n  );\n\n  const defaultBranch = String(\n    d.branch ??\n    d.default_branch ??\n    project.defaultBranch ??\n    'main'\n  ).trim() || 'main';\n\n  const incidentId = String(\n    d.incidentId ??\n    d.incidentUUID ??\n    d.id ??\n    ''\n  ).trim();\n\n  const projectId = String(\n    d.projectId ??\n    project.id ??\n    ''\n  ).trim();\n\n  const blockReasons = [];\n  let blocked = false;\n\n  if (decision === 'BLOCK') {\n    blocked = true;\n    blockReasons.push('Judge decision is BLOCK');\n  }\n\n  if (confidenceScore < 0.5) {\n    blocked = true;\n    blockReasons.push(`Confidence too low: ${confidenceScore}`);\n  }\n\n  if (!repositoryOwner) {\n    blocked = true;\n    blockReasons.push('Missing repository_owner');\n  }\n\n  if (!repositoryName) {\n    blocked = true;\n    blockReasons.push('Missing repository_name');\n  }\n\n  if (!targetFilePath) {\n    blocked = true;\n    blockReasons.push('Missing target_file_path');\n  }\n\n  if (!incidentId) {\n    blocked = true;\n    blockReasons.push('Missing incidentId');\n  }\n\n  results.push({\n    json: {\n      ...d,\n\n      // Normalized values consumed by all later WF2 nodes.\n      incidentId,\n      projectId,\n      aiAnalysis,\n      sonarIssues,\n      files_targeted: filesTargeted,\n      blocked,\n      block_reason: blocked\n        ? blockReasons.join('; ')\n        : 'All constraints passed',\n      repository_owner: repositoryOwner,\n      repository_name: repositoryName,\n      target_file_path: targetFilePath,\n      default_branch: defaultBranch,\n      confidenceScore,\n      decision,\n      riskLevel,\n\n      backend_base_url: String(\n        d.backendBaseUrl ??\n        'http://172.31.172.61:3001'\n      ).replace(/\\/+$/, ''),\n    },\n  });\n}\n\nreturn results;"
+      },
+      "id": "059c5870-91d9-450b-af5c-aa21d83db014",
+      "name": "Policy Gate - Validate Constraints",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1136,
+        784
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "patch-is-not-blocked",
+              "leftValue": "={{ $json.blocked }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "false",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "dc0c47ed-afe3-4909-a5e1-4381a826fddb",
+      "name": "Patch Allowed?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -928,
+        784
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ 'https://api.github.com/repos/' + encodeURIComponent($json.repository_owner) + '/' + encodeURIComponent($json.repository_name) + '/contents/' + $json.target_file_path.split('/').map(encodeURIComponent).join('/') }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "ref",
+              "value": "={{ $json.default_branch }}"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.GITHUB_TOKEN }}"
+            },
+            {
+              "name": "X-GitHub-Api-Version",
+              "value": "2026-03-10"
+            },
+            {
+              "name": "Accept",
+              "value": "application/vnd.github+json"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "56dfc301-d195-4b9d-a8dd-3b01062a6b3f",
+      "name": "Fetch Repository Files",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -592,
+        768
+      ],
+      "webhookId": "62f7404d-2d09-4530-868e-66df4a3abf02",
+      "credentials": {
+        "githubApi": {
+          "id": "fBueZWwflXWM3RoX",
+          "name": "GitHub account"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "={{ 'https://api.github.com/repos/' + encodeURIComponent($('Parse - Code Patch Output').first().json.repository_owner) + '/' + encodeURIComponent($('Parse - Code Patch Output').first().json.repository_name) + '/contents/' + $('Parse - Code Patch Output').first().json.file_path.split('/').map(encodeURIComponent).join('/') }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer REDACTED_GITHUB_PAT"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-GitHub-Api-Version",
+              "value": "2026-03-10"
+            },
+            {
+              "name": "Accept",
+              "value": "application/vnd.github+json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { message: $('Parse - Code Patch Output').first().json.commitMessage, content: $('Parse - Code Patch Output').first().json.content_base64, sha: $('Parse - Code Patch Output').first().json.file_sha, branch: $('Parse - Code Patch Output').first().json.branchName } }}",
+        "options": {}
+      },
+      "id": "46970d11-5e87-4797-8362-5700ae0c3005",
+      "name": "Update File in Branch",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1392,
+        448
+      ],
+      "webhookId": "d2c8e1a2-2a12-4b95-ba42-700c7509172d",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "={{ $('Parse - Code Patch Output').first().json.backend_base_url + '/api/incidents/' + encodeURIComponent($('Parse - Code Patch Output').first().json.incidentId) }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "status",
+              "value": "fix_generated"
+            },
+            {
+              "name": "prUrl",
+              "value": "={{ $json.html_url }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "60a605fa-dda2-49c8-967a-c3d4341a60b4",
+      "name": "Save Execution Result to Backend",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2304,
+        416
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const current = $input.first().json;\nconst gate = $('Policy Gate - Validate Constraints').first().json;\n\nconst errorMessage = String(\n  current.error?.message ??\n  current.message ??\n  current.errorDescription ??\n  'GitHub file fetch failed'\n);\n\nreturn [{\n  json: {\n    success: false,\n    status: 'fetch_failed',\n    blocked: true,\n    retryable: false,\n    step: 'fetch_repository_file',\n    error_message: errorMessage.slice(0, 2000),\n    http_status:\n      current.error?.status ??\n      current.statusCode ??\n      current.httpCode ??\n      null,\n    incidentId: gate.incidentId || null,\n    projectId: gate.projectId || null,\n    repository_owner: gate.repository_owner || null,\n    repository_name: gate.repository_name || null,\n    target_file_path: gate.target_file_path || null,\n    default_branch: gate.default_branch || 'main',\n    occurred_at: new Date().toISOString(),\n  },\n}];"
+      },
+      "id": "26d327cc-c338-4fec-bc7e-cbb631e703af",
+      "name": "Handle Fetch Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -480,
+        1168
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const current = $input.first().json;\nconst patch = $('Parse - Code Patch Output').first().json;\n\nconst errorMessage = String(\n  current.error?.message ??\n  current.message ??\n  current.errorDescription ??\n  'GitHub file update failed'\n);\n\nreturn [{\n  json: {\n    success: false,\n    status: 'file_update_failed',\n    blocked: true,\n    retryable: false,\n    step: 'update_file_in_branch',\n    error_message: errorMessage.slice(0, 2000),\n    http_status:\n      current.error?.status ??\n      current.statusCode ??\n      current.httpCode ??\n      null,\n    incidentId: patch.incidentId || null,\n    repository_owner: patch.repository_owner || null,\n    repository_name: patch.repository_name || null,\n    target_file_path: patch.file_path || null,\n    branch_name: patch.branchName || null,\n    occurred_at: new Date().toISOString(),\n  },\n}];"
+      },
+      "id": "a124c844-b0e6-45e2-8d21-d6058be8d006",
+      "name": "Handle File Update Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1504,
+        912
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const current = $input.first().json;\nconst patch = $('Parse - Code Patch Output').first().json;\n\nconst errorMessage = String(\n  current.error?.message ??\n  current.message ??\n  current.errorDescription ??\n  'Pull request creation failed'\n);\n\nreturn [{\n  json: {\n    success: false,\n    status: 'pull_request_failed',\n    blocked: true,\n    retryable: false,\n    step: 'create_pull_request',\n    error_message: errorMessage.slice(0, 2000),\n    http_status:\n      current.error?.status ??\n      current.statusCode ??\n      current.httpCode ??\n      null,\n    incidentId: patch.incidentId || null,\n    repository_owner: patch.repository_owner || null,\n    repository_name: patch.repository_name || null,\n    branch_name: patch.branchName || null,\n    base_branch: patch.default_branch || 'main',\n    occurred_at: new Date().toISOString(),\n  },\n}];"
+      },
+      "id": "68785051-4579-4093-890d-ba6f9e539001",
+      "name": "Handle PR Creation Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1888,
+        896
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst gate = $('Policy Gate - Validate Constraints').first().json;\n\nif (!input.content) {\n  throw new Error(\n    `GitHub response does not contain file content for ${gate.target_file_path}`\n  );\n}\n\nconst fileContent = Buffer\n  .from(String(input.content).replace(/\\n/g, ''), 'base64')\n  .toString('utf-8');\n\nconst fileName =\n  input.path ||\n  gate.target_file_path ||\n  'ci-cd/Jenkinsfile';\n\nconst allIssues = Array.isArray(gate.sonarIssues)\n  ? gate.sonarIssues\n  : [];\n\nconst relevantIssues = allIssues.filter(\n  (issue) => String(issue?.component ?? '') === fileName\n);\n\nconst issueText = relevantIssues.length > 0\n  ? relevantIssues.map((issue, index) => [\n      `${index + 1}. Severity: ${issue.severity ?? 'UNKNOWN'}`,\n      `   Type: ${issue.type ?? 'UNKNOWN'}`,\n      `   Line: ${issue.line ?? 'unknown'}`,\n      `   Message: ${issue.message ?? 'No message'}`,\n    ].join('\\n')).join('\\n')\n  : 'No file-specific SonarQube issue was supplied. Apply only the relevant remediation instructions below.';\n\nconst ai = gate.aiAnalysis || {};\n\nconst remediationText = [\n  ai.developerActions\n    ? `DEVELOPER ACTIONS:\\n${ai.developerActions}`\n    : '',\n  ai.securityIssues\n    ? `SECURITY ISSUES:\\n${ai.securityIssues}`\n    : '',\n  ai.recommendations\n    ? `RECOMMENDATIONS:\\n${ai.recommendations}`\n    : '',\n].filter(Boolean).join('\\n\\n') ||\n  gate.description ||\n  'Apply secure coding best practices without changing unrelated behavior.';\n\nconst prompt = `You are an expert DevSecOps engineer.\n\nModify exactly one file: ${fileName}\n\nCURRENT FILE:\n<ORIGINAL_FILE>\n${fileContent}\n</ORIGINAL_FILE>\n\nFILE-SPECIFIC ISSUES:\n${issueText}\n\nREMEDIATION CONTEXT:\n${remediationText}\n\nMANDATORY RULES:\n- Return the COMPLETE corrected file, not a diff.\n- Modify only ${fileName}.\n- Apply only fixes relevant to this file.\n- Preserve all valid existing behavior and pipeline logic.\n- Do not invent unavailable classes, methods, secrets, paths, or dependencies.\n- Never include markdown fences.\n- The patched file must not be empty.\n- Respond using exactly these three tags:\n\n<PATCH_DESCRIPTION>brief description</PATCH_DESCRIPTION>\n<COMMIT_MESSAGE>fix: concise commit message</COMMIT_MESSAGE>\n<PATCHED_CODE>\ncomplete corrected file content\n</PATCHED_CODE>`;\n\nconst body = {\n  model: 'claude-haiku-4-5-20251001',\n  max_tokens: 8192,\n  messages: [\n    {\n      role: 'user',\n      content: prompt,\n    },\n  ],\n};\n\nreturn [{\n  json: {\n    claudeBodyString: JSON.stringify(body),\n    file_sha: input.sha || '',\n    file_path: fileName,\n    repository_owner: gate.repository_owner,\n    repository_name: gate.repository_name,\n    default_branch: gate.default_branch,\n    incidentId: gate.incidentId || '',\n    projectId: gate.projectId || '',\n    backend_base_url: gate.backend_base_url,\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -480,
+        496
+      ],
+      "id": "e3873efd-f187-4219-ad62-f1f25731024f",
+      "name": "Prepare - Code Patch Body"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "x-api-key",
+              "value": "=REDACTED_ANTHROPIC_KEY"
+            },
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json.claudeBodyString }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -112,
+        496
+      ],
+      "id": "58cc5763-2595-414b-9bbd-71b24fb59fe2",
+      "name": "Generate Patch with Claude",
+      "retryOnFail": true,
+      "maxTries": 5,
+      "waitBetweenTries": 5000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ 'https://api.github.com/repos/' + encodeURIComponent($('Parse - Code Patch Output').first().json.repository_owner) + '/' + encodeURIComponent($('Parse - Code Patch Output').first().json.repository_name) + '/git/refs' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer REDACTED_GITHUB_PAT"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-GitHub-Api-Version",
+              "value": "2026-03-10"
+            },
+            {
+              "name": "Accept",
+              "value": "application/vnd.github+json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { ref: 'refs/heads/' + $('Parse - Code Patch Output').first().json.branchName, sha: $json.object.sha } }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        992,
+        464
+      ],
+      "id": "c0b85dbf-4b06-4c0d-b0be-99ae71016138",
+      "name": "Create Fix Branch",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "url": "={{ 'https://api.github.com/repos/' + encodeURIComponent($json.repository_owner) + '/' + encodeURIComponent($json.repository_name) + '/git/ref/heads/' + $json.default_branch.split('/').map(encodeURIComponent).join('/') }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=REDACTED_GITHUB_PAT"
+            },
+            {
+              "name": "X-GitHub-Api-Version",
+              "value": "2026-03-10"
+            },
+            {
+              "name": "Accept",
+              "value": "application/vnd.github+json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        608,
+        480
+      ],
+      "id": "8dc6c474-e605-44e3-acc0-3748f69f7913",
+      "name": "Get Base Branch SHA",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json || {};\nconst prepare = $('Prepare - Code Patch Body').first().json || {};\n\nconst text = response.content\n  ?.filter((part) => part.type === 'text')\n  .map((part) => part.text)\n  .join('\\n')\n  .trim() || '';\n\nfunction extractTag(name) {\n  const pattern = new RegExp(\n    `<${name}>\\\\s*([\\\\s\\\\S]*?)\\\\s*</${name}>`,\n    'i'\n  );\n  return text.match(pattern)?.[1]?.trim() || '';\n}\n\nconst patchDescription = extractTag('PATCH_DESCRIPTION');\nconst commitMessage = extractTag('COMMIT_MESSAGE');\nconst patchedCode = extractTag('PATCHED_CODE');\n\nconst validPatch = Boolean(\n  text &&\n  patchedCode &&\n  prepare.file_sha &&\n  prepare.file_path &&\n  prepare.repository_owner &&\n  prepare.repository_name\n);\n\nconst branchName =\n  `fix/ai-devsecops-${Date.now()}`;\n\nreturn [{\n  json: {\n    valid_patch: validPatch,\n    parse_error: validPatch\n      ? null\n      : 'Claude response is missing PATCHED_CODE or required GitHub metadata',\n    incidentId: prepare.incidentId || 'unknown',\n    projectId: prepare.projectId || '',\n    patchDescription:\n      patchDescription ||\n      'Automated DevSecOps security correction',\n    commitMessage:\n      commitMessage ||\n      'fix: automated DevSecOps security patch',\n    branchName,\n    file_sha: prepare.file_sha || '',\n    file_path: prepare.file_path || '',\n    patchedCode,\n    content_base64: patchedCode\n      ? Buffer.from(patchedCode, 'utf8').toString('base64')\n      : '',\n    repository_owner: prepare.repository_owner || '',\n    repository_name: prepare.repository_name || '',\n    default_branch: prepare.default_branch || 'main',\n    backend_base_url: prepare.backend_base_url,\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        80,
+        496
+      ],
+      "id": "3fa5cd0b-08d0-485f-b57d-8066aaec1c74",
+      "name": "Parse - Code Patch Output"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ 'https://api.github.com/repos/' + encodeURIComponent($('Parse - Code Patch Output').first().json.repository_owner) + '/' + encodeURIComponent($('Parse - Code Patch Output').first().json.repository_name) + '/pulls' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer REDACTED_GITHUB_PAT"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-GitHub-Api-Version",
+              "value": "2026-03-10"
+            },
+            {
+              "name": "Accept",
+              "value": "application/vnd.github+json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { title: $('Parse - Code Patch Output').first().json.commitMessage, body: 'AI DevSecOps patch for incident ' + $('Parse - Code Patch Output').first().json.incidentId + '\\n\\nDescription: ' + $('Parse - Code Patch Output').first().json.patchDescription, head: $('Parse - Code Patch Output').first().json.branchName, base: $('Parse - Code Patch Output').first().json.default_branch } }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1728,
+        432
+      ],
+      "id": "616b4072-1ccb-4691-8655-2f36f3b5b2af",
+      "name": "Create Pull Request",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const gate = $input.first().json;\nreturn [{ json: {\n  success: false,\n  status: 'blocked',\n  blocked: true,\n  reason: gate.block_reason,\n  repository_owner: gate.repository_owner || null,\n  repository_name: gate.repository_name || null,\n  target_file_path: gate.target_file_path || null,\n  incidentId: gate.incidentId || null,\n} }];"
+      },
+      "id": "948e73b3-d140-45ca-af6c-f4f2d1bc6ef6",
+      "name": "Return Blocked Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -800,
+        1200
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "patch-valid",
+              "leftValue": "={{ $json.valid_patch }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "bd782ba2-18ef-4bc4-abee-02c148efeeb5",
+      "name": "Patch Output Valid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        240,
+        496
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const current = $input.first().json || {};\nconst gate = $('Policy Gate - Validate Constraints').first().json || {};\n\nconst errorMessage = String(\n  current.error?.message ??\n  current.message ??\n  current.errorDescription ??\n  'patch generation failed'\n);\n\nreturn [{\n  json: {\n    success: false,\n    status: 'patch_generation_failed',\n    blocked: true,\n    step: 'generate_patch',\n    error_message: errorMessage.slice(0, 2000),\n    http_status:\n      current.error?.status ??\n      current.statusCode ??\n      current.httpCode ??\n      null,\n    incidentId: gate.incidentId || null,\n    projectId: gate.projectId || null,\n    repository_owner: gate.repository_owner || null,\n    repository_name: gate.repository_name || null,\n    target_file_path: gate.target_file_path || null,\n    default_branch: gate.default_branch || 'main',\n    occurred_at: new Date().toISOString(),\n  },\n}];"
+      },
+      "id": "85ea0e9c-e7d2-41ff-a807-0a141bd81aa5",
+      "name": "Handle Patch Generation Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        864
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const current = $input.first().json || {};\nconst gate = $('Policy Gate - Validate Constraints').first().json || {};\n\nconst errorMessage = String(\n  current.error?.message ??\n  current.message ??\n  current.errorDescription ??\n  'patch parse failed'\n);\n\nreturn [{\n  json: {\n    success: false,\n    status: 'patch_parse_failed',\n    blocked: true,\n    step: 'parse_patch',\n    error_message: errorMessage.slice(0, 2000),\n    http_status:\n      current.error?.status ??\n      current.statusCode ??\n      current.httpCode ??\n      null,\n    incidentId: gate.incidentId || null,\n    projectId: gate.projectId || null,\n    repository_owner: gate.repository_owner || null,\n    repository_name: gate.repository_name || null,\n    target_file_path: gate.target_file_path || null,\n    default_branch: gate.default_branch || 'main',\n    occurred_at: new Date().toISOString(),\n  },\n}];"
+      },
+      "id": "ecd2a5cb-b8d1-4651-8d92-50ed1a815985",
+      "name": "Handle Patch Parse Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        352,
+        864
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const current = $input.first().json || {};\nconst gate = $('Policy Gate - Validate Constraints').first().json || {};\n\nconst errorMessage = String(\n  current.error?.message ??\n  current.message ??\n  current.errorDescription ??\n  'base branch lookup failed'\n);\n\nreturn [{\n  json: {\n    success: false,\n    status: 'base_branch_lookup_failed',\n    blocked: true,\n    step: 'get_base_branch',\n    error_message: errorMessage.slice(0, 2000),\n    http_status:\n      current.error?.status ??\n      current.statusCode ??\n      current.httpCode ??\n      null,\n    incidentId: gate.incidentId || null,\n    projectId: gate.projectId || null,\n    repository_owner: gate.repository_owner || null,\n    repository_name: gate.repository_name || null,\n    target_file_path: gate.target_file_path || null,\n    default_branch: gate.default_branch || 'main',\n    occurred_at: new Date().toISOString(),\n  },\n}];"
+      },
+      "id": "ca389475-bac1-4e26-972b-cabe67c6b8e1",
+      "name": "Handle Base Branch Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        736,
+        880
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const current = $input.first().json || {};\nconst gate = $('Policy Gate - Validate Constraints').first().json || {};\n\nconst errorMessage = String(\n  current.error?.message ??\n  current.message ??\n  current.errorDescription ??\n  'branch creation failed'\n);\n\nreturn [{\n  json: {\n    success: false,\n    status: 'branch_creation_failed',\n    blocked: true,\n    step: 'create_branch',\n    error_message: errorMessage.slice(0, 2000),\n    http_status:\n      current.error?.status ??\n      current.statusCode ??\n      current.httpCode ??\n      null,\n    incidentId: gate.incidentId || null,\n    projectId: gate.projectId || null,\n    repository_owner: gate.repository_owner || null,\n    repository_name: gate.repository_name || null,\n    target_file_path: gate.target_file_path || null,\n    default_branch: gate.default_branch || 'main',\n    occurred_at: new Date().toISOString(),\n  },\n}];"
+      },
+      "id": "1952b62e-a44b-43f0-8e57-f4ee983969eb",
+      "name": "Handle Branch Creation Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1104,
+        912
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const patch = $('Parse - Code Patch Output').first().json || {};\nconst pr = $('Create Pull Request').first().json || {};\n\nreturn [{\n  json: {\n    success: true,\n    status: 'fix_generated',\n    incidentId: patch.incidentId || null,\n    projectId: patch.projectId || null,\n    repository_owner: patch.repository_owner || null,\n    repository_name: patch.repository_name || null,\n    target_file_path: patch.file_path || null,\n    branch_name: patch.branchName || null,\n    pull_request_number: pr.number || null,\n    pull_request_url: pr.html_url || pr.url || null,\n    patch_description: patch.patchDescription || null,\n  },\n}];"
+      },
+      "id": "d3e42a99-0d57-42bc-afc1-6ad3c20997e4",
+      "name": "Return Success Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2800,
+        336
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const current = $input.first().json || {};\nconst patch = $('Parse - Code Patch Output').first().json || {};\nconst pr = $('Create Pull Request').first().json || {};\n\nreturn [{\n  json: {\n    success: true,\n    status: 'fix_generated_backend_update_failed',\n    warning:\n      String(\n        current.error?.message ||\n        current.message ||\n        'Pull request created, but backend incident update failed'\n      ).slice(0, 2000),\n    incidentId: patch.incidentId || null,\n    repository_owner: patch.repository_owner || null,\n    repository_name: patch.repository_name || null,\n    target_file_path: patch.file_path || null,\n    branch_name: patch.branchName || null,\n    pull_request_number: pr.number || null,\n    pull_request_url: pr.html_url || pr.url || null,\n  },\n}];"
+      },
+      "id": "05929a5b-5668-4199-903f-f2f0aa5bdb0e",
+      "name": "Return Success with Backend Warning",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2752,
+        592
+      ]
+    }
+  ],
+  "connections": {
+    "WF2 Trigger": {
+      "main": [
+        [
+          {
+            "node": "Policy Gate - Validate Constraints",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Policy Gate - Validate Constraints": {
+      "main": [
+        [
+          {
+            "node": "Patch Allowed?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Patch Allowed?": {
+      "main": [
+        [
+          {
+            "node": "Fetch Repository Files",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Blocked Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Repository Files": {
+      "main": [
+        [
+          {
+            "node": "Prepare - Code Patch Body",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Handle Fetch Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare - Code Patch Body": {
+      "main": [
+        [
+          {
+            "node": "Generate Patch with Claude",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Patch with Claude": {
+      "main": [
+        [
+          {
+            "node": "Parse - Code Patch Output",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Handle Patch Generation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse - Code Patch Output": {
+      "main": [
+        [
+          {
+            "node": "Patch Output Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Patch Output Valid?": {
+      "main": [
+        [
+          {
+            "node": "Get Base Branch SHA",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Handle Patch Parse Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Base Branch SHA": {
+      "main": [
+        [
+          {
+            "node": "Create Fix Branch",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Handle Base Branch Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Fix Branch": {
+      "main": [
+        [
+          {
+            "node": "Update File in Branch",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Handle Branch Creation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update File in Branch": {
+      "main": [
+        [
+          {
+            "node": "Create Pull Request",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Handle File Update Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Pull Request": {
+      "main": [
+        [
+          {
+            "node": "Save Execution Result to Backend",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Handle PR Creation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Execution Result to Backend": {
+      "main": [
+        [
+          {
+            "node": "Return Success Result",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Success with Backend Warning",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "id": "vWWrhwuXjcAxmO2B",
+  "meta": {},
+  "pinData": {
+    "WF2 Trigger": [
+      {
+        "json": {
+          "incidentData": "{\"id\":\"f8037308-8069-4c97-96ac-165e747f3947\",\"projectId\":\"3aa1c9b9-e114-40e4-884b-ebc7aa32e002\",\"title\":\"pfe-app-test - Build #67\",\"description\":\"http://172.31.172.61:8082/job/pfe-app-test/67/\",\"status\":\"blocked\",\"source\":\"jenkins\",\"metadata\":{\"security\":{},\"rootCause\":{},\"remediation\":{},\"enrichedData\":{\"zap\":{\"error\":\"\",\"alerts\":[],\"status\":\"UNKNOWN\",\"alerts_low\":0,\"target_url\":\"http://192.168.49.2:30003\",\"alerts_high\":0,\"alerts_count\":0,\"alerts_medium\":0},\"build\":{\"job\":\"pfe-app-test\",\"url\":\"http://172.31.172.61:8082/job/pfe-app-test/67/\",\"number\":\"67\",\"status\":\"UNSTABLE\"},\"owasp\":{\"cves\":[],\"high\":0,\"error\":\"\",\"status\":\"UNKNOWN\",\"critical\":0,\"cves_count\":0},\"sonar\":{\"bugs\":0,\"issues\":[{\"key\":\"29176898-81c7-4ae7-98d0-bfb7620b12ba\",\"url\":\"http://sonarqube:9000/project/issues?id=pfe-app-test&open=29176898-81c7-4ae7-98d0-bfb7620b12ba\",\"line\":55,\"type\":\"CODE_SMELL\",\"effort\":\"10min\",\"message\":\"Replace this use of System.out by a logger.\",\"severity\":\"MAJOR\",\"component\":\"src/main/java/com/pfe/devsecops/service/TaskService.java\"},{\"key\":\"a4ddc69a-03dc-4c36-9a32-4ee9c7a8a760\",\"url\":\"http://sonarqube:9000/project/issues?id=pfe-app-test&open=a4ddc69a-03dc-4c36-9a32-4ee9c7a8a760\",\"line\":27,\"type\":\"CODE_SMELL\",\"effort\":\"5min\",\"message\":\"Remove this field injection and use constructor injection instead.\",\"severity\":\"MAJOR\",\"component\":\"src/main/java/com/pfe/devsecops/config/SecurityConfig.java\"},{\"key\":\"d7f61ba3-8a6f-44bd-85c1-8c58508822a4\",\"url\":\"http://sonarqube:9000/project/issues?id=pfe-app-test&open=d7f61ba3-8a6f-44bd-85c1-8c58508822a4\",\"line\":28,\"type\":\"CODE_SMELL\",\"effort\":\"5min\",\"message\":\"Inject this field value directly into \\\"filterChain\\\", the only method that uses it.\",\"severity\":\"CRITICAL\",\"component\":\"src/main/java/com/pfe/devsecops/config/SecurityConfig.java\"},{\"key\":\"b8305253-8e0c-4fb6-88a8-2eadb6d48a45\",\"url\":\"http://sonarqube:9000/project/issues?id=pfe-app-test&open=b8305253-8e0c-4fb6-88a8-2eadb6d48a45\",\"line\":40,\"type\":\"CODE_SMELL\",\"effort\":\"5min\",\"message\":\"This block of commented-out lines of code should be removed.\",\"severity\":\"MAJOR\",\"component\":\"src/main/java/com/pfe/devsecops/config/SecurityConfig.java\"},{\"key\":\"5d228ca9-9afc-4f4b-9641-703628973e92\",\"url\":\"http://sonarqube:9000/project/issues?id=pfe-app-test&open=5d228ca9-9afc-4f4b-9641-703628973e92\",\"line\":16,\"type\":\"CODE_SMELL\",\"effort\":\"5min\",\"message\":\"Remove this field injection and use constructor injection instead.\",\"severity\":\"MAJOR\",\"component\":\"src/main/java/com/pfe/devsecops/controller/AuthController.java\"},{\"key\":\"98afb863-e0b2-457d-bdb9-f467ca58f0d0\",\"url\":\"http://sonarqube:9000/project/issues?id=pfe-app-test&open=98afb863-e0b2-457d-bdb9-f467ca58f0d0\",\"line\":15,\"type\":\"CODE_SMELL\",\"effort\":\"5min\",\"message\":\"Remove this field injection and use constructor injection instead.\",\"severity\":\"MAJOR\",\"component\":\"src/main/java/com/pfe/devsecops/controller/TaskController.java\"},{\"key\":\"7c1224ab-4688-4123-9ddc-9e9ed325d1f1\",\"url\":\"http://sonarqube:9000/project/issues?id=pfe-app-test&open=7c1224ab-4688-4123-9ddc-9e9ed325d1f1\",\"line\":29,\"type\":\"CODE_SMELL\",\"effort\":\"5min\",\"message\":\"This block of commented-out lines of code should be removed.\",\"severity\":\"MAJOR\",\"component\":\"src/main/java/com/pfe/devsecops/controller/TaskController.java\"},{\"key\":\"b8db9c11-ddf9-4a23-9bf3-1d2ff15a59ef\",\"url\":\"http://sonarqube:9000/project/issues?id=pfe-app-test&open=b8db9c11-ddf9-4a23-9bf3-1d2ff15a59ef\",\"line\":36,\"type\":\"VULNERABILITY\",\"effort\":\"10min\",\"message\":\"Replace this persistent entity with a simple POJO or DTO object.\",\"severity\":\"CRITICAL\",\"component\":\"src/main/java/com/pfe/devsecops/controller/TaskController.java\"},{\"key\":\"f11d4686-a7ba-4c0c-abbb-a12998c57220\",\"url\":\"http://sonarqube:9000/project/issues?id=pfe-app-test&open=f11d4686-a7ba-4c0c-abbb-a12998c57220\",\"line\":41,\"type\":\"VULNERABILITY\",\"effort\":\"10min\",\"message\":\"Replace this persistent entity with a simple POJO or DTO object.\",\"severity\":\"CRITICAL\",\"component\":\"src/main/java/com/pfe/devsecops/controller/TaskController.java\"},{\"key\":\"e044a989-c57d-40ab-917e-0f5dba362e39\",\"url\":\"http://sonarqube:9000/project/issues?id=pfe-app-test&open=e044a989-c57d-40ab-917e-0f5dba362e39\",\"line\":17,\"type\":\"CODE_SMELL\",\"effort\":\"5min\",\"message\":\"Remove this field injection and use constructor injection instead.\",\"severity\":\"MAJOR\",\"component\":\"src/main/java/com/pfe/devsecops/security/CustomUserDetailsService.java\"},{\"key\":\"8a06ee3c-7626-452c-a157-3ac19295921f\",\"url\":\"http://sonarqube:9000/project/issues?id=pfe-app-test&open=8a06ee3c-7626-452c-a157-3ac19295921f\",\"line\":21,\"type\":\"CODE_SMELL\",\"effort\":\"5min\",\"message\":\"Remove this field injection and use constructor injection instead.\",\"severity\":\"MAJOR\",\"component\":\"src/main/java/com/pfe/devsecops/security/JwtRequestFilter.java\"},{\"key\":\"080d57b7-40a6-4b23-979d-5439675be4d7\",\"url\":\"http://sonarqube:9000/project/issues?id=pfe-app-test&open=080d57b7-40a6-4b23-979d-5439675be4d7\",\"line\":24,\"type\":\"CODE_SMELL\",\"effort\":\"5min\",\"message\":\"Remove this field injection and use constructor injection instead.\",\"severity\":\"MAJOR\",\"component\":\"src/main/java/com/pfe/devsecops/security/JwtRequestFilter.java\"},{\"key\":\"571aa09a-86e0-41c7-b608-be156b24f829\",\"url\":\"http://sonarqube:9000/project/issues?id=pfe-app-test&open=571aa09a-86e0-41c7-b608-be156b24f829\",\"line\":19,\"type\":\"CODE_SMELL\",\"effort\":\"5min\",\"message\":\"Remove this field injection and use constructor injection instead.\",\"severity\":\"MAJOR\",\"component\":\"src/main/java/com/pfe/devsecops/service/AuthService.java\"},{\"key\":\"cff1df8d-9d86-4248-b413-4277c4935392\",\"url\":\"http://sonarqube:9000/project/issues?id=pfe-app-test&open=cff1df8d-9d86-4248-b413-4277c4935392\",\"line\":22,\"type\":\"CODE_SMELL\",\"effort\":\"5min\",\"message\":\"Remove this field injection and use constructor injection instead.\",\"severity\":\"MAJOR\",\"component\":\"src/main/java/com/pfe/devsecops/service/AuthService.java\"},{\"key\":\"29eac03c-adff-4535-b33c-c24b90974b08\",\"url\":\"http://sonarqube:9000/project/issues?id=pfe-app-test&open=29eac03c-adff-4535-b33c-c24b90974b08\",\"line\":25,\"type\":\"CODE_SMELL\",\"effort\":\"5min\",\"message\":\"Remove this field injection and use constructor injection instead.\",\"severity\":\"MAJOR\",\"component\":\"src/main/java/com/pfe/devsecops/service/AuthService.java\"},{\"key\":\"c7fe7599-bac3-424c-b91b-5723350c49fa\",\"url\":\"http://sonarqube:9000/project/issues?id=pfe-app-test&open=c7fe7599-bac3-424c-b91b-5723350c49fa\",\"line\":28,\"type\":\"CODE_SMELL\",\"effort\":\"5min\",\"message\":\"Remove this field injection and use constructor injection instead.\",\"severity\":\"MAJOR\",\"component\":\"src/main/java/com/pfe/devsecops/service/AuthService.java\"},{\"key\":\"30dd642c-0365-4466-a8c8-c691f8091d0c\",\"url\":\"http://sonarqube:9000/project/issues?id=pfe-app-test&open=30dd642c-0365-4466-a8c8-c691f8091d0c\",\"line\":38,\"type\":\"CODE_SMELL\",\"effort\":\"20min\",\"message\":\"Replace generic exceptions with specific library exceptions or a custom exception.\",\"severity\":\"MAJOR\",\"component\":\"src/main/java/com/pfe/devsecops/service/AuthService.java\"},{\"key\":\"7a0fe04d-db29-4e6c-8a61-62e702e3c3bc\",\"url\":\"http://sonarqube:9000/project/issues?id=pfe-app-test&open=7a0fe04d-db29-4e6c-8a61-62e702e3c3bc\",\"line\":50,\"type\":\"CODE_SMELL\",\"effort\":\"20min\",\"message\":\"Replace generic exceptions with specific library exceptions or a custom exception.\",\"severity\":\"MAJOR\",\"component\":\"src/main/java/com/pfe/devsecops/service/AuthService.java\"},{\"key\":\"956e68a3-fa8f-47ab-ac6a-aff8e01ac522\",\"url\":\"http://sonarqube:9000/project/issues?id=pfe-app-test&open=956e68a3-fa8f-47ab-ac6a-aff8e01ac522\",\"line\":22,\"type\":\"VULNERABILITY\",\"effort\":\"30min\",\"message\":\"'Password' detected in this expression, review this potentially hard-coded password.\",\"severity\":\"BLOCKER\",\"component\":\"src/main/java/com/pfe/devsecops/service/TaskService.java\"},{\"key\":\"b287b49e-2107-4212-8970-e14c83f99dc7\",\"url\":\"http://sonarqube:9000/project/issues?id=pfe-app-test&open=b287b49e-2107-4212-8970-e14c83f99dc7\",\"line\":24,\"type\":\"VULNERABILITY\",\"effort\":\"30min\",\"message\":\"'Password' detected in this expression, review this potentially hard-coded password.\",\"severity\":\"BLOCKER\",\"component\":\"src/main/java/com/pfe/devsecops/service/TaskService.java\"},{\"key\":\"df3a6793-ebfe-4a49-a22c-2d1b292b107f\",\"url\":\"http://sonarqube:9000/project/issues?id=pfe-app-test&open=df3a6793-ebfe-4a49-a22c-2d1b292b107f\",\"line\":24,\"type\":\"CODE_SMELL\",\"effort\":\"5min\",\"message\":\"Remove this unused \\\"dbPassword\\\" private field.\",\"severity\":\"MAJOR\",\"component\":\"src/main/java/com/pfe/devsecops/service/TaskService.java\"},{\"key\":\"097c28f6-1eb4-4971-bcc0-acaa9c6c3dcd\",\"url\":\"http://sonarqube:9000/project/issues?id=pfe-app-test&open=097c28f6-1eb4-4971-bcc0-acaa9c6c3dcd\",\"line\":26,\"type\":\"CODE_SMELL\",\"effort\":\"5min\",\"message\":\"Remove this field injection and use constructor injection instead.\",\"severity\":\"MAJOR\",\"component\":\"src/main/java/com/pfe/devsecops/service/TaskService.java\"},{\"key\":\"04ee6586-6366-463a-9aca-9c140a640686\",\"url\":\"http://sonarqube:9000/project/issues?id=pfe-app-test&open=04ee6586-6366-463a-9aca-9c140a640686\",\"line\":29,\"type\":\"CODE_SMELL\",\"effort\":\"5min\",\"message\":\"Remove this field injection and use constructor injection instead.\",\"severity\":\"MAJOR\",\"component\":\"src/main/java/com/pfe/devsecops/service/TaskService.java\"},{\"key\":\"744ad407-dafa-459f-a5c5-c8a408f2088c\",\"url\":\"http://sonarqube:9000/project/issues?id=pfe-app-test&open=744ad407-dafa-459f-a5c5-c8a408f2088c\",\"line\":97,\"type\":\"BUG\",\"effort\":\"5min\",\"message\":\"Use try-with-resources or close this \\\"FileInputStream\\\" in a \\\"finally\\\" clause.\",\"severity\":\"BLOCKER\",\"component\":\"src/main/java/com/pfe/devsecops/service/TaskService.java\"},{\"key\":\"54947e23-c650-48e5-b883-f9df60cd886d\",\"url\":\"http://sonarqube:9000/project/issues?id=pfe-app-test&open=54947e23-c650-48e5-b883-f9df60cd886d\",\"line\":104,\"type\":\"CODE_SMELL\",\"effort\":\"10min\",\"message\":\"Replace this use of System.out by a logger.\",\"severity\":\"MAJOR\",\"component\":\"src/main/java/com/pfe/devsecops/service/TaskService.java\"},{\"key\":\"cf0a88c6-e907-4459-8a7f-fe9c567da09d\",\"url\":\"http://sonarqube:9000/project/issues?id=pfe-app-test&open=cf0a88c6-e907-4459-8a7f-fe9c567da09d\",\"line\":113,\"type\":\"CODE_SMELL\",\"effort\":\"1h8min\",\"message\":\"Refactor this method to reduce its Cognitive Complexity from 78 to the 15 allowed.\",\"severity\":\"CRITICAL\",\"component\":\"src/main/java/com/pfe/devsecops/service/TaskService.java\"},{\"key\":\"f97430a6-feb0-48c6-9a07-6e8f7744c2ca\",\"url\":\"http://sonarqube:9000/project/issues?id=pfe-app-test&open=f97430a6-feb0-48c6-9a07-6e8f7744c2ca\",\"line\":117,\"type\":\"CODE_SMELL\",\"effort\":\"8min\",\"message\":\"Define a constant instead of duplicating this literal \\\"ERROR: task is null\\\" 3 times.\",\"severity\":\"CRITICAL\",\"component\":\"src/main/java/com/pfe/devsecops/service/TaskService.java\"},{\"key\":\"2102b6a9-2f7b-44f2-9a41-685f6731f853\",\"url\":\"http://sonarqube:9000/project/issues?id=pfe-app-test&open=2102b6a9-2f7b-44f2-9a41-685f6731f853\",\"line\":118,\"type\":\"CODE_SMELL\",\"effort\":\"8min\",\"message\":\"Define a constant instead of duplicating this literal \\\"ERROR: title required\\\" 3 times.\",\"severity\":\"CRITICAL\",\"component\":\"src/main/java/com/pfe/devsecops/service/TaskService.java\"},{\"key\":\"bbee7425-d6dd-48b2-87f4-6b0ac67037ec\",\"url\":\"http://sonarqube:9000/project/issues?id=pfe-app-test&open=bbee7425-d6dd-48b2-87f4-6b0ac67037ec\",\"line\":119,\"type\":\"CODE_SMELL\",\"effort\":\"8min\",\"message\":\"Define a constant instead of duplicating this literal \\\"ERROR: description required\\\" 3 times.\",\"severity\":\"CRITICAL\",\"component\":\"src/main/java/com/pfe/devsecops/service/TaskService.java\"},{\"key\":\"087a62cb-776b-4c24-b4ef-bcedbffcf7a8\",\"url\":\"http://sonarqube:9000/project/issues?id=pfe-app-test&open=087a62cb-776b-4c24-b4ef-bcedbffcf7a8\",\"line\":120,\"type\":\"CODE_SMELL\",\"effort\":\"8min\",\"message\":\"Define a constant instead of duplicating this literal \\\"ERROR: priority invalid\\\" 3 times.\",\"severity\":\"CRITICAL\",\"component\":\"src/main/java/com/pfe/devsecops/service/TaskService.java\"},{\"key\":\"166d77fa-d84f-4d41-947a-9eb28285c862\",\"url\":\"http://sonarqube:9000/project/issues?id=pfe-app-test&open=166d77fa-d84f-4d41-947a-9eb28285c862\",\"line\":123,\"type\":\"CODE_SMELL\",\"effort\":\"8min\",\"message\":\"Define a constant instead of duplicating this literal \\\"ADMIN\\\" 3 times.\",\"severity\":\"CRITICAL\",\"component\":\"src/main/java/com/pfe/devsecops/service/TaskService.java\"},{\"key\":\"5b42ab01-aa7b-42fe-a1e7-58d90dbac0dd\",\"url\":\"http://sonarqube:9000/project/issues?id=pfe-app-test&open=5b42ab01-aa7b-42fe-a1e7-58d90dbac0dd\",\"line\":135,\"type\":\"CODE_SMELL\",\"effort\":\"10min\",\"message\":\"Replace this use of System.out by a logger.\",\"severity\":\"MAJOR\",\"component\":\"src/main/java/com/pfe/devsecops/service/TaskService.java\"},{\"key\":\"301ade42-ddfa-406a-a5f2-a6556bf13136\",\"url\":\"http://sonarqube:9000/project/issues?id=pfe-app-test&open=301ade42-ddfa-406a-a5f2-a6556bf13136\",\"line\":204,\"type\":\"CODE_SMELL\",\"effort\":\"5min\",\"message\":\"This block of commented-out lines of code should be removed.\",\"severity\":\"MAJOR\",\"component\":\"src/main/java/com/pfe/devsecops/service/TaskService.java\"},{\"key\":\"6793cbd5-1ed8-4e61-a803-32b2045975c4\",\"url\":\"http://sonarqube:9000/project/issues?id=pfe-app-test&open=6793cbd5-1ed8-4e61-a803-32b2045975c4\",\"line\":213,\"type\":\"CODE_SMELL\",\"effort\":\"1min\",\"message\":\"Remove this useless assignment to local variable \\\"unusedMessage\\\".\",\"severity\":\"MAJOR\",\"component\":\"src/main/java/com/pfe/devsecops/service/TaskService.java\"},{\"key\":\"84d78ebc-4b74-4972-a81e-07f27318f239\",\"url\":\"http://sonarqube:9000/project/issues?id=pfe-app-test&open=84d78ebc-4b74-4972-a81e-07f27318f239\",\"line\":221,\"type\":\"VULNERABILITY\",\"effort\":\"30min\",\"message\":\"'password' detected in this expression, review this potentially hard-coded password.\",\"severity\":\"BLOCKER\",\"component\":\"src/main/java/com/pfe/devsecops/service/TaskService.java\"}],\"status\":\"UNKNOWN\",\"coverage\":\"0\",\"code_smells\":0,\"issues_count\":35,\"quality_gate\":\"UNKNOWN\",\"vulnerabilities\":0},\"tests\":{\"total\":0,\"status\":\"UNKNOWN\",\"skipped\":0,\"coverage\":\"0\",\"failures\":0},\"trivy\":{\"cves\":[],\"high\":0,\"error\":\"\",\"status\":\"UNKNOWN\",\"critical\":0,\"cves_count\":0},\"deploy\":{\"status\":\"UNKNOWN\",\"app_url\":\"http://192.168.49.2:30003\",\"namespace\":\"pfe-devsecops\"},\"docker\":{\"registry\":\"\",\"image_tag\":\"\",\"push_status\":\"UNKNOWN\",\"build_status\":\"UNKNOWN\"}}},\"prUrl\":null,\"jenkinsJobName\":\"pfe-app-test\",\"buildNumber\":67,\"aiAnalysis\":\"{\\\"build\\\":\\\"67\\\",\\\"job\\\":\\\"pfe-app-test\\\",\\\"status\\\":\\\"UNSTABLE\\\",\\\"decision\\\":\\\"AUTO_FIX\\\",\\\"confidenceScore\\\":96,\\\"securityLevel\\\":\\\"CRITICAL\\\",\\\"errorsSummary\\\":\\\"BLOCKER: 4 issues (3 hard-coded passwords in TaskService.java lines 22/24/221, 1 unclosed FileInputStream line 97) | CRITICAL: 8 issues (2 VULNERABILITY - persistent entity exposure in TaskController lines 36/41, 6 CODE_SMELL - field injection, cognitive complexity, duplicate literals) | MAJOR: 23 issues (field injection violations, System.out usage, commented code, generic exceptions, unused variables)\\\",\\\"cicdIssues\\\":\\\"Build #67 UNSTABLE - Test framework initialization failure (0 tests detected, UNKNOWN status) blocking pipeline progression. All downstream stages affected: SonarQube quality gate UNKNOWN (0% coverage), security scanners (Trivy/OWASP/ZAP) not executed, Docker image not built. Pipeline halted at test execution layer.\\\",\\\"securityIssues\\\":\\\"HARDCODED CREDENTIALS (BLOCKER): TaskService.java contains 3 hard-coded password instances at lines 22, 24, and 221 - immediate credential exposure risk. ENTITY EXPOSURE (CRITICAL): TaskController.java directly returns JPA entities at lines 36 and 41 - enables object injection and schema leakage. RESOURCE LEAK (BLOCKER): FileInputStream at TaskService.java line 97 not closed in finally block - potential denial of service. NO CVEs detected in dependencies.\\\",\\\"agentActions\\\":\\\"ROOT_CAUSE_AGENT: Identified test framework initialization failure as primary blocker (severity 8/10, confidence 87%) causing cascade failure across all pipeline stages. SECURITY_RISK_AGENT: Flagged 5 critical vulnerabilities with risk score 95/100 (confidence 98%), marked deployment as unsafe. REMEDIATION_AGENT: Confirmed fixes required for dependency injection patterns and logging practices (confidence 95%), auto-fix marked false due to complexity.\\\",\\\"developerActions\\\":\\\"1. IMMEDIATE - Remove hard-coded passwords: Replace lines 22/24/221 in TaskService.java with environment variables or secrets manager: String dbPassword = System.getenv(\\\\\\\"DB_PASSWORD\\\\\\\"); | 2. Fix resource leak: Wrap FileInputStream at line 97 with try-with-resources: try (FileInputStream fis = new FileInputStream(file)) { ... } | 3. Create DTOs for API responses: Replace entity returns in TaskController with TaskDTO class to prevent schema exposure | 4. Refactor to constructor injection: Add @RequiredArgsConstructor to SecurityConfig, AuthController, TaskController, TaskService and convert @Autowired fields to private final | 5. Replace System.out with SLF4J: Add private static final Logger log = LoggerFactory.getLogger(TaskService.class); and use log.info() | 6. Fix test configuration: Verify src/test/java exists and contains @SpringBootTest classes, check pom.xml for surefire-plugin configuration | 7. Validate fixes: Run mvn clean verify sonar:sonar -Dsonar.qualitygate.wait=true\\\",\\\"recommendations\\\":\\\"1. Implement Spring Vault or AWS Secrets Manager for credential management - eliminates hard-coded password risk permanently | 2. Add MapStruct or ModelMapper dependency for automatic Entity-to-DTO conversion in controllers | 3. Configure SonarQube quality gate as mandatory pipeline blocker to catch BLOCKER/CRITICAL issues before merge\\\"}\",\"createdAt\":\"2026-06-30T08:56:34.217Z\",\"updatedAt\":\"2026-06-30T08:57:01.967Z\",\"project\":{\"id\":\"3aa1c9b9-e114-40e4-884b-ebc7aa32e002\",\"name\":\"pfe-app-test\",\"description\":\"Projet cobaye DevSecOps - Tests vulnérabilités\",\"environment\":\"dev\",\"status\":\"healthy\",\"securityScore\":95,\"isActive\":true,\"tags\":null,\"cicdTool\":\"jenkins\",\"jenkinsUrl\":\"http://172.31.172.61:8082\",\"jenkinsJobName\":\"pfe-app-test\",\"jenkinsToken\":\"souhaiel.amri:11f68593ffd755c6384949cef8ef44c06a\",\"githubRepo\":\"souhaiel11/pfe-app-test\",\"githubToken\":\"\",\"sonarqubeUrl\":\"http://sonarqube:9000\",\"sonarqubeKey\":\"pfe-app-test\",\"sonarqubeToken\":\"squ_43a2a435e13a4dbfcc98852a5aeb80eb022f9ada\",\"emailEnabled\":false,\"emailRecipient\":\"\",\"slackEnabled\":false,\"slackChannel\":\"\",\"slackToken\":\"\",\"validationStatus\":{},\"createdAt\":\"2026-06-23T09:52:52.847Z\",\"updatedAt\":\"2026-06-30T08:56:43.724Z\"}}"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  }
+}

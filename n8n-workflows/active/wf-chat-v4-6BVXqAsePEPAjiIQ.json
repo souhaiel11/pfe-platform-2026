@@ -1,0 +1,252 @@
+{
+  "name": "WF-Chat-V4",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "chat-agent",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -416,
+        112
+      ],
+      "id": "a6efcf2c-4179-4a68-add3-b670e4c53113",
+      "name": "Webhook",
+      "webhookId": "647a91e6-4991-4c08-a7bf-437b32bfaab0"
+    },
+    {
+      "parameters": {
+        "jsCode": "const question = $('Fetch Context').first().json.question;\nconst history = $('Fetch Context').first().json.history || [];\n\n// Récupère tous les incidents\nlet incidents = [];\ntry {\n  incidents = $('Get Incidents').all().map(i => i.json);\n} catch(e) { incidents = []; }\n\n// Résumé compact pour Claude\nconst summary = incidents.slice(0, 20).map(i => ({\n  ref: i.incidentRef,\n  project: i.projectName,\n  source: i.source,\n  status: i.status,\n  severity: i.severity,\n  title: i.title,\n  created: i.createdAt\n}));\n\n// Formater l'historique\nconst historyText = history.length > 0\n  ? '\\nHISTORIQUE DE LA CONVERSATION :\\n' + history.slice(-5).map(h => \n      `${h.role === 'user' ? 'Utilisateur' : 'Assistant'}: ${h.content.substring(0, 200)}`\n    ).join('\\n') + '\\n'\n  : '';\n\nconst prompt = `Tu es un assistant DevSecOps expert intégré dans la plateforme Vermeg.\nTu as accès aux données réelles de la plateforme.\n${historyText}\nDONNÉES DE LA PLATEFORME :\n${JSON.stringify(summary, null, 2).substring(0, 4000)}\n\nINSTRUCTIONS :\n- Vérifier les projets disponibles avant chaque réponse\n- Réponds toujours en français\n- Si on te demande un projet spécifique, filtre les données correspondantes\n- Sois précis, utilise les données réelles\n- Réponse claire et correcte\n- Si tu ne trouves pas de données → dis-le clairement\n- Pour les questions de suivi, utilise l'historique ci-dessus\n\nQUESTION : ${question}`;\n\nreturn [{ json: { prompt, question, history } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        144,
+        304
+      ],
+      "id": "32c2a8f2-f072-48b4-8ce1-d569b6aa6ad2",
+      "name": "Build Prompt"
+    },
+    {
+      "parameters": {
+        "url": "=http://172.31.172.61:3001/api/incidents?projectId={{ $json.projectId }}&size=20",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        0,
+        0
+      ],
+      "id": "d8d0e026-a741-496b-a304-4b057e308fc6",
+      "name": "Get Incidents",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Récupère la question, le projectId et l'historique\nconst question = $input.first().json.body.question;\nconst projectId = $input.first().json.body.projectId;\nconst history = $input.first().json.body.history || [];\n\nreturn [{\n  json: {\n    question: question,\n    projectId: projectId,\n    history: history\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -224,
+        288
+      ],
+      "id": "60a88cea-cc42-412d-94e3-205546027f8c",
+      "name": "Fetch Context"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json.claudeBody }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        448,
+        0
+      ],
+      "id": "585672a9-5545-4981-ab55-2f9a583a4a6d",
+      "name": "Get Incidents1",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "Ee9vVedmz84oXg5W",
+          "name": "Claude API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst answer   = response.content[0].text;\n\nreturn [{\n  json: {\n    answer: answer,\n    model: response.model,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        304
+      ],
+      "id": "af1b54d3-8c7d-4d29-a09f-b411c5b79493",
+      "name": "Parse Response"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        912,
+        96
+      ],
+      "id": "22e7781d-0c40-401c-b684-20902c83299e",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "const prompt = $input.first().json.prompt;\n\nconst body = JSON.stringify({\n  model: \"claude-opus-4-5\",\n  max_tokens: 1024,\n  messages: [\n    {\n      role: \"user\",\n      content: prompt\n    }\n  ]\n});\n\nreturn [{ json: { claudeBody: body } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        288,
+        304
+      ],
+      "id": "e07d4acb-5c0f-4b85-b337-5475f73cfa0b",
+      "name": "Prepare Claude Body"
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Fetch Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Incidents": {
+      "main": [
+        [
+          {
+            "node": "Build Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Context": {
+      "main": [
+        [
+          {
+            "node": "Get Incidents",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Prompt": {
+      "main": [
+        [
+          {
+            "node": "Prepare Claude Body",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Incidents1": {
+      "main": [
+        [
+          {
+            "node": "Parse Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Response": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Claude Body": {
+      "main": [
+        [
+          {
+            "node": "Get Incidents1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "id": "6BVXqAsePEPAjiIQ",
+  "meta": {},
+  "pinData": {
+    "Webhook": [
+      {
+        "json": {
+          "headers": {
+            "host": "172.31.172.61:5678",
+            "user-agent": "curl/7.81.0",
+            "accept": "*/*",
+            "content-type": "application/json",
+            "content-length": "86"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "question": "Incidents en cours ?",
+            "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002"
+          },
+          "webhookUrl": "http://localhost:5678/webhook/chat-agent",
+          "executionMode": "production"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  }
+}
