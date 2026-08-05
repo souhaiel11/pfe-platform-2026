@@ -3,7 +3,7 @@
 //  Fichier : src/jenkins-optimizer/jenkins-optimizer.module.ts
 //  Enregistrement : ajouter JenkinsOptimizerModule aux imports de AppModule
 // ─────────────────────────────────────────────────────────────
-import { Module, Controller, Post, Get, Param, Body, Query, UseGuards, HttpException, HttpStatus } from '@nestjs/common';
+import { Module, Controller, Post, Get, Param, Body, Query, Headers, UseGuards, HttpException, HttpStatus } from '@nestjs/common';
 import { TypeOrmModule, InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { randomUUID } from 'crypto';
@@ -11,6 +11,10 @@ import { JenkinsAnalysis, JenkinsAnalysisStatus } from './jenkins-analysis.entit
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 const N8N_URL = process.env.N8N_URL || 'http://172.31.172.61:5678';
+// Secret partagé pour /optimize/:id/callback — appelé par n8n (WF4), pas
+// par le navigateur. Volontairement pas de valeur par défaut : sans cette
+// variable d'env définie, le callback rejette TOUJOURS (fail-closed).
+const N8N_CALLBACK_SECRET = process.env.N8N_CALLBACK_SECRET;
 const WEBHOOK = `${N8N_URL}/webhook/jenkinsfile-optimize`;
 const APPLY_WEBHOOK = `${N8N_URL}/webhook/jenkinsfile-apply`;
 const FETCH_WEBHOOK = `${N8N_URL}/webhook/jenkinsfile-fetch`;
@@ -154,13 +158,20 @@ export class JenkinsOptimizerController {
   }
 
   // Appelé PAR n8n (WF4) à la fin du workflow — succès ou échec explicite.
-  // Pas de guard : même logique que create()/callback ailleurs, appelé
-  // depuis n8n, pas depuis le navigateur.
+  // Pas de JwtAuthGuard (appelé depuis n8n, pas depuis le navigateur), mais
+  // protégé par le même secret partagé que /apply/:applyId/callback : sans
+  // ça, n'importe qui pouvait injecter un faux résultat d'optimisation
+  // affiché ensuite tel quel au développeur.
   @Post('optimize/:id/callback')
   async receiveOptimizeCallback(
     @Param('id') id: string,
     @Body() body: { status: 'done' | 'error'; result?: any; reason?: string; detail?: string },
+    @Headers('x-callback-secret') secret?: string,
   ) {
+    if (!N8N_CALLBACK_SECRET || secret !== N8N_CALLBACK_SECRET) {
+      throw new HttpException('Callback non autorisé', HttpStatus.FORBIDDEN);
+    }
+
     const settledAt = Date.now();
     const job = jobs.get(id);
     if (job) {
@@ -239,6 +250,7 @@ export class JenkinsOptimizerController {
     }
   }
 
+  @UseGuards(JwtAuthGuard)
   @Post('apply')
   async apply(@Body() body: {
     owner: string; repo: string; optimizedJenkinsfile: string;

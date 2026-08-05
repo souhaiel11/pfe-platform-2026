@@ -570,6 +570,10 @@
             {
               "name": "Content-Type",
               "value": "application/json"
+            },
+            {
+              "name": "X-Callback-Secret",
+              "value": "e63c40231fd4f76a0650ea2602cc2ce67c61eb56b5d1838f86e258905f9dde33"
             }
           ]
         },
@@ -598,6 +602,10 @@
             {
               "name": "Content-Type",
               "value": "application/json"
+            },
+            {
+              "name": "X-Callback-Secret",
+              "value": "e63c40231fd4f76a0650ea2602cc2ce67c61eb56b5d1838f86e258905f9dde33"
             }
           ]
         },
