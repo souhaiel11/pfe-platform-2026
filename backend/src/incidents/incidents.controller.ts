@@ -2,6 +2,8 @@ import { Controller, Get, Post, Put, Delete, Param, Body, Query, UseGuards } fro
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { IncidentsService } from './incidents.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { JwtOrInternalSecretGuard } from '../auth/jwt-or-internal-secret.guard';
+import { InternalSecretGuard } from '../auth/internal-secret.guard';
 
 @ApiTags('Incidents')
 @ApiBearerAuth()
@@ -12,8 +14,11 @@ export class IncidentsController {
   @Get() findAll(@Query('projectId') projectId?: string, @Query('status') status?: string, @Query('size') size?: number) { return this.service.findAll(projectId, status, size); }
   @UseGuards(JwtAuthGuard)
   @Get(':id') findOne(@Param('id') id: string) { return this.service.findOne(id); }
+  @UseGuards(JwtAuthGuard)
   @Post() create(@Body() dto: any) { return this.service.create(dto); }
+  @UseGuards(JwtOrInternalSecretGuard)
   @Put(':id') update(@Param('id') id: string, @Body() dto: any) { return this.service.update(id, dto); }
+  @UseGuards(InternalSecretGuard)
   @Post(':id/validation') saveValidation(@Param('id') id: string, @Body() validation: any) { return this.service.saveValidation(id, validation); }
   @UseGuards(JwtAuthGuard)
   @Delete(':id') remove(@Param('id') id: string) { return this.service.remove(id); }

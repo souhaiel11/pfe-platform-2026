@@ -174,6 +174,15 @@
       "parameters": {
         "method": "PUT",
         "url": "=http://172.31.172.61:3001/api/incidents/{{ $('Policy Gate - Validate Constraints').first().json.incidentId }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Internal-Secret",
+              "value": "ae51a679d64d28a917d037ab2d262101f49f5befc9c93973777913d2e4039010"
+            }
+          ]
+        },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ status: \"fix_generated\", prUrl: $json.html_url || $json.url || \"\" }) }}",
