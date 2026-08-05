@@ -1,7 +1,8 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, Headers, HttpException, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query, Headers, HttpException, HttpStatus, UseGuards } from '@nestjs/common';
 import { ProjectsService } from './projects.service';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 // Volontairement pas de valeur par défaut : sans cette variable d'env définie,
 // la route rejette TOUJOURS (fail-closed) — même logique que N8N_CALLBACK_SECRET
@@ -32,17 +33,21 @@ export class ProjectsController {
   @Get(':id')
   findOne(@Param('id') id: string) { return this.service.findOne(id); }
 
+  @UseGuards(JwtAuthGuard)
   @Post()
   create(@Body() dto: CreateProjectDto) { return this.service.create(dto); }
 
+  @UseGuards(JwtAuthGuard)
   @Put(':id')
   update(@Param('id') id: string, @Body() dto: UpdateProjectDto) {
     return this.service.update(id, dto);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Delete(':id')
   remove(@Param('id') id: string) { return this.service.remove(id); }
 
+  @UseGuards(JwtAuthGuard)
   @Post(':id/validate')
   validate(@Param('id') id: string) { return this.service.validateProject(id); }
 
