@@ -1,0 +1,27 @@
+# ================================================================
+# Image de TEST TEMPORAIRE — n'est PAS le Dockerfile de devsecops-testbed.
+# Ne remplace rien dans ce dépôt : le Dockerfile original (base
+# eclipse-temurin:8-jdk, volontairement vulnérable) reste inchangé et
+# reste la cible des scans Trivy.
+#
+# Seule différence avec devsecops-testbed/Dockerfile : l'image de base,
+# eclipse-temurin:11-jre au lieu de eclipse-temurin:8-jdk, pour être
+# cohérente avec le bytecode Java 11 du jar (pom.xml: java.version=11).
+# Sert uniquement à prouver que le déploiement Azure (ACR + ACI) marche.
+#
+# Contexte de build attendu : la racine du dépôt devsecops-testbed
+# (pour que COPY target/devsecops-testbed-1.0.0.jar résolve), ex:
+#   docker build -f infra/docker/Dockerfile.fixed-base-testbed \
+#     -t acrpfedevsecops.azurecr.io/devsecops-testbed:fixed-base-1.0.0 \
+#     /chemin/vers/devsecops-testbed
+# ================================================================
+
+FROM eclipse-temurin:11-jre
+
+WORKDIR /app
+
+COPY target/devsecops-testbed-1.0.0.jar app.jar
+
+EXPOSE 8080
+
+ENTRYPOINT ["java", "-jar", "app.jar"]

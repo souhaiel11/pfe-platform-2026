@@ -5,11 +5,39 @@
 - Infra durable (Terraform, `infra/terraform/`) : resource group `rg-pfe-devsecops`
   + ACR `acrpfedevsecops` (Basic) créés en `francecentral`, vérifiés `Succeeded`
   côté Azure (pas juste déclarés par Terraform).
-- Image `devsecops-testbed:latest` buildée et poussée avec succès sur l'ACR.
+- Image `devsecops-testbed:latest` (originale, vulnérable) buildée et poussée
+  avec succès sur l'ACR.
+- **Déploiement ACI prouvé sur image à base cohérente (`eclipse-temurin:11`) —
+  Spring Running, 0 crash.** L'image vulnérable originale (base Java 8) crashe,
+  comme attendu. Détail dans "Fondation prouvée" ci-dessous.
 
-Le run ACI reste à valider — voir ci-dessous.
+## Fondation prouvée : ACI Running sur image corrigée séparée
 
-## Échec du déploiement ACI
+Pour prouver que la chaîne Azure (ACR → ACI privé) fonctionne réellement, sans
+toucher au dépôt `devsecops-testbed` (le Dockerfile original vulnérable reste
+la cible des scans Trivy, inchangé), un Dockerfile de test **temporaire** a été
+créé hors de ce dépôt : `infra/docker/Dockerfile.fixed-base-testbed`. Seule
+différence avec l'original : `eclipse-temurin:11-jre` au lieu de
+`eclipse-temurin:8-jdk`, cohérent avec le bytecode Java 11 du jar. Même jar
+réutilisé (`target/devsecops-testbed-1.0.0.jar`), aucun fichier de
+`devsecops-testbed` modifié.
+
+Image poussée sous un tag distinct : `acrpfedevsecops.azurecr.io/devsecops-testbed:fixed-base-1.0.0`.
+L'ACR contient les deux tags (`latest` = vulnérable, `fixed-base-1.0.0` = corrigée).
+
+Conteneur ACI de preuve (`aci-devsecops-testbed-fixed`, privé, `ipAddress: null`,
+port 8080, cpu 1 / mémoire 1 Go) :
+
+- État sur 45s (9 checks à 5s d'intervalle) : **`Running` en continu**, jamais `Terminated`.
+- `restartCount` : **0** — pas de crash-loop.
+- Logs : `Started TestbedApplication in 9.285 seconds`, Tomcat sur le port 8080,
+  **aucun `UnsupportedClassVersionError`**.
+- `/api/health` testé depuis l'intérieur du conteneur (`az container exec`, pas
+  d'IP publique) → **`{"status":"UP"}`**.
+
+Conteneur de preuve arrêté puis supprimé après vérification (pas de coût résiduel).
+
+## Échec du déploiement ACI sur l'image originale (non corrigée)
 
 Le conteneur ACI (`aci-devsecops-testbed`, privé, pas d'IP publique) crash au
 démarrage avec :
@@ -36,8 +64,12 @@ après passage par la plateforme DevSecOps.
 
 ## Reste à faire
 
-- [ ] Corriger l'image de base Java du testbed (ou recompiler en ciblant Java 8 —
-      décision à prendre : voir options discutées en session)
-- [ ] Relancer `az container create` sur l'image corrigée, en privé, port 8080
-- [ ] Prouver le démarrage (logs Spring Boot + `/api/health` via `az container exec`)
-- [ ] Documenter le run ACI réussi ici une fois obtenu
+- [x] Prouver que la chaîne ACR → ACI privé fonctionne (fait via l'image
+      `fixed-base-1.0.0`, voir ci-dessus)
+- [ ] Décider comment corriger `devsecops-testbed` pour de vrai (recompiler en
+      ciblant Java 8 pour garder l'image de base volontairement vulnérable, ou
+      changer l'image de base — décision à prendre, voir options discutées en
+      session)
+- [ ] Une fois `devsecops-testbed` corrigé dans son propre dépôt, rejouer le
+      déploiement ACI sur l'image officielle (pas le tag `fixed-base-1.0.0` de
+      test) et documenter ici
