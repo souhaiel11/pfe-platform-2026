@@ -1,0 +1,166 @@
+{
+  "name": "WF5 - Dockerfile Optimizer",
+  "id": "b7SEqPJK3weGXziV",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "dockerfile-fetch",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "f4e54048-9d96-4e19-8131-9343b410d697",
+      "name": "Webhook - Dockerfile Fetch",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [10672, 6960],
+      "webhookId": "8fbfb254-482b-4d0d-825a-3649ef85f903"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body || $input.first().json;\nconst owner = String(body.owner || '').trim();\nconst repo  = String(body.repo  || '').trim();\nconst filePath = String(body.filePath || 'Dockerfile').trim();\nconst ref = String(body.ref || 'main').trim();\nif (!owner || !repo) return [{ json: { error:'INVALID_INPUT', message:'owner et repo sont requis' } }];\nreturn [{ json: { owner, repo, filePath, ref } }];\n"
+      },
+      "id": "cbc768b2-53ed-4786-89c7-ba46312d0740",
+      "name": "Prepare - Fetch Body",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [10896, 6960]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "e8e00337-511c-41d8-91c8-2ec83c3b22ec",
+              "leftValue": "={{ $json.error }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notExists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "b7b1091d-2e7a-4dd3-a047-75526a3008ca",
+      "name": "Fetch Valid ?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [11120, 6960]
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "operation": "get",
+        "owner": {
+          "__rl": true,
+          "mode": "name",
+          "value": "={{ $('Prepare - Fetch Body').first().json.owner }}"
+        },
+        "repository": {
+          "__rl": true,
+          "mode": "name",
+          "value": "={{ $('Prepare - Fetch Body').first().json.repo }}"
+        },
+        "filePath": "={{ $('Prepare - Fetch Body').first().json.filePath }}",
+        "asBinaryProperty": false,
+        "additionalParameters": {}
+      },
+      "id": "7eceec60-fc61-408a-b89d-9dce55930878",
+      "name": "Fetch Dockerfile from Git",
+      "type": "n8n-nodes-base.github",
+      "typeVersion": 1,
+      "position": [11328, 6896],
+      "webhookId": "6597b63e-e889-4b32-a983-fffc043f8655",
+      "credentials": {
+        "githubApi": {
+          "id": "fBueZWwflXWM3RoX",
+          "name": "GitHub account"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const gh = $input.first().json;\nlet decoded = '';\nif (typeof gh.content === 'string' && gh.encoding === 'base64') {\n  try { decoded = Buffer.from(gh.content.replace(/\\n/g,''), 'base64').toString('utf-8'); } catch(e) {}\n} else if (typeof gh.content === 'string') {\n  decoded = gh.content;                          // déjà décodé par le node n8n\n} else if (typeof gh.data === 'string') {\n  decoded = gh.data;\n}\nif (!decoded || decoded.length < 10) {\n  return [{ json: { success:false, error:'EMPTY_FILE', message:'Dockerfile vide ou introuvable — collez-le manuellement' } }];\n}\nreturn [{ json: { success:true, content:decoded, filePath:$('Prepare - Fetch Body').first().json.filePath, sha:gh.sha||'', source:'github' } }];\n"
+      },
+      "id": "553d8e26-78ac-423c-acd5-5f62243e47c7",
+      "name": "Format Fetch Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [11552, 6896]
+    },
+    {
+      "parameters": {
+        "jsCode": "const j = $input.first().json;\nlet message = j.message || 'Fichier introuvable sur le dépôt';\nif (j.error === undefined && j.status === undefined) message = 'Dockerfile introuvable — vérifiez owner/repo/branche/chemin ou collez-le manuellement';\nreturn [{ json: { success:false, error:j.error||'FETCH_ERROR', message } }];\n"
+      },
+      "id": "4ab811c1-af54-4dd4-864b-1f18b2af0070",
+      "name": "Format Fetch Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [11456, 7072]
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {}
+      },
+      "id": "b29dd079-f64d-49fb-8f3b-48655245c99a",
+      "name": "Respond - Fetch",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [12208, 6976]
+    }
+  ],
+  "connections": {
+    "Webhook - Dockerfile Fetch": {
+      "main": [
+        [{ "node": "Prepare - Fetch Body", "type": "main", "index": 0 }]
+      ]
+    },
+    "Prepare - Fetch Body": {
+      "main": [
+        [{ "node": "Fetch Valid ?", "type": "main", "index": 0 }]
+      ]
+    },
+    "Fetch Valid ?": {
+      "main": [
+        [{ "node": "Fetch Dockerfile from Git", "type": "main", "index": 0 }],
+        [{ "node": "Format Fetch Error", "type": "main", "index": 0 }]
+      ]
+    },
+    "Fetch Dockerfile from Git": {
+      "main": [
+        [{ "node": "Format Fetch Result", "type": "main", "index": 0 }],
+        [{ "node": "Format Fetch Error", "type": "main", "index": 0 }]
+      ]
+    },
+    "Format Fetch Result": {
+      "main": [
+        [{ "node": "Respond - Fetch", "type": "main", "index": 0 }]
+      ]
+    },
+    "Format Fetch Error": {
+      "main": [
+        [{ "node": "Respond - Fetch", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {}
+}
