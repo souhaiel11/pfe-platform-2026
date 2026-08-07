@@ -319,7 +319,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "=http://172.31.172.61:3001/api/dockerfile/analyze/{{ $json.jobId }}/callback",
+        "url": "=http://172.31.172.61:3001/api/dockerfile/optimize/{{ $json.jobId }}/callback",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -351,7 +351,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "=http://172.31.172.61:3001/api/dockerfile/analyze/{{ $('Webhook - Dockerfile Optimize').first().json.body.jobId }}/callback",
+        "url": "=http://172.31.172.61:3001/api/dockerfile/optimize/{{ $('Webhook - Dockerfile Optimize').first().json.body.jobId }}/callback",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [

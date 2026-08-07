@@ -12,7 +12,7 @@
 //  (dockerfile-fetch) avant de déclencher l'analyse : une fois pour le
 //  Dockerfile (obligatoire), une fois pour pom.xml (optionnel — un échec
 //  ici n'est PAS une erreur, juste l'absence de détection CAT-JDK, voir
-//  analyze() ci-dessous). Choix (a) plutôt que (b) : réutilise 100% de la
+//  optimize() ci-dessous). Choix (a) plutôt que (b) : réutilise 100% de la
 //  branche fetch déjà prouvée, la branche optimize reste pure (texte in,
 //  findings out), symétrique à jenkinsfile-optimize côté WF4.
 // ─────────────────────────────────────────────────────────────
@@ -76,7 +76,7 @@ export class DockerfileOptimizerController {
   // Appelle la branche n8n dockerfile-fetch déjà prouvée — jamais throw :
   // un échec (fichier absent) est un résultat normal ({success:false,...}),
   // c'est à l'appelant de décider si c'est bloquant (Dockerfile) ou pas
-  // (pom.xml, voir analyze()).
+  // (pom.xml, voir optimize()).
   private async callFetch(owner: string, repo: string, filePath: string, ref?: string): Promise<any> {
     try {
       const res = await fetch(FETCH_WEBHOOK, {
@@ -96,9 +96,12 @@ export class DockerfileOptimizerController {
   // Lance l'analyse en tâche de fond et renvoie un id immédiatement — même
   // principe que jenkins-optimizer/optimize() (voir ses commentaires pour
   // le détail du traitement des erreurs réseau vs timeout ambigu).
+  // Nommée optimize() (pas analyze()) pour matcher le webhook n8n
+  // "dockerfile-optimize" et la convention du jumeau jenkins-optimizer
+  // (/jenkins/optimize ↔ jenkinsfile-optimize) — voir commit de réalignement.
   @UseGuards(JwtAuthGuard)
-  @Post('analyze')
-  async analyze(@Body() body: {
+  @Post('optimize')
+  async optimize(@Body() body: {
     owner: string;
     repo: string;
     projectId: string;
@@ -177,8 +180,8 @@ export class DockerfileOptimizerController {
   }
 
   @UseGuards(JwtAuthGuard)
-  @Get('analyze/:id/status')
-  async getAnalyzeStatus(@Param('id') id: string) {
+  @Get('optimize/:id/status')
+  async getOptimizeStatus(@Param('id') id: string) {
     const job = jobs.get(id);
     if (job) {
       return { status: job.status, result: job.result, reason: job.reason, detail: job.detail };
@@ -193,8 +196,8 @@ export class DockerfileOptimizerController {
   // Appelé PAR n8n (WF5) à la fin du workflow — succès ou échec explicite.
   // Pas de JwtAuthGuard (appelé depuis n8n, pas depuis le navigateur), mais
   // protégé par le même secret partagé que les callbacks jenkins-optimizer.
-  @Post('analyze/:id/callback')
-  async receiveAnalyzeCallback(
+  @Post('optimize/:id/callback')
+  async receiveOptimizeCallback(
     @Param('id') id: string,
     @Body() body: { status: 'done' | 'error'; result?: any; reason?: string; detail?: string },
     @Headers('x-callback-secret') secret?: string,
