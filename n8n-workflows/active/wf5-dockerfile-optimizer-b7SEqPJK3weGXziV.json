@@ -13,7 +13,10 @@
       "name": "Webhook - Dockerfile Fetch",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [10672, 6960],
+      "position": [
+        10672,
+        6960
+      ],
       "webhookId": "8fbfb254-482b-4d0d-825a-3649ef85f903"
     },
     {
@@ -24,7 +27,10 @@
       "name": "Prepare - Fetch Body",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [10896, 6960]
+      "position": [
+        10896,
+        6960
+      ]
     },
     {
       "parameters": {
@@ -54,7 +60,10 @@
       "name": "Fetch Valid ?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
-      "position": [11120, 6960]
+      "position": [
+        11120,
+        6960
+      ]
     },
     {
       "parameters": {
@@ -78,7 +87,10 @@
       "name": "Fetch Dockerfile from Git",
       "type": "n8n-nodes-base.github",
       "typeVersion": 1,
-      "position": [11328, 6896],
+      "position": [
+        11328,
+        6896
+      ],
       "webhookId": "6597b63e-e889-4b32-a983-fffc043f8655",
       "credentials": {
         "githubApi": {
@@ -96,7 +108,10 @@
       "name": "Format Fetch Result",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [11552, 6896]
+      "position": [
+        11552,
+        6896
+      ]
     },
     {
       "parameters": {
@@ -106,7 +121,10 @@
       "name": "Format Fetch Error",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [11456, 7072]
+      "position": [
+        11456,
+        7072
+      ]
     },
     {
       "parameters": {
@@ -117,40 +135,445 @@
       "name": "Respond - Fetch",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
-      "position": [12208, 6976]
+      "position": [
+        12208,
+        6976
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "dockerfile-optimize",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "a1b2c3d4-1111-4a11-8111-100000000001",
+      "name": "Webhook - Dockerfile Optimize",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        10624,
+        7616
+      ],
+      "webhookId": "a1b2c3d4-1111-4a11-8111-200000000001"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body || $input.first().json;\nconst dockerfile = String(body.dockerfile || '').trim();\nconst pomXml = String(body.pomXml || '').trim();\nconst projectName = body.projectName || 'projet';\nconst context = body.context || {};\nif (!dockerfile || dockerfile.length < 20) return [{ json: { error: 'INVALID_INPUT', message: 'Dockerfile vide ou trop court (min 20 caractères)' } }];\nif (dockerfile.length > 30000) return [{ json: { error: 'TOO_LARGE', message: 'Dockerfile trop volumineux (max 30 Ko)' } }];\n\nconst numberLines = (text) => text.split('\\n').map((l, i) => `${i + 1}: ${l}`).join('\\n');\nconst dockerfileNumbered = numberLines(dockerfile);\nconst hasPom = pomXml.length > 0;\n\nconst pomBlock = hasPom\n  ? `\\nPOM.XML DU PROJET (pour la cohérence JDK Dockerfile / build) :\\n\\`\\`\\`xml\\n${pomXml}\\n\\`\\`\\``\n  : '';\n\nconst jdkRule = hasPom\n  ? `3. COHERENCE JDK (catégorie CAT-JDK) : compare la version JDK/JRE de l'image de base du Dockerfile (FROM ...) avec la version cible Java du pom.xml (maven.compiler.target, maven.compiler.release, ou <java.version>). Signale un finding CAT-JDK si elles diffèrent. La \"ligne\" doit être le numéro de la ligne FROM dans le Dockerfile numéroté ci-dessous.`\n  : `3. COHERENCE JDK (catégorie CAT-JDK) : AUCUN pom.xml n'a été fourni (projet non-Java ou fichier absent) — ne produis JAMAIS de finding CAT-JDK.`;\n\nconst systemPrompt = `Tu es un expert Docker et sécurité des conteneurs (15 ans d'expérience), spécialisé DevSecOps.\nTa mission : analyser un Dockerfile et détecter des problèmes dans 3 catégories, SANS réécrire le fichier (la remédiation est un traitement séparé, futur).\nRéponds UNIQUEMENT en JSON valide — pas de markdown, pas de backticks. Commence par { et termine par }.\nLANGUE : tous les textes en FRANÇAIS professionnel.\nCATEGORIES À DETECTER (chaque finding appartient à UNE SEULE catégorie) :\n1. CAT-IMAGE : image de base obsolète ou vulnérable (ex: eclipse-temurin:8, versions EOL de JDK/OS), tag non pinné (:latest ou absence de tag), image inutilement lourde alors qu'une variante slim/alpine/jre existe.\n2. CAT-SECURITY : absence d'instruction USER non-root (le conteneur tourne en root par défaut), absence de HEALTHCHECK, secrets/tokens/mots de passe en dur dans le Dockerfile, apt-get install sans --no-install-recommends.\n${jdkRule}\nRÈGLES DE PRÉCISION :\n- \"ligne\" doit être le numéro de ligne EXACT dans le Dockerfile numéroté fourni ci-dessous (jamais une estimation). Pour une absence (USER, HEALTHCHECK), donne la ligne après laquelle l'ajouter (ex : la dernière ligne du fichier).\n- Ne remonte QUE des findings réels, visibles dans le contenu fourni — jamais d'hypothèse non vérifiable.\n- Une seule catégorie par finding, pas de doublon entre catégories pour le même problème.\nFORMAT EXACT :\n{\"score\":<0-100 du Dockerfile>,\"summary\":\"<3-4 phrases>\",\"issues\":[{\"id\":\"DF-1\",\"category\":\"CAT-IMAGE|CAT-SECURITY|CAT-JDK\",\"severity\":\"CRITIQUE|ELEVE|MOYEN|FAIBLE\",\"ligne\":<numéro de ligne entier>,\"description\":\"<1-2 phrases décrivant le problème>\",\"suggestion\":\"<action concrète à faire>\"}],\"confidence\":<0.0-1.0>}`;\n\nconst userContent = `Analyse ce Dockerfile du projet \"${projectName}\".\n${context.notes ? `Notes : ${context.notes}\\n` : ''}\nDOCKERFILE (numéroté) :\n\\`\\`\\`dockerfile\n${dockerfileNumbered}\n\\`\\`\\`${pomBlock}`;\n\nreturn [{ json: { apiBody: { model: 'claude-sonnet-4-6', max_tokens: 4000, temperature: 0, system: systemPrompt, messages: [{ role: 'user', content: userContent }] }, projectName } }];\n"
+      },
+      "id": "a1b2c3d4-1111-4a11-8111-100000000002",
+      "name": "Prepare - Optimizer Body",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        10848,
+        7616
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "b2c3d4e5-2222-4b22-8222-300000000001",
+              "leftValue": "={{ $json.error }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notExists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-1111-4a11-8111-100000000003",
+      "name": "Input Valid ?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        11072,
+        7616
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.apiBody) }}",
+        "options": {
+          "timeout": 180000
+        }
+      },
+      "id": "a1b2c3d4-1111-4a11-8111-100000000004",
+      "name": "Dockerfile Optimizer Agent",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        11280,
+        7536
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "Ee9vVedmz84oXg5W",
+          "name": "Claude API"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst fail = (msg, raw) => [{ json: { success:false, error:'PARSE_ERROR', message:msg, raw:String(raw||'').substring(0,800) } }];\nif (response.error) return [{ json: { success:false, error:response.error, message:response.message } }];\nconst content = response.content?.[0]?.text || '';\nif (!content) return fail(\"Réponse vide de l'agent\", JSON.stringify(response).substring(0,300));\nlet clean = content.replace(/```json\\s*/gi,'').replace(/```\\s*/gi,'').trim();\nconst s = clean.indexOf('{'), e = clean.lastIndexOf('}');\nif (s === -1 || e === -1) return fail('Aucun JSON trouvé', clean);\ntry {\n  const p = JSON.parse(clean.substring(s, e+1));\n  p.issues = Array.isArray(p.issues) ? p.issues : [];\n  const VALID_CAT = new Set(['CAT-IMAGE','CAT-SECURITY','CAT-JDK']);\n  p.issues = p.issues.filter(i => VALID_CAT.has(i.category));\n  const o = { CRITIQUE:0, ELEVE:1, MOYEN:2, FAIBLE:3 };\n  p.issues.sort((a,b)=>(o[a.severity]??9)-(o[b.severity]??9));\n  return [{ json: { success:true, analyzedAt:new Date().toISOString(), ...p } }];\n} catch (err) { return fail('JSON invalide : '+err.message, clean); }\n"
+      },
+      "id": "a1b2c3d4-1111-4a11-8111-100000000005",
+      "name": "Parse - Optimizer Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        11536,
+        7440
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const j = $input.first().json;\nreturn [{ json: j.error ? { success:false, error:j.error, message:j.message } : j }];\n"
+      },
+      "id": "a1b2c3d4-1111-4a11-8111-100000000006",
+      "name": "Format Input Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        11536,
+        7936
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {}
+      },
+      "id": "a1b2c3d4-1111-4a11-8111-100000000007",
+      "name": "Respond - Analysis",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        12384,
+        7664
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: {\n  jobId: $('Webhook - Dockerfile Optimize').first().json.body.jobId,\n  status: 'error',\n  reason: \"Agent IA a \\u00e9chou\\u00e9 (rate limit / erreur API Anthropic)\",\n  detail: ($json.error && $json.error.message) ? $json.error.message : (String($json.error) || 'Erreur inconnue'),\n}}];"
+      },
+      "id": "a1b2c3d4-1111-4a11-8111-100000000008",
+      "name": "Format Agent Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        11488,
+        7696
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: {\n  jobId: $('Webhook - Dockerfile Optimize').first().json.body.jobId,\n  status: 'error',\n  reason: \"R\\u00e9ponse de l'agent illisible (\\u00e9chec de parsing JSON)\",\n  detail: ($json.error && $json.error.message) ? $json.error.message : (String($json.error) || 'Erreur de parsing inconnue'),\n}}];"
+      },
+      "id": "a1b2c3d4-1111-4a11-8111-100000000009",
+      "name": "Format Parse Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        11728,
+        7552
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://172.31.172.61:3001/api/dockerfile/analyze/{{ $json.jobId }}/callback",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-Callback-Secret",
+              "value": "e63c40231fd4f76a0650ea2602cc2ce67c61eb56b5d1838f86e258905f9dde33"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ status: 'error', reason: $json.reason, detail: $json.detail }) }}",
+        "options": {}
+      },
+      "id": "a1b2c3d4-1111-4a11-8111-10000000000a",
+      "name": "Send Error to Backend",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        11840,
+        7696
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://172.31.172.61:3001/api/dockerfile/analyze/{{ $('Webhook - Dockerfile Optimize').first().json.body.jobId }}/callback",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-Callback-Secret",
+              "value": "e63c40231fd4f76a0650ea2602cc2ce67c61eb56b5d1838f86e258905f9dde33"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ status: 'done', result: $json }) }}",
+        "options": {}
+      },
+      "id": "a1b2c3d4-1111-4a11-8111-10000000000b",
+      "name": "Send Result to Backend",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        11760,
+        7312
+      ],
+      "onError": "continueRegularOutput"
     }
   ],
   "connections": {
     "Webhook - Dockerfile Fetch": {
       "main": [
-        [{ "node": "Prepare - Fetch Body", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Prepare - Fetch Body",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Prepare - Fetch Body": {
       "main": [
-        [{ "node": "Fetch Valid ?", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Fetch Valid ?",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Fetch Valid ?": {
       "main": [
-        [{ "node": "Fetch Dockerfile from Git", "type": "main", "index": 0 }],
-        [{ "node": "Format Fetch Error", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Fetch Dockerfile from Git",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Fetch Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Fetch Dockerfile from Git": {
       "main": [
-        [{ "node": "Format Fetch Result", "type": "main", "index": 0 }],
-        [{ "node": "Format Fetch Error", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Format Fetch Result",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Fetch Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Format Fetch Result": {
       "main": [
-        [{ "node": "Respond - Fetch", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Respond - Fetch",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Format Fetch Error": {
       "main": [
-        [{ "node": "Respond - Fetch", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Respond - Fetch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Dockerfile Optimize": {
+      "main": [
+        [
+          {
+            "node": "Prepare - Optimizer Body",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare - Optimizer Body": {
+      "main": [
+        [
+          {
+            "node": "Input Valid ?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Input Valid ?": {
+      "main": [
+        [
+          {
+            "node": "Dockerfile Optimizer Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Input Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Dockerfile Optimizer Agent": {
+      "main": [
+        [
+          {
+            "node": "Parse - Optimizer Output",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Agent Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse - Optimizer Output": {
+      "main": [
+        [
+          {
+            "node": "Respond - Analysis",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send Result to Backend",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Parse Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Input Error": {
+      "main": [
+        [
+          {
+            "node": "Respond - Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Agent Error": {
+      "main": [
+        [
+          {
+            "node": "Send Error to Backend",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Parse Error": {
+      "main": [
+        [
+          {
+            "node": "Send Error to Backend",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     }
   },
