@@ -7,13 +7,14 @@
 //  même mode async (fire-and-forget + polling + callback).
 //
 //  Couche 2 (branche analyse) : la branche n8n "dockerfile-optimize" ne
-//  fetch RIEN elle-même — elle reçoit dockerfile + pomXml déjà en texte.
-//  C'est CE module qui appelle deux fois la branche fetch existante
-//  (dockerfile-fetch) avant de déclencher l'analyse : une fois pour le
-//  Dockerfile (obligatoire), une fois pour pom.xml (optionnel — un échec
-//  ici n'est PAS une erreur, juste l'absence de détection CAT-JDK, voir
-//  optimize() ci-dessous). Choix (a) plutôt que (b) : réutilise 100% de la
-//  branche fetch déjà prouvée, la branche optimize reste pure (texte in,
+//  fetch RIEN elle-même — elle reçoit dockerfile + pomXml + appConfig déjà
+//  en texte. C'est CE module qui appelle jusqu'à 3 fois la branche fetch
+//  existante (dockerfile-fetch) avant de déclencher l'analyse : Dockerfile
+//  (obligatoire), pom.xml (optionnel, RC-1/RC-3), application.properties/.yml
+//  (optionnel, RC-2) — un échec sur ces deux derniers n'est JAMAIS une
+//  erreur, les checks concernés s'abstiennent simplement (voir Runtime
+//  Coherence Checker côté n8n). Choix (a) plutôt que (b) : réutilise 100% de
+//  la branche fetch déjà prouvée, la branche optimize reste pure (texte in,
 //  findings out), symétrique à jenkinsfile-optimize côté WF4.
 // ─────────────────────────────────────────────────────────────
 import { Module, Controller, Post, Get, Param, Body, Headers, UseGuards, HttpException, HttpStatus } from '@nestjs/common';
@@ -27,6 +28,15 @@ const N8N_URL = process.env.N8N_URL || 'http://172.31.172.61:5678';
 const N8N_CALLBACK_SECRET = process.env.N8N_CALLBACK_SECRET;
 const FETCH_WEBHOOK = `${N8N_URL}/webhook/dockerfile-fetch`;
 const OPTIMIZE_WEBHOOK = `${N8N_URL}/webhook/dockerfile-optimize`;
+
+// Chemins candidats pour le fichier de config Spring Boot (RC-2, port) —
+// essayés dans l'ordre, le premier trouvé gagne. Aucun trouvé n'est pas une
+// erreur : RC-2 s'abstient simplement (voir Runtime Coherence Checker).
+const APP_CONFIG_CANDIDATES = [
+  'src/main/resources/application.properties',
+  'src/main/resources/application.yml',
+  'src/main/resources/application.yaml',
+];
 
 type JobStatus = 'pending' | 'done' | 'error';
 interface JobEntry {
@@ -73,10 +83,21 @@ export class DockerfileOptimizerController {
     return result;
   }
 
+  // Essaie chaque chemin candidat jusqu'au premier succès — utilisé pour
+  // application.properties/.yml (RC-2) dont le chemin/format varie selon le
+  // projet. Aucun trouvé → chaîne vide, jamais une erreur (voir optimize()).
+  private async fetchFirstAvailable(owner: string, repo: string, candidates: string[], ref?: string): Promise<string> {
+    for (const filePath of candidates) {
+      const res = await this.callFetch(owner, repo, filePath, ref);
+      if (res?.success) return res.content;
+    }
+    return '';
+  }
+
   // Appelle la branche n8n dockerfile-fetch déjà prouvée — jamais throw :
   // un échec (fichier absent) est un résultat normal ({success:false,...}),
   // c'est à l'appelant de décider si c'est bloquant (Dockerfile) ou pas
-  // (pom.xml, voir optimize()).
+  // (pom.xml, application config, voir optimize()).
   private async callFetch(owner: string, repo: string, filePath: string, ref?: string): Promise<any> {
     try {
       const res = await fetch(FETCH_WEBHOOK, {
@@ -108,6 +129,7 @@ export class DockerfileOptimizerController {
     projectName?: string;
     dockerfilePath?: string;
     pomPath?: string;
+    appConfigPath?: string;
     ref?: string;
     notes?: string;
   }) {
@@ -121,11 +143,19 @@ export class DockerfileOptimizerController {
     }
 
     // pom.xml optionnel — absent (projet non-Java, ou chemin différent) ne
-    // lève JAMAIS d'erreur ici : la branche n8n saute simplement CAT-JDK
-    // si pomXml est vide (voir "Prepare - Optimizer Body" côté n8n).
+    // lève JAMAIS d'erreur ici : RC-1/RC-3 s'abstiennent simplement si vide
+    // (voir "Prepare - Optimizer Body" côté n8n).
     let pomXml = '';
     const pomRes = await this.callFetch(body.owner, body.repo, body.pomPath || 'pom.xml', body.ref);
     if (pomRes?.success) pomXml = pomRes.content;
+
+    // application.properties/.yml optionnel (RC-2, port) — même logique :
+    // absent n'est jamais une erreur, RC-2 s'abstient. appConfigPath permet
+    // de forcer un chemin précis (tests, projets non standards) ; sinon on
+    // essaie les emplacements Spring Boot usuels dans l'ordre.
+    const appConfig = body.appConfigPath
+      ? (await this.callFetch(body.owner, body.repo, body.appConfigPath, body.ref))?.content || ''
+      : await this.fetchFirstAvailable(body.owner, body.repo, APP_CONFIG_CANDIDATES, body.ref);
 
     const id = randomUUID();
     jobs.set(id, { status: 'pending', createdAt: Date.now() });
@@ -137,6 +167,7 @@ export class DockerfileOptimizerController {
         status: DockerfileAnalysisStatus.PENDING,
         sourceDockerfile: dockerfileRes.content,
         sourcePomXml: pomXml || null,
+        sourceAppConfig: appConfig || null,
       }),
     );
 
@@ -144,10 +175,11 @@ export class DockerfileOptimizerController {
       jobId: id,
       dockerfile: dockerfileRes.content,
       pomXml,
+      appConfig,
       projectName: body.projectName || 'projet',
       context: { notes: body.notes || '' },
     };
-    console.log(`[dockerfile-optimizer] payload envoyé à n8n pour ${id} : dockerfile=${dockerfileRes.content.length} chars, pomXml=${pomXml.length} chars`);
+    console.log(`[dockerfile-optimizer] payload envoyé à n8n pour ${id} : dockerfile=${dockerfileRes.content.length} chars, pomXml=${pomXml.length} chars, appConfig=${appConfig.length} chars`);
 
     fetch(OPTIMIZE_WEBHOOK, {
       method: 'POST',
@@ -176,7 +208,7 @@ export class DockerfileOptimizerController {
       }
     });
 
-    return { id, pomFound: !!pomXml };
+    return { id, pomFound: !!pomXml, appConfigFound: !!appConfig };
   }
 
   @UseGuards(JwtAuthGuard)

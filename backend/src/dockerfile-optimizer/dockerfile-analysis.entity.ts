@@ -35,10 +35,17 @@ export class DockerfileAnalysis {
   @Column({ type: 'text', nullable: true })
   sourceDockerfile: string;
 
-  // pom.xml envoyé pour la détection CAT-JDK — nullable : absent quand le
-  // dépôt n'est pas un projet Maven (pas une erreur, juste CAT-JDK sauté).
+  // pom.xml envoyé pour RC-1 (JDK) et RC-3 (artefact) — nullable : absent
+  // quand le dépôt n'est pas un projet Maven (pas une erreur, ces checks
+  // s'abstiennent simplement).
   @Column({ type: 'text', nullable: true })
   sourcePomXml: string;
+
+  // application.properties/.yml envoyé pour RC-2 (port) — nullable : absent
+  // si le projet n'utilise pas Spring Boot ou un chemin non standard (pas
+  // une erreur, RC-2 s'abstient simplement).
+  @Column({ type: 'text', nullable: true })
+  sourceAppConfig: string;
 
   @Column({ type: 'enum', enum: DockerfileAnalysisStatus, default: DockerfileAnalysisStatus.PENDING })
   status: DockerfileAnalysisStatus;
