@@ -12,6 +12,7 @@ import { WebhooksModule } from './webhooks/webhooks.module';
 import { ChatModule } from './chat/chat.module';
 import { IntegrationsModule } from './integrations/integrations.module';
 import { JenkinsOptimizerModule } from './jenkins-optimizer/jenkins-optimizer.module';
+import { DockerfileOptimizerModule } from './dockerfile-optimizer/dockerfile-optimizer.module';
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { JenkinsOptimizerModule } from './jenkins-optimizer/jenkins-optimizer.mo
     ChatModule,
     IntegrationsModule,
     JenkinsOptimizerModule,
+    DockerfileOptimizerModule,
   ],
 })
 export class AppModule {}
