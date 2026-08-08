@@ -13,6 +13,7 @@ import { ChatModule } from './chat/chat.module';
 import { IntegrationsModule } from './integrations/integrations.module';
 import { JenkinsOptimizerModule } from './jenkins-optimizer/jenkins-optimizer.module';
 import { DockerfileOptimizerModule } from './dockerfile-optimizer/dockerfile-optimizer.module';
+import { AzureDeployModule } from './azure-deploy/azure-deploy.module';
 
 @Module({
   imports: [
@@ -42,6 +43,7 @@ import { DockerfileOptimizerModule } from './dockerfile-optimizer/dockerfile-opt
     IntegrationsModule,
     JenkinsOptimizerModule,
     DockerfileOptimizerModule,
+    AzureDeployModule,
   ],
 })
 export class AppModule {}

@@ -1,6 +1,12 @@
 # État du déploiement Azure — devsecops-testbed
 
-## Ce qui est prouvé aujourd'hui (2026-08-06)
+## Ce qui est prouvé aujourd'hui (2026-08-08)
+
+- **Le backend déclenche réellement un déploiement Azure** (push/pull ACR +
+  ACI) via l'agent hôte, sans détenir aucun credential Azure. Détail dans
+  "Déploiement piloté par le backend" ci-dessous.
+
+## Ce qui était prouvé le 2026-08-06
 
 - Infra durable (Terraform, `infra/terraform/`) : resource group `rg-pfe-devsecops`
   + ACR `acrpfedevsecops` (Basic) créés en `francecentral`, vérifiés `Succeeded`
@@ -37,6 +43,94 @@ port 8080, cpu 1 / mémoire 1 Go) :
 
 Conteneur de preuve arrêté puis supprimé après vérification (pas de coût résiduel).
 
+## Déploiement piloté par le backend — session Azure de l'hôte, pas de service principal
+
+### Pourquoi pas un service principal
+
+Un SP scopé au strict minimum (`AcrPush` sur l'ACR + `Azure Container
+Instances Contributor Role` sur `rg-pfe-devsecops` uniquement) était l'option
+retenue initialement — moindre privilège, credential dédié, révocable
+indépendamment du compte personnel. **Impossible à créer** : le tenant Azure
+AD `esprit.tn` bloque la création d'App Registration pour ce compte
+(`allowedToCreateApps: false`, politique d'autorisation du tenant, vérifié via
+Microsoft Graph), malgré un rôle Owner sur la subscription (RBAC Azure ≠
+permissions Entra ID — deux systèmes séparés). Pas d'admin Entra ID
+sollicitable pour ce projet. Aucune subscription alternative disponible avec
+les mêmes ACR/RG déjà en place.
+
+### Architecture retenue : le backend délègue, il ne détient jamais de token
+
+```
+Frontend (bouton Déployer, futur)
+        │ JWT
+        ▼
+Backend (conteneur Docker, pfe-backend)      ── AUCUN credential Azure ici
+        │ HTTP + secret partagé (X-Agent-Secret)
+        │ → 172.19.0.1:7799 (gateway du bridge Docker "pfe-network")
+        ▼
+Agent hôte (infra/azure-deploy-agent/agent.py) ── seul processus à lire ~/.azure
+        │ az acr login / az acr credential show / az container create
+        ▼
+Azure (ACR acrpfedevsecops + ACI rg-pfe-devsecops)
+```
+
+Le refresh token MSAL de la session personnelle (`~/.azure/msal_token_cache.json`)
+donne un accès **Owner sur toute la subscription** — bien plus large que ce
+qu'un SP scopé aurait donné. Le laisser **ne jamais quitter l'hôte** (jamais
+monté dans un conteneur, jamais transmis au backend) est donc la seule façon
+de ne pas regagner en surface d'attaque ce qu'on a perdu en granularité :
+compromettre le conteneur backend (dépendances npm, réseau exposé) ne donne
+accès qu'au déclenchement d'un déploiement pré-défini, jamais au token lui-même.
+
+L'agent applique 3 garde-fous, dans cet ordre, à chaque appel :
+1. Secret partagé absent côté agent → l'agent refuse de démarrer (fail-closed).
+2. Secret fourni par le backend invalide → `403`, rien d'exécuté.
+3. `resourceGroup` demandé ≠ `rg-pfe-devsecops` → `400`, rejeté même si la
+   session sous-jacente aurait les droits d'agir ailleurs (prouvé : requête
+   vers `rg-musee-virtuel` refusée par l'agent, jamais transmise à `az`).
+4. Session `az` invalide (`az account show` échoue) → `409` avec un message
+   clair (`AZURE_SESSION_EXPIRED`, "faire az login"), jamais un crash ni une
+   tentative de déploiement. Vérifié systématiquement à chaque déploiement,
+   jamais mis en cache d'un appel précédent.
+
+Secret partagé (`AZURE_DEPLOY_AGENT_SECRET`) : même pattern que
+`N8N_CALLBACK_SECRET`/`N8N_INTERNAL_SECRET` — variable d'env dans
+`backend/.env` (gitignored) et `docker-compose.yml`. **Dette notée** : comme
+les secrets N8N_*, il est en clair dans `docker-compose.yml`, qui est
+lui-même versionné — cette modification spécifique n'est volontairement PAS
+committée (secret changé à chaque régénération de l'agent). Externalisation
+propre (fichier `.env` référencé par `env_file:`, jamais de valeur littérale
+dans un fichier suivi par git) documentée comme dette pour tous ces secrets,
+pas seulement celui-ci.
+
+### Limite connue
+
+Le déploiement ne fonctionne QUE si la session `az login` de l'hôte est
+active. Ce n'est pas automatisable sans intervention humaine périodique
+(`az login` expire). **En production, ce mécanisme ne serait pas utilisé** —
+un service principal scopé (comme celui initialement visé) est la bonne
+solution ; il est bloqué ici uniquement par la politique du tenant Esprit,
+propre à cet environnement d'études, pas une limite d'architecture.
+
+### Preuve (2026-08-08)
+
+Déploiement déclenché par un appel HTTP au backend (`POST
+/api/azure-deploy/deploy`), pas depuis un terminal :
+
+- `az acr login` + `az acr credential show` : OK (via la session hôte).
+- `az container create` (image `fixed-base-1.0.0` déjà prouvée, ACR
+  `acrpfedevsecops`, RG `rg-pfe-devsecops`) : OK.
+- État poll jusqu'à `Running`, `restartCount: 0`.
+- `/api/health` via `az container exec` (pas d'IP publique, cohérent avec la
+  preuve du 06/08) → `{"status":"UP"}`.
+- Garde-fou session testé positif (`~/.azure` temporairement absent →
+  réponse `409 AZURE_SESSION_EXPIRED` propre côté backend, pas de crash) et
+  négatif (session restaurée → `200`).
+- Garde-fou RG testé : requête vers `rg-musee-virtuel` → `400
+  RESOURCE_GROUP_NOT_ALLOWED`, jamais transmise à Azure.
+- Conteneur de preuve supprimé immédiatement après vérification (pas de coût
+  résiduel), comme pour la preuve du 06/08.
+
 ## Échec du déploiement ACI sur l'image originale (non corrigée)
 
 Le conteneur ACI (`aci-devsecops-testbed`, privé, pas d'IP publique) crash au
@@ -66,6 +160,14 @@ après passage par la plateforme DevSecOps.
 
 - [x] Prouver que la chaîne ACR → ACI privé fonctionne (fait via l'image
       `fixed-base-1.0.0`, voir ci-dessus)
+- [x] Prouver que le BACKEND (pas un terminal) peut déclencher ce
+      déploiement, sans détenir de credential Azure (agent hôte, voir
+      "Déploiement piloté par le backend" ci-dessus)
+- [ ] Endpoint/notification/bouton "Déployer" côté plateforme (front +
+      validation humaine avant déclenchement) — pas encore construit,
+      volontairement hors scope de cette étape
+- [ ] Rendre l'agent hôte persistant (aujourd'hui lancé manuellement en
+      arrière-plan, pas de service systemd/supervision)
 - [ ] Décider comment corriger `devsecops-testbed` pour de vrai (recompiler en
       ciblant Java 8 pour garder l'image de base volontairement vulnérable, ou
       changer l'image de base — décision à prendre, voir options discutées en

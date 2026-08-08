@@ -1,0 +1,115 @@
+// ─────────────────────────────────────────────────────────────
+//  Azure Deploy — proxy vers l'agent hôte (infra/azure-deploy-agent/agent.py)
+//  Fichier : src/azure-deploy/azure-deploy.module.ts
+//  Enregistrement : ajouter AzureDeployModule aux imports de AppModule
+//
+//  Ce module ne détient JAMAIS de credential Azure. Le service principal
+//  étant impossible (politique du tenant Esprit — Entra ID bloque la
+//  création d'App Registration pour ce compte, voir diagnostic), on
+//  utilise la session Azure personnelle (`az login`) déjà active sur
+//  l'hôte WSL. Pour ne PAS régresser sur le moindre privilège visé
+//  initialement (cette session a le rôle Owner sur TOUTE la subscription,
+//  pas juste sur rg-pfe-devsecops), le token ne quitte JAMAIS l'hôte :
+//  seul l'agent Python (infra/azure-deploy-agent/agent.py), qui tourne
+//  nativement sur l'hôte et lit ~/.azure, exécute des commandes az. Ce
+//  module ne fait que l'appeler en HTTP avec un secret partagé
+//  (AZURE_DEPLOY_AGENT_SECRET), exactement comme n8n authentifie ses
+//  callbacks avec N8N_CALLBACK_SECRET (voir jenkins-optimizer.module.ts).
+//
+//  L'agent est lié à 172.19.0.1 (gateway du bridge Docker "pfe-network"),
+//  jamais à 0.0.0.0 — seuls les conteneurs de ce réseau l'atteignent.
+// ─────────────────────────────────────────────────────────────
+import { Module, Controller, Get, Post, Body, UseGuards, HttpException, HttpStatus } from '@nestjs/common';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+
+const AGENT_URL = process.env.AZURE_DEPLOY_AGENT_URL || 'http://172.19.0.1:7799';
+// Volontairement pas de valeur par défaut : sans cette variable d'env
+// définie, tout appel à l'agent échoue fail-closed (même principe que
+// N8N_CALLBACK_SECRET côté callbacks jenkins-optimizer/dockerfile-optimizer).
+const AGENT_SECRET = process.env.AZURE_DEPLOY_AGENT_SECRET;
+
+@Controller('azure-deploy')
+export class AzureDeployController {
+
+  private assertConfigured() {
+    if (!AGENT_SECRET) {
+      throw new HttpException(
+        "AZURE_DEPLOY_AGENT_SECRET non configuré côté backend — l'agent de déploiement est inatteignable en toute sécurité.",
+        HttpStatus.SERVICE_UNAVAILABLE,
+      );
+    }
+  }
+
+  // Permet au front (futur bouton "Déployer") de vérifier AVANT d'agir que
+  // la session Azure de l'hôte est valide, sans lancer de déploiement.
+  @UseGuards(JwtAuthGuard)
+  @Get('session-status')
+  async sessionStatus() {
+    this.assertConfigured();
+    try {
+      const res = await fetch(`${AGENT_URL}/session-status`, {
+        headers: { 'X-Agent-Secret': AGENT_SECRET as string },
+        signal: AbortSignal.timeout(15000),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        // 409 = session Azure expirée (message clair déjà formé par l'agent) ;
+        // on le propage tel quel, jamais un crash générique.
+        throw new HttpException(data, res.status);
+      }
+      return data;
+    } catch (e: any) {
+      if (e instanceof HttpException) throw e;
+      throw new HttpException(
+        `Agent de déploiement Azure injoignable sur l'hôte : ${e.message}`,
+        HttpStatus.BAD_GATEWAY,
+      );
+    }
+  }
+
+  // Déclenche un déploiement ACI réel. Le backend ne fait que relayer —
+  // toute la logique (vérification session, az acr login, az container
+  // create, polling, health check) vit dans l'agent hôte.
+  @UseGuards(JwtAuthGuard)
+  @Post('deploy')
+  async deploy(@Body() body: {
+    resourceGroup: string;
+    containerName: string;
+    image: string;
+    cpu?: number;
+    memoryInGb?: number;
+    ports?: number[];
+  }) {
+    this.assertConfigured();
+    if (!body?.resourceGroup || !body?.containerName || !body?.image) {
+      throw new HttpException('resourceGroup, containerName et image sont requis', HttpStatus.BAD_REQUEST);
+    }
+    try {
+      const res = await fetch(`${AGENT_URL}/deploy`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Agent-Secret': AGENT_SECRET as string },
+        body: JSON.stringify(body),
+        // Le déploiement ACI réel (create + polling + health check côté
+        // agent) peut prendre plusieurs dizaines de secondes — signal large
+        // mais borné, jamais infini.
+        signal: AbortSignal.timeout(180000),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new HttpException(data, res.status);
+      }
+      return data;
+    } catch (e: any) {
+      if (e instanceof HttpException) throw e;
+      throw new HttpException(
+        `Agent de déploiement Azure injoignable sur l'hôte : ${e.message}`,
+        HttpStatus.BAD_GATEWAY,
+      );
+    }
+  }
+}
+
+@Module({
+  controllers: [AzureDeployController],
+})
+export class AzureDeployModule {}
