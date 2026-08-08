@@ -392,6 +392,194 @@
         11190,
         7536
       ]
+    },
+    {
+      "id": "d5e6f7a8-4444-4d44-8444-400000000001",
+      "name": "Webhook - Dockerfile Apply",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        10624,
+        8300
+      ],
+      "webhookId": "d5e6f7a8-4444-4d44-8444-500000000001",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "dockerfile-apply",
+        "responseMode": "responseNode",
+        "options": {}
+      }
+    },
+    {
+      "id": "d5e6f7a8-4444-4d44-8444-400000000002",
+      "name": "Prepare - Apply Body",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        10848,
+        8300
+      ],
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body || $input.first().json;\nconst dockerfile = String(body.dockerfile || '').trim();\nconst findings = Array.isArray(body.findings) ? body.findings : [];\nconst context = body.context || {};\n\nif (!dockerfile || dockerfile.length < 20) return [{ json: { error: 'INVALID_INPUT', message: 'Dockerfile vide ou trop court (min 20 caractères)' } }];\nif (dockerfile.length > 30000) return [{ json: { error: 'TOO_LARGE', message: 'Dockerfile trop volumineux (max 30 Ko)' } }];\nif (findings.length === 0) return [{ json: { error: 'NOTHING_TO_APPLY', message: 'Aucun finding sélectionné : rien à appliquer' } }];\n\nconst numberLines = (text) => text.split('\\n').map((l, i) => `${i + 1}: ${l}`).join('\\n');\nconst dockerfileNumbered = numberLines(dockerfile);\n\nreturn [{ json: {\n  dockerfile,\n  dockerfileNumbered,\n  findings,\n  pomXml: String(context.pomXml || ''),\n  appConfig: String(context.appConfig || ''),\n} }];\n"
+      }
+    },
+    {
+      "id": "d5e6f7a8-4444-4d44-8444-400000000003",
+      "name": "Apply Input Valid ?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        11072,
+        8300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "d5e6f7a8-if-cond-1",
+              "leftValue": "={{ $json.error }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notExists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "d5e6f7a8-4444-4d44-8444-400000000004",
+      "name": "Build Apply Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        11296,
+        8220
+      ],
+      "parameters": {
+        "jsCode": "const d = $input.first().json;\nconst dockerfileNumbered = d.dockerfileNumbered;\nconst findings = Array.isArray(d.findings) ? d.findings : [];\nconst pomXml = d.pomXml || '';\nconst appConfig = d.appConfig || '';\n\nconst fmtFinding = (f) => `- [${f.id || '?'}] (${f.category || '?'}, ligne ${f.ligne ?? '?'}) ${f.description || ''}\\n    → Correction attendue : ${f.suggestion || ''}`;\nconst fmtList = findings.length ? findings.map(fmtFinding).join('\\n') : '- (aucune)';\nconst idsList = findings.map((f) => f.id).filter(Boolean).join(', ') || '(aucune)';\n\nconst contextBlock = (pomXml || appConfig)\n  ? `\\nCONTEXTE (fourni UNIQUEMENT pour comprendre certains findings — ne fait PAS partie de ta sortie, tu ne dois JAMAIS le modifier ni le recopier) :\\n${pomXml ? `pom.xml :\\n\\`\\`\\`xml\\n${pomXml}\\n\\`\\`\\`\\n` : ''}${appConfig ? `configuration applicative :\\n\\`\\`\\`\\n${appConfig}\\n\\`\\`\\`\\n` : ''}`\n  : '';\n\nconst systemPrompt = `Tu es un expert Docker et sécurité des conteneurs (15 ans d'expérience), spécialisé DevSecOps.\nTa mission : produire une version CORRIGÉE d'un Dockerfile en appliquant EXACTEMENT et UNIQUEMENT les corrections listées ci-dessous, sans jamais en introduire d'autres.\nRéponds UNIQUEMENT en JSON valide — pas de markdown, pas de backticks. Commence par { et termine par }.\nLANGUE : les textes (description) en FRANÇAIS. Les instructions Docker restent en anglais standard.\n\nRÈGLES IMPÉRATIVES :\n1. Applique SEULEMENT les corrections listées ci-dessous, une par une, à la ligne indiquée. N'en ajoute AUCUNE autre, même si tu repères d'autres problèmes en lisant le fichier — ce n'est pas ton rôle d'en juger, seules les corrections fournies sont autorisées.\n2. TOUTE ligne du Dockerfile non concernée par une correction listée DOIT rester STRICTEMENT IDENTIQUE à l'original (même texte, même ordre, mêmes commentaires). Ne modifie JAMAIS sans qu'une correction listée le demande explicitement : la ligne COPY qui copie l'artefact applicatif, EXPOSE, ENTRYPOINT/CMD, WORKDIR.\n3. Le fichier produit doit être COMPLET et directement utilisable — aucun \"...\", aucune section omise, aucune troncature.\n4. N'invente RIEN de non vérifiable : n'écris JAMAIS de valeur fictive (placeholder de digest SHA256, hash inventé) ni de commande non confirmée par le contenu fourni (ex: un wrapper de build comme ./mvnw dont l'existence n'est prouvée nulle part). Si une correction ne peut être appliquée avec certitude SANS deviner une telle valeur ou commande, N'APPLIQUE PAS cette correction précise — indique-le dans changes[].description comme nécessitant une intervention manuelle, plutôt que d'inventer.\n5. Si une correction nécessiterait normalement de modifier un fichier AUTRE que le Dockerfile (ex: pom.xml, application.properties), n'y touche pas : ta sortie est UNIQUEMENT le Dockerfile corrigé.\n\nFORMAT EXACT :\n{\"optimizedDockerfile\":\"<FICHIER COMPLET>\",\"changes\":[{\"ref\":\"<id de la correction>\",\"description\":\"<modification appliquée en une phrase, ou 'non appliquée : nécessite une intervention manuelle' si applicable>\"}],\"confidence\":<0.0-1.0>}`;\n\nconst userContent = `Voici le Dockerfile ORIGINAL à corriger.\n\nCORRECTIONS À APPLIQUER (et rien d'autre — toute autre ligne reste identique) :\n${fmtList}\n${contextBlock}\nDOCKERFILE ORIGINAL (numéroté, pour référence — ta sortie ne doit PAS contenir les numéros de ligne) :\n\\`\\`\\`dockerfile\n${dockerfileNumbered}\n\\`\\`\\`\n\nRAPPEL FINAL avant de répondre : seules ces corrections sont autorisées — ${idsList}. Relis le fichier que tu produis : chaque ligne modifiée ou ajoutée doit être justifiable par UNE de ces corrections précises, jamais par une initiative personnelle.`;\n\nreturn [{ json: { apiBody: { model: 'claude-sonnet-4-6', max_tokens: 8000, temperature: 0, system: systemPrompt, messages: [{ role: 'user', content: userContent }] } } }];\n"
+      }
+    },
+    {
+      "id": "d5e6f7a8-4444-4d44-8444-400000000005",
+      "name": "Dockerfile Apply Agent",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        11520,
+        8220
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "Ee9vVedmz84oXg5W",
+          "name": "Claude API"
+        }
+      },
+      "onError": "continueErrorOutput",
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.apiBody) }}",
+        "options": {
+          "timeout": 180000
+        }
+      }
+    },
+    {
+      "id": "d5e6f7a8-4444-4d44-8444-400000000006",
+      "name": "Parse Apply Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        11744,
+        8220
+      ],
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst fail = (msg, raw) => [{ json: { success: false, error: 'PARSE_ERROR', message: msg, raw: String(raw || '').substring(0, 500) } }];\nif (response.error) {\n  const em = response.message || (response.error && (response.error.message || (typeof response.error === 'string' ? response.error : JSON.stringify(response.error)))) || 'Erreur technique Apply Agent';\n  return [{ json: { success: false, error: 'AGENT_ERROR', message: String(em) } }];\n}\nconst content = response.content?.[0]?.text || '';\nif (!content) return fail(\"Réponse vide de l'agent de remédiation\", JSON.stringify(response).substring(0, 300));\nlet clean = content.replace(/```json\\s*/gi, '').replace(/```\\s*/gi, '').trim();\nconst s = clean.indexOf('{'), e = clean.lastIndexOf('}');\nif (s === -1 || e === -1) return fail('Aucun JSON trouvé', clean);\nlet p;\ntry { p = JSON.parse(clean.substring(s, e + 1)); }\ncatch (err) { return fail('JSON invalide : ' + err.message, clean); }\nif (!p.optimizedDockerfile || String(p.optimizedDockerfile).length < 20) return fail('Fichier corrigé absent ou trop court', clean);\n\nreturn [{ json: {\n  success: true,\n  optimizedDockerfile: String(p.optimizedDockerfile),\n  changes: Array.isArray(p.changes) ? p.changes : [],\n  confidence: p.confidence,\n} }];\n"
+      }
+    },
+    {
+      "id": "d5e6f7a8-4444-4d44-8444-400000000007",
+      "name": "Format Apply Input Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        11296,
+        8460
+      ],
+      "parameters": {
+        "jsCode": "const j = $input.first().json;\nreturn [{ json: { success: false, error: j.error, message: j.message } }];\n"
+      }
+    },
+    {
+      "id": "d5e6f7a8-4444-4d44-8444-400000000008",
+      "name": "Format Apply Agent Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        11744,
+        8460
+      ],
+      "parameters": {
+        "jsCode": "const j = $input.first().json;\nconst em = (j.error && j.error.message) ? j.error.message : (String(j.error) || 'Erreur inconnue');\nreturn [{ json: {\n  success: false,\n  error: 'AGENT_ERROR',\n  message: \"Agent de remédiation a échoué (rate limit / erreur API Anthropic)\",\n  detail: em,\n} }];\n"
+      }
+    },
+    {
+      "id": "d5e6f7a8-4444-4d44-8444-400000000009",
+      "name": "Respond - Apply Agent",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        11968,
+        8300
+      ],
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {}
+      }
+    },
+    {
+      "id": "e6f7a8b9-5555-4e55-8555-600000000001",
+      "name": "Apply Gate — Docker Déterministe",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        11968,
+        8220
+      ],
+      "parameters": {
+        "jsCode": "const parsed = $input.first().json;\n\n// Si Parse Apply Output a déjà échoué (JSON illisible, agent en erreur),\n// rien à gater — le gate ne s'applique qu'à une sortie agent reçue.\nif (!parsed.success) {\n  return [{ json: { ...parsed, gateOk: false, violations: [{ family: 'PRE', message: parsed.message || 'Agent Apply en échec, gate non exécuté' }], classification: [] } }];\n}\n\nconst original = String(($('Prepare - Apply Body').first().json || {}).dockerfile || '');\nconst findings = Array.isArray(($('Prepare - Apply Body').first().json || {}).findings) ? $('Prepare - Apply Body').first().json.findings : [];\nconst optimized = String(parsed.optimizedDockerfile || '');\nconst changes = Array.isArray(parsed.changes) ? parsed.changes : [];\n\nconst violations = [];\n\n// ─────────────────────────────────────────────────────────────────────\n// A — VALIDITÉ SYNTAXIQUE (heuristique déterministe : nécessaire, pas un\n// vrai parseur Docker complet — fail-closed sur tout doute).\n// ─────────────────────────────────────────────────────────────────────\nconst INSTR_RE = /^\\s*(FROM|RUN|CMD|LABEL|EXPOSE|ENV|ADD|COPY|ENTRYPOINT|VOLUME|USER|WORKDIR|ARG|ONBUILD|STOPSIGNAL|HEALTHCHECK|SHELL)\\b/i;\nconst optLines = optimized.split('\\n');\nlet prevContinuation = false;\nconst stageNames = new Set();\noptLines.forEach((line, i) => {\n  const trimmed = line.trim();\n  if (!trimmed || trimmed.startsWith('#')) { prevContinuation = false; return; }\n  if (prevContinuation) { prevContinuation = trimmed.endsWith('\\\\'); return; }\n  if (!INSTR_RE.test(line)) {\n    violations.push({ family: 'A', message: `Ligne ${i + 1} : instruction Docker non reconnue (\"${trimmed.substring(0, 60)}\")` });\n  }\n  const fromMatch = /^\\s*FROM\\s+\\S+\\s+AS\\s+(\\S+)/i.exec(line);\n  if (fromMatch) stageNames.add(fromMatch[1].toLowerCase());\n  prevContinuation = trimmed.endsWith('\\\\');\n});\nif (!/^\\s*FROM\\s+\\S+/im.test(optimized)) {\n  violations.push({ family: 'A', message: 'Aucune instruction FROM trouvée dans le Dockerfile corrigé' });\n}\noptLines.forEach((line, i) => {\n  const m = /COPY\\s+--from=(\\S+)/i.exec(line);\n  if (m && !/^\\d+$/.test(m[1]) && !stageNames.has(m[1].toLowerCase())) {\n    violations.push({ family: 'A', message: `Ligne ${i + 1} : COPY --from=\"${m[1]}\" référence un stage jamais déclaré (FROM ... AS ${m[1]})` });\n  }\n});\n\n// ─────────────────────────────────────────────────────────────────────\n// Helpers — ré-implémentent volontairement (un node Code n8n ne peut pas\n// importer une fonction d'un autre node) la même logique que Runtime\n// Coherence Checker / CAT-IMAGE / CAT-SECURITY. À garder synchronisé si\n// ces détecteurs évoluent.\n// ─────────────────────────────────────────────────────────────────────\nfunction finalStageOf(text) {\n  const lines = text.split('\\n');\n  const fromIdx = [];\n  lines.forEach((l, i) => { if (/^\\s*FROM\\s+\\S+/i.test(l)) fromIdx.push(i); });\n  const stageStart = fromIdx.length ? fromIdx[fromIdx.length - 1] : 0;\n  return { lines: lines.slice(stageStart) };\n}\nfunction extractFromTag(text) {\n  const { lines } = finalStageOf(text);\n  const fromLine = lines.find((l) => /^\\s*FROM\\s+\\S+/i.test(l));\n  if (!fromLine) return null;\n  const ref = fromLine.replace(/^\\s*FROM\\s+/i, '').trim().split(/\\s+/)[0];\n  const after = ref.split('/').pop();\n  let image = after, tag = null;\n  if (after.includes(':')) { const idx = after.indexOf(':'); image = after.slice(0, idx); tag = after.slice(idx + 1); }\n  const m = tag ? /^(\\d+)/.exec(tag) : null;\n  return { raw: ref, image, tag, majorVersion: m ? m[1] : null };\n}\nfunction hasUser(text) { return finalStageOf(text).lines.some((l) => /^\\s*USER\\s+\\S+/i.test(l)); }\nfunction hasHealthcheck(text) { return finalStageOf(text).lines.some((l) => /^\\s*HEALTHCHECK\\s+/i.test(l)); }\nfunction extractExposePort(text) {\n  const { lines } = finalStageOf(text);\n  for (const l of lines) { const m = /^\\s*EXPOSE\\s+(\\d+)/i.exec(l); if (m) return m[1]; }\n  return null;\n}\nfunction extractCopyJar(text) {\n  const { lines } = finalStageOf(text);\n  let found = null;\n  lines.forEach((l) => { if (/^\\s*COPY\\s+/i.test(l) && /\\.jar(\\s|$)/i.test(l)) found = l.trim(); });\n  return found;\n}\nfunction extractEntrypointOrCmd(text) {\n  const m = /^\\s*(ENTRYPOINT|CMD)\\s+.+$/im.exec(text);\n  return m ? m[0].trim() : null;\n}\n\n// ─────────────────────────────────────────────────────────────────────\n// B — CORRECTIONS PRÉSENTES (uniquement les findings ayant un détecteur\n// déterministe rejouable) + D — CLASSIFICATION DE CONFIANCE.\n// ─────────────────────────────────────────────────────────────────────\nconst classification = [];\nconst optFrom = extractFromTag(optimized);\nconst DETERMINISTIC_IDS = new Set(['DF-IMG-JDK', 'DF-IMG-PIN', 'DF-SEC-USER', 'DF-SEC-HEALTHCHECK']);\n\nfor (const f of findings) {\n  const id = f.id || f.ref || '?';\n  const change = changes.find((c) => c.ref === id);\n  const declinedByAgent = change && /non appliqu|intervention manuelle|revue manuelle/i.test(change.description || '');\n\n  if (declinedByAgent) {\n    classification.push({ id, status: 'REFUSÉ', reason: change.description });\n    continue;\n  }\n\n  if (id === 'DF-IMG-JDK') {\n    // Propriété, pas une liste d'exclusion : le stage final doit être sur\n    // une version LTS supportée (>=17), pas juste \"hors de {6,7,8}\" — une\n    // version 9-16 (non-LTS, non obsolète au sens strict) ne doit PAS passer\n    // ce contrôle non plus.\n    const v = optFrom && optFrom.majorVersion ? parseInt(optFrom.majorVersion, 10) : NaN;\n    const ok = Number.isInteger(v) && v >= 17;\n    if (ok) classification.push({ id, status: 'SÛR', reason: `FROM du stage final = ${optFrom.raw} (Java ${v}, >= 17 LTS)` });\n    else { classification.push({ id, status: 'MANQUANT', reason: `FROM du stage final = ${optFrom ? optFrom.raw : '?'} — pas une version LTS >= 17 (ou indéterminable)` }); violations.push({ family: 'B', ref: id, message: `Correction ${id} absente : le stage final n'est pas sur une version Java >= 17 LTS` }); }\n    continue;\n  }\n  if (id === 'DF-IMG-PIN') {\n    const ok = !!(optFrom && optFrom.tag && optFrom.tag !== 'latest');\n    if (ok) classification.push({ id, status: 'SÛR', reason: `FROM final pinné sur le tag \"${optFrom.tag}\"` });\n    else { classification.push({ id, status: 'MANQUANT', reason: 'FROM final toujours non pinné' }); violations.push({ family: 'B', ref: id, message: `Correction ${id} absente : image toujours non pinnée` }); }\n    continue;\n  }\n  if (id === 'DF-SEC-USER') {\n    const ok = hasUser(optimized);\n    if (ok) classification.push({ id, status: 'SÛR', reason: \"USER présent dans l'étape finale\" });\n    else { classification.push({ id, status: 'MANQUANT', reason: 'USER toujours absent' }); violations.push({ family: 'B', ref: id, message: `Correction ${id} absente : USER non-root toujours manquant` }); }\n    continue;\n  }\n  if (id === 'DF-SEC-HEALTHCHECK') {\n    const ok = hasHealthcheck(optimized);\n    if (ok) classification.push({ id, status: 'SÛR', reason: \"HEALTHCHECK présent dans l'étape finale\" });\n    else { classification.push({ id, status: 'MANQUANT', reason: 'HEALTHCHECK toujours absent' }); violations.push({ family: 'B', ref: id, message: `Correction ${id} absente : HEALTHCHECK toujours manquant` }); }\n    continue;\n  }\n\n  // Pas de détecteur déterministe rejouable (jugement LLM : JDK-vs-JRE,\n  // digest, multi-stage, RC-1/2/3, apt-get, ADD subtil...) — jamais gaté\n  // sur B, seulement classé pour revue humaine.\n  if (change) classification.push({ id, status: 'INFÉRÉ', reason: change.description || 'Appliqué par jugement LLM, non re-vérifiable par du code' });\n  else classification.push({ id, status: 'MANQUANT', reason: \"Ni appliqué ni signalé comme écarté par l'agent\" });\n}\n\n// ─────────────────────────────────────────────────────────────────────\n// C — RIEN CASSÉ (comparaison original vs corrigé sur les instructions\n// essentielles). REJET si une instruction essentielle a disparu.\n// ─────────────────────────────────────────────────────────────────────\nconst origExpose = extractExposePort(original);\nconst optExpose = extractExposePort(optimized);\nif (origExpose && !optExpose) violations.push({ family: 'C', message: `EXPOSE ${origExpose} (présent dans l'original) a disparu du Dockerfile corrigé` });\n\nconst origCopyJar = extractCopyJar(original);\nconst optCopyJar = extractCopyJar(optimized);\nif (origCopyJar && !optCopyJar) violations.push({ family: 'C', message: `Le COPY de l'artefact .jar (\"${origCopyJar}\") a disparu du Dockerfile corrigé` });\n\nconst origEntry = extractEntrypointOrCmd(original);\nconst optEntry = extractEntrypointOrCmd(optimized);\nif (origEntry && !optEntry) violations.push({ family: 'C', message: `ENTRYPOINT/CMD (\"${origEntry}\") a disparu du Dockerfile corrigé` });\nelse if (origEntry && optEntry && origEntry !== optEntry) violations.push({ family: 'C', message: `ENTRYPOINT/CMD modifié sans qu'aucune correction ne le justifie : \"${origEntry}\" → \"${optEntry}\"` });\n\nconst gateOk = violations.length === 0;\n\nreturn [{ json: {\n  ...parsed,\n  gateOk,\n  violations,\n  classification,\n} }];\n"
+      }
     }
   ],
   "connections": {
@@ -594,6 +782,119 @@
         [
           {
             "node": "Dockerfile Optimizer Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Dockerfile Apply": {
+      "main": [
+        [
+          {
+            "node": "Prepare - Apply Body",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare - Apply Body": {
+      "main": [
+        [
+          {
+            "node": "Apply Input Valid ?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Apply Input Valid ?": {
+      "main": [
+        [
+          {
+            "node": "Build Apply Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Apply Input Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Apply Prompt": {
+      "main": [
+        [
+          {
+            "node": "Dockerfile Apply Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Dockerfile Apply Agent": {
+      "main": [
+        [
+          {
+            "node": "Parse Apply Output",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Apply Agent Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Apply Output": {
+      "main": [
+        [
+          {
+            "node": "Apply Gate — Docker Déterministe",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Apply Input Error": {
+      "main": [
+        [
+          {
+            "node": "Respond - Apply Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Apply Agent Error": {
+      "main": [
+        [
+          {
+            "node": "Respond - Apply Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Apply Gate — Docker Déterministe": {
+      "main": [
+        [
+          {
+            "node": "Respond - Apply Agent",
             "type": "main",
             "index": 0
           }
