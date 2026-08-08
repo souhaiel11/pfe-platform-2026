@@ -19,8 +19,12 @@
 //  L'agent est lié à 172.19.0.1 (gateway du bridge Docker "pfe-network"),
 //  jamais à 0.0.0.0 — seuls les conteneurs de ce réseau l'atteignent.
 // ─────────────────────────────────────────────────────────────
-import { Module, Controller, Get, Post, Body, UseGuards, HttpException, HttpStatus } from '@nestjs/common';
+import { Module, Controller, Get, Post, Param, Body, UseGuards, HttpException, HttpStatus } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { Report } from '../reports/report.entity';
+import { Project } from '../projects/project.entity';
+import { AzureDeployReadinessService } from './azure-deploy-readiness.service';
 
 const AGENT_URL = process.env.AZURE_DEPLOY_AGENT_URL || 'http://172.19.0.1:7799';
 // Volontairement pas de valeur par défaut : sans cette variable d'env
@@ -30,6 +34,7 @@ const AGENT_SECRET = process.env.AZURE_DEPLOY_AGENT_SECRET;
 
 @Controller('azure-deploy')
 export class AzureDeployController {
+  constructor(private readonly readiness: AzureDeployReadinessService) {}
 
   private assertConfigured() {
     if (!AGENT_SECRET) {
@@ -90,6 +95,15 @@ export class AzureDeployController {
     }
   }
 
+  // Renvoie l'état "prêt à déployer" d'un projet (par id) sans rien
+  // déclencher — c'est ce que le front interroge pour activer/griser le
+  // bouton "Déployer" avant même que l'utilisateur clique.
+  @UseGuards(JwtAuthGuard)
+  @Get('ready/:projectId')
+  async ready(@Param('projectId') projectId: string) {
+    return this.readiness.isReadyToDeploy(projectId);
+  }
+
   // Déclenche un déploiement ACI réel. Le backend ne fait QUE relayer un
   // couple {project, imageTag} — il ne choisit JAMAIS containerName, image
   // complète, cpu/memory/ports ni resourceGroup : ces paramètres vivent
@@ -105,6 +119,22 @@ export class AzureDeployController {
     if (!body?.project || !body?.imageTag) {
       throw new HttpException('project et imageTag sont requis', HttpStatus.BAD_REQUEST);
     }
+
+    // Gardien fail-closed, appliqué ICI même si le front a déjà consulté
+    // /ready avant d'afficher le bouton — un appel direct à /deploy (front
+    // buggé, script, curl) ne doit jamais pouvoir contourner la vérification.
+    const readiness = await this.readiness.isReadyToDeployByProjectName(body.project);
+    if (!readiness.ready) {
+      throw new HttpException(
+        {
+          error: 'NOT_READY_TO_DEPLOY',
+          message: `Projet '${body.project}' non prêt à être déployé.`,
+          reasons: readiness.reasons,
+        },
+        HttpStatus.CONFLICT,
+      );
+    }
+
     try {
       const res = await fetch(`${AGENT_URL}/deploy`, {
         method: 'POST',
@@ -131,6 +161,8 @@ export class AzureDeployController {
 }
 
 @Module({
+  imports: [TypeOrmModule.forFeature([Report, Project])],
   controllers: [AzureDeployController],
+  providers: [AzureDeployReadinessService],
 })
 export class AzureDeployModule {}
