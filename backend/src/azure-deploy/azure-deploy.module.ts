@@ -40,6 +40,29 @@ export class AzureDeployController {
     }
   }
 
+  // Liste les projets déployables — reflète le registre fixe côté agent
+  // (PROJECTS dans agent.py), jamais une liste construite par le backend.
+  @UseGuards(JwtAuthGuard)
+  @Get('projects')
+  async projects() {
+    this.assertConfigured();
+    try {
+      const res = await fetch(`${AGENT_URL}/projects`, {
+        headers: { 'X-Agent-Secret': AGENT_SECRET as string },
+        signal: AbortSignal.timeout(15000),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new HttpException(data, res.status);
+      return data;
+    } catch (e: any) {
+      if (e instanceof HttpException) throw e;
+      throw new HttpException(
+        `Agent de déploiement Azure injoignable sur l'hôte : ${e.message}`,
+        HttpStatus.BAD_GATEWAY,
+      );
+    }
+  }
+
   // Permet au front (futur bouton "Déployer") de vérifier AVANT d'agir que
   // la session Azure de l'hôte est valide, sans lancer de déploiement.
   @UseGuards(JwtAuthGuard)
@@ -67,22 +90,20 @@ export class AzureDeployController {
     }
   }
 
-  // Déclenche un déploiement ACI réel. Le backend ne fait que relayer —
-  // toute la logique (vérification session, az acr login, az container
-  // create, polling, health check) vit dans l'agent hôte.
+  // Déclenche un déploiement ACI réel. Le backend ne fait QUE relayer un
+  // couple {project, imageTag} — il ne choisit JAMAIS containerName, image
+  // complète, cpu/memory/ports ni resourceGroup : ces paramètres vivent
+  // exclusivement dans le registre fixe PROJECTS de l'agent hôte. Même si ce
+  // module était compromis ou appelé avec un body forgé, il ne peut pas
+  // faire exécuter à l'agent autre chose qu'un déploiement d'un projet
+  // déclaré, avec le tag d'image demandé (validé côté agent par une regex
+  // stricte avant tout usage).
   @UseGuards(JwtAuthGuard)
   @Post('deploy')
-  async deploy(@Body() body: {
-    resourceGroup: string;
-    containerName: string;
-    image: string;
-    cpu?: number;
-    memoryInGb?: number;
-    ports?: number[];
-  }) {
+  async deploy(@Body() body: { project: string; imageTag: string }) {
     this.assertConfigured();
-    if (!body?.resourceGroup || !body?.containerName || !body?.image) {
-      throw new HttpException('resourceGroup, containerName et image sont requis', HttpStatus.BAD_REQUEST);
+    if (!body?.project || !body?.imageTag) {
+      throw new HttpException('project et imageTag sont requis', HttpStatus.BAD_REQUEST);
     }
     try {
       const res = await fetch(`${AGENT_URL}/deploy`, {

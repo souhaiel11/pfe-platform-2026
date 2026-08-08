@@ -1,0 +1,13 @@
+[Unit]
+Description=Azure Deploy Agent — seul processus autorisé à lire ~/.azure pour le déploiement de la plateforme DevSecOps
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 %h/pfe-2026/platform/infra/azure-deploy-agent/agent.py
+EnvironmentFile=%h/pfe-2026/platform/infra/azure-deploy-agent/.env
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=default.target

