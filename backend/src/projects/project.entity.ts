@@ -46,6 +46,14 @@ export class Project {
   @Column({ default: true })
   isActive: boolean;
 
+  // Idempotence de la notification "prêt à déployer" (voir
+  // reports.service.ts:syncDeployReadyNotification) — persisté plutôt que
+  // recalculé à chaque écriture, pour ne créer la notif QUE sur la
+  // transition non-prêt->prêt. Remis à false dès que le projet régresse,
+  // pour permettre une re-notification au prochain passage au vert.
+  @Column({ default: false })
+  deployReadyNotified: boolean;
+
   @Column({ type: 'simple-array', nullable: true })
   tags: string[];
 

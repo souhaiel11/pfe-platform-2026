@@ -164,5 +164,8 @@ export class AzureDeployController {
   imports: [TypeOrmModule.forFeature([Report, Project])],
   controllers: [AzureDeployController],
   providers: [AzureDeployReadinessService],
+  // Exporté pour ReportsModule — la notification "prêt à déployer" (transition
+  // false->true) réutilise le même juge que /ready et /deploy, jamais une copie.
+  exports: [AzureDeployReadinessService],
 })
 export class AzureDeployModule {}

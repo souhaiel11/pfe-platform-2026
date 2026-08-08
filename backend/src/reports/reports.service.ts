@@ -9,6 +9,9 @@ import { firstValueFrom } from 'rxjs';
 import { normalizeReport } from '../common/report-normalizer';
 import { calculateSecurityScore, getRiskLevel } from '../common/security-score';
 import { sanitizeEntityProject } from '../common/sanitize-project';
+import { AzureDeployReadinessService, DeployReadiness } from '../azure-deploy/azure-deploy-readiness.service';
+import { IncidentsService } from '../incidents/incidents.service';
+import { IncidentStatus } from '../incidents/incident.entity';
 
 @Injectable()
 export class ReportsService {
@@ -17,6 +20,8 @@ export class ReportsService {
     @InjectRepository(Project) private readonly projectRepo: Repository<Project>,
     private readonly http: HttpService,
     private readonly config: ConfigService,
+    private readonly readiness: AzureDeployReadinessService,
+    private readonly incidents: IncidentsService,
   ) {}
 
   // Toujours borné à 100 (les plus récents) — historique conservé en
@@ -55,6 +60,7 @@ export class ReportsService {
     // Décision Judge exposée séparément — n'influence jamais le score ci-dessus.
     report.judgeDecision = (dto as any).judgeDecision ?? null;
     report.judgeConfidence = (dto as any).judgeConfidence ?? null;
+
     const saved = await this.repo.save(report);
 
     // Mettre à jour le score du projet depuis ce dernier report combined —
@@ -64,6 +70,8 @@ export class ReportsService {
         securityScore: report.securityScore,
         status: (report.securityScore >= 80 ? 'healthy' : report.securityScore >= 40 ? 'warning' : 'critical') as any,
       });
+      const after = await this.readiness.isReadyToDeploy(dto.projectId);
+      await this.syncDeployReadyNotification(dto.projectId, after);
     }
 
     return saved;
@@ -90,8 +98,48 @@ export class ReportsService {
       );
     }
 
+    // Le report qui peut faire basculer isReadyToDeploy est toujours le
+    // dernier report combined du projet — inutile de vérifier ici s'il l'est
+    // encore après l'update, syncDeployReadyNotification relit l'état réel.
+    const report = await this.repo.findOne({ where: { id } });
+
     await this.repo.update(id, update);
-    return this.findOne(id);
+    const updated = await this.findOne(id);
+
+    if (report?.type === ReportType.COMBINED) {
+      const after = await this.readiness.isReadyToDeploy(report.projectId);
+      await this.syncDeployReadyNotification(report.projectId, after);
+    }
+
+    return updated;
+  }
+
+  // Notification "prêt à déployer" — greffée sur le système d'incidents
+  // existant (pas d'entité Notification dédiée, voir diagnostic). Idempotence
+  // via le flag persisté Project.deployReadyNotified (Option A), pas via un
+  // snapshot avant/après : plus robuste (survit à un redémarrage backend
+  // entre deux écritures) et permet la re-notification après régression.
+  private async syncDeployReadyNotification(projectId: string, after: DeployReadiness) {
+    const project = await this.projectRepo.findOne({ where: { id: projectId } });
+    if (!project) return;
+
+    if (after.ready && !project.deployReadyNotified) {
+      await this.incidents.create({
+        projectId,
+        title: `${project.name} prêt à déployer`,
+        description:
+          `Le projet "${project.name}" vient de passer à l'état "prêt à déployer" ` +
+          `(gouvernance, CVE critiques et quality gate au vert). Page projet : /projects/${projectId}`,
+        status: IncidentStatus.COMPLETED,
+        source: 'DEPLOY_READY',
+        metadata: { link: `/projects/${projectId}`, reportId: after.reportId },
+      } as any);
+      await this.projectRepo.update(projectId, { deployReadyNotified: true });
+    } else if (!after.ready && project.deployReadyNotified) {
+      // Régression : le projet redevient non-prêt, on réarme le flag pour
+      // qu'un futur retour au vert redéclenche une notification.
+      await this.projectRepo.update(projectId, { deployReadyNotified: false });
+    }
   }
 
   async remove(id: string) {
