@@ -1,5 +1,6 @@
 import { Component, OnInit, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { CveTableComponent } from './cve-table.component';
 import { ProjectOverviewComponent } from './project-overview.component';
@@ -11,7 +12,7 @@ import { RiskStateService } from '../../core/services/risk-state.service';
 @Component({
   selector: 'app-project-detail',
   standalone: true,
-  imports: [CommonModule, RouterModule, CveTableComponent, ProjectOverviewComponent, JenkinsfileOptimizerComponent],
+  imports: [CommonModule, FormsModule, RouterModule, CveTableComponent, ProjectOverviewComponent, JenkinsfileOptimizerComponent],
   templateUrl: './project-detail.component.html',
   styleUrls: ['./project-detail.component.scss'],
 })
@@ -42,6 +43,17 @@ export class ProjectDetailComponent implements OnInit {
   // Incident.aiAnalysis, gardé pour l'onglet Rapport IA uniquement).
   // Fail-CLOSED : decision null/absente => "EN ATTENTE", jamais "AUTORISÉ" par défaut.
   judge: { decision: string | null; confidence: number | null } = { decision: null, confidence: null };
+
+  // Déploiement Azure — le backend (isReadyToDeploy, fail-closed) est le
+  // SEUL juge. Le front n'affiche que ce qu'il renvoie ; en cas d'erreur
+  // réseau on reste fail-closed ici aussi (jamais "prêt" par défaut).
+  deployReady = false;
+  deployReasons: string[] = [];
+  deployReadyLoading = true;
+  deploying = false;
+  deployImageTag = 'latest';
+  deploySuccessInfo: { state: string; health: string } | null = null;
+  deployErrorMessage: string | null = null;
 
   allCves(ed: any): any[] {
     return [ ...(ed?.trivy?.cves || []), ...(ed?.owasp?.cves || []) ];
@@ -150,6 +162,7 @@ export class ProjectDetailComponent implements OnInit {
         this.loadReports();
         this.loadJenkinsBuilds();
         this.loadJudgeStatus();
+        this.loadDeployReadiness();
       },
       error: () => {
         this.toast.error('Erreur', 'Projet introuvable');
@@ -191,6 +204,64 @@ export class ProjectDetailComponent implements OnInit {
         };
       },
       error: () => { this.judge = { decision: null, confidence: null }; },
+    });
+  }
+
+  loadDeployReadiness() {
+    this.deployReadyLoading = true;
+    this.api.getDeployReadiness(this.id).subscribe({
+      next: (r: any) => {
+        this.deployReady = !!r?.ready;
+        this.deployReasons = r?.reasons || [];
+        this.deployReadyLoading = false;
+      },
+      error: () => {
+        // Backend injoignable ou erreur : jamais "prêt" par défaut côté front non plus.
+        this.deployReady = false;
+        this.deployReasons = ["Impossible de vérifier l'état de préparation au déploiement (backend injoignable)"];
+        this.deployReadyLoading = false;
+      },
+    });
+  }
+
+  // Le backend re-vérifie isReadyToDeploy à l'intérieur même de /deploy —
+  // ce clic ne fait que proposer l'action, jamais ne la garantit. Si l'état
+  // a changé entre le chargement de la page et le clic (409 NOT_READY_TO_DEPLOY),
+  // on réaligne l'affichage sur le verdict du backend, qui reste seul juge.
+  deployToAzure() {
+    if (!this.deployReady || this.deploying || !this.project?.name) return;
+    this.deploying = true;
+    this.deploySuccessInfo = null;
+    this.deployErrorMessage = null;
+    this.api.deployToAzure(this.project.name, this.deployImageTag || 'latest').subscribe({
+      next: (r: any) => {
+        this.deploying = false;
+        if (r?.success) {
+          this.deploySuccessInfo = { state: r.state, health: r.healthOk ? 'UP' : (r.health || 'inconnu') };
+          this.toast.success('Déploiement réussi', `Conteneur ${r.state} — santé ${r.healthOk ? 'UP' : 'KO'}`);
+        } else {
+          const msg = `Déploiement échoué côté agent (état: ${r?.state || 'inconnu'}).`;
+          this.deployErrorMessage = msg;
+          this.toast.error('Déploiement échoué', msg);
+        }
+      },
+      error: (err: any) => {
+        this.deploying = false;
+        const body = err?.error;
+        if (err.status === 409 && body?.error === 'NOT_READY_TO_DEPLOY') {
+          this.deployReady = false;
+          this.deployReasons = body.reasons || [];
+          this.toast.error('Non prêt à déployer', "L'état a changé depuis le chargement de la page — le backend a refusé.");
+        } else if (err.status === 409 && body?.error === 'AZURE_SESSION_EXPIRED') {
+          const msg = "Session Azure expirée sur l'hôte — exécuter `az login`, puis réessayer.";
+          this.deployErrorMessage = msg;
+          this.toast.error('Session Azure expirée', msg);
+        } else {
+          const msg = body?.message || 'Erreur inattendue lors du déploiement.';
+          this.deployErrorMessage = msg;
+          this.toast.error('Erreur', msg);
+        }
+      },
     });
   }
 

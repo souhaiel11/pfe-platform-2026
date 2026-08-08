@@ -430,6 +430,47 @@
           </button>
         </div>
 
+        <!-- ── Déploiement Azure — le backend (isReadyToDeploy) reste seul juge ── -->
+        <div class="deploy-azure-box mt-10">
+          <div class="deploy-azure-row">
+            <input
+              class="deploy-tag-input"
+              type="text"
+              [(ngModel)]="deployImageTag"
+              [disabled]="deploying"
+              placeholder="tag d'image (ex: latest)"
+              spellcheck="false"
+            />
+            <button
+              class="btn btn-action"
+              [class.blue]="deployReady && !deploying"
+              [class.gray]="!deployReady || deploying"
+              [disabled]="!deployReady || deploying || deployReadyLoading"
+              [title]="deployReady ? 'Déployer sur Azure' : deployReasons.join(' · ')"
+              (click)="deployToAzure()"
+            >
+              <ng-container *ngIf="deployReadyLoading">⏳ Vérification…</ng-container>
+              <ng-container *ngIf="!deployReadyLoading && deploying">⏳ Déploiement en cours (~30-60s)…</ng-container>
+              <ng-container *ngIf="!deployReadyLoading && !deploying">☁️ Déployer sur Azure</ng-container>
+            </button>
+          </div>
+
+          <div class="deploy-not-ready" *ngIf="!deployReadyLoading && !deployReady && !deploying">
+            🔒 Non déployable — le backend refuse (fail-closed) :
+            <ul>
+              <li *ngFor="let reason of deployReasons">{{reason}}</li>
+            </ul>
+          </div>
+
+          <div class="deploy-result success" *ngIf="deploySuccessInfo">
+            ✅ Déploiement réussi — état <strong>{{deploySuccessInfo.state}}</strong>, santé <strong>{{deploySuccessInfo.health}}</strong>
+          </div>
+
+          <div class="deploy-result error" *ngIf="deployErrorMessage">
+            ⚠️ {{deployErrorMessage}}
+          </div>
+        </div>
+
         <div class="empty-state" *ngIf="!ed.trivy && !ed.zap && !ed.owasp">
           <div class="empty-icon">🛡️</div>
           <div class="empty-title">Aucune donnée de sécurité</div>

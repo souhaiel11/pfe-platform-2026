@@ -80,5 +80,12 @@ export class ApiService {
   rejectFix(id: string) { return this.http.post(`${this.base}/incidents/${id}/reject`, {}); }
 
   triggerBuild(projectId: string) { return this.http.post(`${this.base}/incidents/${projectId}/trigger-build`, {}); }
+
+  // ── Azure Deploy — le backend reste seul juge du "prêt à déployer",
+  // voir azure-deploy-readiness.service.ts (fail-closed) ────────────
+  getDeployReadiness(projectId: string) { return this.http.get<any>(`${this.base}/azure-deploy/ready/${projectId}`); }
+  deployToAzure(project: string, imageTag: string) {
+    return this.http.post<any>(`${this.base}/azure-deploy/deploy`, { project, imageTag });
+  }
 }
 
