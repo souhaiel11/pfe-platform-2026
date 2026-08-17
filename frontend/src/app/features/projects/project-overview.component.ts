@@ -1,5 +1,6 @@
 import { Component, Input, Output, EventEmitter, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { diagnoseTrivy, diagnoseOwasp, diagnoseZap, diagnoseSonar, diagnoseTests, diagnoseDocker, IncidentContext } from '../incidents/phase-diagnostics';
 
 // ─────────────────────────────────────────────────────────────────────────
 //  VUE GLOBALE v2 — onglet « Rapport IA »
@@ -33,6 +34,7 @@ interface Stage {
               [class.blocking]="blockingKey() === s.key"
               [class.clickable]="!!s.tab"
               [attr.tabindex]="s.tab ? 0 : null"
+              [title]="diagnosticFor(s.key)"
               (click)="s.tab && goToTab.emit(s.tab)"
               (keydown.enter)="s.tab && goToTab.emit(s.tab)">
             <span class="gate-track" [class.gate-track-end]="last"></span>
@@ -269,6 +271,12 @@ interface Stage {
 export class ProjectOverviewComponent {
   @Input() set ed(v: any) { this._ed.set(v || {}); }
   @Input() set rp(v: any) { this._rp.set(v || {}); }
+  // Optionnel — colonnes Incident (errorReason/errorStep), pas dans ed/rp.
+  // Absent quand ce composant est utilisé côté Report seul (project-detail) :
+  // le diagnostic reste honnête (niveau "hypothèse" au lieu de "probable"),
+  // voir phase-diagnostics.ts::cascadeDiagnostic.
+  @Input() errorReason: string | null = null;
+  @Input() errorStep: string | null = null;
   @Output() goToTab = new EventEmitter<string>();
 
   private _ed = signal<any>({});
@@ -279,6 +287,24 @@ export class ProjectOverviewComponent {
     const i = this.guide()?.issues;
     return Array.isArray(i) ? i : [];
   });
+
+  // Tooltip (survol/focus) des portes du rail — Phase 3 : plus jamais un
+  // état "skip"/UNKNOWN muet. 'build'/'deploy' non couverts ici (Build a
+  // déjà son propre mécanisme, plus riche, via classify()+log console —
+  // voir jenkinsIssues()/Bloc A ; Deploy hors périmètre de phase-diagnostics.ts).
+  diagnosticFor(key: string): string {
+    const d = this._ed();
+    const ctx: IncidentContext = { errorReason: this.errorReason, errorStep: this.errorStep };
+    switch (key) {
+      case 'tests': return diagnoseTests(d, ctx).message;
+      case 'sonar': return diagnoseSonar(d, ctx).message;
+      case 'trivy': return diagnoseTrivy(d, ctx).message;
+      case 'owasp': return diagnoseOwasp(d, ctx).message;
+      case 'zap':   return diagnoseZap(d, ctx).message;
+      case 'image': return diagnoseDocker(d).message;
+      default: return '';
+    }
+  }
 
   sevKey(s: string): string {
     const u = String(s || '').toUpperCase();

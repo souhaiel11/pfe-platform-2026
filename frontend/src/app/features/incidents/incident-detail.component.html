@@ -111,7 +111,9 @@
                du projet, même données enrichedData/aiAnalysis) : chaque phase pass/warn/fail/
                skip, cliquable, route vers l'onglet projet correspondant. -->
           <div style="margin-bottom:16px;" *ngIf="enrichedData">
-            <app-project-overview [ed]="enrichedData" [rp]="aiAnalysis" (goToTab)="onGoToTab($event)">
+            <app-project-overview [ed]="enrichedData" [rp]="aiAnalysis"
+              [errorReason]="incident.errorReason" [errorStep]="incident.errorStep"
+              (goToTab)="onGoToTab($event)">
             </app-project-overview>
           </div>
 

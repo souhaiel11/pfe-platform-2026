@@ -9,6 +9,7 @@ import { classify, remediationModeForPhase } from './jenkins-known-fixes';
 import { ProjectOverviewComponent } from '../projects/project-overview.component';
 import { RemediationCardComponent, RemediationIssue, RemediationMode } from './remediation-card.component';
 import { evaluateProjectCleanliness, ProjectCleanliness } from './project-cleanliness';
+import { diagnoseTrivy, diagnoseOwasp, diagnoseZap, diagnoseSonar, diagnoseTests, diagnoseDocker, IncidentContext } from './phase-diagnostics';
 
 // ═══════════════════════════════════════════════════════════════════
 //  INCIDENT DETAIL — v2.0
@@ -273,44 +274,63 @@ export class IncidentDetailComponent implements OnInit, OnDestroy {
     return evaluateProjectCleanliness(this.enrichedData);
   }
 
-  // Phrase d'action par phase agent — le "→ lancer la correction WFx" que
-  // demande le bloc C. Une seule ligne par phase, contrairement aux CVE
-  // (voir deploymentLines) qui sont détaillées une par une.
-  private readonly AGENT_ACTION_HINT: Record<string, string> = {
-    'Jenkinsfile': 'lancer la correction via WF4 (carte "⬡ Build Jenkins" ci-dessus)',
-    'Docker': 'lancer la correction via WF5 (onglet Docker du projet)',
-    'SonarQube': 'lancer la correction via WF2 (carte SonarQube ci-dessus)',
-  };
+  // Phase 3 (couche d'interprétation) : contexte errorReason/errorStep du
+  // MÊME incident, seul endroit où ces colonnes existent (incident.entity.ts
+  // — pas dans enrichedData). Passé à diagnose*() pour que le cascade pointe
+  // la vraie cause capturée plutôt qu'une hypothèse générique.
+  private diagnosticContext(): IncidentContext {
+    return { errorReason: this.incident?.errorReason || null, errorStep: this.incident?.errorStep || null };
+  }
 
   // Une ligne par point bloquant, avec l'acteur responsable. Pour les 2
   // phases vulnérabilité, on n'affiche PAS le compteur agrégé de
   // blockingPhases : on éclate en une ligne par CVE CRITICAL réelle, en
   // réutilisant cveInstruction() (Bloc A, déjà prouvé) — c'est ça qui donne
   // "Log4Shell (log4j) → mettre à jour vers 2.15.0" plutôt que "2 CVE".
+  // Pour tout le reste, on délègue à phase-diagnostics.ts (Phase 2) plutôt
+  // qu'à un hint statique — un "UNKNOWN" ne doit plus jamais atteindre
+  // l'écran nu. Docker et SonarQube en particulier : l'ancien hint disait
+  // toujours "→ lancer WF5/WF2" même quand la vraie cause est un bug de
+  // câblage plateforme (Docker) ou un appel API cassé (Sonar gate) que WF2/
+  // WF5 ne peuvent pas corriger — c'était une fausse piste, corrigée ici.
   deploymentLines(): { actor: 'Agent' | 'Vous'; phase: string; text: string }[] {
     const c = this.cleanliness();
+    const ctx = this.diagnosticContext();
     const lines: { actor: 'Agent' | 'Vous'; phase: string; text: string }[] = [];
+    const pushDiag = (diag: { actor: string | null; message: string; phase: string }) => {
+      lines.push({ actor: diag.actor === 'agent' ? 'Agent' : 'Vous', phase: diag.phase, text: diag.message });
+    };
     for (const bp of c.blockingPhases) {
       if (bp.phase === 'Vulnérabilités conteneur (Trivy)') {
         const criticals = (this.enrichedData?.trivy?.cves || []).filter((cv: any) => String(cv?.severity).toUpperCase() === 'CRITICAL');
         if (criticals.length) {
           for (const cv of criticals) lines.push({ actor: 'Vous', phase: 'Trivy', text: this.cveInstruction(cv) });
-          continue;
+        } else {
+          pushDiag(diagnoseTrivy(this.enrichedData, ctx));
         }
+        continue;
       }
       if (bp.phase === 'Vulnérabilités dépendances (OWASP)') {
         const criticals = (this.enrichedData?.owasp?.cves || []).filter((cv: any) => String(cv?.severity).toUpperCase() === 'CRITICAL');
         if (criticals.length) {
           for (const cv of criticals) lines.push({ actor: 'Vous', phase: 'OWASP', text: this.cveInstruction(cv) });
-          continue;
+        } else {
+          pushDiag(diagnoseOwasp(this.enrichedData, ctx));
         }
+        continue;
       }
-      if (bp.type === 'agent') {
-        const hint = this.AGENT_ACTION_HINT[bp.phase] || 'lancer la correction automatique correspondante';
-        lines.push({ actor: 'Agent', phase: bp.phase, text: `${bp.raison} → ${hint}` });
-      } else {
-        lines.push({ actor: 'Vous', phase: bp.phase, text: bp.raison });
+      if (bp.phase === 'DAST (ZAP)') { pushDiag(diagnoseZap(this.enrichedData, ctx)); continue; }
+      if (bp.phase === 'SonarQube') { pushDiag(diagnoseSonar(this.enrichedData, ctx)); continue; }
+      if (bp.phase === 'Docker') { pushDiag(diagnoseDocker(this.enrichedData)); continue; }
+      if (bp.phase === 'Tests') { pushDiag(diagnoseTests(this.enrichedData, ctx)); continue; }
+      if (bp.phase === 'Jenkinsfile') {
+        // Déjà le mécanisme le plus riche (classify() + vrai log console,
+        // voir jenkinsIssues()/Bloc A) — pas de diagnose dédié à dupliquer ici.
+        lines.push({ actor: 'Agent', phase: bp.phase, text: `${bp.raison} → lancer la correction via WF4 (carte "⬡ Build Jenkins" ci-dessus)` });
+        continue;
       }
+      // Filet : phase future non couverte par phase-diagnostics.ts.
+      lines.push({ actor: bp.type === 'agent' ? 'Agent' : 'Vous', phase: bp.phase, text: bp.raison });
     }
     return lines;
   }
