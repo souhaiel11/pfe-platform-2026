@@ -103,6 +103,28 @@
 
     /* ── Autres ── */
     .decision-card { border-left: 3px solid var(--accent-orange); }
+
+    /* ── Bloc C : verrou de déploiement ── */
+    .deploy-card.card { border-left: 3px solid var(--accent-red); }
+    .deploy-card.card.is-clean { border-left-color: var(--accent-green); }
+    .deploy-headline {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 13px; margin-bottom: 8px;
+    }
+    .deploy-locked .deploy-headline { color: var(--accent-red); }
+    .deploy-unlocked .deploy-headline { color: var(--accent-green); }
+    .deploy-icon { font-size: 14px; }
+    .deploy-list {
+      margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px;
+    }
+    .deploy-list li { font-size: 12px; color: var(--text-secondary); line-height: 1.5; }
+    .deploy-actor {
+      display: inline-block; font-size: 10px; font-weight: 700;
+      border-radius: 4px; padding: 1px 6px; margin-right: 6px;
+    }
+    .deploy-actor.agent { background: rgba(59,130,246,0.15); color: #3b82f6; }
+    .deploy-actor.vous  { background: rgba(249,115,22,0.15); color: #f97316; }
+    .deploy-note { font-size: 11px; color: var(--text-muted); margin: 8px 0 0; }
     .code-block {
       background: var(--bg-primary);
       border: 1px solid var(--border);

@@ -128,13 +128,31 @@
             (correct)="onJenkinsCorrect()">
           </app-remediation-card>
 
-          <!-- Conteneur (Trivy) — Couche 2, mode B (exemple signalement) : phase
-               TOUJOURS 'vulnerability', jamais de bouton (garde-fou fixe dans le
-               composant), même si des CVE critiques sont détectées. -->
+          <!-- Conteneur (Trivy) — Couche 2, signalement : phase TOUJOURS
+               'vulnerability', jamais de bouton (garde-fou fixe dans le
+               composant). Une carte par CVE, instruction précise
+               (mettre à jour <pkg> de X vers Y) — voir cveInstruction(). -->
           <app-remediation-card *ngIf="trivyIssues().length"
             phaseLabel="Conteneur (Trivy)"
             [mode]="trivyMode()"
             [issues]="trivyIssues()">
+          </app-remediation-card>
+
+          <!-- Dépendances (OWASP Dependency-Check) — même patron que Trivy,
+               absente jusqu'ici (aucune carte n'existait pour cette phase). -->
+          <app-remediation-card *ngIf="owaspIssues().length"
+            phaseLabel="Dépendances (OWASP)"
+            [mode]="owaspMode()"
+            [issues]="owaspIssues()">
+          </app-remediation-card>
+
+          <!-- DAST (ZAP) — même patron, absente jusqu'ici. Voir zapIssues() :
+               lecture défensive, jamais vérifiée sur une vraie alerte (ZAP
+               n'a produit aucune alerte sur les builds récents de ce projet). -->
+          <app-remediation-card *ngIf="zapIssues().length"
+            phaseLabel="DAST (ZAP)"
+            [mode]="zapMode()"
+            [issues]="zapIssues()">
           </app-remediation-card>
 
           <!-- SonarQube — Couche 2, mode C (auto-fix-bulk) : visible seulement si
@@ -151,6 +169,39 @@
             [correcting]="sonarCorrecting()"
             (correct)="onSonarCorrect()">
           </app-remediation-card>
+
+          <!-- ══ Couche 3 — Verrou de déploiement (Bloc C) ══
+               Reflète UNIQUEMENT evaluateProjectCleanliness() (project-cleanliness.ts) :
+               ce bloc ne recalcule rien, il traduit son résultat en texte. Fail-closed :
+               cleanliness() renvoie déjà "verrouillé" si enrichedData est absent. -->
+          <div class="card deploy-card" [class.is-clean]="cleanliness().clean" style="margin-bottom:16px;" *ngIf="enrichedData">
+            <div class="card-header" style="margin-bottom:12px;">
+              <span class="card-title">🔒 Déploiement</span>
+            </div>
+
+            <div *ngIf="!cleanliness().clean" class="deploy-box deploy-locked">
+              <div class="deploy-headline">
+                <span class="deploy-icon">🔒</span>
+                <strong>Déploiement bloqué</strong> — {{ deploymentLines().length }} point(s) à traiter
+              </div>
+              <ul class="deploy-list">
+                <li *ngFor="let line of deploymentLines()">
+                  <span class="deploy-actor" [class.agent]="line.actor==='Agent'" [class.vous]="line.actor==='Vous'">[{{ line.actor }}]</span>
+                  <strong>{{ line.phase }}</strong> : {{ line.text }}
+                </li>
+              </ul>
+            </div>
+
+            <div *ngIf="cleanliness().clean" class="deploy-box deploy-unlocked">
+              <div class="deploy-headline">
+                <span class="deploy-icon">✓</span>
+                <strong>Projet propre — prêt pour le déploiement</strong>
+              </div>
+              <p class="deploy-note" *ngIf="nonBlockingSummary()">
+                Points non bloquants restants : {{ nonBlockingSummary() }}
+              </p>
+            </div>
+          </div>
 
           <!-- Décision Judge -->
           <div *ngIf="aiAnalysis" class="card decision-card" style="margin-bottom:16px;">

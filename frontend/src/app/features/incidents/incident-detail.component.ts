@@ -8,6 +8,7 @@ import { DeveloperGuide } from './developer-guide/developer-guide.model';
 import { classify, remediationModeForPhase } from './jenkins-known-fixes';
 import { ProjectOverviewComponent } from '../projects/project-overview.component';
 import { RemediationCardComponent, RemediationIssue, RemediationMode } from './remediation-card.component';
+import { evaluateProjectCleanliness, ProjectCleanliness } from './project-cleanliness';
 
 // ═══════════════════════════════════════════════════════════════════
 //  INCIDENT DETAIL — v2.0
@@ -143,18 +144,182 @@ export class IncidentDetailComponent implements OnInit, OnDestroy {
     else this.generateWF4Fix();
   }
 
-  // ── Carte Trivy (Couche 2, mode B — exemple signalement) ────────────────
+  // ── Instructions humaines par CVE (Trivy/OWASP) ──────────────────────────
+  // enrichedData.{trivy,owasp}.cves[] est déjà au format v2.1 (voir
+  // report-normalizer.ts::Cve, vérifié en base sur de vraies données WF1 :
+  // {id, pkg, cvss, title, source, severity, primaryUrl, fixedVersion,
+  // installedVersion}) — WF1 écrit directement ce format dans
+  // incident.metadata.enrichedData, aucun passage par normalizeReport() ici
+  // (celui-ci ne s'applique qu'aux Report), mais même contrat de données.
+  // fixedVersion/installedVersion arrivent en "" (jamais absents) quand
+  // inconnus — jamais null — donc `!cve.fixedVersion` couvre les deux cas.
+  private cveInstruction(cve: any): string {
+    const pkg = cve?.pkg || 'paquet non identifié par le scan';
+    const id = cve?.id || 'CVE non identifiée';
+    if (cve?.fixedVersion) {
+      const from = cve.installedVersion || 'version installée non fournie par le scan';
+      return `Mettre à jour ${pkg} de ${from} vers ${cve.fixedVersion} (corrige ${id}).`;
+    }
+    // Honnête : le scan ne fournit pas de version corrigée — on ne
+    // l'invente jamais, on dit explicitement qu'il faut vérifier à la main.
+    return `${id} sur ${pkg} : aucune version corrigée indiquée par le scan — vérifier manuellement l'existence d'un correctif, ou évaluer un contournement.`;
+  }
+  private cveDetail(cve: any): string {
+    const parts: string[] = [];
+    if (cve?.title) parts.push(cve.title);
+    if (cve?.cvss != null) parts.push(`CVSS ${cve.cvss}`);
+    if (cve?.primaryUrl) parts.push(cve.primaryUrl);
+    return parts.length ? parts.join(' — ') : 'Aucun détail supplémentaire fourni par le scan.';
+  }
+  private static readonly SEV_RANK: Record<string, number> = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3 };
+  private sortBySeverity(cves: any[]): any[] {
+    return [...cves].sort((a, b) => {
+      const ra = IncidentDetailComponent.SEV_RANK[String(a?.severity).toUpperCase()] ?? 9;
+      const rb = IncidentDetailComponent.SEV_RANK[String(b?.severity).toUpperCase()] ?? 9;
+      return ra !== rb ? ra - rb : (b?.cvss || 0) - (a?.cvss || 0);
+    });
+  }
+  private cveToIssue(cve: any): RemediationIssue {
+    return {
+      id: `${cve?.id || 'cve'}-${cve?.pkg || ''}`,
+      title: this.cveInstruction(cve),
+      detail: this.cveDetail(cve),
+      severity: cve?.severity,
+    };
+  }
+  // Filet honnête : si un jour la forme des données change et que les
+  // compteurs agrégés sont présents sans le détail cves[] (ne devrait plus
+  // arriver au format v2.1 actuel, vérifié en base), on ne fabrique pas de
+  // CVE — on affiche le fait brut plutôt que de masquer le problème.
+  private aggregateFallback(t: any, phaseLabel: string): RemediationIssue[] {
+    const total = (t?.critical || 0) + (t?.high || 0);
+    if (!total) return [];
+    return [{ id: `${phaseLabel}-summary`, title: `${t.cves_count || total} CVE détectée(s) par ${phaseLabel}, détail indisponible dans ce scan`, detail: null }];
+  }
+
+  // ── Carte Trivy (Couche 2, mode B — signalement) ─────────────────────────
   // Statique : la phase Trivy est TOUJOURS 'vulnerability', jamais besoin de
   // classify() dessus (voir remediationModeForPhase, jenkins-known-fixes.ts).
   trivyMode(): RemediationMode { return remediationModeForPhase('trivy'); }
   trivyIssues(): RemediationIssue[] {
     const t = this.enrichedData?.trivy;
     if (!t || t.status !== 'COMPLETED') return [];
-    const parts: string[] = [];
-    if ((t.critical || 0) > 0) parts.push(`${t.critical} critique(s)`);
-    if ((t.high || 0) > 0) parts.push(`${t.high} élevée(s)`);
-    if (!parts.length) return [];
-    return [{ id: 'trivy-summary', title: `${t.cves_count || 0} CVE détectée(s) — ${parts.join(', ')}`, detail: null }];
+    const cves = Array.isArray(t.cves) ? t.cves : [];
+    if (cves.length) return this.sortBySeverity(cves).map((c: any) => this.cveToIssue(c));
+    return this.aggregateFallback(t, 'Trivy');
+  }
+
+  // ── Carte OWASP Dependency-Check (Couche 2, signalement) ─────────────────
+  // Même contrat de données que Trivy (ScannerBlock), source différente.
+  owaspMode(): RemediationMode { return remediationModeForPhase('owasp'); }
+  owaspIssues(): RemediationIssue[] {
+    const o = this.enrichedData?.owasp;
+    if (!o || o.status !== 'COMPLETED') return [];
+    const cves = Array.isArray(o.cves) ? o.cves : [];
+    if (cves.length) return this.sortBySeverity(cves).map((c: any) => this.cveToIssue(c));
+    return this.aggregateFallback(o, 'OWASP');
+  }
+
+  // ── Carte ZAP (Couche 2, signalement) ─────────────────────────────────
+  // enrichedData.zap.alerts[] : présent dans le rawData brut (vérifié en
+  // base — ex. report 043c6f66, zap.alerts=[] mais la clé existe) mais
+  // JAMAIS observé non-vide sur aucun report de ce projet (ZAP timeout /
+  // scanner UNKNOWN sur tous les builds récents, voir dette connue) — donc
+  // AUCUNE forme réelle de ces objets n'a pu être vérifiée. Lecture
+  // défensive sur les noms de champs standards du rapport JSON ZAP
+  // (alert/risk/desc/solution/instances[].uri) ; si rien d'exploitable,
+  // on le dit honnêtement plutôt que d'inventer une alerte.
+  zapMode(): RemediationMode { return remediationModeForPhase('zap'); }
+  zapIssues(): RemediationIssue[] {
+    const alerts = this.enrichedData?.zap?.alerts;
+    if (!Array.isArray(alerts) || !alerts.length) return [];
+    return alerts.map((a: any, idx: number) => {
+      const name = a?.alert || a?.name || a?.title || null;
+      const where = a?.url || a?.instances?.[0]?.uri || a?.target_url || null;
+      const risk = a?.risk || a?.riskdesc || a?.severity || null;
+      const desc = a?.desc || a?.description || null;
+      const solution = a?.solution || null;
+      const title = name
+        ? `${name}${where ? ' — ' + where : ''}`
+        : `Alerte ZAP #${idx + 1} — nom non fourni par le scan`;
+      const detailParts: string[] = [];
+      if (desc) detailParts.push(desc);
+      if (solution) detailParts.push(`Solution suggérée : ${solution}`);
+      if (!detailParts.length) detailParts.push('Aucun détail fourni par le scan pour cette alerte.');
+      return {
+        id: a?.pluginid ? `zap-${a.pluginid}-${idx}` : `zap-${idx}`,
+        title,
+        detail: detailParts.join(' '),
+        severity: risk,
+      };
+    });
+  }
+
+  // ── Couche 3 : verrou de déploiement (Bloc C) ────────────────────────────
+  // evaluateProjectCleanliness() (project-cleanliness.ts) est la SEULE
+  // source de vérité pour clean/blocked — ce composant se contente de la
+  // traduire en texte lisible, jamais de recalculer la logique de blocage.
+  // Fail-closed explicite : enrichedData absent => verrouillé, pas "on ne
+  // sait pas donc on laisse passer".
+  cleanliness(): ProjectCleanliness {
+    if (!this.enrichedData) {
+      return {
+        clean: false,
+        blockingPhases: [{ phase: 'État du projet', raison: "Aucune donnée d'analyse disponible pour cet incident — verrouillé par défaut.", type: 'humain' }],
+        nonExecutedPhases: [],
+        nonBlockingFindings: [],
+      };
+    }
+    return evaluateProjectCleanliness(this.enrichedData);
+  }
+
+  // Phrase d'action par phase agent — le "→ lancer la correction WFx" que
+  // demande le bloc C. Une seule ligne par phase, contrairement aux CVE
+  // (voir deploymentLines) qui sont détaillées une par une.
+  private readonly AGENT_ACTION_HINT: Record<string, string> = {
+    'Jenkinsfile': 'lancer la correction via WF4 (carte "⬡ Build Jenkins" ci-dessus)',
+    'Docker': 'lancer la correction via WF5 (onglet Docker du projet)',
+    'SonarQube': 'lancer la correction via WF2 (carte SonarQube ci-dessus)',
+  };
+
+  // Une ligne par point bloquant, avec l'acteur responsable. Pour les 2
+  // phases vulnérabilité, on n'affiche PAS le compteur agrégé de
+  // blockingPhases : on éclate en une ligne par CVE CRITICAL réelle, en
+  // réutilisant cveInstruction() (Bloc A, déjà prouvé) — c'est ça qui donne
+  // "Log4Shell (log4j) → mettre à jour vers 2.15.0" plutôt que "2 CVE".
+  deploymentLines(): { actor: 'Agent' | 'Vous'; phase: string; text: string }[] {
+    const c = this.cleanliness();
+    const lines: { actor: 'Agent' | 'Vous'; phase: string; text: string }[] = [];
+    for (const bp of c.blockingPhases) {
+      if (bp.phase === 'Vulnérabilités conteneur (Trivy)') {
+        const criticals = (this.enrichedData?.trivy?.cves || []).filter((cv: any) => String(cv?.severity).toUpperCase() === 'CRITICAL');
+        if (criticals.length) {
+          for (const cv of criticals) lines.push({ actor: 'Vous', phase: 'Trivy', text: this.cveInstruction(cv) });
+          continue;
+        }
+      }
+      if (bp.phase === 'Vulnérabilités dépendances (OWASP)') {
+        const criticals = (this.enrichedData?.owasp?.cves || []).filter((cv: any) => String(cv?.severity).toUpperCase() === 'CRITICAL');
+        if (criticals.length) {
+          for (const cv of criticals) lines.push({ actor: 'Vous', phase: 'OWASP', text: this.cveInstruction(cv) });
+          continue;
+        }
+      }
+      if (bp.type === 'agent') {
+        const hint = this.AGENT_ACTION_HINT[bp.phase] || 'lancer la correction automatique correspondante';
+        lines.push({ actor: 'Agent', phase: bp.phase, text: `${bp.raison} → ${hint}` });
+      } else {
+        lines.push({ actor: 'Vous', phase: bp.phase, text: bp.raison });
+      }
+    }
+    return lines;
+  }
+
+  // Texte discret pour le cas "propre" : ce qui reste signalé sans bloquer.
+  nonBlockingSummary(): string {
+    const c = this.cleanliness();
+    const parts = [...c.nonExecutedPhases, ...c.nonBlockingFindings].map(p => p.raison);
+    return parts.join(' · ');
   }
 
   // ── Carte SonarQube (Couche 2, mode C — auto-fix-bulk) ──────────────────
