@@ -342,6 +342,60 @@ export class IncidentDetailComponent implements OnInit, OnDestroy {
     return parts.join(' · ');
   }
 
+  // ── Guide de priorisation (structure : barre → action prioritaire → "ensuite" → verrou) ──
+  // Réutilise UNIQUEMENT cleanliness().blockingPhases (déjà déterministe :
+  // Jenkinsfile/Docker/SonarQube — agent, cause racine — avant Trivy/OWASP/
+  // ZAP/Tests — humain, voir project-cleanliness.ts) — aucun nouveau tri
+  // inventé ici, juste sa traduction en ordre visuel + emphase.
+
+  // 7 phases suivies (Jenkinsfile, Docker, Sonar, Trivy, OWASP, ZAP, Tests).
+  // "Résolues" = ni bloquantes ni hors-périmètre (nonExecutedPhases, ex. ZAP
+  // en dette connue) — Y exclut volontairement ce qui est hors périmètre du
+  // verrou pour que la barre atteigne 100% EXACTEMENT quand cleanliness().clean
+  // devient vrai (cohérence barre ↔ verrou, demandée explicitement).
+  progress(): { resolved: number; total: number; percent: number } {
+    const c = this.cleanliness();
+    const total = Math.max(7 - c.nonExecutedPhases.length, 0);
+    const resolved = Math.max(total - c.blockingPhases.length, 0);
+    return { resolved, total, percent: total > 0 ? Math.round((resolved / total) * 100) : 100 };
+  }
+
+  private phaseRank(...names: string[]): number {
+    const order = this.cleanliness().blockingPhases.map(p => p.phase);
+    const idxs = names.map(n => order.indexOf(n)).filter(i => i !== -1);
+    return idxs.length ? Math.min(...idxs) : 999;
+  }
+  // Jenkinsfile/Docker/Tests partagent la même carte "⬡ Build Jenkins"
+  // (mode dynamique via classify(), voir jenkinsRemediationMode()) — son
+  // rang est le meilleur des 3 phases qu'elle peut représenter.
+  jenkinsRank(): number { return this.phaseRank('Jenkinsfile', 'Docker', 'Tests'); }
+  trivyRank():   number { return this.phaseRank('Vulnérabilités conteneur (Trivy)'); }
+  owaspRank():   number { return this.phaseRank('Vulnérabilités dépendances (OWASP)'); }
+  zapRank():     number { return this.phaseRank('DAST (ZAP)'); }
+  sonarRank():   number { return this.phaseRank('SonarQube'); }
+
+  private topRank(): number {
+    const real = [this.jenkinsRank(), this.trivyRank(), this.owaspRank(), this.zapRank(), this.sonarRank()].filter(r => r < 999);
+    return real.length ? Math.min(...real) : 999;
+  }
+  hasPriorityPhase(): boolean { return this.topRank() < 999; }
+  isPriority(rank: number): boolean { return this.hasPriorityPhase() && rank === this.topRank(); }
+  // order CSS du slot : 0 = prioritaire (toujours en tête), 1 = titre
+  // "Ensuite", 2+rang = le reste, groupé par priorité décroissante.
+  slotOrder(rank: number): number { return this.isPriority(rank) ? 0 : 2 + Math.min(rank, 900); }
+
+  hasLaterCards(): boolean {
+    if (!this.hasPriorityPhase()) return false;
+    const cards: { visible: boolean; rank: number }[] = [
+      { visible: this.incident?.source === 'jenkins', rank: this.jenkinsRank() },
+      { visible: this.trivyIssues().length > 0, rank: this.trivyRank() },
+      { visible: this.owaspIssues().length > 0, rank: this.owaspRank() },
+      { visible: this.zapIssues().length > 0, rank: this.zapRank() },
+      { visible: this.sonarIssues().length > 0, rank: this.sonarRank() },
+    ];
+    return cards.some(c => c.visible && !this.isPriority(c.rank));
+  }
+
   // ── Carte SonarQube (Couche 2, mode C — auto-fix-bulk) ──────────────────
   // Statique comme Trivy : la phase Sonar est TOUJOURS 'auto-fix-bulk'
   // (PHASE_MODE, jenkins-known-fixes.ts) — WF2 ne cible pas encore une

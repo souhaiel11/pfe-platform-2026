@@ -104,6 +104,43 @@
     /* ── Autres ── */
     .decision-card { border-left: 3px solid var(--accent-orange); }
 
+    /* ── Guide de priorisation : barre + slots priorité/ensuite ── */
+    .progress-block { margin-bottom: 18px; }
+    .progress-head {
+      display: flex; align-items: baseline; justify-content: space-between;
+      margin-bottom: 6px;
+    }
+    .progress-label { font-size: 12px; font-weight: 600; color: var(--text-secondary); }
+    .progress-pct { font-size: 12px; font-weight: 700; font-family: var(--font-mono); color: var(--accent-green); }
+    .progress-bar {
+      height: 6px; border-radius: 3px; background: var(--border); overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%; border-radius: 3px; background: var(--accent-green);
+      transition: width 0.4s ease;
+    }
+
+    .phase-flow { display: flex; flex-direction: column; gap: 16px; margin-bottom: 16px; }
+    .phase-slot { display: block; }
+    .priority-slot {
+      position: relative;
+      border: 2px solid var(--accent-red);
+      border-radius: var(--radius-md, 10px);
+      padding: 2px;
+    }
+    .priority-tag {
+      display: inline-block; font-size: 10px; font-weight: 800; letter-spacing: .05em;
+      text-transform: uppercase; color: #fff; background: var(--accent-red);
+      border-radius: 4px 4px 0 0; padding: 4px 10px; margin: -2px -2px 0;
+    }
+    .later-slot { opacity: 0.55; filter: saturate(0.7); transition: opacity 0.15s ease; }
+    .later-slot:hover { opacity: 0.9; filter: none; }
+    .ensuite-heading {
+      font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+      letter-spacing: .12em; text-transform: uppercase; color: var(--text-muted);
+      margin: 4px 0 -6px;
+    }
+
     /* ── Bloc C : verrou de déploiement ── */
     .deploy-card.card { border-left: 3px solid var(--accent-red); }
     .deploy-card.card.is-clean { border-left-color: var(--accent-green); }
