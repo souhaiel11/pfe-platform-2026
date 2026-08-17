@@ -118,6 +118,13 @@
       border-radius: var(--radius-md); padding: 16px;
     }
 
+    /* ── Gouvernance des décisions — encart statique, pas un contrôle ── */
+    .governance-card { margin-top: 14px; }
+    .governance-text {
+      font-size: 12px; line-height: 1.6; color: var(--text-secondary);
+      margin-top: 8px; text-transform: none; letter-spacing: normal;
+    }
+
     .btn-save-primary {
       margin-top: 14px; padding: 7px 16px;
       background: var(--accent-blue-bg); border: 1px solid var(--accent-blue);

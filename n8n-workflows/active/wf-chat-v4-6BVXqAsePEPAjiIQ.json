@@ -34,7 +34,16 @@
     {
       "parameters": {
         "url": "=http://172.31.172.61:3001/api/incidents?projectId={{ $json.projectId }}&size=20",
-        "options": {}
+        "options": {},
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Internal-Secret",
+              "value": "ae51a679d64d28a917d037ab2d262101f49f5befc9c93973777913d2e4039010"
+            }
+          ]
+        }
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,

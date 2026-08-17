@@ -46,7 +46,7 @@
                 <div class="field-row" *ngIf="tool.authType === 'token'">
                   <label class="field-label">{{tool.tokenLabel}}</label>
                   <input class="field-input" type="password" [(ngModel)]="tool.token"
-                         placeholder="••••••••••••••••" />
+                         [placeholder]="getSecretPlaceholder(tool.hasToken, '••••••••••••••••')" />
                 </div>
 
                 <!-- Basic auth (Nexus) -->
@@ -59,7 +59,7 @@
                   <div class="field-row">
                     <label class="field-label">Mot de passe</label>
                     <input class="field-input" type="password" [(ngModel)]="tool.password"
-                           placeholder="••••••••" />
+                           [placeholder]="getSecretPlaceholder(tool.hasPassword, '••••••••')" />
                   </div>
                 </ng-container>
 
@@ -108,18 +108,19 @@
               <input class="field-input mono accent-blue" value="llama3.2:3b" readonly />
             </div>
             <div class="field-row">
-              <label class="field-label">Seuil de confiance Judge</label>
-              <div class="range-row">
-                <input type="range" min="50" max="95" step="5" [(ngModel)]="confidenceThreshold" class="range-input" />
-                <span class="range-val">{{confidenceThreshold}}%</span>
-              </div>
-              <div class="field-hint">Seuil en dessous duquel le Judge refuse une correction automatique.</div>
-            </div>
-            <div class="field-row">
               <label class="field-label">URL Webhook n8n</label>
               <input class="field-input mono" [value]="n8nUrl" readonly />
             </div>
-            <button class="btn-save-primary" (click)="saveConfig()">Sauvegarder</button>
+          </div>
+
+          <!-- Pas de seuil de confiance à régler : la gouvernance est
+               déterministe, pas probabiliste. Voir Prepare - Judge Body
+               (WF1) — décision calculée AVANT l'appel au Judge IA. -->
+          <div class="card governance-card">
+            <div class="field-label">Gouvernance des décisions</div>
+            <p class="field-hint governance-text">
+              La décision de déploiement (BLOCK / correction proposée / notification) est déterminée par des règles déterministes sur les findings réels : une CVE critique déclenche un blocage systématique ; les findings SonarQube (blockers, vulnérabilités critiques, bugs) déclenchent une proposition de correction. Le Judge Agent (IA) analyse le contexte et rédige la remédiation, mais ne prend jamais seul la décision de gouvernance — le score de confiance qu'il produit est informatif, jamais un seuil actionnable. Cette séparation garantit des décisions reproductibles et auditables, indépendantes de la variabilité d'un modèle.
+            </p>
           </div>
         </div>
 

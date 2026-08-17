@@ -21,10 +21,16 @@ export class WebhooksController {
     return this.service.handleJenkins(id, body);
   }
 
-  @Post('jenkins/by-job/:jobName')
+  // (.*) plutôt que :jobName seul — même bug que internal/by-job (voir
+  // projects.controller.ts) : un job Jenkins multibranche envoie
+  // "<job>/<branche>", un slash brut que path-to-regexp ne matche jamais
+  // sur un paramètre mono-segment. Résolution factorisée dans
+  // ProjectsService.resolveByJobName — source unique de vérité, partagée
+  // avec internal/by-job.
+  @Post('jenkins/by-job/:jobName(.*)')
   async jenkinsByJob(@Param('jobName') jobName: string, @Body() body: any) {
-    const all = await this.projects.findAll();
-    const project = all.find((p: any) => p.jenkinsJobName === jobName);
+    const matches = await this.projects.resolveByJobName(jobName);
+    const project = matches[0];
     if (!project) return { error: `No project found for job: ${jobName}` };
     return this.service.handleJenkins(project.id, body);
   }

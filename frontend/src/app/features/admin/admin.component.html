@@ -27,20 +27,20 @@
             <tr *ngFor="let u of users">
               <td>
                 <div style="display:flex;align-items:center;gap:8px;">
-                  <div class="user-av">{{u.username?.substring(0,2).toUpperCase()}}</div>
-                  <span style="font-weight:500;color:var(--text-primary);">{{u.username}}</span>
+                  <div class="user-av">{{u.name?.substring(0,2).toUpperCase()}}</div>
+                  <span style="font-weight:500;color:var(--text-primary);">{{u.name}}</span>
                 </div>
               </td>
               <td>{{u.email}}</td>
               <td>
-                <span class="badge" [class]="u.role === 'ADMIN' ? 'high' : 'info'">{{u.role}}</span>
+                <span class="badge" [class]="u.role === 'admin' ? 'high' : 'info'">{{u.role}}</span>
               </td>
               <td style="font-family:var(--font-mono);font-size:11px;">
                 {{u.createdAt | date:'dd/MM/yyyy'}}
               </td>
               <td>
                 <button class="btn btn-danger btn-sm" (click)="deleteUser(u)"
-                        [disabled]="u.role === 'ADMIN'">
+                        [disabled]="u.role === 'admin'">
                   Supprimer
                 </button>
               </td>
@@ -58,7 +58,7 @@
           </div>
           <div class="form-group">
             <label class="form-label">Nom d'utilisateur *</label>
-            <input class="form-control" [(ngModel)]="newUser.username" placeholder="username" />
+            <input class="form-control" [(ngModel)]="newUser.name" placeholder="nom" />
           </div>
           <div class="form-group">
             <label class="form-label">Email *</label>
@@ -71,14 +71,14 @@
           <div class="form-group">
             <label class="form-label">Rôle</label>
             <select class="form-control" [(ngModel)]="newUser.role">
-              <option value="USER">USER</option>
-              <option value="ADMIN">ADMIN</option>
+              <option value="developer">Développeur</option>
+              <option value="admin">Administrateur</option>
             </select>
           </div>
           <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:20px;">
             <button class="btn btn-secondary" (click)="showModal=false">Annuler</button>
             <button class="btn btn-primary" (click)="createUser()"
-                    [disabled]="!newUser.username || !newUser.email || !newUser.password">
+                    [disabled]="!newUser.name || !newUser.email || !newUser.password">
               Créer
             </button>
           </div>

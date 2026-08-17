@@ -23,11 +23,13 @@ import { Repository } from 'typeorm';
 import { randomUUID } from 'crypto';
 import { DockerfileAnalysis, DockerfileAnalysisStatus } from './dockerfile-analysis.entity';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { Project } from '../projects/project.entity';
 
 const N8N_URL = process.env.N8N_URL || 'http://172.31.172.61:5678';
 const N8N_CALLBACK_SECRET = process.env.N8N_CALLBACK_SECRET;
 const FETCH_WEBHOOK = `${N8N_URL}/webhook/dockerfile-fetch`;
 const OPTIMIZE_WEBHOOK = `${N8N_URL}/webhook/dockerfile-optimize`;
+const APPLY_WEBHOOK = `${N8N_URL}/webhook/dockerfile-apply`;
 
 // Chemins candidats pour le fichier de config Spring Boot (RC-2, port) —
 // essayés dans l'ordre, le premier trouvé gagne. Aucun trouvé n'est pas une
@@ -65,7 +67,29 @@ export class DockerfileOptimizerController {
   constructor(
     @InjectRepository(DockerfileAnalysis)
     private readonly analyses: Repository<DockerfileAnalysis>,
+    @InjectRepository(Project)
+    private readonly projects: Repository<Project>,
   ) {}
+
+  // Même logique que JenkinsOptimizerController.resolveDefaultBranch() —
+  // voir son commentaire pour le détail (fail-safe, jamais fail-loud,
+  // même mécanisme d'auth que ProjectsService.getGithubStats()).
+  private async resolveDefaultBranch(owner: string, repo: string, token?: string): Promise<string> {
+    try {
+      const headers: Record<string, string> = { 'User-Agent': 'DevSecOps-Platform' };
+      if (token) headers['Authorization'] = `token ${token}`;
+      const res = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
+        headers,
+        signal: AbortSignal.timeout(5000),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      return data.default_branch || 'main';
+    } catch (e: any) {
+      console.warn(`[dockerfile-optimizer] default_branch fetch failed for ${owner}/${repo}, falling back to 'main' (${e?.message || e})`);
+      return 'main';
+    }
+  }
 
   // Protégé JWT : contrairement à jenkins-optimizer/fetch (appelé nulle
   // part côté front pour l'instant), cette branche est destinée à être
@@ -81,6 +105,60 @@ export class DockerfileOptimizerController {
       throw new HttpException(result?.message || 'Dockerfile introuvable', HttpStatus.NOT_FOUND);
     }
     return result;
+  }
+
+  // Remédiation (couche apply WF5) — MVP volontairement synchrone (Option B,
+  // pas de stockage intermédiaire) : la branche n8n dockerfile-apply exécute
+  // agent + gate + PR GitHub dans une seule exécution qui répond à la fin
+  // (contrairement à jenkins-optimizer, pas de polling/callback ici). Testé
+  // en pratique entre ~30 et 90s ; nginx a un proxy_read_timeout de 200s
+  // (déjà élargi pour l'agent Jenkinsfile, voir docker/nginx.conf) — signal
+  // borné à 190s pour que le backend réponde avec un message clair avant que
+  // nginx ne coupe sec.
+  // Le front envoie directement dockerfile + findings (tous, pas de
+  // sélection fine dans ce MVP) + context — aucune réhydratation depuis une
+  // analyse stockée, il n'y a pas d'entité DockerfileApply pour l'instant.
+  @UseGuards(JwtAuthGuard)
+  @Post('apply')
+  async apply(@Body() body: {
+    dockerfile: string;
+    findings: any[];
+    context?: { pomXml?: string; appConfig?: string };
+    owner: string;
+    repo: string;
+    baseBranch?: string;
+    filePath?: string;
+  }) {
+    if (!body?.dockerfile || !Array.isArray(body.findings) || body.findings.length === 0) {
+      throw new HttpException('dockerfile et findings (au moins un) sont requis', HttpStatus.BAD_REQUEST);
+    }
+    if (!body?.owner || !body?.repo) {
+      throw new HttpException('owner et repo sont requis', HttpStatus.BAD_REQUEST);
+    }
+
+    try {
+      const res = await fetch(APPLY_WEBHOOK, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          dockerfile: body.dockerfile,
+          findings: body.findings,
+          context: body.context || {},
+          owner: body.owner,
+          repo: body.repo,
+          baseBranch: body.baseBranch || 'main',
+          filePath: body.filePath || 'Dockerfile',
+        }),
+        signal: AbortSignal.timeout(190000),
+      });
+      const data = await res.json();
+      return Array.isArray(data) ? data[0] : data;
+    } catch (e: any) {
+      throw new HttpException(
+        `Agent de remédiation Docker injoignable ou en échec : ${e.message}`,
+        HttpStatus.BAD_GATEWAY,
+      );
+    }
   }
 
   // Essaie chaque chemin candidat jusqu'au premier succès — utilisé pour
@@ -132,12 +210,24 @@ export class DockerfileOptimizerController {
     appConfigPath?: string;
     ref?: string;
     notes?: string;
+    buildError?: string;
   }) {
     if (!body?.owner || !body?.repo || !body?.projectId) {
       throw new HttpException('owner, repo et projectId sont requis', HttpStatus.BAD_REQUEST);
     }
 
-    const dockerfileRes = await this.callFetch(body.owner, body.repo, body.dockerfilePath || 'Dockerfile', body.ref);
+    // Branche : si le front n'en fournit pas, on résout la branche par
+    // défaut réelle du repo via GitHub plutôt que de retomber en silence
+    // sur 'main' (voir resolveDefaultBranch — même logique que WF4). Le
+    // token vient du Project (déjà rechargé pour projectId, requis
+    // ci-dessus), pas du frontend.
+    let ref = body.ref;
+    if (!ref) {
+      const project = await this.projects.findOneBy({ id: body.projectId });
+      ref = await this.resolveDefaultBranch(body.owner, body.repo, project?.githubToken);
+    }
+
+    const dockerfileRes = await this.callFetch(body.owner, body.repo, body.dockerfilePath || 'Dockerfile', ref);
     if (!dockerfileRes?.success) {
       throw new HttpException(dockerfileRes?.message || 'Dockerfile introuvable', HttpStatus.NOT_FOUND);
     }
@@ -146,7 +236,7 @@ export class DockerfileOptimizerController {
     // lève JAMAIS d'erreur ici : RC-1/RC-3 s'abstiennent simplement si vide
     // (voir "Prepare - Optimizer Body" côté n8n).
     let pomXml = '';
-    const pomRes = await this.callFetch(body.owner, body.repo, body.pomPath || 'pom.xml', body.ref);
+    const pomRes = await this.callFetch(body.owner, body.repo, body.pomPath || 'pom.xml', ref);
     if (pomRes?.success) pomXml = pomRes.content;
 
     // application.properties/.yml optionnel (RC-2, port) — même logique :
@@ -154,8 +244,8 @@ export class DockerfileOptimizerController {
     // de forcer un chemin précis (tests, projets non standards) ; sinon on
     // essaie les emplacements Spring Boot usuels dans l'ordre.
     const appConfig = body.appConfigPath
-      ? (await this.callFetch(body.owner, body.repo, body.appConfigPath, body.ref))?.content || ''
-      : await this.fetchFirstAvailable(body.owner, body.repo, APP_CONFIG_CANDIDATES, body.ref);
+      ? (await this.callFetch(body.owner, body.repo, body.appConfigPath, ref))?.content || ''
+      : await this.fetchFirstAvailable(body.owner, body.repo, APP_CONFIG_CANDIDATES, ref);
 
     const id = randomUUID();
     jobs.set(id, { status: 'pending', createdAt: Date.now() });
@@ -178,6 +268,7 @@ export class DockerfileOptimizerController {
       appConfig,
       projectName: body.projectName || 'projet',
       context: { notes: body.notes || '' },
+      buildError: body.buildError || null,
     };
     console.log(`[dockerfile-optimizer] payload envoyé à n8n pour ${id} : dockerfile=${dockerfileRes.content.length} chars, pomXml=${pomXml.length} chars, appConfig=${appConfig.length} chars`);
 
@@ -271,7 +362,7 @@ export class DockerfileOptimizerController {
 }
 
 @Module({
-  imports: [TypeOrmModule.forFeature([DockerfileAnalysis])],
+  imports: [TypeOrmModule.forFeature([DockerfileAnalysis, Project])],
   controllers: [DockerfileOptimizerController],
 })
 export class DockerfileOptimizerModule {}

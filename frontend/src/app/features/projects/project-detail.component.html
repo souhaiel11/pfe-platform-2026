@@ -19,14 +19,16 @@
           </div>
         </div>
         <div class="header-actions">
-          <div class="score-ring" [class.critical]="lastScore < 40" [class.high]="lastScore >= 40 && lastScore < 60"
-               [class.medium]="lastScore >= 60 && lastScore < 80" [class.low]="lastScore >= 80">
-            <span class="score-num">{{lastScore}}</span>
+          <div class="score-ring" [class.indetermine]="scanIncomplete || scoreUnavailable"
+               [class.critical]="!scanIncomplete && !scoreUnavailable && lastScore < 40" [class.high]="!scanIncomplete && !scoreUnavailable && lastScore >= 40 && lastScore < 60"
+               [class.medium]="!scanIncomplete && !scoreUnavailable && lastScore >= 60 && lastScore < 80" [class.low]="!scanIncomplete && !scoreUnavailable && lastScore >= 80">
+            <span class="score-num">{{scanIncomplete ? '?' : (scoreUnavailable ? '—' : lastScore)}}</span>
             <span class="score-lbl">SCORE</span>
           </div>
-          <div class="risk-pill" [class.critical]="lastRisk==='critical'" [class.high]="lastRisk==='high'"
-               [class.medium]="lastRisk==='medium'" [class.low]="lastRisk==='low'">
-            {{lastRisk.toUpperCase() || 'N/A'}}
+          <div class="risk-pill" [class.indetermine]="scanIncomplete || scoreUnavailable"
+               [class.critical]="!scanIncomplete && !scoreUnavailable && lastRisk==='critical'" [class.high]="!scanIncomplete && !scoreUnavailable && lastRisk==='high'"
+               [class.medium]="!scanIncomplete && !scoreUnavailable && lastRisk==='medium'" [class.low]="!scanIncomplete && !scoreUnavailable && lastRisk==='low'">
+            {{scanIncomplete ? 'INDETERMINE' : (scoreUnavailable ? 'NON DISPONIBLE' : (lastRisk.toUpperCase() || 'N/A'))}}
           </div>
         </div>
       </div>
@@ -41,6 +43,9 @@
         </button>
         <button class="tab-btn" [class.active]="activeTab==='sonarqube'" (click)="setActiveTab('sonarqube')">
           🔍 SonarQube
+        </button>
+        <button class="tab-btn" [class.active]="activeTab==='docker'"    (click)="setActiveTab('docker')">
+          🐳 Docker
         </button>
         <button class="tab-btn" [class.active]="activeTab==='securite'"  (click)="selectTab('securite')">
           🔒 Sécurité
@@ -189,6 +194,26 @@
           </div>
         </div>
 
+        <!-- Fiabilité des builds — même source/formule que le dashboard
+             (getJenkinsStatus, jamais un chiffre issu de builds fabriqués). -->
+        <div class="kpi-grid mt-10">
+          <div class="kpi-card">
+            <div class="kpi-label">Taux de réussite des builds</div>
+            <ng-container *ngIf="buildReliability?.rate != null; else noReliability">
+              <div class="kpi-value" [style.color]="buildReliability!.rate! >= 80 ? 'var(--accent-green)' : (buildReliability!.rate! >= 50 ? 'var(--accent-orange)' : 'var(--accent-red)')">
+                {{buildReliability!.rate}}%
+              </div>
+              <div class="kpi-sub" [title]="buildReliability!.sampleSize + ' build(s) pris en compte'">
+                sur {{buildReliability!.sampleSize}} build{{buildReliability!.sampleSize! > 1 ? 's' : ''}}
+              </div>
+            </ng-container>
+            <ng-template #noReliability>
+              <div class="kpi-value" style="color:var(--text-secondary)">—</div>
+              <div class="kpi-sub" style="color:var(--text-secondary)">{{jenkinsMessage || 'Non disponible'}}</div>
+            </ng-template>
+          </div>
+        </div>
+
         <!-- Analyse IA Jenkins -->
         <div class="zone-card zone-cicd mt-10" *ngIf="rp.cicdIssues">
           <div class="zone-header"><span>🤖</span><span class="zone-title">ANALYSE IA — PIPELINE CI/CD</span></div>
@@ -227,11 +252,31 @@
           </div>
         </div>
 
-        <div class="empty-state" *ngIf="!ed.build && !jenkinsBuilds.length">
+        <!-- État dégradé honnête (non configuré / indisponible) — jamais un
+             tableau de builds fabriqués (getMockJenkinsStatus supprimé).
+             Neutre gris, jamais rouge : absence d'info ≠ échec. -->
+        <div class="empty-state" *ngIf="!jenkinsBuilds.length && jenkinsMessage" style="color:var(--text-secondary)">
+          <div class="empty-icon" style="color:var(--text-secondary)">⚙️</div>
+          <div class="empty-title" style="color:var(--text-secondary)">{{jenkinsMessage}}</div>
+          <div class="empty-sub">Aucun historique de build à afficher.</div>
+        </div>
+
+        <div class="empty-state" *ngIf="!ed.build && !jenkinsBuilds.length && !jenkinsMessage">
           <div class="empty-icon">⚙️</div>
           <div class="empty-title">Aucune donnée Jenkins</div>
           <div class="empty-sub">Lancez un build pour voir les données</div>
         </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════ -->
+      <!-- ONGLET DOCKER                                -->
+      <!-- ═══════════════════════════════════════════ -->
+      <div *ngIf="activeTab === 'docker'">
+        <app-dockerfile-optimizer
+          [projectId]="project?.id"
+          [projectName]="project?.name"
+          [repo]="project?.githubRepo">
+        </app-dockerfile-optimizer>
       </div>
 
       <!-- ═══════════════════════════════════════════ -->
@@ -313,34 +358,58 @@
 
         <!-- ── KPIs vue d'ensemble ── -->
         <div class="kpi-grid">
-          <div class="kpi-card" [class.kpi-alert]="(ed.trivy?.critical||0)>0">
+          <div class="kpi-card" *ngIf="!isScannerMissing(ed.trivy)" [class.kpi-alert]="(ed.trivy?.critical||0)>0">
             <div class="kpi-label">Conteneur (Trivy)</div>
             <div class="kpi-value" [style.color]="(ed.trivy?.critical||0)>0?'var(--accent-red)':'var(--accent-green)'">
               {{ed.trivy?.critical || 0}} <span style="font-size:13px;opacity:.6">critique(s)</span>
             </div>
             <div class="kpi-sub">{{ed.trivy?.high || 0}} élevée(s) · {{ed.trivy?.cves_count || 0}} total</div>
           </div>
-          <div class="kpi-card" [class.kpi-alert]="(ed.owasp?.critical||0)>0">
+          <div class="kpi-card scanner-missing" *ngIf="isScannerMissing(ed.trivy)">
+            <div class="kpi-label">Conteneur (Trivy)</div>
+            <div class="kpi-value scanner-missing-value">SCANNER NON EXÉCUTÉ</div>
+            <div class="kpi-sub">Aucune donnée sur ce build</div>
+          </div>
+
+          <div class="kpi-card" *ngIf="!isScannerMissing(ed.owasp)" [class.kpi-alert]="(ed.owasp?.critical||0)>0">
             <div class="kpi-label">Dépendances (OWASP)</div>
             <div class="kpi-value" [style.color]="(ed.owasp?.critical||0)>0?'var(--accent-red)':'var(--accent-green)'">
               {{ed.owasp?.critical || 0}} <span style="font-size:13px;opacity:.6">critique(s)</span>
             </div>
             <div class="kpi-sub">{{ed.owasp?.high || 0}} élevée(s) · {{ed.owasp?.cves_count || 0}} total</div>
           </div>
-          <div class="kpi-card" [class.kpi-alert]="(ed.zap?.alerts_high||0)>0">
+          <div class="kpi-card scanner-missing" *ngIf="isScannerMissing(ed.owasp)">
+            <div class="kpi-label">Dépendances (OWASP)</div>
+            <div class="kpi-value scanner-missing-value">SCANNER NON EXÉCUTÉ</div>
+            <div class="kpi-sub">Aucune donnée sur ce build</div>
+          </div>
+
+          <div class="kpi-card" *ngIf="!isScannerMissing(ed.zap)" [class.kpi-alert]="(ed.zap?.alerts_high||0)>0">
             <div class="kpi-label">DAST (ZAP)</div>
             <div class="kpi-value" [style.color]="(ed.zap?.alerts_high||0)>0?'var(--accent-red)':((ed.zap?.alerts_medium||0)>0?'var(--accent-orange)':'var(--accent-green)')">
               {{ed.zap?.alerts_high || 0}} <span style="font-size:13px;opacity:.6">élevée(s)</span>
             </div>
             <div class="kpi-sub">{{ed.zap?.alerts_medium || 0}} moyenne(s) · {{ed.zap?.alerts_count || 0}} total</div>
           </div>
+          <div class="kpi-card scanner-missing" *ngIf="isScannerMissing(ed.zap)">
+            <div class="kpi-label">DAST (ZAP)</div>
+            <div class="kpi-value scanner-missing-value">SCANNER NON EXÉCUTÉ</div>
+            <div class="kpi-sub">Aucune donnée sur ce build</div>
+          </div>
           <div class="kpi-card">
             <div class="kpi-label">Déploiement</div>
+            <!-- Go/no-go = UNIQUEMENT deployReady (isReadyToDeploy, même source
+                 que le bloc "Déployer sur Azure" plus bas — jamais deux vérités
+                 possibles sur cette page). judge.decision==='BLOCK' ne sert
+                 qu'à choisir le libellé BLOQUÉ vs EN ATTENTE quand !deployReady,
+                 il ne peut jamais produire "PRÊT" à lui seul. -->
             <div class="kpi-value"
-                 [style.color]="judge.decision === 'BLOCK' ? 'var(--accent-red)' : (judge.decision ? 'var(--accent-green)' : 'var(--text-secondary)')">
-              {{judge.decision === 'BLOCK' ? 'BLOQUÉ' : (judge.decision ? 'AUTORISÉ' : 'EN ATTENTE')}}
+                 [style.color]="deployReadyLoading ? 'var(--text-secondary)' : (deployReady ? 'var(--accent-green)' : (judge.decision === 'BLOCK' ? 'var(--accent-red)' : 'var(--text-secondary)'))">
+              {{deployReadyLoading ? '…' : (deployReady ? 'PRÊT À DÉPLOYER' : (judge.decision === 'BLOCK' ? 'BLOQUÉ' : 'EN ATTENTE'))}}
             </div>
-            <div class="kpi-sub">{{judge.confidence !== null ? 'Confiance ' + judge.confidence + '%' : 'Décision Judge indéterminée'}}</div>
+            <div class="kpi-sub">
+              {{deployReadyLoading ? 'Vérification…' : (deployReady ? (judge.confidence !== null ? 'Confiance ' + judge.confidence + '%' : 'Décision Judge indéterminée') : (deployReasons[0] || 'Raison indisponible'))}}
+            </div>
           </div>
         </div>
 
@@ -364,6 +433,10 @@
           </div>
           <app-cve-table [cves]="ed.trivy.cves" [guide]="devGuide(ed)"></app-cve-table>
         </div>
+        <div class="sec-section scanner-not-run" *ngIf="(securityFilter === 'all' || securityFilter === 'trivy') && isScannerMissing(ed.trivy)">
+          <div class="sec-section-title">🐳 Vulnérabilités conteneur</div>
+          <div class="scanner-not-run-note">Ce scanner n'a pas été exécuté sur ce build.</div>
+        </div>
 
         <!-- ── Section 2 : CVE dépendances (OWASP) ── -->
         <div class="sec-section" *ngIf="(securityFilter === 'all' || securityFilter === 'owasp') && ed.owasp?.cves?.length">
@@ -378,6 +451,10 @@
             </div>
           </div>
           <app-cve-table [cves]="ed.owasp.cves" [guide]="devGuide(ed)"></app-cve-table>
+        </div>
+        <div class="sec-section scanner-not-run" *ngIf="(securityFilter === 'all' || securityFilter === 'owasp') && isScannerMissing(ed.owasp)">
+          <div class="sec-section-title">📦 Vulnérabilités de dépendances</div>
+          <div class="scanner-not-run-note">Ce scanner n'a pas été exécuté sur ce build.</div>
         </div>
 
         <!-- ── Section 3 : alertes DAST (ZAP) ── -->
@@ -406,6 +483,10 @@
             </tbody>
           </table>
         </div>
+        <div class="sec-section scanner-not-run" *ngIf="(securityFilter === 'all' || securityFilter === 'zap') && isScannerMissing(ed.zap)">
+          <div class="sec-section-title">🌐 Alertes DAST</div>
+          <div class="scanner-not-run-note">Ce scanner n'a pas été exécuté sur ce build.</div>
+        </div>
 
         <!-- ── Analyse IA sécurité ── -->
         <details class="justif-details mt-10" *ngIf="rp.securityIssues">
@@ -424,9 +505,6 @@
         <div class="action-row mt-10">
           <button class="btn btn-action red" (click)="rollbackDeployment()" *ngIf="rp.decision==='BLOCK'">
             🚫 Rollback déploiement
-          </button>
-          <button class="btn btn-action green" (click)="createFixPR()" *ngIf="project.githubRepo">
-            🔧 Créer PR de correction
           </button>
         </div>
 

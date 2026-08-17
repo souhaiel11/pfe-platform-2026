@@ -26,7 +26,8 @@ const dataSource = new DataSource({
   synchronize: false,
 });
 
-function statusFor(score: number): string {
+function statusFor(score: number, incomplete = false): string {
+  if (incomplete) return 'warning';
   return score >= 80 ? 'healthy' : score >= 40 ? 'warning' : 'critical';
 }
 
@@ -43,16 +44,17 @@ async function main() {
   console.log(`${reports.length} report(s) trouvé(s).`);
   console.log('──────────────────────────────────────────────────');
 
-  const latestCombinedByProject = new Map<string, Report>();
+  const latestCombinedByProject = new Map<string, Report & { _incomplete?: boolean }>();
 
   for (const report of reports) {
     const normalized = normalizeReport(report.rawData);
-    const newScore = calculateSecurityScore(normalized);
-    const newRiskLevel = getRiskLevel(newScore);
+    const { score: newScore, incomplete, missingScanners } = calculateSecurityScore(normalized);
+    const newRiskLevel = getRiskLevel(newScore, incomplete);
 
     console.log(
       `${report.id.slice(0, 8)} | ${report.type.padEnd(9)} | ${report.createdAt.toISOString().slice(0, 10)} | ` +
-      `score ${report.securityScore} → ${newScore} | riskLevel ${report.riskLevel} → ${newRiskLevel}`
+      `score ${report.securityScore} → ${newScore} | riskLevel ${report.riskLevel} → ${newRiskLevel}` +
+      (incomplete ? ` | INCOMPLET (${missingScanners.join(',')})` : '')
     );
 
     if (apply) {
@@ -60,7 +62,7 @@ async function main() {
     }
 
     if (report.type === 'combined' && !latestCombinedByProject.has(report.projectId)) {
-      latestCombinedByProject.set(report.projectId, { ...report, securityScore: newScore } as Report);
+      latestCombinedByProject.set(report.projectId, { ...report, securityScore: newScore, _incomplete: incomplete } as any);
     }
   }
 
@@ -69,7 +71,7 @@ async function main() {
   for (const [projectId, report] of latestCombinedByProject) {
     const project = await projectRepo.findOne({ where: { id: projectId } });
     if (!project) continue;
-    const newStatus = statusFor(report.securityScore);
+    const newStatus = statusFor(report.securityScore, report._incomplete);
     console.log(
       `${project.name.padEnd(20)} | securityScore ${project.securityScore} → ${report.securityScore} | status ${project.status} → ${newStatus}`
     );

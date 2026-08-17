@@ -25,6 +25,11 @@
     .risk-pill.high     { background:var(--accent-orange-bg); color:var(--accent-orange) }
     .risk-pill.medium   { background:var(--accent-orange-bg); color:var(--accent-orange) }
     .risk-pill.low      { background:var(--accent-green-bg);  color:var(--accent-green) }
+    /* Scanner(s) manquant(s) — mêmes tokens neutres que .scanner-status.unknown
+       dans incident-detail.component.scss, jamais vert (voir security-score.ts). */
+    .score-ring.indetermine { border-color:var(--border) }
+    .score-ring.indetermine .score-num { color:var(--text-muted) }
+    .risk-pill.indetermine { background:var(--border); color:var(--text-muted) }
 
     /* Tabs */
     .tabs-row { display:flex; gap:4px; margin-bottom:16px; border-bottom:1px solid var(--border); flex-wrap:wrap }
@@ -509,4 +514,19 @@
 
 @media (prefers-reduced-motion: reduce) {
   .justif-chevron, .history-item, .tool { transition: none !important; }
+}
+
+/* ── Scanner non exécuté — Étape 2, mêmes tokens neutres que
+   .scanner-status.unknown dans incident-detail.component.scss. Jamais vert :
+   un scanner absent n'a rien vérifié, ce n'est pas un "0 trouvé". ── */
+.kpi-card.scanner-missing { border-color: var(--border); background: var(--bg-secondary); }
+.kpi-value.scanner-missing-value {
+  font-size: 13px; font-weight: 700; letter-spacing: .02em;
+  color: var(--text-muted); background: var(--border);
+  display: inline-block; padding: 3px 8px; border-radius: 4px;
+}
+.sec-section.scanner-not-run { padding: 12px 14px; }
+.scanner-not-run-note {
+  font-size: 12px; color: var(--text-muted); background: var(--border);
+  display: inline-block; padding: 4px 10px; border-radius: 4px; margin-top: 6px;
 }

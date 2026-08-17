@@ -17,7 +17,13 @@ export class ProjectsController {
   // en config projet. Pas de JwtAuthGuard (appelé depuis n8n, pas depuis le
   // navigateur) mais protégé par un secret partagé pour éviter la fuite de
   // credentials (githubToken, jenkinsUrl, etc.) à quiconque connaît un jobName.
-  @Get('internal/by-job/:jobName')
+  // (.*) plutôt que :jobName seul — un job Jenkins multibranche envoie
+  // "<job>/<branche>" (ex: "vuln-testapp/main"), un slash brut que
+  // path-to-regexp ne matche jamais sur un paramètre mono-segment (404
+  // garanti sur tout projet multibranche). La résolution (match exact puis
+  // repli forme courte) est factorisée dans ProjectsService.resolveByJobName
+  // — source unique de vérité, partagée avec webhooks/jenkins/by-job.
+  @Get('internal/by-job/:jobName(.*)')
   findByJobInternal(@Param('jobName') jobName: string, @Headers('x-internal-secret') secret?: string) {
     if (!N8N_INTERNAL_SECRET || secret !== N8N_INTERNAL_SECRET) {
       throw new HttpException('Accès interne non autorisé', HttpStatus.FORBIDDEN);

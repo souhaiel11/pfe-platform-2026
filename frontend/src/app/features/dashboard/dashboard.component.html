@@ -1,173 +1,180 @@
-    <div class="dashboard">
+<div class="dashboard">
 
-      <!-- TOP BAR -->
-      <div class="topbar">
-        <div class="topbar-left">
-          <div class="logo-mark">D</div>
+  <!-- ═══════════════════════════════════════════════════════════════
+       SIDEBAR — Navigation latérale
+       ═══════════════════════════════════════════════════════════════ -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon">◈</div>
+      <span class="brand-text">SecOps<span class="brand-accent">Hub</span></span>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a class="nav-item active" [routerLink]="['/dashboard']">
+        <span class="nav-icon">▤</span>
+        <span>Dashboard</span>
+      </a>
+      <a class="nav-item" [routerLink]="['/projects']">
+        <span class="nav-icon">◫</span>
+        <span>Projets</span>
+        <span class="nav-badge" *ngIf="projects.length">{{projects.length}}</span>
+      </a>
+      <a class="nav-item" [routerLink]="['/incidents']">
+        <span class="nav-icon">⚠</span>
+        <span>Incidents</span>
+        <span class="nav-badge alert" *ngIf="notifications.length">{{notifications.length}}</span>
+      </a>
+      <a class="nav-item" [routerLink]="['/security']">
+        <span class="nav-icon">◧</span>
+        <span>Sécurité</span>
+      </a>
+      <a class="nav-item" (click)="toggleTheme()" style="cursor:pointer">
+        <span class="nav-icon">{{themeService.theme() === 'dark' ? '☀' : '☾'}}</span>
+        <span>{{themeService.theme() === 'dark' ? 'Clair' : 'Sombre'}}</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="user-pill">
+        <div class="user-avatar">SA</div>
+        <div class="user-info">
+          <div class="user-name">Souhaiel Amri</div>
+          <div class="user-role">Security Lead</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       MAIN CONTENT
+       ═══════════════════════════════════════════════════════════════ -->
+  <main class="main">
+
+    <!-- ── Topbar ── -->
+    <header class="topbar">
+      <div class="breadcrumb">
+        <span>Plateforme</span>
+        <span class="sep">/</span>
+        <span class="current">Dashboard</span>
+      </div>
+      <div class="topbar-actions">
+        <div class="live-badge">
+          <span class="live-dot"></span>
+          LIVE
+        </div>
+        <button class="btn-icon" (click)="toggleNotif()" [class.has-notif]="notifications.length">
+          <i class="ti ti-bell"></i>
+          <span class="notif-dot" *ngIf="notifications.length"></span>
+        </button>
+      </div>
+    </header>
+
+    <!-- ── Notification Panel ── -->
+    <div class="notif-panel" [class.open]="notifOpen">
+      <div class="notif-header">
+        <span>Notifications</span>
+        <button class="close-btn" (click)="toggleNotif()"><i class="ti ti-x"></i></button>
+      </div>
+      <div class="notif-list">
+        <div class="notif-item" *ngFor="let n of notifications" [class]="n.level">
+          <div class="notif-dot"></div>
           <div>
-            <div class="logo-title">DevSecOps AI</div>
-            <div class="logo-sub">Vermeg · PFE 2026</div>
+            <div class="notif-title">{{n.title}}</div>
+            <div class="notif-meta">{{n.meta}}</div>
           </div>
         </div>
-        <div class="topbar-right">
-          <div class="live-badge">
-            <span class="live-dot"></span>
-            LIVE
+        <div class="notif-empty" *ngIf="!notifications.length">Aucune notification</div>
+      </div>
+    </div>
+
+    <!-- ── Content ── -->
+    <div class="content">
+
+      <!-- ══ Synthèse Sécurité Plateforme ══ -->
+      <section class="sec-panel" *ngIf="!securitySummaryLoading && securitySummary" (click)="goToSecurity()" role="button" tabindex="0">
+        <div class="sec-panel-head">
+          <div class="sec-panel-title">
+            <i class="ti ti-shield-check"></i>
+            Sécurité plateforme
+            <span class="sec-panel-sub">{{securitySummary.totalProjects}} projet(s) · voir détail →</span>
           </div>
-          <button class="icon-btn notif-btn" (click)="toggleNotif()">
-            <i class="ti ti-bell"></i>
-            <span class="notif-count" *ngIf="notifications.length">{{notifications.length}}</span>
-          </button>
-          <button class="icon-btn" (click)="exportPDF()">
-            <i class="ti ti-file-type-pdf"></i>
-          </button>
-          <button class="icon-btn" (click)="toggleTheme()">
-            <i class="ti ti-sun"  *ngIf="themeService.theme() === 'dark'"></i>
-            <i class="ti ti-moon" *ngIf="themeService.theme() === 'light'"></i>
-          </button>
-          <div class="user-av">SA</div>
         </div>
+        <div class="sec-kpi-grid">
+          <div class="sec-kpi">
+            <span class="sec-kpi-label">CVE critiques</span>
+            <span class="sec-kpi-value" style="color:var(--accent-red)">{{securitySummary.totalCriticalCves}}</span>
+          </div>
+          <div class="sec-kpi">
+            <span class="sec-kpi-label">CVE élevées</span>
+            <span class="sec-kpi-value" style="color:var(--accent-orange)">{{securitySummary.totalHighCves}}</span>
+          </div>
+          <div class="sec-kpi">
+            <span class="sec-kpi-label">Score moyen</span>
+            <span class="sec-kpi-value" [style.color]="getRiskColor(securitySummary.avgSecurityScore)">
+              {{securitySummary.avgSecurityScore}}
+            </span>
+          </div>
+        </div>
+      </section>
+
+      <!-- ══ Charts Row ══ -->
+      <div class="charts-row">
+        <!-- Risk Scores -->
+        <section class="panel wide">
+          <div class="panel-header">
+            <h3><i class="ti ti-shield-half"></i> Score de risque global</h3>
+          </div>
+          <div class="loading-overlay" *ngIf="projectsLoading">
+            <div class="spinner"></div><span>Chargement…</span>
+          </div>
+          <div class="empty-state" *ngIf="!projectsLoading && !projects.length">
+            <div class="empty-icon">◧</div>
+            <div class="empty-title">Aucun projet</div>
+            <div class="empty-sub">Ajoutez un projet pour voir son score de risque</div>
+          </div>
+          <div class="risk-list" *ngIf="!projectsLoading && projects.length">
+            <div class="risk-item" *ngFor="let p of projects">
+              <div class="risk-proj">
+                <div class="risk-av" [style.background]="p.avatarBg" [style.color]="p.avatarColor">{{p.initials}}</div>
+                <div class="risk-info">
+                  <div class="risk-name">{{p.name}}</div>
+                  <div class="risk-tech">{{p.tech}}</div>
+                </div>
+              </div>
+              <div class="risk-ring-wrap">
+                <canvas [id]="'risk-' + p.id" width="64" height="64"></canvas>
+                <div class="risk-center" [style.color]="p.riskScore !== null ? getRiskColor(p.riskScore) : 'var(--text-secondary)'">
+                  {{p.riskScore !== null ? p.riskScore : '—'}}
+                </div>
+              </div>
+              <div class="risk-breakdown">
+                <div class="rb-row" *ngFor="let r of p.riskBreakdown">
+                  <span class="rb-lbl">{{r.label}}</span>
+                  <div class="rb-track"><div class="rb-fill" [style.width.%]="r.value" [style.background]="getBarColor(r.value)"></div></div>
+                  <span class="rb-val" [style.color]="getBarColor(r.value)">{{r.value}}</span>
+                </div>
+                <div class="rb-row empty" *ngIf="!p.riskBreakdown.length">Score indisponible</div>
+              </div>
+            </div>
+          </div>
+        </section>
       </div>
 
-      <!-- NOTIF PANEL -->
-      <div class="notif-panel" [class.open]="notifOpen">
-        <div class="notif-header">
-          <span>Notifications</span>
-          <button class="close-btn" (click)="toggleNotif()"><i class="ti ti-x"></i></button>
-        </div>
-        <div class="notif-list">
-          <div class="notif-item" *ngFor="let n of notifications" [class]="n.level">
-            <div class="notif-dot"></div>
-            <div>
-              <div class="notif-title">{{n.title}}</div>
-              <div class="notif-meta">{{n.meta}}</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- CONTENT -->
-      <div class="content">
-
-        <!-- KPIs -->
-        <div class="kpi-grid">
-          <div class="kpi-card" [class]="k.color" *ngFor="let k of kpis">
-            <div class="kpi-icon"><i [class]="'ti ' + k.icon"></i></div>
-            <div class="kpi-body">
-              <div class="kpi-val">{{k.value}}</div>
-              <div class="kpi-label">{{k.label}}</div>
-              <div class="kpi-sub">{{k.sub}}</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- SYNTHÈSE SÉCURITÉ PLATEFORME (security-global) -->
-        <div class="card security-summary-card" *ngIf="!securitySummaryLoading && securitySummary"
-             (click)="goToSecurity()" role="button" tabindex="0">
-          <div class="card-title">
-            <i class="ti ti-shield-check"></i> Sécurité plateforme — vue d'ensemble
-            <span style="margin-left:auto;font-size:9px;color:var(--text-secondary)">{{securitySummary.totalProjects}} projet(s) · voir détail →</span>
-          </div>
-          <div class="kpi-grid" style="margin-bottom:0">
-            <div class="kpi-card red">
-              <div class="kpi-body">
-                <div class="kpi-val">{{securitySummary.totalCriticalCves}}</div>
-                <div class="kpi-label">CVE critiques (plateforme)</div>
-              </div>
-            </div>
-            <div class="kpi-card orange">
-              <div class="kpi-body">
-                <div class="kpi-val">{{securitySummary.totalHighCves}}</div>
-                <div class="kpi-label">CVE élevées (plateforme)</div>
-              </div>
-            </div>
-            <div class="kpi-card">
-              <div class="kpi-body">
-                <div class="kpi-val" [style.color]="getRiskColor(securitySummary.avgSecurityScore)">{{securitySummary.avgSecurityScore}}</div>
-                <div class="kpi-label">Score sécurité moyen</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- RISK + HEATMAP ROW -->
-        <div class="two-col" style="margin-bottom:20px">
-
-          <!-- RISK SCORES -->
-          <div class="card">
-            <div class="card-title">
-              <i class="ti ti-shield-half"></i>
-              Score de risque global
-            </div>
-            <div class="loading-overlay" *ngIf="projectsLoading"><div class="spinner"></div><span>Chargement...</span></div>
-            <div class="empty-state" *ngIf="!projectsLoading && projects.length === 0">
-              <div class="empty-icon">◧</div>
-              <div class="empty-title">Aucun projet</div>
-              <div class="empty-sub">Ajoutez un projet pour voir son score de risque</div>
-            </div>
-            <div class="risk-list" *ngIf="!projectsLoading && projects.length > 0">
-              <div class="risk-item" *ngFor="let p of projects">
-                <div class="risk-proj-info">
-                  <div class="risk-av" [style.background]="p.avatarBg" [style.color]="p.avatarColor">{{p.initials}}</div>
-                  <div>
-                    <div class="risk-name">{{p.name}}</div>
-                    <div class="risk-tech">{{p.tech}}</div>
-                  </div>
-                </div>
-                <div class="risk-ring-wrap">
-                  <canvas [id]="'risk-' + p.id" width="70" height="70"></canvas>
-                  <div class="risk-center-txt" [style.color]="p.riskScore !== null ? getRiskColor(p.riskScore) : 'var(--text-secondary)'">
-                    {{p.riskScore !== null ? p.riskScore : '—'}}
-                  </div>
-                </div>
-                <div class="risk-breakdown">
-                  <div class="rb-row" *ngFor="let r of p.riskBreakdown">
-                    <span class="rb-lbl">{{r.label}}</span>
-                    <div class="rb-bar-bg">
-                      <div class="rb-bar" [style.width]="r.value + '%'" [style.background]="getBarColor(r.value)"></div>
-                    </div>
-                    <span class="rb-val" [style.color]="getBarColor(r.value)">{{r.value}}</span>
-                  </div>
-                  <div class="rb-row" *ngIf="!p.riskBreakdown.length" style="color:var(--text-secondary);font-size:10px">
-                    Score indisponible
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- HEATMAP -->
-          <div class="card">
-            <div class="card-title">
-              <i class="ti ti-calendar-stats"></i>
-              Heatmap builds — 8 semaines
-            </div>
-            <div class="heatmap-wrap" id="heatmap"></div>
-            <div class="heatmap-legend">
-              <span>Moins</span>
-              <div class="hm-swatch" style="background:var(--bg-tertiary);border:1px solid var(--border-color)"></div>
-              <div class="hm-swatch" style="background:var(--accent-green-bg)"></div>
-              <div class="hm-swatch" style="background:var(--color-success)"></div>
-              <div class="hm-swatch" style="background:var(--accent-green)"></div>
-              <div class="hm-swatch" style="background:var(--accent-red)"></div>
-              <span>Échec</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- PROJECTS -->
-        <div class="section-title">
-          <i class="ti ti-folder"></i>
-          Projets surveillés
+      <!-- ══ Projets ══ -->
+      <section class="projects-section">
+        <div class="section-head">
+          <h3><i class="ti ti-folder"></i> Projets surveillés</h3>
           <span class="section-count">{{projects.length}}</span>
         </div>
-        <div class="loading-overlay" *ngIf="projectsLoading"><div class="spinner"></div><span>Chargement...</span></div>
-        <div class="empty-state" *ngIf="!projectsLoading && projects.length === 0">
+        <div class="loading-overlay" *ngIf="projectsLoading">
+          <div class="spinner"></div><span>Chargement…</span>
+        </div>
+        <div class="empty-state" *ngIf="!projectsLoading && !projects.length">
           <div class="empty-icon">◧</div>
           <div class="empty-title">Aucun projet</div>
           <div class="empty-sub">Créez votre premier projet pour commencer</div>
         </div>
-        <div class="proj-grid" *ngIf="!projectsLoading && projects.length > 0">
+        <div class="proj-grid" *ngIf="!projectsLoading && projects.length">
           <a class="proj-card" *ngFor="let p of projects" [routerLink]="['/projects', p.id]">
             <div class="proj-card-header">
               <div class="proj-av" [style.background]="p.avatarBg" [style.color]="p.avatarColor">{{p.initials}}</div>
@@ -177,96 +184,71 @@
               </div>
             </div>
             <div class="proj-pills">
-              <span class="pill red" *ngIf="p.incidents > 0">{{p.incidents}} incident{{p.incidents > 1 ? 's' : ''}}</span>
-              <span class="pill green" *ngIf="p.incidents === 0">0 incidents</span>
-              <span class="pill" [class]="p.buildStatus === 'SUCCESS' ? 'green' : 'red'">Build {{p.buildStatus}}</span>
+              <span class="pill" [class.red]="p.incidents > 0" [class.green]="p.incidents === 0">
+                {{p.incidents}} incident{{p.incidents > 1 ? 's' : ''}}
+              </span>
+              <span class="pill" [class.green]="p.buildStatus === 'SUCCESS'" [class.red]="p.buildStatus !== 'SUCCESS'">
+                Build {{p.buildStatus}}
+              </span>
             </div>
-            <div class="health-bar-wrap">
-              <div class="health-bar" [style.width]="(p.health !== null ? p.health : 0) + '%'"
-                   [style.background]="p.health !== null ? getBarColor(p.health) : 'var(--text-secondary)'"></div>
+            <div class="health-track">
+              <div class="health-fill" [style.width.%]="p.health !== null ? p.health : 0" [style.background]="p.health !== null ? getBarColor(p.health) : 'var(--text-secondary)'"></div>
             </div>
-            <div class="health-label">
+            <div class="health-meta">
               <span>Santé globale</span>
-              <span [style.color]="p.health !== null ? getBarColor(p.health) : 'var(--text-secondary)'" style="font-weight:600">
+              <span [style.color]="p.health !== null ? getBarColor(p.health) : 'var(--text-secondary)'">
                 {{p.health !== null ? p.health + '%' : 'indisponible'}}
               </span>
             </div>
             <div class="proj-footer">
-              <span>{{p.lastUpdate}}</span>
-              <span class="risk-badge" [style.color]="p.riskScore !== null ? getRiskColor(p.riskScore) : 'var(--text-secondary)'">
+              <span class="proj-date">{{p.lastUpdate}}</span>
+              <span class="proj-risk" [style.color]="p.riskScore !== null ? getRiskColor(p.riskScore) : 'var(--text-secondary)'">
                 Risque : {{p.riskScore !== null ? p.riskScore + '/100' : 'indisponible'}}
               </span>
             </div>
           </a>
         </div>
+      </section>
 
-        <!-- DORA + ACTIVITY ROW -->
-        <div class="two-col">
-
-          <!-- DORA -->
-          <div class="card">
-            <div class="card-title">
-              <i class="ti ti-chart-bar"></i>
-              Métriques DORA
+      <!-- ══ Bottom Row : Activité ══ -->
+      <div class="bottom-row">
+        <!-- Taux de réussite des builds — jamais un chiffre issu de builds
+             fabriqués (getMockJenkinsStatus) : null explicite => "Non disponible". -->
+        <section class="panel">
+          <div class="panel-header">
+            <h3><i class="ti ti-git-branch"></i> Taux de réussite des builds</h3>
+          </div>
+          <div class="reliability-body" *ngIf="buildReliability?.rate != null">
+            <div class="reliability-value" [style.color]="getRiskColor(buildReliability!.rate!)">{{buildReliability!.rate}}%</div>
+            <div class="reliability-sub" [title]="buildReliability!.sampleSize + ' build(s) pris en compte'">
+              sur {{buildReliability!.sampleSize}} build{{buildReliability!.sampleSize! > 1 ? 's' : ''}} (historique Jenkins)
             </div>
-            <div class="dora-grid">
-              <div class="dora-card" *ngFor="let d of doraMetrics">
-                <div class="dora-icon">{{d.icon}}</div>
-                <div class="dora-val" [style.color]="d.color">{{d.value}}</div>
-                <div class="dora-label">{{d.label}}</div>
-                <span class="dora-badge" [style.background]="d.badgeBg" [style.color]="d.color">{{d.level}}</span>
+          </div>
+          <div class="reliability-body" *ngIf="buildReliability?.rate == null">
+            <div class="reliability-value" style="color:var(--text-secondary)">—</div>
+            <div class="reliability-sub">Non disponible</div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header">
+            <h3><i class="ti ti-activity"></i> Activité récente</h3>
+          </div>
+          <div class="activity-list">
+            <div class="activity-item" *ngFor="let a of activities">
+              <div class="act-dot" [style.background]="a.color"></div>
+              <div class="act-body">
+                <div class="act-title">{{a.title}}</div>
+                <div class="act-meta">{{a.meta}}</div>
               </div>
             </div>
+            <div class="act-empty" *ngIf="!activitiesLoading && !activities.length">Aucun incident récent.</div>
           </div>
-
-          <!-- ACTIVITY -->
-          <div class="card">
-            <div class="card-title">
-              <i class="ti ti-activity"></i>
-              Activité récente
-            </div>
-            <div class="activity-list">
-              <div class="activity-item" *ngFor="let a of activities">
-                <div class="act-dot" [style.background]="a.color"></div>
-                <div class="act-body">
-                  <div class="act-title">{{a.title}}</div>
-                  <div class="act-meta">{{a.meta}}</div>
-                </div>
-              </div>
-              <div class="act-empty" *ngIf="!activitiesLoading && !activities.length">Aucun incident récent.</div>
-            </div>
-          </div>
-        </div>
-
-
-      </div>
-
-      <!-- CHAT FAB -->
-      <div class="chat-fab" (click)="toggleChat()">
-        <i class="ti ti-message-chatbot"></i>
-        <span class="fab-badge" *ngIf="unreadChat">{{unreadChat}}</span>
-      </div>
-
-      <!-- CHAT POPUP -->
-      <div class="chat-popup" [class.open]="chatOpen">
-        <div class="cp-header">
-          <div class="cp-title"><i class="ti ti-robot"></i> DevSecOps AI</div>
-          <span class="online-dot">● En ligne</span>
-          <button class="close-btn" (click)="toggleChat()"><i class="ti ti-x"></i></button>
-        </div>
-        <div class="cp-messages" id="cp-msgs">
-          <div class="cp-msg ai" *ngFor="let m of chatMessages; let i = index" [class]="m.role">
-            {{m.content}}
-          </div>
-        </div>
-        <div class="cp-suggestions">
-          <button class="cp-sug" *ngFor="let s of chatSuggestions" (click)="sendSuggestion(s)">{{s}}</button>
-        </div>
-        <div class="cp-input-row">
-          <input class="cp-input" [(ngModel)]="chatInput" placeholder="Question..."
-            (keydown.enter)="sendChat()" [ngModelOptions]="{standalone: true}">
-          <button class="cp-send" (click)="sendChat()"><i class="ti ti-send"></i></button>
-        </div>
+        </section>
       </div>
 
     </div>
+  </main>
+
+
+</div>

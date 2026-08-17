@@ -50,11 +50,6 @@ export const routes: Routes = [
           import('./features/analysis/analysis.component').then(m => m.AnalysisComponent)
       },
       {
-        path: 'notifications',
-        loadComponent: () =>
-          import('./features/notifications/notifications.component').then(m => m.NotificationsComponent)
-      },
-      {
         path: 'admin',
         loadComponent: () =>
           import('./features/admin/admin.component').then(m => m.AdminComponent)
@@ -65,35 +60,19 @@ export const routes: Routes = [
           import('./features/settings/settings.component').then(m => m.SettingsComponent)
       },
       // ── Nouvelles pages ──────────────────────────────────
-      {
-        path: 'jenkins',
-        loadComponent: () =>
-          import('./features/tools/jenkins.component').then(m => m.JenkinsComponent)
-      },
-      {
-        path: 'sonarqube',
-        loadComponent: () =>
-          import('./features/tools/sonarqube.component').then(m => m.SonarqubeComponent)
-      },
+      // jenkins/sonarqube/kubernetes/dora : composants conservés sur disque
+      // (features/tools, features/analytics) mais retirés du routing — pages
+      // mockées, aucune ne correspond à une fonctionnalité déposée. Voir
+      // audit frontend (lot C).
       {
         path: 'security',
         loadComponent: () =>
           import('./features/tools/security.component').then(m => m.SecurityComponent)
       },
       {
-        path: 'kubernetes',
-        loadComponent: () =>
-          import('./features/tools/kubernetes.component').then(m => m.KubernetesComponent)
-      },
-      {
         path: 'monitoring',
         loadComponent: () =>
           import('./features/tools/monitoring.component').then(m => m.MonitoringComponent)
-      },
-      {
-        path: 'dora',
-        loadComponent: () =>
-          import('./features/analytics/dora.component').then(m => m.DoraComponent)
       },
       {
         path: 'prediction',

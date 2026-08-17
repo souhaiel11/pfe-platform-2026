@@ -18,17 +18,37 @@
               <h2 style="font-size:16px;color:var(--text-primary);margin-bottom:8px;">
                 {{incident.title}}
               </h2>
-              <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-                <span class="badge" [class]="getStatusBadgeClass(incident.status)">{{incident.status}}</span>
-                <span *ngIf="aiAnalysis?.securityLevel" class="badge" [class]="getSeverityBadgeClass(aiAnalysis.securityLevel)">
-                  {{aiAnalysis.securityLevel}}
-                </span>
-                <span *ngIf="aiAnalysis?.confidenceScore" style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono);">
-                  confiance {{aiAnalysis.confidenceScore}}%
-                </span>
-                <span style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono);">
-                  · {{incident.createdAt | date:'dd/MM/yyyy HH:mm'}}
-                </span>
+
+              <!-- Statut DOMINANT — la décision de la plateforme, seule
+                   information affichée en grand. Le reste (statut Jenkins/
+                   cycle de vie, sévérité) devient secondaire ci-dessous. -->
+              <div style="font-size:22px;font-weight:700;letter-spacing:.02em;margin-bottom:4px;"
+                   [style.color]="dominantStatusColor()">
+                {{dominantStatusLabel()}}
+              </div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:11px;color:var(--text-muted);font-family:var(--font-mono);">
+                <span>statut : {{incident.status}}</span>
+                <span *ngIf="aiAnalysis?.securityLevel">· sévérité : {{aiAnalysis.securityLevel}}</span>
+                <span *ngIf="aiAnalysis?.confidenceScore">· confiance {{aiAnalysis.confidenceScore}}%</span>
+                <span>· {{incident.createdAt | date:'dd/MM/yyyy HH:mm'}}</span>
+              </div>
+
+              <!-- Résultat WF2 (génération) — distinct de validation.prUrl (WF3, onglet
+                   Validation PR) : ceci reflète la génération, pas la validation post-PR. -->
+              <div *ngIf="incident.prUrl" style="margin-top:10px;">
+                <a [href]="incident.prUrl" target="_blank"
+                   style="color:var(--accent-blue);text-decoration:none;font-family:var(--font-mono);font-size:12px;">
+                  🔧 Voir la PR de correction générée ↗
+                </a>
+              </div>
+              <div *ngIf="!incident.prUrl && prGenerationState === 'polling'"
+                   style="margin-top:10px;font-size:12px;color:var(--text-muted);display:flex;align-items:center;gap:6px;">
+                <span class="spinner" style="width:12px;height:12px;border-width:1.5px;"></span>
+                Génération de la PR en cours...
+              </div>
+              <div *ngIf="!incident.prUrl && prGenerationState === 'timeout'"
+                   style="margin-top:10px;font-size:12px;color:var(--accent-orange);">
+                ⚠️ La génération n'a pas abouti (vérifier githubRepo et findings Sonar BLOCKER).
               </div>
             </div>
             <div style="display:flex;gap:8px;flex-shrink:0;">
@@ -85,6 +105,52 @@
 
         <!-- ══ ONGLET : ANALYSE IA (WF1) ══ -->
         <div *ngIf="activeTab === 'analysis'">
+
+          <!-- Rail de phases (Couche 1, Build→Tests→SAST→SCA→Conteneur→DAST→Déploiement) —
+               réutilise tel quel app-project-overview (déjà écrit pour l'onglet "Rapport IA"
+               du projet, même données enrichedData/aiAnalysis) : chaque phase pass/warn/fail/
+               skip, cliquable, route vers l'onglet projet correspondant. -->
+          <div style="margin-bottom:16px;" *ngIf="enrichedData">
+            <app-project-overview [ed]="enrichedData" [rp]="aiAnalysis" (goToTab)="onGoToTab($event)">
+            </app-project-overview>
+          </div>
+
+          <!-- Build Jenkins direct — Couche 2, mode A (patron) : composant générique,
+               mode/issues/action calculés dynamiquement depuis classify(errorReason)
+               (peut pointer vers WF4 OU WF5 selon la vraie cause, voir jenkinsRemediationMode). -->
+          <app-remediation-card *ngIf="incident.source === 'jenkins'"
+            phaseLabel="⬡ Build Jenkins"
+            [mode]="jenkinsRemediationMode()"
+            [issues]="jenkinsIssues()"
+            [advice]="classification.solution"
+            [actionLabel]="jenkinsActionLabel()"
+            [correcting]="jenkinsCorrecting()"
+            (correct)="onJenkinsCorrect()">
+          </app-remediation-card>
+
+          <!-- Conteneur (Trivy) — Couche 2, mode B (exemple signalement) : phase
+               TOUJOURS 'vulnerability', jamais de bouton (garde-fou fixe dans le
+               composant), même si des CVE critiques sont détectées. -->
+          <app-remediation-card *ngIf="trivyIssues().length"
+            phaseLabel="Conteneur (Trivy)"
+            [mode]="trivyMode()"
+            [issues]="trivyIssues()">
+          </app-remediation-card>
+
+          <!-- SonarQube — Couche 2, mode C (auto-fix-bulk) : visible seulement si
+               enrichedData.sonar.issues existe (même garde que la carte Trivy).
+               onSonarCorrect() appelle le MÊME approveFix() que le bouton "✓ Approuver
+               le fix" du header — chemin déjà prouvé (18 PR réelles), aucun nouvel
+               endpoint ni workflow. -->
+          <app-remediation-card *ngIf="sonarIssues().length"
+            phaseLabel="🔍 SonarQube"
+            [mode]="sonarMode()"
+            [issues]="sonarIssues()"
+            advice="Correction du code via WF2 sur l'ensemble des findings."
+            actionLabel="Corriger via WF2"
+            [correcting]="sonarCorrecting()"
+            (correct)="onSonarCorrect()">
+          </app-remediation-card>
 
           <!-- Décision Judge -->
           <div *ngIf="aiAnalysis" class="card decision-card" style="margin-bottom:16px;">

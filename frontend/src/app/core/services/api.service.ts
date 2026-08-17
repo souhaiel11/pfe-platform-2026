@@ -67,7 +67,13 @@ export class ApiService {
   deleteUser(id: string)             { return this.http.delete(`${this.base}/auth/users/${id}`); }
 
   getJenkins(id: string)  { return this.http.get<any>(`${this.base}/projects/${id}/jenkins-status`); }
-  getSonar(id: string)    { return this.http.get<any>(`${this.base}/projects/${id}/sonar`); }
+  fetchJenkinsfile(owner: string, repo: string) { return this.http.post<any>(`${this.base}/jenkins/fetch`, { owner, repo, filePath: 'Jenkinsfile' }); }
+  optimizeJenkinsfile(body: { projectId: string; projectName?: string; jenkinsfile: string; buildError?: string }) {
+    return this.http.post<any>(`${this.base}/jenkins/optimize`, body);
+  }
+  optimizeDockerfile(body: { owner: string; repo: string; projectId: string; projectName?: string; buildError?: string }) {
+    return this.http.post<any>(`${this.base}/dockerfile/optimize`, body);
+  }
 
   // ── Integrations ─────────────────────────────────────────
   getIntegrations()                              { return this.http.get<any[]>(`${this.base}/integrations`); }

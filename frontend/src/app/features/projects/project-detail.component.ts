@@ -5,6 +5,7 @@ import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { CveTableComponent } from './cve-table.component';
 import { ProjectOverviewComponent } from './project-overview.component';
 import { JenkinsfileOptimizerComponent } from './jenkinsfile-optimizer.component';
+import { DockerfileOptimizerComponent } from './dockerfile-optimizer.component';
 import { ApiService } from '../../core/services/api.service';
 import { ToastService } from '../../core/services/toast.service';
 import { RiskStateService } from '../../core/services/risk-state.service';
@@ -12,7 +13,7 @@ import { RiskStateService } from '../../core/services/risk-state.service';
 @Component({
   selector: 'app-project-detail',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, CveTableComponent, ProjectOverviewComponent, JenkinsfileOptimizerComponent],
+  imports: [CommonModule, FormsModule, RouterModule, CveTableComponent, ProjectOverviewComponent, JenkinsfileOptimizerComponent, DockerfileOptimizerComponent],
   templateUrl: './project-detail.component.html',
   styleUrls: ['./project-detail.component.scss'],
 })
@@ -30,7 +31,7 @@ export class ProjectDetailComponent implements OnInit {
     jenkins: 'jenkins', sonar: 'sonarqube',
     security: 'securite'
   };
-  readonly VALID_TABS = ['rapport', 'jenkins', 'sonarqube', 'securite', 'incidents', 'config'];
+  readonly VALID_TABS = ['rapport', 'jenkins', 'sonarqube', 'docker', 'securite', 'incidents', 'config'];
   activeTab = 'rapport';
   securityFilter: 'all' | 'trivy' | 'owasp' | 'zap' = 'all';
 
@@ -58,6 +59,14 @@ export class ProjectDetailComponent implements OnInit {
   allCves(ed: any): any[] {
     return [ ...(ed?.trivy?.cves || []), ...(ed?.owasp?.cves || []) ];
   }
+
+  // Règle dupliquée avec le backend (security-score.ts::isScannerComplete) —
+  // absence de status (legacy) = donnée de confiance, status présent et
+  // différent de 'COMPLETED' = scanner non exécuté. Garder synchronisée.
+  isScannerMissing(block: any): boolean {
+    const status = block?.status;
+    return !!status && status !== 'COMPLETED';
+  }
   devGuide(_ed: any): any {
     return this.rp?.developerGuide ?? null;
   }
@@ -68,8 +77,23 @@ export class ProjectDetailComponent implements OnInit {
   lastScore = 100;
   lastRisk = 'low';
 
+  // true si trivy/owasp/zap/sonar n'a pas tourné sur le dernier rapport
+  // (même périmètre que calculateSecurityScore côté backend, Étape 1).
+  scanIncomplete = false;
+  missingScanners: string[] = [];
+
+  // Reports réels (Report.securityScore/riskLevel, Étape 1) du projet, pour
+  // corréler le score du header — voir findMatchingReport().
+  allReportsRaw: any[] = [];
+  // true si le cas est complet (scanIncomplete=false) MAIS qu'aucun report
+  // ne correspond (historique ancien, sans build.number) : "—" neutre,
+  // jamais un palier fabriqué en repli.
+  scoreUnavailable = false;
+
   // Jenkins builds
   jenkinsBuilds: any[] = [];
+  buildReliability: { rate: number | null; sampleSize: number } | null = null;
+  jenkinsMessage: string | null = null;
 
   // Analyse IA SonarQube extraite
   sonarAiAnalysis = '';
@@ -191,20 +215,41 @@ export class ProjectDetailComponent implements OnInit {
     });
   }
 
-  // Dernier Report réel (colonnes judgeDecision/judgeConfidence) — sert
-  // UNIQUEMENT le badge Déploiement fail-closed, n'affecte pas l'onglet
-  // Rapport IA (qui reste sur /incidents, allReports/rp inchangés).
+  // Dernier Report réel (colonnes judgeDecision/judgeConfidence) — sert le
+  // badge Déploiement fail-closed ET (voir findMatchingReport) le score réel
+  // du header, corrélé par build. N'affecte pas l'onglet Rapport IA en
+  // lui-même (qui reste sur /incidents, allReports/rp inchangés).
   loadJudgeStatus() {
     this.api.getProjectReports({ projectId: this.id }).subscribe({
       next: (list: any[]) => {
-        const latest = Array.isArray(list) && list.length > 0 ? list[0] : null;
+        this.allReportsRaw = Array.isArray(list) ? list : [];
+        const latest = this.allReportsRaw.length > 0 ? this.allReportsRaw[0] : null;
         this.judge = {
           decision: latest?.judgeDecision ?? null,
           confidence: latest?.judgeConfidence ?? null,
         };
+        // loadReports() et loadJudgeStatus() sont indépendants (2 appels HTTP
+        // séparés) : si l'historique était déjà sélectionné avant que les
+        // reports arrivent, on recalcule le score maintenant que la
+        // corrélation par buildNumber est possible.
+        if (this.latestReport) this.selectReport(this.latestReport);
       },
-      error: () => { this.judge = { decision: null, confidence: null }; },
+      error: () => { this.judge = { decision: null, confidence: null }; this.allReportsRaw = []; },
     });
+  }
+
+  // Corrélation Incident -> Report : pas de FK entre les deux tables, mais
+  // Incident.buildNumber == Report.rawData.enrichedData.build.number pour le
+  // même run de pipeline (vérifié sur données réelles). Les reports
+  // antérieurs à cette convention n'ont pas build.number -> pas de match,
+  // jamais de repli sur une estimation.
+  private findMatchingReport(incident: any): any | null {
+    const buildNum = incident?.buildNumber;
+    if (buildNum === null || buildNum === undefined || !this.allReportsRaw.length) return null;
+    return this.allReportsRaw.find(rep => {
+      const repBuildNum = rep?.rawData?.enrichedData?.build?.number;
+      return repBuildNum !== null && repBuildNum !== undefined && Number(repBuildNum) === Number(buildNum);
+    }) ?? null;
   }
 
   loadDeployReadiness() {
@@ -266,10 +311,19 @@ export class ProjectDetailComponent implements OnInit {
   }
 
   loadJenkinsBuilds() {
-    if (!this.project?.jenkinsJobName) return;
+    // Pas de garde côté front sur jenkinsJobName : le backend est la seule
+    // source de vérité sur "configuré ou pas" (getJenkinsStatus), y compris
+    // pour le message exact à afficher — jamais deviné côté client.
     this.api.getJenkins(this.id).subscribe({
-      next: (d: any) => { this.jenkinsBuilds = d?.builds || []; },
-      error: () => {}
+      next: (d: any) => {
+        this.jenkinsBuilds = d?.builds || [];
+        // Même source que le dashboard (getJenkinsStatus) — null si _liveData
+        // est faux (non configuré/erreur/timeout — plus aucun mock possible),
+        // jamais un chiffre inventé.
+        this.buildReliability = { rate: d?.buildSuccessRate ?? null, sampleSize: d?.sampleSize ?? 0 };
+        this.jenkinsMessage = d?._liveData ? null : (d?.message || 'Données Jenkins indisponibles');
+      },
+      error: () => { this.buildReliability = null; this.jenkinsBuilds = []; this.jenkinsMessage = 'Impossible de contacter le backend'; }
     });
   }
 
@@ -278,10 +332,32 @@ export class ProjectDetailComponent implements OnInit {
     this.rp = this.parseReport(r.aiAnalysis);
     // Charger enrichedData
     this.ed = (r.metadata?.enrichedData) ?? (r.rawData?.enrichedData) ?? {};
-    // Score depuis le rapport
-    const _lvl = (this.rp.security || r.riskLevel || "low").toUpperCase(); this.lastScore = _lvl === "CRITICAL" ? 10 : _lvl === "HIGH" ? 30 : _lvl === "MEDIUM" ? 60 : 90;
-    this.lastRisk = _lvl.toLowerCase();
-    this.riskState.setLevel(this.lastRisk);
+    // Complétude des scanners — pilote les badges "SCANNER NON EXÉCUTÉ" et
+    // l'état INDETERMINE du header (voir isScannerMissing ci-dessus).
+    this.missingScanners = (['trivy', 'owasp', 'zap', 'sonar'] as const)
+      .filter(k => this.isScannerMissing(this.ed[k]));
+    this.scanIncomplete = this.missingScanners.length > 0;
+
+    // Score du header — VRAI Report.securityScore/riskLevel (Étape 1,
+    // incomplete-aware), jamais un palier fabriqué depuis le texte IA
+    // (rp.security). Cas incomplete : le template affiche '?' via
+    // scanIncomplete, la valeur ci-dessous n'est alors jamais rendue.
+    this.scoreUnavailable = false;
+    if (this.scanIncomplete) {
+      this.lastRisk = 'indetermine';
+    } else {
+      const matched = this.findMatchingReport(r);
+      if (matched) {
+        this.lastScore = matched.securityScore;
+        this.lastRisk = (matched.riskLevel || '').toLowerCase();
+        this.riskState.setLevel(this.lastRisk);
+      } else {
+        // Historique ancien sans corrélation possible (pas de build.number
+        // sur le report) : "—" neutre, jamais une estimation.
+        this.scoreUnavailable = true;
+        this.lastRisk = 'unavailable';
+      }
+    }
     // Tâches développeur
     this.devTasks = this.parseDevTasks(this.rp.developerActions);
     this.checkedTasks = 0;
@@ -313,11 +389,6 @@ export class ProjectDetailComponent implements OnInit {
   rollbackDeployment() {
     this.toast.success('Rollback', 'Commande kubectl rollout undo envoyée');
     // À connecter à un endpoint backend qui exécute kubectl
-  }
-
-  createFixPR() {
-    this.toast.success('PR', 'Création de la PR en cours via WF2');
-    // À connecter au WF2 n8n Auto-Fix
   }
 
   splitItems(text: string): string[] {

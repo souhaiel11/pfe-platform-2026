@@ -10,7 +10,12 @@ import { InternalSecretGuard } from '../auth/internal-secret.guard';
 @Controller('incidents')
 export class IncidentsController {
   constructor(private readonly service: IncidentsService) {}
-  @UseGuards(JwtAuthGuard)
+  // JwtOrInternalSecretGuard (pas JwtAuthGuard seul) : le node "Get Incidents"
+  // de WF-Chat-V4 appelle cette route côté n8n sans session utilisateur —
+  // même pattern que PUT :id (WF2/WF3). Élargit le blast radius de
+  // N8N_INTERNAL_SECRET (encore un endpoint déverrouillé) — tracé comme
+  // raison supplémentaire de rotation avant Azure (P1, cf. rapport soutenance).
+  @UseGuards(JwtOrInternalSecretGuard)
   @Get() findAll(@Query('projectId') projectId?: string, @Query('status') status?: string, @Query('size') size?: number) { return this.service.findAll(projectId, status, size); }
   @UseGuards(JwtAuthGuard)
   @Get(':id') findOne(@Param('id') id: string) { return this.service.findOne(id); }

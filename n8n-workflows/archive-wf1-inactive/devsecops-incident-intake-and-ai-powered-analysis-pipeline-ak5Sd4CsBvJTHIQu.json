@@ -1,0 +1,674 @@
+{
+  "name": "DevSecOps Incident Intake and AI-Powered Analysis Pipeline",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "incident-intake",
+        "authentication": "headerAuth",
+        "options": {
+          "responseCode": {
+            "values": {
+              "responseCode": 202
+            }
+          }
+        }
+      },
+      "id": "fa7cb51a-d79e-483e-b12b-67cc4ea6bb36",
+      "name": "Incident Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1568,
+        512
+      ],
+      "webhookId": "010b13a4-056a-4fda-8963-a345b2d3f2d5",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "J3abTQF7qL703z6k",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract and normalize incident data from webhook payload\nconst items = $input.all();\nconst normalizedItems = [];\n\nfor (const item of items) {\n  const payload = item.json.body || item.json;\n  \n  const normalized = {\n    incidentId: payload.incidentId || payload.incident_id || null,\n    source: payload.source || null,\n    sourceType: payload.sourceType || payload.source_type || null,\n    title: payload.title || null,\n    severity: payload.severity || null,\n    logs: payload.logs || null,\n    branch: payload.branch || null,\n    repository: payload.repository || payload.repo || null\n  };\n  \n  normalizedItems.push({ json: normalized });\n}\n\nreturn normalizedItems;"
+      },
+      "id": "e9e6cdf4-d33d-4c07-a30a-2792acb702c5",
+      "name": "Normalize Incident Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1344,
+        512
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://devsecops_backend:3000/api/events/ingest",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "20e8adf3-29f0-4464-8399-053acfab36b3",
+      "name": "Send Raw Incident to Backend",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -1120,
+        512
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": ""
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.sourceType }}",
+                    "rightValue": "jenkins",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": ""
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.sourceType }}",
+                    "rightValue": "sonarqube",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": ""
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.sourceType }}",
+                    "rightValue": "github",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": ""
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.sourceType }}",
+                    "rightValue": "generic",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "f2f9814b-5ee3-4c80-ae94-17738724fb27",
+      "name": "Route by Source",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        -896,
+        480
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract Jenkins-specific context from incident data\nconst items = $input.all();\nconst enrichedItems = [];\n\nfor (const item of items) {\n  const incident = item.json;\n  \n  // Parse Jenkins-specific fields from logs or source data\n  const jenkinsContext = {\n    buildNumber: incident.logs?.buildNumber || incident.buildNumber || null,\n    jobName: incident.logs?.jobName || incident.jobName || null,\n    pipelineStage: incident.logs?.stage || incident.stage || null,\n    buildUrl: incident.logs?.buildUrl || incident.buildUrl || null,\n    buildStatus: incident.logs?.status || incident.status || null,\n    duration: incident.logs?.duration || incident.duration || null,\n    triggeredBy: incident.logs?.triggeredBy || incident.triggeredBy || null,\n    node: incident.logs?.node || incident.node || null\n  };\n  \n  // Merge original incident data with Jenkins context\n  const enriched = {\n    ...incident,\n    jenkinsContext,\n    enrichedAt: new Date().toISOString(),\n    enrichmentSource: 'jenkins'\n  };\n  \n  enrichedItems.push({ json: enriched });\n}\n\nreturn enrichedItems;"
+      },
+      "id": "da39a9e8-1832-4133-8ea2-10fa1cd6f063",
+      "name": "Enrich Jenkins Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -672,
+        224
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract and enrich SonarQube-specific context from incident data\nconst items = $input.all();\nconst enrichedItems = [];\n\nfor (const item of items) {\n  const incident = item.json;\n  \n  // Parse logs if they're in string format\n  let logs = incident.logs;\n  if (typeof logs === 'string') {\n    try {\n      logs = JSON.parse(logs);\n    } catch (e) {\n      logs = { raw: logs };\n    }\n  }\n  \n  // Extract SonarQube-specific context\n  const sonarQubeContext = {\n    projectKey: logs?.projectKey || logs?.project?.key || null,\n    projectName: logs?.projectName || logs?.project?.name || null,\n    qualityGateStatus: logs?.qualityGate?.status || logs?.status || null,\n    qualityGateConditions: logs?.qualityGate?.conditions || [],\n    metrics: {\n      bugs: logs?.bugs || logs?.metrics?.bugs || 0,\n      vulnerabilities: logs?.vulnerabilities || logs?.metrics?.vulnerabilities || 0,\n      codeSmells: logs?.codeSmells || logs?.code_smells || logs?.metrics?.code_smells || 0,\n      securityHotspots: logs?.securityHotspots || logs?.security_hotspots || logs?.metrics?.security_hotspots || 0,\n      coverage: logs?.coverage || logs?.metrics?.coverage || null,\n      duplications: logs?.duplications || logs?.metrics?.duplications || null,\n      technicalDebt: logs?.technicalDebt || logs?.technical_debt || logs?.metrics?.sqale_index || null\n    },\n    branch: incident.branch || logs?.branch?.name || 'main',\n    analysisDate: logs?.analysedAt || logs?.analysis_date || new Date().toISOString(),\n    serverUrl: logs?.serverUrl || logs?.server_url || null,\n    dashboardUrl: logs?.dashboardUrl || logs?.dashboard_url || null\n  };\n  \n  // Create enriched incident structure\n  const enriched = {\n    ...incident,\n    enrichedContext: {\n      source: 'sonarqube',\n      timestamp: new Date().toISOString(),\n      sonarqube: sonarQubeContext\n    },\n    // Add summary for quick reference\n    summary: {\n      totalIssues: sonarQubeContext.metrics.bugs + sonarQubeContext.metrics.vulnerabilities + sonarQubeContext.metrics.codeSmells,\n      criticalIssues: sonarQubeContext.metrics.bugs + sonarQubeContext.metrics.vulnerabilities,\n      qualityGatePassed: sonarQubeContext.qualityGateStatus === 'OK' || sonarQubeContext.qualityGateStatus === 'PASSED',\n      projectKey: sonarQubeContext.projectKey\n    }\n  };\n  \n  enrichedItems.push({ json: enriched });\n}\n\nreturn enrichedItems;"
+      },
+      "id": "45dd71b5-044c-4ba3-9704-747855f8f5e5",
+      "name": "Enrich SonarQube Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -672,
+        416
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract and enrich GitHub-specific context from incident data\nconst items = $input.all();\nconst enrichedItems = [];\n\nfor (const item of items) {\n  const incident = item.json;\n  \n  // Extract GitHub-specific fields\n  const githubContext = {\n    prNumber: incident.prNumber || incident.pr_number || incident.pullRequestNumber || null,\n    commitSha: incident.commitSha || incident.commit_sha || incident.sha || null,\n    workflowRun: incident.workflowRun || incident.workflow_run || incident.runId || null,\n    actionType: incident.actionType || incident.action_type || incident.action || null,\n    actor: incident.actor || incident.user || null,\n    ref: incident.ref || incident.branch || null,\n    workflowName: incident.workflowName || incident.workflow_name || null,\n    jobName: incident.jobName || incident.job_name || null,\n    conclusion: incident.conclusion || incident.status || null,\n    htmlUrl: incident.htmlUrl || incident.html_url || incident.url || null\n  };\n  \n  // Build enriched incident structure\n  const enriched = {\n    ...incident,\n    enrichedContext: {\n      source: 'github',\n      github: githubContext,\n      enrichedAt: new Date().toISOString()\n    }\n  };\n  \n  enrichedItems.push({ json: enriched });\n}\n\nreturn enrichedItems;"
+      },
+      "id": "615be249-111f-4215-8f16-381bfff2bbd0",
+      "name": "Enrich GitHub Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -672,
+        608
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract generic context from incident data\nconst items = $input.all();\nconst enrichedItems = [];\n\nfor (const item of items) {\n  const incident = item.json;\n  \n  // Extract generic context information\n  const enrichedIncident = {\n    ...incident,\n    enrichedContext: {\n      timestamp: new Date().toISOString(),\n      environment: incident.environment || 'unknown',\n      tags: incident.tags || [],\n      metadata: incident.metadata || {},\n      customFields: incident.customFields || {},\n      processedAt: new Date().toISOString(),\n      enrichmentSource: 'generic'\n    }\n  };\n  \n  enrichedItems.push({ json: enrichedIncident });\n}\n\nreturn enrichedItems;"
+      },
+      "id": "b554dba9-e88e-46ff-b516-6c29e915c784",
+      "name": "Enrich Generic Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -672,
+        800
+      ]
+    },
+    {
+      "parameters": {
+        "numberInputs": 4
+      },
+      "id": "7833db04-d817-4315-94d1-b24ee889cb99",
+      "name": "Merge Enriched Incident",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -448,
+        480
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build a complete JSON package with incident data, enriched context, and analysis directives for AI agents\nconst items = $input.all();\nconst analysisPackages = [];\n\nfor (const item of items) {\n  const incident = item.json;\n  \n  // Extract enriched context based on source type\n  const enrichedContext = incident.enrichedContext || {};\n  const sourceType = incident.sourceType || 'generic';\n  \n  // Build analysis directives based on source type and severity\n  const analysisDirectives = {\n    rootCauseAnalysis: {\n      enabled: true,\n      focus: [\n        'Identify the primary failure point',\n        'Analyze contributing factors',\n        'Determine if this is a recurring issue',\n        'Assess impact on downstream systems'\n      ],\n      context: sourceType\n    },\n    securityRiskAnalysis: {\n      enabled: true,\n      focus: [\n        'Evaluate security implications',\n        'Identify potential vulnerabilities exposed',\n        'Assess data exposure risk',\n        'Determine compliance impact'\n      ],\n      severity: incident.severity || 'medium'\n    },\n    remediationFeasibility: {\n      enabled: true,\n      focus: [\n        'Suggest immediate mitigation steps',\n        'Propose long-term fixes',\n        'Estimate implementation effort',\n        'Identify required resources and expertise'\n      ],\n      priority: incident.severity === 'critical' || incident.severity === 'high' ? 'urgent' : 'normal'\n    }\n  };\n  \n  // Build the complete analysis package\n  const analysisPackage = {\n    incidentId: incident.incidentId,\n    timestamp: new Date().toISOString(),\n    source: {\n      type: sourceType,\n      name: incident.source,\n      repository: incident.repository,\n      branch: incident.branch\n    },\n    incident: {\n      title: incident.title,\n      severity: incident.severity,\n      logs: incident.logs,\n      rawData: {\n        incidentId: incident.incidentId,\n        sourceType: incident.sourceType,\n        source: incident.source\n      }\n    },\n    enrichedContext: enrichedContext,\n    analysisDirectives: analysisDirectives,\n    metadata: {\n      packageVersion: '1.0',\n      createdAt: new Date().toISOString(),\n      workflowId: $workflow.id,\n      executionId: $execution.id\n    }\n  };\n  \n  analysisPackages.push({ json: analysisPackage });\n}\n\nreturn analysisPackages;"
+      },
+      "id": "b7f298d0-00e9-4707-a418-e02c1796ba34",
+      "name": "Prepare AI Analysis Package",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -224,
+        512
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ JSON.stringify($json) }}",
+        "batching": {}
+      },
+      "id": "6d1ac1f9-8e05-42b7-8a33-4044d78a23f4",
+      "name": "Root Cause Analysis",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        0,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "model": "mistral:7b",
+        "options": {}
+      },
+      "id": "9ef20e97-744a-4580-9493-3d44c6e7e53c",
+      "name": "Ollama Model - Root Cause",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        80,
+        624
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ JSON.stringify($json) }}",
+        "batching": {}
+      },
+      "id": "4f2b2274-fa64-468a-b832-ea6f0069189e",
+      "name": "Security Risk Analysis",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        0,
+        912
+      ]
+    },
+    {
+      "parameters": {
+        "model": "mistral:7b",
+        "options": {}
+      },
+      "id": "1c7c0575-7602-498a-a3d5-563600f38de9",
+      "name": "Ollama Model - Security",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        80,
+        1136
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ JSON.stringify($json) }}",
+        "batching": {}
+      },
+      "id": "ce0718dc-afef-4e16-9a9c-f80f05b3a152",
+      "name": "Remediation Feasibility",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "model": "mistral:7b",
+        "options": {}
+      },
+      "id": "b170bbbf-5a08-4fe2-841b-a766e915a340",
+      "name": "Ollama Model - Remediation",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        80,
+        224
+      ]
+    },
+    {
+      "parameters": {
+        "numberInputs": 3
+      },
+      "id": "c1ba6f9f-6adc-41c9-9508-0d0f0ea47c2f",
+      "name": "Merge Agent Reports",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        352,
+        496
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://devsecops_backend:3000/api/events/analysis/reports",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "jsonData",
+              "value": "={{ JSON.stringify($json) }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "3aa187c7-6369-4b5e-9e2e-f6238102dec6",
+      "name": "Save Agent Reports to Backend",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        576,
+        512
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ JSON.stringify($json) }}",
+        "batching": {}
+      },
+      "id": "e4ef44f5-2702-4616-aff2-387302827a64",
+      "name": "Judge Agent",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        800,
+        512
+      ]
+    },
+    {
+      "parameters": {
+        "model": "mistral:7b",
+        "options": {}
+      },
+      "id": "4fb47e06-3c28-439b-be62-48a28daf7fd5",
+      "name": "Ollama Model - Judge",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        880,
+        736
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://devsecops_backend:3000/api/events/analysis/decisions",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "jsonData",
+              "value": "={{ JSON.stringify($json) }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "573d0d42-c316-418c-af8c-3dccc885a613",
+      "name": "Save Decision to Backend",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1152,
+        512
+      ]
+    }
+  ],
+  "connections": {
+    "Incident Webhook": {
+      "main": [
+        [
+          {
+            "node": "Normalize Incident Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Incident Payload": {
+      "main": [
+        [
+          {
+            "node": "Send Raw Incident to Backend",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Raw Incident to Backend": {
+      "main": [
+        [
+          {
+            "node": "Route by Source",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route by Source": {
+      "main": [
+        [
+          {
+            "node": "Enrich Jenkins Context",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Enrich SonarQube Context",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Enrich GitHub Context",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Enrich Generic Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enrich Jenkins Context": {
+      "main": [
+        [
+          {
+            "node": "Merge Enriched Incident",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enrich SonarQube Context": {
+      "main": [
+        [
+          {
+            "node": "Merge Enriched Incident",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Enrich GitHub Context": {
+      "main": [
+        [
+          {
+            "node": "Merge Enriched Incident",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Enrich Generic Context": {
+      "main": [
+        [
+          {
+            "node": "Merge Enriched Incident",
+            "type": "main",
+            "index": 3
+          }
+        ]
+      ]
+    },
+    "Merge Enriched Incident": {
+      "main": [
+        [
+          {
+            "node": "Prepare AI Analysis Package",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare AI Analysis Package": {
+      "main": [
+        [
+          {
+            "node": "Root Cause Analysis",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Security Risk Analysis",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Remediation Feasibility",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Model - Root Cause": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Root Cause Analysis",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Model - Security": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Security Risk Analysis",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Model - Remediation": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Remediation Feasibility",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Root Cause Analysis": {
+      "main": [
+        [
+          {
+            "node": "Merge Agent Reports",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Security Risk Analysis": {
+      "main": [
+        [
+          {
+            "node": "Merge Agent Reports",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Remediation Feasibility": {
+      "main": [
+        [
+          {
+            "node": "Merge Agent Reports",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Merge Agent Reports": {
+      "main": [
+        [
+          {
+            "node": "Save Agent Reports to Backend",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Agent Reports to Backend": {
+      "main": [
+        [
+          {
+            "node": "Judge Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Model - Judge": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Judge Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Judge Agent": {
+      "main": [
+        [
+          {
+            "node": "Save Decision to Backend",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "id": "ak5Sd4CsBvJTHIQu",
+  "meta": {}
+}

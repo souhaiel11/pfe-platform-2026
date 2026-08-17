@@ -7,3 +7,10 @@
       padding: 2px 7px;
       border-radius: var(--radius-sm);
     }
+
+    /* Absence de sévérité connue — gris neutre, jamais une couleur de
+       gravité (même principe que l'état INDETERMINE du score). */
+    .badge.severity-unknown {
+      background: var(--bg-tertiary);
+      color: var(--text-muted);
+    }

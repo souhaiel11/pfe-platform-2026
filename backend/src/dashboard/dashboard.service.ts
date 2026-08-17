@@ -9,6 +9,7 @@ import { Report } from '../reports/report.entity';
 import { normalizeReport } from '../common/report-normalizer';
 import { computeRiskScore } from '../common/risk-score';
 import { calculateSecurityScore } from '../common/security-score';
+import { computeBuildSuccessRate } from '../common/build-success-rate';
 
 const JENKINS_GLOBAL_TIMEOUT_MS = 5000;
 
@@ -77,6 +78,8 @@ export class DashboardService {
     const items = jenkinsProjects.map((project, i) => {
       const result = settled[i];
 
+      // Timeout du Promise.race ou réponse vide : absence d'info, jamais un
+      // échec confirmé => 'unknown', pas 'red' (même principe que _liveData).
       if (result.status !== 'fulfilled' || !result.value) {
         const error = result.status === 'rejected'
           ? (result.reason?.message || 'Jenkins injoignable')
@@ -85,8 +88,8 @@ export class DashboardService {
           projectId: project.id,
           projectName: project.name,
           jenkinsJobName: project.jenkinsJobName,
-          status: 'red' as 'green' | 'red',
-          recentSuccessRate: 0,
+          status: 'unknown' as 'green' | 'red' | 'unknown',
+          recentSuccessRate: null,
           lastBuild: null,
           error,
           _sortTimestamp: 0,
@@ -94,53 +97,57 @@ export class DashboardService {
       }
 
       const jenkins = result.value;
-      // Historique réel {0,10} builds si dispo, sinon un seul point (mock / fallback)
-      const builds: any[] = Array.isArray(jenkins.builds) && jenkins.builds.length
-        ? jenkins.builds
-        : [{ result: jenkins.result, timestamp: jenkins.timestamp }];
+      // Taux de réussite, status et lastBuild : source unique avec
+      // projects.service.ts::getJenkinsStatus (même helper, même _liveData).
+      // !isLive (non configuré, erreur, timeout — getMockJenkinsStatus
+      // supprimé) => rien de dérivé, jamais une valeur fictive ni comptée
+      // dans l'agrégat plateforme.
+      const isLive = jenkins._liveData === true;
+      const builds: any[] = isLive && Array.isArray(jenkins.builds) ? jenkins.builds : [];
+      const recentSuccessRate = isLive ? computeBuildSuccessRate(builds) : null;
 
-      const successCount = builds.filter((b: any) => b.result === 'SUCCESS').length;
-      const recentSuccessRate = builds.length
-        ? Math.round((successCount / builds.length) * 100)
-        : 0;
+      if (isLive) {
+        totalBuildsCount += builds.length;
+        totalSuccessCount += builds.filter((b: any) => b.result === 'SUCCESS').length;
+        failedBuilds24h += builds.filter(
+          (b: any) =>
+            (b.result === 'FAILURE' || b.result === 'ABORTED') &&
+            b.timestamp && b.timestamp >= oneDayAgo,
+        ).length;
+      }
 
-      totalBuildsCount += builds.length;
-      totalSuccessCount += successCount;
-      failedBuilds24h += builds.filter(
-        (b: any) =>
-          (b.result === 'FAILURE' || b.result === 'ABORTED') &&
-          b.timestamp && b.timestamp >= oneDayAgo,
-      ).length;
-
-      const isGreen = jenkins.result === 'SUCCESS';
-      const durationSeconds = Math.round((jenkins.duration || 0) / 1000);
-      durationSum += durationSeconds;
-      durationCount += 1;
+      const durationSeconds = isLive ? Math.round((jenkins.duration || 0) / 1000) : 0;
+      if (isLive) { durationSum += durationSeconds; durationCount += 1; }
 
       return {
         projectId: project.id,
         projectName: project.name,
         jenkinsJobName: project.jenkinsJobName,
-        status: (isGreen ? 'green' : 'red') as 'green' | 'red',
+        // !isLive => 'unknown' : jamais 'red', qui affirmerait à tort un
+        // échec confirmé sur une simple absence de données.
+        status: (!isLive ? 'unknown' : (jenkins.result === 'SUCCESS' ? 'green' : 'red')) as 'green' | 'red' | 'unknown',
         recentSuccessRate,
-        lastBuild: {
+        lastBuild: isLive ? {
           number: jenkins.buildNumber ?? null,
           result: jenkins.result ?? null,
           durationSeconds,
           timestamp: jenkins.timestamp ? new Date(jenkins.timestamp).toISOString() : null,
           url: jenkins.url ?? null,
-        },
-        error: null,
-        _sortTimestamp: jenkins.timestamp || 0,
+        } : null,
+        error: isLive ? null : (jenkins.message || 'Données Jenkins indisponibles'),
+        _sortTimestamp: isLive ? (jenkins.timestamp || 0) : 0,
       };
     });
 
     const projectsGreen = items.filter(it => it.status === 'green').length;
     const projectsRed = items.filter(it => it.status === 'red').length;
+    const projectsUnknown = items.filter(it => it.status === 'unknown').length;
 
-    // Tri : rouges d'abord (échecs en premier), puis verts ; à l'intérieur, plus récents d'abord
+    // Tri : rouges confirmés d'abord, puis inconnus (à vérifier), puis verts ;
+    // à l'intérieur de chaque groupe, plus récents d'abord.
+    const STATUS_PRIORITY: Record<string, number> = { red: 0, unknown: 1, green: 2 };
     items.sort((a, b) => {
-      if (a.status !== b.status) return a.status === 'red' ? -1 : 1;
+      if (a.status !== b.status) return STATUS_PRIORITY[a.status] - STATUS_PRIORITY[b.status];
       return b._sortTimestamp - a._sortTimestamp;
     });
 
@@ -152,10 +159,14 @@ export class DashboardService {
         projectsWithJenkins: jenkinsProjects.length,
         projectsGreen,
         projectsRed,
-        // % de builds réussis sur les 10 derniers builds de chaque projet, cumulés
+        projectsUnknown,
+        // % de builds réussis cumulés sur l'historique live de chaque projet
+        // (jusqu'à 20 builds/projet) — null si aucun projet n'a de données
+        // live (jamais un 0% fabriqué).
         aggregateSuccessRate: totalBuildsCount
           ? Math.round((totalSuccessCount / totalBuildsCount) * 100)
-          : 0,
+          : null,
+        aggregateSampleSize: totalBuildsCount,
         failedBuilds24h,
         avgDurationSeconds: durationCount ? Math.round(durationSum / durationCount) : 0,
       },
@@ -220,7 +231,7 @@ export class DashboardService {
       // project.securityScore (copie figée qui peut se désynchroniser sans
       // alerte). Cohérent par construction avec criticalCves ci-dessous,
       // puisque calculés depuis le même `normalized`.
-      const liveScore = calculateSecurityScore(normalized);
+      const { score: liveScore, incomplete: scoreIncomplete, missingScanners } = calculateSecurityScore(normalized);
       liveScoreSum += liveScore;
 
       const trivy = normalized.trivy;
@@ -255,6 +266,10 @@ export class DashboardService {
         projectId: project.id,
         projectName: project.name,
         securityScore: liveScore,
+        // Consommé par la page /security et l'onglet Sécurité projet pour
+        // afficher un badge "scanner non exécuté" au lieu d'un faux "0 trouvé".
+        incomplete: scoreIncomplete,
+        missingScanners,
         criticalCves: tCrit + oCrit,
         highCves: tHigh + oHigh,
         trivy: { critical: tCrit, high: tHigh },

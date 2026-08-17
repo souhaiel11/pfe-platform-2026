@@ -66,39 +66,4 @@
         </div>
       </div>
 
-      <!-- Create Modal -->
-      <div class="modal-overlay" *ngIf="showModal" (click)="showModal=false">
-        <div class="modal" (click)="$event.stopPropagation()">
-          <div class="modal-header">
-            <span class="card-title">Nouveau projet</span>
-            <button class="btn btn-secondary btn-sm" (click)="showModal=false">✕</button>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Nom du projet *</label>
-            <input class="form-control" [(ngModel)]="newProject.name" placeholder="ex: PFE-VERMEG" />
-          </div>
-          <div class="form-group">
-            <label class="form-label">Description</label>
-            <input class="form-control" [(ngModel)]="newProject.description" placeholder="Description optionnelle" />
-          </div>
-          <div class="form-group">
-            <label class="form-label">Clé SonarQube</label>
-            <input class="form-control" [(ngModel)]="newProject.sonarKey" placeholder="ex: equipe1-3arctic1-2425" />
-          </div>
-          <div class="form-group">
-            <label class="form-label">GitHub Repository</label>
-            <input class="form-control" [(ngModel)]="newProject.githubRepo" placeholder="ex: souhaiel11/pfe-devsecops-2026" />
-          </div>
-          <div class="form-group">
-            <label class="form-label">Jenkins Job Name</label>
-            <input class="form-control" [(ngModel)]="newProject.jenkinsJobName" placeholder="ex: pfe-devsecops-pipeline" />
-          </div>
-          <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:20px;">
-            <button class="btn btn-secondary" (click)="showModal=false">Annuler</button>
-            <button class="btn btn-primary" (click)="createProject()" [disabled]="!newProject.name">
-              Créer le projet
-            </button>
-          </div>
-        </div>
-      </div>
     </div>

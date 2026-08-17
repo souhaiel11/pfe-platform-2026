@@ -26,6 +26,9 @@ export class CreateProjectDto {
   jenkinsJobName?: string;
 
   @IsOptional() @IsString()
+  jenkinsJobPath?: string;
+
+  @IsOptional() @IsString()
   jenkinsToken?: string;
 
   // GitHub

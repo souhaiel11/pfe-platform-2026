@@ -31,6 +31,15 @@ export class JenkinsAnalysis {
   @Column({ unique: true })
   jobId: string;
 
+  // Jenkinsfile ORIGINAL envoyé à l'agent pour cette analyse — nécessaire
+  // pour pouvoir régénérer plus tard à partir du fichier propre (pas de
+  // optimizedJenkinsfile déjà modifié). Sans ça, "Régénérer" ne fonctionne
+  // qu'à l'intérieur de la même session (source() en mémoire côté front) et
+  // casse après un simple F5. Nullable : les lignes créées avant cette
+  // colonne n'en ont pas — dégradation propre, pas une erreur.
+  @Column({ type: 'text', nullable: true })
+  sourceJenkinsfile: string;
+
   @Column({ type: 'enum', enum: JenkinsAnalysisStatus, default: JenkinsAnalysisStatus.PENDING })
   status: JenkinsAnalysisStatus;
 

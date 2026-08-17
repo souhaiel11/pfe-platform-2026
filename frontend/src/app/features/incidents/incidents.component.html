@@ -12,32 +12,19 @@
       <!-- Filters -->
       <div class="card" style="margin-bottom:16px;padding:14px 20px;">
         <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
-          <select class="form-control" [(ngModel)]="filters.severity" (change)="load()" style="width:140px;">
-            <option value="">Toutes sévérités</option>
-            <option value="CRITICAL">CRITICAL</option>
-            <option value="HIGH">HIGH</option>
-            <option value="MEDIUM">MEDIUM</option>
-            <option value="LOW">LOW</option>
-          </select>
-          <select class="form-control" [(ngModel)]="filters.status" (change)="load()" style="width:180px;">
+          <select class="form-control" [(ngModel)]="filters.status" (change)="load()" style="width:200px;">
             <option value="">Tous statuts</option>
-            <option value="OPEN">OPEN</option>
-            <option value="ANALYZING">ANALYZING</option>
-            <option value="CORRECTION_PROPOSED">CORRECTION_PROPOSED</option>
-            <option value="CORRECTION_APPLIED">CORRECTION_APPLIED</option>
-            <option value="RESOLVED">RESOLVED</option>
-            <option value="CLOSED">CLOSED</option>
+            <option value="pending">En attente</option>
+            <option value="analyzing">En cours d'analyse</option>
+            <option value="analyzed">Analysé</option>
+            <option value="fix_generated">Correction générée</option>
+            <option value="validating">Validation en cours</option>
+            <option value="approved">Approuvé</option>
+            <option value="completed">Terminé</option>
+            <option value="blocked">Bloqué</option>
+            <option value="failed">Échec</option>
+            <option value="rejected">Rejeté</option>
           </select>
-          <select class="form-control" [(ngModel)]="filters.source" (change)="load()" style="width:140px;">
-            <option value="">Toutes sources</option>
-            <option value="JENKINS">JENKINS</option>
-            <option value="SONARQUBE">SONARQUBE</option>
-            <option value="DOCKER">DOCKER</option>
-            <option value="GITHUB">GITHUB</option>
-          </select>
-          <input class="form-control" [(ngModel)]="filters.search"
-                 placeholder="Rechercher..." style="flex:1;min-width:160px;"
-                 (input)="onSearch()" />
           <button class="btn btn-secondary btn-sm" (click)="resetFilters()">↺ Reset</button>
         </div>
       </div>
@@ -66,8 +53,8 @@
             </tr>
             <tr *ngFor="let inc of incidents">
               <td>
-                <span style="font-family:var(--font-mono);font-size:11px;color:var(--accent-blue);">
-                  {{inc.incidentId?.substring(0,24)}}...
+                <span style="font-family:var(--font-mono);font-size:11px;color:var(--accent-blue);" [title]="inc.id">
+                  {{inc.id?.substring(0,8)}}
                 </span>
               </td>
               <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
@@ -76,7 +63,10 @@
               <td>
                 <span class="source-tag">{{inc.sourceType}}</span>
               </td>
-              <td><span class="badge {{inc.severity?.toLowerCase()}}">{{inc.severity}}</span></td>
+              <td>
+                <span *ngIf="inc._severity" class="badge" [class]="getSeverityBadgeClass(inc._severity)">{{inc._severity}}</span>
+                <span *ngIf="!inc._severity" class="badge severity-unknown">Non déterminée</span>
+              </td>
               <td><span class="badge {{inc.status?.toLowerCase()}}">{{inc.status}}</span></td>
               <td style="font-family:var(--font-mono);font-size:11px;">
                 {{inc.createdAt | date:'dd/MM/yy HH:mm'}}
@@ -91,14 +81,4 @@
         </table>
       </div>
 
-      <!-- Pagination -->
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:12px;" *ngIf="totalPages > 1">
-        <span style="font-size:11px;color:var(--text-muted);">
-          Page {{page + 1}} / {{totalPages}} — {{total}} résultats
-        </span>
-        <div style="display:flex;gap:6px;">
-          <button class="btn btn-secondary btn-sm" [disabled]="page === 0" (click)="prevPage()">← Préc.</button>
-          <button class="btn btn-secondary btn-sm" [disabled]="page >= totalPages - 1" (click)="nextPage()">Suiv. →</button>
-        </div>
-      </div>
     </div>

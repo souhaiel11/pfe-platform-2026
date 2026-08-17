@@ -122,9 +122,13 @@ import { Subscription, interval, switchMap } from 'rxjs';
         <div class="jo-issues">
           <details class="jo-issue" *ngFor="let i of r.issues">
             <summary class="jo-issue-head">
+              <input type="checkbox" class="jo-issue-check" [checked]="isSelected(i.id)"
+                     (click)="$event.stopPropagation()" (change)="toggleSelection(i.id)"
+                     [attr.aria-label]="'Retenir ' + i.id" />
               <span class="sev" [attr.data-sev]="sevKey(i.severity)">{{ i.severity }}</span>
               <span class="jo-cat mono">{{ i.category }}</span>
               <strong class="jo-issue-title">{{ i.title }}</strong>
+              <span class="jo-confirm-badge" *ngIf="i.needsConfirmation">À CONFIRMER</span>
               <span class="jo-chevron">▸</span>
             </summary>
             <div class="jo-issue-body">
@@ -134,21 +138,17 @@ import { Subscription, interval, switchMap } from 'rxjs';
             </div>
           </details>
         </div>
-      </section>
 
-      <!-- Fichier optimisé -->
-      <section class="block">
-        <div class="jo-file-head">
-          <div>
-            <span class="eyebrow">Jenkinsfile optimisé</span>
-            <p class="jo-sub" style="margin:0">Complet et prêt à remplacer l'original — chaque modification est tracée ci-dessous.</p>
-          </div>
-          <div class="jo-file-actions">
-            <button class="jo-btn ghost" (click)="copy(r.optimizedJenkinsfile)">{{ copied() ? 'Copié ✓' : 'Copier' }}</button>
-            <button class="jo-btn ghost" (click)="download(r.optimizedJenkinsfile)">Télécharger</button>
-          </div>
+        <!-- Sélection : lue en direct par apply() au clic sur "Valider → PR"
+             (WF4 v4 — l'agent 2 régénère le fichier à l'étape PR à partir du
+             Jenkinsfile ORIGINAL + cette sélection, il n'y a plus d'aperçu
+             intermédiaire à régénérer ici). Purement informative. -->
+        <div class="jo-selection-bar">
+          <span class="jo-sub" style="margin:0">
+            <strong class="mono">{{ selectedIssueIds().size }}</strong> / {{ r.issues.length }} correction(s) retenue(s)
+          </span>
         </div>
-        <pre class="jo-code"><code>{{ r.optimizedJenkinsfile }}</code></pre>
+        <p class="jo-hint" *ngIf="selectedIssueIds().size === 0">Sélectionnez au moins une correction avant de valider.</p>
       </section>
 
       <!-- Décision : valider (PR) ou rejeter -->
@@ -157,8 +157,8 @@ import { Subscription, interval, switchMap } from 'rxjs';
           <div class="jo-decision-txt">
             <span class="eyebrow">Appliquer ces changements</span>
             <p class="jo-sub" style="margin:0">
-              « Valider » crée une branche et ouvre une Pull Request sur le dépôt — rien n'est poussé sur
-              <code class="mono">{{ baseBranch }}</code> directement. Vous relisez et fusionnez depuis GitHub.
+              « Valider » régénère le Jenkinsfile selon votre sélection et ouvre une Pull Request sur le dépôt —
+              rien n'est poussé sur <code class="mono">{{ baseBranch }}</code> directement. Vous relisez et fusionnez depuis GitHub.
             </p>
             <div class="jo-repo-fields" *ngIf="!owner || !repo">
               <input class="jo-repo-in" placeholder="owner (ex: souhaiel11)"
@@ -169,11 +169,18 @@ import { Subscription, interval, switchMap } from 'rxjs';
           </div>
           <div class="jo-decision-btns">
             <button class="jo-btn ghost danger" [disabled]="applying()" (click)="reject()">Rejeter</button>
-            <button class="jo-btn" [disabled]="applying() || !canApply()" (click)="apply(r)">
+            <button class="jo-btn" [disabled]="applying() || !canApply() || !sourceAvailable() || selectedIssueIds().size === 0" (click)="apply(r)">
               {{ applying() ? 'Création de la PR…' : 'Valider → créer la PR' }}
             </button>
           </div>
         </div>
+        <p class="jo-hint" *ngIf="!sourceAvailable()">
+          Jenkinsfile source non disponible pour cette analyse — relancez une analyse complète pour activer la validation.
+        </p>
+        <p class="jo-violation" *ngIf="selectionViolation()">
+          ⚠ La PR a été bloquée : l'agent a réintroduit une correction écartée — {{ selectionViolation() }}
+        </p>
+        <p class="jo-unstable" *ngIf="applying() && applyPollUnstable()">Connexion instable — nouvelle tentative…</p>
         <p class="jo-error" *ngIf="applyError()">{{ applyError() }}</p>
       </section>
 
@@ -260,6 +267,11 @@ import { Subscription, interval, switchMap } from 'rxjs';
     .jo-btn.ghost { background: transparent; color: inherit; border-color: var(--c-line); }
     .jo-btn.ghost:hover { border-color: rgba(127,127,127,.5); }
     .jo-error { color: var(--c-fail); font-size: 12.5px; margin: 10px 0 0; }
+    .jo-violation {
+      color: var(--c-warn); font-size: 12.5px; margin: 10px 0 0; font-weight: 600;
+      background: rgba(234,88,12,.08); border: 1px solid rgba(234,88,12,.25);
+      border-radius: 8px; padding: 8px 12px;
+    }
     .jo-neutral { font-size: 12.5px; opacity: .55; margin: 0 0 16px; padding: 8px 12px; border: 1px dashed var(--c-line); border-radius: 8px; }
     .jo-loading { display: flex; align-items: center; gap: 10px; margin-top: 14px; font-size: 12.5px; opacity: .7; }
     .jo-unstable { margin: 6px 0 0; font-size: 11px; opacity: .55; }
@@ -298,8 +310,18 @@ import { Subscription, interval, switchMap } from 'rxjs';
     .jo-issue-head:hover { background: rgba(127,127,127,.05); }
     .jo-issue[open] .jo-chevron { transform: rotate(90deg); }
     .jo-chevron { margin-left: auto; opacity: .4; transition: transform .15s; }
+    .jo-issue-check { flex-shrink: 0; width: 15px; height: 15px; cursor: pointer; accent-color: var(--c-auto); }
     .jo-cat { font-size: 10px; opacity: .5; letter-spacing: .06em; }
     .jo-issue-title { font-size: 13px; font-weight: 600; }
+    .jo-confirm-badge {
+      font-size: 9.5px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase;
+      padding: 2px 7px; border-radius: 3px; flex-shrink: 0;
+      background: rgba(202,138,4,.15); color: var(--c-med);
+    }
+    .jo-selection-bar {
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      margin-top: 12px; flex-wrap: wrap;
+    }
     .jo-issue-body { padding: 2px 16px 14px 16px; font-size: 12.5px; line-height: 1.6; }
     .jo-issue-body p { margin: 6px 0; }
     .jo-lbl { font-weight: 700; opacity: .7; }
@@ -310,8 +332,6 @@ import { Subscription, interval, switchMap } from 'rxjs';
     }
 
     /* Fichier */
-    .jo-file-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 14px; flex-wrap: wrap; margin-bottom: 10px; }
-    .jo-file-actions { display: flex; gap: 8px; }
     .jo-code {
       margin: 0; max-height: 480px; overflow: auto;
       background: #0f172a; color: #e2e8f0; border-radius: 12px;
@@ -380,7 +400,6 @@ export class JenkinsfileOptimizerComponent implements OnInit, OnDestroy {
   loading = signal<boolean>(false);
   error = signal<string>('');
   result = signal<any>(null);
-  copied = signal<boolean>(false);
 
   mode = signal<'git' | 'paste'>('git');
   ownerInput = signal<string>('');
@@ -398,15 +417,35 @@ export class JenkinsfileOptimizerComponent implements OnInit, OnDestroy {
   // Signal discret, n'arrête jamais le polling — juste une indication que
   // le réseau a un souci passager (pas un vrai statut du job).
   pollUnstable = signal<boolean>(false);
+  // Même chose, côté polling de /apply/:applyId/status.
+  applyPollUnstable = signal<boolean>(false);
   // Vrai le temps du chargement de GET /jenkins/analyses au démarrage —
   // distinct de "loading" (qui, lui, veut dire "une analyse tourne").
   checkingHistory = signal<boolean>(false);
   private pollSub?: Subscription;
+  private applyPollSub?: Subscription;
+
+  // ── Sélection des corrections ──────────────────────────────────────
+  // jobId (pas l'id de ligne DB) de l'analyse actuellement affichée — c'est
+  // ce qu'on envoie à /apply pour que le backend y retrouve sourceJenkinsfile
+  // et les issues complètes (WF4 v4 : l'agent 2 régénère le fichier à
+  // l'étape PR, il n'y a plus de fichier pré-calculé côté frontend).
+  currentJobId = signal<string>('');
+  // Faux uniquement pour une analyse antérieure à l'ajout de la colonne
+  // sourceJenkinsfile — dans ce cas "Valider" est désactivé avec un message
+  // explicite, jamais un plantage silencieux côté backend.
+  sourceAvailable = signal<boolean>(false);
+  selectedIssueIds = signal<Set<string>>(new Set());
+  // Message de violation renvoyé par le gate de la branche APPLY (WF4 v4)
+  // quand l'agent 2 a réintroduit une correction écartée — bandeau distinct
+  // d'une erreur réseau/infra (voir apply()).
+  selectionViolation = signal<string | null>(null);
 
   constructor(private http: HttpClient) {}
 
   ngOnDestroy(): void {
     this.pollSub?.unsubscribe();
+    this.applyPollSub?.unsubscribe();
   }
 
   ngOnInit(): void {
@@ -442,11 +481,16 @@ export class JenkinsfileOptimizerComponent implements OnInit, OnDestroy {
         this.checkingHistory.set(false);
         const latest = rows?.[0];
         if (!latest) return;
+        // Toujours restaurer le Jenkinsfile original en mémoire — sert de
+        // repli visuel et confirme au dev ce qui a été analysé ; la
+        // régénération, elle, repasse par priorJobId côté backend, pas
+        // par ce texte.
+        this.source.set(latest.sourceJenkinsfile || '');
         if (latest.status === 'done') {
-          this.result.set(latest.result);
+          this.applyResult(latest.jobId, latest.result, !!latest.sourceJenkinsfile);
         } else if (latest.status === 'pending') {
           this.loading.set(true);
-          this.startPolling(latest.jobId);
+          this.startPolling(latest.jobId, !!latest.sourceJenkinsfile);
         } else if (latest.status === 'error') {
           this.error.set(`Bloqué : ${latest.reason || 'raison inconnue'}${latest.detail ? ' — ' + latest.detail : ''}`);
         }
@@ -455,6 +499,36 @@ export class JenkinsfileOptimizerComponent implements OnInit, OnDestroy {
       // aucun historique n'existait — ne bloque jamais l'usage normal.
       error: () => this.checkingHistory.set(false),
     });
+  }
+
+  // Point d'entrée UNIQUE pour afficher un résultat (fraîchement analysé,
+  // rechargé depuis l'historique, ou régénéré) — garantit que la sélection
+  // de cases à cocher et l'état "PR créée" repartent toujours cohérents
+  // avec le fichier réellement affiché.
+  private applyResult(jobId: string, r: any, sourceAvailable: boolean): void {
+    this.result.set(r);
+    this.currentJobId.set(jobId);
+    this.sourceAvailable.set(sourceAvailable);
+    const defaultSelected = new Set<string>(
+      (r?.issues || []).filter((i: any) => !i.needsConfirmation).map((i: any) => i.id),
+    );
+    this.selectedIssueIds.set(defaultSelected);
+    // Une PR précédente concernait l'ancien résultat — ne pas la laisser
+    // masquer la section de décision pour ce nouveau résultat.
+    this.applied.set(null);
+    this.applyError.set('');
+    this.applying.set(false);
+    this.selectionViolation.set(null);
+  }
+
+  isSelected(id: string): boolean {
+    return this.selectedIssueIds().has(id);
+  }
+
+  toggleSelection(id: string): void {
+    const next = new Set(this.selectedIssueIds());
+    if (next.has(id)) next.delete(id); else next.add(id);
+    this.selectedIssueIds.set(next);
   }
 
   canFetch(): boolean { return !!this.ownerInput().trim() && !!this.repoInput().trim(); }
@@ -481,24 +555,119 @@ export class JenkinsfileOptimizerComponent implements OnInit, OnDestroy {
     });
   }
 
-  private effOwner(): string { return (this.owner || this.ownerInput()).trim(); }
-  private effRepo(): string { return (this.repo || this.repoInput()).trim(); }
+  // ngOnInit() sépare déjà tout "owner/repo" combiné (ex: project.githubRepo)
+  // dans ownerInput()/repoInput() — on doit lire CES signaux en priorité, pas
+  // this.owner/this.repo bruts, sinon un repo combiné jamais séparé repart
+  // tel quel vers le backend (violation du contrat "repo en nom seul").
+  private effOwner(): string { return (this.ownerInput() || this.owner || '').trim(); }
+  private effRepo(): string { return (this.repoInput() || this.repo || '').trim(); }
   canApply(): boolean { return !!this.effOwner() && !!this.effRepo(); }
 
+  // WF4 v4 : asynchrone comme optimize() — POST /apply ne déclenche que le
+  // workflow n8n (Apply Agent, vrai appel LLM) et renvoie un applyId
+  // immédiatement. Le résultat réel (succès/bloqué/échec) arrive plus tard
+  // via le callback n8n -> GET /apply/:applyId/status (voir startApplyPolling).
+  // Un aller-retour synchrone n'est plus tenable : l'Apply Agent peut
+  // prendre plusieurs minutes, largement au-delà des timeouts de proxy.
   apply(r: any): void {
     this.applying.set(true);
     this.applyError.set('');
+    this.selectionViolation.set(null);
+    this.applyPollUnstable.set(false);
+    const retained = (r.issues || [])
+      .filter((i: any) => this.selectedIssueIds().has(i.id))
+      .map((i: any) => ({ id: i.id, title: i.title }));
+    const discarded = (r.issues || [])
+      .filter((i: any) => !this.selectedIssueIds().has(i.id))
+      .map((i: any) => ({ id: i.id, title: i.title }));
+
     this.http.post<any>('/api/jenkins/apply', {
+      jobId: this.currentJobId(),
       owner: this.effOwner(),
       repo: this.effRepo(),
       baseBranch: this.baseBranch,
       filePath: 'Jenkinsfile',
-      optimizedJenkinsfile: r.optimizedJenkinsfile,
+      retainedIssues: retained,
+      discardedIssues: discarded,
     }).subscribe({
-      next: (res) => { this.applied.set(res); this.applying.set(false); },
+      next: (res) => {
+        if (!res?.applyId) {
+          this.applying.set(false);
+          this.applyError.set("Réponse inattendue du serveur : identifiant d'apply manquant.");
+          return;
+        }
+        this.startApplyPolling(res.applyId);
+      },
       error: (e) => {
-        this.applyError.set(e?.error?.message || e?.message || 'Échec de création de la PR.');
         this.applying.set(false);
+        this.applyError.set(e?.error?.message || e?.message || 'Échec de création de la PR.');
+      },
+    });
+  }
+
+  // Poll GET /apply/:applyId/status. Le backend a son propre garde-fou
+  // APPLY_STALE_MS (balayage en arrière-plan, indépendant du polling) — mais
+  // on n'y fait plus une confiance aveugle côté front : un poll qui tourne
+  // depuis trop longtemps sans jamais voir status changer sort quand même de
+  // "en cours" plutôt que de tourner éternellement (défense en profondeur,
+  // au cas où le backend serait lui-même injoignable). Et si prUrl apparaît
+  // dans le résultat à N'IMPORTE quel moment, on l'affiche immédiatement —
+  // ne pas attendre status==='success' au cas où le champ arriverait avant
+  // que le statut ne soit finalisé.
+  private static readonly APPLY_POLL_MAX_ATTEMPTS = 20; // 20 x 3s = 60s
+  private startApplyPolling(applyId: string): void {
+    let unstableStreak = 0;
+    let attempts = 0;
+    this.applyPollSub?.unsubscribe();
+    this.applyPollSub = interval(3000).pipe(
+      switchMap(() => this.http.get<any>(`/api/jenkins/apply/${applyId}/status`)),
+    ).subscribe({
+      next: (s) => {
+        unstableStreak = 0;
+        this.applyPollUnstable.set(false);
+        if (s.result?.prUrl) {
+          this.applyPollSub?.unsubscribe();
+          this.applying.set(false);
+          this.applied.set(s.result);
+          return;
+        }
+        if (s.status === 'pending') {
+          attempts++;
+          if (attempts >= JenkinsfileOptimizerComponent.APPLY_POLL_MAX_ATTEMPTS) {
+            this.applyPollSub?.unsubscribe();
+            this.applying.set(false);
+            this.applyError.set('Création non confirmée après 60s — vérifiez sur GitHub si la PR a bien été créée.');
+          }
+          return; // on continue de poller
+        }
+        this.applyPollSub?.unsubscribe();
+        this.applying.set(false);
+        if (s.status === 'success') {
+          this.applied.set(s.result);
+        } else if (s.status === 'blocked') {
+          const violations = Array.isArray(s.result?.violations)
+            ? s.result.violations.map((v: any) => `${v.ref || '?'} (${v.pattern || v.title || ''})`).join(', ')
+            : '';
+          this.selectionViolation.set(
+            [s.result?.message || 'La PR a été bloquée par le gate de validation.', violations]
+              .filter(Boolean).join(' — '),
+          );
+        } else {
+          this.applyError.set(s.result?.message || 'Échec de création de la PR.');
+        }
+      },
+      error: (e) => {
+        if (e.status === 404) {
+          this.applyPollSub?.unsubscribe();
+          this.applying.set(false);
+          this.applyError.set('Apply introuvable ou expiré — réessayez.');
+          return;
+        }
+        // Erreur réseau transitoire du polling lui-même : on ne coupe pas
+        // le suivi, on signale juste une instabilité discrète (même logique
+        // que startPolling()).
+        unstableStreak++;
+        if (unstableStreak >= 3) this.applyPollUnstable.set(true);
       },
     });
   }
@@ -541,7 +710,7 @@ export class JenkinsfileOptimizerComponent implements OnInit, OnDestroy {
           this.loading.set(false);
           return;
         }
-        this.startPolling(r.id);
+        this.startPolling(r.id, true);
       },
       error: (e) => {
         this.error.set(e?.error?.message || e?.message || "Impossible de démarrer l'analyse — vérifiez que le backend est joignable.");
@@ -554,7 +723,8 @@ export class JenkinsfileOptimizerComponent implements OnInit, OnDestroy {
   // tant que status=pending — pas de timeout ni de seuil de temps. Seul un
   // vrai status=error (raison explicite fournie par le workflow) ou un 404
   // (job perdu/expiré) arrêtent le polling.
-  private startPolling(id: string): void {
+  //
+  private startPolling(id: string, sourceAvailable: boolean): void {
     let unstableStreak = 0;
     this.pollSub = interval(3000).pipe(
       switchMap(() => this.http.get<any>(`/api/jenkins/optimize/${id}/status`)),
@@ -566,7 +736,7 @@ export class JenkinsfileOptimizerComponent implements OnInit, OnDestroy {
         this.pollSub?.unsubscribe();
         this.loading.set(false);
         if (s.status === 'done') {
-          this.result.set(s.result);
+          this.applyResult(id, s.result, sourceAvailable);
         } else {
           this.error.set(`Bloqué : ${s.reason || 'raison inconnue'}${s.detail ? ' — ' + s.detail : ''}`);
         }
@@ -588,24 +758,15 @@ export class JenkinsfileOptimizerComponent implements OnInit, OnDestroy {
 
   reset(): void {
     this.pollSub?.unsubscribe();
+    this.applyPollSub?.unsubscribe();
     this.pollUnstable.set(false);
-    this.result.set(null); this.copied.set(false);
+    this.applyPollUnstable.set(false);
+    this.result.set(null);
     this.applied.set(null); this.applyError.set(''); this.applying.set(false);
     this.fetched.set(false); this.fetchError.set('');
-  }
-
-  copy(text: string): void {
-    navigator.clipboard?.writeText(text);
-    this.copied.set(true);
-    setTimeout(() => this.copied.set(false), 2000);
-  }
-
-  download(text: string): void {
-    const blob = new Blob([text], { type: 'text/plain' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'Jenkinsfile';
-    a.click();
-    URL.revokeObjectURL(a.href);
+    this.currentJobId.set('');
+    this.sourceAvailable.set(false);
+    this.selectedIssueIds.set(new Set());
+    this.selectionViolation.set(null);
   }
 }

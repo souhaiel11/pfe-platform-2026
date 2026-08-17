@@ -99,6 +99,11 @@
         </div>
       </div>
       <div class="field">
+        <label>Jenkins Job Path <span class="hint">(multibranch uniquement, ex: mon-dossier/job/main)</span></label>
+        <input formControlName="jenkinsJobPath" placeholder="mon-dossier/job/main">
+        <span class="hint">Laisser vide pour un job simple (non multibranch) — le Job Name suffit alors.</span>
+      </div>
+      <div class="field">
         <label>Jenkins Token <span class="hint">(format: user:token)</span></label>
         <input formControlName="jenkinsToken" type="password" placeholder="souhaiel.amri:11f686...">
       </div>

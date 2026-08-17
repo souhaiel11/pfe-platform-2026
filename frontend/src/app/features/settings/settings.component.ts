@@ -18,6 +18,10 @@ interface ToolConfig {
   token: string;
   username: string;
   password: string;
+  // Le backend ne renvoie plus jamais la valeur réelle (voir integrations.service.ts
+  // sanitize()) — seule sa présence est connue, pour afficher "déjà configuré".
+  hasToken: boolean;
+  hasPassword: boolean;
   enabled: boolean;
   status: 'connected' | 'disconnected' | 'error';
   lastChecked?: string;
@@ -35,7 +39,6 @@ interface ToolConfig {
   styleUrls: ['./settings.component.scss'],
 })
 export class SettingsComponent implements OnInit {
-  confidenceThreshold = 70;
   n8nUrl = `${environment.n8nUrl}/webhook/jenkins-event`;
 
   tools: ToolConfig[] = [
@@ -43,28 +46,28 @@ export class SettingsComponent implements OnInit {
       toolType: 'grafana', name: 'Grafana', icon: 'G', color: '#f59e0b',
       description: 'Dashboards & alerting — GET /api/health',
       authType: 'token', tokenLabel: 'API Key (Bearer)',
-      url: '', token: '', username: '', password: '',
+      url: '', token: '', username: '', password: '', hasToken: false, hasPassword: false,
       enabled: true, status: 'disconnected', expanded: false, testing: false, saving: false,
     },
     {
       toolType: 'prometheus', name: 'Prometheus', icon: 'P', color: '#e24b4a',
       description: 'Métriques & monitoring — GET /-/healthy',
       authType: 'none', tokenLabel: '',
-      url: '', token: '', username: '', password: '',
+      url: '', token: '', username: '', password: '', hasToken: false, hasPassword: false,
       enabled: true, status: 'disconnected', expanded: false, testing: false, saving: false,
     },
     {
       toolType: 'kubernetes', name: 'Kubernetes', icon: 'K', color: '#38bdf8',
       description: 'Orchestration de conteneurs — GET /readyz',
       authType: 'token', tokenLabel: 'Bearer Token (kubeconfig)',
-      url: '', token: '', username: '', password: '',
+      url: '', token: '', username: '', password: '', hasToken: false, hasPassword: false,
       enabled: true, status: 'disconnected', expanded: false, testing: false, saving: false,
     },
     {
       toolType: 'nexus', name: 'Nexus', icon: 'N', color: '#a78bfa',
       description: 'Dépôt d\'artefacts — GET /service/rest/v1/status',
       authType: 'basic', tokenLabel: '',
-      url: '', token: '', username: '', password: '',
+      url: '', token: '', username: '', password: '', hasToken: false, hasPassword: false,
       enabled: true, status: 'disconnected', expanded: false, testing: false, saving: false,
     },
   ];
@@ -89,9 +92,15 @@ export class SettingsComponent implements OnInit {
           if (!tool) continue;
           tool.id       = intg.id;
           tool.url      = intg.url      || '';
-          tool.token    = intg.token    || '';
+          // Le backend ne renvoie plus le token/password en clair (voir FIX
+          // sécurité 2026-08-04) — seuls hasToken/hasPassword indiquent si un
+          // secret est déjà enregistré ; le champ reste vide tant que
+          // l'utilisateur ne retape rien (voir saveTool()/getSecretPlaceholder()).
+          tool.token    = '';
           tool.username = intg.username || '';
-          tool.password = intg.password || '';
+          tool.password = '';
+          tool.hasToken    = !!intg.hasToken;
+          tool.hasPassword = !!intg.hasPassword;
           tool.enabled  = intg.enabled;
           tool.status   = intg.status   || 'disconnected';
           tool.metadata = intg.metadata || null;
@@ -189,6 +198,10 @@ export class SettingsComponent implements OnInit {
     }
   }
 
+  getSecretPlaceholder(hasSecret: boolean, generic: string): string {
+    return hasSecret ? 'Déjà configuré — laisser vide pour ne pas changer' : generic;
+  }
+
   getUrlPlaceholder(type: string): string {
     const map: Record<string, string> = {
       grafana:    'http://localhost:3000',
@@ -204,7 +217,4 @@ export class SettingsComponent implements OnInit {
     return Object.entries(metadata).map(([key, val]) => ({ key, val: String(val) }));
   }
 
-  saveConfig() {
-    this.toast.success('Configuration sauvegardée', `Seuil Judge : ${this.confidenceThreshold}%`);
-  }
 }

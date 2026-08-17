@@ -1,7 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
-import { FormsModule } from '@angular/forms';
 import { forkJoin, of, catchError } from 'rxjs';
 import { ApiService } from '../../core/services/api.service';
 import { ToastService } from '../../core/services/toast.service';
@@ -10,15 +9,13 @@ import { ProjectEventsService } from '../../core/services/project-events.service
 @Component({
   selector: 'app-projects',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule],
+  imports: [CommonModule, RouterModule],
   templateUrl: './projects.component.html',
   styleUrls: ['./projects.component.scss'],
 })
 export class ProjectsComponent implements OnInit {
   projects: any[] = [];
   loading   = false;
-  showModal = false;
-  newProject = { name: '', description: '', sonarKey: '', githubRepo: '', jenkinsJobName: '' };
 
   constructor(
     private api: ApiService,
@@ -54,20 +51,6 @@ export class ProjectsComponent implements OnInit {
         this.loading = false;
       },
       error: () => { this.toast.error('Erreur', 'Impossible de charger les projets'); this.loading = false; }
-    });
-  }
-
-  createProject() {
-    if (!this.newProject.name) return;
-    this.api.createProject(this.newProject).subscribe({
-      next: () => {
-        this.toast.success('Projet créé', this.newProject.name);
-        this.showModal = false;
-        this.newProject = { name: '', description: '', sonarKey: '', githubRepo: '', jenkinsJobName: '' };
-        this.load();
-        this.projectEvents.notifyChanged();
-      },
-      error: () => this.toast.error('Erreur', 'Impossible de créer le projet')
     });
   }
 

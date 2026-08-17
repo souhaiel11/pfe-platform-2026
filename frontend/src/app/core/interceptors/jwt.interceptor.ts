@@ -7,8 +7,11 @@ export const jwtInterceptor: HttpInterceptorFn = (req, next) => {
   const router = inject(Router);
   const token = localStorage.getItem('token');
 
-  // Do not add token for auth endpoints or n8n webhooks
-  const isPublic = req.url.includes('/auth/') || req.url.includes('5678');
+  // Do not add token for the 2 genuinely public auth endpoints or n8n
+  // webhooks. Exact match (endsWith), not a substring on '/auth/' — sinon
+  // ça stripperait aussi le token des routes protégées /auth/users(/:id).
+  const PUBLIC_AUTH_PATHS = ['/auth/login', '/auth/register'];
+  const isPublic = PUBLIC_AUTH_PATHS.some(p => req.url.endsWith(p)) || req.url.includes('5678');
   const cloned = (token && !isPublic)
     ? req.clone({ setHeaders: { Authorization: `Bearer ${token}` } })
     : req;

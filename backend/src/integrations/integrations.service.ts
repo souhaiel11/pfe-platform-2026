@@ -16,11 +16,40 @@ export class IntegrationsService {
     private readonly http: HttpService,
   ) {}
 
-  findAll() {
-    return this.repo.find({ order: { toolType: 'ASC' } });
+  // Un credential (token/password) ne doit jamais repartir en clair vers le
+  // front une fois enregistré — seule sa présence est utile côté UI (afficher
+  // "configuré" plutôt que la valeur). Deny-list par construction, même
+  // logique que sanitizeProject (voir common/sanitize-project.ts) : un champ
+  // secret ajouté à Integration sans être ajouté ici fuiterait silencieusement.
+  private sanitize(integration: Integration) {
+    const { token, password, ...rest } = integration;
+    return { ...rest, hasToken: !!token, hasPassword: !!password };
+  }
+
+  // Un champ token/password vide envoyé par le front lors d'un update ne veut
+  // pas dire "efface le secret existant" — le front ne reçoit plus jamais la
+  // vraie valeur (voir sanitize()), donc un champ laissé vide à l'écran est
+  // par construction une valeur inchangée, pas une intention d'effacement.
+  private dropBlankSecrets<T extends Record<string, any>>(dto: T): T {
+    const clean: any = { ...dto };
+    if (clean.token === '' || clean.token === null || clean.token === undefined) delete clean.token;
+    if (clean.password === '' || clean.password === null || clean.password === undefined) delete clean.password;
+    return clean;
+  }
+
+  async findAll() {
+    const rows = await this.repo.find({ order: { toolType: 'ASC' } });
+    return rows.map((r) => this.sanitize(r));
   }
 
   async findOne(id: string) {
+    return this.sanitize(await this.findOneRaw(id));
+  }
+
+  // Réservé à l'usage interne (testConnection doit lire le vrai token/
+  // password pour construire l'en-tête Authorization) — ne jamais renvoyer
+  // ceci directement dans une réponse HTTP.
+  private async findOneRaw(id: string) {
     const i = await this.repo.findOne({ where: { id } });
     if (!i) throw new NotFoundException('Integration not found');
     return i;
@@ -29,21 +58,23 @@ export class IntegrationsService {
   async upsert(dto: CreateIntegrationDto) {
     const existing = await this.repo.findOne({ where: { toolType: dto.toolType } });
     if (existing) {
-      await this.repo.update(existing.id, dto as any);
-      return this.repo.findOne({ where: { id: existing.id } });
+      await this.repo.update(existing.id, this.dropBlankSecrets(dto) as any);
+      const updated = await this.repo.findOne({ where: { id: existing.id } });
+      return this.sanitize(updated!);
     }
-    const integration = this.repo.create(dto as any);
-    return this.repo.save(integration);
+    const integration = this.repo.create(dto as Integration);
+    const saved = await this.repo.save(integration);
+    return this.sanitize(saved);
   }
 
   async update(id: string, dto: UpdateIntegrationDto) {
     await this.findOne(id);
-    await this.repo.update(id, dto as any);
+    await this.repo.update(id, this.dropBlankSecrets(dto) as any);
     return this.findOne(id);
   }
 
   async testConnection(id: string) {
-    const integration = await this.findOne(id);
+    const integration = await this.findOneRaw(id);
     const now = new Date();
     try {
       const metadata = await this.doTest(integration);

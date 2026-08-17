@@ -64,6 +64,7 @@ export class ProjectFormComponent implements OnInit {
       cicdTool:       ['jenkins'],
       jenkinsUrl:     [''],
       jenkinsJobName: ['', [Validators.required, Validators.pattern(/^[a-zA-Z0-9._-]+$/)]],
+      jenkinsJobPath: [''],
       jenkinsToken:   [''],
       githubRepo:     ['', [Validators.required, Validators.pattern(/^[\w-]+\/[\w.-]+$/)]],
       githubToken:    [''],

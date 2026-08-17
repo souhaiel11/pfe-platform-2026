@@ -6,6 +6,7 @@ import { Incident, IncidentStatus } from './incident.entity';
 import { IncidentsGateway } from './incidents.gateway';
 import { Project } from '../projects/project.entity';
 import { sanitizeEntityProject } from '../common/sanitize-project';
+import { writeErrorToEntity } from '../common/workflow-error';
 
 @Injectable()
 export class IncidentsService {
@@ -27,7 +28,7 @@ export class IncidentsService {
   async findAll(projectId?: string, status?: string, size?: number) {
     const where: any = {};
     if (projectId) where.projectId = projectId;
-    const validStatuses = ["pending","analyzing","analyzed","fix_generated","validating","approved","completed","failed","rejected"];
+    const validStatuses = ["pending","analyzing","analyzed","fix_generated","validating","approved","completed","blocked","failed","rejected"];
     const normalizedStatus = status?.toLowerCase();
     if (normalizedStatus && validStatuses.includes(normalizedStatus)) where.status = normalizedStatus;
     const incidents = await this.repo.find({
@@ -71,7 +72,21 @@ export class IncidentsService {
   }
 
   async update(id: string, dto: Partial<Incident>) {
-    await this.repo.update(id, dto);
+    // Seul le PUT qui reporte explicitement une errorReason passe par le
+    // helper (normalise errorDetail/errorStep à null si absents) — un
+    // update normal (statut, prUrl, metadata...) sans errorReason n'est pas
+    // touché, comportement identique à avant.
+    const payload = (dto as any).errorReason
+      ? {
+          ...dto,
+          ...writeErrorToEntity({
+            reason: (dto as any).errorReason,
+            detail: (dto as any).errorDetail,
+            step: (dto as any).errorStep,
+          }),
+        }
+      : dto;
+    await this.repo.update(id, payload);
     const updated = await this.findOne(id);
     this.gateway.emit('incident:updated', updated);
     return updated;

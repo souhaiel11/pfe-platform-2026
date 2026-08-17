@@ -55,8 +55,9 @@ export class ReportsService {
     // Score de sécurité : TOUJOURS le calcul déterministe sur les findings
     // normalisés — jamais dto.securityScore/riskLevel (valeurs LLM ignorées).
     const normalized = normalizeReport(dto.rawData);
-    report.securityScore = calculateSecurityScore(normalized);
-    report.riskLevel = getRiskLevel(report.securityScore);
+    const { score, incomplete } = calculateSecurityScore(normalized);
+    report.securityScore = score;
+    report.riskLevel = getRiskLevel(score, incomplete);
     // Décision Judge exposée séparément — n'influence jamais le score ci-dessus.
     report.judgeDecision = (dto as any).judgeDecision ?? null;
     report.judgeConfidence = (dto as any).judgeConfidence ?? null;
@@ -66,9 +67,15 @@ export class ReportsService {
     // Mettre à jour le score du projet depuis ce dernier report combined —
     // l'historique complet est conservé (aucune suppression/archivage auto).
     if (dto.type === 'combined' && dto.projectId) {
+      // incomplete → jamais 'healthy' (ProjectStatus n'a pas de 4e valeur
+      // "indéterminé" ; 'warning' est le palier existant le plus honnête en
+      // attendant une éventuelle extension de l'enum, décision produit à part).
+      const projectStatus = incomplete
+        ? 'warning'
+        : (report.securityScore >= 80 ? 'healthy' : report.securityScore >= 40 ? 'warning' : 'critical');
       await this.projectRepo.update(dto.projectId, {
         securityScore: report.securityScore,
-        status: (report.securityScore >= 80 ? 'healthy' : report.securityScore >= 40 ? 'warning' : 'critical') as any,
+        status: projectStatus as any,
       });
       const after = await this.readiness.isReadyToDeploy(dto.projectId);
       await this.syncDeployReadyNotification(dto.projectId, after);

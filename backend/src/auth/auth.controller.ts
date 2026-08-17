@@ -1,8 +1,15 @@
 // auth.controller.ts
-import { Controller, Post, Get, Delete, Param, Body, UseGuards, OnModuleInit } from '@nestjs/common';
+import { Controller, Post, Get, Delete, Param, Body, UseGuards, OnModuleInit, BadRequestException } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
+import { UserRole } from './user.entity';
+
+// Whitelist stricte — même principe fail-closed que le reste de la plateforme :
+// un rôle fourni mais invalide est un 400 explicite (jamais silencieusement
+// corrigé/ignoré) ; un rôle absent laisse le service appliquer son défaut
+// sûr (DEVELOPER, le moins privilégié — jamais ADMIN par défaut).
+const VALID_ROLES: string[] = [UserRole.ADMIN, UserRole.DEVELOPER, UserRole.VIEWER];
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -13,8 +20,18 @@ export class AuthController implements OnModuleInit {
   @Post('login') login(@Body() body: { email: string; password: string }) {
     return this.service.login(body.email, body.password);
   }
-  @Post('register') register(@Body() body: { email: string; password: string; name: string }) {
-    return this.service.register(body.email, body.password, body.name);
+  @Post('register')
+  register(@Body() body: { email: string; password: string; name?: string; username?: string; role?: string }) {
+    // Le front historique envoyait "username" ; la colonne réelle est "name".
+    const name = body.name ?? body.username;
+    let role: UserRole | undefined;
+    if (body.role !== undefined && body.role !== null) {
+      if (!VALID_ROLES.includes(body.role)) {
+        throw new BadRequestException(`role invalide : "${body.role}" (valeurs autorisées : ${VALID_ROLES.join(', ')})`);
+      }
+      role = body.role as UserRole;
+    }
+    return this.service.register(body.email, body.password, name as string, role);
   }
   @ApiBearerAuth() @UseGuards(JwtAuthGuard) @Get('users') findAll() { return this.service.findAll(); }
   @ApiBearerAuth() @UseGuards(JwtAuthGuard) @Delete('users/:id') remove(@Param('id') id: string) { return this.service.remove(id); }

@@ -1221,6 +1221,32 @@
       "id": "ea7224ef-97d5-4818-b4ce-a340385a3653",
       "name": "Save Judge Decision to Report",
       "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Sortie ERREUR de \"Lookup Project\" (index 1) — avant ce fix, jamais\n// câblée : un 404 (jobName introuvable, ex. slash multibranche non retiré,\n// projet jamais créé côté plateforme) était silencieusement jeté et toute\n// la chaîne WF1 (4 agents + Judge) s'arrêtait sans aucune trace nulle part.\nconst err = $input.first().json;\nconsole.warn(`[WF1] Lookup Project a échoué — jobName probablement introuvable (404) ou secret interne rejeté. Détail : ${JSON.stringify(err)}`);\nreturn [{ json: { ...err, wf1LookupProjectFailed: true } }];\n"
+      },
+      "id": "82dc178c-711d-40d8-ade6-e15eb9371d73",
+      "name": "Log Lookup Project Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        31184,
+        23048
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Sortie ERREUR de \"Send Raw Incident to Backend\" (index 1) — avant ce fix,\n// jamais câblée : un 404 (jobName introuvable côté /api/webhooks/jenkins/by-job,\n// même bug que Lookup Project) était silencieusement jeté et toute la chaîne\n// WF1 (fetch rapports + 4 agents + Judge) s'arrêtait sans aucune trace.\nconst err = $input.first().json;\nconsole.warn(`[WF1] Send Raw Incident to Backend a échoué — jobName probablement introuvable (404) ou backend injoignable. Détail : ${JSON.stringify(err)}`);\nreturn [{ json: { ...err, wf1SendRawIncidentFailed: true } }];\n"
+      },
+      "id": "cf98da1b-3b77-4df0-a723-6064ba63129d",
+      "name": "Log Send Raw Incident Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        31616,
+        23032
+      ]
     }
   ],
   "connections": {
@@ -1283,6 +1309,13 @@
         [
           {
             "node": "Extract Project Config",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log Lookup Project Error",
             "type": "main",
             "index": 0
           }
@@ -1502,6 +1535,13 @@
         [
           {
             "node": "Prepare Fetch URLs",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log Send Raw Incident Error",
             "type": "main",
             "index": 0
           }

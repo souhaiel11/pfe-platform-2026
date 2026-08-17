@@ -25,7 +25,6 @@ export class LayoutComponent implements OnInit {
     '/projects':      'Projets',
     '/incidents':     'Incidents',
     '/analysis':      'Agents IA',
-    '/notifications': 'Notifications',
     '/settings':      'Paramètres',
     '/admin':         'Administration',
   };

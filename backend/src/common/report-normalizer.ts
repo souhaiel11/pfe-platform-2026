@@ -23,6 +23,11 @@ export interface ScannerBlock {
   high: number;
   cves_count: number;
   cves: Cve[];
+  // Statut réel du scanner sur CE report — absent (legacy/empty) = donnée de
+  // confiance historique ; présent et différent de 'COMPLETED' (ex. 'UNKNOWN')
+  // = le scanner n'a pas tourné, voir security-score.ts::isScannerComplete.
+  status?: string;
+  _source?: string;
 }
 
 export interface SonarIssue {
@@ -40,12 +45,16 @@ export interface SonarBlock {
   coverage: number;
   quality_gate: string;
   issues: SonarIssue[];
+  status?: string;
+  _source?: string;
 }
 
 export interface ZapBlock {
   alerts_high: number;
   alerts_count: number;
   alerts_medium: number;
+  status?: string;
+  _source?: string;
 }
 
 export interface EnrichedData {
