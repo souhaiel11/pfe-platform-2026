@@ -10,6 +10,7 @@ import { randomUUID } from 'crypto';
 import { JenkinsAnalysis, JenkinsAnalysisStatus } from './jenkins-analysis.entity';
 import { JenkinsApply, JenkinsApplyStatus } from './jenkins-apply.entity';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { JwtOrInternalSecretGuard } from '../auth/jwt-or-internal-secret.guard';
 import { Project } from '../projects/project.entity';
 
 const N8N_URL = process.env.N8N_URL || 'http://172.31.172.61:5678';
@@ -145,6 +146,10 @@ export class JenkinsOptimizerController {
   // aucune requête HTTP ne reste jamais ouverte plus de quelques ms,
   // donc aucun timeout de proxy (nginx, tunnel de soutenance, etc.)
   // ne peut plus jamais couper cet appel.
+  // Appelé par le front (JWT utilisateur) ET par le routage auto WF4 dans
+  // webhooks.service.ts (token de service signé en interne, voir routeToOptimizer)
+  // — d'où le guard hybride plutôt qu'un JwtAuthGuard nu.
+  @UseGuards(JwtOrInternalSecretGuard)
   @Post('optimize')
   async optimize(@Body() body: {
     jenkinsfile?: string;
@@ -296,6 +301,9 @@ export class JenkinsOptimizerController {
     return { id };
   }
 
+  // Même raison que optimize() ci-dessus : le front poll ce endpoint avec
+  // son JWT, mais rien n'empêche un futur appel serveur->serveur.
+  @UseGuards(JwtOrInternalSecretGuard)
   @Get('optimize/:id/status')
   async getOptimizeStatus(@Param('id') id: string) {
     const job = jobs.get(id);
@@ -372,6 +380,9 @@ export class JenkinsOptimizerController {
     return this.analyses.find({ where: { projectId }, order: { createdAt: 'DESC' } });
   }
 
+  // Appelé par le front (bouton manuel) ET par le routage auto WF4 (token
+  // de service) juste avant optimize() — même guard hybride que optimize().
+  @UseGuards(JwtOrInternalSecretGuard)
   @Post('fetch')
   async fetch(@Body() body: { owner: string; repo: string; filePath?: string; ref?: string }) {
     if (!body?.owner || !body?.repo) {

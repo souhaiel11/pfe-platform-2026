@@ -167,11 +167,17 @@ export class WebhooksService {
     if (classification.type === 'jenkinsfile') {
       // WF4 : /jenkins/optimize a besoin du contenu, pas seulement du
       // chemin — un fetch préalable est requis (WF4 ne le fait pas lui-même,
-      // contrairement à WF5). Pas de JwtAuthGuard sur cette route (voir
-      // jenkins-optimizer.module.ts, non modifié) — aucun token nécessaire.
+      // contrairement à WF5). /jenkins/fetch et /jenkins/optimize sont
+      // protégés par JwtOrInternalSecretGuard (voir jenkins-optimizer.module.ts) :
+      // un appel serveur->serveur n'a pas de session à réutiliser, on signe un
+      // token de service à la volée (même secret que AuthModule, voir
+      // webhooks.module.ts) — même pattern que la branche WF5 ci-dessous.
+      const internalToken = this.jwt.sign({
+        sub: 'internal-webhook-router', email: 'internal-router@devsecops.local', role: 'admin',
+      });
       const fetchRes = await fetch(`${SELF_API_URL}/jenkins/fetch`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${internalToken}` },
         body: JSON.stringify({ owner, repo, filePath: 'Jenkinsfile', ref: branch || undefined }),
         signal: AbortSignal.timeout(30000),
       });
@@ -182,7 +188,7 @@ export class WebhooksService {
       }
       await fetch(`${SELF_API_URL}/jenkins/optimize`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${internalToken}` },
         body: JSON.stringify({
           projectId, projectName: project?.name, jenkinsfile: fetchData.jenkinsfile, buildError: errorReason,
         }),
