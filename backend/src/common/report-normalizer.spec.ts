@@ -110,4 +110,78 @@ console.log('Test 6 — v2.1, sonar.coverage en string (comme produit par n8n)')
   check('sonar.coverage est bien un number (0), pas la string "0"', n.sonar.coverage === 0 && typeof n.sonar.coverage === 'number');
 }
 
+// ── 7-11. Vérité scanner (QA-WF1-SCANNER-DIAGNOSTIC-HARDENING §12, matrice A-J) ──
+// Ces cas couvrent le repli déterministe (fillScannerTruth/fillStageTruth) pour
+// des reports historiques SANS les nouveaux champs, et vérifient que des champs
+// déjà posés par WF1 (post-fix) ne sont jamais écrasés.
+console.log('Test 7 — repli legacy : status COMPLETED sans champs de vérité (cves_count=0 réel)');
+{
+  const raw = { enrichedData: { trivy: { status: 'COMPLETED', critical: 0, high: 0, cves_count: 0, cves: [] } } };
+  const n = normalizeReport(raw);
+  check('trivy.executed = true (repli sur scanState dérivé de status)', n.trivy.executed === true);
+  check('trivy.completed = true', n.trivy.completed === true);
+  check('trivy.resultAvailable = true', n.trivy.resultAvailable === true);
+  check('trivy.findingCount = 0 (complété, réellement 0)', n.trivy.findingCount === 0);
+}
+
+console.log("Test 8 — repli legacy : status FAILED sans preuve -> incertitude honnête (pas de faux 0/false)");
+{
+  const raw = { enrichedData: { owasp: { status: 'FAILED', critical: 0, high: 0, cves_count: 0, cves: [] } } };
+  const n = normalizeReport(raw);
+  check('owasp.executed = null (aucune preuve d\'exécution dans ce report legacy)', n.owasp.executed === null);
+  check('owasp.completed = false', n.owasp.completed === false);
+  check('owasp.resultAvailable = false', n.owasp.resultAvailable === false);
+  check('owasp.findingCount = null (jamais 0 par défaut sur un FAILED)', n.owasp.findingCount === null);
+}
+
+console.log('Test 9 — champs déjà posés par WF1 (post-fix) jamais écrasés : Sonar CE task id manquant');
+{
+  const raw = {
+    enrichedData: {
+      sonar: {
+        status: 'COMPLETED', scanState: 'COMPLETED_ZERO_FINDINGS', quality_gate: 'API_ERROR', issues: [],
+        analysisSubmitted: true, qualityGateResolved: false, completed: false, resultAvailable: false,
+        findingCount: null, technicalCode: 'SONAR_CE_TASK_ID_MISSING', problemClass: 'FIXABLE_CONFIGURATION',
+        owner: 'agent', evidence: ['Sonar Issues API a retourné une réponse valide'], route: 'WF4',
+      },
+    },
+  };
+  const n = normalizeReport(raw);
+  check('sonar.completed reste false (pas écrasé par le scanState dérivé)', n.sonar.completed === false);
+  check('sonar.resultAvailable reste false', n.sonar.resultAvailable === false);
+  check('sonar.findingCount reste null (jamais 0 malgré issues=[])', n.sonar.findingCount === null);
+  check('sonar.technicalCode = SONAR_CE_TASK_ID_MISSING préservé', n.sonar.technicalCode === 'SONAR_CE_TASK_ID_MISSING');
+  check('sonar.route = WF4 préservé', (n.sonar as any).route === 'WF4');
+}
+
+console.log('Test 10 — ZAP post-fix : executed=true malgré cible injoignable (bug executed=false corrigé côté WF1)');
+{
+  const raw = {
+    enrichedData: {
+      zap: {
+        status: 'FAILED', scanState: 'FAILED', alerts_high: 0, alerts_count: 0,
+        executed: true, completed: false, resultAvailable: false, findingCount: null,
+        technicalCode: 'DOCKER_CONFIGURATION_ERROR', problemClass: 'FIXABLE_CONFIGURATION',
+        owner: 'INFRASTRUCTURE/ADMIN', route: 'ADMIN_ACTION_REQUIRED',
+      },
+    },
+  };
+  const n = normalizeReport(raw);
+  check('zap.executed = true préservé (pas retombé à false)', n.zap.executed === true);
+  check('zap.problemClass = FIXABLE_CONFIGURATION (pas PRODUCT_DEFECT)', (n.zap as any).problemClass === 'FIXABLE_CONFIGURATION');
+  check('zap.route = ADMIN_ACTION_REQUIRED (jamais auto-routé)', (n.zap as any).route === 'ADMIN_ACTION_REQUIRED');
+}
+
+console.log('Test 11 — stages.<x> : findingCount=0 sur un stage FAILED non résultat-disponible -> null');
+{
+  const raw = {
+    enrichedData: {
+      trivy: { status: 'FAILED', critical: 0, high: 0, cves_count: 0, cves: [] },
+      stages: { trivy: { stage: 'trivy', status: 'FAILED', blocking: true, executed: true, findings: [], findingCount: 0, source: 'TRIVY' } },
+    },
+  };
+  const n = normalizeReport(raw);
+  check('stages.trivy.findingCount = null (pas 0 — bug confirmé build #11 dans stageFromScan)', n.stages?.trivy?.findingCount === null);
+}
+
 console.log(`\n${passed} assertions passées.`);

@@ -12,9 +12,12 @@
 //
 //  Philosophie fail-closed héritée de azure-deploy-readiness.service.ts :
 //  une phase dont le statut est absent/inattendu est BLOQUANTE par défaut,
-//  jamais assimilée à "ok". La SEULE exception est ZAP, décidée
-//  explicitement (dette applicative diagnostiquée : timeout, pas un simple
-//  "pas encore essayé") — voir le bloc ZAP ci-dessous.
+//  jamais assimilée à "ok". ZAP suivait auparavant une exception (non
+//  bloquant tant que non complété) — supprimée (ticket
+//  QA-WF1-SCANNER-DIAGNOSTIC-HARDENING §8) : ZAP est un scanner requis au
+//  même titre que Trivy/OWASP, un DAST non complété (timeout, blocage
+//  Docker/Jenkins, etc.) est une vraie inconnue de sécurité, pas un motif
+//  pour laisser passer un déploiement.
 // ─────────────────────────────────────────────────────────────
 
 export type PhaseType = 'agent' | 'humain';
@@ -113,22 +116,10 @@ export function evaluateProjectCleanliness(enrichedData: any): ProjectCleanlines
     }
   }
 
-  // ── ZAP — DAST (humain) — SEULE EXCEPTION au fail-closed ──
-  // Décision explicite (option b) : le timeout ZAP est une dette
-  // applicative diagnostiquée (l'app ne répond pas sur :8080 en 60s), pas
-  // une simple absence de données. Un "non exécuté" ici n'est PAS traité
-  // comme "ok" (ce serait fail-open, jamais fait ailleurs dans ce fichier)
-  // mais comme une 3e catégorie explicite : signalé, exclu du blocage,
-  // raison honnête. Si ZAP finit un jour par compléter (COMPLETED), on
-  // revient au même traitement fail-closed que Trivy/OWASP — cette
-  // exception ne s'applique qu'à l'état "non exécuté" actuel, pas à un
-  // résultat ZAP positif qu'on choisirait d'ignorer.
+  // ── ZAP — DAST (humain) — fail-closed, même traitement que Trivy/OWASP ──
   const zap = enrichedData?.zap;
   if (zap?.status !== 'COMPLETED') {
-    nonExecutedPhases.push({
-      phase: 'DAST (ZAP)',
-      raison: `Scanner non exécuté (statut ${zap?.status || 'absent'}) — dette applicative connue (timeout sur l'app cible), hors périmètre du verrou pour l'instant. À vérifier manuellement avant déploiement.`,
-    });
+    blockingPhases.push({ phase: 'DAST (ZAP)', raison: `Scanner non exécuté ou incomplet (statut ${zap?.status || 'absent'}${zap?.technicalCode ? `, cause : ${zap.technicalCode}` : ''}) — résultat DAST indisponible, bloquant par défaut.`, type: 'humain' });
   } else if ((zap.alerts_high || 0) > 0) {
     blockingPhases.push({ phase: 'DAST (ZAP)', raison: `${zap.alerts_high} alerte(s) haute(s) ouverte(s)`, type: 'humain' });
   }

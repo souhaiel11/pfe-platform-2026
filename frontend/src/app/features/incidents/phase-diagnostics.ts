@@ -14,12 +14,16 @@
 //  affiche à la place d'un "UNKNOWN" nu.
 //
 //  Trois niveaux de certitude, jamais mélangés dans le texte final :
-//   - CONFIRMÉ   : prouvé par les données de CE run (ex. Sonar a trouvé des
-//     issues réelles mais le quality gate spécifiquement n'a pas répondu —
-//     visible en comparant issues.length et quality_gate).
+//   - CONFIRMÉ   : prouvé par les données de CE run — soit technicalCode
+//     posé par WF1 avec preuve (voir scanner-diagnostics.ts), soit déduit
+//     directement des champs du bloc (ex. Sonar a trouvé des issues réelles
+//     mais le quality gate spécifiquement n'a pas répondu).
 //   - HYPOTHÈSE  : dette déjà diagnostiquée dans une session précédente
 //     (nvd-api-key, timeout ZAP) — probable, PAS reprouvée sur ce run
-//     précis (on n'a pas le log du stage OWASP/ZAP pour ce build).
+//     précis (on n'a pas le log du stage OWASP/ZAP pour ce build). Ce n'est
+//     qu'un FILET DE REPLI : si le bloc porte un technicalCode confirmé
+//     pour ce run (ticket QA-WF1-SCANNER-DIAGNOSTIC-HARDENING §9), cette
+//     hypothèse générique n'est jamais affichée à sa place.
 //   - INCONNU    : rien d'exploitable → filet honnête, jamais un UNKNOWN nu.
 // ─────────────────────────────────────────────────────────────
 
@@ -53,6 +57,54 @@ function honestFallback(phase: string, actor: DiagnosticActor, extra: string, en
   const url = buildUrl(enrichedData);
   const link = url ? ` Consultez le log Jenkins : ${url}` : ' Aucun lien de build disponible pour ce run — consultez Jenkins directement.';
   return { phase, green: false, actor, confidence: 'inconnu', message: `${extra} Cause non identifiée automatiquement.${link}` };
+}
+
+// Textes canoniques pour les technicalCode prouvés par WF1 sur CE run (voir
+// scanner-diagnostics.ts::TechnicalCode) — priorité absolue sur cascade/
+// honestFallback, qui restent un repli pour les runs sans preuve technique
+// posée (incidents/reports antérieurs à ce fix, ou scanner qui n'a jamais
+// démarré). N'invente rien : ne lit que block.technicalCode/owner/evidence/
+// route, déjà posés par WF1 avec preuve.
+const TECHNICAL_CODE_MESSAGES: Record<string, (evidence: string, route: string) => string> = {
+  SCANNER_CREDENTIAL_INVALID: (evidence) =>
+    `Le scanner a démarré mais la credential requise a été rejetée — l'analyse n'a pas pu se terminer.${evidence} `
+      + `ACTION (admin/infrastructure) : renouvelez/corrigez la credential dans Jenkins (Manage Credentials). PR non applicable — ce n'est pas un défaut de code.`,
+  SCANNER_TIMEOUT: (evidence, route) =>
+    `Le scanner a démarré (téléchargement/scan lancé) mais n'a pas terminé dans le délai imparti — timeout technique confirmé, pas une absence de résultat.${evidence} `
+      + `ACTION : vérifiez la ressource/réseau du stage${route}.`,
+  SCANNER_DATABASE_DOWNLOAD_FAILED: (evidence) =>
+    `Le scanner a démarré mais le téléchargement de sa base de données a échoué.${evidence} ACTION : vérifiez la connectivité réseau du stage vers la source de la base.`,
+  SONAR_CE_TASK_ID_MISSING: (evidence) =>
+    `Sonar a bien soumis l'analyse au serveur (ANALYSIS SUCCESSFUL côté Sonar) mais Jenkins n'a pas pu obtenir le ceTaskId au moment requis — la corrélation quality gate est donc indisponible pour ce build, ce n'est pas un défaut du code analysé.${evidence} `
+      + `ACTION : le statut du quality gate affiché n'est pas fiable pour ce build précis — revalidez après correction de la corrélation.`,
+  DOCKER_CONFIGURATION_ERROR: (evidence, route) =>
+    `L'application a démarré normalement (conteneur up, code de sortie 0) mais le scanner n'a pas pu l'atteindre — mésappariement de topologie Docker/Jenkins (le Docker-in-Docker et l'agent Jenkins sont sur des réseaux distincts malgré le même nom), pas un défaut applicatif.${evidence} `
+      + `ACTION : corrigez la configuration Docker/Jenkins${route}.`,
+  TARGET_UNAVAILABLE: (evidence, route) =>
+    `La cible du scan n'était pas disponible/joignable au moment du stage.${evidence} ACTION : vérifiez que la cible démarre et répond avant ce stage${route}.`,
+  NETWORK_FAILURE: (evidence) =>
+    `Le scanner a démarré mais une défaillance réseau a empêché l'analyse de se terminer.${evidence} ACTION : vérifiez la connectivité réseau du stage.`,
+  RESOURCE_FAILURE: (evidence) =>
+    `Le scanner a démarré mais a échoué par manque de ressources (mémoire/disque/CPU) sur l'agent Jenkins.${evidence} ACTION : vérifiez les ressources allouées à l'agent.`,
+  SCANNER_REPORT_MISSING: (evidence) =>
+    `Le scanner a démarré mais son rapport n'a pas été retrouvé/transmis à la plateforme.${evidence} ACTION : vérifiez la publication du rapport (chemin/volume partagé Jenkins→n8n).`,
+};
+
+// route='WF4'/'WF5' : correction possible via un agent d'optimisation
+// (Jenkinsfile/Dockerfile) → actor 'agent'. Tout le reste (ADMIN_ACTION_
+// REQUIRED, NONE, WF2 credential humaine) reste 'humain' : aucune de ces
+// causes n'est un défaut de code auto-corrigeable par le judge/PR flow.
+function technicalCodeDiagnostic(phase: string, block: any): PhaseDiagnostic | null {
+  const code = block?.technicalCode;
+  if (!code || typeof code !== 'string') return null;
+  const evidence = Array.isArray(block?.evidence) && block.evidence.length ? ` Preuve : ${block.evidence.join(' ; ')}.` : '';
+  const route = block?.route && block.route !== 'NONE' ? ` (routage recommandé : ${block.route})` : '';
+  const actor: DiagnosticActor = (block?.route === 'WF4' || block?.route === 'WF5') ? 'agent' : 'humain';
+  const build = TECHNICAL_CODE_MESSAGES[code];
+  const message = build
+    ? build(evidence, route)
+    : `Échec technique confirmé (${code}), pas une absence de résultat ni un défaut de code présumé.${evidence} ACTION (${block?.owner || actor}) : voir la preuve ci-dessus${route}.`;
+  return { phase, green: false, actor, confidence: 'confirmé', message };
 }
 
 // Rule 1 — cascade : le build de CE run a échoué/est instable, donc une
@@ -92,6 +144,9 @@ export function diagnoseTrivy(enrichedData: any, ctx?: IncidentContext): PhaseDi
   const t = enrichedData?.trivy;
   if (t?.status === 'COMPLETED') return { phase: 'Trivy', green: true, actor: null, confidence: 'confirmé', message: 'Trivy a tourné et produit un résultat exploitable.' };
 
+  const tech = technicalCodeDiagnostic('Trivy', t);
+  if (tech) return tech;
+
   const cascade = cascadeDiagnostic('Trivy', enrichedData, ctx);
   if (cascade) return cascade;
 
@@ -110,6 +165,9 @@ export function diagnoseTrivy(enrichedData: any, ctx?: IncidentContext): PhaseDi
 export function diagnoseOwasp(enrichedData: any, ctx?: IncidentContext): PhaseDiagnostic {
   const o = enrichedData?.owasp;
   if (o?.status === 'COMPLETED') return { phase: 'OWASP', green: true, actor: null, confidence: 'confirmé', message: 'OWASP Dependency-Check a tourné et produit un résultat exploitable.' };
+
+  const tech = technicalCodeDiagnostic('OWASP', o);
+  if (tech) return tech;
 
   const cascade = cascadeDiagnostic('OWASP', enrichedData, ctx);
   if (cascade) return cascade;
@@ -135,6 +193,9 @@ export function diagnoseZap(enrichedData: any, ctx?: IncidentContext): PhaseDiag
     }
     return { phase: 'ZAP', green: true, actor: null, confidence: 'confirmé', message: 'ZAP a tourné et produit un résultat exploitable.' };
   }
+
+  const tech = technicalCodeDiagnostic('ZAP', z);
+  if (tech) return tech;
 
   const cascade = cascadeDiagnostic('ZAP', enrichedData, ctx);
   if (cascade) return cascade;
@@ -162,12 +223,18 @@ export function diagnoseSonar(enrichedData: any, ctx?: IncidentContext): PhaseDi
         + `ACTION (agent) : corrigez via WF2 (carte SonarQube).`,
     };
   }
-  // gate ni OK/PASSED ni ERROR/FAILED (typiquement UNKNOWN) — distinction
-  // CONFIRMÉE par les données elles-mêmes, pas une hypothèse : si des
-  // issues réelles existent, Sonar A tourné (l'appel Issues a marché), donc
-  // c'est spécifiquement l'appel quality-gate qui a échoué (dette connue :
-  // "Text must not be null" côté SonarQube), pas un problème d'accès Sonar
-  // en général.
+  // gate ni OK/PASSED ni ERROR/FAILED (typiquement UNKNOWN) — priorité au
+  // technicalCode posé par WF1 avec preuve (ex. SONAR_CE_TASK_ID_MISSING :
+  // analyse soumise, corrélation ceTaskId jamais faite) sur l'heuristique
+  // générique ci-dessous, qui reste un repli pour les runs sans cette preuve.
+  const tech = technicalCodeDiagnostic('SonarQube', s);
+  if (tech) return tech;
+
+  // Distinction CONFIRMÉE par les données elles-mêmes, pas une hypothèse :
+  // si des issues réelles existent, Sonar A tourné (l'appel Issues a
+  // marché), donc c'est spécifiquement l'appel quality-gate qui a échoué
+  // (dette connue : "Text must not be null" côté SonarQube), pas un
+  // problème d'accès Sonar en général.
   if ((s?.issues?.length || 0) > 0 || (s?.bugs || 0) + (s?.vulnerabilities || 0) + (s?.code_smells || 0) > 0) {
     return {
       phase: 'SonarQube', green: false, actor: 'humain', confidence: 'confirmé',

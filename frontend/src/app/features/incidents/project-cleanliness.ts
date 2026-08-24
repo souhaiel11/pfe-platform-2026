@@ -13,9 +13,10 @@
 //  IncidentDetailComponent.enrichedData).
 //
 //  Philosophie fail-closed : une phase dont le statut est absent/inattendu
-//  est BLOQUANTE par défaut, jamais assimilée à "ok". La SEULE exception
-//  est ZAP, décidée explicitement (dette applicative diagnostiquée :
-//  timeout, pas un simple "pas encore essayé") — voir le bloc ZAP ci-dessous.
+//  est BLOQUANTE par défaut, jamais assimilée à "ok". ZAP suivait
+//  auparavant une exception (non bloquant tant que non complété) —
+//  supprimée (ticket QA-WF1-SCANNER-DIAGNOSTIC-HARDENING §8) : ZAP est un
+//  scanner requis au même titre que Trivy/OWASP.
 //  Seule la sévérité CRITICAL bloque sur Trivy/OWASP (décision explicite) ;
 //  HIGH/MEDIUM/LOW sont signalées (nonBlockingFindings), jamais bloquantes.
 // ─────────────────────────────────────────────────────────────
@@ -107,13 +108,10 @@ export function evaluateProjectCleanliness(enrichedData: any): ProjectCleanlines
     }
   }
 
-  // ── ZAP — DAST (humain) — SEULE EXCEPTION au fail-closed ──
+  // ── ZAP — DAST (humain) — fail-closed, même traitement que Trivy/OWASP ──
   const zap = enrichedData?.zap;
   if (zap?.status !== 'COMPLETED') {
-    nonExecutedPhases.push({
-      phase: 'DAST (ZAP)',
-      raison: `Scanner non exécuté (statut ${zap?.status || 'absent'}) — dette applicative connue (timeout sur l'app cible), hors périmètre du verrou pour l'instant. À vérifier manuellement avant déploiement.`,
-    });
+    blockingPhases.push({ phase: 'DAST (ZAP)', raison: `Scanner non exécuté ou incomplet (statut ${zap?.status || 'absent'}${zap?.technicalCode ? `, cause : ${zap.technicalCode}` : ''}) — résultat DAST indisponible, bloquant par défaut.`, type: 'humain' });
   } else if ((zap.alerts_high || 0) > 0) {
     blockingPhases.push({ phase: 'DAST (ZAP)', raison: `${zap.alerts_high} alerte(s) haute(s) ouverte(s)`, type: 'humain' });
   }
