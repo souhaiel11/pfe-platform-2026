@@ -22,6 +22,19 @@ export enum CicdTool {
   AZURE   = 'azure',
 }
 
+export interface AzureDeploymentConfig {
+  provider: 'azure-container-instances';
+  resourceGroup: string;
+  targetName: string;
+  registry: string;
+  imageRepository: string;
+  region?: string;
+  subscriptionRef?: string;
+  cpu?: string;
+  memoryInGb?: string;
+  ports?: string[];
+}
+
 @Entity('projects')
 export class Project {
   @PrimaryGeneratedColumn('uuid')
@@ -40,8 +53,12 @@ export class Project {
   @Column({ type: 'enum', enum: ProjectStatus, default: ProjectStatus.HEALTHY })
   status: ProjectStatus;
 
-  @Column({ type: 'float', default: 100 })
-  securityScore: number;
+  // default:100 s'applique seulement à la CRÉATION (avant tout report combined) ;
+  // nullable pour permettre null après un report combined incomplete=true
+  // (scanner requis sans résultat) — voir reports.service.ts::create. null
+  // signifie "non vérifié", jamais assimilé à 0 ou 100 par un consommateur.
+  @Column({ type: 'float', nullable: true, default: 100 })
+  securityScore: number | null;
 
   @Column({ default: true })
   isActive: boolean;
@@ -124,6 +141,22 @@ export class Project {
     sonarqube?: { valid: boolean; message: string; checkedAt: string };
     jenkins?:   { valid: boolean; message: string; checkedAt: string };
   };
+
+  // Configuration de cible non sensible. Les credentials Azure restent
+  // exclusivement dans l'environnement de l'agent hôte.
+  @Column({ type: 'jsonb', nullable: true })
+  azureConfig: AzureDeploymentConfig | null;
+
+  // Ledger minimal et durable pour rendre POST /azure-deploy/deploy
+  // idempotent sans introduire de table parallèle.
+  @Column({ type: 'jsonb', nullable: true })
+  azureDeploymentState: {
+    requestId: string;
+    status: 'DISPATCHING' | 'DEPLOYED' | 'FAILED';
+    imageTag: string;
+    updatedAt: string;
+    result?: Record<string, any>;
+  } | null;
 
   @CreateDateColumn()
   createdAt: Date;

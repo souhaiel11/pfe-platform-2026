@@ -56,7 +56,12 @@ export class ReportsService {
     // normalisés — jamais dto.securityScore/riskLevel (valeurs LLM ignorées).
     const normalized = normalizeReport(dto.rawData);
     const { score, incomplete } = calculateSecurityScore(normalized);
-    report.securityScore = score;
+    // QA-SCANNER-RUNTIME-TRUTH-CORRECTION-R1 §5 : un scanner requis absent du
+    // calcul (incomplete=true) rend le score numérique non significatif — 100
+    // signifierait "vérifié et propre", pas "on n'a mesuré qu'une partie".
+    // null + riskLevel='INDETERMINE' (déjà correct ci-dessous) est le contrat
+    // honnête ; jamais un nombre qui laisse croire à un scan complet.
+    report.securityScore = incomplete ? null : score;
     report.riskLevel = getRiskLevel(score, incomplete);
     // Décision Judge exposée séparément — n'influence jamais le score ci-dessus.
     report.judgeDecision = (dto as any).judgeDecision ?? null;
@@ -74,6 +79,8 @@ export class ReportsService {
         ? 'warning'
         : (report.securityScore >= 80 ? 'healthy' : report.securityScore >= 40 ? 'warning' : 'critical');
       await this.projectRepo.update(dto.projectId, {
+        // report.securityScore est déjà null si incomplete (voir ci-dessus) —
+        // propagé tel quel, jamais un nombre fabriqué pour combler le null.
         securityScore: report.securityScore,
         status: projectStatus as any,
       });
@@ -87,7 +94,9 @@ export class ReportsService {
   // Met à jour UNIQUEMENT judgeDecision/judgeConfidence — jamais
   // securityScore/riskLevel/rawData, jamais de recalcul. Le reste du body
   // est ignoré silencieusement (pas une source de vérité pour ces champs).
-  private static readonly VALID_DECISIONS = ['BLOCK', 'AUTO_FIX', 'NOTIFY_ONLY'];
+  // FIX_PROPOSED is the explicit "proposal awaiting human review" decision
+  // emitted by WF1. It is intentionally distinct from approval or execution.
+  private static readonly VALID_DECISIONS = ['BLOCK', 'AUTO_FIX', 'FIX_PROPOSED', 'NOTIFY_ONLY'];
 
   async updateJudgeDecision(id: string, dto: any) {
     const update: { judgeDecision?: string; judgeConfidence?: number } = {};

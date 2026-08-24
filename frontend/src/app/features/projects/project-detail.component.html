@@ -36,25 +36,25 @@
       <!-- ═══ TABS ═══ -->
       <div class="tabs-row">
         <button class="tab-btn" [class.active]="activeTab==='rapport'"   (click)="setActiveTab('rapport')">
-          🤖 Rapport IA <span class="tab-badge" *ngIf="allReports.length">{{allReports.length}}</span>
+          <i class="ti ti-report-analytics"></i> Rapport IA <span class="tab-badge" *ngIf="allReports.length">{{allReports.length}}</span>
         </button>
         <button class="tab-btn" [class.active]="activeTab==='jenkins'"   (click)="setActiveTab('jenkins')">
-          ⚙️ Jenkins
+          <i class="ti ti-settings-automation"></i> Jenkins
         </button>
         <button class="tab-btn" [class.active]="activeTab==='sonarqube'" (click)="setActiveTab('sonarqube')">
-          🔍 SonarQube
+          <i class="ti ti-radar"></i> SonarQube
         </button>
         <button class="tab-btn" [class.active]="activeTab==='docker'"    (click)="setActiveTab('docker')">
-          🐳 Docker
+          <i class="ti ti-brand-docker"></i> Docker
         </button>
         <button class="tab-btn" [class.active]="activeTab==='securite'"  (click)="selectTab('securite')">
-          🔒 Sécurité
+          <i class="ti ti-shield-lock"></i> Sécurité
         </button>
         <button class="tab-btn" [class.active]="activeTab==='incidents'" (click)="setActiveTab('incidents')">
-          ⚠️ Incidents <span class="tab-badge danger" *ngIf="incidents.length">{{incidents.length}}</span>
+          <i class="ti ti-alert-triangle"></i> Incidents <span class="tab-badge danger" *ngIf="incidents.length">{{incidents.length}}</span>
         </button>
         <button class="tab-btn" [class.active]="activeTab==='config'"    (click)="setActiveTab('config')">
-          ⚙️ Config
+          <i class="ti ti-adjustments"></i> Config
         </button>
       </div>
 
@@ -91,7 +91,7 @@
 
           <!-- ── Vue globale : chaîne de contrôle + répartition + actions ── -->
           <app-project-overview
-            [ed]="ed" [rp]="rp"
+            [ed]="ed" [rp]="rp" [backendStages]="deployReadiness?.requiredStages || []"
             (goToTab)="onGoToTab($event)">
           </app-project-overview>
 
@@ -133,7 +133,7 @@
                 <span class="h-build">Build #{{parseReport(r.aiAnalysis).build || '?'}}</span>
                 <span class="h-date">{{r.createdAt | date:'dd/MM HH:mm'}}</span>
                 <span class="h-dec" [style.color]="getDecisionColor(parseReport(r.aiAnalysis).decision)">{{parseReport(r.aiAnalysis).decision || 'N/A'}}</span>
-                <span class="h-score" [class.critical]="r.securityScore < 40">{{r.securityScore}}/100</span>
+                <span class="h-score" [class.critical]="r.securityScore != null && r.securityScore < 40">{{r.securityScore != null ? (r.securityScore + '/100') : 'non vérifié'}}</span>
               </div>
             </div>
           </div>
@@ -226,13 +226,13 @@
 
         <!-- Actions Jenkins -->
         <div class="action-row mt-10">
-          <button class="btn btn-action green" (click)="triggerBuild()">
-            🔄 Déclencher un build
+          <button *ngIf="canOperate" class="btn btn-action green" (click)="triggerBuild()" [disabled]="buildTriggering">
+            {{ buildTriggering ? '⏳ Déclenchement…' : '🔄 Déclencher un build' }}
           </button>
-          <a [href]="'http://172.31.172.61:8082/job/'+(project.jenkinsJobName||'')" target="_blank" class="btn btn-action">
+          <a *ngIf="toolUrl(project.jenkinsUrl, '/job/' + (project.jenkinsJobName || '')) as jenkinsLink" [href]="jenkinsLink" target="_blank" rel="noopener" class="btn btn-action">
             🔗 Ouvrir Jenkins
           </a>
-          <a [href]="ed.build?.url?.replace('jenkins:8080','172.31.172.61:8082')" target="_blank" class="btn btn-action" *ngIf="ed.build?.url">
+          <a [href]="buildUrl(ed.build?.url)" target="_blank" rel="noopener" class="btn btn-action" *ngIf="buildUrl(ed.build?.url)">
             📋 Voir les logs
           </a>
         </div>
@@ -247,7 +247,7 @@
               <span class="build-result" [style.color]="b.result==='SUCCESS'?'var(--accent-green)':'var(--accent-red)'">{{b.result || 'RUNNING'}}</span>
               <span class="build-dur">{{b.duration}}s</span>
               <span class="build-time">{{b.timestamp | date:'dd/MM HH:mm'}}</span>
-              <a [href]="b.url?.replace('jenkins:8080','172.31.172.61:8082')" target="_blank" class="build-link">→</a>
+              <a [href]="buildUrl(b.url)" target="_blank" rel="noopener" class="build-link" *ngIf="buildUrl(b.url)">→</a>
             </div>
           </div>
         </div>
@@ -340,8 +340,8 @@
 
         <!-- Actions SonarQube -->
         <div class="action-row mt-10">
-          <a href="http://172.31.172.61:9000" target="_blank" class="btn btn-action">🔗 Ouvrir SonarQube</a>
-          <a [href]="'http://172.31.172.61:9000/project/issues?id='+(project.sonarqubeKey||'')" target="_blank" class="btn btn-action">📋 Voir toutes les issues</a>
+          <a *ngIf="toolUrl(project.sonarqubeUrl) as sonarLink" [href]="sonarLink" target="_blank" rel="noopener" class="btn btn-action">🔗 Ouvrir SonarQube</a>
+          <a *ngIf="toolUrl(project.sonarqubeUrl, '/project/issues?id=' + (project.sonarqubeKey || '')) as sonarIssuesLink" [href]="sonarIssuesLink" target="_blank" rel="noopener" class="btn btn-action">📋 Voir toutes les issues</a>
         </div>
 
         <div class="empty-state" *ngIf="!ed.sonar">
@@ -501,13 +501,6 @@
           </div>
         </details>
 
-        <!-- ── Actions ── -->
-        <div class="action-row mt-10">
-          <button class="btn btn-action red" (click)="rollbackDeployment()" *ngIf="rp.decision==='BLOCK'">
-            🚫 Rollback déploiement
-          </button>
-        </div>
-
         <!-- ── Déploiement Azure — le backend (isReadyToDeploy) reste seul juge ── -->
         <div class="deploy-azure-box mt-10">
           <div class="deploy-azure-row">
@@ -519,18 +512,34 @@
               placeholder="tag d'image (ex: latest)"
               spellcheck="false"
             />
-            <button
+            <button *ngIf="canOperate && deployReady && deploymentConfigured"
               class="btn btn-action"
               [class.blue]="deployReady && !deploying"
               [class.gray]="!deployReady || deploying"
-              [disabled]="!deployReady || deploying || deployReadyLoading"
+              [disabled]="!deployReady || !deploymentConfigured || deploying || deployReadyLoading"
               [title]="deployReady ? 'Déployer sur Azure' : deployReasons.join(' · ')"
-              (click)="deployToAzure()"
+              (click)="requestDeployConfirmation()"
             >
               <ng-container *ngIf="deployReadyLoading">⏳ Vérification…</ng-container>
               <ng-container *ngIf="!deployReadyLoading && deploying">⏳ Déploiement en cours (~30-60s)…</ng-container>
-              <ng-container *ngIf="!deployReadyLoading && !deploying">☁️ Déployer sur Azure</ng-container>
+              <ng-container *ngIf="!deployReadyLoading && !deploying">☁️ Préparer le déploiement</ng-container>
             </button>
+          </div>
+
+          <div class="deploy-not-ready" *ngIf="!deployReadyLoading && !deploymentConfigured">
+            ⚙️ Azure non configuré pour ce projet — aucun fallback vers une autre cible.
+          </div>
+
+          <div class="deploy-confirm" *ngIf="deployConfirmationOpen">
+            <h4>Confirmer le déploiement</h4>
+            <p><strong>Projet :</strong> {{project?.name}}</p>
+            <p><strong>Build :</strong> #{{deployReadiness?.currentBuild || '—'}}</p>
+            <p><strong>Cible :</strong> {{deploymentTarget?.targetName}} ({{deploymentTarget?.resourceGroup}})</p>
+            <p *ngIf="deployReadiness?.warnings?.length"><strong>Avertissements :</strong> {{deployReadiness.warnings.join(' · ')}}</p>
+            <div class="deploy-azure-row">
+              <button class="btn btn-action gray" [disabled]="deploying" (click)="cancelDeployConfirmation()">Annuler</button>
+              <button class="btn btn-action blue" [disabled]="deploying" (click)="deployToAzure()">Confirmer le déploiement</button>
+            </div>
           </div>
 
           <div class="deploy-not-ready" *ngIf="!deployReadyLoading && !deployReady && !deploying">
@@ -548,6 +557,44 @@
             ⚠️ {{deployErrorMessage}}
           </div>
         </div>
+
+        <section class="cockpit-panel mt-10">
+          <div class="cockpit-head">
+            <div><h3>Cockpit DevSecOps</h3><small>Source de vérité : backend</small></div>
+            <span class="readiness-pill" [class.ready]="deployReadiness?.status === 'READY'">{{deployReadiness?.status || 'NOT_READY'}}</span>
+          </div>
+          <div class="cockpit-grid">
+            <div><span>Build courant</span><strong>#{{deployReadiness?.currentBuild || '—'}}</strong></div>
+            <div><span>Build validé</span><strong>#{{deployReadiness?.validatedBuild || '—'}}</strong></div>
+            <div><span>Blockers</span><strong>{{deployReadiness?.unresolvedBlockingCount ?? '—'}}</strong></div>
+            <div><span>Azure</span><strong>{{deploymentConfigured ? 'CONFIGURÉ' : 'NON CONFIGURÉ'}}</strong></div>
+          </div>
+          <div class="a1-warning" *ngIf="deployReadiness && deployReadiness.correlationVerified !== true">
+            Sonar analysis correlation not verified — READY est bloqué.
+          </div>
+          <div class="stage-grid" *ngIf="deployReadiness?.requiredStages?.length">
+            <details class="stage-card" *ngFor="let stage of deployReadiness.requiredStages" [class]="'stage-card ' + stageCss(stage.status)">
+              <summary><strong>{{stage.stage}}</strong><span>{{stage.status}}</span></summary>
+              <p>{{stage.message || 'Aucun détail disponible'}}</p>
+              <small>Source: {{stage.source || 'backend'}} · Findings: {{stage.findingCount ?? 0}} · Blocking: {{stage.blocking ? 'oui' : 'non'}} · Required: {{stage.required ? 'oui' : 'non'}}</small>
+            </details>
+          </div>
+          <div class="next-action" *ngIf="deployReadiness?.recommendedNextAction || deployReasons[0]">
+            <strong>Recommended Next Action</strong><span>{{deployReadiness?.recommendedNextAction || deployReasons[0]}}</span>
+          </div>
+        </section>
+
+        <section class="cockpit-panel mt-10">
+          <div class="cockpit-head"><div><h3>Convergence</h3><small>Historique corrélé des cycles</small></div></div>
+          <div class="cycle-list" *ngIf="convergenceCycles.length; else noCycles">
+            <article class="cycle-item" *ngFor="let cycle of convergenceCycles">
+              <strong>Build #{{cycle.buildNumber || '—'}}</strong>
+              <span>{{cycle.status || 'UNVERIFIED'}}</span>
+              <small>{{cycle.blockingCount ?? 0}} blocker(s) · PR {{cycle.prNumber ? '#' + cycle.prNumber : '—'}} · {{cycle.correlationVerified ? 'CORRELATED' : 'UNVERIFIED'}}</small>
+            </article>
+          </div>
+          <ng-template #noCycles><p class="deploy-not-ready">Aucun cycle corrélé disponible.</p></ng-template>
+        </section>
 
         <div class="empty-state" *ngIf="!ed.trivy && !ed.zap && !ed.owasp">
           <div class="empty-icon">🛡️</div>

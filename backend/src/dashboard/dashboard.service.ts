@@ -30,9 +30,14 @@ export class DashboardService {
     const criticalBugs = bugs.filter(b => b.severity === BugSeverity.CRITICAL);
     const fixedBugs = bugs.filter(b => b.status === BugStatus.RESOLVED || b.status === BugStatus.PR_CREATED);
 
-    const avgSecurityScore = projects.length
-      ? projects.reduce((sum, p) => sum + (p.securityScore || 100), 0) / projects.length
-      : 100;
+    // QA-SCANNER-RUNTIME-TRUTH-CORRECTION-R1 §5 : un projet dont le dernier
+    // report combined est incomplete a securityScore=null (voir
+    // reports.service.ts) — exclu de la moyenne, jamais compté comme 100
+    // ("non vérifié" gonflerait faussement la moyenne globale vers le haut).
+    const scoredProjects = projects.filter(p => p.securityScore != null);
+    const avgSecurityScore = scoredProjects.length
+      ? scoredProjects.reduce((sum, p) => sum + (p.securityScore as number), 0) / scoredProjects.length
+      : null;
 
     return {
       totalProjects: projects.length,
@@ -43,7 +48,7 @@ export class DashboardService {
       openBugs: openBugs.length,
       criticalBugs: criticalBugs.length,
       fixedBugs: fixedBugs.length,
-      avgSecurityScore: Math.round(avgSecurityScore),
+      avgSecurityScore: avgSecurityScore == null ? null : Math.round(avgSecurityScore),
       recentBugs: bugs.slice(0, 5),
       projects: projects.slice(0, 6),
       bugsByDay: this.getBugsByDay(bugs),
@@ -219,6 +224,7 @@ export class DashboardService {
     let zapHighAlerts = 0, zapMediumAlerts = 0;
     let sonarBugs = 0, sonarVulnerabilities = 0, sonarCodeSmells = 0;
     let liveScoreSum = 0;
+    let liveScoredCount = 0;
 
     const byProject = projects.map(project => {
       const rawData = latestByProject.get(project.id);
@@ -232,7 +238,10 @@ export class DashboardService {
       // alerte). Cohérent par construction avec criticalCves ci-dessous,
       // puisque calculés depuis le même `normalized`.
       const { score: liveScore, incomplete: scoreIncomplete, missingScanners } = calculateSecurityScore(normalized);
-      liveScoreSum += liveScore;
+      // Exclu de la moyenne globale si incomplete — même principe que
+      // getGlobalStats() : un score "non vérifié" ne doit jamais tirer la
+      // moyenne globale vers le haut comme s'il valait un vrai 100.
+      if (!scoreIncomplete) { liveScoreSum += liveScore; liveScoredCount++; }
 
       const trivy = normalized.trivy;
       const owasp = normalized.owasp;
@@ -286,8 +295,10 @@ export class DashboardService {
 
     byProject.sort((a, b) => b.criticalCves - a.criticalCves);
 
-    // Moyenne des scores LIVE recalculés ci-dessus — pas des Project.securityScore figés.
-    const avgSecurityScore = projects.length ? Math.round(liveScoreSum / projects.length) : 100;
+    // Moyenne des scores LIVE recalculés ci-dessus — pas des Project.securityScore
+    // figés. null si aucun projet n'a de score exploitable (tous incomplete),
+    // jamais 100 par défaut (voir avgSecurityScore ci-dessous et getGlobalStats).
+    const avgSecurityScore = liveScoredCount ? Math.round(liveScoreSum / liveScoredCount) : null;
 
     return {
       summary: {
