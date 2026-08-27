@@ -3,22 +3,26 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { CveTableComponent } from './cve-table.component';
+import { ZapTableComponent } from './zap-table.component';
 import { ProjectOverviewComponent } from './project-overview.component';
 import { JenkinsfileOptimizerComponent } from './jenkinsfile-optimizer.component';
 import { DockerfileOptimizerComponent } from './dockerfile-optimizer.component';
 import { ApiService } from '../../core/services/api.service';
 import { ToastService } from '../../core/services/toast.service';
 import { RiskStateService } from '../../core/services/risk-state.service';
+import { AuthService } from '../../core/services/auth.service';
+import { StageStatusLabelPipe } from '../../shared/stage-status-label.pipe';
 
 @Component({
   selector: 'app-project-detail',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, CveTableComponent, ProjectOverviewComponent, JenkinsfileOptimizerComponent, DockerfileOptimizerComponent],
+  imports: [CommonModule, FormsModule, RouterModule, CveTableComponent, ZapTableComponent, ProjectOverviewComponent, JenkinsfileOptimizerComponent, DockerfileOptimizerComponent, StageStatusLabelPipe],
   templateUrl: './project-detail.component.html',
   styleUrls: ['./project-detail.component.scss'],
 })
 export class ProjectDetailComponent implements OnInit {
   approving = false;
+  buildTriggering = false;
   @Input() id!: string;
 
   project: any = null;
@@ -49,12 +53,18 @@ export class ProjectDetailComponent implements OnInit {
   // SEUL juge. Le front n'affiche que ce qu'il renvoie ; en cas d'erreur
   // réseau on reste fail-closed ici aussi (jamais "prêt" par défaut).
   deployReady = false;
+  deployReadiness: any = null;
+  deploymentConfigured = false;
+  deploymentTarget: any = null;
+  convergenceCycles: any[] = [];
   deployReasons: string[] = [];
   deployReadyLoading = true;
   deploying = false;
   deployImageTag = 'latest';
   deploySuccessInfo: { state: string; health: string } | null = null;
   deployErrorMessage: string | null = null;
+  deployConfirmationOpen = false;
+  private deploymentRequestId: string | null = null;
 
   allCves(ed: any): any[] {
     return [ ...(ed?.trivy?.cves || []), ...(ed?.owasp?.cves || []) ];
@@ -108,7 +118,9 @@ export class ProjectDetailComponent implements OnInit {
     private riskState: RiskStateService,
     private router: Router,
     private route: ActivatedRoute,
+    public auth: AuthService,
   ) {}
+  get canOperate() { return ['admin', 'developer'].includes(this.auth.currentUser?.role); }
 
   // Source unique de vérité pour changer d'onglet : met à jour activeTab ET
   // reflète le choix dans l'URL (?tab=xxx) sans recharger la page, pour que
@@ -187,6 +199,7 @@ export class ProjectDetailComponent implements OnInit {
         this.loadJenkinsBuilds();
         this.loadJudgeStatus();
         this.loadDeployReadiness();
+        this.loadConvergence();
       },
       error: () => {
         this.toast.error('Erreur', 'Projet introuvable');
@@ -256,17 +269,45 @@ export class ProjectDetailComponent implements OnInit {
     this.deployReadyLoading = true;
     this.api.getDeployReadiness(this.id).subscribe({
       next: (r: any) => {
+        this.deployReadiness = r;
         this.deployReady = !!r?.ready;
+        this.deploymentConfigured = r?.deploymentConfigured === true;
+        this.deploymentTarget = r?.deploymentTarget || null;
         this.deployReasons = r?.reasons || [];
         this.deployReadyLoading = false;
       },
       error: () => {
         // Backend injoignable ou erreur : jamais "prêt" par défaut côté front non plus.
         this.deployReady = false;
+        this.deployReadiness = null;
+        this.deploymentConfigured = false;
         this.deployReasons = ["Impossible de vérifier l'état de préparation au déploiement (backend injoignable)"];
         this.deployReadyLoading = false;
       },
     });
+  }
+
+  loadConvergence() {
+    this.api.getConvergence(this.id).subscribe({
+      next: (r: any) => { this.convergenceCycles = Array.isArray(r?.cycles) ? r.cycles : []; },
+      error: () => { this.convergenceCycles = []; },
+    });
+  }
+
+  stageCss(status: string): string {
+    return ['PASSED', 'FAILED', 'WARNING', 'RUNNING', 'NOT_RUN', 'NOT_REACHED'].includes(status) ? status.toLowerCase() : 'not-run';
+  }
+
+  requestDeployConfirmation() {
+    if (!this.canOperate || !this.deployReady || !this.deploymentConfigured || this.deploying) return;
+    this.deploymentRequestId = globalThis.crypto?.randomUUID?.() || `deploy-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    this.deployConfirmationOpen = true;
+  }
+
+  cancelDeployConfirmation() {
+    if (this.deploying) return;
+    this.deployConfirmationOpen = false;
+    this.deploymentRequestId = null;
   }
 
   // Le backend re-vérifie isReadyToDeploy à l'intérieur même de /deploy —
@@ -274,13 +315,14 @@ export class ProjectDetailComponent implements OnInit {
   // a changé entre le chargement de la page et le clic (409 NOT_READY_TO_DEPLOY),
   // on réaligne l'affichage sur le verdict du backend, qui reste seul juge.
   deployToAzure() {
-    if (!this.deployReady || this.deploying || !this.project?.name) return;
+    if (!this.deployReady || !this.deploymentConfigured || this.deploying || !this.project?.id || !this.deploymentRequestId) return;
     this.deploying = true;
     this.deploySuccessInfo = null;
     this.deployErrorMessage = null;
-    this.api.deployToAzure(this.project.name, this.deployImageTag || 'latest').subscribe({
+    this.api.deployToAzure(this.project.id, this.deployImageTag || 'latest', this.deploymentRequestId, true).subscribe({
       next: (r: any) => {
         this.deploying = false;
+        this.deployConfirmationOpen = false;
         if (r?.success) {
           this.deploySuccessInfo = { state: r.state, health: r.healthOk ? 'UP' : (r.health || 'inconnu') };
           this.toast.success('Déploiement réussi', `Conteneur ${r.state} — santé ${r.healthOk ? 'UP' : 'KO'}`);
@@ -377,18 +419,41 @@ export class ProjectDetailComponent implements OnInit {
   }
 
   triggerBuild() {
+    if (this.buildTriggering) return;
+    this.buildTriggering = true;
     this.api.triggerBuild(this.project.id).subscribe({
       next: (r: any) => {
-        if (r.success) this.toast.success('Build lancé', 'Build ' + (r.job || '') + ' démarré');
+        this.buildTriggering = false;
+        if (r.success) {
+          this.toast.success('Build lancé', 'Build ' + (r.job || '') + ' accepté par Jenkins');
+          this.loadJenkinsBuilds();
+        }
         else this.toast.error('Erreur', r.error || 'Echec du déclenchement');
       },
-      error: () => this.toast.error('Erreur', 'Impossible de contacter le backend'),
+      error: (err: any) => {
+        this.buildTriggering = false;
+        const message = err?.error?.message || err?.error?.error?.message || 'Impossible de déclencher le build';
+        this.toast.error('Erreur Jenkins', message);
+      },
     });
   }
 
-  rollbackDeployment() {
-    this.toast.success('Rollback', 'Commande kubectl rollout undo envoyée');
-    // À connecter à un endpoint backend qui exécute kubectl
+  toolUrl(base: string | null | undefined, path = ''): string | null {
+    if (!base || !/^https?:\/\//i.test(base)) return null;
+    return `${base.replace(/\/$/, '')}${path}`;
+  }
+
+  buildUrl(url: string | null | undefined): string | null {
+    if (!url) return null;
+    try {
+      const source = new URL(url);
+      const configured = this.toolUrl(this.project?.jenkinsUrl);
+      if (!configured) return null;
+      const target = new URL(configured);
+      target.pathname = source.pathname;
+      target.search = source.search;
+      return target.toString();
+    } catch { return null; }
   }
 
   splitItems(text: string): string[] {

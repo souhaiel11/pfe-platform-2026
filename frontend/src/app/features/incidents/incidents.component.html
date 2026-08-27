@@ -4,8 +4,8 @@
           <h1 class="page-title">// incidents</h1>
           <p class="page-subtitle">Gestion et suivi des incidents détectés par la plateforme IA</p>
         </div>
-        <div class="live-indicator">
-          <div class="live-dot"></div> {{total}} incidents
+        <div class="live-indicator" [title]="total >= size ? 'Le backend limite cette liste à ' + size + ' résultats ; le nombre réel peut être supérieur.' : ''">
+          <div class="live-dot"></div> {{total}} incidents{{ total >= size ? ' affichés (limite ' + size + ')' : '' }}
         </div>
       </div>
 

@@ -9,7 +9,7 @@
       <ng-container *ngIf="incident && !loading">
 
         <!-- ─── HEADER CARD ─── -->
-        <div class="card" style="margin-bottom:16px;border-left:3px solid {{getSeverityColor(aiAnalysis?.securityLevel)}};">
+        <div class="card" style="margin-bottom:16px;border-left:3px solid {{dominantStatusColor()}};">
           <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;">
             <div>
               <div style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted);margin-bottom:6px;">
@@ -28,7 +28,7 @@
               </div>
               <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:11px;color:var(--text-muted);font-family:var(--font-mono);">
                 <span>statut : {{incident.status}}</span>
-                <span *ngIf="aiAnalysis?.securityLevel">· sévérité : {{aiAnalysis.securityLevel}}</span>
+                <span *ngIf="aiAnalysis?.securityLevel">· estimation IA : {{aiAnalysis.securityLevel}}</span>
                 <span *ngIf="aiAnalysis?.confidenceScore">· confiance {{aiAnalysis.confidenceScore}}%</span>
                 <span>· {{incident.createdAt | date:'dd/MM/yyyy HH:mm'}}</span>
               </div>
@@ -52,16 +52,17 @@
               </div>
             </div>
             <div style="display:flex;gap:8px;flex-shrink:0;">
-              <button *ngIf="incident.status === 'analyzed' || incident.status === 'blocked'"
-                      class="btn btn-success btn-sm" (click)="approveFix()">
-                ✓ Approuver le fix
+              <button *ngIf="!hasRealPr() && (incident.status === 'analyzed' || incident.status === 'blocked') && hasAutoFixEligible()"
+                      class="btn btn-success btn-sm" [disabled]="approvalBusy" (click)="approveFix()">
+                {{approvalBusy ? 'Démarrage…' : 'Créer la Pull Request'}}
               </button>
-              <button *ngIf="incident.status === 'analyzed' || incident.status === 'blocked'"
-                      class="btn btn-secondary btn-sm" (click)="rejectFix()">
-                ✕ Rejeter
+              <button *ngIf="!hasRealPr() && (incident.status === 'analyzed' || incident.status === 'blocked')"
+                      class="btn btn-secondary btn-sm" [disabled]="approvalBusy" (click)="rejectFix()">
+                ✕ Refuser / corriger manuellement
               </button>
             </div>
           </div>
+          <div *ngIf="approvalError" style="margin-top:10px;color:var(--accent-red);font-size:12px;">{{approvalError}}</div>
         </div>
 
         <!-- ─── TIMELINE CYCLE DE VIE ─── -->
@@ -112,6 +113,7 @@
                skip, cliquable, route vers l'onglet projet correspondant. -->
           <div style="margin-bottom:16px;" *ngIf="enrichedData">
             <app-project-overview [ed]="enrichedData" [rp]="aiAnalysis"
+              [backendStages]="governedStages()"
               [errorReason]="incident.errorReason" [errorStep]="incident.errorStep"
               (goToTab)="onGoToTab($event)">
             </app-project-overview>
@@ -215,8 +217,8 @@
                 phaseLabel="🔍 SonarQube"
                 [mode]="sonarMode()"
                 [issues]="sonarIssues()"
-                advice="Correction du code via WF2 sur l'ensemble des findings."
-                actionLabel="Corriger via WF2"
+                advice="Examinez la correction proposée. GitHub ne sera modifié qu'après votre clic explicite."
+                actionLabel="Créer la Pull Request"
                 [correcting]="sonarCorrecting()"
                 (correct)="onSonarCorrect()">
               </app-remediation-card>
@@ -256,8 +258,9 @@
             <div *ngIf="cleanliness().clean" class="deploy-box deploy-unlocked">
               <div class="deploy-headline">
                 <span class="deploy-icon">✓</span>
-                <strong>Projet propre — prêt pour le déploiement</strong>
+                <strong>Aucun blocker détecté dans ce rapport</strong>
               </div>
+              <p class="deploy-note">La readiness de déploiement reste calculée exclusivement par le backend du projet.</p>
               <p class="deploy-note" *ngIf="nonBlockingSummary()">
                 Points non bloquants restants : {{ nonBlockingSummary() }}
               </p>
@@ -301,7 +304,7 @@
                   </div>
                 </div>
                 <div class="scanner-status" [class]="enrichedData.sonar?.status?.toLowerCase()">
-                  {{enrichedData.sonar?.status}}
+                  {{enrichedData.sonar?.status | stageStatusLabel}}
                 </div>
               </div>
 
@@ -319,7 +322,7 @@
                   </div>
                 </div>
                 <div class="scanner-status" [class]="enrichedData.trivy?.status?.toLowerCase()">
-                  {{enrichedData.trivy?.status}}
+                  {{enrichedData.trivy?.status | stageStatusLabel}}
                 </div>
               </div>
 
@@ -337,7 +340,7 @@
                   </div>
                 </div>
                 <div class="scanner-status" [class]="enrichedData.owasp?.status?.toLowerCase()">
-                  {{enrichedData.owasp?.status}}
+                  {{enrichedData.owasp?.status | stageStatusLabel}}
                 </div>
               </div>
 
@@ -355,7 +358,7 @@
                   </div>
                 </div>
                 <div class="scanner-status" [class]="enrichedData.zap?.status?.toLowerCase()">
-                  {{enrichedData.zap?.status}}
+                  {{enrichedData.zap?.status | stageStatusLabel}}
                 </div>
               </div>
 

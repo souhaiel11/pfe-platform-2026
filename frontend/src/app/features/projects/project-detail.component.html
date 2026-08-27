@@ -159,7 +159,7 @@
           <div class="kpi-card">
             <div class="kpi-label">Build</div>
             <div class="kpi-value" [style.color]="ed.build.status==='SUCCESS'?'var(--accent-green)':'var(--accent-red)'">#{{ed.build.number || '?'}}</div>
-            <div class="kpi-sub" [style.color]="ed.build.status==='SUCCESS'?'var(--accent-green)':'var(--accent-red)'">{{ed.build.status || 'N/A'}}</div>
+            <div class="kpi-sub" [style.color]="ed.build.status==='SUCCESS'?'var(--accent-green)':'var(--accent-red)'">{{(ed.build.status | stageStatusLabel) || 'N/A'}}</div>
           </div>
           <div class="kpi-card">
             <div class="kpi-label">Tests</div>
@@ -305,7 +305,7 @@
           </div>
           <div class="kpi-card"><div class="kpi-label">Status</div>
             <div class="kpi-value" style="font-size:14px" [style.color]="ed.sonar.status==='SUCCESS'?'var(--accent-green)':'var(--accent-orange)'">
-              {{ed.sonar.status || 'N/A'}}
+              {{(ed.sonar.status | stageStatusLabel) || 'N/A'}}
             </div>
           </div>
         </div>
@@ -322,7 +322,8 @@
                 <td><span class="sev-badge" [style.background]="getSevColor(issue.severity)">{{issue.severity}}</span></td>
                 <td style="font-size:10px;color:var(--text-muted)">{{issue.type}}</td>
                 <td style="max-width:280px;font-size:11px">{{issue.message}}</td>
-                <td style="font-size:10px;color:var(--text-muted);font-family:var(--font-mono)">{{issue.component}}</td>
+                <td style="font-size:10px;color:var(--text-muted);font-family:var(--font-mono);max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"
+                    [title]="issue.file || issue.component || ''">{{issue.file || issue.component || 'Non disponible'}}</td>
                 <td style="font-size:10px;text-align:center">{{issue.line || '-'}}</td>
                 <td style="font-size:10px;color:var(--accent-orange)">{{issue.effort || '-'}}</td>
               </tr>
@@ -469,19 +470,7 @@
               <span class="sec-badge yellow" *ngIf="ed.zap?.alerts_medium">{{ed.zap.alerts_medium}} MOYEN</span>
             </div>
           </div>
-          <table class="data-table">
-            <thead>
-              <tr><th>Alerte</th><th>Risque</th><th>Description</th><th>Solution</th></tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let alert of ed.zap.alerts">
-                <td style="font-size:11px;font-weight:600;max-width:140px">{{alert.name}}</td>
-                <td><span class="sev-badge" [style.background]="getSevColor(alert.risk)">{{alert.risk?.split(' ')[0]}}</span></td>
-                <td style="font-size:10px;color:var(--text-muted);max-width:200px">{{(alert.desc || alert.description || '')?.substring(0,120)}}</td>
-                <td style="font-size:10px;color:var(--accent-green);max-width:200px">{{alert.solution?.substring(0,100)}}</td>
-              </tr>
-            </tbody>
-          </table>
+          <app-zap-table [alerts]="ed.zap.alerts"></app-zap-table>
         </div>
         <div class="sec-section scanner-not-run" *ngIf="(securityFilter === 'all' || securityFilter === 'zap') && isScannerMissing(ed.zap)">
           <div class="sec-section-title">🌐 Alertes DAST</div>

@@ -1,6 +1,6 @@
 import { Component, Input, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { DeveloperGuide, DevGuideIssue } from './developer-guide.model';
+import { DeveloperGuide, DevGuideIssue, DevGuideFallbackFixOrderItem } from './developer-guide.model';
 
 // ─────────────────────────────────────────────────────────────────────
 // Onglet "Guide de correction" — page détail incident
@@ -14,7 +14,7 @@ import { DeveloperGuide, DevGuideIssue } from './developer-guide.model';
   standalone: true,
   imports: [CommonModule],
   template: `
-    <ng-container *ngIf="guide && guide.issues?.length; else empty">
+    <ng-container *ngIf="guide && hasDetailedIssues(); else fallbackOrEmpty">
 
       <!-- ── Bandeau plan d'action ─────────────────────────────── -->
       <section class="dg-plan">
@@ -28,13 +28,13 @@ import { DeveloperGuide, DevGuideIssue } from './developer-guide.model';
         </div>
         <p class="dg-summary">{{ guide.summaryForDeveloper }}</p>
 
-        <div class="dg-quickwins" *ngIf="guide.quickWins?.length">
+        <div class="dg-quickwins" *ngIf="stringQuickWins().length">
           <span class="dg-qw-label">⚡ Quick wins (&lt; 15 min) :</span>
-          <button class="dg-qw-btn" *ngFor="let id of guide.quickWins" (click)="scrollTo(id)">{{ id }}</button>
+          <button class="dg-qw-btn" *ngFor="let id of stringQuickWins()" (click)="scrollTo(id)">{{ id }}</button>
         </div>
 
-        <ol class="dg-fixorder" *ngIf="guide.fixOrder?.length">
-          <li *ngFor="let id of guide.fixOrder">
+        <ol class="dg-fixorder" *ngIf="stringFixOrder().length">
+          <li *ngFor="let id of stringFixOrder()">
             <a (click)="scrollTo(id)">{{ id }}</a>
             <span class="dg-fixorder-title">{{ titleOf(id) }}</span>
           </li>
@@ -102,6 +102,45 @@ import { DeveloperGuide, DevGuideIssue } from './developer-guide.model';
         </div>
       </article>
     </ng-container>
+
+    <!-- ── Guide de secours (fallback déterministe) ─────────────
+         Utilisé quand l'agent Developer Guidance (LLM) n'a pas pu produire
+         de fiche détaillée par issue (issues[] vide), mais que WF1 a quand
+         même généré un plan d'action déterministe (fixOrder/quickWins/
+         summaryForDeveloper). Le guide existe : ne jamais afficher "aucun
+         guide disponible" dans ce cas. -->
+    <ng-template #fallbackOrEmpty>
+      <ng-container *ngIf="hasFallbackPlan(); else empty">
+        <section class="dg-plan dg-plan-fallback">
+          <div class="dg-plan-head">
+            <h3>Guide de correction</h3>
+            <span class="dg-chip dg-chip-fallback" title="Guide généré automatiquement : l'agent IA n'a pas pu produire de fiche détaillée par problème pour ce build.">
+              Plan déterministe
+            </span>
+          </div>
+          <p class="dg-summary" *ngIf="guide?.summaryForDeveloper">{{ guide?.summaryForDeveloper }}</p>
+
+          <div class="dg-block" *ngIf="fallbackFixOrder().length">
+            <h4>Ordre de correction recommandé</h4>
+            <ol class="dg-fallback-order">
+              <li *ngFor="let item of fallbackFixOrder()">
+                <strong>{{ item.title }}</strong>
+                <span class="dg-fallback-detail" *ngIf="item.detail">{{ item.detail }}</span>
+                <span class="dg-fallback-meta" *ngIf="item.owner || item.route">
+                  <span *ngIf="item.owner">Responsable : {{ item.owner }}</span>
+                  <span *ngIf="item.route && item.route !== 'NONE'"> · Route : {{ item.route }}</span>
+                </span>
+              </li>
+            </ol>
+          </div>
+
+          <div class="dg-quickwins" *ngIf="stringQuickWins().length">
+            <span class="dg-qw-label">⚡ Actions rapides :</span>
+            <span class="dg-qw-item" *ngFor="let w of stringQuickWins()">{{ w }}</span>
+          </div>
+        </section>
+      </ng-container>
+    </ng-template>
 
     <ng-template #empty>
       <div class="dg-empty">
@@ -175,6 +214,15 @@ import { DeveloperGuide, DevGuideIssue } from './developer-guide.model';
 
     .dg-empty { text-align: center; color: #64748b; padding: 40px 20px; }
     .dg-empty-hint { font-size: 12px; }
+
+    /* ── Guide de secours (fallback déterministe) ── */
+    .dg-chip-fallback { background: #e2e8f0; color: #334155; cursor: help; }
+    .dg-fallback-order { margin: 6px 0 0; padding-left: 22px; }
+    .dg-fallback-order li { margin: 8px 0; line-height: 1.5; }
+    .dg-fallback-detail { display: block; color: #64748b; font-size: 13px; }
+    .dg-fallback-meta { display: block; color: #94a3b8; font-size: 12px; margin-top: 2px; }
+    .dg-qw-item { border: 1px solid #e2e8f0; background: #f8fafc; color: #475569; border-radius: 6px;
+                  padding: 2px 8px; font-size: 12px; }
   `]
 })
 export class DeveloperGuideTabComponent {
@@ -185,6 +233,36 @@ export class DeveloperGuideTabComponent {
   sortedIssues = computed<DevGuideIssue[]>(() =>
     [...(this.guide?.issues ?? [])].sort((a, b) => (a.priority ?? 99) - (b.priority ?? 99))
   );
+
+  // TEST-FE-02/03 (voir docs/frontend-qa/regression): fiche détaillée par
+  // issue prioritaire quand disponible ; guide de secours déterministe sinon.
+  hasDetailedIssues(): boolean {
+    return !!(this.guide && this.guide.issues && this.guide.issues.length);
+  }
+
+  private isFallbackItem(x: string | DevGuideFallbackFixOrderItem): x is DevGuideFallbackFixOrderItem {
+    return !!x && typeof x === 'object';
+  }
+
+  fallbackFixOrder = computed<DevGuideFallbackFixOrderItem[]>(() =>
+    (this.guide?.fixOrder ?? []).filter((x): x is DevGuideFallbackFixOrderItem => this.isFallbackItem(x))
+  );
+
+  stringFixOrder = computed<string[]>(() =>
+    (this.guide?.fixOrder ?? []).filter((x): x is string => typeof x === 'string')
+  );
+
+  stringQuickWins = computed<string[]>(() =>
+    (this.guide?.quickWins ?? []).filter((x): x is string => typeof x === 'string')
+  );
+
+  hasFallbackPlan(): boolean {
+    return !!(this.guide && (
+      this.fallbackFixOrder().length > 0 ||
+      this.stringQuickWins().length > 0 ||
+      (this.guide.summaryForDeveloper && this.guide.summaryForDeveloper.trim().length > 0)
+    ));
+  }
 
   isOpen(id: string): boolean { return this.openIds().has(id); }
 

@@ -8,6 +8,7 @@ import { DeveloperGuide } from './developer-guide/developer-guide.model';
 import { classify, remediationModeForPhase } from './jenkins-known-fixes';
 import { ProjectOverviewComponent } from '../projects/project-overview.component';
 import { RemediationCardComponent, RemediationIssue, RemediationMode } from './remediation-card.component';
+import { StageStatusLabelPipe } from '../../shared/stage-status-label.pipe';
 import { evaluateProjectCleanliness, ProjectCleanliness } from './project-cleanliness';
 import { diagnoseTrivy, diagnoseOwasp, diagnoseZap, diagnoseSonar, diagnoseTests, diagnoseDocker, IncidentContext } from './phase-diagnostics';
 
@@ -21,7 +22,7 @@ import { diagnoseTrivy, diagnoseOwasp, diagnoseZap, diagnoseSonar, diagnoseTests
 @Component({
   selector: 'app-incident-detail',
   standalone: true,
-  imports: [CommonModule, RouterModule, DeveloperGuideTabComponent, ProjectOverviewComponent, RemediationCardComponent],
+  imports: [CommonModule, RouterModule, DeveloperGuideTabComponent, ProjectOverviewComponent, RemediationCardComponent, StageStatusLabelPipe],
   templateUrl: './incident-detail.component.html',
   styleUrls: ['./incident-detail.component.scss'],
 })
@@ -42,6 +43,8 @@ export class IncidentDetailComponent implements OnInit, OnDestroy {
     { type: 'unknown', solution: null };
   generatingWF4Fix = false;
   generatingWF5Fix = false;
+  approvalBusy = false;
+  approvalError: string | null = null;
   decision:    any  = null;   // legacy
   loading      = true;
   activeTab    = 'analysis';
@@ -114,6 +117,11 @@ export class IncidentDetailComponent implements OnInit, OnDestroy {
   goBack(): void {
     const projectId = this.incident?.projectId;
     this.router.navigate(projectId ? ['/projects', projectId] : ['/projects']);
+  }
+
+  governedStages(): any[] {
+    const stages = this.enrichedData?.stages;
+    return stages && typeof stages === 'object' ? Object.values(stages) : [];
   }
 
   // ── Carte Jenkins (Couche 2, mode A) ────────────────────────────────────
@@ -410,18 +418,31 @@ export class IncidentDetailComponent implements OnInit, OnDestroy {
   // phase Sonar — ils appellent la même méthode donc ne peuvent jamais se
   // contredire, et `correcting` est branché sur le même signal de polling
   // pour que les deux reflètent "en cours" ensemble.
-  sonarMode(): RemediationMode { return remediationModeForPhase('sonar'); }
+  sonarMode(): RemediationMode {
+    return this.sonarIssues().some(i => i.remediationType === 'AUTO_FIX_ELIGIBLE') ? 'auto-fix-bulk' : 'signal-only';
+  }
   sonarIssues(): RemediationIssue[] {
     const issues = this.enrichedData?.sonar?.issues || [];
     return issues.map((i: any) => ({
-      id: i.key,
+      id: i.id || i.key,
       title: i.message,
       detail: i.component ? `${i.component}${i.line ? ':' + i.line : ''}` : null,
       severity: i.severity,
+      stage: i.stage || 'sonar', source: i.source || 'SONARQUBE', blocking: i.blocking,
+      rootCause: i.rootCause || null, impact: i.impact || null,
+      file: i.file || (i.component?.includes(':') ? i.component.split(':').slice(1).join(':') : i.component),
+      line: i.line || null, recommendation: i.recommendation || null,
+      remediationType: i.remediationType || 'DEVELOPER_ACTION_REQUIRED',
     }));
   }
-  sonarCorrecting(): boolean { return this.prGenerationState === 'polling'; }
-  onSonarCorrect(): void { this.approveFix(); }
+  sonarCorrecting(): boolean { return this.approvalBusy || this.prGenerationState === 'polling'; }
+  onSonarCorrect(selected?: Set<string>): void { this.approveFix(selected?.values().next().value); }
+
+  hasAutoFixEligible(): boolean {
+    const stages = this.enrichedData?.stages || {};
+    return Object.values(stages).some((s: any) => (s?.findings || []).some((f: any) => f.remediationType === 'AUTO_FIX_ELIGIBLE'))
+      || this.sonarIssues().some(i => i.remediationType === 'AUTO_FIX_ELIGIBLE');
+  }
 
   // Traduit les clés abstraites émises par <app-project-overview> (le rail
   // de phases, réutilisé tel quel — voir project-overview.component.ts)
@@ -500,21 +521,35 @@ export class IncidentDetailComponent implements OnInit, OnDestroy {
     });
   }
 
-  approveFix() {
-    this.api.approveFix(this.id).subscribe({
-      next: () => {
-        this.toast.success('Fix approuvé — WF2 déclenché');
+  approveFix(findingId?: string) {
+    if (this.approvalBusy) return;
+    this.approvalBusy = true;
+    this.approvalError = null;
+    this.api.approveFix(this.id, findingId).subscribe({
+      next: (result: any) => {
+        this.approvalBusy = false;
+        this.toast.success(`Demande de correction démarrée via ${result?.workflow || 'workflow spécialisé'}`);
         this.load();
         this.startPrPolling();
       },
-      error: () => this.toast.error('Erreur', 'Impossible d\'approuver')
+      error: (err: any) => {
+        this.approvalBusy = false;
+        this.approvalError = err.status === 403
+          ? "Vous n'êtes pas autorisé à créer cette correction."
+          : err.status === 409
+            ? (err?.error?.message || 'Une correction ou une Pull Request existe déjà pour ce finding.')
+            : (err?.error?.message || err?.error?.code || 'Impossible de démarrer la correction');
+        this.toast.error('Erreur', this.approvalError || 'Impossible de démarrer la correction');
+      }
     });
   }
 
   rejectFix() {
+    if (this.approvalBusy) return;
+    this.approvalBusy = true;
     this.api.rejectFix(this.id).subscribe({
-      next: () => { this.toast.success('Fix rejeté'); this.load(); },
-      error: () => this.toast.error('Erreur', 'Impossible de rejeter')
+      next: () => { this.approvalBusy = false; this.toast.success('Correction refusée — action manuelle conservée'); this.load(); },
+      error: (err: any) => { this.approvalBusy = false; this.approvalError = err?.error?.message || 'Impossible de rejeter'; this.toast.error('Erreur', this.approvalError || 'Impossible de rejeter'); }
     });
   }
 
@@ -642,6 +677,8 @@ export class IncidentDetailComponent implements OnInit, OnDestroy {
       MEDIUM:'var(--accent-orange)', LOW:'var(--accent-green)' };
     return map[s] || 'var(--border)';
   }
+
+  hasRealPr(): boolean { return /^https?:\/\//i.test(String(this.incident?.prUrl || '')); }
   getSeverityBadgeClass(s: string) {
     const map: any = { CRITICAL:'high', HIGH:'high', MEDIUM:'medium', LOW:'info' };
     return map[s] || '';

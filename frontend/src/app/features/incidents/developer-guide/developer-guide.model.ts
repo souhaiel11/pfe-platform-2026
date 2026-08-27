@@ -25,12 +25,26 @@ export interface DevGuideIssue {
   priority: number;                 // 1 = à corriger en premier
 }
 
+// Forme produite par le fallback déterministe (WF1) quand l'agent LLM
+// Developer Guidance échoue à parser sa réponse : pas de fiche par issue,
+// seulement un plan d'action au niveau catégorie. Distincte de la forme
+// "string" (id d'issue) utilisée par fixOrder quand issues[] est peuplé.
+export interface DevGuideFallbackFixOrderItem {
+  priority: number;
+  category: string;
+  title: string;
+  detail?: string;
+  owner?: string;
+  route?: string;
+  source?: string;
+}
+
 export interface DeveloperGuide {
   incidentId: string;
   summaryForDeveloper: string;
   issues: DevGuideIssue[];
   quickWins: string[];              // ids des issues < 15 min
-  fixOrder: string[];               // ids dans l'ordre recommandé
+  fixOrder: (string | DevGuideFallbackFixOrderItem)[]; // ids (guide détaillé) OU items de plan (fallback déterministe)
   totalEstimatedMinutes: number;
   confidence: number;
   parseError?: boolean;
