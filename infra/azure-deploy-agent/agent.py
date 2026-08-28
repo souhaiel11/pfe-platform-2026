@@ -11,19 +11,14 @@ Garde-fous appliqués, dans cet ordre, à chaque requête :
   1. Secret partagé absent côté agent → fail-closed au démarrage (le process
      refuse même de démarrer, comme N8N_CALLBACK_SECRET côté backend).
   2. Secret fourni par l'appelant invalide/absent → 403, rien d'autre exécuté.
-  3. Le backend ne choisit JAMAIS containerName/image/cpu/memory/ports/RG —
-     il envoie uniquement une clé `project` (ex: "devsecops-testbed") qui DOIT
-     correspondre exactement à une entrée de PROJECTS ci-dessous. Tous les
-     paramètres de déploiement viennent de CE dict fixe, jamais du corps de
-     la requête. Le seul champ variable accepté est `imageTag`, validé par
-     une regex stricte (charset des tags Docker) AVANT tout usage. Aucune
+  3. Le backend résout la configuration non sensible depuis le Project. L'agent
+     la valide contre ses allow-lists d'environnement avant tout usage. Aucune
      commande shell n'est construite par concaténation de texte : tout appel
      touchant une valeur externe passe par subprocess avec une LISTE
      d'arguments (shell=False) — même une valeur qui passerait la regex par
      erreur ne pourrait pas être interprétée comme un séparateur de commande
      shell (;, &&, |, `, $()...), elle serait juste un argv invalide pour az.
-  4. resourceGroup résolu (via PROJECTS, jamais fourni par l'appelant) doit
-     être rg-pfe-devsecops — vérifié quand même explicitement, en profondeur.
+  4. resourceGroup et registry doivent appartenir aux allow-lists de l'agent.
   5. Session az invalide/expirée (`az account show` échoue) → erreur claire
      AZURE_SESSION_EXPIRED, jamais un crash, jamais une tentative de déploiement.
 
@@ -42,28 +37,18 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 BIND_HOST = "172.19.0.1"
 BIND_PORT = 7799
 
-ALLOWED_RESOURCE_GROUP = "rg-pfe-devsecops"
-ALLOWED_ACR = "acrpfedevsecops"
+ALLOWED_RESOURCE_GROUPS = {x.strip() for x in os.environ.get("AZURE_ALLOWED_RESOURCE_GROUPS", "").split(",") if x.strip()}
+ALLOWED_ACRS = {x.strip() for x in os.environ.get("AZURE_ALLOWED_ACRS", "").split(",") if x.strip()}
 
 # ─────────────────────────────────────────────────────────────────────────
-# REGISTRE FIXE DES PROJETS DÉPLOYABLES — la SEULE source des paramètres de
-# déploiement. Ajouter un projet = ajouter une entrée ici (côté agent), pas
-# un champ que le backend pourrait fournir librement.
+# Les allow-lists sont opérationnelles et non sensibles. Une cible projet ne
+# peut jamais sortir de ces périmètres, même avec un body forgé.
 # ─────────────────────────────────────────────────────────────────────────
-PROJECTS = {
-    "devsecops-testbed": {
-        "resourceGroup": ALLOWED_RESOURCE_GROUP,
-        "containerName": "aci-devsecops-testbed",
-        "acrRepository": "devsecops-testbed",
-        "cpu": "1",
-        "memoryInGb": "1",
-        "ports": ["8080"],
-    },
-}
-
 # Charset des tags Docker : [A-Za-z0-9_][A-Za-z0-9._-]{0,127} — rejette tout
 # séparateur shell (;, &, |, $, `, espace, retour à la ligne...).
 IMAGE_TAG_RE = re.compile(r"^[A-Za-z0-9_][A-Za-z0-9._-]{0,127}$")
+AZURE_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,126}$")
+REPOSITORY_RE = re.compile(r"^[a-z0-9][a-z0-9._/-]{0,254}$")
 
 AGENT_SECRET = os.environ.get("AZURE_DEPLOY_AGENT_SECRET")
 if not AGENT_SECRET:
@@ -112,6 +97,20 @@ def check_azure_session():
         account = json.loads(out)
     except json.JSONDecodeError:
         return False, {"error": "AZURE_SESSION_EXPIRED", "message": "Réponse az account show illisible."}
+    # `az account show` ne prouve que la présence du cache local. Forcer
+    # l'obtention d'un token ARM détecte notamment une MFA expirée avant que
+    # l'utilisateur confirme un déploiement.
+    arm_ok, _, arm_err = run_argv([
+        "az", "account", "get-access-token",
+        "--resource", "https://management.azure.com/",
+        "--query", "expiresOn", "-o", "tsv",
+    ], timeout=20)
+    if not arm_ok:
+        return False, {
+            "error": "AZURE_SESSION_EXPIRED",
+            "message": "Session Azure ARM expirée — exécuter `az login` avant E1.",
+            "detail": arm_err[:500],
+        }
     return True, account
 
 
@@ -155,11 +154,11 @@ class Handler(BaseHTTPRequestHandler):
             # Expose la liste des clés déployables — jamais les valeurs
             # brutes utiles à un attaquant (noms exacts non secrets de toute
             # façon, mais principe de minimalité).
-            return self._send(200, {"projects": list(PROJECTS.keys())})
+            return self._send(200, {"mode": "per-project-config", "configured": bool(ALLOWED_RESOURCE_GROUPS and ALLOWED_ACRS)})
         return self._send(404, {"error": "NOT_FOUND"})
 
     def do_POST(self):
-        if self.path != "/deploy":
+        if self.path not in {"/deploy", "/validate-target"}:
             return self._send(404, {"error": "NOT_FOUND"})
 
         if not self._authorized():
@@ -171,16 +170,10 @@ class Handler(BaseHTTPRequestHandler):
 
         # ── Le backend ne fournit QUE ces deux champs. Tout le reste vient
         # exclusivement de PROJECTS (registre fixe côté agent). ────────────
-        project_key = body.get("project")
+        project_id = body.get("projectId")
+        request_id = body.get("requestId")
         image_tag = body.get("imageTag")
-
-        project = PROJECTS.get(project_key)
-        if not project:
-            return self._send(400, {
-                "error": "UNKNOWN_PROJECT",
-                "message": f"Projet '{project_key}' non déclaré dans le registre fixe de l'agent.",
-                "available": list(PROJECTS.keys()),
-            })
+        target = body.get("target") or {}
 
         if not image_tag or not IMAGE_TAG_RE.match(image_tag):
             return self._send(400, {
@@ -188,18 +181,40 @@ class Handler(BaseHTTPRequestHandler):
                 "message": "imageTag requis, charset restreint (lettres/chiffres/._-), pas de séparateur shell.",
             })
 
-        resource_group = project["resourceGroup"]
-        if resource_group != ALLOWED_RESOURCE_GROUP:
-            # Ne devrait jamais arriver (PROJECTS est fixe et codé en dur),
-            # mais vérifié quand même explicitement — défense en profondeur,
-            # jamais une confiance aveugle même dans notre propre config.
-            return self._send(500, {"error": "PROJECT_MISCONFIGURED", "message": "resourceGroup interne invalide."})
+        resource_group = target.get("resourceGroup")
+        registry = target.get("registry")
+        container_name = target.get("targetName")
+        acr_repository = target.get("imageRepository")
+        cpu = str(target.get("cpu") or "1")
+        memory = str(target.get("memoryInGb") or "1")
+        ports = [str(p) for p in (target.get("ports") or ["8080"])]
+        if target.get("provider") != "azure-container-instances":
+            return self._send(400, {"error": "UNSUPPORTED_PROVIDER"})
+        if not ALLOWED_RESOURCE_GROUPS or resource_group not in ALLOWED_RESOURCE_GROUPS:
+            return self._send(403, {"error": "RESOURCE_GROUP_NOT_ALLOWED"})
+        if not ALLOWED_ACRS or registry not in ALLOWED_ACRS:
+            return self._send(403, {"error": "REGISTRY_NOT_ALLOWED"})
+        if not container_name or not AZURE_NAME_RE.match(container_name):
+            return self._send(400, {"error": "INVALID_TARGET_NAME"})
+        if not acr_repository or not REPOSITORY_RE.match(acr_repository):
+            return self._send(400, {"error": "INVALID_IMAGE_REPOSITORY"})
+        if cpu not in {"0.5", "1", "2", "4"} or memory not in {"0.5", "1", "1.5", "2", "3", "4", "8"}:
+            return self._send(400, {"error": "INVALID_COMPUTE_LIMIT"})
+        if not ports or any(not p.isdigit() or not 1 <= int(p) <= 65535 for p in ports):
+            return self._send(400, {"error": "INVALID_PORTS"})
 
-        container_name = project["containerName"]
-        acr_repository = project["acrRepository"]
-        cpu = project["cpu"]
-        memory = project["memoryInGb"]
-        ports = project["ports"]
+        # Même validation que /deploy, avec arrêt garanti avant toute
+        # commande Azure : utilisé par le préflight et les tests UI/backend.
+        if self.path == "/validate-target":
+            return self._send(200, {
+                "valid": True,
+                "projectId": project_id,
+                "requestId": request_id,
+                "provider": target.get("provider"),
+                "resourceGroupAllowed": True,
+                "registryAllowed": True,
+                "targetName": container_name,
+            })
 
         # ── Garde-fou session : vérifié à CHAQUE déploiement, jamais mis en
         # cache d'un appel précédent (une session peut expirer entre deux). ──
@@ -209,7 +224,7 @@ class Handler(BaseHTTPRequestHandler):
 
         steps = []
 
-        ok, out, err = run_fixed(f"az acr login --name {ALLOWED_ACR}")
+        ok, out, err = run_argv(["az", "acr", "login", "--name", registry])
         steps.append({"step": "acr_login", "ok": ok, "detail": (out or err)[:300]})
         if not ok:
             return self._send(500, {"success": False, "error": "ACR_LOGIN_FAILED", "steps": steps})
@@ -223,7 +238,7 @@ class Handler(BaseHTTPRequestHandler):
         # l'exécution — acceptable ici (machine mono-utilisateur, credential
         # scopé à cet ACR, pas le token Owner), à durcir si la machine devient
         # partagée (ex: variable d'env lue par un wrapper au lieu d'un argv).
-        ok, out, err = run_fixed(f"az acr credential show -n {ALLOWED_ACR} -o json")
+        ok, out, err = run_argv(["az", "acr", "credential", "show", "-n", registry, "-o", "json"])
         steps.append({"step": "acr_credential_show", "ok": ok, "detail": "ok" if ok else err[:300]})
         if not ok:
             return self._send(500, {"success": False, "error": "ACR_CREDENTIAL_FETCH_FAILED", "steps": steps})
@@ -233,7 +248,7 @@ class Handler(BaseHTTPRequestHandler):
 
         # ── Seule ligne de toute la fonction qui contient une valeur fournie
         # par le backend (image_tag) : liste d'arguments, shell=False. ─────
-        full_image = f"{ALLOWED_ACR}.azurecr.io/{acr_repository}:{image_tag}"
+        full_image = f"{registry}.azurecr.io/{acr_repository}:{image_tag}"
         create_args = [
             "az", "container", "create",
             "-g", resource_group,
@@ -257,7 +272,7 @@ class Handler(BaseHTTPRequestHandler):
         state = None
         restart_count = None
         for _ in range(24):  # ~2 min max (24 x 5s)
-            ok, out, err = run_fixed(f"az container show -g {resource_group} -n {container_name} -o json", timeout=15)
+            ok, out, err = run_argv(["az", "container", "show", "-g", resource_group, "-n", container_name, "-o", "json"], timeout=15)
             if ok:
                 data = json.loads(out)
                 state = data.get("instanceView", {}).get("state")
@@ -281,11 +296,10 @@ class Handler(BaseHTTPRequestHandler):
             # plus à ouvrir le port (~9s mesurés). Retry court plutôt qu'un
             # seul essai qui peut faussement rapporter "unhealthy".
             for attempt in range(6):  # jusqu'à 30s (6 x 5s)
-                ok, out, err = run_fixed(
-                    f"az container exec -g {resource_group} -n {container_name} "
-                    f'--exec-command "curl -s http://localhost:8080/api/health"',
-                    timeout=15,
-                )
+                ok, out, err = run_argv([
+                    "az", "container", "exec", "-g", resource_group, "-n", container_name,
+                    "--exec-command", "curl -s http://localhost:8080/api/health",
+                ], timeout=15)
                 health = (out or err)[:300]
                 if ok and '"UP"' in (out or ''):
                     health_ok = True
@@ -296,7 +310,8 @@ class Handler(BaseHTTPRequestHandler):
         return self._send(200, {
             "success": state == "Running",
             "healthOk": health_ok,
-            "project": project_key,
+            "projectId": project_id,
+            "requestId": request_id,
             "containerName": container_name,
             "state": state,
             "restartCount": restart_count,
@@ -310,5 +325,5 @@ class Handler(BaseHTTPRequestHandler):
 
 if __name__ == "__main__":
     server = HTTPServer((BIND_HOST, BIND_PORT), Handler)
-    print(f"[azure-deploy-agent] listening on {BIND_HOST}:{BIND_PORT} (projects={list(PROJECTS.keys())})")
+    print(f"[azure-deploy-agent] listening on {BIND_HOST}:{BIND_PORT} (per-project targets)")
     server.serve_forever()

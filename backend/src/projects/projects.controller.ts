@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, Headers, HttpException, HttpStatus, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query, Headers, HttpException, HttpStatus, UseGuards, Req, ForbiddenException } from '@nestjs/common';
 import { ProjectsService } from './projects.service';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
@@ -12,6 +12,9 @@ const N8N_INTERNAL_SECRET = process.env.N8N_INTERNAL_SECRET;
 @Controller('projects')
 export class ProjectsController {
   constructor(private readonly service: ProjectsService) {}
+  private assertEditor(req: any) {
+    if (!['admin', 'developer'].includes(String(req.user?.role || '').toLowerCase())) throw new ForbiddenException('Action non autorisée');
+  }
 
   // Appelé par n8n (node "Lookup Project" de WF1) pour résoudre un jobName Jenkins
   // en config projet. Pas de JwtAuthGuard (appelé depuis n8n, pas depuis le
@@ -31,41 +34,62 @@ export class ProjectsController {
     return this.service.findByJobNameInternal(jobName);
   }
 
+  // Corrélation Sonar déterministe pour WF1 : l'identifiant CE vient du
+  // report-task.txt du build concerné. Aucun lookup "latest par projet".
+  @Get('internal/:id/sonar-correlation')
+  sonarCorrelation(
+    @Param('id') id: string,
+    @Query('ceTaskId') ceTaskId: string,
+    @Headers('x-internal-secret') secret?: string,
+  ) {
+    if (!N8N_INTERNAL_SECRET || secret !== N8N_INTERNAL_SECRET) {
+      throw new HttpException('Accès interne non autorisé', HttpStatus.FORBIDDEN);
+    }
+    return this.service.resolveSonarCorrelation(id, ceTaskId);
+  }
+
+  @UseGuards(JwtAuthGuard)
   @Get()
   findAll(@Query('jenkinsJobName') jenkinsJobName?: string) {
     return this.service.findAll(jenkinsJobName);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Get(':id')
   findOne(@Param('id') id: string) { return this.service.findOne(id); }
 
   @UseGuards(JwtAuthGuard)
   @Post()
-  create(@Body() dto: CreateProjectDto) { return this.service.create(dto); }
+  create(@Body() dto: CreateProjectDto, @Req() req: any) { this.assertEditor(req); return this.service.create(dto); }
 
   @UseGuards(JwtAuthGuard)
   @Put(':id')
-  update(@Param('id') id: string, @Body() dto: UpdateProjectDto) {
+  update(@Param('id') id: string, @Body() dto: UpdateProjectDto, @Req() req: any) {
+    this.assertEditor(req);
     return this.service.update(id, dto);
   }
 
   @UseGuards(JwtAuthGuard)
   @Delete(':id')
-  remove(@Param('id') id: string) { return this.service.remove(id); }
+  remove(@Param('id') id: string, @Req() req: any) { this.assertEditor(req); return this.service.remove(id); }
 
   @UseGuards(JwtAuthGuard)
   @Post(':id/validate')
-  validate(@Param('id') id: string) { return this.service.validateProject(id); }
+  validate(@Param('id') id: string, @Req() req: any) { this.assertEditor(req); return this.service.validateProject(id); }
 
+  @UseGuards(JwtAuthGuard)
   @Get(':id/sonar-metrics')
   sonarMetrics(@Param('id') id: string) { return this.service.getSonarMetrics(id); }
 
+  @UseGuards(JwtAuthGuard)
   @Get(':id/jenkins-status')
   jenkinsStatus(@Param('id') id: string) { return this.service.getJenkinsStatus(id); }
 
+  @UseGuards(JwtAuthGuard)
   @Get(':id/trivy-report')
   trivyReport(@Param('id') id: string) { return this.service.getTrivyReport(id); }
 
+  @UseGuards(JwtAuthGuard)
   @Get(':id/github-stats')
   githubStats(@Param('id') id: string) { return this.service.getGithubStats(id); }
 }

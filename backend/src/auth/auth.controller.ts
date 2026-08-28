@@ -1,5 +1,5 @@
 // auth.controller.ts
-import { Controller, Post, Get, Delete, Param, Body, UseGuards, OnModuleInit, BadRequestException } from '@nestjs/common';
+import { Controller, Post, Get, Delete, Param, Body, UseGuards, OnModuleInit, BadRequestException, ForbiddenException, Req } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
@@ -15,13 +15,19 @@ const VALID_ROLES: string[] = [UserRole.ADMIN, UserRole.DEVELOPER, UserRole.VIEW
 @Controller('auth')
 export class AuthController implements OnModuleInit {
   constructor(private readonly service: AuthService) {}
+  private assertAdmin(req: any) {
+    if (String(req.user?.role || '').toLowerCase() !== UserRole.ADMIN) {
+      throw new ForbiddenException('Administration réservée aux administrateurs');
+    }
+  }
   async onModuleInit() { await this.service.seed(); }
 
   @Post('login') login(@Body() body: { email: string; password: string }) {
     return this.service.login(body.email, body.password);
   }
-  @Post('register')
-  register(@Body() body: { email: string; password: string; name?: string; username?: string; role?: string }) {
+  @ApiBearerAuth() @UseGuards(JwtAuthGuard) @Post('register')
+  register(@Body() body: { email: string; password: string; name?: string; username?: string; role?: string }, @Req() req: any) {
+    this.assertAdmin(req);
     // Le front historique envoyait "username" ; la colonne réelle est "name".
     const name = body.name ?? body.username;
     let role: UserRole | undefined;
@@ -33,6 +39,6 @@ export class AuthController implements OnModuleInit {
     }
     return this.service.register(body.email, body.password, name as string, role);
   }
-  @ApiBearerAuth() @UseGuards(JwtAuthGuard) @Get('users') findAll() { return this.service.findAll(); }
-  @ApiBearerAuth() @UseGuards(JwtAuthGuard) @Delete('users/:id') remove(@Param('id') id: string) { return this.service.remove(id); }
+  @ApiBearerAuth() @UseGuards(JwtAuthGuard) @Get('users') findAll(@Req() req: any) { this.assertAdmin(req); return this.service.findAll(); }
+  @ApiBearerAuth() @UseGuards(JwtAuthGuard) @Delete('users/:id') remove(@Param('id') id: string, @Req() req: any) { this.assertAdmin(req); return this.service.remove(id); }
 }

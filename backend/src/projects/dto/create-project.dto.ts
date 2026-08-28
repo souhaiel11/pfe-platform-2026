@@ -1,4 +1,5 @@
-import { IsString, IsOptional, IsEnum, IsArray, IsBoolean } from 'class-validator';
+import { IsString, IsOptional, IsEnum, IsArray, IsBoolean, IsObject } from 'class-validator';
+import { AzureDeploymentConfig } from '../project.entity';
 import { ProjectEnvironment, CicdTool } from '../project.entity';
 
 export class CreateProjectDto {
@@ -63,4 +64,7 @@ export class CreateProjectDto {
 
   @IsOptional() @IsString()
   slackToken?: string;
+
+  @IsOptional() @IsObject()
+  azureConfig?: AzureDeploymentConfig;
 }

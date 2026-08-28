@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Project } from './project.entity';
@@ -26,6 +26,26 @@ export class ProjectsService {
 
   private sanitizeProject(project: Project) {
     return sanitizeProject(project);
+  }
+
+  private normalizeAzureConfig(input: any) {
+    if (input === null) return null;
+    if (!input || input.provider !== 'azure-container-instances') throw new BadRequestException('Unsupported Azure deployment provider');
+    for (const key of ['resourceGroup', 'targetName', 'registry', 'imageRepository']) {
+      if (typeof input[key] !== 'string' || !input[key].trim()) throw new BadRequestException(`azureConfig.${key} is required`);
+    }
+    // Allow-list stricte : aucun token/password/credential arbitraire ne peut
+    // être persisté dans Project.azureConfig.
+    return {
+      provider: 'azure-container-instances' as const,
+      resourceGroup: input.resourceGroup.trim(), targetName: input.targetName.trim(),
+      registry: input.registry.trim(), imageRepository: input.imageRepository.trim(),
+      ...(input.region ? { region: String(input.region).trim() } : {}),
+      ...(input.subscriptionRef ? { subscriptionRef: String(input.subscriptionRef).trim() } : {}),
+      ...(input.cpu ? { cpu: String(input.cpu) } : {}),
+      ...(input.memoryInGb ? { memoryInGb: String(input.memoryInGb) } : {}),
+      ...(Array.isArray(input.ports) ? { ports: input.ports.map(String) } : {}),
+    };
   }
 
   async findAll(jenkinsJobName?: string) {
@@ -75,12 +95,75 @@ export class ProjectsService {
     return p;
   }
 
+  async resolveSonarCorrelation(projectId: string, ceTaskId: string) {
+    const project = await this.findOneInternal(projectId);
+    if (!ceTaskId || !/^[A-Za-z0-9_-]{8,128}$/.test(ceTaskId)) {
+      throw new BadRequestException('Valid ceTaskId is required');
+    }
+    if (!project.sonarqubeToken) {
+      return { ceTaskId, analysisId: null, qualityGate: 'QUALITY_GATE_UNAVAILABLE', correlationVerified: false, state: 'SONAR_NOT_CONFIGURED' };
+    }
+
+    // L'URL interne est l'adresse de service de la plateforme, déjà utilisée
+    // par WF1. Le projectKey/token restent strictement propres au projet.
+    const baseUrl = (project.sonarqubeUrl || 'http://sonarqube:9000').replace(/\/$/, '');
+    const headers = { Authorization: `Basic ${Buffer.from(`${project.sonarqubeToken}:`).toString('base64')}` };
+    const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+    for (let attempt = 1; attempt <= 60; attempt++) {
+      let response: any;
+      try {
+        response = await firstValueFrom(this.http.get(`${baseUrl}/api/ce/task`, {
+          params: { id: ceTaskId }, headers, timeout: 10_000, validateStatus: () => true,
+        }));
+      } catch {
+        return { ceTaskId, analysisId: null, qualityGate: 'API_ERROR', correlationVerified: false, state: 'API_ERROR', attempts: attempt };
+      }
+      if (response.status < 200 || response.status >= 300 || !response.data?.task) {
+        return { ceTaskId, analysisId: null, qualityGate: 'API_ERROR', correlationVerified: false, state: 'API_ERROR', attempts: attempt };
+      }
+
+      const task = response.data.task;
+      const state = String(task.status || '').toUpperCase();
+      if (state === 'PENDING' || state === 'IN_PROGRESS') {
+        if (attempt < 60) await sleep(5_000);
+        continue;
+      }
+      if (state === 'FAILED' || state === 'CANCELED') {
+        return { ceTaskId, analysisId: null, qualityGate: state === 'FAILED' ? 'SONAR_ANALYSIS_FAILED' : 'SONAR_ANALYSIS_CANCELED', correlationVerified: false, state, attempts: attempt };
+      }
+      if (state !== 'SUCCESS' || !task.analysisId) {
+        return { ceTaskId, analysisId: null, qualityGate: 'QUALITY_GATE_NOT_COMPUTED', correlationVerified: false, state: state || 'UNKNOWN', attempts: attempt };
+      }
+
+      const analysisId = String(task.analysisId);
+      try {
+        const gate = await firstValueFrom(this.http.get(`${baseUrl}/api/qualitygates/project_status`, {
+          params: { analysisId }, headers, timeout: 10_000, validateStatus: () => true,
+        }));
+        const status = String(gate.data?.projectStatus?.status || '').toUpperCase();
+        if (gate.status < 200 || gate.status >= 300) {
+          return { ceTaskId, analysisId, qualityGate: 'API_ERROR', correlationVerified: false, state: 'API_ERROR', attempts: attempt };
+        }
+        if (!status) {
+          return { ceTaskId, analysisId, qualityGate: 'QUALITY_GATE_NOT_COMPUTED', correlationVerified: false, state: 'SUCCESS', attempts: attempt };
+        }
+        return { ceTaskId, analysisId, qualityGate: status, projectStatus: gate.data.projectStatus, correlationVerified: true, state: 'SUCCESS', attempts: attempt };
+      } catch {
+        return { ceTaskId, analysisId, qualityGate: 'API_ERROR', correlationVerified: false, state: 'API_ERROR', attempts: attempt };
+      }
+    }
+    return { ceTaskId, analysisId: null, qualityGate: 'SONAR_ANALYSIS_TIMEOUT', correlationVerified: false, state: 'TIMEOUT', attempts: 60 };
+  }
+
   async create(dto: CreateProjectDto) {
     if (dto.jenkinsJobName) {
       const existing = await this.repo.findOne({ where: { jenkinsJobName: dto.jenkinsJobName } });
       if (existing) throw new ConflictException(`Un projet avec le job Jenkins "${dto.jenkinsJobName}" existe déjà`);
     }
-    const p = this.repo.create(dto);
+    const payload: any = { ...dto };
+    if (Object.prototype.hasOwnProperty.call(payload, 'azureConfig')) payload.azureConfig = this.normalizeAzureConfig(payload.azureConfig);
+    const p = this.repo.create(payload as Partial<Project>);
     const saved = await this.repo.save(p);
     return this.sanitizeProject(saved);
   }
@@ -92,6 +175,7 @@ export class ProjectsService {
     // Le frontend ne recoit jamais les tokens en clair : il enverrait
     // sinon des chaines vides qui ecraseraient les vraies valeurs.
     const payload: any = { ...dto };
+    if (Object.prototype.hasOwnProperty.call(payload, 'azureConfig')) payload.azureConfig = this.normalizeAzureConfig(payload.azureConfig);
     for (const field of ['jenkinsToken', 'sonarqubeToken', 'githubToken', 'slackToken']) {
       if (payload[field] === '' || payload[field] === null || payload[field] === undefined) {
         delete payload[field];

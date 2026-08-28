@@ -19,11 +19,14 @@
 //  L'agent est lié à 172.19.0.1 (gateway du bridge Docker "pfe-network"),
 //  jamais à 0.0.0.0 — seuls les conteneurs de ce réseau l'atteignent.
 // ─────────────────────────────────────────────────────────────
-import { Module, Controller, Get, Post, Param, Body, UseGuards, HttpException, HttpStatus } from '@nestjs/common';
+import { Module, Controller, Get, Post, Param, Body, UseGuards, HttpException, HttpStatus, Req } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Report } from '../reports/report.entity';
 import { Project } from '../projects/project.entity';
+import { Incident } from '../incidents/incident.entity';
 import { AzureDeployReadinessService } from './azure-deploy-readiness.service';
 
 const AGENT_URL = process.env.AZURE_DEPLOY_AGENT_URL || 'http://172.19.0.1:7799';
@@ -34,7 +37,10 @@ const AGENT_SECRET = process.env.AZURE_DEPLOY_AGENT_SECRET;
 
 @Controller('azure-deploy')
 export class AzureDeployController {
-  constructor(private readonly readiness: AzureDeployReadinessService) {}
+  constructor(
+    private readonly readiness: AzureDeployReadinessService,
+    @InjectRepository(Project) private readonly projectsRepo: Repository<Project>,
+  ) {}
 
   private assertConfigured() {
     if (!AGENT_SECRET) {
@@ -45,27 +51,12 @@ export class AzureDeployController {
     }
   }
 
-  // Liste les projets déployables — reflète le registre fixe côté agent
-  // (PROJECTS dans agent.py), jamais une liste construite par le backend.
+  // Liste les projets configurés sans exposer de secret Azure.
   @UseGuards(JwtAuthGuard)
   @Get('projects')
   async projects() {
-    this.assertConfigured();
-    try {
-      const res = await fetch(`${AGENT_URL}/projects`, {
-        headers: { 'X-Agent-Secret': AGENT_SECRET as string },
-        signal: AbortSignal.timeout(15000),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new HttpException(data, res.status);
-      return data;
-    } catch (e: any) {
-      if (e instanceof HttpException) throw e;
-      throw new HttpException(
-        `Agent de déploiement Azure injoignable sur l'hôte : ${e.message}`,
-        HttpStatus.BAD_GATEWAY,
-      );
-    }
+    const projects = await this.projectsRepo.find();
+    return { projects: projects.filter(p => !!p.azureConfig).map(p => ({ id: p.id, name: p.name, target: p.azureConfig })) };
   }
 
   // Permet au front (futur bouton "Déployer") de vérifier AVANT d'agir que
@@ -104,42 +95,57 @@ export class AzureDeployController {
     return this.readiness.isReadyToDeploy(projectId);
   }
 
-  // Déclenche un déploiement ACI réel. Le backend ne fait QUE relayer un
-  // couple {project, imageTag} — il ne choisit JAMAIS containerName, image
-  // complète, cpu/memory/ports ni resourceGroup : ces paramètres vivent
-  // exclusivement dans le registre fixe PROJECTS de l'agent hôte. Même si ce
-  // module était compromis ou appelé avec un body forgé, il ne peut pas
-  // faire exécuter à l'agent autre chose qu'un déploiement d'un projet
-  // déclaré, avec le tag d'image demandé (validé côté agent par une regex
-  // stricte avant tout usage).
+  // Déclenche un déploiement ACI réel depuis la configuration non sensible
+  // du Project. L'agent applique en plus ses allow-lists resource group/ACR.
   @UseGuards(JwtAuthGuard)
   @Post('deploy')
-  async deploy(@Body() body: { project: string; imageTag: string }) {
+  async deploy(@Body() body: { projectId: string; imageTag: string; requestId: string; confirmed: boolean; dryRun?: boolean }, @Req() req: any) {
     this.assertConfigured();
-    if (!body?.project || !body?.imageTag) {
-      throw new HttpException('project et imageTag sont requis', HttpStatus.BAD_REQUEST);
+    if (!['admin', 'developer'].includes(String(req.user?.role || '').toLowerCase())) {
+      throw new HttpException('Utilisateur non autorisé à déployer', HttpStatus.FORBIDDEN);
     }
+    if (!body?.projectId || !body?.imageTag || !body?.requestId || body.confirmed !== true) {
+      throw new HttpException('projectId, imageTag, requestId et confirmation explicite sont requis', HttpStatus.BAD_REQUEST);
+    }
+    const project = await this.projectsRepo.findOne({ where: { id: body.projectId } });
+    if (!project) throw new HttpException('Projet introuvable', HttpStatus.NOT_FOUND);
+    if (!project.azureConfig) throw new HttpException({ error: 'AZURE_NOT_CONFIGURED' }, HttpStatus.CONFLICT);
 
     // Gardien fail-closed, appliqué ICI même si le front a déjà consulté
     // /ready avant d'afficher le bouton — un appel direct à /deploy (front
     // buggé, script, curl) ne doit jamais pouvoir contourner la vérification.
-    const readiness = await this.readiness.isReadyToDeployByProjectName(body.project);
+    const readiness = await this.readiness.isReadyToDeploy(body.projectId);
     if (!readiness.ready) {
       throw new HttpException(
         {
           error: 'NOT_READY_TO_DEPLOY',
-          message: `Projet '${body.project}' non prêt à être déployé.`,
+          message: `Projet '${project.name}' non prêt à être déployé.`,
           reasons: readiness.reasons,
         },
         HttpStatus.CONFLICT,
       );
     }
 
+    if (body.dryRun) return { status: 'AZURE_DISPATCH_READY', dryRun: true, requestId: body.requestId, target: readiness.deploymentTarget };
+
+    const reservation = await this.projectsRepo.manager.transaction(async manager => {
+      const locked = await manager.getRepository(Project).findOne({ where: { id: body.projectId }, lock: { mode: 'pessimistic_write' } });
+      if (!locked) throw new HttpException('Projet introuvable', HttpStatus.NOT_FOUND);
+      const existing = locked.azureDeploymentState;
+      if (existing?.requestId === body.requestId) return { duplicate: existing, project: locked };
+      if (existing?.status === 'DISPATCHING') throw new HttpException({ error: 'DEPLOYMENT_IN_PROGRESS' }, HttpStatus.CONFLICT);
+      locked.azureDeploymentState = { requestId: body.requestId, status: 'DISPATCHING', imageTag: body.imageTag, updatedAt: new Date().toISOString() };
+      await manager.save(locked);
+      return { duplicate: null, project: locked };
+    });
+    if (reservation.duplicate) return { duplicate: true, ...reservation.duplicate };
+    const reservedProject = reservation.project;
+
     try {
       const res = await fetch(`${AGENT_URL}/deploy`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Agent-Secret': AGENT_SECRET as string },
-        body: JSON.stringify(body),
+        body: JSON.stringify({ projectId: reservedProject.id, requestId: body.requestId, imageTag: body.imageTag, target: reservedProject.azureConfig }),
         // Le déploiement ACI réel (create + polling + health check côté
         // agent) peut prendre plusieurs dizaines de secondes — signal large
         // mais borné, jamais infini.
@@ -149,8 +155,12 @@ export class AzureDeployController {
       if (!res.ok) {
         throw new HttpException(data, res.status);
       }
+      reservedProject.azureDeploymentState = { requestId: body.requestId, status: 'DEPLOYED', imageTag: body.imageTag, updatedAt: new Date().toISOString(), result: data };
+      await this.projectsRepo.save(reservedProject);
       return data;
     } catch (e: any) {
+      reservedProject.azureDeploymentState = { requestId: body.requestId, status: 'FAILED', imageTag: body.imageTag, updatedAt: new Date().toISOString() };
+      await this.projectsRepo.save(reservedProject);
       if (e instanceof HttpException) throw e;
       throw new HttpException(
         `Agent de déploiement Azure injoignable sur l'hôte : ${e.message}`,
@@ -161,7 +171,7 @@ export class AzureDeployController {
 }
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Report, Project])],
+  imports: [TypeOrmModule.forFeature([Report, Project, Incident])],
   controllers: [AzureDeployController],
   providers: [AzureDeployReadinessService],
   // Exporté pour ReportsModule — la notification "prêt à déployer" (transition

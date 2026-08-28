@@ -7,3 +7,5 @@ dist/
 *.bak-*
 *.bak*
 *.old
+__pycache__/
+infra/azure-deploy-agent/allowlists.env

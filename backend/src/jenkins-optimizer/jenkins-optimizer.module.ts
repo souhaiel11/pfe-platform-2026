@@ -3,7 +3,7 @@
 //  Fichier : src/jenkins-optimizer/jenkins-optimizer.module.ts
 //  Enregistrement : ajouter JenkinsOptimizerModule aux imports de AppModule
 // ─────────────────────────────────────────────────────────────
-import { Module, Controller, Post, Get, Param, Body, Query, Headers, UseGuards, HttpException, HttpStatus } from '@nestjs/common';
+import { Module, Controller, Post, Get, Param, Body, Query, Headers, UseGuards, HttpException, HttpStatus, Req } from '@nestjs/common';
 import { TypeOrmModule, InjectRepository } from '@nestjs/typeorm';
 import { Repository, LessThan } from 'typeorm';
 import { randomUUID } from 'crypto';
@@ -135,10 +135,11 @@ export class JenkinsOptimizerController {
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
-      return data.default_branch || 'main';
+      if (!data.default_branch) throw new Error('default_branch absent');
+      return data.default_branch;
     } catch (e: any) {
-      console.warn(`[jenkins-optimizer] default_branch fetch failed for ${owner}/${repo}, falling back to 'main' (${e?.message || e})`);
-      return 'main';
+      console.warn(`[jenkins-optimizer] default_branch fetch failed for ${owner}/${repo} (${e?.message || e})`);
+      return '';
     }
   }
 
@@ -435,7 +436,10 @@ export class JenkinsOptimizerController {
     filePath?: string;
     retainedIssues?: { id: string; title: string }[];
     discardedIssues?: { id: string; title: string }[];
-  }) {
+  }, @Req() req: any) {
+    if (!['admin', 'developer'].includes(String(req.user?.role || '').toLowerCase())) {
+      throw new HttpException('Utilisateur non autorisé à créer une correction', HttpStatus.FORBIDDEN);
+    }
     if (!body?.jobId || !body?.owner || !body?.repo) {
       throw new HttpException('jobId, owner et repo sont requis', HttpStatus.BAD_REQUEST);
     }
@@ -474,6 +478,9 @@ export class JenkinsOptimizerController {
       }),
     );
 
+    const project = await this.projects.findOne({ where: { githubRepo: `${body.owner}/${body.repo}` } });
+    const baseBranch = body.baseBranch || await this.resolveDefaultBranch(body.owner, body.repo, project?.githubToken);
+    if (!baseBranch) throw new HttpException('Branche par défaut introuvable', HttpStatus.BAD_GATEWAY);
     const applyPayload = {
       // Requis par le nœud n8n "Send Apply Callback", qui lit
       // $('Webhook - Apply').first().json.body.applyId pour construire
@@ -483,14 +490,14 @@ export class JenkinsOptimizerController {
       applyId,
       owner: body.owner,
       repo: body.repo,
-      baseBranch: body.baseBranch || 'main',
+      baseBranch,
       filePath: body.filePath || 'Jenkinsfile',
       originalJenkinsfile: analysis.sourceJenkinsfile,
       retained,
       excluded,
     };
     // Preuve directe du contrat réellement envoyé — vérification WF4 v4.
-    console.log(`[jenkins-optimizer] payload APPLY envoyé à n8n pour applyId=${applyId} :`, JSON.stringify(applyPayload));
+    console.log(`[jenkins-optimizer] demande APPLY transmise à n8n pour applyId=${applyId}`);
 
     // Fire-and-forget — ce fetch ne sert QU'À déclencher le workflow, sa
     // réponse HTTP n'est JAMAIS la donnée réelle, seul le callback fait foi.
@@ -499,7 +506,7 @@ export class JenkinsOptimizerController {
     // optimize(), voir son commentaire détaillé plus haut).
     fetch(APPLY_WEBHOOK, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-Internal-Secret': process.env.N8N_INTERNAL_SECRET || '' },
       body: JSON.stringify(applyPayload),
       signal: AbortSignal.timeout(30000),
     }).catch(async (e: any) => {

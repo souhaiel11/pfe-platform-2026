@@ -6,6 +6,7 @@ After=network.target
 Type=simple
 ExecStart=/usr/bin/python3 %h/pfe-2026/platform/infra/azure-deploy-agent/agent.py
 EnvironmentFile=%h/pfe-2026/platform/infra/azure-deploy-agent/.env
+EnvironmentFile=%h/pfe-2026/platform/infra/azure-deploy-agent/allowlists.env
 Restart=on-failure
 RestartSec=3
 

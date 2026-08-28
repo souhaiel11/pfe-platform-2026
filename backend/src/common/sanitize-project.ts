@@ -9,7 +9,7 @@
 // documente cette limite). Une allow-list explicite des champs publics
 // serait fail-closed (plus sûre) — à envisager si Project accumule d'autres
 // catégories de données sensibles à l'avenir.
-const SENSITIVE_PROJECT_FIELDS = ['jenkinsToken', 'sonarqubeToken', 'githubToken', 'slackToken'] as const;
+const SENSITIVE_PROJECT_FIELDS = ['jenkinsToken', 'sonarqubeToken', 'githubToken', 'slackToken', 'azureDeploymentState'] as const;
 
 export function sanitizeProject<T extends Record<string, any>>(
   project: T | null | undefined,

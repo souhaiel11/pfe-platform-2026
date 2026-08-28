@@ -17,7 +17,7 @@
 //  la branche fetch déjà prouvée, la branche optimize reste pure (texte in,
 //  findings out), symétrique à jenkinsfile-optimize côté WF4.
 // ─────────────────────────────────────────────────────────────
-import { Module, Controller, Post, Get, Param, Body, Headers, UseGuards, HttpException, HttpStatus } from '@nestjs/common';
+import { Module, Controller, Post, Get, Param, Body, Headers, UseGuards, HttpException, HttpStatus, Req } from '@nestjs/common';
 import { TypeOrmModule, InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { randomUUID } from 'crypto';
@@ -84,10 +84,11 @@ export class DockerfileOptimizerController {
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
-      return data.default_branch || 'main';
+      if (!data.default_branch) throw new Error('default_branch absent');
+      return data.default_branch;
     } catch (e: any) {
-      console.warn(`[dockerfile-optimizer] default_branch fetch failed for ${owner}/${repo}, falling back to 'main' (${e?.message || e})`);
-      return 'main';
+      console.warn(`[dockerfile-optimizer] default_branch fetch failed for ${owner}/${repo} (${e?.message || e})`);
+      return '';
     }
   }
 
@@ -121,6 +122,8 @@ export class DockerfileOptimizerController {
   @UseGuards(JwtAuthGuard)
   @Post('apply')
   async apply(@Body() body: {
+    requestId: string;
+    projectId: string;
     dockerfile: string;
     findings: any[];
     context?: { pomXml?: string; appConfig?: string };
@@ -128,7 +131,20 @@ export class DockerfileOptimizerController {
     repo: string;
     baseBranch?: string;
     filePath?: string;
-  }) {
+  }, @Req() req: any) {
+    if (!['admin', 'developer'].includes(String(req.user?.role || '').toLowerCase())) {
+      throw new HttpException('Utilisateur non autorisé à créer une correction', HttpStatus.FORBIDDEN);
+    }
+    if (!body?.requestId || !body?.projectId) {
+      throw new HttpException('requestId et projectId sont requis', HttpStatus.BAD_REQUEST);
+    }
+    const ledgerId = `apply:${body.requestId}`;
+    const existing = await this.analyses.findOneBy({ jobId: ledgerId });
+    if (existing) {
+      return { requestId: body.requestId, duplicate: true, status: existing.status, result: existing.result };
+    }
+    const projectById = await this.projects.findOneBy({ id: body.projectId });
+    if (!projectById) throw new HttpException('Projet introuvable', HttpStatus.NOT_FOUND);
     if (!body?.dockerfile || !Array.isArray(body.findings) || body.findings.length === 0) {
       throw new HttpException('dockerfile et findings (au moins un) sont requis', HttpStatus.BAD_REQUEST);
     }
@@ -136,24 +152,36 @@ export class DockerfileOptimizerController {
       throw new HttpException('owner et repo sont requis', HttpStatus.BAD_REQUEST);
     }
 
+    const configuredRepo = String(projectById.githubRepo || '').replace(/^https?:\/\/github\.com\//, '').replace(/\.git$/, '');
+    if (configuredRepo.toLowerCase() !== `${body.owner}/${body.repo}`.toLowerCase()) throw new HttpException('Repository/project mismatch', HttpStatus.CONFLICT);
+    const baseBranch = body.baseBranch || await this.resolveDefaultBranch(body.owner, body.repo, projectById.githubToken);
+    if (!baseBranch) throw new HttpException('Branche par défaut introuvable', HttpStatus.BAD_GATEWAY);
+    await this.analyses.save(this.analyses.create({ projectId: body.projectId, jobId: ledgerId, sourceDockerfile: body.dockerfile,
+      status: DockerfileAnalysisStatus.PENDING, result: { kind: 'APPLY', requestId: body.requestId } }));
     try {
       const res = await fetch(APPLY_WEBHOOK, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-Internal-Secret': process.env.N8N_INTERNAL_SECRET || '' },
         body: JSON.stringify({
           dockerfile: body.dockerfile,
           findings: body.findings,
           context: body.context || {},
           owner: body.owner,
           repo: body.repo,
-          baseBranch: body.baseBranch || 'main',
+          baseBranch,
+          requestId: body.requestId,
           filePath: body.filePath || 'Dockerfile',
         }),
         signal: AbortSignal.timeout(190000),
       });
       const data = await res.json();
-      return Array.isArray(data) ? data[0] : data;
+      const result = Array.isArray(data) ? data[0] : data;
+      const ledger = await this.analyses.findOneBy({ jobId: ledgerId });
+      if (ledger) { ledger.status = DockerfileAnalysisStatus.DONE; ledger.result = { kind: 'APPLY', requestId: body.requestId, response: result }; ledger.settledAt = new Date(); await this.analyses.save(ledger); }
+      return { requestId: body.requestId, duplicate: false, ...result };
     } catch (e: any) {
+      const ledger = await this.analyses.findOneBy({ jobId: ledgerId });
+      if (ledger) { ledger.status = DockerfileAnalysisStatus.ERROR; ledger.reason = 'Docker apply workflow failed'; ledger.detail = e.message; ledger.settledAt = new Date(); await this.analyses.save(ledger); }
       throw new HttpException(
         `Agent de remédiation Docker injoignable ou en échec : ${e.message}`,
         HttpStatus.BAD_GATEWAY,
