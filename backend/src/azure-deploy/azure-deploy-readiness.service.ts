@@ -15,12 +15,24 @@ import { Repository } from 'typeorm';
 import { Report, ReportType } from '../reports/report.entity';
 import { Project } from '../projects/project.entity';
 import { normalizeReport } from '../common/report-normalizer';
+import { Incident } from '../incidents/incident.entity';
+import { evaluateReadiness, GovernedStage } from '../common/governance';
 
 export interface DeployReadiness {
   ready: boolean;
   reasons: string[];
+  status?: 'READY' | 'NOT_READY';
+  blockingReasons?: string[];
+  warnings?: string[];
+  currentBuild?: number | null;
+  validatedBuild?: number | null;
+  unresolvedBlockingCount?: number;
+  requiredStages?: GovernedStage[];
+  correlationVerified?: boolean;
   reportId?: string;
   reportCreatedAt?: Date;
+  deploymentConfigured?: boolean;
+  deploymentTarget?: Record<string, string | undefined> | null;
 }
 
 // Seules valeurs qui prouvent positivement un quality gate au vert — une
@@ -34,9 +46,21 @@ export class AzureDeployReadinessService {
   constructor(
     @InjectRepository(Report) private readonly reportRepo: Repository<Report>,
     @InjectRepository(Project) private readonly projectRepo: Repository<Project>,
+    @InjectRepository(Incident) private readonly incidentRepo: Repository<Incident>,
   ) {}
 
   async isReadyToDeploy(projectId: string): Promise<DeployReadiness> {
+    const project = await this.projectRepo.findOne({ where: { id: projectId } });
+    if (!project) return { ready: false, status: 'NOT_READY', reasons: ['Project not found'], blockingReasons: ['Project not found'], deploymentConfigured: false };
+    const deploymentConfigured = !!project.azureConfig;
+    const deploymentTarget = project.azureConfig ? {
+      provider: project.azureConfig.provider,
+      resourceGroup: project.azureConfig.resourceGroup,
+      targetName: project.azureConfig.targetName,
+      registry: project.azureConfig.registry,
+      imageRepository: project.azureConfig.imageRepository,
+      region: project.azureConfig.region,
+    } : null;
     const report = await this.reportRepo.findOne({
       where: { projectId, type: ReportType.COMBINED },
       order: { createdAt: 'DESC' },
@@ -45,7 +69,7 @@ export class AzureDeployReadinessService {
     if (!report) {
       return {
         ready: false,
-        reasons: ['Aucun report combined pour ce projet — impossible de vérifier son état, refus par défaut.'],
+        reasons: ['Aucun report combined pour ce projet — impossible de vérifier son état, refus par défaut.'], deploymentConfigured, deploymentTarget,
       };
     }
 
@@ -54,7 +78,7 @@ export class AzureDeployReadinessService {
         ready: false,
         reasons: ['Le dernier report combined a un rawData vide — impossible de vérifier son état, refus par défaut.'],
         reportId: report.id,
-        reportCreatedAt: report.createdAt,
+        reportCreatedAt: report.createdAt, deploymentConfigured, deploymentTarget,
       };
     }
 
@@ -66,21 +90,45 @@ export class AzureDeployReadinessService {
           "Le dernier report combined ne contient aucune donnée d'analyse exploitable (format non reconnu) — refus par défaut.",
         ],
         reportId: report.id,
-        reportCreatedAt: report.createdAt,
+        reportCreatedAt: report.createdAt, deploymentConfigured, deploymentTarget,
       };
     }
 
-    const reasons: string[] = [];
+    const incident = await this.incidentRepo.findOne({ where: { projectId }, order: { createdAt: 'DESC' } });
+    if (!incident) return { ready: false, status: 'NOT_READY', reasons: ['No correlated incident exists'], blockingReasons: ['No correlated incident exists'] };
+    const metadata: any = incident.metadata || {};
+    const validation: any = metadata.validation || {};
+    const raw: any = report.rawData || {};
+    const currentBuild = Number(raw?.enrichedData?.build?.number ?? raw?.build?.number ?? raw?.buildNumber ?? incident.buildNumber) || null;
+    const stages: GovernedStage[] = Object.values(normalized.stages || {}).map((s: any) => ({
+      stage: s.stage || s.source || 'unknown', status: s.status, blocking: !!s.blocking,
+      required: s.required !== false, message: s.message, source: s.source,
+      findingCount: Array.isArray(s.findings) ? s.findings.length : Number(s.findingCount || 0),
+    }));
+    const stageFindings = Object.values(normalized.stages || {}).flatMap((s: any) => Array.isArray(s.findings) ? s.findings : []);
+    const unresolvedBlockingCount = stageFindings.filter((f: any) => f?.blocking === true && f?.resolved !== true).length;
+    const gate = normalized.sonar.quality_gate;
+    const result = evaluateReadiness({
+      currentBuild,
+      validatedBuild: Number(validation.buildNumber) || null,
+      validationPassed: validation.validationStatus === 'VALIDATED' && validation.passed === true,
+      correlationVerified: validation.correlationVerified === true && validation.projectId === projectId && validation.incidentId === incident.id,
+      sonarRequired: true,
+      sonarCorrelationVerified: validation.sonarCorrelationVerified === true,
+      sonarStatus: validation.sonarStatus || gate || null,
+      unresolvedBlockingCount,
+      fixRequestStatus: metadata.fixRequest?.status,
+      stages,
+    });
+
+    const reasons: string[] = [...result.blockingReasons];
+    if (!deploymentConfigured) reasons.push('Azure deployment is not configured for this project');
 
     // 1. Gouvernance — une valeur absente/inconnue n'est JAMAIS traitée comme
     // "différente de BLOCK" : elle doit être explicitement AUTO_FIX ou
     // NOTIFY_ONLY pour compter comme une décision de gouvernance confirmée.
     if (report.judgeDecision === 'BLOCK') {
       reasons.push('judgeDecision=BLOCK (le Judge agent a explicitement bloqué ce build)');
-    } else if (report.judgeDecision !== 'AUTO_FIX' && report.judgeDecision !== 'NOTIFY_ONLY') {
-      reasons.push(
-        `judgeDecision absent ou indéterminé (valeur: ${report.judgeDecision ?? 'null'}) — aucune décision de gouvernance confirmée`,
-      );
     }
 
     // 2. Sécurité
@@ -91,7 +139,6 @@ export class AzureDeployReadinessService {
 
     // 3. Qualité — même logique fail-closed que pour judgeDecision : seule
     // une valeur positivement connue comme "verte" fait passer le critère.
-    const gate = normalized.sonar.quality_gate;
     if (BLOCKING_QUALITY_GATES.includes(gate)) {
       reasons.push(`quality gate Sonar ${gate}`);
     } else if (!OK_QUALITY_GATES.includes(gate)) {
@@ -99,16 +146,19 @@ export class AzureDeployReadinessService {
     }
 
     return {
+      ...result,
       ready: reasons.length === 0,
-      reasons,
+      status: reasons.length === 0 ? 'READY' : 'NOT_READY',
+      reasons: [...new Set(reasons)],
+      blockingReasons: [...new Set(reasons)],
       reportId: report.id,
       reportCreatedAt: report.createdAt,
+      deploymentConfigured,
+      deploymentTarget,
     };
   }
 
-  // POST /deploy reçoit une clé projet ("devsecops-testbed", la même que
-  // le registre fixe de l'agent hôte), pas un id — résolution en base ici,
-  // jamais fournie/choisie par l'appelant.
+  // Compatibilité lecture seule pour les anciens consommateurs par nom.
   async isReadyToDeployByProjectName(name: string): Promise<DeployReadiness> {
     const project = await this.projectRepo.findOne({ where: { name } });
     if (!project) {

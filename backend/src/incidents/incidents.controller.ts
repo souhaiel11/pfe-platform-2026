@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Delete, Param, Body, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Param, Body, Query, UseGuards, Req, ForbiddenException } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { IncidentsService } from './incidents.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -18,6 +18,8 @@ export class IncidentsController {
   @UseGuards(JwtOrInternalSecretGuard)
   @Get() findAll(@Query('projectId') projectId?: string, @Query('status') status?: string, @Query('size') size?: number) { return this.service.findAll(projectId, status, size); }
   @UseGuards(JwtAuthGuard)
+  @Get('project/:projectId/cycles') convergence(@Param('projectId') projectId: string) { return this.service.convergence(projectId); }
+  @UseGuards(JwtAuthGuard)
   @Get(':id') findOne(@Param('id') id: string) { return this.service.findOne(id); }
   @UseGuards(JwtAuthGuard)
   @Post() create(@Body() dto: any) { return this.service.create(dto); }
@@ -29,10 +31,17 @@ export class IncidentsController {
   @Delete(':id') remove(@Param('id') id: string) { return this.service.remove(id); }
 
   @UseGuards(JwtAuthGuard)
-  @Post(':id/approve') approveFix(@Param('id') id: string) { return this.service.approveFix(id); }
+  @Post(':id/approve') approveFix(@Param('id') id: string, @Body() body: any, @Req() req: any) {
+    return this.service.approveFix(id, req.user, body || {});
+  }
   @UseGuards(JwtAuthGuard)
-  @Post(':id/reject') rejectFix(@Param('id') id: string) { return this.service.rejectFix(id); }
+  @Post(':id/reject') rejectFix(@Param('id') id: string, @Body() body: any, @Req() req: any) {
+    return this.service.rejectFix(id, req.user, body || {});
+  }
 
   @UseGuards(JwtAuthGuard)
-  @Post(':id/trigger-build') triggerBuild(@Param('id') id: string) { return this.service.triggerBuild(id); }
+  @Post(':id/trigger-build') triggerBuild(@Param('id') id: string, @Req() req: any) {
+    if (!['admin', 'developer'].includes(String(req.user?.role || '').toLowerCase())) throw new ForbiddenException('Action non autorisée');
+    return this.service.triggerBuild(id);
+  }
 }
