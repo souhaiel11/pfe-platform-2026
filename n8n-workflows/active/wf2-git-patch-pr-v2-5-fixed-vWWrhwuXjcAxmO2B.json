@@ -131,10 +131,6 @@
         "headerParameters": {
           "parameters": [
             {
-              "name": "Authorization",
-              "value": "=Bearer REDACTED_GITHUB_PAT"
-            },
-            {
               "name": "Content-Type",
               "value": "application/json"
             },
@@ -151,7 +147,9 @@
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ { message: $('Parse - Code Patch Output').first().json.commitMessage, content: $('Parse - Code Patch Output').first().json.content_base64, sha: $('Parse - Code Patch Output').first().json.file_sha, branch: $('Parse - Code Patch Output').first().json.branchName } }}",
-        "options": {}
+        "options": {},
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi"
       },
       "id": "46970d11-5e87-4797-8362-5700ae0c3005",
       "name": "Update File in Branch",
@@ -162,7 +160,13 @@
         448
       ],
       "webhookId": "d2c8e1a2-2a12-4b95-ba42-700c7509172d",
-      "onError": "continueErrorOutput"
+      "onError": "continueErrorOutput",
+      "credentials": {
+        "githubApi": {
+          "id": "fBueZWwflXWM3RoX",
+          "name": "GitHub account"
+        }
+      }
     },
     {
       "parameters": {
@@ -177,7 +181,7 @@
             },
             {
               "name": "X-Internal-Secret",
-              "value": "ae51a679d64d28a917d037ab2d262101f49f5befc9c93973777913d2e4039010"
+              "value": "={{ $env.N8N_INTERNAL_SECRET }}"
             }
           ]
         },
@@ -270,10 +274,6 @@
               "value": "application/json"
             },
             {
-              "name": "x-api-key",
-              "value": "=REDACTED_ANTHROPIC_KEY"
-            },
-            {
               "name": "anthropic-version",
               "value": "2023-06-01"
             }
@@ -283,7 +283,9 @@
         "contentType": "raw",
         "rawContentType": "application/json",
         "body": "={{ $json.claudeBodyString }}",
-        "options": {}
+        "options": {},
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
@@ -296,7 +298,13 @@
       "retryOnFail": true,
       "maxTries": 5,
       "waitBetweenTries": 5000,
-      "onError": "continueErrorOutput"
+      "onError": "continueErrorOutput",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "Ee9vVedmz84oXg5W",
+          "name": "Claude API"
+        }
+      }
     },
     {
       "parameters": {
@@ -305,10 +313,6 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {
-              "name": "Authorization",
-              "value": "=Bearer REDACTED_GITHUB_PAT"
-            },
             {
               "name": "Content-Type",
               "value": "application/json"
@@ -326,7 +330,9 @@
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ { ref: 'refs/heads/' + $('Parse - Code Patch Output').first().json.branchName, sha: $json.object.sha } }}",
-        "options": {}
+        "options": {},
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi"
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
@@ -336,7 +342,13 @@
       ],
       "id": "c0b85dbf-4b06-4c0d-b0be-99ae71016138",
       "name": "Create Fix Branch",
-      "onError": "continueErrorOutput"
+      "onError": "continueErrorOutput",
+      "credentials": {
+        "githubApi": {
+          "id": "fBueZWwflXWM3RoX",
+          "name": "GitHub account"
+        }
+      }
     },
     {
       "parameters": {
@@ -344,10 +356,6 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {
-              "name": "Authorization",
-              "value": "=REDACTED_GITHUB_PAT"
-            },
             {
               "name": "X-GitHub-Api-Version",
               "value": "2026-03-10"
@@ -358,7 +366,9 @@
             }
           ]
         },
-        "options": {}
+        "options": {},
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi"
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
@@ -368,7 +378,13 @@
       ],
       "id": "8dc6c474-e605-44e3-acc0-3748f69f7913",
       "name": "Get Base Branch SHA",
-      "onError": "continueErrorOutput"
+      "onError": "continueErrorOutput",
+      "credentials": {
+        "githubApi": {
+          "id": "fBueZWwflXWM3RoX",
+          "name": "GitHub account"
+        }
+      }
     },
     {
       "parameters": {
@@ -391,10 +407,6 @@
         "headerParameters": {
           "parameters": [
             {
-              "name": "Authorization",
-              "value": "=Bearer REDACTED_GITHUB_PAT"
-            },
-            {
               "name": "Content-Type",
               "value": "application/json"
             },
@@ -411,7 +423,9 @@
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ { title: $('Parse - Code Patch Output').first().json.commitMessage, body: 'AI DevSecOps patch for incident ' + $('Parse - Code Patch Output').first().json.incidentId + '\\n\\nDescription: ' + $('Parse - Code Patch Output').first().json.patchDescription, head: $('Parse - Code Patch Output').first().json.branchName, base: $('Parse - Code Patch Output').first().json.default_branch } }}",
-        "options": {}
+        "options": {},
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi"
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
@@ -421,7 +435,13 @@
       ],
       "id": "616b4072-1ccb-4691-8655-2f36f3b5b2af",
       "name": "Create Pull Request",
-      "onError": "continueErrorOutput"
+      "onError": "continueErrorOutput",
+      "credentials": {
+        "githubApi": {
+          "id": "fBueZWwflXWM3RoX",
+          "name": "GitHub account"
+        }
+      }
     },
     {
       "parameters": {
@@ -757,23 +777,12 @@
       ]
     }
   },
-  "active": true,
+  "active": false,
   "settings": {
     "executionOrder": "v1",
     "binaryMode": "separate"
   },
   "id": "vWWrhwuXjcAxmO2B",
   "meta": {},
-  "pinData": {
-    "WF2 Trigger": [
-      {
-        "json": {
-          "incidentData": "{\"id\":\"f8037308-8069-4c97-96ac-165e747f3947\",\"projectId\":\"3aa1c9b9-e114-40e4-884b-ebc7aa32e002\",\"title\":\"pfe-app-test - Build #67\",\"description\":\"http://172.31.172.61:8082/job/pfe-app-test/67/\",\"status\":\"blocked\",\"source\":\"jenkins\",\"metadata\":{\"security\":{},\"rootCause\":{},\"remediation\":{},\"enrichedData\":{\"zap\":{\"error\":\"\",\"alerts\":[],\"status\":\"UNKNOWN\",\"alerts_low\":0,\"target_url\":\"http://192.168.49.2:30003\",\"alerts_high\":0,\"alerts_count\":0,\"alerts_medium\":0},\"build\":{\"job\":\"pfe-app-test\",\"url\":\"http://172.31.172.61:8082/job/pfe-app-test/67/\",\"number\":\"67\",\"status\":\"UNSTABLE\"},\"owasp\":{\"cves\":[],\"high\":0,\"error\":\"\",\"status\":\"UNKNOWN\",\"critical\":0,\"cves_count\":0},\"sonar\":{\"bugs\":0,\"issues\":[{\"key\":\"29176898-81c7-4ae7-98d0-bfb7620b12ba\",\"url\":\"http://sonarqube:9000/project/issues?id=pfe-app-test&open=29176898-81c7-4ae7-98d0-bfb7620b12ba\",\"line\":55,\"type\":\"CODE_SMELL\",\"effort\":\"10min\",\"message\":\"Replace this use of System.out by a logger.\",\"severity\":\"MAJOR\",\"component\":\"src/main/java/com/pfe/devsecops/service/TaskService.java\"},{\"key\":\"a4ddc69a-03dc-4c36-9a32-4ee9c7a8a760\",\"url\":\"http://sonarqube:9000/project/issues?id=pfe-app-test&open=a4ddc69a-03dc-4c36-9a32-4ee9c7a8a760\",\"line\":27,\"type\":\"CODE_SMELL\",\"effort\":\"5min\",\"message\":\"Remove this field injection and use constructor injection instead.\",\"severity\":\"MAJOR\",\"component\":\"src/main/java/com/pfe/devsecops/config/SecurityConfig.java\"},{\"key\":\"d7f61ba3-8a6f-44bd-85c1-8c58508822a4\",\"url\":\"http://sonarqube:9000/project/issues?id=pfe-app-test&open=d7f61ba3-8a6f-44bd-85c1-8c58508822a4\",\"line\":28,\"type\":\"CODE_SMELL\",\"effort\":\"5min\",\"message\":\"Inject this field value directly into \\\"filterChain\\\", the only method that uses it.\",\"severity\":\"CRITICAL\",\"component\":\"src/main/java/com/pfe/devsecops/config/SecurityConfig.java\"},{\"key\":\"b8305253-8e0c-4fb6-88a8-2eadb6d48a45\",\"url\":\"http://sonarqube:9000/project/issues?id=pfe-app-test&open=b8305253-8e0c-4fb6-88a8-2eadb6d48a45\",\"line\":40,\"type\":\"CODE_SMELL\",\"effort\":\"5min\",\"message\":\"This block of commented-out lines of code should be removed.\",\"severity\":\"MAJOR\",\"component\":\"src/main/java/com/pfe/devsecops/config/SecurityConfig.java\"},{\"key\":\"5d228ca9-9afc-4f4b-9641-703628973e92\",\"url\":\"http://sonarqube:9000/project/issues?id=pfe-app-test&open=5d228ca9-9afc-4f4b-9641-703628973e92\",\"line\":16,\"type\":\"CODE_SMELL\",\"effort\":\"5min\",\"message\":\"Remove this field injection and use constructor injection instead.\",\"severity\":\"MAJOR\",\"component\":\"src/main/java/com/pfe/devsecops/controller/AuthController.java\"},{\"key\":\"98afb863-e0b2-457d-bdb9-f467ca58f0d0\",\"url\":\"http://sonarqube:9000/project/issues?id=pfe-app-test&open=98afb863-e0b2-457d-bdb9-f467ca58f0d0\",\"line\":15,\"type\":\"CODE_SMELL\",\"effort\":\"5min\",\"message\":\"Remove this field injection and use constructor injection instead.\",\"severity\":\"MAJOR\",\"component\":\"src/main/java/com/pfe/devsecops/controller/TaskController.java\"},{\"key\":\"7c1224ab-4688-4123-9ddc-9e9ed325d1f1\",\"url\":\"http://sonarqube:9000/project/issues?id=pfe-app-test&open=7c1224ab-4688-4123-9ddc-9e9ed325d1f1\",\"line\":29,\"type\":\"CODE_SMELL\",\"effort\":\"5min\",\"message\":\"This block of commented-out lines of code should be removed.\",\"severity\":\"MAJOR\",\"component\":\"src/main/java/com/pfe/devsecops/controller/TaskController.java\"},{\"key\":\"b8db9c11-ddf9-4a23-9bf3-1d2ff15a59ef\",\"url\":\"http://sonarqube:9000/project/issues?id=pfe-app-test&open=b8db9c11-ddf9-4a23-9bf3-1d2ff15a59ef\",\"line\":36,\"type\":\"VULNERABILITY\",\"effort\":\"10min\",\"message\":\"Replace this persistent entity with a simple POJO or DTO object.\",\"severity\":\"CRITICAL\",\"component\":\"src/main/java/com/pfe/devsecops/controller/TaskController.java\"},{\"key\":\"f11d4686-a7ba-4c0c-abbb-a12998c57220\",\"url\":\"http://sonarqube:9000/project/issues?id=pfe-app-test&open=f11d4686-a7ba-4c0c-abbb-a12998c57220\",\"line\":41,\"type\":\"VULNERABILITY\",\"effort\":\"10min\",\"message\":\"Replace this persistent entity with a simple POJO or DTO object.\",\"severity\":\"CRITICAL\",\"component\":\"src/main/java/com/pfe/devsecops/controller/TaskController.java\"},{\"key\":\"e044a989-c57d-40ab-917e-0f5dba362e39\",\"url\":\"http://sonarqube:9000/project/issues?id=pfe-app-test&open=e044a989-c57d-40ab-917e-0f5dba362e39\",\"line\":17,\"type\":\"CODE_SMELL\",\"effort\":\"5min\",\"message\":\"Remove this field injection and use constructor injection instead.\",\"severity\":\"MAJOR\",\"component\":\"src/main/java/com/pfe/devsecops/security/CustomUserDetailsService.java\"},{\"key\":\"8a06ee3c-7626-452c-a157-3ac19295921f\",\"url\":\"http://sonarqube:9000/project/issues?id=pfe-app-test&open=8a06ee3c-7626-452c-a157-3ac19295921f\",\"line\":21,\"type\":\"CODE_SMELL\",\"effort\":\"5min\",\"message\":\"Remove this field injection and use constructor injection instead.\",\"severity\":\"MAJOR\",\"component\":\"src/main/java/com/pfe/devsecops/security/JwtRequestFilter.java\"},{\"key\":\"080d57b7-40a6-4b23-979d-5439675be4d7\",\"url\":\"http://sonarqube:9000/project/issues?id=pfe-app-test&open=080d57b7-40a6-4b23-979d-5439675be4d7\",\"line\":24,\"type\":\"CODE_SMELL\",\"effort\":\"5min\",\"message\":\"Remove this field injection and use constructor injection instead.\",\"severity\":\"MAJOR\",\"component\":\"src/main/java/com/pfe/devsecops/security/JwtRequestFilter.java\"},{\"key\":\"571aa09a-86e0-41c7-b608-be156b24f829\",\"url\":\"http://sonarqube:9000/project/issues?id=pfe-app-test&open=571aa09a-86e0-41c7-b608-be156b24f829\",\"line\":19,\"type\":\"CODE_SMELL\",\"effort\":\"5min\",\"message\":\"Remove this field injection and use constructor injection instead.\",\"severity\":\"MAJOR\",\"component\":\"src/main/java/com/pfe/devsecops/service/AuthService.java\"},{\"key\":\"cff1df8d-9d86-4248-b413-4277c4935392\",\"url\":\"http://sonarqube:9000/project/issues?id=pfe-app-test&open=cff1df8d-9d86-4248-b413-4277c4935392\",\"line\":22,\"type\":\"CODE_SMELL\",\"effort\":\"5min\",\"message\":\"Remove this field injection and use constructor injection instead.\",\"severity\":\"MAJOR\",\"component\":\"src/main/java/com/pfe/devsecops/service/AuthService.java\"},{\"key\":\"29eac03c-adff-4535-b33c-c24b90974b08\",\"url\":\"http://sonarqube:9000/project/issues?id=pfe-app-test&open=29eac03c-adff-4535-b33c-c24b90974b08\",\"line\":25,\"type\":\"CODE_SMELL\",\"effort\":\"5min\",\"message\":\"Remove this field injection and use constructor injection instead.\",\"severity\":\"MAJOR\",\"component\":\"src/main/java/com/pfe/devsecops/service/AuthService.java\"},{\"key\":\"c7fe7599-bac3-424c-b91b-5723350c49fa\",\"url\":\"http://sonarqube:9000/project/issues?id=pfe-app-test&open=c7fe7599-bac3-424c-b91b-5723350c49fa\",\"line\":28,\"type\":\"CODE_SMELL\",\"effort\":\"5min\",\"message\":\"Remove this field injection and use constructor injection instead.\",\"severity\":\"MAJOR\",\"component\":\"src/main/java/com/pfe/devsecops/service/AuthService.java\"},{\"key\":\"30dd642c-0365-4466-a8c8-c691f8091d0c\",\"url\":\"http://sonarqube:9000/project/issues?id=pfe-app-test&open=30dd642c-0365-4466-a8c8-c691f8091d0c\",\"line\":38,\"type\":\"CODE_SMELL\",\"effort\":\"20min\",\"message\":\"Replace generic exceptions with specific library exceptions or a custom exception.\",\"severity\":\"MAJOR\",\"component\":\"src/main/java/com/pfe/devsecops/service/AuthService.java\"},{\"key\":\"7a0fe04d-db29-4e6c-8a61-62e702e3c3bc\",\"url\":\"http://sonarqube:9000/project/issues?id=pfe-app-test&open=7a0fe04d-db29-4e6c-8a61-62e702e3c3bc\",\"line\":50,\"type\":\"CODE_SMELL\",\"effort\":\"20min\",\"message\":\"Replace generic exceptions with specific library exceptions or a custom exception.\",\"severity\":\"MAJOR\",\"component\":\"src/main/java/com/pfe/devsecops/service/AuthService.java\"},{\"key\":\"956e68a3-fa8f-47ab-ac6a-aff8e01ac522\",\"url\":\"http://sonarqube:9000/project/issues?id=pfe-app-test&open=956e68a3-fa8f-47ab-ac6a-aff8e01ac522\",\"line\":22,\"type\":\"VULNERABILITY\",\"effort\":\"30min\",\"message\":\"'Password' detected in this expression, review this potentially hard-coded password.\",\"severity\":\"BLOCKER\",\"component\":\"src/main/java/com/pfe/devsecops/service/TaskService.java\"},{\"key\":\"b287b49e-2107-4212-8970-e14c83f99dc7\",\"url\":\"http://sonarqube:9000/project/issues?id=pfe-app-test&open=b287b49e-2107-4212-8970-e14c83f99dc7\",\"line\":24,\"type\":\"VULNERABILITY\",\"effort\":\"30min\",\"message\":\"'Password' detected in this expression, review this potentially hard-coded password.\",\"severity\":\"BLOCKER\",\"component\":\"src/main/java/com/pfe/devsecops/service/TaskService.java\"},{\"key\":\"df3a6793-ebfe-4a49-a22c-2d1b292b107f\",\"url\":\"http://sonarqube:9000/project/issues?id=pfe-app-test&open=df3a6793-ebfe-4a49-a22c-2d1b292b107f\",\"line\":24,\"type\":\"CODE_SMELL\",\"effort\":\"5min\",\"message\":\"Remove this unused \\\"dbPassword\\\" private field.\",\"severity\":\"MAJOR\",\"component\":\"src/main/java/com/pfe/devsecops/service/TaskService.java\"},{\"key\":\"097c28f6-1eb4-4971-bcc0-acaa9c6c3dcd\",\"url\":\"http://sonarqube:9000/project/issues?id=pfe-app-test&open=097c28f6-1eb4-4971-bcc0-acaa9c6c3dcd\",\"line\":26,\"type\":\"CODE_SMELL\",\"effort\":\"5min\",\"message\":\"Remove this field injection and use constructor injection instead.\",\"severity\":\"MAJOR\",\"component\":\"src/main/java/com/pfe/devsecops/service/TaskService.java\"},{\"key\":\"04ee6586-6366-463a-9aca-9c140a640686\",\"url\":\"http://sonarqube:9000/project/issues?id=pfe-app-test&open=04ee6586-6366-463a-9aca-9c140a640686\",\"line\":29,\"type\":\"CODE_SMELL\",\"effort\":\"5min\",\"message\":\"Remove this field injection and use constructor injection instead.\",\"severity\":\"MAJOR\",\"component\":\"src/main/java/com/pfe/devsecops/service/TaskService.java\"},{\"key\":\"744ad407-dafa-459f-a5c5-c8a408f2088c\",\"url\":\"http://sonarqube:9000/project/issues?id=pfe-app-test&open=744ad407-dafa-459f-a5c5-c8a408f2088c\",\"line\":97,\"type\":\"BUG\",\"effort\":\"5min\",\"message\":\"Use try-with-resources or close this \\\"FileInputStream\\\" in a \\\"finally\\\" clause.\",\"severity\":\"BLOCKER\",\"component\":\"src/main/java/com/pfe/devsecops/service/TaskService.java\"},{\"key\":\"54947e23-c650-48e5-b883-f9df60cd886d\",\"url\":\"http://sonarqube:9000/project/issues?id=pfe-app-test&open=54947e23-c650-48e5-b883-f9df60cd886d\",\"line\":104,\"type\":\"CODE_SMELL\",\"effort\":\"10min\",\"message\":\"Replace this use of System.out by a logger.\",\"severity\":\"MAJOR\",\"component\":\"src/main/java/com/pfe/devsecops/service/TaskService.java\"},{\"key\":\"cf0a88c6-e907-4459-8a7f-fe9c567da09d\",\"url\":\"http://sonarqube:9000/project/issues?id=pfe-app-test&open=cf0a88c6-e907-4459-8a7f-fe9c567da09d\",\"line\":113,\"type\":\"CODE_SMELL\",\"effort\":\"1h8min\",\"message\":\"Refactor this method to reduce its Cognitive Complexity from 78 to the 15 allowed.\",\"severity\":\"CRITICAL\",\"component\":\"src/main/java/com/pfe/devsecops/service/TaskService.java\"},{\"key\":\"f97430a6-feb0-48c6-9a07-6e8f7744c2ca\",\"url\":\"http://sonarqube:9000/project/issues?id=pfe-app-test&open=f97430a6-feb0-48c6-9a07-6e8f7744c2ca\",\"line\":117,\"type\":\"CODE_SMELL\",\"effort\":\"8min\",\"message\":\"Define a constant instead of duplicating this literal \\\"ERROR: task is null\\\" 3 times.\",\"severity\":\"CRITICAL\",\"component\":\"src/main/java/com/pfe/devsecops/service/TaskService.java\"},{\"key\":\"2102b6a9-2f7b-44f2-9a41-685f6731f853\",\"url\":\"http://sonarqube:9000/project/issues?id=pfe-app-test&open=2102b6a9-2f7b-44f2-9a41-685f6731f853\",\"line\":118,\"type\":\"CODE_SMELL\",\"effort\":\"8min\",\"message\":\"Define a constant instead of duplicating this literal \\\"ERROR: title required\\\" 3 times.\",\"severity\":\"CRITICAL\",\"component\":\"src/main/java/com/pfe/devsecops/service/TaskService.java\"},{\"key\":\"bbee7425-d6dd-48b2-87f4-6b0ac67037ec\",\"url\":\"http://sonarqube:9000/project/issues?id=pfe-app-test&open=bbee7425-d6dd-48b2-87f4-6b0ac67037ec\",\"line\":119,\"type\":\"CODE_SMELL\",\"effort\":\"8min\",\"message\":\"Define a constant instead of duplicating this literal \\\"ERROR: description required\\\" 3 times.\",\"severity\":\"CRITICAL\",\"component\":\"src/main/java/com/pfe/devsecops/service/TaskService.java\"},{\"key\":\"087a62cb-776b-4c24-b4ef-bcedbffcf7a8\",\"url\":\"http://sonarqube:9000/project/issues?id=pfe-app-test&open=087a62cb-776b-4c24-b4ef-bcedbffcf7a8\",\"line\":120,\"type\":\"CODE_SMELL\",\"effort\":\"8min\",\"message\":\"Define a constant instead of duplicating this literal \\\"ERROR: priority invalid\\\" 3 times.\",\"severity\":\"CRITICAL\",\"component\":\"src/main/java/com/pfe/devsecops/service/TaskService.java\"},{\"key\":\"166d77fa-d84f-4d41-947a-9eb28285c862\",\"url\":\"http://sonarqube:9000/project/issues?id=pfe-app-test&open=166d77fa-d84f-4d41-947a-9eb28285c862\",\"line\":123,\"type\":\"CODE_SMELL\",\"effort\":\"8min\",\"message\":\"Define a constant instead of duplicating this literal \\\"ADMIN\\\" 3 times.\",\"severity\":\"CRITICAL\",\"component\":\"src/main/java/com/pfe/devsecops/service/TaskService.java\"},{\"key\":\"5b42ab01-aa7b-42fe-a1e7-58d90dbac0dd\",\"url\":\"http://sonarqube:9000/project/issues?id=pfe-app-test&open=5b42ab01-aa7b-42fe-a1e7-58d90dbac0dd\",\"line\":135,\"type\":\"CODE_SMELL\",\"effort\":\"10min\",\"message\":\"Replace this use of System.out by a logger.\",\"severity\":\"MAJOR\",\"component\":\"src/main/java/com/pfe/devsecops/service/TaskService.java\"},{\"key\":\"301ade42-ddfa-406a-a5f2-a6556bf13136\",\"url\":\"http://sonarqube:9000/project/issues?id=pfe-app-test&open=301ade42-ddfa-406a-a5f2-a6556bf13136\",\"line\":204,\"type\":\"CODE_SMELL\",\"effort\":\"5min\",\"message\":\"This block of commented-out lines of code should be removed.\",\"severity\":\"MAJOR\",\"component\":\"src/main/java/com/pfe/devsecops/service/TaskService.java\"},{\"key\":\"6793cbd5-1ed8-4e61-a803-32b2045975c4\",\"url\":\"http://sonarqube:9000/project/issues?id=pfe-app-test&open=6793cbd5-1ed8-4e61-a803-32b2045975c4\",\"line\":213,\"type\":\"CODE_SMELL\",\"effort\":\"1min\",\"message\":\"Remove this useless assignment to local variable \\\"unusedMessage\\\".\",\"severity\":\"MAJOR\",\"component\":\"src/main/java/com/pfe/devsecops/service/TaskService.java\"},{\"key\":\"84d78ebc-4b74-4972-a81e-07f27318f239\",\"url\":\"http://sonarqube:9000/project/issues?id=pfe-app-test&open=84d78ebc-4b74-4972-a81e-07f27318f239\",\"line\":221,\"type\":\"VULNERABILITY\",\"effort\":\"30min\",\"message\":\"'password' detected in this expression, review this potentially hard-coded password.\",\"severity\":\"BLOCKER\",\"component\":\"src/main/java/com/pfe/devsecops/service/TaskService.java\"}],\"status\":\"UNKNOWN\",\"coverage\":\"0\",\"code_smells\":0,\"issues_count\":35,\"quality_gate\":\"UNKNOWN\",\"vulnerabilities\":0},\"tests\":{\"total\":0,\"status\":\"UNKNOWN\",\"skipped\":0,\"coverage\":\"0\",\"failures\":0},\"trivy\":{\"cves\":[],\"high\":0,\"error\":\"\",\"status\":\"UNKNOWN\",\"critical\":0,\"cves_count\":0},\"deploy\":{\"status\":\"UNKNOWN\",\"app_url\":\"http://192.168.49.2:30003\",\"namespace\":\"pfe-devsecops\"},\"docker\":{\"registry\":\"\",\"image_tag\":\"\",\"push_status\":\"UNKNOWN\",\"build_status\":\"UNKNOWN\"}}},\"prUrl\":null,\"jenkinsJobName\":\"pfe-app-test\",\"buildNumber\":67,\"aiAnalysis\":\"{\\\"build\\\":\\\"67\\\",\\\"job\\\":\\\"pfe-app-test\\\",\\\"status\\\":\\\"UNSTABLE\\\",\\\"decision\\\":\\\"AUTO_FIX\\\",\\\"confidenceScore\\\":96,\\\"securityLevel\\\":\\\"CRITICAL\\\",\\\"errorsSummary\\\":\\\"BLOCKER: 4 issues (3 hard-coded passwords in TaskService.java lines 22/24/221, 1 unclosed FileInputStream line 97) | CRITICAL: 8 issues (2 VULNERABILITY - persistent entity exposure in TaskController lines 36/41, 6 CODE_SMELL - field injection, cognitive complexity, duplicate literals) | MAJOR: 23 issues (field injection violations, System.out usage, commented code, generic exceptions, unused variables)\\\",\\\"cicdIssues\\\":\\\"Build #67 UNSTABLE - Test framework initialization failure (0 tests detected, UNKNOWN status) blocking pipeline progression. All downstream stages affected: SonarQube quality gate UNKNOWN (0% coverage), security scanners (Trivy/OWASP/ZAP) not executed, Docker image not built. Pipeline halted at test execution layer.\\\",\\\"securityIssues\\\":\\\"HARDCODED CREDENTIALS (BLOCKER): TaskService.java contains 3 hard-coded password instances at lines 22, 24, and 221 - immediate credential exposure risk. ENTITY EXPOSURE (CRITICAL): TaskController.java directly returns JPA entities at lines 36 and 41 - enables object injection and schema leakage. RESOURCE LEAK (BLOCKER): FileInputStream at TaskService.java line 97 not closed in finally block - potential denial of service. NO CVEs detected in dependencies.\\\",\\\"agentActions\\\":\\\"ROOT_CAUSE_AGENT: Identified test framework initialization failure as primary blocker (severity 8/10, confidence 87%) causing cascade failure across all pipeline stages. SECURITY_RISK_AGENT: Flagged 5 critical vulnerabilities with risk score 95/100 (confidence 98%), marked deployment as unsafe. REMEDIATION_AGENT: Confirmed fixes required for dependency injection patterns and logging practices (confidence 95%), auto-fix marked false due to complexity.\\\",\\\"developerActions\\\":\\\"1. IMMEDIATE - Remove hard-coded passwords: Replace lines 22/24/221 in TaskService.java with environment variables or secrets manager: String dbPassword = System.getenv(\\\\\\\"DB_PASSWORD\\\\\\\"); | 2. Fix resource leak: Wrap FileInputStream at line 97 with try-with-resources: try (FileInputStream fis = new FileInputStream(file)) { ... } | 3. Create DTOs for API responses: Replace entity returns in TaskController with TaskDTO class to prevent schema exposure | 4. Refactor to constructor injection: Add @RequiredArgsConstructor to SecurityConfig, AuthController, TaskController, TaskService and convert @Autowired fields to private final | 5. Replace System.out with SLF4J: Add private static final Logger log = LoggerFactory.getLogger(TaskService.class); and use log.info() | 6. Fix test configuration: Verify src/test/java exists and contains @SpringBootTest classes, check pom.xml for surefire-plugin configuration | 7. Validate fixes: Run mvn clean verify sonar:sonar -Dsonar.qualitygate.wait=true\\\",\\\"recommendations\\\":\\\"1. Implement Spring Vault or AWS Secrets Manager for credential management - eliminates hard-coded password risk permanently | 2. Add MapStruct or ModelMapper dependency for automatic Entity-to-DTO conversion in controllers | 3. Configure SonarQube quality gate as mandatory pipeline blocker to catch BLOCKER/CRITICAL issues before merge\\\"}\",\"createdAt\":\"2026-06-30T08:56:34.217Z\",\"updatedAt\":\"2026-06-30T08:57:01.967Z\",\"project\":{\"id\":\"3aa1c9b9-e114-40e4-884b-ebc7aa32e002\",\"name\":\"pfe-app-test\",\"description\":\"Projet cobaye DevSecOps - Tests vulnérabilités\",\"environment\":\"dev\",\"status\":\"healthy\",\"securityScore\":95,\"isActive\":true,\"tags\":null,\"cicdTool\":\"jenkins\",\"jenkinsUrl\":\"http://172.31.172.61:8082\",\"jenkinsJobName\":\"pfe-app-test\",\"jenkinsToken\":\"souhaiel.amri:11f68593ffd755c6384949cef8ef44c06a\",\"githubRepo\":\"souhaiel11/pfe-app-test\",\"githubToken\":\"\",\"sonarqubeUrl\":\"http://sonarqube:9000\",\"sonarqubeKey\":\"pfe-app-test\",\"sonarqubeToken\":\"squ_43a2a435e13a4dbfcc98852a5aeb80eb022f9ada\",\"emailEnabled\":false,\"emailRecipient\":\"\",\"slackEnabled\":false,\"slackChannel\":\"\",\"slackToken\":\"\",\"validationStatus\":{},\"createdAt\":\"2026-06-23T09:52:52.847Z\",\"updatedAt\":\"2026-06-30T08:56:43.724Z\"}}"
-        },
-        "pairedItem": {
-          "item": 0
-        }
-      }
-    ]
-  }
+  "pinData": {}
 }

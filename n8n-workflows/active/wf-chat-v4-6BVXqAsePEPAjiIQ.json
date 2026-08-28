@@ -33,14 +33,14 @@
     },
     {
       "parameters": {
-        "url": "=http://172.31.172.61:3001/api/incidents?projectId={{ $json.projectId }}&size=20",
+        "url": "=http://backend:3001/api/incidents?projectId={{ $json.projectId }}&size=20",
         "options": {},
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
               "name": "X-Internal-Secret",
-              "value": "ae51a679d64d28a917d037ab2d262101f49f5befc9c93973777913d2e4039010"
+              "value": "={{ $env.N8N_INTERNAL_SECRET }}"
             }
           ]
         }

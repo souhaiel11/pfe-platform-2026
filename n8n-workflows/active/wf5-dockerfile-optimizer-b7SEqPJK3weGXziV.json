@@ -1,1299 +1,1325 @@
-{
-  "name": "WF5 - Dockerfile Optimizer",
-  "id": "b7SEqPJK3weGXziV",
-  "nodes": [
-    {
-      "parameters": {
-        "httpMethod": "POST",
-        "path": "dockerfile-fetch",
-        "responseMode": "responseNode",
-        "options": {}
+[
+  {
+    "name": "WF5 - Dockerfile Optimizer",
+    "id": "b7SEqPJK3weGXziV",
+    "nodes": [
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "dockerfile-fetch",
+          "responseMode": "responseNode",
+          "options": {}
+        },
+        "id": "f4e54048-9d96-4e19-8131-9343b410d697",
+        "name": "Webhook - Dockerfile Fetch",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2,
+        "position": [
+          10672,
+          6960
+        ],
+        "webhookId": "8fbfb254-482b-4d0d-825a-3649ef85f903"
       },
-      "id": "f4e54048-9d96-4e19-8131-9343b410d697",
-      "name": "Webhook - Dockerfile Fetch",
-      "type": "n8n-nodes-base.webhook",
-      "typeVersion": 2,
-      "position": [
-        10672,
-        6960
-      ],
-      "webhookId": "8fbfb254-482b-4d0d-825a-3649ef85f903"
-    },
-    {
-      "parameters": {
-        "jsCode": "const body = $input.first().json.body || $input.first().json;\nconst owner = String(body.owner || '').trim();\nconst repo  = String(body.repo  || '').trim();\nconst filePath = String(body.filePath || 'Dockerfile').trim();\nconst ref = String(body.ref || 'main').trim();\nif (!owner || !repo) return [{ json: { error:'INVALID_INPUT', message:'owner et repo sont requis' } }];\nreturn [{ json: { owner, repo, filePath, ref } }];\n"
+      {
+        "parameters": {
+          "jsCode": "const body = $input.first().json.body || $input.first().json;\nconst owner = String(body.owner || '').trim();\nconst repo  = String(body.repo  || '').trim();\nconst filePath = String(body.filePath || 'Dockerfile').trim();\nconst ref = String(body.ref || 'main').trim();\nif (!owner || !repo) return [{ json: { error:'INVALID_INPUT', message:'owner et repo sont requis' } }];\nreturn [{ json: { owner, repo, filePath, ref } }];\n"
+        },
+        "id": "cbc768b2-53ed-4786-89c7-ba46312d0740",
+        "name": "Prepare - Fetch Body",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          10896,
+          6960
+        ]
       },
-      "id": "cbc768b2-53ed-4786-89c7-ba46312d0740",
-      "name": "Prepare - Fetch Body",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        10896,
-        6960
-      ]
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "typeValidation": "strict",
-            "version": 2
-          },
-          "conditions": [
-            {
-              "id": "e8e00337-511c-41d8-91c8-2ec83c3b22ec",
-              "leftValue": "={{ $json.error }}",
-              "rightValue": "",
-              "operator": {
-                "type": "string",
-                "operation": "notExists",
-                "singleValue": true
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "e8e00337-511c-41d8-91c8-2ec83c3b22ec",
+                "leftValue": "={{ $json.error }}",
+                "rightValue": "",
+                "operator": {
+                  "type": "string",
+                  "operation": "notExists",
+                  "singleValue": true
+                }
               }
-            }
-          ],
-          "combinator": "and"
+            ],
+            "combinator": "and"
+          },
+          "options": {}
         },
-        "options": {}
+        "id": "b7b1091d-2e7a-4dd3-a047-75526a3008ca",
+        "name": "Fetch Valid ?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          11120,
+          6960
+        ]
       },
-      "id": "b7b1091d-2e7a-4dd3-a047-75526a3008ca",
-      "name": "Fetch Valid ?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.2,
-      "position": [
-        11120,
-        6960
-      ]
-    },
-    {
-      "parameters": {
-        "resource": "file",
-        "operation": "get",
-        "owner": {
-          "__rl": true,
-          "mode": "name",
-          "value": "={{ $('Prepare - Fetch Body').first().json.owner }}"
+      {
+        "parameters": {
+          "resource": "file",
+          "operation": "get",
+          "owner": {
+            "__rl": true,
+            "mode": "name",
+            "value": "={{ $('Prepare - Fetch Body').first().json.owner }}"
+          },
+          "repository": {
+            "__rl": true,
+            "mode": "name",
+            "value": "={{ $('Prepare - Fetch Body').first().json.repo }}"
+          },
+          "filePath": "={{ $('Prepare - Fetch Body').first().json.filePath }}",
+          "asBinaryProperty": false,
+          "additionalParameters": {}
         },
-        "repository": {
-          "__rl": true,
-          "mode": "name",
-          "value": "={{ $('Prepare - Fetch Body').first().json.repo }}"
+        "id": "7eceec60-fc61-408a-b89d-9dce55930878",
+        "name": "Fetch Dockerfile from Git",
+        "type": "n8n-nodes-base.github",
+        "typeVersion": 1,
+        "position": [
+          11328,
+          6896
+        ],
+        "webhookId": "6597b63e-e889-4b32-a983-fffc043f8655",
+        "credentials": {
+          "githubApi": {
+            "id": "fBueZWwflXWM3RoX",
+            "name": "GitHub account"
+          }
         },
-        "filePath": "={{ $('Prepare - Fetch Body').first().json.filePath }}",
-        "asBinaryProperty": false,
-        "additionalParameters": {}
+        "onError": "continueErrorOutput"
       },
-      "id": "7eceec60-fc61-408a-b89d-9dce55930878",
-      "name": "Fetch Dockerfile from Git",
-      "type": "n8n-nodes-base.github",
-      "typeVersion": 1,
-      "position": [
-        11328,
-        6896
-      ],
-      "webhookId": "6597b63e-e889-4b32-a983-fffc043f8655",
-      "credentials": {
-        "githubApi": {
-          "id": "fBueZWwflXWM3RoX",
-          "name": "GitHub account"
+      {
+        "parameters": {
+          "jsCode": "const gh = $input.first().json;\nlet decoded = '';\nif (typeof gh.content === 'string' && gh.encoding === 'base64') {\n  try { decoded = Buffer.from(gh.content.replace(/\\n/g,''), 'base64').toString('utf-8'); } catch(e) {}\n} else if (typeof gh.content === 'string') {\n  decoded = gh.content;                          // déjà décodé par le node n8n\n} else if (typeof gh.data === 'string') {\n  decoded = gh.data;\n}\nif (!decoded || decoded.length < 10) {\n  return [{ json: { success:false, error:'EMPTY_FILE', message:'Dockerfile vide ou introuvable — collez-le manuellement' } }];\n}\nreturn [{ json: { success:true, content:decoded, filePath:$('Prepare - Fetch Body').first().json.filePath, sha:gh.sha||'', source:'github' } }];\n"
+        },
+        "id": "553d8e26-78ac-423c-acd5-5f62243e47c7",
+        "name": "Format Fetch Result",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          11552,
+          6896
+        ]
+      },
+      {
+        "parameters": {
+          "jsCode": "const j = $input.first().json;\nlet message = j.message || 'Fichier introuvable sur le dépôt';\nif (j.error === undefined && j.status === undefined) message = 'Dockerfile introuvable — vérifiez owner/repo/branche/chemin ou collez-le manuellement';\nreturn [{ json: { success:false, error:j.error||'FETCH_ERROR', message } }];\n"
+        },
+        "id": "4ab811c1-af54-4dd4-864b-1f18b2af0070",
+        "name": "Format Fetch Error",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          11456,
+          7072
+        ]
+      },
+      {
+        "parameters": {
+          "respondWith": "allIncomingItems",
+          "options": {}
+        },
+        "id": "b29dd079-f64d-49fb-8f3b-48655245c99a",
+        "name": "Respond - Fetch",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          12208,
+          6976
+        ]
+      },
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "dockerfile-optimize",
+          "responseMode": "responseNode",
+          "options": {}
+        },
+        "id": "a1b2c3d4-1111-4a11-8111-100000000001",
+        "name": "Webhook - Dockerfile Optimize",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2,
+        "position": [
+          10624,
+          7616
+        ],
+        "webhookId": "a1b2c3d4-1111-4a11-8111-200000000001"
+      },
+      {
+        "parameters": {
+          "jsCode": "const body = $input.first().json.body || $input.first().json;\nconst dockerfile = String(body.dockerfile || '').trim();\nconst pomXml = String(body.pomXml || '').trim();\nconst appConfig = String(body.appConfig || '').trim();\nconst projectName = body.projectName || 'projet';\nconst context = body.context || {};\nconst buildError = String(body.buildError || '').trim();\nif (!dockerfile || dockerfile.length < 20) return [{ json: { error: 'INVALID_INPUT', message: 'Dockerfile vide ou trop court (min 20 caractères)' } }];\nif (dockerfile.length > 30000) return [{ json: { error: 'TOO_LARGE', message: 'Dockerfile trop volumineux (max 30 Ko)' } }];\n\nconst numberLines = (text) => text.split('\\n').map((l, i) => `${i + 1}: ${l}`).join('\\n');\nconst dockerfileNumbered = numberLines(dockerfile);\n\nconst systemPrompt = `Tu es un expert Docker et sécurité des conteneurs (15 ans d'expérience), spécialisé DevSecOps.\nTa mission : analyser un Dockerfile et détecter des problèmes dans 2 catégories, SANS réécrire le fichier (la remédiation est un traitement séparé, futur).\nRéponds UNIQUEMENT en JSON valide — pas de markdown, pas de backticks. Commence par { et termine par }.\nLANGUE : tous les textes en FRANÇAIS professionnel.\nIMPORTANT — PÉRIMÈTRE : un contrôle DÉTERMINISTE séparé (code, pas toi) gère déjà :\n- la cohérence de version JDK entre le Dockerfile et le pom.xml (catégorie CAT-JDK) — n'émets JAMAIS de finding CAT-JDK, ce n'est pas ton rôle ;\n- l'obsolescence de version JDK de l'image de base (JDK 6/7/8) et l'absence de tag pinné (\":latest\" ou tag absent) — n'émets JAMAIS de finding sur CES DEUX points précis pour l'image de base, ils sont déjà couverts avec certitude par le code.\nIMPORTANT — TRIVY : un scanner CVE séparé (Trivy) liste déjà les vulnérabilités connues des paquets de l'image (CVE, CVSS, package). Ce n'est PAS ton rôle, pour AUCUNE catégorie : n'énumère JAMAIS un identifiant CVE ni une vulnérabilité de paquet précise. Tu juges la CONCEPTION et les pratiques du Dockerfile, jamais son contenu scanné.\nIMPORTANT — PÉRIMÈTRE CAT-SECURITY : un contrôle DÉTERMINISTE séparé (code, pas toi) gère déjà l'absence d'instruction USER non-root, l'absence de HEALTHCHECK, les secrets/tokens/mots de passe en dur (ENV/ARG avec une valeur littérale) ET l'usage d'ADD pour un fichier local (au lieu de COPY) dans le Dockerfile — n'émets JAMAIS de finding sur CES QUATRE points précis, ils sont déjà couverts avec certitude par le code.\nCATEGORIES À DETECTER (chaque finding appartient à UNE SEULE catégorie) :\n1. CAT-IMAGE (uniquement les aspects NON couverts par le contrôle déterministe ci-dessus, jamais un CVE) : variante inadaptée (ex : image \":jdk\" complète utilisée en étape finale alors qu'une variante \":jre\" suffit pour exécuter un .jar déjà compilé — taille et surface d'attaque inutiles), image de base lourde ou non officielle quand une alternative plus légère/officielle existe pour le même usage, autres mauvaises pratiques de choix d'image de base (absence de build multi-stage, absence d'épinglage par digest SHA256, etc). Pour CHAQUE finding CAT-IMAGE, \"suggestion\" DOIT proposer une image de base cible concrète et réaliste (ex : \"remplacer par eclipse-temurin:17-jre-jammy\") quand un remplacement d'image est pertinent — jamais un conseil vague type \"utilisez une meilleure image\".\n2. CAT-SECURITY (uniquement les aspects NON couverts par le contrôle déterministe ci-dessus, jamais un CVE) : apt-get/apk install sans nettoyage (absence de --no-install-recommends, absence de nettoyage du cache type 'apt-get clean && rm -rf /var/lib/apt/lists/*') augmentant surface d'attaque et poids inutilement, autres mauvaises pratiques de sécurité contextuelles du Dockerfile non listées ci-dessus (jugement au cas par cas). Pour CHAQUE finding CAT-SECURITY, \"suggestion\" DOIT proposer une correction concrète et directement applicable (ex : la commande exacte à ajouter/modifier) — jamais un conseil vague type \"améliorez la sécurité\".\nRÈGLES DE PRÉCISION :\n- \"ligne\" doit être le numéro de ligne EXACT dans le Dockerfile numéroté fourni ci-dessous (jamais une estimation). Pour une absence (USER, HEALTHCHECK), donne la ligne après laquelle l'ajouter (ex : la dernière ligne du fichier).\n- Ne remonte QUE des findings réels, visibles dans le contenu fourni — jamais d'hypothèse non vérifiable.\n- Une seule catégorie par finding, pas de doublon entre catégories pour le même problème.\nFORMAT EXACT :\n{\"score\":<0-100 du Dockerfile>,\"summary\":\"<3-4 phrases ; le score et le résumé tiennent compte de l'ensemble des problèmes même ceux détectés par le contrôle déterministe, mentionnés séparément>\",\"issues\":[{\"id\":\"DF-1\",\"category\":\"CAT-IMAGE|CAT-SECURITY\",\"severity\":\"CRITIQUE|ELEVE|MOYEN|FAIBLE\",\"ligne\":<numéro de ligne entier>,\"description\":\"<1-2 phrases décrivant le problème>\",\"suggestion\":\"<action concrète à faire>\"}],\"confidence\":<0.0-1.0>}`;\n\nconst buildErrorBlock = buildError ? `\n════════════════════════════════════════════════\nERREUR DE BUILD REELLE — PRIORITE ABSOLUE POUR L'ANALYSE\n════════════════════════════════════════════════\nUne erreur de build reelle a ete identifiee. Priorise l'analyse de CETTE erreur :\n\"${buildError}\"\nLes fichiers (Dockerfile, pom.xml) restent la source de verite pour determiner la\ncorrection. Si l'erreur de build concerne une vulnerabilite/CVE (Trivy), NE PROPOSE\nAUCUNE correction — ce n'est pas ton role, signale seulement (le garde-fou CVE\nci-dessus reste prioritaire sur tout, meme avec cette erreur fournie).\n` : '';\n\nconst userContent = `Analyse ce Dockerfile du projet \"${projectName}\".\n${buildErrorBlock}${context.notes ? `Notes : ${context.notes}\\n` : ''}\nDOCKERFILE (numéroté) :\n\\`\\`\\`dockerfile\n${dockerfileNumbered}\n\\`\\`\\``;\n\nreturn [{ json: {\n  apiBody: { model: 'claude-sonnet-4-6', max_tokens: 4000, temperature: 0, system: systemPrompt, messages: [{ role: 'user', content: userContent }] },\n  projectName,\n  dockerfile,\n  pomXml,\n  appConfig,\n} }];\n"
+        },
+        "id": "a1b2c3d4-1111-4a11-8111-100000000002",
+        "name": "Prepare - Optimizer Body",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          10848,
+          7616
+        ]
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "b2c3d4e5-2222-4b22-8222-300000000001",
+                "leftValue": "={{ $json.error }}",
+                "rightValue": "",
+                "operator": {
+                  "type": "string",
+                  "operation": "notExists",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        },
+        "id": "a1b2c3d4-1111-4a11-8111-100000000003",
+        "name": "Input Valid ?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          11072,
+          7616
+        ]
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://api.anthropic.com/v1/messages",
+          "authentication": "genericCredentialType",
+          "genericAuthType": "httpHeaderAuth",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "anthropic-version",
+                "value": "2023-06-01"
+              },
+              {
+                "name": "content-type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify($json.apiBody) }}",
+          "options": {
+            "timeout": 180000
+          }
+        },
+        "id": "a1b2c3d4-1111-4a11-8111-100000000004",
+        "name": "Dockerfile Optimizer Agent",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          11280,
+          7536
+        ],
+        "retryOnFail": true,
+        "maxTries": 3,
+        "waitBetweenTries": 3000,
+        "credentials": {
+          "httpHeaderAuth": {
+            "id": "Ee9vVedmz84oXg5W",
+            "name": "Claude API"
+          }
+        },
+        "onError": "continueErrorOutput"
+      },
+      {
+        "parameters": {
+          "jsCode": "const response = $input.first().json;\nconst fail = (msg, raw) => [{ json: { success:false, error:'PARSE_ERROR', message:msg, raw:String(raw||'').substring(0,800) } }];\nif (response.error) return [{ json: { success:false, error:response.error, message:response.message } }];\nconst content = response.content?.[0]?.text || '';\nif (!content) return fail(\"Réponse vide de l'agent\", JSON.stringify(response).substring(0,300));\nlet clean = content.replace(/```json\\s*/gi,'').replace(/```\\s*/gi,'').trim();\nconst s = clean.indexOf('{'), e = clean.lastIndexOf('}');\nif (s === -1 || e === -1) return fail('Aucun JSON trouvé', clean);\ntry {\n  const p = JSON.parse(clean.substring(s, e+1));\n\n  // ── Findings déterministes (Runtime Coherence Checker RC-1..N + sous-\n  // partie CAT-IMAGE) — calculés par \"Runtime Coherence Checker\", en amont\n  // de l'appel LLM, jamais par le LLM lui-même. Même philosophie que le\n  // gate de sélection WF4 : ce qui doit être EXACT et reproductible passe\n  // par du code, pas par un prompt.\n  let deterministic = { findings: [], runtimeCoherence: { checks: {}, notes: [] } };\n  try { deterministic = $('Runtime Coherence Checker').first().json.deterministicChecks || deterministic; } catch (_) {}\n\n  // Issues LLM : seules CAT-IMAGE et CAT-SECURITY sont légitimes — un\n  // CAT-JDK émis malgré la consigne du prompt est un défaut de l'agent,\n  // pas une donnée fiable, donc rejeté ici (defense in depth).\n  const LLM_VALID_CAT = new Set(['CAT-IMAGE','CAT-SECURITY']);\n  const llmIssues = (Array.isArray(p.issues) ? p.issues : []).filter(i => LLM_VALID_CAT.has(i.category));\n\n  const allIssues = [...deterministic.findings, ...llmIssues];\n  const o = { CRITIQUE:0, ELEVE:1, MOYEN:2, FAIBLE:3 };\n  allIssues.sort((a,b)=>(o[a.severity]??9)-(o[b.severity]??9));\n\n  return [{ json: {\n    success:true,\n    analyzedAt:new Date().toISOString(),\n    score: p.score,\n    summary: p.summary,\n    confidence: p.confidence,\n    issues: allIssues,\n    runtimeCoherence: deterministic.runtimeCoherence,\n  } }];\n} catch (err) { return fail('JSON invalide : '+err.message, clean); }\n"
+        },
+        "id": "a1b2c3d4-1111-4a11-8111-100000000005",
+        "name": "Parse - Optimizer Output",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          11536,
+          7440
+        ],
+        "onError": "continueErrorOutput"
+      },
+      {
+        "parameters": {
+          "jsCode": "const j = $input.first().json;\nreturn [{ json: j.error ? { success:false, error:j.error, message:j.message } : j }];\n"
+        },
+        "id": "a1b2c3d4-1111-4a11-8111-100000000006",
+        "name": "Format Input Error",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          11536,
+          7936
+        ]
+      },
+      {
+        "parameters": {
+          "respondWith": "allIncomingItems",
+          "options": {}
+        },
+        "id": "a1b2c3d4-1111-4a11-8111-100000000007",
+        "name": "Respond - Analysis",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          12384,
+          7664
+        ]
+      },
+      {
+        "parameters": {
+          "jsCode": "return [{ json: {\n  jobId: $('Webhook - Dockerfile Optimize').first().json.body.jobId,\n  status: 'error',\n  reason: \"Agent IA a \\u00e9chou\\u00e9 (rate limit / erreur API Anthropic)\",\n  detail: ($json.error && $json.error.message) ? $json.error.message : (String($json.error) || 'Erreur inconnue'),\n}}];"
+        },
+        "id": "a1b2c3d4-1111-4a11-8111-100000000008",
+        "name": "Format Agent Error",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          11488,
+          7696
+        ]
+      },
+      {
+        "parameters": {
+          "jsCode": "return [{ json: {\n  jobId: $('Webhook - Dockerfile Optimize').first().json.body.jobId,\n  status: 'error',\n  reason: \"R\\u00e9ponse de l'agent illisible (\\u00e9chec de parsing JSON)\",\n  detail: ($json.error && $json.error.message) ? $json.error.message : (String($json.error) || 'Erreur de parsing inconnue'),\n}}];"
+        },
+        "id": "a1b2c3d4-1111-4a11-8111-100000000009",
+        "name": "Format Parse Error",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          11728,
+          7552
+        ]
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "=http://backend:3001/api/dockerfile/optimize/{{ $json.jobId }}/callback",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "name": "X-Callback-Secret",
+                "value": "={{ $env.N8N_CALLBACK_SECRET }}"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({ status: 'error', reason: $json.reason, detail: $json.detail }) }}",
+          "options": {}
+        },
+        "id": "a1b2c3d4-1111-4a11-8111-10000000000a",
+        "name": "Send Error to Backend",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          11840,
+          7696
+        ],
+        "onError": "continueRegularOutput"
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "=http://backend:3001/api/dockerfile/optimize/{{ $('Webhook - Dockerfile Optimize').first().json.body.jobId }}/callback",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "name": "X-Callback-Secret",
+                "value": "={{ $env.N8N_CALLBACK_SECRET }}"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({ status: 'done', result: $json }) }}",
+          "options": {}
+        },
+        "id": "a1b2c3d4-1111-4a11-8111-10000000000b",
+        "name": "Send Result to Backend",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          11760,
+          7312
+        ],
+        "onError": "continueRegularOutput"
+      },
+      {
+        "parameters": {
+          "jsCode": "// ─────────────────────────────────────────────────────────────────────────\n// RUNTIME COHERENCE CHECKER — patron extensible.\n//\n// Contrat d'un module de check RC-N (objet simple, aucune classe requise) :\n//   {\n//     id, name, category,                      // identité + catégorie de finding\n//     extractDockerfile(dockerfile) -> { value, determined, reason, line, ...détails },\n//     extractProject(projectFiles)  -> { value, determined, reason, source, ...détails },\n//     describe(dockerfileVal, projectVal) -> { severity, description, suggestion },\n//   }\n// extractDockerfile/extractProject retournent TOUJOURS determined:false plutôt\n// que de deviner (tag latest, valeur héritée d'un <parent> Maven non résolue,\n// pattern non reconnu, fichier absent, etc.).\n//\n// Le moteur runCoherenceChecks() applique CE MÊME contrat à chaque module,\n// sans connaître son contenu métier : extraction des 2 côtés, puis 3 états\n// possibles — jamais 2 :\n//   1. déterminées + différentes → finding (via describe())\n//   2. déterminées + identiques → RAS, rien n'est émis\n//   3. au moins une indéterminée → jamais de finding, au plus une note\n// Ajouter RC-2/RC-3 = pousser un nouvel objet dans CHECKS. runCoherenceChecks\n// ne change JAMAIS.\n// ─────────────────────────────────────────────────────────────────────────\nfunction runCoherenceChecks(checks, ctx) {\n  const findings = [];\n  const notes = [];\n  const details = {};\n\n  for (const check of checks) {\n    const a = check.extractDockerfile(ctx.dockerfile);\n    const b = check.extractProject(ctx.projectFiles);\n    const bothDetermined = a.determined && b.determined;\n    const mismatch = bothDetermined && a.value !== b.value;\n\n    details[check.id] = { dockerfile: a, project: b, comparable: bothDetermined, mismatch };\n\n    if (mismatch) {\n      const d = check.describe(a, b);\n      findings.push({\n        id: `DF-${check.id}`,\n        category: check.category,\n        severity: d.severity,\n        ligne: a.line ?? null,\n        description: d.description,\n        suggestion: d.suggestion,\n        deterministic: true,\n      });\n    } else if (!bothDetermined) {\n      const parts = [];\n      if (!a.determined) parts.push(`Dockerfile : ${a.reason}`);\n      if (!b.determined) parts.push(`${check.projectSource || 'fichier projet'} : ${b.reason}`);\n      const note = `[${check.id}] ${check.name} — non déterminable avec certitude : ${parts.join(' ; ')}. Vérification manuelle recommandée ; aucune incohérence supposée.`;\n      notes.push({ id: check.id, name: check.name, note });\n      details[check.id].note = note;\n    }\n    // cas 2 (déterminées + identiques) : rien à ajouter, RAS silencieux.\n  }\n\n  return { findings, notes, details };\n}\n\n// ── RC-1 : cohérence version JDK (Dockerfile FROM ↔ pom.xml) ──────────────\nconst RC1_JDK_VERSION = {\n  id: 'RC-1',\n  name: 'Cohérence version JDK',\n  category: 'CAT-JDK',\n  projectSource: 'pom.xml',\n\n  // Image finale = dernière instruction FROM (couvre le multi-stage). Familles\n  // reconnues : eclipse-temurin, openjdk, adoptopenjdk, amazoncorretto,\n  // zulu-openjdk — variantes -jdk/-jre/-alpine/-slim toutes supportées via le\n  // numéro en tête du tag. Hors de cette liste, ou tag latest/absent/non\n  // numérique → determined:false, jamais une supposition.\n  extractDockerfile(dockerfile) {\n    const KNOWN_JDK_IMAGES = /(eclipse-temurin|openjdk|adoptopenjdk|amazoncorretto|zulu-openjdk|azul\\/zulu-openjdk)/i;\n    const text = String(dockerfile || '');\n    const lines = text.split('\\n');\n    const fromIdx = [];\n    lines.forEach((l, i) => { if (/^\\s*FROM\\s+\\S+/i.test(l)) fromIdx.push(i); });\n    if (fromIdx.length === 0) {\n      return { value: null, determined: false, reason: 'aucune instruction FROM trouvée', line: null, raw: null, image: null, tag: null };\n    }\n    const lastIdx = fromIdx[fromIdx.length - 1];\n    const ref = lines[lastIdx].replace(/^\\s*FROM\\s+/i, '').trim().split(/\\s+/)[0]; // ignore \"AS builder\"\n    const line = lastIdx + 1;\n\n    const afterLastSlash = ref.split('/').pop();\n    let image = afterLastSlash, tag = null;\n    if (afterLastSlash.includes(':')) {\n      const idx = afterLastSlash.indexOf(':');\n      image = afterLastSlash.slice(0, idx);\n      tag = afterLastSlash.slice(idx + 1);\n    }\n    const fullImageName = ref.split(':')[0]; // pour matcher azul/zulu-openjdk (contient un '/')\n\n    if (!KNOWN_JDK_IMAGES.test(fullImageName)) {\n      return { value: null, determined: false, reason: 'image de base non reconnue comme JDK/JRE (parseur limité aux familles connues : eclipse-temurin, openjdk, adoptopenjdk, amazoncorretto, zulu-openjdk)', line, raw: ref, image, tag };\n    }\n    if (!tag || tag === 'latest') {\n      return { value: null, determined: false, reason: tag === 'latest' ? 'tag \"latest\" non pinné — version non déterminable avec certitude' : 'aucun tag — version non déterminable (latest implicite)', line, raw: ref, image, tag: tag || null };\n    }\n    const m = /^(\\d+)/.exec(tag); // couvre \"8\", \"8-jdk\", \"11-jre-slim\", \"17-jdk-alpine\", \"8u282-b08-jdk\"\n    if (!m) {\n      return { value: null, determined: false, reason: `tag \"${tag}\" ne débute pas par un numéro de version JDK reconnu`, line, raw: ref, image, tag };\n    }\n    return { value: m[1], determined: true, reason: null, line, raw: ref, image, tag };\n  },\n\n  // Ordre standard Maven : maven.compiler.release > .target > java.version.\n  // Ne résout JAMAIS un <parent> pour deviner sa valeur héritée — si aucune\n  // des 3 propriétés n'est déclarée EXPLICITEMENT dans ce pom.xml, indéterminé.\n  extractProject(projectFiles) {\n    const xml = projectFiles && projectFiles.pomXml;\n    if (!xml) return { value: null, determined: false, reason: 'pom.xml absent', source: null };\n    const patterns = [\n      { re: /<maven\\.compiler\\.release>\\s*(\\d+)\\s*<\\/maven\\.compiler\\.release>/i, src: 'maven.compiler.release' },\n      { re: /<maven\\.compiler\\.target>\\s*(\\d+)\\s*<\\/maven\\.compiler\\.target>/i, src: 'maven.compiler.target' },\n      { re: /<java\\.version>\\s*(\\d+)\\s*<\\/java\\.version>/i, src: 'java.version' },\n    ];\n    for (const p of patterns) {\n      const m = p.re.exec(xml);\n      if (m) return { value: m[1], determined: true, reason: null, source: p.src };\n    }\n    const hasParent = /<parent>/i.test(xml);\n    return {\n      value: null, determined: false, source: null,\n      reason: hasParent\n        ? \"aucune propriété maven.compiler.*/java.version déclarée explicitement — un <parent> Maven est présent mais sa valeur héritée n'est pas résolue (jamais devinée)\"\n        : 'aucune propriété maven.compiler.*/java.version trouvée dans ce pom.xml',\n    };\n  },\n\n  describe(dockerfileVal, projectVal) {\n    return {\n      severity: 'CRITIQUE',\n      description: `Incohérence JDK détectée par contrôle déterministe (RC-1) : l'image de base (${dockerfileVal.raw}) fournit le JDK ${dockerfileVal.value}, alors que le pom.xml cible Java ${projectVal.value} (propriété ${projectVal.source}).`,\n      suggestion: `Aligner les deux : passer l'image de base à un JDK/JRE ${projectVal.value} (ex: ${dockerfileVal.image || 'eclipse-temurin'}:${projectVal.value}-jre-jammy), ou abaisser la cible du pom.xml à ${dockerfileVal.value} si la montée de version n'est pas voulue.`,\n    };\n  },\n};\n\n// ── RC-2 : cohérence port (Dockerfile EXPOSE ↔ application.properties/.yml server.port) ──\nconst RC2_PORT = {\n  id: 'RC-2',\n  name: 'Cohérence port (EXPOSE ↔ server.port)',\n  category: 'CAT-PORT',\n  projectSource: 'application.properties/.yml',\n\n  extractDockerfile(dockerfile) {\n    const text = String(dockerfile || '');\n    const lines = text.split('\\n');\n    const fromIdx = [];\n    lines.forEach((l, i) => { if (/^\\s*FROM\\s+\\S+/i.test(l)) fromIdx.push(i); });\n    const stageStart = fromIdx.length ? fromIdx[fromIdx.length - 1] : 0; // étape finale (multi-stage)\n    const finalLines = lines.slice(stageStart);\n\n    const ports = [];\n    finalLines.forEach((l, i) => {\n      const m = /^\\s*EXPOSE\\s+(.+)$/i.exec(l);\n      if (!m) return;\n      m[1].trim().split(/\\s+/).forEach((tok) => {\n        const pm = /^(\\d+)(\\/(tcp|udp))?$/i.exec(tok);\n        if (pm) ports.push({ value: pm[1], line: stageStart + i + 1, raw: l.trim() });\n      });\n    });\n\n    if (ports.length === 0) {\n      return { value: null, determined: false, reason: \"aucune instruction EXPOSE trouvée (dans l'étape finale)\", line: null, raw: null };\n    }\n    const distinct = [...new Set(ports.map((p) => p.value))];\n    if (distinct.length > 1) {\n      return { value: null, determined: false, reason: `plusieurs ports EXPOSE distincts (${distinct.join(', ')}) — ambigu, comparaison non fiable`, line: ports[0].line, raw: ports.map((p) => p.raw).join(' | ') };\n    }\n    return { value: distinct[0], determined: true, reason: null, line: ports[0].line, raw: ports[0].raw };\n  },\n\n  extractProject(projectFiles) {\n    const cfg = projectFiles && projectFiles.appConfig;\n    if (!cfg) return { value: null, determined: false, reason: 'fichier de configuration applicatif absent (application.properties/.yml non trouvé)', source: null };\n    let m = /^\\s*server\\.port\\s*[:=]\\s*(\\d+)\\s*$/im.exec(cfg);\n    if (m) return { value: m[1], determined: true, reason: null, source: 'server.port (properties)' };\n    m = /server:\\s*\\n(?:[^\\n]*\\n)*?\\s*port:\\s*(\\d+)/im.exec(cfg);\n    if (m) return { value: m[1], determined: true, reason: null, source: 'server.port (yaml)' };\n    return { value: null, determined: false, reason: 'aucune propriété server.port trouvée dans le fichier de configuration', source: null };\n  },\n\n  describe(dockerfileVal, projectVal) {\n    return {\n      severity: 'ELEVE',\n      description: `Incohérence de port détectée par contrôle déterministe (RC-2) : le Dockerfile expose le port ${dockerfileVal.value} (${dockerfileVal.raw}), alors que l'application est configurée pour écouter sur le port ${projectVal.value} (${projectVal.source}).`,\n      suggestion: `Aligner les deux : soit changer EXPOSE ${dockerfileVal.value} en EXPOSE ${projectVal.value} dans le Dockerfile, soit changer server.port à ${dockerfileVal.value} dans la configuration applicative.`,\n    };\n  },\n};\n\n// ── RC-3 : cohérence artefact (Dockerfile COPY ↔ nom produit par le build Maven) ──\nconst RC3_ARTIFACT = {\n  id: 'RC-3',\n  name: 'Cohérence artefact (COPY ↔ artefact Maven)',\n  category: 'CAT-ARTIFACT',\n  projectSource: 'pom.xml',\n\n  extractDockerfile(dockerfile) {\n    const text = String(dockerfile || '');\n    const lines = text.split('\\n');\n    const fromIdx = [];\n    lines.forEach((l, i) => { if (/^\\s*FROM\\s+\\S+/i.test(l)) fromIdx.push(i); });\n    const stageStart = fromIdx.length ? fromIdx[fromIdx.length - 1] : 0;\n    const finalLines = lines.slice(stageStart);\n\n    // Dernière instruction COPY (pas --from=, celles-là copient entre stages,\n    // pas depuis le contexte de build) dont la source pointe vers un .jar.\n    let found = null;\n    finalLines.forEach((l, i) => {\n      const m = /^\\s*COPY\\s+(?!--from=)(\\S+\\.jar)\\s+\\S+/i.exec(l);\n      if (m) found = { raw: l.trim(), src: m[1], line: stageStart + i + 1 };\n    });\n\n    if (!found) {\n      return { value: null, determined: false, reason: \"aucune instruction COPY vers un .jar trouvée (dans l'étape finale)\", line: null, raw: null };\n    }\n    if (found.src.includes('*')) {\n      return { value: null, determined: false, reason: `chemin COPY avec wildcard (${found.src}) — nom de fichier exact non déterminable statiquement, build indisponible pour vérification`, line: found.line, raw: found.raw };\n    }\n    const basename = found.src.split('/').pop();\n    return { value: basename, determined: true, reason: null, line: found.line, raw: found.raw };\n  },\n\n  extractProject(projectFiles) {\n    const xml = projectFiles && projectFiles.pomXml;\n    if (!xml) return { value: null, determined: false, reason: 'pom.xml absent', source: null };\n\n    // Exclut <parent>...</parent> (artifactId/version du PARENT, pas du\n    // projet) ET tout ce qui suit <dependencies> (artifactId/version des\n    // DÉPENDANCES) — ne garde que la section d'identité du projet lui-même.\n    const withoutParent = xml.replace(/<parent>[\\s\\S]*?<\\/parent>/i, '');\n    const projectSection = withoutParent.split(/<dependencies>/i)[0];\n\n    // <build><finalName> a priorité s'il est déclaré et littéral (pas de\n    // placeholder ${...} non résolvable statiquement).\n    const finalNameM = /<finalName>\\s*([^<\\s]+)\\s*<\\/finalName>/i.exec(xml);\n    if (finalNameM) {\n      const finalName = finalNameM[1];\n      if (/\\$\\{/.test(finalName)) {\n        return { value: null, determined: false, source: 'build.finalName', reason: `<finalName> utilise un placeholder non résolvable statiquement (${finalName}) — build indisponible pour vérification` };\n      }\n      return { value: `${finalName}.jar`, determined: true, reason: null, source: 'build.finalName' };\n    }\n\n    // Convention Maven standard : <artifactId>-<version>.jar\n    const artifactIdM = /<artifactId>\\s*([^<\\s]+)\\s*<\\/artifactId>/i.exec(projectSection);\n    const versionM = /<version>\\s*([^<\\s]+)\\s*<\\/version>/i.exec(projectSection);\n    if (!artifactIdM || !versionM) {\n      return { value: null, determined: false, source: null, reason: \"artifactId et/ou version du projet non trouvés dans ce pom.xml — nom d'artefact non déterminable, build indisponible pour vérification\" };\n    }\n    return { value: `${artifactIdM[1]}-${versionM[1]}.jar`, determined: true, reason: null, source: 'artifactId + version' };\n  },\n\n  describe(dockerfileVal, projectVal) {\n    return {\n      severity: 'CRITIQUE',\n      description: `Incohérence d'artefact détectée par contrôle déterministe (RC-3) : le Dockerfile copie \"${dockerfileVal.value}\" (${dockerfileVal.raw}), alors que le build Maven produira \"${projectVal.value}\" (${projectVal.source}).`,\n      suggestion: `Corriger le chemin COPY dans le Dockerfile pour qu'il pointe vers \"${projectVal.value}\", ou aligner artifactId/version/finalName du pom.xml sur le nom réellement produit.`,\n    };\n  },\n};\n\n// ─────────────────────────────────────────────────────────────────────────\n// REGISTRE — pour ajouter un futur RC-N : définir un objet suivant le même\n// contrat puis l'ajouter ici. runCoherenceChecks() ne change JAMAIS.\n// ─────────────────────────────────────────────────────────────────────────\nconst CHECKS = [RC1_JDK_VERSION, RC2_PORT, RC3_ARTIFACT];\n\n// ── Exécution ────────────────────────────────────────────────────────────\nconst item = $input.first().json;\nconst dockerfile = String(item.dockerfile || '');\nconst pomXml = String(item.pomXml || '');\nconst appConfig = String(item.appConfig || '');\n\nconst { findings: rcFindings, notes: rcNotes, details: rcDetails } =\n  runCoherenceChecks(CHECKS, { dockerfile, projectFiles: { pomXml, appConfig } });\n\n// ── CAT-IMAGE (règle déterministe hors patron RC — ne compare pas deux\n// fichiers, juste une règle sur le Dockerfile seul) : obsolescence connue +\n// tag non pinné. Réutilise l'extraction RC-1 pour éviter de re-parser FROM.\nconst OBSOLETE_JDK_VERSIONS = new Set(['6', '7', '8']);\nconst KNOWN_JDK_IMAGES = /(eclipse-temurin|openjdk|adoptopenjdk|amazoncorretto|zulu-openjdk|azul\\/zulu-openjdk)/i;\nconst df = RC1_JDK_VERSION.extractDockerfile(dockerfile);\n\nconst imageFindings = [];\nif (df.determined && OBSOLETE_JDK_VERSIONS.has(df.value)) {\n  imageFindings.push({\n    id: 'DF-IMG-JDK',\n    category: 'CAT-IMAGE',\n    severity: 'CRITIQUE',\n    ligne: df.line,\n    description: `Version JDK obsolète détectée par contrôle déterministe : ${df.raw} embarque le JDK ${df.value}, en fin de support étendu.`,\n    suggestion: `Migrer vers une image basée sur un JDK/JRE LTS supporté (17 ou 21) — ex: ${df.image || 'eclipse-temurin'}:17-jre-jammy.`,\n    deterministic: true,\n  });\n}\nif (df.image && KNOWN_JDK_IMAGES.test(df.image) && (!df.tag || df.tag === 'latest')) {\n  imageFindings.push({\n    id: 'DF-IMG-PIN',\n    category: 'CAT-IMAGE',\n    severity: 'ELEVE',\n    ligne: df.line,\n    description: `Image de base non pinnée détectée par contrôle déterministe : ${df.raw} n'a pas de tag explicite ou utilise \"latest\", ce qui rend le build non reproductible.`,\n    suggestion: `Épingler un tag de version explicite (idéalement avec digest SHA256) plutôt que \"latest\".`,\n    deterministic: true,\n  });\n}\n\n// ── CAT-SECURITY (déterministe, hors patron RC — même logique que le bloc\n// CAT-IMAGE ci-dessus : règles sur le Dockerfile seul, pas de comparaison\n// à un fichier projet) : USER absent, HEALTHCHECK absent, secret en dur.\n// Scope volontairement limité à ces 3 faits nets — apt-get sans nettoyage et\n// ADD vs COPY restent au jugement du LLM (contexte nécessaire, pas un simple\n// pattern binaire).\nconst fromIdxAll = [];\ndockerfile.split('\\n').forEach((l, i) => { if (/^\\s*FROM\\s+\\S+/i.test(l)) fromIdxAll.push(i); });\nconst allLines = dockerfile.split('\\n');\nconst stageStartSec = fromIdxAll.length ? fromIdxAll[fromIdxAll.length - 1] : 0;\nconst finalStageLines = allLines.slice(stageStartSec);\n\n// Ligne d'ancrage pour un finding d'ABSENCE : la dernière ligne non vide de\n// l'étape finale (\"ajouter après cette ligne\") — jamais une ligne vide ou\n// une estimation.\nfunction lastMeaningfulLine(lines, offset) {\n  for (let i = lines.length - 1; i >= 0; i--) {\n    if (lines[i].trim().length > 0) return offset + i + 1;\n  }\n  return offset + lines.length;\n}\nconst anchorLine = lastMeaningfulLine(finalStageLines, stageStartSec);\n\nconst securityFindings = [];\n\nconst hasUser = finalStageLines.some((l) => /^\\s*USER\\s+\\S+/i.test(l));\nif (!hasUser) {\n  securityFindings.push({\n    id: 'DF-SEC-USER',\n    category: 'CAT-SECURITY',\n    severity: 'CRITIQUE',\n    ligne: anchorLine,\n    description: \"Absence d'instruction USER détectée par contrôle déterministe : aucune instruction USER dans l'étape finale, le conteneur s'exécute donc en tant que root par défaut.\",\n    suggestion: \"Ajouter avant l'ENTRYPOINT/CMD : 'RUN addgroup --system appgroup && adduser --system --ingroup appgroup appuser' puis 'USER appuser'.\",\n    deterministic: true,\n  });\n}\n\n// HEALTHCHECK NONE compte comme PRÉSENT — c'est un choix explicite de\n// l'auteur, pas un oubli, jamais traité comme une absence.\nconst hasHealthcheck = finalStageLines.some((l) => /^\\s*HEALTHCHECK\\s+/i.test(l));\nif (!hasHealthcheck) {\n  securityFindings.push({\n    id: 'DF-SEC-HEALTHCHECK',\n    category: 'CAT-SECURITY',\n    severity: 'ELEVE',\n    ligne: anchorLine,\n    description: \"Absence d'instruction HEALTHCHECK détectée par contrôle déterministe : aucune instruction HEALTHCHECK dans l'étape finale, Docker/l'orchestrateur ne peut pas détecter un conteneur défaillant.\",\n    suggestion: \"Ajouter avant l'ENTRYPOINT/CMD : 'HEALTHCHECK --interval=30s --timeout=5s --retries=3 CMD curl -f http://localhost:<port>/actuator/health || exit 1' (adapter le endpoint).\",\n    deterministic: true,\n  });\n}\n\n// Secret en dur : ENV/ARG dont le NOM évoque un secret ET porteur d'une\n// valeur littérale sur la même ligne — scanne TOUT le Dockerfile (pas\n// seulement l'étape finale : une valeur en dur dans une étape builder reste\n// visible dans l'historique/cache de build, donc un risque réel aussi).\nconst SECRET_VAR_RE = /(password|passwd|pwd|secret|token|api[_-]?key|access[_-]?key|private[_-]?key|credential)/i;\nallLines.forEach((l, i) => {\n  const eqForm = /^\\s*(ENV|ARG)\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*=\\s*(\\S.*)$/i.exec(l);\n  const spaceForm = !eqForm ? /^\\s*(ENV)\\s+([A-Za-z_][A-Za-z0-9_]*)\\s+(\\S.*)$/i.exec(l) : null;\n  const m = eqForm || spaceForm;\n  if (!m) return;\n  const [, instr, varName, varValue] = m;\n  if (!SECRET_VAR_RE.test(varName) || !varValue || !varValue.trim()) return;\n  securityFindings.push({\n    id: `DF-SEC-SECRET-${i + 1}`,\n    category: 'CAT-SECURITY',\n    severity: 'CRITIQUE',\n    ligne: i + 1,\n    description: `Valeur potentiellement sensible en dur détectée par contrôle déterministe : la variable \"${varName}\" (${instr}) est définie avec une valeur littérale directement dans le Dockerfile.`,\n    suggestion: `Ne jamais écrire de secret en dur dans le Dockerfile — injecter \"${varName}\" au runtime (variable d'environnement du conteneur, secret manager) ou via --build-arg sans valeur par défaut sensible.`,\n    deterministic: true,\n  });\n});\n\n// ADD utilisé pour un fichier LOCAL simple : mauvaise pratique nette — ADD\n// n'est justifié que pour une URL distante (téléchargement) ou une archive\n// locale connue (extraction automatique). Scanne tout le Dockerfile (toutes\n// étapes), --chown/--chmod ignorés avant la paire source/destination.\nconst ARCHIVE_EXT_RE = /\\.(tar|tar\\.gz|tgz|tar\\.bz2|tbz2|tar\\.xz|txz|zip)$/i;\nallLines.forEach((l, i) => {\n  const m = /^\\s*ADD\\s+(?:--\\S+\\s+)*(\\S+)\\s+\\S+/i.exec(l);\n  if (!m) return;\n  const src = m[1];\n  const isRemoteUrl = /^https?:\\/\\//i.test(src);\n  const isKnownArchive = ARCHIVE_EXT_RE.test(src);\n  if (isRemoteUrl || isKnownArchive) return; // usage légitime d'ADD, jamais signalé\n  securityFindings.push({\n    id: `DF-SEC-ADD-${i + 1}`,\n    category: 'CAT-SECURITY',\n    severity: 'FAIBLE',\n    ligne: i + 1,\n    description: `Utilisation d'ADD pour un fichier local détectée par contrôle déterministe : \"${src}\" n'est ni une URL distante ni une archive reconnue (extraction automatique) — ADD n'apporte alors aucun bénéfice par rapport à COPY, dont le comportement est strictement prévisible.`,\n    suggestion: `Remplacer par COPY : le comportement d'ADD (extraction automatique, gestion des URL) n'est pas nécessaire ici et peut surprendre.`,\n    deterministic: true,\n  });\n});\n\nreturn [{\n  json: {\n    ...item,\n    deterministicChecks: {\n      runtimeCoherence: { checks: rcDetails, notes: rcNotes },\n      findings: [...rcFindings, ...imageFindings, ...securityFindings],\n    },\n  },\n}];\n"
+        },
+        "id": "a1b2c3d4-1111-4a11-8111-100000000010",
+        "name": "Runtime Coherence Checker",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          11190,
+          7536
+        ]
+      },
+      {
+        "id": "d5e6f7a8-4444-4d44-8444-400000000001",
+        "name": "Webhook - Dockerfile Apply",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2,
+        "position": [
+          10624,
+          8300
+        ],
+        "webhookId": "d5e6f7a8-4444-4d44-8444-500000000001",
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "dockerfile-apply",
+          "responseMode": "responseNode",
+          "options": {}
         }
       },
-      "onError": "continueErrorOutput"
-    },
-    {
-      "parameters": {
-        "jsCode": "const gh = $input.first().json;\nlet decoded = '';\nif (typeof gh.content === 'string' && gh.encoding === 'base64') {\n  try { decoded = Buffer.from(gh.content.replace(/\\n/g,''), 'base64').toString('utf-8'); } catch(e) {}\n} else if (typeof gh.content === 'string') {\n  decoded = gh.content;                          // déjà décodé par le node n8n\n} else if (typeof gh.data === 'string') {\n  decoded = gh.data;\n}\nif (!decoded || decoded.length < 10) {\n  return [{ json: { success:false, error:'EMPTY_FILE', message:'Dockerfile vide ou introuvable — collez-le manuellement' } }];\n}\nreturn [{ json: { success:true, content:decoded, filePath:$('Prepare - Fetch Body').first().json.filePath, sha:gh.sha||'', source:'github' } }];\n"
+      {
+        "id": "d5e6f7a8-4444-4d44-8444-400000000002",
+        "name": "Prepare - Apply Body",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          10848,
+          8300
+        ],
+        "parameters": {
+          "jsCode": "const body = $input.first().json.body || $input.first().json;\nconst dockerfile = String(body.dockerfile || '').trim();\nconst findings = Array.isArray(body.findings) ? body.findings : [];\nconst context = body.context || {};\n\nif (!dockerfile || dockerfile.length < 20) return [{ json: { error: 'INVALID_INPUT', message: 'Dockerfile vide ou trop court (min 20 caractères)' } }];\nif (dockerfile.length > 30000) return [{ json: { error: 'TOO_LARGE', message: 'Dockerfile trop volumineux (max 30 Ko)' } }];\nif (findings.length === 0) return [{ json: { error: 'NOTHING_TO_APPLY', message: 'Aucun finding sélectionné : rien à appliquer' } }];\n\nconst numberLines = (text) => text.split('\\n').map((l, i) => `${i + 1}: ${l}`).join('\\n');\nconst dockerfileNumbered = numberLines(dockerfile);\n\nreturn [{ json: {\n  dockerfile,\n  dockerfileNumbered,\n  findings,\n  pomXml: String(context.pomXml || ''),\n  appConfig: String(context.appConfig || ''),\n} }];\n"
+        }
       },
-      "id": "553d8e26-78ac-423c-acd5-5f62243e47c7",
-      "name": "Format Fetch Result",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        11552,
-        6896
-      ]
-    },
-    {
-      "parameters": {
-        "jsCode": "const j = $input.first().json;\nlet message = j.message || 'Fichier introuvable sur le dépôt';\nif (j.error === undefined && j.status === undefined) message = 'Dockerfile introuvable — vérifiez owner/repo/branche/chemin ou collez-le manuellement';\nreturn [{ json: { success:false, error:j.error||'FETCH_ERROR', message } }];\n"
-      },
-      "id": "4ab811c1-af54-4dd4-864b-1f18b2af0070",
-      "name": "Format Fetch Error",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        11456,
-        7072
-      ]
-    },
-    {
-      "parameters": {
-        "respondWith": "allIncomingItems",
-        "options": {}
-      },
-      "id": "b29dd079-f64d-49fb-8f3b-48655245c99a",
-      "name": "Respond - Fetch",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.1,
-      "position": [
-        12208,
-        6976
-      ]
-    },
-    {
-      "parameters": {
-        "httpMethod": "POST",
-        "path": "dockerfile-optimize",
-        "responseMode": "responseNode",
-        "options": {}
-      },
-      "id": "a1b2c3d4-1111-4a11-8111-100000000001",
-      "name": "Webhook - Dockerfile Optimize",
-      "type": "n8n-nodes-base.webhook",
-      "typeVersion": 2,
-      "position": [
-        10624,
-        7616
-      ],
-      "webhookId": "a1b2c3d4-1111-4a11-8111-200000000001"
-    },
-    {
-      "parameters": {
-        "jsCode": "const body = $input.first().json.body || $input.first().json;\nconst dockerfile = String(body.dockerfile || '').trim();\nconst pomXml = String(body.pomXml || '').trim();\nconst appConfig = String(body.appConfig || '').trim();\nconst projectName = body.projectName || 'projet';\nconst context = body.context || {};\nconst buildError = String(body.buildError || '').trim();\nif (!dockerfile || dockerfile.length < 20) return [{ json: { error: 'INVALID_INPUT', message: 'Dockerfile vide ou trop court (min 20 caractères)' } }];\nif (dockerfile.length > 30000) return [{ json: { error: 'TOO_LARGE', message: 'Dockerfile trop volumineux (max 30 Ko)' } }];\n\nconst numberLines = (text) => text.split('\\n').map((l, i) => `${i + 1}: ${l}`).join('\\n');\nconst dockerfileNumbered = numberLines(dockerfile);\n\nconst systemPrompt = `Tu es un expert Docker et sécurité des conteneurs (15 ans d'expérience), spécialisé DevSecOps.\nTa mission : analyser un Dockerfile et détecter des problèmes dans 2 catégories, SANS réécrire le fichier (la remédiation est un traitement séparé, futur).\nRéponds UNIQUEMENT en JSON valide — pas de markdown, pas de backticks. Commence par { et termine par }.\nLANGUE : tous les textes en FRANÇAIS professionnel.\nIMPORTANT — PÉRIMÈTRE : un contrôle DÉTERMINISTE séparé (code, pas toi) gère déjà :\n- la cohérence de version JDK entre le Dockerfile et le pom.xml (catégorie CAT-JDK) — n'émets JAMAIS de finding CAT-JDK, ce n'est pas ton rôle ;\n- l'obsolescence de version JDK de l'image de base (JDK 6/7/8) et l'absence de tag pinné (\":latest\" ou tag absent) — n'émets JAMAIS de finding sur CES DEUX points précis pour l'image de base, ils sont déjà couverts avec certitude par le code.\nIMPORTANT — TRIVY : un scanner CVE séparé (Trivy) liste déjà les vulnérabilités connues des paquets de l'image (CVE, CVSS, package). Ce n'est PAS ton rôle, pour AUCUNE catégorie : n'énumère JAMAIS un identifiant CVE ni une vulnérabilité de paquet précise. Tu juges la CONCEPTION et les pratiques du Dockerfile, jamais son contenu scanné.\nIMPORTANT — PÉRIMÈTRE CAT-SECURITY : un contrôle DÉTERMINISTE séparé (code, pas toi) gère déjà l'absence d'instruction USER non-root, l'absence de HEALTHCHECK, les secrets/tokens/mots de passe en dur (ENV/ARG avec une valeur littérale) ET l'usage d'ADD pour un fichier local (au lieu de COPY) dans le Dockerfile — n'émets JAMAIS de finding sur CES QUATRE points précis, ils sont déjà couverts avec certitude par le code.\nCATEGORIES À DETECTER (chaque finding appartient à UNE SEULE catégorie) :\n1. CAT-IMAGE (uniquement les aspects NON couverts par le contrôle déterministe ci-dessus, jamais un CVE) : variante inadaptée (ex : image \":jdk\" complète utilisée en étape finale alors qu'une variante \":jre\" suffit pour exécuter un .jar déjà compilé — taille et surface d'attaque inutiles), image de base lourde ou non officielle quand une alternative plus légère/officielle existe pour le même usage, autres mauvaises pratiques de choix d'image de base (absence de build multi-stage, absence d'épinglage par digest SHA256, etc). Pour CHAQUE finding CAT-IMAGE, \"suggestion\" DOIT proposer une image de base cible concrète et réaliste (ex : \"remplacer par eclipse-temurin:17-jre-jammy\") quand un remplacement d'image est pertinent — jamais un conseil vague type \"utilisez une meilleure image\".\n2. CAT-SECURITY (uniquement les aspects NON couverts par le contrôle déterministe ci-dessus, jamais un CVE) : apt-get/apk install sans nettoyage (absence de --no-install-recommends, absence de nettoyage du cache type 'apt-get clean && rm -rf /var/lib/apt/lists/*') augmentant surface d'attaque et poids inutilement, autres mauvaises pratiques de sécurité contextuelles du Dockerfile non listées ci-dessus (jugement au cas par cas). Pour CHAQUE finding CAT-SECURITY, \"suggestion\" DOIT proposer une correction concrète et directement applicable (ex : la commande exacte à ajouter/modifier) — jamais un conseil vague type \"améliorez la sécurité\".\nRÈGLES DE PRÉCISION :\n- \"ligne\" doit être le numéro de ligne EXACT dans le Dockerfile numéroté fourni ci-dessous (jamais une estimation). Pour une absence (USER, HEALTHCHECK), donne la ligne après laquelle l'ajouter (ex : la dernière ligne du fichier).\n- Ne remonte QUE des findings réels, visibles dans le contenu fourni — jamais d'hypothèse non vérifiable.\n- Une seule catégorie par finding, pas de doublon entre catégories pour le même problème.\nFORMAT EXACT :\n{\"score\":<0-100 du Dockerfile>,\"summary\":\"<3-4 phrases ; le score et le résumé tiennent compte de l'ensemble des problèmes même ceux détectés par le contrôle déterministe, mentionnés séparément>\",\"issues\":[{\"id\":\"DF-1\",\"category\":\"CAT-IMAGE|CAT-SECURITY\",\"severity\":\"CRITIQUE|ELEVE|MOYEN|FAIBLE\",\"ligne\":<numéro de ligne entier>,\"description\":\"<1-2 phrases décrivant le problème>\",\"suggestion\":\"<action concrète à faire>\"}],\"confidence\":<0.0-1.0>}`;\n\nconst buildErrorBlock = buildError ? `\n════════════════════════════════════════════════\nERREUR DE BUILD REELLE — PRIORITE ABSOLUE POUR L'ANALYSE\n════════════════════════════════════════════════\nUne erreur de build reelle a ete identifiee. Priorise l'analyse de CETTE erreur :\n\"${buildError}\"\nLes fichiers (Dockerfile, pom.xml) restent la source de verite pour determiner la\ncorrection. Si l'erreur de build concerne une vulnerabilite/CVE (Trivy), NE PROPOSE\nAUCUNE correction — ce n'est pas ton role, signale seulement (le garde-fou CVE\nci-dessus reste prioritaire sur tout, meme avec cette erreur fournie).\n` : '';\n\nconst userContent = `Analyse ce Dockerfile du projet \"${projectName}\".\n${buildErrorBlock}${context.notes ? `Notes : ${context.notes}\\n` : ''}\nDOCKERFILE (numéroté) :\n\\`\\`\\`dockerfile\n${dockerfileNumbered}\n\\`\\`\\``;\n\nreturn [{ json: {\n  apiBody: { model: 'claude-sonnet-4-6', max_tokens: 4000, temperature: 0, system: systemPrompt, messages: [{ role: 'user', content: userContent }] },\n  projectName,\n  dockerfile,\n  pomXml,\n  appConfig,\n} }];\n"
-      },
-      "id": "a1b2c3d4-1111-4a11-8111-100000000002",
-      "name": "Prepare - Optimizer Body",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        10848,
-        7616
-      ]
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 2
-          },
-          "conditions": [
-            {
-              "id": "b2c3d4e5-2222-4b22-8222-300000000001",
-              "leftValue": "={{ $json.error }}",
-              "rightValue": "",
-              "operator": {
-                "type": "string",
-                "operation": "notExists",
-                "singleValue": true
+      {
+        "id": "d5e6f7a8-4444-4d44-8444-400000000003",
+        "name": "Apply Input Valid ?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [
+          11072,
+          8300
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "d5e6f7a8-if-cond-1",
+                "leftValue": "={{ $json.error }}",
+                "rightValue": "",
+                "operator": {
+                  "type": "string",
+                  "operation": "notExists",
+                  "singleValue": true
+                }
               }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "d5e6f7a8-4444-4d44-8444-400000000004",
+        "name": "Build Apply Prompt",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          11296,
+          8220
+        ],
+        "parameters": {
+          "jsCode": "const d = $input.first().json;\nconst dockerfileNumbered = d.dockerfileNumbered;\nconst findings = Array.isArray(d.findings) ? d.findings : [];\nconst pomXml = d.pomXml || '';\nconst appConfig = d.appConfig || '';\n\nconst fmtFinding = (f) => `- [${f.id || '?'}] (${f.category || '?'}, ligne ${f.ligne ?? '?'}) ${f.description || ''}\\n    → Correction attendue : ${f.suggestion || ''}`;\nconst fmtList = findings.length ? findings.map(fmtFinding).join('\\n') : '- (aucune)';\nconst idsList = findings.map((f) => f.id).filter(Boolean).join(', ') || '(aucune)';\n\nconst contextBlock = (pomXml || appConfig)\n  ? `\\nCONTEXTE (fourni UNIQUEMENT pour comprendre certains findings — ne fait PAS partie de ta sortie, tu ne dois JAMAIS le modifier ni le recopier) :\\n${pomXml ? `pom.xml :\\n\\`\\`\\`xml\\n${pomXml}\\n\\`\\`\\`\\n` : ''}${appConfig ? `configuration applicative :\\n\\`\\`\\`\\n${appConfig}\\n\\`\\`\\`\\n` : ''}`\n  : '';\n\nconst systemPrompt = `Tu es un expert Docker et sécurité des conteneurs (15 ans d'expérience), spécialisé DevSecOps.\nTa mission : produire une version CORRIGÉE d'un Dockerfile en appliquant EXACTEMENT et UNIQUEMENT les corrections listées ci-dessous, sans jamais en introduire d'autres.\nRéponds UNIQUEMENT en JSON valide — pas de markdown, pas de backticks. Commence par { et termine par }.\nLANGUE : les textes (description) en FRANÇAIS. Les instructions Docker restent en anglais standard.\n\nRÈGLES IMPÉRATIVES :\n1. Applique SEULEMENT les corrections listées ci-dessous, une par une, à la ligne indiquée. N'en ajoute AUCUNE autre, même si tu repères d'autres problèmes en lisant le fichier — ce n'est pas ton rôle d'en juger, seules les corrections fournies sont autorisées.\n2. TOUTE ligne du Dockerfile non concernée par une correction listée DOIT rester STRICTEMENT IDENTIQUE à l'original (même texte, même ordre, mêmes commentaires). Ne modifie JAMAIS sans qu'une correction listée le demande explicitement : la ligne COPY qui copie l'artefact applicatif, EXPOSE, ENTRYPOINT/CMD, WORKDIR.\n3. Le fichier produit doit être COMPLET et directement utilisable — aucun \"...\", aucune section omise, aucune troncature.\n4. N'invente RIEN de non vérifiable : n'écris JAMAIS de valeur fictive (placeholder de digest SHA256, hash inventé) ni de commande non confirmée par le contenu fourni (ex: un wrapper de build comme ./mvnw dont l'existence n'est prouvée nulle part). Si une correction ne peut être appliquée avec certitude SANS deviner une telle valeur ou commande, N'APPLIQUE PAS cette correction précise — indique-le dans changes[].description comme nécessitant une intervention manuelle, plutôt que d'inventer.\n5. Si une correction nécessiterait normalement de modifier un fichier AUTRE que le Dockerfile (ex: pom.xml, application.properties), n'y touche pas : ta sortie est UNIQUEMENT le Dockerfile corrigé.\n\nFORMAT EXACT :\n{\"optimizedDockerfile\":\"<FICHIER COMPLET>\",\"changes\":[{\"ref\":\"<id de la correction>\",\"description\":\"<modification appliquée en une phrase, ou 'non appliquée : nécessite une intervention manuelle' si applicable>\"}],\"confidence\":<0.0-1.0>}`;\n\nconst userContent = `Voici le Dockerfile ORIGINAL à corriger.\n\nCORRECTIONS À APPLIQUER (et rien d'autre — toute autre ligne reste identique) :\n${fmtList}\n${contextBlock}\nDOCKERFILE ORIGINAL (numéroté, pour référence — ta sortie ne doit PAS contenir les numéros de ligne) :\n\\`\\`\\`dockerfile\n${dockerfileNumbered}\n\\`\\`\\`\n\nRAPPEL FINAL avant de répondre : seules ces corrections sont autorisées — ${idsList}. Relis le fichier que tu produis : chaque ligne modifiée ou ajoutée doit être justifiable par UNE de ces corrections précises, jamais par une initiative personnelle.`;\n\nreturn [{ json: { apiBody: { model: 'claude-sonnet-4-6', max_tokens: 8000, temperature: 0, system: systemPrompt, messages: [{ role: 'user', content: userContent }] } } }];\n"
+        }
+      },
+      {
+        "id": "d5e6f7a8-4444-4d44-8444-400000000005",
+        "name": "Dockerfile Apply Agent",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          11520,
+          8220
+        ],
+        "retryOnFail": true,
+        "maxTries": 3,
+        "waitBetweenTries": 3000,
+        "credentials": {
+          "httpHeaderAuth": {
+            "id": "Ee9vVedmz84oXg5W",
+            "name": "Claude API"
+          }
+        },
+        "onError": "continueErrorOutput",
+        "parameters": {
+          "method": "POST",
+          "url": "https://api.anthropic.com/v1/messages",
+          "authentication": "genericCredentialType",
+          "genericAuthType": "httpHeaderAuth",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "anthropic-version",
+                "value": "2023-06-01"
+              },
+              {
+                "name": "content-type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify($json.apiBody) }}",
+          "options": {
+            "timeout": 180000
+          }
+        }
+      },
+      {
+        "id": "d5e6f7a8-4444-4d44-8444-400000000006",
+        "name": "Parse Apply Output",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          11744,
+          8220
+        ],
+        "parameters": {
+          "jsCode": "const response = $input.first().json;\nconst fail = (msg, raw) => [{ json: { success: false, error: 'PARSE_ERROR', message: msg, raw: String(raw || '').substring(0, 500) } }];\nif (response.error) {\n  const em = response.message || (response.error && (response.error.message || (typeof response.error === 'string' ? response.error : JSON.stringify(response.error)))) || 'Erreur technique Apply Agent';\n  return [{ json: { success: false, error: 'AGENT_ERROR', message: String(em) } }];\n}\nconst content = response.content?.[0]?.text || '';\nif (!content) return fail(\"Réponse vide de l'agent de remédiation\", JSON.stringify(response).substring(0, 300));\nlet clean = content.replace(/```json\\s*/gi, '').replace(/```\\s*/gi, '').trim();\nconst s = clean.indexOf('{'), e = clean.lastIndexOf('}');\nif (s === -1 || e === -1) return fail('Aucun JSON trouvé', clean);\nlet p;\ntry { p = JSON.parse(clean.substring(s, e + 1)); }\ncatch (err) { return fail('JSON invalide : ' + err.message, clean); }\nif (!p.optimizedDockerfile || String(p.optimizedDockerfile).length < 20) return fail('Fichier corrigé absent ou trop court', clean);\n\nreturn [{ json: {\n  success: true,\n  optimizedDockerfile: String(p.optimizedDockerfile),\n  changes: Array.isArray(p.changes) ? p.changes : [],\n  confidence: p.confidence,\n} }];\n"
+        }
+      },
+      {
+        "id": "d5e6f7a8-4444-4d44-8444-400000000007",
+        "name": "Format Apply Input Error",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          11296,
+          8460
+        ],
+        "parameters": {
+          "jsCode": "const j = $input.first().json;\nreturn [{ json: { success: false, error: j.error, message: j.message } }];\n"
+        }
+      },
+      {
+        "id": "d5e6f7a8-4444-4d44-8444-400000000008",
+        "name": "Format Apply Agent Error",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          11744,
+          8460
+        ],
+        "parameters": {
+          "jsCode": "const j = $input.first().json;\nconst em = (j.error && j.error.message) ? j.error.message : (String(j.error) || 'Erreur inconnue');\nreturn [{ json: {\n  success: false,\n  error: 'AGENT_ERROR',\n  message: \"Agent de remédiation a échoué (rate limit / erreur API Anthropic)\",\n  detail: em,\n} }];\n"
+        }
+      },
+      {
+        "id": "d5e6f7a8-4444-4d44-8444-400000000009",
+        "name": "Respond - Apply Agent",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          13984,
+          8220
+        ],
+        "parameters": {
+          "respondWith": "allIncomingItems",
+          "options": {}
+        }
+      },
+      {
+        "id": "e6f7a8b9-5555-4e55-8555-600000000001",
+        "name": "Apply Gate — Docker Déterministe",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          11968,
+          8220
+        ],
+        "parameters": {
+          "jsCode": "const parsed = $input.first().json;\n\n// Si Parse Apply Output a déjà échoué (JSON illisible, agent en erreur),\n// rien à gater — le gate ne s'applique qu'à une sortie agent reçue.\nif (!parsed.success) {\n  return [{ json: { ...parsed, gateOk: false, violations: [{ family: 'PRE', message: parsed.message || 'Agent Apply en échec, gate non exécuté' }], classification: [] } }];\n}\n\nconst original = String(($('Prepare - Apply Body').first().json || {}).dockerfile || '');\nconst findings = Array.isArray(($('Prepare - Apply Body').first().json || {}).findings) ? $('Prepare - Apply Body').first().json.findings : [];\nconst optimized = String(parsed.optimizedDockerfile || '');\nconst changes = Array.isArray(parsed.changes) ? parsed.changes : [];\n\nconst violations = [];\n\n// ─────────────────────────────────────────────────────────────────────\n// A — VALIDITÉ SYNTAXIQUE (heuristique déterministe : nécessaire, pas un\n// vrai parseur Docker complet — fail-closed sur tout doute).\n// ─────────────────────────────────────────────────────────────────────\nconst INSTR_RE = /^\\s*(FROM|RUN|CMD|LABEL|EXPOSE|ENV|ADD|COPY|ENTRYPOINT|VOLUME|USER|WORKDIR|ARG|ONBUILD|STOPSIGNAL|HEALTHCHECK|SHELL)\\b/i;\nconst optLines = optimized.split('\\n');\nlet prevContinuation = false;\nconst stageNames = new Set();\noptLines.forEach((line, i) => {\n  const trimmed = line.trim();\n  if (!trimmed || trimmed.startsWith('#')) { prevContinuation = false; return; }\n  if (prevContinuation) { prevContinuation = trimmed.endsWith('\\\\'); return; }\n  if (!INSTR_RE.test(line)) {\n    violations.push({ family: 'A', message: `Ligne ${i + 1} : instruction Docker non reconnue (\"${trimmed.substring(0, 60)}\")` });\n  }\n  const fromMatch = /^\\s*FROM\\s+\\S+\\s+AS\\s+(\\S+)/i.exec(line);\n  if (fromMatch) stageNames.add(fromMatch[1].toLowerCase());\n  prevContinuation = trimmed.endsWith('\\\\');\n});\nif (!/^\\s*FROM\\s+\\S+/im.test(optimized)) {\n  violations.push({ family: 'A', message: 'Aucune instruction FROM trouvée dans le Dockerfile corrigé' });\n}\noptLines.forEach((line, i) => {\n  const m = /COPY\\s+--from=(\\S+)/i.exec(line);\n  if (m && !/^\\d+$/.test(m[1]) && !stageNames.has(m[1].toLowerCase())) {\n    violations.push({ family: 'A', message: `Ligne ${i + 1} : COPY --from=\"${m[1]}\" référence un stage jamais déclaré (FROM ... AS ${m[1]})` });\n  }\n});\n\n// ─────────────────────────────────────────────────────────────────────\n// Helpers — ré-implémentent volontairement (un node Code n8n ne peut pas\n// importer une fonction d'un autre node) la même logique que Runtime\n// Coherence Checker / CAT-IMAGE / CAT-SECURITY. À garder synchronisé si\n// ces détecteurs évoluent.\n// ─────────────────────────────────────────────────────────────────────\nfunction finalStageOf(text) {\n  const lines = text.split('\\n');\n  const fromIdx = [];\n  lines.forEach((l, i) => { if (/^\\s*FROM\\s+\\S+/i.test(l)) fromIdx.push(i); });\n  const stageStart = fromIdx.length ? fromIdx[fromIdx.length - 1] : 0;\n  return { lines: lines.slice(stageStart) };\n}\nfunction extractFromTag(text) {\n  const { lines } = finalStageOf(text);\n  const fromLine = lines.find((l) => /^\\s*FROM\\s+\\S+/i.test(l));\n  if (!fromLine) return null;\n  const ref = fromLine.replace(/^\\s*FROM\\s+/i, '').trim().split(/\\s+/)[0];\n  const after = ref.split('/').pop();\n  let image = after, tag = null;\n  if (after.includes(':')) { const idx = after.indexOf(':'); image = after.slice(0, idx); tag = after.slice(idx + 1); }\n  const m = tag ? /^(\\d+)/.exec(tag) : null;\n  return { raw: ref, image, tag, majorVersion: m ? m[1] : null };\n}\nfunction hasUser(text) { return finalStageOf(text).lines.some((l) => /^\\s*USER\\s+\\S+/i.test(l)); }\nfunction hasHealthcheck(text) { return finalStageOf(text).lines.some((l) => /^\\s*HEALTHCHECK\\s+/i.test(l)); }\nfunction extractExposePort(text) {\n  const { lines } = finalStageOf(text);\n  for (const l of lines) { const m = /^\\s*EXPOSE\\s+(\\d+)/i.exec(l); if (m) return m[1]; }\n  return null;\n}\nfunction extractCopyJar(text) {\n  const { lines } = finalStageOf(text);\n  let found = null;\n  lines.forEach((l) => { if (/^\\s*COPY\\s+/i.test(l) && /\\.jar(\\s|$)/i.test(l)) found = l.trim(); });\n  return found;\n}\nfunction extractEntrypointOrCmd(text) {\n  const m = /^\\s*(ENTRYPOINT|CMD)\\s+.+$/im.exec(text);\n  return m ? m[0].trim() : null;\n}\n\n// ─────────────────────────────────────────────────────────────────────\n// B — CORRECTIONS PRÉSENTES (uniquement les findings ayant un détecteur\n// déterministe rejouable) + D — CLASSIFICATION DE CONFIANCE.\n// ─────────────────────────────────────────────────────────────────────\nconst classification = [];\nconst optFrom = extractFromTag(optimized);\nconst DETERMINISTIC_IDS = new Set(['DF-IMG-JDK', 'DF-IMG-PIN', 'DF-SEC-USER', 'DF-SEC-HEALTHCHECK']);\n\nfor (const f of findings) {\n  const id = f.id || f.ref || '?';\n  const change = changes.find((c) => c.ref === id);\n  const declinedByAgent = change && /non appliqu|intervention manuelle|revue manuelle/i.test(change.description || '');\n\n  if (declinedByAgent) {\n    classification.push({ id, status: 'REFUSÉ', reason: change.description });\n    continue;\n  }\n\n  if (id === 'DF-IMG-JDK') {\n    // Propriété, pas une liste d'exclusion : le stage final doit être sur\n    // une version LTS supportée (>=17), pas juste \"hors de {6,7,8}\" — une\n    // version 9-16 (non-LTS, non obsolète au sens strict) ne doit PAS passer\n    // ce contrôle non plus.\n    const v = optFrom && optFrom.majorVersion ? parseInt(optFrom.majorVersion, 10) : NaN;\n    const ok = Number.isInteger(v) && v >= 17;\n    if (ok) classification.push({ id, status: 'SÛR', reason: `FROM du stage final = ${optFrom.raw} (Java ${v}, >= 17 LTS)` });\n    else { classification.push({ id, status: 'MANQUANT', reason: `FROM du stage final = ${optFrom ? optFrom.raw : '?'} — pas une version LTS >= 17 (ou indéterminable)` }); violations.push({ family: 'B', ref: id, message: `Correction ${id} absente : le stage final n'est pas sur une version Java >= 17 LTS` }); }\n    continue;\n  }\n  if (id === 'DF-IMG-PIN') {\n    const ok = !!(optFrom && optFrom.tag && optFrom.tag !== 'latest');\n    if (ok) classification.push({ id, status: 'SÛR', reason: `FROM final pinné sur le tag \"${optFrom.tag}\"` });\n    else { classification.push({ id, status: 'MANQUANT', reason: 'FROM final toujours non pinné' }); violations.push({ family: 'B', ref: id, message: `Correction ${id} absente : image toujours non pinnée` }); }\n    continue;\n  }\n  if (id === 'DF-SEC-USER') {\n    const ok = hasUser(optimized);\n    if (ok) classification.push({ id, status: 'SÛR', reason: \"USER présent dans l'étape finale\" });\n    else { classification.push({ id, status: 'MANQUANT', reason: 'USER toujours absent' }); violations.push({ family: 'B', ref: id, message: `Correction ${id} absente : USER non-root toujours manquant` }); }\n    continue;\n  }\n  if (id === 'DF-SEC-HEALTHCHECK') {\n    const ok = hasHealthcheck(optimized);\n    if (ok) classification.push({ id, status: 'SÛR', reason: \"HEALTHCHECK présent dans l'étape finale\" });\n    else { classification.push({ id, status: 'MANQUANT', reason: 'HEALTHCHECK toujours absent' }); violations.push({ family: 'B', ref: id, message: `Correction ${id} absente : HEALTHCHECK toujours manquant` }); }\n    continue;\n  }\n\n  // Pas de détecteur déterministe rejouable (jugement LLM : JDK-vs-JRE,\n  // digest, multi-stage, RC-1/2/3, apt-get, ADD subtil...) — jamais gaté\n  // sur B, seulement classé pour revue humaine.\n  if (change) classification.push({ id, status: 'INFÉRÉ', reason: change.description || 'Appliqué par jugement LLM, non re-vérifiable par du code' });\n  else classification.push({ id, status: 'MANQUANT', reason: \"Ni appliqué ni signalé comme écarté par l'agent\" });\n}\n\n// ─────────────────────────────────────────────────────────────────────\n// C — RIEN CASSÉ (comparaison original vs corrigé sur les instructions\n// essentielles). REJET si une instruction essentielle a disparu.\n// ─────────────────────────────────────────────────────────────────────\nconst origExpose = extractExposePort(original);\nconst optExpose = extractExposePort(optimized);\nif (origExpose && !optExpose) violations.push({ family: 'C', message: `EXPOSE ${origExpose} (présent dans l'original) a disparu du Dockerfile corrigé` });\n\nconst origCopyJar = extractCopyJar(original);\nconst optCopyJar = extractCopyJar(optimized);\nif (origCopyJar && !optCopyJar) violations.push({ family: 'C', message: `Le COPY de l'artefact .jar (\"${origCopyJar}\") a disparu du Dockerfile corrigé` });\n\nconst origEntry = extractEntrypointOrCmd(original);\nconst optEntry = extractEntrypointOrCmd(optimized);\nif (origEntry && !optEntry) violations.push({ family: 'C', message: `ENTRYPOINT/CMD (\"${origEntry}\") a disparu du Dockerfile corrigé` });\nelse if (origEntry && optEntry && origEntry !== optEntry) violations.push({ family: 'C', message: `ENTRYPOINT/CMD modifié sans qu'aucune correction ne le justifie : \"${origEntry}\" → \"${optEntry}\"` });\n\nconst gateOk = violations.length === 0;\n\nreturn [{ json: {\n  ...parsed,\n  gateOk,\n  violations,\n  classification,\n} }];\n"
+        }
+      },
+      {
+        "id": "f7a8b9c0-6666-4f66-8666-700000000001",
+        "name": "Gate OK ?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [
+          12192,
+          8220
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "typeValidation": "loose",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "f7a8b9c0-if-cond-1",
+                "leftValue": "={{ $json.gateOk }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "f7a8b9c0-6666-4f66-8666-700000000002",
+        "name": "Prepare PR Body",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          12416,
+          8060
+        ],
+        "parameters": {
+          "jsCode": "const gate = $input.first().json;\nconst body = ($('Webhook - Dockerfile Apply').first().json.body) || {};\n\nlet owner = String(body.owner || '').trim();\nlet repo = String(body.repo || '').trim();\nif (repo.includes('/')) {\n  const parts = repo.split('/').filter(Boolean);\n  repo = parts.pop();\n  if (!owner && parts.length) owner = parts.pop();\n}\nconst filePath = String(body.filePath || 'Dockerfile').trim();\nconst baseBranch = String(body.baseBranch || '').trim();\n\nif (!owner || !repo) {\n  return [{ json: { ...gate, prError: 'INVALID_INPUT', prMessage: 'owner et repo sont requis pour créer la PR' } }];\n}\n\nconst classification = Array.isArray(gate.classification) ? gate.classification : [];\nconst sur = classification.filter((c) => c.status === 'SÛR');\nconst infere = classification.filter((c) => c.status === 'INFÉRÉ');\nconst refuse = classification.filter((c) => c.status === 'REFUSÉ');\nconst fmtList = (items) => (items.length ? items.map((c) => `- \\`${c.id}\\` — ${c.reason}`).join('\\n') : '- (aucune)');\n\nconst prBody = `Cette PR applique une remédiation Dockerfile générée par l'agent IA de la plateforme DevSecOps, **validée par un gate déterministe avant création** (aucune PR n'est créée si le gate rejette).\n\n## ✅ Corrections appliquées et vérifiées automatiquement (SÛR)\n${fmtList(sur)}\n\n## 👀 Corrections appliquées par jugement de l'agent — à RELIRE avant merge (INFÉRÉ)\nCes éléments ne sont pas re-vérifiables par du code déterministe.\n${fmtList(infere)}\n\n## ⛔ Corrections NON appliquées (REFUSÉ par l'agent lui-même)\n${fmtList(refuse)}\n\n---\n> Générée automatiquement par la plateforme DevSecOps (WF5 — remédiation Dockerfile). À relire avant merge.`;\n\nconst ts = new Date().toISOString().replace(/[:.]/g, '-').substring(0, 19);\nconst branchName = `ci/dockerfile-remediation-${ts}`;\n\nreturn [{ json: {\n  ...gate,\n  owner, repo, filePath, baseBranch, branchName,\n  commitMessage: 'ci: remédiation Dockerfile par agent IA (gate déterministe validé)',\n  prTitle: '🤖 Remédiation Dockerfile (agent IA, gate validé)',\n  prBody,\n} }];\n"
+        }
+      },
+      {
+        "id": "f7a8b9c0-6666-4f66-8666-700000000003",
+        "name": "PR Input Valid ?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [
+          12640,
+          8060
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "f7a8b9c0-if-cond-2",
+                "leftValue": "={{ $json.prError }}",
+                "rightValue": "",
+                "operator": {
+                  "type": "string",
+                  "operation": "notExists",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "f7a8b9c0-6666-4f66-8666-700000000004",
+        "name": "Get Base SHA (Docker)",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          12864,
+          8060
+        ],
+        "credentials": {
+          "githubApi": {
+            "id": "YBO0vWrPlyoYx4Kr",
+            "name": "GitHub n8n"
+          }
+        },
+        "onError": "continueErrorOutput",
+        "parameters": {
+          "url": "=https://api.github.com/repos/{{ $('Prepare PR Body').first().json.owner }}/{{ $('Prepare PR Body').first().json.repo }}/git/ref/heads/{{ $('Prepare PR Body').first().json.baseBranch }}",
+          "authentication": "predefinedCredentialType",
+          "nodeCredentialType": "githubApi",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "X-GitHub-Api-Version",
+                "value": "2022-11-28"
+              }
+            ]
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "f7a8b9c0-6666-4f66-8666-700000000005",
+        "name": "Create Branch (Docker)",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          13088,
+          8060
+        ],
+        "credentials": {
+          "githubApi": {
+            "id": "YBO0vWrPlyoYx4Kr",
+            "name": "GitHub n8n"
+          }
+        },
+        "parameters": {
+          "method": "POST",
+          "url": "=https://api.github.com/repos/{{ $('Prepare PR Body').first().json.owner }}/{{ $('Prepare PR Body').first().json.repo }}/git/refs",
+          "authentication": "predefinedCredentialType",
+          "nodeCredentialType": "githubApi",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "X-GitHub-Api-Version",
+                "value": "2022-11-28"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={\n  \"ref\": \"refs/heads/{{ $('Prepare PR Body').first().json.branchName }}\",\n  \"sha\": \"{{ $json.object.sha }}\"\n}",
+          "options": {}
+        }
+      },
+      {
+        "id": "f7a8b9c0-6666-4f66-8666-700000000006",
+        "name": "Commit Dockerfile",
+        "type": "n8n-nodes-base.github",
+        "typeVersion": 1,
+        "position": [
+          13312,
+          8060
+        ],
+        "webhookId": "f7a8b9c0-6666-4f66-8666-800000000001",
+        "credentials": {
+          "githubApi": {
+            "id": "YBO0vWrPlyoYx4Kr",
+            "name": "GitHub n8n"
+          }
+        },
+        "parameters": {
+          "resource": "file",
+          "operation": "edit",
+          "owner": {
+            "__rl": true,
+            "mode": "name",
+            "value": "={{ $('Prepare PR Body').first().json.owner }}"
+          },
+          "repository": {
+            "__rl": true,
+            "mode": "name",
+            "value": "={{ $('Prepare PR Body').first().json.repo }}"
+          },
+          "filePath": "={{ $('Prepare PR Body').first().json.filePath }}",
+          "binaryData": "={{ false }}",
+          "fileContent": "={{ $('Apply Gate — Docker Déterministe').first().json.optimizedDockerfile }}",
+          "commitMessage": "={{ $('Prepare PR Body').first().json.commitMessage }}",
+          "additionalParameters": {
+            "branch": {
+              "branch": "={{ $('Prepare PR Body').first().json.branchName }}"
+            }
+          }
+        }
+      },
+      {
+        "id": "f7a8b9c0-6666-4f66-8666-700000000007",
+        "name": "Create Pull Request (Docker)",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          13536,
+          8060
+        ],
+        "credentials": {
+          "githubApi": {
+            "id": "YBO0vWrPlyoYx4Kr",
+            "name": "GitHub n8n"
+          }
+        },
+        "parameters": {
+          "method": "POST",
+          "url": "=https://api.github.com/repos/{{ $('Prepare PR Body').first().json.owner }}/{{ $('Prepare PR Body').first().json.repo }}/pulls",
+          "authentication": "predefinedCredentialType",
+          "nodeCredentialType": "githubApi",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "X-GitHub-Api-Version",
+                "value": "2022-11-28"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={\n  \"title\": \"{{ $('Prepare PR Body').first().json.prTitle }}\",\n  \"head\": \"{{ $('Prepare PR Body').first().json.branchName }}\",\n  \"base\": \"{{ $('Prepare PR Body').first().json.baseBranch }}\",\n  \"body\": {{ JSON.stringify($('Prepare PR Body').first().json.prBody) }}\n}",
+          "options": {}
+        }
+      },
+      {
+        "id": "f7a8b9c0-6666-4f66-8666-700000000008",
+        "name": "Format Apply PR Result",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          13760,
+          8060
+        ],
+        "parameters": {
+          "jsCode": "const pr = $input.first().json;\nconst gate = $('Apply Gate — Docker Déterministe').first().json;\nconst branch = $('Prepare PR Body').first().json.branchName;\nreturn [{ json: {\n  success: true,\n  gateOk: true,\n  prUrl: pr.html_url || pr.url || '',\n  prNumber: pr.number || null,\n  branch,\n  classification: gate.classification,\n  message: 'Pull Request créée avec succès',\n} }];\n"
+        }
+      },
+      {
+        "id": "f7a8b9c0-6666-4f66-8666-700000000009",
+        "name": "Format Gate Rejected",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          12416,
+          8380
+        ],
+        "parameters": {
+          "jsCode": "const gate = $input.first().json;\nreturn [{ json: {\n  success: false,\n  gateOk: false,\n  error: 'GATE_REJECTED',\n  message: 'Le gate déterministe a rejeté la correction — aucune PR créée.',\n  violations: gate.violations,\n  classification: gate.classification || [],\n} }];\n"
+        }
+      },
+      {
+        "id": "f7a8b9c0-6666-4f66-8666-700000000010",
+        "name": "Format PR Input Error",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          12864,
+          8380
+        ],
+        "parameters": {
+          "jsCode": "const j = $input.first().json;\nreturn [{ json: { success: false, error: j.prError, message: j.prMessage } }];\n"
+        }
+      },
+      {
+        "id": "phase-b-authorize-backend-approval",
+        "name": "Authorize Backend Approval",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          10804,
+          8300
+        ],
+        "parameters": {
+          "jsCode": "const input=$input.first().json; const headers=input.headers||{}; if(!headers['x-internal-secret']||headers['x-internal-secret']!==$env.N8N_INTERNAL_SECRET) throw new Error('UNAUTHORIZED_BACKEND_CALL'); const body=input.body||input; if(!body.requestId&&!body.applyId) throw new Error('MISSING_APPROVAL_CORRELATION'); if(!body.baseBranch) throw new Error('DEFAULT_BRANCH_REQUIRED'); return [{json:input}];"
+        }
+      }
+    ],
+    "connections": {
+      "Webhook - Dockerfile Fetch": {
+        "main": [
+          [
+            {
+              "node": "Prepare - Fetch Body",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Prepare - Fetch Body": {
+        "main": [
+          [
+            {
+              "node": "Fetch Valid ?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Fetch Valid ?": {
+        "main": [
+          [
+            {
+              "node": "Fetch Dockerfile from Git",
+              "type": "main",
+              "index": 0
             }
           ],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "id": "a1b2c3d4-1111-4a11-8111-100000000003",
-      "name": "Input Valid ?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.2,
-      "position": [
-        11072,
-        7616
-      ]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "https://api.anthropic.com/v1/messages",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+          [
             {
-              "name": "anthropic-version",
-              "value": "2023-06-01"
+              "node": "Format Fetch Error",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Fetch Dockerfile from Git": {
+        "main": [
+          [
+            {
+              "node": "Format Fetch Result",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Format Fetch Error",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Format Fetch Result": {
+        "main": [
+          [
+            {
+              "node": "Respond - Fetch",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Format Fetch Error": {
+        "main": [
+          [
+            {
+              "node": "Respond - Fetch",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Webhook - Dockerfile Optimize": {
+        "main": [
+          [
+            {
+              "node": "Prepare - Optimizer Body",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Prepare - Optimizer Body": {
+        "main": [
+          [
+            {
+              "node": "Input Valid ?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Input Valid ?": {
+        "main": [
+          [
+            {
+              "node": "Runtime Coherence Checker",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Format Input Error",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Dockerfile Optimizer Agent": {
+        "main": [
+          [
+            {
+              "node": "Parse - Optimizer Output",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Format Agent Error",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Parse - Optimizer Output": {
+        "main": [
+          [
+            {
+              "node": "Respond - Analysis",
+              "type": "main",
+              "index": 0
             },
             {
-              "name": "content-type",
-              "value": "application/json"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify($json.apiBody) }}",
-        "options": {
-          "timeout": 180000
-        }
-      },
-      "id": "a1b2c3d4-1111-4a11-8111-100000000004",
-      "name": "Dockerfile Optimizer Agent",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        11280,
-        7536
-      ],
-      "retryOnFail": true,
-      "maxTries": 3,
-      "waitBetweenTries": 3000,
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "Ee9vVedmz84oXg5W",
-          "name": "Claude API"
-        }
-      },
-      "onError": "continueErrorOutput"
-    },
-    {
-      "parameters": {
-        "jsCode": "const response = $input.first().json;\nconst fail = (msg, raw) => [{ json: { success:false, error:'PARSE_ERROR', message:msg, raw:String(raw||'').substring(0,800) } }];\nif (response.error) return [{ json: { success:false, error:response.error, message:response.message } }];\nconst content = response.content?.[0]?.text || '';\nif (!content) return fail(\"Réponse vide de l'agent\", JSON.stringify(response).substring(0,300));\nlet clean = content.replace(/```json\\s*/gi,'').replace(/```\\s*/gi,'').trim();\nconst s = clean.indexOf('{'), e = clean.lastIndexOf('}');\nif (s === -1 || e === -1) return fail('Aucun JSON trouvé', clean);\ntry {\n  const p = JSON.parse(clean.substring(s, e+1));\n\n  // ── Findings déterministes (Runtime Coherence Checker RC-1..N + sous-\n  // partie CAT-IMAGE) — calculés par \"Runtime Coherence Checker\", en amont\n  // de l'appel LLM, jamais par le LLM lui-même. Même philosophie que le\n  // gate de sélection WF4 : ce qui doit être EXACT et reproductible passe\n  // par du code, pas par un prompt.\n  let deterministic = { findings: [], runtimeCoherence: { checks: {}, notes: [] } };\n  try { deterministic = $('Runtime Coherence Checker').first().json.deterministicChecks || deterministic; } catch (_) {}\n\n  // Issues LLM : seules CAT-IMAGE et CAT-SECURITY sont légitimes — un\n  // CAT-JDK émis malgré la consigne du prompt est un défaut de l'agent,\n  // pas une donnée fiable, donc rejeté ici (defense in depth).\n  const LLM_VALID_CAT = new Set(['CAT-IMAGE','CAT-SECURITY']);\n  const llmIssues = (Array.isArray(p.issues) ? p.issues : []).filter(i => LLM_VALID_CAT.has(i.category));\n\n  const allIssues = [...deterministic.findings, ...llmIssues];\n  const o = { CRITIQUE:0, ELEVE:1, MOYEN:2, FAIBLE:3 };\n  allIssues.sort((a,b)=>(o[a.severity]??9)-(o[b.severity]??9));\n\n  return [{ json: {\n    success:true,\n    analyzedAt:new Date().toISOString(),\n    score: p.score,\n    summary: p.summary,\n    confidence: p.confidence,\n    issues: allIssues,\n    runtimeCoherence: deterministic.runtimeCoherence,\n  } }];\n} catch (err) { return fail('JSON invalide : '+err.message, clean); }\n"
-      },
-      "id": "a1b2c3d4-1111-4a11-8111-100000000005",
-      "name": "Parse - Optimizer Output",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        11536,
-        7440
-      ],
-      "onError": "continueErrorOutput"
-    },
-    {
-      "parameters": {
-        "jsCode": "const j = $input.first().json;\nreturn [{ json: j.error ? { success:false, error:j.error, message:j.message } : j }];\n"
-      },
-      "id": "a1b2c3d4-1111-4a11-8111-100000000006",
-      "name": "Format Input Error",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        11536,
-        7936
-      ]
-    },
-    {
-      "parameters": {
-        "respondWith": "allIncomingItems",
-        "options": {}
-      },
-      "id": "a1b2c3d4-1111-4a11-8111-100000000007",
-      "name": "Respond - Analysis",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.1,
-      "position": [
-        12384,
-        7664
-      ]
-    },
-    {
-      "parameters": {
-        "jsCode": "return [{ json: {\n  jobId: $('Webhook - Dockerfile Optimize').first().json.body.jobId,\n  status: 'error',\n  reason: \"Agent IA a \\u00e9chou\\u00e9 (rate limit / erreur API Anthropic)\",\n  detail: ($json.error && $json.error.message) ? $json.error.message : (String($json.error) || 'Erreur inconnue'),\n}}];"
-      },
-      "id": "a1b2c3d4-1111-4a11-8111-100000000008",
-      "name": "Format Agent Error",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        11488,
-        7696
-      ]
-    },
-    {
-      "parameters": {
-        "jsCode": "return [{ json: {\n  jobId: $('Webhook - Dockerfile Optimize').first().json.body.jobId,\n  status: 'error',\n  reason: \"R\\u00e9ponse de l'agent illisible (\\u00e9chec de parsing JSON)\",\n  detail: ($json.error && $json.error.message) ? $json.error.message : (String($json.error) || 'Erreur de parsing inconnue'),\n}}];"
-      },
-      "id": "a1b2c3d4-1111-4a11-8111-100000000009",
-      "name": "Format Parse Error",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        11728,
-        7552
-      ]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "=http://172.31.172.61:3001/api/dockerfile/optimize/{{ $json.jobId }}/callback",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            },
-            {
-              "name": "X-Callback-Secret",
-              "value": "e63c40231fd4f76a0650ea2602cc2ce67c61eb56b5d1838f86e258905f9dde33"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ status: 'error', reason: $json.reason, detail: $json.detail }) }}",
-        "options": {}
-      },
-      "id": "a1b2c3d4-1111-4a11-8111-10000000000a",
-      "name": "Send Error to Backend",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        11840,
-        7696
-      ],
-      "onError": "continueRegularOutput"
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "=http://172.31.172.61:3001/api/dockerfile/optimize/{{ $('Webhook - Dockerfile Optimize').first().json.body.jobId }}/callback",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            },
-            {
-              "name": "X-Callback-Secret",
-              "value": "e63c40231fd4f76a0650ea2602cc2ce67c61eb56b5d1838f86e258905f9dde33"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ status: 'done', result: $json }) }}",
-        "options": {}
-      },
-      "id": "a1b2c3d4-1111-4a11-8111-10000000000b",
-      "name": "Send Result to Backend",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        11760,
-        7312
-      ],
-      "onError": "continueRegularOutput"
-    },
-    {
-      "parameters": {
-        "jsCode": "// ─────────────────────────────────────────────────────────────────────────\n// RUNTIME COHERENCE CHECKER — patron extensible.\n//\n// Contrat d'un module de check RC-N (objet simple, aucune classe requise) :\n//   {\n//     id, name, category,                      // identité + catégorie de finding\n//     extractDockerfile(dockerfile) -> { value, determined, reason, line, ...détails },\n//     extractProject(projectFiles)  -> { value, determined, reason, source, ...détails },\n//     describe(dockerfileVal, projectVal) -> { severity, description, suggestion },\n//   }\n// extractDockerfile/extractProject retournent TOUJOURS determined:false plutôt\n// que de deviner (tag latest, valeur héritée d'un <parent> Maven non résolue,\n// pattern non reconnu, fichier absent, etc.).\n//\n// Le moteur runCoherenceChecks() applique CE MÊME contrat à chaque module,\n// sans connaître son contenu métier : extraction des 2 côtés, puis 3 états\n// possibles — jamais 2 :\n//   1. déterminées + différentes → finding (via describe())\n//   2. déterminées + identiques → RAS, rien n'est émis\n//   3. au moins une indéterminée → jamais de finding, au plus une note\n// Ajouter RC-2/RC-3 = pousser un nouvel objet dans CHECKS. runCoherenceChecks\n// ne change JAMAIS.\n// ─────────────────────────────────────────────────────────────────────────\nfunction runCoherenceChecks(checks, ctx) {\n  const findings = [];\n  const notes = [];\n  const details = {};\n\n  for (const check of checks) {\n    const a = check.extractDockerfile(ctx.dockerfile);\n    const b = check.extractProject(ctx.projectFiles);\n    const bothDetermined = a.determined && b.determined;\n    const mismatch = bothDetermined && a.value !== b.value;\n\n    details[check.id] = { dockerfile: a, project: b, comparable: bothDetermined, mismatch };\n\n    if (mismatch) {\n      const d = check.describe(a, b);\n      findings.push({\n        id: `DF-${check.id}`,\n        category: check.category,\n        severity: d.severity,\n        ligne: a.line ?? null,\n        description: d.description,\n        suggestion: d.suggestion,\n        deterministic: true,\n      });\n    } else if (!bothDetermined) {\n      const parts = [];\n      if (!a.determined) parts.push(`Dockerfile : ${a.reason}`);\n      if (!b.determined) parts.push(`${check.projectSource || 'fichier projet'} : ${b.reason}`);\n      const note = `[${check.id}] ${check.name} — non déterminable avec certitude : ${parts.join(' ; ')}. Vérification manuelle recommandée ; aucune incohérence supposée.`;\n      notes.push({ id: check.id, name: check.name, note });\n      details[check.id].note = note;\n    }\n    // cas 2 (déterminées + identiques) : rien à ajouter, RAS silencieux.\n  }\n\n  return { findings, notes, details };\n}\n\n// ── RC-1 : cohérence version JDK (Dockerfile FROM ↔ pom.xml) ──────────────\nconst RC1_JDK_VERSION = {\n  id: 'RC-1',\n  name: 'Cohérence version JDK',\n  category: 'CAT-JDK',\n  projectSource: 'pom.xml',\n\n  // Image finale = dernière instruction FROM (couvre le multi-stage). Familles\n  // reconnues : eclipse-temurin, openjdk, adoptopenjdk, amazoncorretto,\n  // zulu-openjdk — variantes -jdk/-jre/-alpine/-slim toutes supportées via le\n  // numéro en tête du tag. Hors de cette liste, ou tag latest/absent/non\n  // numérique → determined:false, jamais une supposition.\n  extractDockerfile(dockerfile) {\n    const KNOWN_JDK_IMAGES = /(eclipse-temurin|openjdk|adoptopenjdk|amazoncorretto|zulu-openjdk|azul\\/zulu-openjdk)/i;\n    const text = String(dockerfile || '');\n    const lines = text.split('\\n');\n    const fromIdx = [];\n    lines.forEach((l, i) => { if (/^\\s*FROM\\s+\\S+/i.test(l)) fromIdx.push(i); });\n    if (fromIdx.length === 0) {\n      return { value: null, determined: false, reason: 'aucune instruction FROM trouvée', line: null, raw: null, image: null, tag: null };\n    }\n    const lastIdx = fromIdx[fromIdx.length - 1];\n    const ref = lines[lastIdx].replace(/^\\s*FROM\\s+/i, '').trim().split(/\\s+/)[0]; // ignore \"AS builder\"\n    const line = lastIdx + 1;\n\n    const afterLastSlash = ref.split('/').pop();\n    let image = afterLastSlash, tag = null;\n    if (afterLastSlash.includes(':')) {\n      const idx = afterLastSlash.indexOf(':');\n      image = afterLastSlash.slice(0, idx);\n      tag = afterLastSlash.slice(idx + 1);\n    }\n    const fullImageName = ref.split(':')[0]; // pour matcher azul/zulu-openjdk (contient un '/')\n\n    if (!KNOWN_JDK_IMAGES.test(fullImageName)) {\n      return { value: null, determined: false, reason: 'image de base non reconnue comme JDK/JRE (parseur limité aux familles connues : eclipse-temurin, openjdk, adoptopenjdk, amazoncorretto, zulu-openjdk)', line, raw: ref, image, tag };\n    }\n    if (!tag || tag === 'latest') {\n      return { value: null, determined: false, reason: tag === 'latest' ? 'tag \"latest\" non pinné — version non déterminable avec certitude' : 'aucun tag — version non déterminable (latest implicite)', line, raw: ref, image, tag: tag || null };\n    }\n    const m = /^(\\d+)/.exec(tag); // couvre \"8\", \"8-jdk\", \"11-jre-slim\", \"17-jdk-alpine\", \"8u282-b08-jdk\"\n    if (!m) {\n      return { value: null, determined: false, reason: `tag \"${tag}\" ne débute pas par un numéro de version JDK reconnu`, line, raw: ref, image, tag };\n    }\n    return { value: m[1], determined: true, reason: null, line, raw: ref, image, tag };\n  },\n\n  // Ordre standard Maven : maven.compiler.release > .target > java.version.\n  // Ne résout JAMAIS un <parent> pour deviner sa valeur héritée — si aucune\n  // des 3 propriétés n'est déclarée EXPLICITEMENT dans ce pom.xml, indéterminé.\n  extractProject(projectFiles) {\n    const xml = projectFiles && projectFiles.pomXml;\n    if (!xml) return { value: null, determined: false, reason: 'pom.xml absent', source: null };\n    const patterns = [\n      { re: /<maven\\.compiler\\.release>\\s*(\\d+)\\s*<\\/maven\\.compiler\\.release>/i, src: 'maven.compiler.release' },\n      { re: /<maven\\.compiler\\.target>\\s*(\\d+)\\s*<\\/maven\\.compiler\\.target>/i, src: 'maven.compiler.target' },\n      { re: /<java\\.version>\\s*(\\d+)\\s*<\\/java\\.version>/i, src: 'java.version' },\n    ];\n    for (const p of patterns) {\n      const m = p.re.exec(xml);\n      if (m) return { value: m[1], determined: true, reason: null, source: p.src };\n    }\n    const hasParent = /<parent>/i.test(xml);\n    return {\n      value: null, determined: false, source: null,\n      reason: hasParent\n        ? \"aucune propriété maven.compiler.*/java.version déclarée explicitement — un <parent> Maven est présent mais sa valeur héritée n'est pas résolue (jamais devinée)\"\n        : 'aucune propriété maven.compiler.*/java.version trouvée dans ce pom.xml',\n    };\n  },\n\n  describe(dockerfileVal, projectVal) {\n    return {\n      severity: 'CRITIQUE',\n      description: `Incohérence JDK détectée par contrôle déterministe (RC-1) : l'image de base (${dockerfileVal.raw}) fournit le JDK ${dockerfileVal.value}, alors que le pom.xml cible Java ${projectVal.value} (propriété ${projectVal.source}).`,\n      suggestion: `Aligner les deux : passer l'image de base à un JDK/JRE ${projectVal.value} (ex: ${dockerfileVal.image || 'eclipse-temurin'}:${projectVal.value}-jre-jammy), ou abaisser la cible du pom.xml à ${dockerfileVal.value} si la montée de version n'est pas voulue.`,\n    };\n  },\n};\n\n// ── RC-2 : cohérence port (Dockerfile EXPOSE ↔ application.properties/.yml server.port) ──\nconst RC2_PORT = {\n  id: 'RC-2',\n  name: 'Cohérence port (EXPOSE ↔ server.port)',\n  category: 'CAT-PORT',\n  projectSource: 'application.properties/.yml',\n\n  extractDockerfile(dockerfile) {\n    const text = String(dockerfile || '');\n    const lines = text.split('\\n');\n    const fromIdx = [];\n    lines.forEach((l, i) => { if (/^\\s*FROM\\s+\\S+/i.test(l)) fromIdx.push(i); });\n    const stageStart = fromIdx.length ? fromIdx[fromIdx.length - 1] : 0; // étape finale (multi-stage)\n    const finalLines = lines.slice(stageStart);\n\n    const ports = [];\n    finalLines.forEach((l, i) => {\n      const m = /^\\s*EXPOSE\\s+(.+)$/i.exec(l);\n      if (!m) return;\n      m[1].trim().split(/\\s+/).forEach((tok) => {\n        const pm = /^(\\d+)(\\/(tcp|udp))?$/i.exec(tok);\n        if (pm) ports.push({ value: pm[1], line: stageStart + i + 1, raw: l.trim() });\n      });\n    });\n\n    if (ports.length === 0) {\n      return { value: null, determined: false, reason: \"aucune instruction EXPOSE trouvée (dans l'étape finale)\", line: null, raw: null };\n    }\n    const distinct = [...new Set(ports.map((p) => p.value))];\n    if (distinct.length > 1) {\n      return { value: null, determined: false, reason: `plusieurs ports EXPOSE distincts (${distinct.join(', ')}) — ambigu, comparaison non fiable`, line: ports[0].line, raw: ports.map((p) => p.raw).join(' | ') };\n    }\n    return { value: distinct[0], determined: true, reason: null, line: ports[0].line, raw: ports[0].raw };\n  },\n\n  extractProject(projectFiles) {\n    const cfg = projectFiles && projectFiles.appConfig;\n    if (!cfg) return { value: null, determined: false, reason: 'fichier de configuration applicatif absent (application.properties/.yml non trouvé)', source: null };\n    let m = /^\\s*server\\.port\\s*[:=]\\s*(\\d+)\\s*$/im.exec(cfg);\n    if (m) return { value: m[1], determined: true, reason: null, source: 'server.port (properties)' };\n    m = /server:\\s*\\n(?:[^\\n]*\\n)*?\\s*port:\\s*(\\d+)/im.exec(cfg);\n    if (m) return { value: m[1], determined: true, reason: null, source: 'server.port (yaml)' };\n    return { value: null, determined: false, reason: 'aucune propriété server.port trouvée dans le fichier de configuration', source: null };\n  },\n\n  describe(dockerfileVal, projectVal) {\n    return {\n      severity: 'ELEVE',\n      description: `Incohérence de port détectée par contrôle déterministe (RC-2) : le Dockerfile expose le port ${dockerfileVal.value} (${dockerfileVal.raw}), alors que l'application est configurée pour écouter sur le port ${projectVal.value} (${projectVal.source}).`,\n      suggestion: `Aligner les deux : soit changer EXPOSE ${dockerfileVal.value} en EXPOSE ${projectVal.value} dans le Dockerfile, soit changer server.port à ${dockerfileVal.value} dans la configuration applicative.`,\n    };\n  },\n};\n\n// ── RC-3 : cohérence artefact (Dockerfile COPY ↔ nom produit par le build Maven) ──\nconst RC3_ARTIFACT = {\n  id: 'RC-3',\n  name: 'Cohérence artefact (COPY ↔ artefact Maven)',\n  category: 'CAT-ARTIFACT',\n  projectSource: 'pom.xml',\n\n  extractDockerfile(dockerfile) {\n    const text = String(dockerfile || '');\n    const lines = text.split('\\n');\n    const fromIdx = [];\n    lines.forEach((l, i) => { if (/^\\s*FROM\\s+\\S+/i.test(l)) fromIdx.push(i); });\n    const stageStart = fromIdx.length ? fromIdx[fromIdx.length - 1] : 0;\n    const finalLines = lines.slice(stageStart);\n\n    // Dernière instruction COPY (pas --from=, celles-là copient entre stages,\n    // pas depuis le contexte de build) dont la source pointe vers un .jar.\n    let found = null;\n    finalLines.forEach((l, i) => {\n      const m = /^\\s*COPY\\s+(?!--from=)(\\S+\\.jar)\\s+\\S+/i.exec(l);\n      if (m) found = { raw: l.trim(), src: m[1], line: stageStart + i + 1 };\n    });\n\n    if (!found) {\n      return { value: null, determined: false, reason: \"aucune instruction COPY vers un .jar trouvée (dans l'étape finale)\", line: null, raw: null };\n    }\n    if (found.src.includes('*')) {\n      return { value: null, determined: false, reason: `chemin COPY avec wildcard (${found.src}) — nom de fichier exact non déterminable statiquement, build indisponible pour vérification`, line: found.line, raw: found.raw };\n    }\n    const basename = found.src.split('/').pop();\n    return { value: basename, determined: true, reason: null, line: found.line, raw: found.raw };\n  },\n\n  extractProject(projectFiles) {\n    const xml = projectFiles && projectFiles.pomXml;\n    if (!xml) return { value: null, determined: false, reason: 'pom.xml absent', source: null };\n\n    // Exclut <parent>...</parent> (artifactId/version du PARENT, pas du\n    // projet) ET tout ce qui suit <dependencies> (artifactId/version des\n    // DÉPENDANCES) — ne garde que la section d'identité du projet lui-même.\n    const withoutParent = xml.replace(/<parent>[\\s\\S]*?<\\/parent>/i, '');\n    const projectSection = withoutParent.split(/<dependencies>/i)[0];\n\n    // <build><finalName> a priorité s'il est déclaré et littéral (pas de\n    // placeholder ${...} non résolvable statiquement).\n    const finalNameM = /<finalName>\\s*([^<\\s]+)\\s*<\\/finalName>/i.exec(xml);\n    if (finalNameM) {\n      const finalName = finalNameM[1];\n      if (/\\$\\{/.test(finalName)) {\n        return { value: null, determined: false, source: 'build.finalName', reason: `<finalName> utilise un placeholder non résolvable statiquement (${finalName}) — build indisponible pour vérification` };\n      }\n      return { value: `${finalName}.jar`, determined: true, reason: null, source: 'build.finalName' };\n    }\n\n    // Convention Maven standard : <artifactId>-<version>.jar\n    const artifactIdM = /<artifactId>\\s*([^<\\s]+)\\s*<\\/artifactId>/i.exec(projectSection);\n    const versionM = /<version>\\s*([^<\\s]+)\\s*<\\/version>/i.exec(projectSection);\n    if (!artifactIdM || !versionM) {\n      return { value: null, determined: false, source: null, reason: \"artifactId et/ou version du projet non trouvés dans ce pom.xml — nom d'artefact non déterminable, build indisponible pour vérification\" };\n    }\n    return { value: `${artifactIdM[1]}-${versionM[1]}.jar`, determined: true, reason: null, source: 'artifactId + version' };\n  },\n\n  describe(dockerfileVal, projectVal) {\n    return {\n      severity: 'CRITIQUE',\n      description: `Incohérence d'artefact détectée par contrôle déterministe (RC-3) : le Dockerfile copie \"${dockerfileVal.value}\" (${dockerfileVal.raw}), alors que le build Maven produira \"${projectVal.value}\" (${projectVal.source}).`,\n      suggestion: `Corriger le chemin COPY dans le Dockerfile pour qu'il pointe vers \"${projectVal.value}\", ou aligner artifactId/version/finalName du pom.xml sur le nom réellement produit.`,\n    };\n  },\n};\n\n// ─────────────────────────────────────────────────────────────────────────\n// REGISTRE — pour ajouter un futur RC-N : définir un objet suivant le même\n// contrat puis l'ajouter ici. runCoherenceChecks() ne change JAMAIS.\n// ─────────────────────────────────────────────────────────────────────────\nconst CHECKS = [RC1_JDK_VERSION, RC2_PORT, RC3_ARTIFACT];\n\n// ── Exécution ────────────────────────────────────────────────────────────\nconst item = $input.first().json;\nconst dockerfile = String(item.dockerfile || '');\nconst pomXml = String(item.pomXml || '');\nconst appConfig = String(item.appConfig || '');\n\nconst { findings: rcFindings, notes: rcNotes, details: rcDetails } =\n  runCoherenceChecks(CHECKS, { dockerfile, projectFiles: { pomXml, appConfig } });\n\n// ── CAT-IMAGE (règle déterministe hors patron RC — ne compare pas deux\n// fichiers, juste une règle sur le Dockerfile seul) : obsolescence connue +\n// tag non pinné. Réutilise l'extraction RC-1 pour éviter de re-parser FROM.\nconst OBSOLETE_JDK_VERSIONS = new Set(['6', '7', '8']);\nconst KNOWN_JDK_IMAGES = /(eclipse-temurin|openjdk|adoptopenjdk|amazoncorretto|zulu-openjdk|azul\\/zulu-openjdk)/i;\nconst df = RC1_JDK_VERSION.extractDockerfile(dockerfile);\n\nconst imageFindings = [];\nif (df.determined && OBSOLETE_JDK_VERSIONS.has(df.value)) {\n  imageFindings.push({\n    id: 'DF-IMG-JDK',\n    category: 'CAT-IMAGE',\n    severity: 'CRITIQUE',\n    ligne: df.line,\n    description: `Version JDK obsolète détectée par contrôle déterministe : ${df.raw} embarque le JDK ${df.value}, en fin de support étendu.`,\n    suggestion: `Migrer vers une image basée sur un JDK/JRE LTS supporté (17 ou 21) — ex: ${df.image || 'eclipse-temurin'}:17-jre-jammy.`,\n    deterministic: true,\n  });\n}\nif (df.image && KNOWN_JDK_IMAGES.test(df.image) && (!df.tag || df.tag === 'latest')) {\n  imageFindings.push({\n    id: 'DF-IMG-PIN',\n    category: 'CAT-IMAGE',\n    severity: 'ELEVE',\n    ligne: df.line,\n    description: `Image de base non pinnée détectée par contrôle déterministe : ${df.raw} n'a pas de tag explicite ou utilise \"latest\", ce qui rend le build non reproductible.`,\n    suggestion: `Épingler un tag de version explicite (idéalement avec digest SHA256) plutôt que \"latest\".`,\n    deterministic: true,\n  });\n}\n\n// ── CAT-SECURITY (déterministe, hors patron RC — même logique que le bloc\n// CAT-IMAGE ci-dessus : règles sur le Dockerfile seul, pas de comparaison\n// à un fichier projet) : USER absent, HEALTHCHECK absent, secret en dur.\n// Scope volontairement limité à ces 3 faits nets — apt-get sans nettoyage et\n// ADD vs COPY restent au jugement du LLM (contexte nécessaire, pas un simple\n// pattern binaire).\nconst fromIdxAll = [];\ndockerfile.split('\\n').forEach((l, i) => { if (/^\\s*FROM\\s+\\S+/i.test(l)) fromIdxAll.push(i); });\nconst allLines = dockerfile.split('\\n');\nconst stageStartSec = fromIdxAll.length ? fromIdxAll[fromIdxAll.length - 1] : 0;\nconst finalStageLines = allLines.slice(stageStartSec);\n\n// Ligne d'ancrage pour un finding d'ABSENCE : la dernière ligne non vide de\n// l'étape finale (\"ajouter après cette ligne\") — jamais une ligne vide ou\n// une estimation.\nfunction lastMeaningfulLine(lines, offset) {\n  for (let i = lines.length - 1; i >= 0; i--) {\n    if (lines[i].trim().length > 0) return offset + i + 1;\n  }\n  return offset + lines.length;\n}\nconst anchorLine = lastMeaningfulLine(finalStageLines, stageStartSec);\n\nconst securityFindings = [];\n\nconst hasUser = finalStageLines.some((l) => /^\\s*USER\\s+\\S+/i.test(l));\nif (!hasUser) {\n  securityFindings.push({\n    id: 'DF-SEC-USER',\n    category: 'CAT-SECURITY',\n    severity: 'CRITIQUE',\n    ligne: anchorLine,\n    description: \"Absence d'instruction USER détectée par contrôle déterministe : aucune instruction USER dans l'étape finale, le conteneur s'exécute donc en tant que root par défaut.\",\n    suggestion: \"Ajouter avant l'ENTRYPOINT/CMD : 'RUN addgroup --system appgroup && adduser --system --ingroup appgroup appuser' puis 'USER appuser'.\",\n    deterministic: true,\n  });\n}\n\n// HEALTHCHECK NONE compte comme PRÉSENT — c'est un choix explicite de\n// l'auteur, pas un oubli, jamais traité comme une absence.\nconst hasHealthcheck = finalStageLines.some((l) => /^\\s*HEALTHCHECK\\s+/i.test(l));\nif (!hasHealthcheck) {\n  securityFindings.push({\n    id: 'DF-SEC-HEALTHCHECK',\n    category: 'CAT-SECURITY',\n    severity: 'ELEVE',\n    ligne: anchorLine,\n    description: \"Absence d'instruction HEALTHCHECK détectée par contrôle déterministe : aucune instruction HEALTHCHECK dans l'étape finale, Docker/l'orchestrateur ne peut pas détecter un conteneur défaillant.\",\n    suggestion: \"Ajouter avant l'ENTRYPOINT/CMD : 'HEALTHCHECK --interval=30s --timeout=5s --retries=3 CMD curl -f http://localhost:<port>/actuator/health || exit 1' (adapter le endpoint).\",\n    deterministic: true,\n  });\n}\n\n// Secret en dur : ENV/ARG dont le NOM évoque un secret ET porteur d'une\n// valeur littérale sur la même ligne — scanne TOUT le Dockerfile (pas\n// seulement l'étape finale : une valeur en dur dans une étape builder reste\n// visible dans l'historique/cache de build, donc un risque réel aussi).\nconst SECRET_VAR_RE = /(password|passwd|pwd|secret|token|api[_-]?key|access[_-]?key|private[_-]?key|credential)/i;\nallLines.forEach((l, i) => {\n  const eqForm = /^\\s*(ENV|ARG)\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*=\\s*(\\S.*)$/i.exec(l);\n  const spaceForm = !eqForm ? /^\\s*(ENV)\\s+([A-Za-z_][A-Za-z0-9_]*)\\s+(\\S.*)$/i.exec(l) : null;\n  const m = eqForm || spaceForm;\n  if (!m) return;\n  const [, instr, varName, varValue] = m;\n  if (!SECRET_VAR_RE.test(varName) || !varValue || !varValue.trim()) return;\n  securityFindings.push({\n    id: `DF-SEC-SECRET-${i + 1}`,\n    category: 'CAT-SECURITY',\n    severity: 'CRITIQUE',\n    ligne: i + 1,\n    description: `Valeur potentiellement sensible en dur détectée par contrôle déterministe : la variable \"${varName}\" (${instr}) est définie avec une valeur littérale directement dans le Dockerfile.`,\n    suggestion: `Ne jamais écrire de secret en dur dans le Dockerfile — injecter \"${varName}\" au runtime (variable d'environnement du conteneur, secret manager) ou via --build-arg sans valeur par défaut sensible.`,\n    deterministic: true,\n  });\n});\n\n// ADD utilisé pour un fichier LOCAL simple : mauvaise pratique nette — ADD\n// n'est justifié que pour une URL distante (téléchargement) ou une archive\n// locale connue (extraction automatique). Scanne tout le Dockerfile (toutes\n// étapes), --chown/--chmod ignorés avant la paire source/destination.\nconst ARCHIVE_EXT_RE = /\\.(tar|tar\\.gz|tgz|tar\\.bz2|tbz2|tar\\.xz|txz|zip)$/i;\nallLines.forEach((l, i) => {\n  const m = /^\\s*ADD\\s+(?:--\\S+\\s+)*(\\S+)\\s+\\S+/i.exec(l);\n  if (!m) return;\n  const src = m[1];\n  const isRemoteUrl = /^https?:\\/\\//i.test(src);\n  const isKnownArchive = ARCHIVE_EXT_RE.test(src);\n  if (isRemoteUrl || isKnownArchive) return; // usage légitime d'ADD, jamais signalé\n  securityFindings.push({\n    id: `DF-SEC-ADD-${i + 1}`,\n    category: 'CAT-SECURITY',\n    severity: 'FAIBLE',\n    ligne: i + 1,\n    description: `Utilisation d'ADD pour un fichier local détectée par contrôle déterministe : \"${src}\" n'est ni une URL distante ni une archive reconnue (extraction automatique) — ADD n'apporte alors aucun bénéfice par rapport à COPY, dont le comportement est strictement prévisible.`,\n    suggestion: `Remplacer par COPY : le comportement d'ADD (extraction automatique, gestion des URL) n'est pas nécessaire ici et peut surprendre.`,\n    deterministic: true,\n  });\n});\n\nreturn [{\n  json: {\n    ...item,\n    deterministicChecks: {\n      runtimeCoherence: { checks: rcDetails, notes: rcNotes },\n      findings: [...rcFindings, ...imageFindings, ...securityFindings],\n    },\n  },\n}];\n"
-      },
-      "id": "a1b2c3d4-1111-4a11-8111-100000000010",
-      "name": "Runtime Coherence Checker",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        11190,
-        7536
-      ]
-    },
-    {
-      "id": "d5e6f7a8-4444-4d44-8444-400000000001",
-      "name": "Webhook - Dockerfile Apply",
-      "type": "n8n-nodes-base.webhook",
-      "typeVersion": 2,
-      "position": [
-        10624,
-        8300
-      ],
-      "webhookId": "d5e6f7a8-4444-4d44-8444-500000000001",
-      "parameters": {
-        "httpMethod": "POST",
-        "path": "dockerfile-apply",
-        "responseMode": "responseNode",
-        "options": {}
-      }
-    },
-    {
-      "id": "d5e6f7a8-4444-4d44-8444-400000000002",
-      "name": "Prepare - Apply Body",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        10848,
-        8300
-      ],
-      "parameters": {
-        "jsCode": "const body = $input.first().json.body || $input.first().json;\nconst dockerfile = String(body.dockerfile || '').trim();\nconst findings = Array.isArray(body.findings) ? body.findings : [];\nconst context = body.context || {};\n\nif (!dockerfile || dockerfile.length < 20) return [{ json: { error: 'INVALID_INPUT', message: 'Dockerfile vide ou trop court (min 20 caractères)' } }];\nif (dockerfile.length > 30000) return [{ json: { error: 'TOO_LARGE', message: 'Dockerfile trop volumineux (max 30 Ko)' } }];\nif (findings.length === 0) return [{ json: { error: 'NOTHING_TO_APPLY', message: 'Aucun finding sélectionné : rien à appliquer' } }];\n\nconst numberLines = (text) => text.split('\\n').map((l, i) => `${i + 1}: ${l}`).join('\\n');\nconst dockerfileNumbered = numberLines(dockerfile);\n\nreturn [{ json: {\n  dockerfile,\n  dockerfileNumbered,\n  findings,\n  pomXml: String(context.pomXml || ''),\n  appConfig: String(context.appConfig || ''),\n} }];\n"
-      }
-    },
-    {
-      "id": "d5e6f7a8-4444-4d44-8444-400000000003",
-      "name": "Apply Input Valid ?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
-      "position": [
-        11072,
-        8300
-      ],
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 2
-          },
-          "conditions": [
-            {
-              "id": "d5e6f7a8-if-cond-1",
-              "leftValue": "={{ $json.error }}",
-              "rightValue": "",
-              "operator": {
-                "type": "string",
-                "operation": "notExists",
-                "singleValue": true
-              }
+              "node": "Send Result to Backend",
+              "type": "main",
+              "index": 0
             }
           ],
-          "combinator": "and"
-        },
-        "options": {}
-      }
-    },
-    {
-      "id": "d5e6f7a8-4444-4d44-8444-400000000004",
-      "name": "Build Apply Prompt",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        11296,
-        8220
-      ],
-      "parameters": {
-        "jsCode": "const d = $input.first().json;\nconst dockerfileNumbered = d.dockerfileNumbered;\nconst findings = Array.isArray(d.findings) ? d.findings : [];\nconst pomXml = d.pomXml || '';\nconst appConfig = d.appConfig || '';\n\nconst fmtFinding = (f) => `- [${f.id || '?'}] (${f.category || '?'}, ligne ${f.ligne ?? '?'}) ${f.description || ''}\\n    → Correction attendue : ${f.suggestion || ''}`;\nconst fmtList = findings.length ? findings.map(fmtFinding).join('\\n') : '- (aucune)';\nconst idsList = findings.map((f) => f.id).filter(Boolean).join(', ') || '(aucune)';\n\nconst contextBlock = (pomXml || appConfig)\n  ? `\\nCONTEXTE (fourni UNIQUEMENT pour comprendre certains findings — ne fait PAS partie de ta sortie, tu ne dois JAMAIS le modifier ni le recopier) :\\n${pomXml ? `pom.xml :\\n\\`\\`\\`xml\\n${pomXml}\\n\\`\\`\\`\\n` : ''}${appConfig ? `configuration applicative :\\n\\`\\`\\`\\n${appConfig}\\n\\`\\`\\`\\n` : ''}`\n  : '';\n\nconst systemPrompt = `Tu es un expert Docker et sécurité des conteneurs (15 ans d'expérience), spécialisé DevSecOps.\nTa mission : produire une version CORRIGÉE d'un Dockerfile en appliquant EXACTEMENT et UNIQUEMENT les corrections listées ci-dessous, sans jamais en introduire d'autres.\nRéponds UNIQUEMENT en JSON valide — pas de markdown, pas de backticks. Commence par { et termine par }.\nLANGUE : les textes (description) en FRANÇAIS. Les instructions Docker restent en anglais standard.\n\nRÈGLES IMPÉRATIVES :\n1. Applique SEULEMENT les corrections listées ci-dessous, une par une, à la ligne indiquée. N'en ajoute AUCUNE autre, même si tu repères d'autres problèmes en lisant le fichier — ce n'est pas ton rôle d'en juger, seules les corrections fournies sont autorisées.\n2. TOUTE ligne du Dockerfile non concernée par une correction listée DOIT rester STRICTEMENT IDENTIQUE à l'original (même texte, même ordre, mêmes commentaires). Ne modifie JAMAIS sans qu'une correction listée le demande explicitement : la ligne COPY qui copie l'artefact applicatif, EXPOSE, ENTRYPOINT/CMD, WORKDIR.\n3. Le fichier produit doit être COMPLET et directement utilisable — aucun \"...\", aucune section omise, aucune troncature.\n4. N'invente RIEN de non vérifiable : n'écris JAMAIS de valeur fictive (placeholder de digest SHA256, hash inventé) ni de commande non confirmée par le contenu fourni (ex: un wrapper de build comme ./mvnw dont l'existence n'est prouvée nulle part). Si une correction ne peut être appliquée avec certitude SANS deviner une telle valeur ou commande, N'APPLIQUE PAS cette correction précise — indique-le dans changes[].description comme nécessitant une intervention manuelle, plutôt que d'inventer.\n5. Si une correction nécessiterait normalement de modifier un fichier AUTRE que le Dockerfile (ex: pom.xml, application.properties), n'y touche pas : ta sortie est UNIQUEMENT le Dockerfile corrigé.\n\nFORMAT EXACT :\n{\"optimizedDockerfile\":\"<FICHIER COMPLET>\",\"changes\":[{\"ref\":\"<id de la correction>\",\"description\":\"<modification appliquée en une phrase, ou 'non appliquée : nécessite une intervention manuelle' si applicable>\"}],\"confidence\":<0.0-1.0>}`;\n\nconst userContent = `Voici le Dockerfile ORIGINAL à corriger.\n\nCORRECTIONS À APPLIQUER (et rien d'autre — toute autre ligne reste identique) :\n${fmtList}\n${contextBlock}\nDOCKERFILE ORIGINAL (numéroté, pour référence — ta sortie ne doit PAS contenir les numéros de ligne) :\n\\`\\`\\`dockerfile\n${dockerfileNumbered}\n\\`\\`\\`\n\nRAPPEL FINAL avant de répondre : seules ces corrections sont autorisées — ${idsList}. Relis le fichier que tu produis : chaque ligne modifiée ou ajoutée doit être justifiable par UNE de ces corrections précises, jamais par une initiative personnelle.`;\n\nreturn [{ json: { apiBody: { model: 'claude-sonnet-4-6', max_tokens: 8000, temperature: 0, system: systemPrompt, messages: [{ role: 'user', content: userContent }] } } }];\n"
-      }
-    },
-    {
-      "id": "d5e6f7a8-4444-4d44-8444-400000000005",
-      "name": "Dockerfile Apply Agent",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        11520,
-        8220
-      ],
-      "retryOnFail": true,
-      "maxTries": 3,
-      "waitBetweenTries": 3000,
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "Ee9vVedmz84oXg5W",
-          "name": "Claude API"
-        }
-      },
-      "onError": "continueErrorOutput",
-      "parameters": {
-        "method": "POST",
-        "url": "https://api.anthropic.com/v1/messages",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+          [
             {
-              "name": "anthropic-version",
-              "value": "2023-06-01"
-            },
-            {
-              "name": "content-type",
-              "value": "application/json"
+              "node": "Format Parse Error",
+              "type": "main",
+              "index": 0
             }
           ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify($json.apiBody) }}",
-        "options": {
-          "timeout": 180000
-        }
-      }
-    },
-    {
-      "id": "d5e6f7a8-4444-4d44-8444-400000000006",
-      "name": "Parse Apply Output",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        11744,
-        8220
-      ],
-      "parameters": {
-        "jsCode": "const response = $input.first().json;\nconst fail = (msg, raw) => [{ json: { success: false, error: 'PARSE_ERROR', message: msg, raw: String(raw || '').substring(0, 500) } }];\nif (response.error) {\n  const em = response.message || (response.error && (response.error.message || (typeof response.error === 'string' ? response.error : JSON.stringify(response.error)))) || 'Erreur technique Apply Agent';\n  return [{ json: { success: false, error: 'AGENT_ERROR', message: String(em) } }];\n}\nconst content = response.content?.[0]?.text || '';\nif (!content) return fail(\"Réponse vide de l'agent de remédiation\", JSON.stringify(response).substring(0, 300));\nlet clean = content.replace(/```json\\s*/gi, '').replace(/```\\s*/gi, '').trim();\nconst s = clean.indexOf('{'), e = clean.lastIndexOf('}');\nif (s === -1 || e === -1) return fail('Aucun JSON trouvé', clean);\nlet p;\ntry { p = JSON.parse(clean.substring(s, e + 1)); }\ncatch (err) { return fail('JSON invalide : ' + err.message, clean); }\nif (!p.optimizedDockerfile || String(p.optimizedDockerfile).length < 20) return fail('Fichier corrigé absent ou trop court', clean);\n\nreturn [{ json: {\n  success: true,\n  optimizedDockerfile: String(p.optimizedDockerfile),\n  changes: Array.isArray(p.changes) ? p.changes : [],\n  confidence: p.confidence,\n} }];\n"
-      }
-    },
-    {
-      "id": "d5e6f7a8-4444-4d44-8444-400000000007",
-      "name": "Format Apply Input Error",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        11296,
-        8460
-      ],
-      "parameters": {
-        "jsCode": "const j = $input.first().json;\nreturn [{ json: { success: false, error: j.error, message: j.message } }];\n"
-      }
-    },
-    {
-      "id": "d5e6f7a8-4444-4d44-8444-400000000008",
-      "name": "Format Apply Agent Error",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        11744,
-        8460
-      ],
-      "parameters": {
-        "jsCode": "const j = $input.first().json;\nconst em = (j.error && j.error.message) ? j.error.message : (String(j.error) || 'Erreur inconnue');\nreturn [{ json: {\n  success: false,\n  error: 'AGENT_ERROR',\n  message: \"Agent de remédiation a échoué (rate limit / erreur API Anthropic)\",\n  detail: em,\n} }];\n"
-      }
-    },
-    {
-      "id": "d5e6f7a8-4444-4d44-8444-400000000009",
-      "name": "Respond - Apply Agent",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.1,
-      "position": [
-        13984,
-        8220
-      ],
-      "parameters": {
-        "respondWith": "allIncomingItems",
-        "options": {}
-      }
-    },
-    {
-      "id": "e6f7a8b9-5555-4e55-8555-600000000001",
-      "name": "Apply Gate — Docker Déterministe",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        11968,
-        8220
-      ],
-      "parameters": {
-        "jsCode": "const parsed = $input.first().json;\n\n// Si Parse Apply Output a déjà échoué (JSON illisible, agent en erreur),\n// rien à gater — le gate ne s'applique qu'à une sortie agent reçue.\nif (!parsed.success) {\n  return [{ json: { ...parsed, gateOk: false, violations: [{ family: 'PRE', message: parsed.message || 'Agent Apply en échec, gate non exécuté' }], classification: [] } }];\n}\n\nconst original = String(($('Prepare - Apply Body').first().json || {}).dockerfile || '');\nconst findings = Array.isArray(($('Prepare - Apply Body').first().json || {}).findings) ? $('Prepare - Apply Body').first().json.findings : [];\nconst optimized = String(parsed.optimizedDockerfile || '');\nconst changes = Array.isArray(parsed.changes) ? parsed.changes : [];\n\nconst violations = [];\n\n// ─────────────────────────────────────────────────────────────────────\n// A — VALIDITÉ SYNTAXIQUE (heuristique déterministe : nécessaire, pas un\n// vrai parseur Docker complet — fail-closed sur tout doute).\n// ─────────────────────────────────────────────────────────────────────\nconst INSTR_RE = /^\\s*(FROM|RUN|CMD|LABEL|EXPOSE|ENV|ADD|COPY|ENTRYPOINT|VOLUME|USER|WORKDIR|ARG|ONBUILD|STOPSIGNAL|HEALTHCHECK|SHELL)\\b/i;\nconst optLines = optimized.split('\\n');\nlet prevContinuation = false;\nconst stageNames = new Set();\noptLines.forEach((line, i) => {\n  const trimmed = line.trim();\n  if (!trimmed || trimmed.startsWith('#')) { prevContinuation = false; return; }\n  if (prevContinuation) { prevContinuation = trimmed.endsWith('\\\\'); return; }\n  if (!INSTR_RE.test(line)) {\n    violations.push({ family: 'A', message: `Ligne ${i + 1} : instruction Docker non reconnue (\"${trimmed.substring(0, 60)}\")` });\n  }\n  const fromMatch = /^\\s*FROM\\s+\\S+\\s+AS\\s+(\\S+)/i.exec(line);\n  if (fromMatch) stageNames.add(fromMatch[1].toLowerCase());\n  prevContinuation = trimmed.endsWith('\\\\');\n});\nif (!/^\\s*FROM\\s+\\S+/im.test(optimized)) {\n  violations.push({ family: 'A', message: 'Aucune instruction FROM trouvée dans le Dockerfile corrigé' });\n}\noptLines.forEach((line, i) => {\n  const m = /COPY\\s+--from=(\\S+)/i.exec(line);\n  if (m && !/^\\d+$/.test(m[1]) && !stageNames.has(m[1].toLowerCase())) {\n    violations.push({ family: 'A', message: `Ligne ${i + 1} : COPY --from=\"${m[1]}\" référence un stage jamais déclaré (FROM ... AS ${m[1]})` });\n  }\n});\n\n// ─────────────────────────────────────────────────────────────────────\n// Helpers — ré-implémentent volontairement (un node Code n8n ne peut pas\n// importer une fonction d'un autre node) la même logique que Runtime\n// Coherence Checker / CAT-IMAGE / CAT-SECURITY. À garder synchronisé si\n// ces détecteurs évoluent.\n// ─────────────────────────────────────────────────────────────────────\nfunction finalStageOf(text) {\n  const lines = text.split('\\n');\n  const fromIdx = [];\n  lines.forEach((l, i) => { if (/^\\s*FROM\\s+\\S+/i.test(l)) fromIdx.push(i); });\n  const stageStart = fromIdx.length ? fromIdx[fromIdx.length - 1] : 0;\n  return { lines: lines.slice(stageStart) };\n}\nfunction extractFromTag(text) {\n  const { lines } = finalStageOf(text);\n  const fromLine = lines.find((l) => /^\\s*FROM\\s+\\S+/i.test(l));\n  if (!fromLine) return null;\n  const ref = fromLine.replace(/^\\s*FROM\\s+/i, '').trim().split(/\\s+/)[0];\n  const after = ref.split('/').pop();\n  let image = after, tag = null;\n  if (after.includes(':')) { const idx = after.indexOf(':'); image = after.slice(0, idx); tag = after.slice(idx + 1); }\n  const m = tag ? /^(\\d+)/.exec(tag) : null;\n  return { raw: ref, image, tag, majorVersion: m ? m[1] : null };\n}\nfunction hasUser(text) { return finalStageOf(text).lines.some((l) => /^\\s*USER\\s+\\S+/i.test(l)); }\nfunction hasHealthcheck(text) { return finalStageOf(text).lines.some((l) => /^\\s*HEALTHCHECK\\s+/i.test(l)); }\nfunction extractExposePort(text) {\n  const { lines } = finalStageOf(text);\n  for (const l of lines) { const m = /^\\s*EXPOSE\\s+(\\d+)/i.exec(l); if (m) return m[1]; }\n  return null;\n}\nfunction extractCopyJar(text) {\n  const { lines } = finalStageOf(text);\n  let found = null;\n  lines.forEach((l) => { if (/^\\s*COPY\\s+/i.test(l) && /\\.jar(\\s|$)/i.test(l)) found = l.trim(); });\n  return found;\n}\nfunction extractEntrypointOrCmd(text) {\n  const m = /^\\s*(ENTRYPOINT|CMD)\\s+.+$/im.exec(text);\n  return m ? m[0].trim() : null;\n}\n\n// ─────────────────────────────────────────────────────────────────────\n// B — CORRECTIONS PRÉSENTES (uniquement les findings ayant un détecteur\n// déterministe rejouable) + D — CLASSIFICATION DE CONFIANCE.\n// ─────────────────────────────────────────────────────────────────────\nconst classification = [];\nconst optFrom = extractFromTag(optimized);\nconst DETERMINISTIC_IDS = new Set(['DF-IMG-JDK', 'DF-IMG-PIN', 'DF-SEC-USER', 'DF-SEC-HEALTHCHECK']);\n\nfor (const f of findings) {\n  const id = f.id || f.ref || '?';\n  const change = changes.find((c) => c.ref === id);\n  const declinedByAgent = change && /non appliqu|intervention manuelle|revue manuelle/i.test(change.description || '');\n\n  if (declinedByAgent) {\n    classification.push({ id, status: 'REFUSÉ', reason: change.description });\n    continue;\n  }\n\n  if (id === 'DF-IMG-JDK') {\n    // Propriété, pas une liste d'exclusion : le stage final doit être sur\n    // une version LTS supportée (>=17), pas juste \"hors de {6,7,8}\" — une\n    // version 9-16 (non-LTS, non obsolète au sens strict) ne doit PAS passer\n    // ce contrôle non plus.\n    const v = optFrom && optFrom.majorVersion ? parseInt(optFrom.majorVersion, 10) : NaN;\n    const ok = Number.isInteger(v) && v >= 17;\n    if (ok) classification.push({ id, status: 'SÛR', reason: `FROM du stage final = ${optFrom.raw} (Java ${v}, >= 17 LTS)` });\n    else { classification.push({ id, status: 'MANQUANT', reason: `FROM du stage final = ${optFrom ? optFrom.raw : '?'} — pas une version LTS >= 17 (ou indéterminable)` }); violations.push({ family: 'B', ref: id, message: `Correction ${id} absente : le stage final n'est pas sur une version Java >= 17 LTS` }); }\n    continue;\n  }\n  if (id === 'DF-IMG-PIN') {\n    const ok = !!(optFrom && optFrom.tag && optFrom.tag !== 'latest');\n    if (ok) classification.push({ id, status: 'SÛR', reason: `FROM final pinné sur le tag \"${optFrom.tag}\"` });\n    else { classification.push({ id, status: 'MANQUANT', reason: 'FROM final toujours non pinné' }); violations.push({ family: 'B', ref: id, message: `Correction ${id} absente : image toujours non pinnée` }); }\n    continue;\n  }\n  if (id === 'DF-SEC-USER') {\n    const ok = hasUser(optimized);\n    if (ok) classification.push({ id, status: 'SÛR', reason: \"USER présent dans l'étape finale\" });\n    else { classification.push({ id, status: 'MANQUANT', reason: 'USER toujours absent' }); violations.push({ family: 'B', ref: id, message: `Correction ${id} absente : USER non-root toujours manquant` }); }\n    continue;\n  }\n  if (id === 'DF-SEC-HEALTHCHECK') {\n    const ok = hasHealthcheck(optimized);\n    if (ok) classification.push({ id, status: 'SÛR', reason: \"HEALTHCHECK présent dans l'étape finale\" });\n    else { classification.push({ id, status: 'MANQUANT', reason: 'HEALTHCHECK toujours absent' }); violations.push({ family: 'B', ref: id, message: `Correction ${id} absente : HEALTHCHECK toujours manquant` }); }\n    continue;\n  }\n\n  // Pas de détecteur déterministe rejouable (jugement LLM : JDK-vs-JRE,\n  // digest, multi-stage, RC-1/2/3, apt-get, ADD subtil...) — jamais gaté\n  // sur B, seulement classé pour revue humaine.\n  if (change) classification.push({ id, status: 'INFÉRÉ', reason: change.description || 'Appliqué par jugement LLM, non re-vérifiable par du code' });\n  else classification.push({ id, status: 'MANQUANT', reason: \"Ni appliqué ni signalé comme écarté par l'agent\" });\n}\n\n// ─────────────────────────────────────────────────────────────────────\n// C — RIEN CASSÉ (comparaison original vs corrigé sur les instructions\n// essentielles). REJET si une instruction essentielle a disparu.\n// ─────────────────────────────────────────────────────────────────────\nconst origExpose = extractExposePort(original);\nconst optExpose = extractExposePort(optimized);\nif (origExpose && !optExpose) violations.push({ family: 'C', message: `EXPOSE ${origExpose} (présent dans l'original) a disparu du Dockerfile corrigé` });\n\nconst origCopyJar = extractCopyJar(original);\nconst optCopyJar = extractCopyJar(optimized);\nif (origCopyJar && !optCopyJar) violations.push({ family: 'C', message: `Le COPY de l'artefact .jar (\"${origCopyJar}\") a disparu du Dockerfile corrigé` });\n\nconst origEntry = extractEntrypointOrCmd(original);\nconst optEntry = extractEntrypointOrCmd(optimized);\nif (origEntry && !optEntry) violations.push({ family: 'C', message: `ENTRYPOINT/CMD (\"${origEntry}\") a disparu du Dockerfile corrigé` });\nelse if (origEntry && optEntry && origEntry !== optEntry) violations.push({ family: 'C', message: `ENTRYPOINT/CMD modifié sans qu'aucune correction ne le justifie : \"${origEntry}\" → \"${optEntry}\"` });\n\nconst gateOk = violations.length === 0;\n\nreturn [{ json: {\n  ...parsed,\n  gateOk,\n  violations,\n  classification,\n} }];\n"
-      }
-    },
-    {
-      "id": "f7a8b9c0-6666-4f66-8666-700000000001",
-      "name": "Gate OK ?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
-      "position": [
-        12192,
-        8220
-      ],
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "typeValidation": "loose",
-            "version": 2
-          },
-          "conditions": [
+        ]
+      },
+      "Format Input Error": {
+        "main": [
+          [
             {
-              "id": "f7a8b9c0-if-cond-1",
-              "leftValue": "={{ $json.gateOk }}",
-              "rightValue": true,
-              "operator": {
-                "type": "boolean",
-                "operation": "true",
-                "singleValue": true
-              }
+              "node": "Respond - Analysis",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Format Agent Error": {
+        "main": [
+          [
+            {
+              "node": "Send Error to Backend",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Format Parse Error": {
+        "main": [
+          [
+            {
+              "node": "Send Error to Backend",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Runtime Coherence Checker": {
+        "main": [
+          [
+            {
+              "node": "Dockerfile Optimizer Agent",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Webhook - Dockerfile Apply": {
+        "main": [
+          [
+            {
+              "node": "Authorize Backend Approval",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Prepare - Apply Body": {
+        "main": [
+          [
+            {
+              "node": "Apply Input Valid ?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Apply Input Valid ?": {
+        "main": [
+          [
+            {
+              "node": "Build Apply Prompt",
+              "type": "main",
+              "index": 0
             }
           ],
-          "combinator": "and"
-        },
-        "options": {}
-      }
-    },
-    {
-      "id": "f7a8b9c0-6666-4f66-8666-700000000002",
-      "name": "Prepare PR Body",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        12416,
-        8060
-      ],
-      "parameters": {
-        "jsCode": "const gate = $input.first().json;\nconst body = ($('Webhook - Dockerfile Apply').first().json.body) || {};\n\nlet owner = String(body.owner || '').trim();\nlet repo = String(body.repo || '').trim();\nif (repo.includes('/')) {\n  const parts = repo.split('/').filter(Boolean);\n  repo = parts.pop();\n  if (!owner && parts.length) owner = parts.pop();\n}\nconst filePath = String(body.filePath || 'Dockerfile').trim();\nconst baseBranch = String(body.baseBranch || 'main').trim();\n\nif (!owner || !repo) {\n  return [{ json: { ...gate, prError: 'INVALID_INPUT', prMessage: 'owner et repo sont requis pour créer la PR' } }];\n}\n\nconst classification = Array.isArray(gate.classification) ? gate.classification : [];\nconst sur = classification.filter((c) => c.status === 'SÛR');\nconst infere = classification.filter((c) => c.status === 'INFÉRÉ');\nconst refuse = classification.filter((c) => c.status === 'REFUSÉ');\nconst fmtList = (items) => (items.length ? items.map((c) => `- \\`${c.id}\\` — ${c.reason}`).join('\\n') : '- (aucune)');\n\nconst prBody = `Cette PR applique une remédiation Dockerfile générée par l'agent IA de la plateforme DevSecOps, **validée par un gate déterministe avant création** (aucune PR n'est créée si le gate rejette).\n\n## ✅ Corrections appliquées et vérifiées automatiquement (SÛR)\n${fmtList(sur)}\n\n## 👀 Corrections appliquées par jugement de l'agent — à RELIRE avant merge (INFÉRÉ)\nCes éléments ne sont pas re-vérifiables par du code déterministe.\n${fmtList(infere)}\n\n## ⛔ Corrections NON appliquées (REFUSÉ par l'agent lui-même)\n${fmtList(refuse)}\n\n---\n> Générée automatiquement par la plateforme DevSecOps (WF5 — remédiation Dockerfile). À relire avant merge.`;\n\nconst ts = new Date().toISOString().replace(/[:.]/g, '-').substring(0, 19);\nconst branchName = `ci/dockerfile-remediation-${ts}`;\n\nreturn [{ json: {\n  ...gate,\n  owner, repo, filePath, baseBranch, branchName,\n  commitMessage: 'ci: remédiation Dockerfile par agent IA (gate déterministe validé)',\n  prTitle: '🤖 Remédiation Dockerfile (agent IA, gate validé)',\n  prBody,\n} }];\n"
-      }
-    },
-    {
-      "id": "f7a8b9c0-6666-4f66-8666-700000000003",
-      "name": "PR Input Valid ?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
-      "position": [
-        12640,
-        8060
-      ],
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 2
-          },
-          "conditions": [
+          [
             {
-              "id": "f7a8b9c0-if-cond-2",
-              "leftValue": "={{ $json.prError }}",
-              "rightValue": "",
-              "operator": {
-                "type": "string",
-                "operation": "notExists",
-                "singleValue": true
-              }
+              "node": "Format Apply Input Error",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Build Apply Prompt": {
+        "main": [
+          [
+            {
+              "node": "Dockerfile Apply Agent",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Dockerfile Apply Agent": {
+        "main": [
+          [
+            {
+              "node": "Parse Apply Output",
+              "type": "main",
+              "index": 0
             }
           ],
-          "combinator": "and"
-        },
-        "options": {}
-      }
-    },
-    {
-      "id": "f7a8b9c0-6666-4f66-8666-700000000004",
-      "name": "Get Base SHA (Docker)",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        12864,
-        8060
-      ],
-      "credentials": {
-        "githubApi": {
-          "id": "YBO0vWrPlyoYx4Kr",
-          "name": "GitHub n8n"
-        }
-      },
-      "onError": "continueErrorOutput",
-      "parameters": {
-        "url": "=https://api.github.com/repos/{{ $('Prepare PR Body').first().json.owner }}/{{ $('Prepare PR Body').first().json.repo }}/git/ref/heads/{{ $('Prepare PR Body').first().json.baseBranch }}",
-        "authentication": "predefinedCredentialType",
-        "nodeCredentialType": "githubApi",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+          [
             {
-              "name": "X-GitHub-Api-Version",
-              "value": "2022-11-28"
+              "node": "Format Apply Agent Error",
+              "type": "main",
+              "index": 0
             }
           ]
-        },
-        "options": {}
-      }
-    },
-    {
-      "id": "f7a8b9c0-6666-4f66-8666-700000000005",
-      "name": "Create Branch (Docker)",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        13088,
-        8060
-      ],
-      "credentials": {
-        "githubApi": {
-          "id": "YBO0vWrPlyoYx4Kr",
-          "name": "GitHub n8n"
-        }
+        ]
       },
-      "parameters": {
-        "method": "POST",
-        "url": "=https://api.github.com/repos/{{ $('Prepare PR Body').first().json.owner }}/{{ $('Prepare PR Body').first().json.repo }}/git/refs",
-        "authentication": "predefinedCredentialType",
-        "nodeCredentialType": "githubApi",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+      "Parse Apply Output": {
+        "main": [
+          [
             {
-              "name": "X-GitHub-Api-Version",
-              "value": "2022-11-28"
+              "node": "Apply Gate — Docker Déterministe",
+              "type": "main",
+              "index": 0
             }
           ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={\n  \"ref\": \"refs/heads/{{ $('Prepare PR Body').first().json.branchName }}\",\n  \"sha\": \"{{ $json.object.sha }}\"\n}",
-        "options": {}
-      }
-    },
-    {
-      "id": "f7a8b9c0-6666-4f66-8666-700000000006",
-      "name": "Commit Dockerfile",
-      "type": "n8n-nodes-base.github",
-      "typeVersion": 1,
-      "position": [
-        13312,
-        8060
-      ],
-      "webhookId": "f7a8b9c0-6666-4f66-8666-800000000001",
-      "credentials": {
-        "githubApi": {
-          "id": "YBO0vWrPlyoYx4Kr",
-          "name": "GitHub n8n"
-        }
+        ]
       },
-      "parameters": {
-        "resource": "file",
-        "operation": "edit",
-        "owner": {
-          "__rl": true,
-          "mode": "name",
-          "value": "={{ $('Prepare PR Body').first().json.owner }}"
-        },
-        "repository": {
-          "__rl": true,
-          "mode": "name",
-          "value": "={{ $('Prepare PR Body').first().json.repo }}"
-        },
-        "filePath": "={{ $('Prepare PR Body').first().json.filePath }}",
-        "binaryData": "={{ false }}",
-        "fileContent": "={{ $('Apply Gate — Docker Déterministe').first().json.optimizedDockerfile }}",
-        "commitMessage": "={{ $('Prepare PR Body').first().json.commitMessage }}",
-        "additionalParameters": {
-          "branch": {
-            "branch": "={{ $('Prepare PR Body').first().json.branchName }}"
-          }
-        }
-      }
-    },
-    {
-      "id": "f7a8b9c0-6666-4f66-8666-700000000007",
-      "name": "Create Pull Request (Docker)",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        13536,
-        8060
-      ],
-      "credentials": {
-        "githubApi": {
-          "id": "YBO0vWrPlyoYx4Kr",
-          "name": "GitHub n8n"
-        }
-      },
-      "parameters": {
-        "method": "POST",
-        "url": "=https://api.github.com/repos/{{ $('Prepare PR Body').first().json.owner }}/{{ $('Prepare PR Body').first().json.repo }}/pulls",
-        "authentication": "predefinedCredentialType",
-        "nodeCredentialType": "githubApi",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+      "Format Apply Input Error": {
+        "main": [
+          [
             {
-              "name": "X-GitHub-Api-Version",
-              "value": "2022-11-28"
+              "node": "Respond - Apply Agent",
+              "type": "main",
+              "index": 0
             }
           ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={\n  \"title\": \"{{ $('Prepare PR Body').first().json.prTitle }}\",\n  \"head\": \"{{ $('Prepare PR Body').first().json.branchName }}\",\n  \"base\": \"{{ $('Prepare PR Body').first().json.baseBranch }}\",\n  \"body\": {{ JSON.stringify($('Prepare PR Body').first().json.prBody) }}\n}",
-        "options": {}
+        ]
+      },
+      "Format Apply Agent Error": {
+        "main": [
+          [
+            {
+              "node": "Respond - Apply Agent",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Apply Gate — Docker Déterministe": {
+        "main": [
+          [
+            {
+              "node": "Gate OK ?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Gate OK ?": {
+        "main": [
+          [
+            {
+              "node": "Prepare PR Body",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Format Gate Rejected",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Prepare PR Body": {
+        "main": [
+          [
+            {
+              "node": "PR Input Valid ?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "PR Input Valid ?": {
+        "main": [
+          [
+            {
+              "node": "Get Base SHA (Docker)",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Format PR Input Error",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Get Base SHA (Docker)": {
+        "main": [
+          [
+            {
+              "node": "Create Branch (Docker)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Create Branch (Docker)": {
+        "main": [
+          [
+            {
+              "node": "Commit Dockerfile",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Commit Dockerfile": {
+        "main": [
+          [
+            {
+              "node": "Create Pull Request (Docker)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Create Pull Request (Docker)": {
+        "main": [
+          [
+            {
+              "node": "Format Apply PR Result",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Format Apply PR Result": {
+        "main": [
+          [
+            {
+              "node": "Respond - Apply Agent",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Format Gate Rejected": {
+        "main": [
+          [
+            {
+              "node": "Respond - Apply Agent",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Format PR Input Error": {
+        "main": [
+          [
+            {
+              "node": "Respond - Apply Agent",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Authorize Backend Approval": {
+        "main": [
+          [
+            {
+              "node": "Prepare - Apply Body",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
       }
     },
-    {
-      "id": "f7a8b9c0-6666-4f66-8666-700000000008",
-      "name": "Format Apply PR Result",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        13760,
-        8060
-      ],
-      "parameters": {
-        "jsCode": "const pr = $input.first().json;\nconst gate = $('Apply Gate — Docker Déterministe').first().json;\nconst branch = $('Prepare PR Body').first().json.branchName;\nreturn [{ json: {\n  success: true,\n  gateOk: true,\n  prUrl: pr.html_url || pr.url || '',\n  prNumber: pr.number || null,\n  branch,\n  classification: gate.classification,\n  message: 'Pull Request créée avec succès',\n} }];\n"
-      }
+    "active": true,
+    "settings": {
+      "executionOrder": "v1",
+      "binaryMode": "separate"
     },
-    {
-      "id": "f7a8b9c0-6666-4f66-8666-700000000009",
-      "name": "Format Gate Rejected",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        12416,
-        8380
-      ],
-      "parameters": {
-        "jsCode": "const gate = $input.first().json;\nreturn [{ json: {\n  success: false,\n  gateOk: false,\n  error: 'GATE_REJECTED',\n  message: 'Le gate déterministe a rejeté la correction — aucune PR créée.',\n  violations: gate.violations,\n  classification: gate.classification || [],\n} }];\n"
-      }
+    "meta": {
+      "templateCredsSetupCompleted": true
     },
-    {
-      "id": "f7a8b9c0-6666-4f66-8666-700000000010",
-      "name": "Format PR Input Error",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        12864,
-        8380
-      ],
-      "parameters": {
-        "jsCode": "const j = $input.first().json;\nreturn [{ json: { success: false, error: j.prError, message: j.prMessage } }];\n"
-      }
-    }
-  ],
-  "connections": {
-    "Webhook - Dockerfile Fetch": {
-      "main": [
-        [
-          {
-            "node": "Prepare - Fetch Body",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Prepare - Fetch Body": {
-      "main": [
-        [
-          {
-            "node": "Fetch Valid ?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Fetch Valid ?": {
-      "main": [
-        [
-          {
-            "node": "Fetch Dockerfile from Git",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Format Fetch Error",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Fetch Dockerfile from Git": {
-      "main": [
-        [
-          {
-            "node": "Format Fetch Result",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Format Fetch Error",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Format Fetch Result": {
-      "main": [
-        [
-          {
-            "node": "Respond - Fetch",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Format Fetch Error": {
-      "main": [
-        [
-          {
-            "node": "Respond - Fetch",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Webhook - Dockerfile Optimize": {
-      "main": [
-        [
-          {
-            "node": "Prepare - Optimizer Body",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Prepare - Optimizer Body": {
-      "main": [
-        [
-          {
-            "node": "Input Valid ?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Input Valid ?": {
-      "main": [
-        [
-          {
-            "node": "Runtime Coherence Checker",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Format Input Error",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Dockerfile Optimizer Agent": {
-      "main": [
-        [
-          {
-            "node": "Parse - Optimizer Output",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Format Agent Error",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Parse - Optimizer Output": {
-      "main": [
-        [
-          {
-            "node": "Respond - Analysis",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Send Result to Backend",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Format Parse Error",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Format Input Error": {
-      "main": [
-        [
-          {
-            "node": "Respond - Analysis",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Format Agent Error": {
-      "main": [
-        [
-          {
-            "node": "Send Error to Backend",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Format Parse Error": {
-      "main": [
-        [
-          {
-            "node": "Send Error to Backend",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Runtime Coherence Checker": {
-      "main": [
-        [
-          {
-            "node": "Dockerfile Optimizer Agent",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Webhook - Dockerfile Apply": {
-      "main": [
-        [
-          {
-            "node": "Prepare - Apply Body",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Prepare - Apply Body": {
-      "main": [
-        [
-          {
-            "node": "Apply Input Valid ?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Apply Input Valid ?": {
-      "main": [
-        [
-          {
-            "node": "Build Apply Prompt",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Format Apply Input Error",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Build Apply Prompt": {
-      "main": [
-        [
-          {
-            "node": "Dockerfile Apply Agent",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Dockerfile Apply Agent": {
-      "main": [
-        [
-          {
-            "node": "Parse Apply Output",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Format Apply Agent Error",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Parse Apply Output": {
-      "main": [
-        [
-          {
-            "node": "Apply Gate — Docker Déterministe",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Format Apply Input Error": {
-      "main": [
-        [
-          {
-            "node": "Respond - Apply Agent",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Format Apply Agent Error": {
-      "main": [
-        [
-          {
-            "node": "Respond - Apply Agent",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Apply Gate — Docker Déterministe": {
-      "main": [
-        [
-          {
-            "node": "Gate OK ?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Gate OK ?": {
-      "main": [
-        [
-          {
-            "node": "Prepare PR Body",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Format Gate Rejected",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Prepare PR Body": {
-      "main": [
-        [
-          {
-            "node": "PR Input Valid ?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "PR Input Valid ?": {
-      "main": [
-        [
-          {
-            "node": "Get Base SHA (Docker)",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Format PR Input Error",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Get Base SHA (Docker)": {
-      "main": [
-        [
-          {
-            "node": "Create Branch (Docker)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Create Branch (Docker)": {
-      "main": [
-        [
-          {
-            "node": "Commit Dockerfile",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Commit Dockerfile": {
-      "main": [
-        [
-          {
-            "node": "Create Pull Request (Docker)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Create Pull Request (Docker)": {
-      "main": [
-        [
-          {
-            "node": "Format Apply PR Result",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Format Apply PR Result": {
-      "main": [
-        [
-          {
-            "node": "Respond - Apply Agent",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Format Gate Rejected": {
-      "main": [
-        [
-          {
-            "node": "Respond - Apply Agent",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Format PR Input Error": {
-      "main": [
-        [
-          {
-            "node": "Respond - Apply Agent",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    }
-  },
-  "active": true,
-  "settings": {
-    "executionOrder": "v1",
-    "binaryMode": "separate"
-  },
-  "meta": {
-    "templateCredsSetupCompleted": true
-  },
-  "pinData": {}
-}
+    "pinData": {}
+  }
+]
