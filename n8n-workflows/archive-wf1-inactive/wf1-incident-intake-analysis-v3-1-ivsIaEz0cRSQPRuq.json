@@ -300,7 +300,7 @@
             },
             {
               "name": "x-api-key",
-              "value": "REDACTED_ANTHROPIC_KEY"
+              "value": "={{ $env.ANTHROPIC_API_KEY }}"
             },
             {
               "name": "anthropic-version",
@@ -337,7 +337,7 @@
             },
             {
               "name": "x-api-key",
-              "value": "REDACTED_ANTHROPIC_KEY"
+              "value": "={{ $env.ANTHROPIC_API_KEY }}"
             },
             {
               "name": "anthropic-version",
@@ -374,7 +374,7 @@
             },
             {
               "name": "x-api-key",
-              "value": "REDACTED_ANTHROPIC_KEY"
+              "value": "={{ $env.ANTHROPIC_API_KEY }}"
             },
             {
               "name": "anthropic-version",
@@ -514,7 +514,7 @@
           "parameters": [
             {
               "name": "x-api-key",
-              "value": "REDACTED_ANTHROPIC_KEY"
+              "value": "={{ $env.ANTHROPIC_API_KEY }}"
             },
             {
               "name": "anthropic-version",

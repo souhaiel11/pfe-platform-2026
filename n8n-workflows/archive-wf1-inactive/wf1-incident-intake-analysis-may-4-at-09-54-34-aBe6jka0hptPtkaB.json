@@ -737,7 +737,7 @@
           "parameters": [
             {
               "name": "x-api-key",
-              "value": " REDACTED_ANTHROPIC_KEY"
+              "value": "={{ $env.ANTHROPIC_API_KEY }}"
             },
             {
               "name": "anthropic-version",
@@ -899,7 +899,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI4MDg1NmE1Ny0yMmFiLTRkYzctOTg2Yi03MjhmZTAwZDlmZDAiLCJlbWFpbCI6ImFkbWluQGRldnNlY29wcy5sb2NhbCIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTc3NzM2NTgzMiwiZXhwIjoxNzc3OTcwNjMyfQ.ExOJXL97rb8Xvn-x5R3z3J0xCrkqTWNwtBTtXFPuCOA"
+              "value": "={{ \"Bearer \" + $env.BACKEND_API_TOKEN }}"
             }
           ]
         },
