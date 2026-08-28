@@ -82,7 +82,7 @@ export class ApiService {
   updateIntegration(id: string, data: any)       { return this.http.put<any>(`${this.base}/integrations/${id}`, data); }
   testIntegration(id: string)                    { return this.http.post<any>(`${this.base}/integrations/${id}/test`, {}); }
 
-  approveFix(id: string) { return this.http.post(`${this.base}/incidents/${id}/approve`, {}); }
+  approveFix(id: string, findingId?: string) { return this.http.post(`${this.base}/incidents/${id}/approve`, findingId ? { findingId } : {}); }
   rejectFix(id: string) { return this.http.post(`${this.base}/incidents/${id}/reject`, {}); }
 
   triggerBuild(projectId: string) { return this.http.post(`${this.base}/incidents/${projectId}/trigger-build`, {}); }
@@ -90,8 +90,8 @@ export class ApiService {
   // ── Azure Deploy — le backend reste seul juge du "prêt à déployer",
   // voir azure-deploy-readiness.service.ts (fail-closed) ────────────
   getDeployReadiness(projectId: string) { return this.http.get<any>(`${this.base}/azure-deploy/ready/${projectId}`); }
-  deployToAzure(project: string, imageTag: string) {
-    return this.http.post<any>(`${this.base}/azure-deploy/deploy`, { project, imageTag });
+  getConvergence(projectId: string) { return this.http.get<any>(`${this.base}/incidents/project/${projectId}/cycles`); }
+  deployToAzure(projectId: string, imageTag: string, requestId: string, confirmed: boolean) {
+    return this.http.post<any>(`${this.base}/azure-deploy/deploy`, { projectId, imageTag, requestId, confirmed });
   }
 }
-

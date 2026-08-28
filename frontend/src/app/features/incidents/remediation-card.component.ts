@@ -32,6 +32,15 @@ export interface RemediationIssue {
   title: string;
   detail?: string | null;
   severity?: string | null;
+  stage?: string | null;
+  source?: string | null;
+  blocking?: boolean;
+  rootCause?: string | null;
+  impact?: string | null;
+  file?: string | null;
+  line?: number | null;
+  recommendation?: string | null;
+  remediationType?: 'AUTO_FIX_ELIGIBLE' | 'DEVELOPER_ACTION_REQUIRED' | string;
 }
 
 @Component({
@@ -55,6 +64,16 @@ export interface RemediationIssue {
               <strong>{{ i.title }}</strong>
             </div>
             <div *ngIf="i.detail" class="rc-detail">{{ i.detail }}</div>
+            <div class="rc-meta" *ngIf="i.stage || i.source || i.remediationType">
+              <span *ngIf="i.stage">Stage: {{ i.stage }}</span>
+              <span *ngIf="i.source">Source: {{ i.source }}</span>
+              <span>{{ i.blocking ? 'Bloquant' : 'Non bloquant' }}</span>
+              <span *ngIf="i.remediationType">{{ i.remediationType }}</span>
+            </div>
+            <div *ngIf="i.rootCause"><strong>Cause :</strong> {{ i.rootCause }}</div>
+            <div *ngIf="i.impact"><strong>Impact :</strong> {{ i.impact }}</div>
+            <div *ngIf="i.file" class="mono">{{ i.file }}<span *ngIf="i.line">:{{ i.line }}</span></div>
+            <div *ngIf="i.recommendation"><strong>Recommandation :</strong> {{ i.recommendation }}</div>
           </div>
         </div>
       </div>
@@ -104,6 +123,7 @@ export interface RemediationIssue {
     .rc-recap { font-size: 12px; margin: 12px 0 8px; }
     .rc-note { font-size: 11px; color: var(--text-secondary); font-style: italic; margin: 10px 0; }
     .rc-guard { font-size: 11px; color: var(--text-secondary); }
+    .rc-meta { display:flex;gap:8px;flex-wrap:wrap;font-size:10px;color:var(--text-secondary);margin:5px 0; }
     .mono { font-family: var(--font-mono); }
     .sev {
       display: inline-block; font-size: 9.5px; font-weight: 800; letter-spacing: .06em;

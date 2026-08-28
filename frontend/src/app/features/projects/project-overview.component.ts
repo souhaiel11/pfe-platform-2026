@@ -12,6 +12,7 @@ import { diagnoseTrivy, diagnoseOwasp, diagnoseZap, diagnoseSonar, diagnoseTests
 interface Stage {
   key: string; label: string; detail: string;
   state: 'pass' | 'warn' | 'fail' | 'skip'; tab: string | null;
+  source?: string | null;
 }
 
 @Component({
@@ -41,6 +42,7 @@ interface Stage {
             <span class="gate-pip"></span>
             <span class="gate-label">{{ s.label }}</span>
             <span class="gate-detail">{{ s.detail }}</span>
+            <span class="gate-source" *ngIf="s.source">{{ s.source }}</span>
             <span class="gate-flag" *ngIf="blockingKey() === s.key">Arrêt ici</span>
           </li>
         </ol>
@@ -175,6 +177,7 @@ interface Stage {
     .gate.blocking { background: rgba(220,38,38,.06); }
     .gate-label { font-size: 12.5px; font-weight: 650; }
     .gate-detail { font-size: 11px; opacity: .55; font-family: var(--font-mono, monospace); }
+    .gate-source { font-size: 9px; opacity: .42; overflow-wrap:anywhere; }
     .gate-flag {
       margin-top: 5px; align-self: flex-start;
       font-size: 9px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase;
@@ -271,6 +274,7 @@ interface Stage {
 export class ProjectOverviewComponent {
   @Input() set ed(v: any) { this._ed.set(v || {}); }
   @Input() set rp(v: any) { this._rp.set(v || {}); }
+  @Input() set backendStages(v: any[]) { this._backendStages.set(Array.isArray(v) ? v : []); }
   // Optionnel — colonnes Incident (errorReason/errorStep), pas dans ed/rp.
   // Absent quand ce composant est utilisé côté Report seul (project-detail) :
   // le diagnostic reste honnête (niveau "hypothèse" au lieu de "probable"),
@@ -281,6 +285,7 @@ export class ProjectOverviewComponent {
 
   private _ed = signal<any>({});
   private _rp = signal<any>({});
+  private _backendStages = signal<any[]>([]);
 
   private guide = computed<any>(() => this._rp()?.developerGuide || {});
   private issues = computed<any[]>(() => {
@@ -321,6 +326,19 @@ export class ProjectOverviewComponent {
   });
 
   stages = computed<Stage[]>(() => {
+    const governed = this._backendStages();
+    if (governed.length) {
+      const tabs: Record<string, string> = { build: 'jenkins', tests: 'jenkins', sonar: 'sonar', trivy: 'security:trivy', owasp: 'security:owasp', zap: 'security:zap', container: 'jenkins', docker: 'jenkins', deploy: 'jenkins' };
+      const state = (status: string): Stage['state'] => ({ PASSED: 'pass', FAILED: 'fail', WARNING: 'warn', RUNNING: 'warn', NOT_RUN: 'skip', NOT_REACHED: 'skip' } as any)[status] || 'skip';
+      return governed.map(s => ({
+        key: String(s.stage || 'unknown').toLowerCase(),
+        label: s.stage || 'Stage',
+        detail: `${s.status || 'NOT_RUN'} · ${Number(s.findingCount ?? s.findings?.length ?? 0)} finding(s)`,
+        state: state(String(s.status || 'NOT_RUN').toUpperCase()),
+        tab: tabs[String(s.stage || '').toLowerCase()] || null,
+        source: s.source || null,
+      }));
+    }
     const d = this._ed();
     const s = this.sonarBySeverity();
     const buildOk = String(d?.build?.status || '').toUpperCase() === 'SUCCESS';
@@ -332,33 +350,32 @@ export class ProjectOverviewComponent {
     const cveState = (crit: number, high: number, status: string): Stage['state'] =>
       status !== 'COMPLETED' ? 'skip' : (crit > 0 ? 'fail' : (high > 0 ? 'warn' : 'pass'));
 
+    // Historique sans stage model : tous les états restent neutres. Aucun
+    // signal legacy absent ne peut devenir vert.
     return [
       { key: 'build', label: 'Build', tab: 'jenkins',
         detail: d?.build?.number ? '#' + d.build.number : '—',
-        state: buildOk ? 'pass' : (d?.build?.status ? 'fail' : 'skip') },
+        state: 'skip' },
       { key: 'tests', label: 'Tests', tab: 'jenkins',
         detail: (tests.total ?? 0) === 0 ? 'aucun test' : `${tests.failures ?? 0} échec(s)`,
-        state: (tests.total ?? 0) === 0 ? 'warn' : ((tests.failures ?? 0) > 0 ? 'fail' : 'pass') },
+        state: 'skip' },
       { key: 'sonar', label: 'SonarQube', tab: 'sonar',
-        detail: `${s.BLOCKER} bloquant(s)`, state: sonarState },
+        detail: `${s.BLOCKER} bloquant(s)`, state: 'skip' },
       { key: 'trivy', label: 'Conteneur', tab: 'security:trivy',
         detail: `${d?.trivy?.critical ?? 0} critique(s)`,
-        state: cveState(d?.trivy?.critical ?? 0, d?.trivy?.high ?? 0, d?.trivy?.status) },
+        state: 'skip' },
       { key: 'owasp', label: 'Dépendances', tab: 'security:owasp',
         detail: `${d?.owasp?.critical ?? 0} critique(s)`,
-        state: cveState(d?.owasp?.critical ?? 0, d?.owasp?.high ?? 0, d?.owasp?.status) },
+        state: 'skip' },
       { key: 'zap', label: 'DAST', tab: 'security:zap',
         detail: `${d?.zap?.alerts_count ?? 0} alerte(s)`,
-        state: d?.zap?.status !== 'COMPLETED' ? 'skip'
-             : ((d?.zap?.alerts_high ?? 0) > 0 ? 'fail'
-             : ((d?.zap?.alerts_medium ?? 0) > 0 ? 'warn' : 'pass')) },
+        state: 'skip' },
       { key: 'image', label: 'Image', tab: 'jenkins',
         detail: d?.docker?.image_tag ? String(d.docker.image_tag).split(':').pop() || '—' : '—',
-        state: String(d?.docker?.build_status || '').toUpperCase() === 'SUCCESS' ? 'pass' : 'skip' },
+        state: 'skip' },
       { key: 'deploy', label: 'Déploiement', tab: 'jenkins',
         detail: String(d?.deploy?.status || 'non lancé').toLowerCase(),
-        state: String(d?.deploy?.status || '').toUpperCase() === 'SUCCESS' ? 'pass'
-             : (String(d?.deploy?.status || '').toUpperCase() === 'FAILED' ? 'fail' : 'skip') },
+        state: 'skip' },
     ];
   });
 
@@ -369,7 +386,9 @@ export class ProjectOverviewComponent {
 
   verdictTitle = computed<string>(() => {
     const k = this.blockingKey();
-    if (!k) return 'Le pipeline passe toutes les portes';
+    if (!k && this.stages().some(s => s.state === 'skip')) return 'Pipeline incomplet ou non corrélé';
+    if (!k && this.stages().some(s => s.state === 'warn')) return 'Pipeline terminé avec avertissements';
+    if (!k) return 'Le pipeline passe toutes les portes requises';
     const s = this.stages().find(x => x.key === k);
     return `Bloqué à l'étape « ${s?.label} »`;
   });
@@ -385,21 +404,28 @@ export class ProjectOverviewComponent {
     const d = this._ed();
     const s = this.sonarBySeverity();
     const tone = (fail: number, warn: number) => fail > 0 ? 'fail' : (warn > 0 ? 'warn' : 'pass');
+    const governedTone = (stage: string, fail: number, warn: number) => {
+      const status = String(this._backendStages().find(s => String(s.stage || '').toLowerCase() === stage)?.status || 'NOT_RUN').toUpperCase();
+      if (status === 'FAILED') return 'fail';
+      if (status === 'WARNING' || status === 'RUNNING') return 'warn';
+      if (status !== 'PASSED') return 'skip';
+      return tone(fail, warn);
+    };
     return [
       { name: 'SonarQube', tab: 'sonar', count: d?.sonar?.issues_count ?? 0,
-        detail: `${s.BLOCKER} bloquant · ${s.CRITICAL} critique`, tone: tone(s.BLOCKER, s.CRITICAL) },
+        detail: `${s.BLOCKER} bloquant · ${s.CRITICAL} critique`, tone: governedTone('sonar', s.BLOCKER, s.CRITICAL) },
       { name: 'CVE conteneur', tab: 'security:trivy', count: d?.trivy?.cves_count ?? 0,
         detail: `${d?.trivy?.critical ?? 0} critique · ${d?.trivy?.high ?? 0} élevée`,
-        tone: tone(d?.trivy?.critical ?? 0, d?.trivy?.high ?? 0) },
+        tone: governedTone('trivy', d?.trivy?.critical ?? 0, d?.trivy?.high ?? 0) },
       { name: 'CVE dépendances', tab: 'security:owasp', count: d?.owasp?.cves_count ?? 0,
         detail: `${d?.owasp?.critical ?? 0} critique · ${d?.owasp?.high ?? 0} élevée`,
-        tone: tone(d?.owasp?.critical ?? 0, d?.owasp?.high ?? 0) },
+        tone: governedTone('owasp', d?.owasp?.critical ?? 0, d?.owasp?.high ?? 0) },
       { name: 'Alertes DAST', tab: 'security:zap', count: d?.zap?.alerts_count ?? 0,
         detail: `${d?.zap?.alerts_high ?? 0} élevée · ${d?.zap?.alerts_medium ?? 0} moyenne`,
-        tone: tone(d?.zap?.alerts_high ?? 0, d?.zap?.alerts_medium ?? 0) },
+        tone: governedTone('zap', d?.zap?.alerts_high ?? 0, d?.zap?.alerts_medium ?? 0) },
       { name: 'Tests', tab: 'jenkins', count: d?.tests?.total ?? 0,
         detail: `${d?.tests?.failures ?? 0} échec · ${d?.tests?.coverage ?? 0}% couverture`,
-        tone: tone(d?.tests?.failures ?? 0, (d?.tests?.total ?? 0) === 0 ? 1 : 0) },
+        tone: governedTone('tests', d?.tests?.failures ?? 0, 0) },
     ];
   });
 
