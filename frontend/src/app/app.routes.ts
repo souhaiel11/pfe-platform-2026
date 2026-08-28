@@ -1,5 +1,7 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
+import { editorGuard } from './core/guards/editor.guard';
+import { adminGuard } from './core/guards/admin.guard';
 
 export const routes: Routes = [
   {
@@ -26,6 +28,7 @@ export const routes: Routes = [
       },
       {
         path: 'projects/new',
+        canActivate: [editorGuard],
         loadComponent: () =>
           import('./features/projects/project-form.component').then(m => m.ProjectFormComponent)
       },
@@ -51,6 +54,7 @@ export const routes: Routes = [
       },
       {
         path: 'admin',
+        canActivate: [adminGuard],
         loadComponent: () =>
           import('./features/admin/admin.component').then(m => m.AdminComponent)
       },
@@ -79,7 +83,11 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/analytics/prediction.component').then(m => m.PredictionComponent)
       },
+      {
+        path: 'not-found',
+        loadComponent: () => import('./shared/not-found.component').then(m => m.NotFoundComponent)
+      },
     ]
   },
-  { path: '**', redirectTo: '' }
+  { path: '**', redirectTo: 'not-found' }
 ];

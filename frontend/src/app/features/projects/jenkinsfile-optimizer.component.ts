@@ -50,7 +50,7 @@ import { Subscription, interval, switchMap } from 'rxjs';
         <div class="jo-git-fields">
           <input class="jo-repo-in" placeholder="owner (ex: souhaiel11)"
                  [value]="ownerInput()" (input)="ownerInput.set($any($event.target).value)" />
-          <input class="jo-repo-in" placeholder="repo (ex: devsecops-testbed)"
+          <input class="jo-repo-in" placeholder="repository"
                  [value]="repoInput()" (input)="repoInput.set($any($event.target).value)" />
           <input class="jo-repo-in small" placeholder="branche (main)"
                  [value]="refInput()" (input)="refInput.set($any($event.target).value)" />
@@ -163,7 +163,7 @@ import { Subscription, interval, switchMap } from 'rxjs';
             <div class="jo-repo-fields" *ngIf="!owner || !repo">
               <input class="jo-repo-in" placeholder="owner (ex: souhaiel11)"
                      [value]="ownerInput()" (input)="ownerInput.set($any($event.target).value)" />
-              <input class="jo-repo-in" placeholder="repo (ex: devsecops-testbed)"
+              <input class="jo-repo-in" placeholder="repository"
                      [value]="repoInput()" (input)="repoInput.set($any($event.target).value)" />
             </div>
           </div>

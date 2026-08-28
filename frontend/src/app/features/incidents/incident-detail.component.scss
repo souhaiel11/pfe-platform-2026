@@ -100,6 +100,11 @@
       line-height: 1.6;
       white-space: pre-wrap;
     }
+    .rc-detail, .report-content, code, a { overflow-wrap:anywhere; word-break:break-word; }
+    @media (max-width: 600px) {
+      .lifecycle-step { min-width:76px; }
+      .tab-btn { padding:8px 10px; }
+    }
 
     /* ── Autres ── */
     .decision-card { border-left: 3px solid var(--accent-orange); }

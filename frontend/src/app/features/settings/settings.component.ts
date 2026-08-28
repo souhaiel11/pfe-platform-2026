@@ -1,9 +1,9 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { environment } from '../../../environments/environment';
 import { ToastService } from '../../core/services/toast.service';
 import { ApiService } from '../../core/services/api.service';
+import { AuthService } from '../../core/services/auth.service';
 
 interface ToolConfig {
   toolType: string;
@@ -39,7 +39,7 @@ interface ToolConfig {
   styleUrls: ['./settings.component.scss'],
 })
 export class SettingsComponent implements OnInit {
-  n8nUrl = `${environment.n8nUrl}/webhook/jenkins-event`;
+  n8nUrl = '/webhook/jenkins-event (service n8n interne)';
 
   tools: ToolConfig[] = [
     {
@@ -82,7 +82,8 @@ export class SettingsComponent implements OnInit {
     { label: 'Auteur',              value: 'Amri Souhaiel — ESPRIT / Vermeg' },
   ];
 
-  constructor(private toast: ToastService, private api: ApiService) {}
+  constructor(private toast: ToastService, private api: ApiService, public auth: AuthService) {}
+  get canEdit() { return ['admin', 'developer'].includes(this.auth.currentUser?.role); }
 
   ngOnInit() {
     this.api.getIntegrations().subscribe({
@@ -204,10 +205,10 @@ export class SettingsComponent implements OnInit {
 
   getUrlPlaceholder(type: string): string {
     const map: Record<string, string> = {
-      grafana:    'http://localhost:3000',
-      prometheus: 'http://localhost:9090',
-      kubernetes: 'https://192.168.49.2:8443',
-      nexus:      'http://localhost:8081',
+      grafana:    'https://grafana.example.internal',
+      prometheus: 'https://prometheus.example.internal',
+      kubernetes: 'https://kubernetes.example.internal',
+      nexus:      'https://nexus.example.internal',
     };
     return map[type] || 'https://...';
   }

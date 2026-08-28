@@ -80,14 +80,14 @@
                 <!-- Actions -->
                 <div class="tool-actions">
                   <button class="btn-test" (click)="testTool(tool)"
-                          [disabled]="tool.testing || tool.saving || !tool.url">
+                          [disabled]="!canEdit || tool.testing || tool.saving || !tool.url">
                     <span *ngIf="!tool.testing">⚡ Tester la connexion</span>
                     <span *ngIf="tool.testing" class="spin">↻</span>
                     <span *ngIf="tool.testing"> Test en cours…</span>
                   </button>
                   <button class="btn-save" [style.border-color]="tool.color" [style.color]="tool.color"
                           (click)="saveTool(tool)"
-                          [disabled]="tool.saving || tool.testing || !tool.url">
+                          [disabled]="!canEdit || tool.saving || tool.testing || !tool.url">
                     <span *ngIf="!tool.saving">Enregistrer</span>
                     <span *ngIf="tool.saving" class="spin">↻</span>
                     <span *ngIf="tool.saving"> Sauvegarde…</span>

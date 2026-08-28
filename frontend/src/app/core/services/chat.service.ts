@@ -21,8 +21,7 @@ export class ChatService {
   loading$  = this.loadingSubject.asObservable();
 
   // FIX: production webhook URL (not /webhook-test/)
-  private readonly webhookUrl = `${environment.n8nUrl}/webhook/chat-agent`;
-  private readonly defaultProjectId = environment.defaultProjectId;
+  private readonly chatUrl = `${environment.apiUrl}/chat/ask`;
 
   constructor(private http: HttpClient) {}
 
@@ -44,12 +43,12 @@ export class ChatService {
     this.addMessage('user', question);
     this.loadingSubject.next(true);
 
-    this.http.post<any>(this.webhookUrl, {
+    this.http.post<any>(this.chatUrl, {
       question: question.trim(),
-      projectId: projectId || this.defaultProjectId
+      ...(projectId ? { projectId } : {})
     }).subscribe({
       next: res => {
-        this.addMessage('assistant', res.answer || 'Réponse reçue.');
+        this.addMessage('assistant', res.answer || 'Réponse indisponible.');
         this.loadingSubject.next(false);
       },
       error: () => {

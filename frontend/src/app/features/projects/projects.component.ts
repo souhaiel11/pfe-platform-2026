@@ -5,6 +5,7 @@ import { forkJoin, of, catchError } from 'rxjs';
 import { ApiService } from '../../core/services/api.service';
 import { ToastService } from '../../core/services/toast.service';
 import { ProjectEventsService } from '../../core/services/project-events.service';
+import { AuthService } from '../../core/services/auth.service';
 
 @Component({
   selector: 'app-projects',
@@ -22,7 +23,9 @@ export class ProjectsComponent implements OnInit {
     private toast: ToastService,
     private router: Router,
     private projectEvents: ProjectEventsService,
+    public auth: AuthService,
   ) {}
+  get canEdit() { return ['admin', 'developer'].includes(this.auth.currentUser?.role); }
 
   ngOnInit() { this.load(); }
 

@@ -36,10 +36,10 @@
 
     <div class="sidebar-footer">
       <div class="user-pill">
-        <div class="user-avatar">SA</div>
+        <div class="user-avatar">{{(auth.currentUser?.username || auth.currentUser?.email || 'U').substring(0,2).toUpperCase()}}</div>
         <div class="user-info">
-          <div class="user-name">Souhaiel Amri</div>
-          <div class="user-role">Security Lead</div>
+          <div class="user-name">{{auth.currentUser?.username || auth.currentUser?.email}}</div>
+          <div class="user-role">{{auth.currentUser?.role}}</div>
         </div>
       </div>
     </div>
@@ -187,8 +187,8 @@
               <span class="pill" [class.red]="p.incidents > 0" [class.green]="p.incidents === 0">
                 {{p.incidents}} incident{{p.incidents > 1 ? 's' : ''}}
               </span>
-              <span class="pill" [class.green]="p.buildStatus === 'SUCCESS'" [class.red]="p.buildStatus !== 'SUCCESS'">
-                Build {{p.buildStatus}}
+              <span class="pill" [class.green]="p.buildStatus === 'SUCCESS'" [class.red]="p.buildStatus && p.buildStatus !== 'SUCCESS'">
+                Build {{p.buildStatus || 'indisponible'}}<ng-container *ngIf="p.buildNumber"> #{{p.buildNumber}}</ng-container>
               </span>
             </div>
             <div class="health-track">

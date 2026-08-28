@@ -239,3 +239,38 @@
     }
 
     .page-wrap { flex: 1; overflow: auto; }
+
+    .mobile-menu-btn, .nav-scrim { display: none; }
+
+    @media (max-width: 720px) {
+      .sidebar {
+        transform: translateX(-100%);
+        transition: transform .2s ease;
+        box-shadow: 10px 0 30px rgba(15, 23, 42, .16);
+      }
+      .sidebar.mobile-open { transform: translateX(0); }
+      .main-content { margin-left: 0; min-width: 0; width: 100%; }
+      .mobile-menu-btn {
+        display: inline-flex;
+        width: 32px; height: 32px;
+        align-items: center; justify-content: center;
+        border: 1px solid var(--border-color);
+        border-radius: 7px;
+        color: var(--text-primary);
+        background: var(--bg-tertiary);
+        cursor: pointer;
+        flex: 0 0 auto;
+      }
+      .nav-scrim {
+        display: block;
+        position: fixed;
+        inset: 0;
+        z-index: 90;
+        border: 0;
+        background: rgba(15, 23, 42, .42);
+      }
+      .topbar { padding: 0 10px; }
+      .vermeg-logo { display: none; }
+      .live-badge { padding-inline: 7px; }
+      .page-wrap { min-width: 0; }
+    }

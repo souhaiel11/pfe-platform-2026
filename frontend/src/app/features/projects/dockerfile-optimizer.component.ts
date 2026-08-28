@@ -31,7 +31,7 @@ import { Subscription, interval, switchMap } from 'rxjs';
       <div class="do-git-fields">
         <input class="do-repo-in" placeholder="owner (ex: souhaiel11)"
                [value]="ownerInput()" (input)="ownerInput.set($any($event.target).value)" />
-        <input class="do-repo-in" placeholder="repo (ex: devsecops-testbed)"
+        <input class="do-repo-in" placeholder="repository"
                [value]="repoInput()" (input)="repoInput.set($any($event.target).value)" />
       </div>
 
@@ -340,6 +340,8 @@ export class DockerfileOptimizerComponent implements OnInit, OnDestroy {
     this.applyResult.set(null);
 
     this.http.post<any>('/api/dockerfile/apply', {
+      requestId: crypto.randomUUID(),
+      projectId: this.projectId,
       dockerfile: this.dockerfileSource(),
       findings: r.issues || [],
       context: {},

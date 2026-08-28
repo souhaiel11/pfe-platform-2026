@@ -5,6 +5,9 @@
 
 :host { display: block; }
 
+/* Le dashboard est déjà rendu dans LayoutComponent : son ancien shell
+   autonome reste masqué pour éviter navigation/header dupliqués. */
+
 .dashboard {
   display: flex;
   min-height: 100vh;
@@ -13,6 +16,12 @@
   font-family: var(--font-body, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
   font-variant-numeric: tabular-nums;
 }
+
+/* Dashboard imbriqué dans le shell global : une seule navigation et une
+   seule topbar restent visibles. */
+.dashboard > .sidebar, .dashboard > .main > .topbar { display:none; }
+.dashboard { min-height:0; display:block; }
+.dashboard > .main { display:block; overflow:visible; }
 
 /* ── Sidebar ── */
 .sidebar {

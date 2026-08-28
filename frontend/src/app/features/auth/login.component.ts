@@ -26,7 +26,7 @@ import { ToastService } from '../../core/services/toast.service';
             </div>
           </div>
         </div>
-        <div class="brand-footer">Vermeg · ESPRIT · 2024–2025</div>
+        <div class="brand-footer">Vermeg · ESPRIT · PFE 2026</div>
       </div>
       <div class="login-right">
         <div class="login-card">
@@ -67,6 +67,12 @@ import { ToastService } from '../../core/services/toast.service';
     .feature-title { font-size:13px; font-weight:600; color:var(--text-primary); margin-bottom:3px; }
     .feature-desc { font-size:11px; color:var(--text-muted); line-height:1.4; }
     .brand-footer { font-size:11px; color:var(--text-faint); font-family:var(--font-mono); }
+    @media (max-width: 760px) {
+      .login-shell { min-height:100vh; height:auto; }
+      .login-left { display:none; }
+      .login-right { padding:20px; }
+      .login-card { width:min(100%,380px); padding:26px 22px; }
+    }
     .login-right { flex:1; display:flex; align-items:center; justify-content:center; }
     .login-card { width:380px; background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius-lg); padding:36px; }
     .login-header { margin-bottom:28px; }
@@ -84,7 +90,7 @@ export class LoginComponent {
   features = [
     { icon: '◈', title: 'Analyse IA automatique',    desc: '4 agents spécialisés analysent chaque incident en parallèle' },
     { icon: '⬡', title: 'Détection sécurité',         desc: 'Trivy + SonarQube intégrés dans le pipeline CI/CD' },
-    { icon: '◆', title: 'Corrections automatiques',   desc: 'Pull Requests GitHub créées automatiquement par l\'IA' },
+    { icon: '◆', title: 'Corrections gouvernées',      desc: 'Pull Request uniquement après approbation utilisateur explicite' },
     { icon: '◉', title: 'Monitoring temps réel',      desc: 'Dashboard live avec WebSocket et alertes instantanées' }
   ];
 

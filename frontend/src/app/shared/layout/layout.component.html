@@ -1,5 +1,5 @@
     <div class="app-shell">
-      <aside class="sidebar" [ngStyle]="sidebarRiskStyle">
+      <aside class="sidebar" [class.mobile-open]="mobileNavOpen" [ngStyle]="sidebarRiskStyle">
         <div class="sb-logo">
           <div class="logo-mark">V</div>
           <div>
@@ -9,18 +9,18 @@
         </div>
         <nav class="sb-nav">
           <div class="nav-section">Plateforme</div>
-          <a class="nav-item" routerLink="/dashboard" routerLinkActive="active"><i class="ti ti-layout-dashboard"></i> Dashboard</a>
-          <a class="nav-item" routerLink="/projects" routerLinkActive="active"><i class="ti ti-folder"></i> Projets</a>
-          <a class="nav-item" routerLink="/analysis" routerLinkActive="active"><i class="ti ti-robot"></i> Agents IA</a>
+          <a class="nav-item" routerLink="/dashboard" routerLinkActive="active" (click)="closeMobileNav()"><i class="ti ti-layout-dashboard"></i> Dashboard</a>
+          <a class="nav-item" routerLink="/projects" routerLinkActive="active" (click)="closeMobileNav()"><i class="ti ti-folder"></i> Projets</a>
+          <a class="nav-item" routerLink="/analysis" routerLinkActive="active" (click)="closeMobileNav()"><i class="ti ti-robot"></i> Agents IA</a>
           <div class="nav-section">CI/CD & Sécurité</div>
-          <a class="nav-item" routerLink="/security" routerLinkActive="active"><i class="ti ti-bug"></i> Trivy / OWASP</a>
+          <a class="nav-item" routerLink="/security" routerLinkActive="active" (click)="closeMobileNav()"><i class="ti ti-bug"></i> Trivy / OWASP</a>
           <div class="nav-section">Infrastructure</div>
-          <a class="nav-item" routerLink="/monitoring" routerLinkActive="active"><i class="ti ti-activity"></i> Grafana</a>
+          <a class="nav-item" routerLink="/monitoring" routerLinkActive="active" (click)="closeMobileNav()"><i class="ti ti-activity"></i> Grafana</a>
           <div class="nav-section">Analytics</div>
-          <a class="nav-item" routerLink="/prediction" routerLinkActive="active"><i class="ti ti-gauge"></i> Indicateurs de risque</a>
+          <a class="nav-item" routerLink="/prediction" routerLinkActive="active" (click)="closeMobileNav()"><i class="ti ti-gauge"></i> Indicateurs de risque</a>
           <div class="nav-section">Système</div>
-          <a class="nav-item" routerLink="/settings" routerLinkActive="active"><i class="ti ti-settings"></i> Paramètres</a>
-          <a class="nav-item" routerLink="/admin" routerLinkActive="active" *ngIf="isAdmin"><i class="ti ti-shield"></i> Admin</a>
+          <a class="nav-item" routerLink="/settings" routerLinkActive="active" (click)="closeMobileNav()"><i class="ti ti-settings"></i> Paramètres</a>
+          <a class="nav-item" routerLink="/admin" routerLinkActive="active" (click)="closeMobileNav()" *ngIf="isAdmin"><i class="ti ti-shield"></i> Admin</a>
         </nav>
         <div class="sb-footer">
           <div class="user-row">
@@ -33,9 +33,13 @@
           </div>
         </div>
       </aside>
+      <button class="nav-scrim" *ngIf="mobileNavOpen" (click)="closeMobileNav()" aria-label="Fermer la navigation"></button>
 
       <div class="main-content">
         <header class="topbar">
+          <button class="mobile-menu-btn" type="button" (click)="mobileNavOpen = !mobileNavOpen" aria-label="Ouvrir la navigation">
+            <i class="ti ti-menu-2"></i>
+          </button>
           <!-- Vermeg logo -->
           <div class="vermeg-logo">
             <span class="logo-v">V</span><span class="logo-ermeg">ERMEG</span><span class="logo-product">DevSecOps</span>

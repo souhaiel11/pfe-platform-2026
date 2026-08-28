@@ -16,6 +16,7 @@ import { ChatWidgetComponent } from '../chat-widget/chat-widget.component';
   styleUrls: ['./layout.component.scss'],
 })
 export class LayoutComponent implements OnInit {
+  mobileNavOpen = false;
   openCount = 0;
   notifCount = 0;
   pageTitle = "Vue d'ensemble";
@@ -69,6 +70,7 @@ export class LayoutComponent implements OnInit {
   }
 
   logout() { this.auth.logout(); }
+  closeMobileNav() { this.mobileNavOpen = false; }
   get currentUser() { return this.auth.currentUser; }
   get isAdmin() { return this.auth.isAdmin; }
   get userInitials() {

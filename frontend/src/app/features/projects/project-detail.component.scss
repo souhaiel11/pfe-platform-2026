@@ -488,6 +488,45 @@
 /* ── Déploiement Azure ── */
 .deploy-azure-box { display: flex; flex-direction: column; gap: 8px; }
 .deploy-azure-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.deploy-confirm, .cockpit-panel { padding: 16px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-secondary); }
+.cockpit-head { display:flex; justify-content:space-between; gap:12px; align-items:center; }
+.cockpit-head h3 { margin:0; }
+.cockpit-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:10px; margin:14px 0; }
+.cockpit-grid > div { display:flex; flex-direction:column; gap:5px; padding:10px; border:1px solid var(--border); border-radius:8px; }
+.readiness-pill { padding:5px 10px; border-radius:999px; color:var(--accent-red); background:rgba(239,68,68,.12); }
+.readiness-pill.ready { color:var(--accent-green); background:rgba(34,197,94,.12); }
+.a1-warning { padding:10px; border-left:3px solid var(--accent-orange); background:rgba(245,158,11,.10); }
+.stage-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:10px; margin-top:12px; }
+.stage-card { padding:10px; border:1px solid var(--border); border-left:4px solid var(--text-secondary); border-radius:8px; }
+.stage-card summary { display:flex; justify-content:space-between; cursor:pointer; }
+.stage-card.passed { border-left-color:var(--accent-green); }
+.stage-card.failed { border-left-color:var(--accent-red); }
+.stage-card.warning { border-left-color:var(--accent-orange); }
+.stage-card.running { border-left-color:var(--accent-blue); }
+.stage-card.not-run { opacity:.72; border-left-color:#6b7280; }
+.stage-card.not-reached { opacity:.5; border-left-color:#94a3b8; }
+.next-action { display:flex; flex-direction:column; gap:4px; margin-top:12px; }
+.cycle-list { display:flex; flex-direction:column; gap:8px; margin-top:12px; }
+.cycle-item { display:grid; grid-template-columns:120px 120px 1fr; gap:10px; padding:10px; border-left:3px solid var(--accent-blue); background:var(--bg-primary); }
+.project-name, .header-meta, .stage-card p, .cycle-item, .deploy-confirm p { overflow-wrap:anywhere; word-break:break-word; }
+@media (max-width: 1024px) {
+  .cockpit-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .stage-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+@media (max-width: 600px) {
+  .page { padding: 12px; }
+  .page-header { display:grid; grid-template-columns:auto 1fr; align-items:center; gap:12px; padding:14px; }
+  .header-info { min-width:0; }
+  .header-info h1 { overflow-wrap:anywhere; }
+  .header-meta { align-items:flex-start; flex-wrap:wrap; }
+  .header-meta .sep { display:none; }
+  .header-meta span:not(.badge-env) { flex-basis:100%; }
+  .header-actions { grid-column:1 / -1; margin-left:0; justify-content:flex-start; flex-wrap:wrap; }
+  .cockpit-grid, .stage-grid { grid-template-columns:1fr; }
+  .cycle-item { grid-template-columns:1fr; }
+  .deploy-confirm { padding:12px; }
+  .deploy-azure-row > * { width:100%; }
+}
 .deploy-tag-input {
   padding: 7px 10px; font-size: 12px; font-family: var(--font-mono);
   border: 1px solid var(--border-color, rgba(127,127,127,.3)); border-radius: 6px;

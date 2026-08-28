@@ -5,6 +5,7 @@ import { Subscription, forkJoin, of, catchError } from 'rxjs';
 import { ApiService } from '../../core/services/api.service';
 import { ThemeService } from '../../core/services/theme.service';
 import { ProjectEventsService } from '../../core/services/project-events.service';
+import { AuthService } from '../../core/services/auth.service';
 
 @Component({
   selector: 'app-dashboard',
@@ -41,12 +42,14 @@ export class DashboardComponent implements OnInit, OnDestroy {
   // getJenkinsStatus). rate=null => "Non disponible", jamais un chiffre
   // dérivé de builds fabriqués (getMockJenkinsStatus).
   buildReliability: { rate: number | null; sampleSize: number } | null = null;
+  private jenkinsByProject = new Map<string, any>();
 
   constructor(
     private api: ApiService,
     public themeService: ThemeService,
     private router: Router,
     private projectEvents: ProjectEventsService,
+    public auth: AuthService,
   ) {}
 
   ngOnInit() {
@@ -84,8 +87,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
         this.buildReliability = s
           ? { rate: s.aggregateSuccessRate ?? null, sampleSize: s.aggregateSampleSize ?? 0 }
           : null;
+        this.jenkinsByProject = new Map((data?.projects || []).map((p: any) => [p.projectId, p]));
+        this.projects = this.projects.map(p => {
+          const j: any = this.jenkinsByProject.get(p.id);
+          return { ...p, buildStatus: j?.lastBuild?.result || null, buildNumber: j?.lastBuild?.number || null };
+        });
       },
-      error: () => { this.buildReliability = null; },
+      error: () => { this.buildReliability = null; this.jenkinsByProject.clear(); },
     });
   }
 
@@ -147,7 +155,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
       tech: `${p.cicdTool || 'jenkins'} · ${p.environment || 'dev'}`,
       initials, avatarBg: avatar.bg, avatarColor: avatar.color,
       incidents: (p.openIncidents || 0) + (p.analyzingIncidents || 0),
-      buildStatus: p.status === 'healthy' ? 'SUCCESS' : 'FAILURE',
+      buildStatus: this.jenkinsByProject.get(p.id)?.lastBuild?.result || null,
+      buildNumber: this.jenkinsByProject.get(p.id)?.lastBuild?.number || null,
       health: score, riskScore: score,
       lastUpdate: p.updatedAt ? this.timeAgo(new Date(p.updatedAt).getTime()) : '—',
       riskBreakdown: score !== null ? [{ label: 'Score sécurité', value: score }] : [],

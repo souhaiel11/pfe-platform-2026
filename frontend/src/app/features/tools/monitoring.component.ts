@@ -1,5 +1,6 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { ApiService } from '../../core/services/api.service';
 
 @Component({
   selector: 'app-monitoring',
@@ -10,7 +11,7 @@ import { CommonModule } from '@angular/common';
       <div class="page-header">
         <div class="page-icon" style="background:var(--accent-orange-bg)"><i class="ti ti-activity" style="color:var(--accent-orange)"></i></div>
         <div><h2>Monitoring — Grafana</h2><div class="page-sub">Métriques pods Kubernetes · Prometheus</div></div>
-        <a href="http://172.31.172.61:3000" target="_blank" class="ext-btn"><i class="ti ti-external-link"></i> Ouvrir Grafana</a>
+        <a *ngIf="grafanaUrl" [href]="grafanaUrl" target="_blank" rel="noopener" class="ext-btn"><i class="ti ti-external-link"></i> Ouvrir Grafana</a>
       </div>
 
       <div class="grafana-embed">
@@ -18,7 +19,9 @@ import { CommonModule } from '@angular/common';
         <div class="grafana-body">
           <i class="ti ti-external-link grafana-ico"></i>
           <div class="grafana-msg">Dashboard complet disponible sur Grafana</div>
-          <a href="http://172.31.172.61:3000" target="_blank" class="grafana-link">Ouvrir le dashboard →</a>
+          <a *ngIf="grafanaUrl" [href]="grafanaUrl" target="_blank" rel="noopener" class="grafana-link">Ouvrir le dashboard →</a>
+          <div *ngIf="!loading && !grafanaUrl" class="grafana-msg">Grafana n'est pas configuré dans les intégrations.</div>
+          <button *ngIf="!loading && !grafanaUrl" class="retry" (click)="load()">Réessayer</button>
         </div>
       </div>
     </div>
@@ -38,6 +41,23 @@ import { CommonModule } from '@angular/common';
     .grafana-msg{font-size:12px;color:var(--text-secondary);margin-bottom:10px}
     .grafana-link{color:var(--accent-blue);font-size:11px;text-decoration:none}
     .grafana-link:hover{text-decoration:underline}
+    .retry{border:1px solid var(--border-color);background:var(--bg-tertiary);color:var(--text-primary);padding:6px 10px;border-radius:6px;cursor:pointer}
   `]
 })
-export class MonitoringComponent {}
+export class MonitoringComponent implements OnInit {
+  grafanaUrl: string | null = null;
+  loading = true;
+  constructor(private api: ApiService) {}
+  ngOnInit() { this.load(); }
+  load() {
+    this.loading = true;
+    this.api.getIntegrations().subscribe({
+      next: rows => {
+        const configured = (rows || []).find((x: any) => x.toolType === 'grafana' && x.enabled !== false);
+        this.grafanaUrl = configured?.url && /^https?:\/\//i.test(configured.url) ? configured.url : null;
+        this.loading = false;
+      },
+      error: () => { this.grafanaUrl = null; this.loading = false; },
+    });
+  }
+}

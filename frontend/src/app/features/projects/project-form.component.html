@@ -90,7 +90,7 @@
       <div class="field-row">
         <div class="field">
           <label>Jenkins URL</label>
-          <input formControlName="jenkinsUrl" placeholder="http://172.31.172.61:8082">
+          <input formControlName="jenkinsUrl" placeholder="https://jenkins.example.internal">
         </div>
         <div class="field">
           <label>Job Name</label>
@@ -112,8 +112,8 @@
       <div class="field-row">
         <div class="field">
           <label>Repository <span class="hint">(owner/repo)</span></label>
-          <input formControlName="githubRepo" placeholder="souhaiel11/pfe-app-test">
-          <div class="field-error" *ngIf="isInvalid('githubRepo')">Requis, format owner/repo (ex: souhaiel11/devsecops-testbed).</div>
+          <input formControlName="githubRepo" placeholder="organisation/repository">
+          <div class="field-error" *ngIf="isInvalid('githubRepo')">Requis, format owner/repository.</div>
         </div>
         <div class="field">
           <label>GitHub Token <span class="hint">(optionnel)</span></label>
@@ -127,7 +127,7 @@
       <div class="field-row">
         <div class="field">
           <label>SonarQube URL</label>
-          <input formControlName="sonarqubeUrl" placeholder="http://172.31.172.61:9000">
+          <input formControlName="sonarqubeUrl" placeholder="https://sonarqube.example.internal">
         </div>
         <div class="field">
           <label>Project Key</label>

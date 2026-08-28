@@ -4,7 +4,7 @@
           <h1 class="page-title">// projets</h1>
           <p class="page-subtitle">Gestion des projets sous surveillance DevSecOps IA</p>
         </div>
-        <button class="btn btn-primary" (click)="goToNewProject()">+ Nouveau projet</button>
+        <button *ngIf="canEdit" class="btn btn-primary" (click)="goToNewProject()">+ Nouveau projet</button>
       </div>
 
       <div *ngIf="loading" class="loading-overlay"><div class="spinner"></div><span>Chargement...</span></div>
@@ -60,7 +60,7 @@
             </span>
             <div style="display:flex;gap:6px;">
               <a [routerLink]="['/projects', p.id]" class="btn btn-secondary btn-sm">Voir →</a>
-              <button class="btn btn-danger btn-sm" (click)="confirmDelete(p)">✕</button>
+              <button *ngIf="canEdit" class="btn btn-danger btn-sm" (click)="confirmDelete(p)">✕</button>
             </div>
           </div>
         </div>
