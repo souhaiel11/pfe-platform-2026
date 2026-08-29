@@ -1,6 +1,7 @@
 import { Component, Input, Output, EventEmitter, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { diagnoseTrivy, diagnoseOwasp, diagnoseZap, diagnoseSonar, diagnoseTests, diagnoseDocker, IncidentContext } from '../incidents/phase-diagnostics';
+import { PresentationLabelPipe } from '../../shared/presentation-label.pipe';
 
 // ─────────────────────────────────────────────────────────────────────────
 //  VUE GLOBALE v2 — onglet « Rapport IA »
@@ -18,32 +19,35 @@ interface Stage {
 @Component({
   selector: 'app-project-overview',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, PresentationLabelPipe],
   template: `
     <!-- ══ RAIL DE CONTRÔLE ══ -->
     <section class="chain">
       <header class="chain-head">
         <span class="eyebrow">Chaîne de contrôle du pipeline</span>
-        <h3 class="chain-title">{{ verdictTitle() }}</h3>
-        <p class="chain-sub">{{ verdictSub() }}</p>
+        <h3 class="chain-title">{{ readiness()?.ready ? 'Déploiement prêt' : 'Déploiement non prêt' }}</h3>
+        <p class="chain-sub">{{ readinessAction() }}</p>
+        <ul class="blocker-list" *ngIf="!readiness()?.ready && blockerPriorities().length">
+          <li *ngFor="let p of blockerPriorities()"><button type="button" (click)="p.tab && goToTab.emit(p.tab)">{{p.label}}</button></li>
+        </ul>
       </header>
 
       <div class="rail-wrap">
         <ol class="gates">
           <li *ngFor="let s of stages(); let i = index; let last = last"
               class="gate" [attr.data-state]="s.state"
-              [class.blocking]="blockingKey() === s.key"
+              [class.blocking]="isBlocking(s.key)"
               [class.clickable]="!!s.tab"
               [attr.tabindex]="s.tab ? 0 : null"
               [title]="diagnosticFor(s.key)"
               (click)="s.tab && goToTab.emit(s.tab)"
-              (keydown.enter)="s.tab && goToTab.emit(s.tab)">
+              (keydown.enter)="s.tab && goToTab.emit(s.tab)" (keydown.space)="$event.preventDefault(); s.tab && goToTab.emit(s.tab)">
             <span class="gate-track" [class.gate-track-end]="last"></span>
             <span class="gate-pip"></span>
             <span class="gate-label">{{ s.label }}</span>
             <span class="gate-detail">{{ s.detail }}</span>
             <span class="gate-source" *ngIf="s.source">{{ s.source }}</span>
-            <span class="gate-flag" *ngIf="blockingKey() === s.key">Arrêt ici</span>
+            <span class="gate-flag" *ngIf="isBlocking(s.key)">Bloquant</span>
           </li>
         </ol>
       </div>
@@ -105,15 +109,21 @@ interface Stage {
       </section>
     </div>
 
-    <!-- ══ À TRAITER EN PREMIER ══ -->
-    <section class="block" *ngIf="topActions().length">
-      <span class="eyebrow">À traiter en premier</span>
+    <!-- ══ PRIORITÉS ══ -->
+    <section class="block" *ngIf="blockerPriorities().length || topActions().length">
+      <span class="eyebrow">Priorités</span>
+      <ol class="acts" *ngIf="blockerPriorities().length">
+        <li class="act priority-link" *ngFor="let p of blockerPriorities(); let i=index" (click)="p.tab && goToTab.emit(p.tab)" tabindex="0" (keydown.enter)="p.tab && goToTab.emit(p.tab)">
+          <span class="act-rank mono">{{i + 1}}</span><div class="act-body"><strong class="act-title">{{p.label}}</strong></div><span aria-hidden="true">→</span>
+        </li>
+      </ol>
+      <span class="eyebrow finding-priorities" *ngIf="topActions().length">Problèmes prioritaires</span>
       <ol class="acts">
         <li class="act" *ngFor="let a of topActions()">
           <span class="act-rank mono">{{ a.priority }}</span>
           <div class="act-body">
             <div class="act-line">
-              <span class="sev" [attr.data-sev]="sevKey(a.severity)">{{ a.severity }}</span>
+              <span class="sev" [attr.data-sev]="sevKey(a.severity)">{{ a.severity | presentationLabel }}</span>
               <strong class="act-title">{{ a.title }}</strong>
               <span class="who" [class.agent]="a.resolution === 'AUTO'">
                 {{ a.resolution === 'AUTO' ? 'agent' : 'manuel' }}
@@ -153,6 +163,8 @@ interface Stage {
     .chain { border: 1px solid var(--c-line); border-radius: 12px; padding: 20px 22px 8px; background: var(--c-soft); }
     .chain-title { margin: 0 0 4px; font-size: 19px; font-weight: 700; letter-spacing: -.01em; }
     .chain-sub { margin: 0; font-size: 13px; opacity: .68; line-height: 1.55; max-width: 68ch; }
+    .blocker-list{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0 0;padding:0;list-style:none}.blocker-list button{border:1px solid rgba(220,38,38,.22);background:rgba(220,38,38,.07);color:inherit;border-radius:999px;padding:5px 9px;font:600 11px inherit;cursor:pointer}.blocker-list button:focus-visible{outline:2px solid var(--c-auto)}
+    .priority-link{cursor:pointer}.priority-link:focus-visible{outline:2px solid var(--c-auto);outline-offset:-2px}.finding-priorities{margin-top:18px}
 
     .rail-wrap { overflow-x: auto; margin: 18px -6px 0; }
     .gates { list-style: none; margin: 0; padding: 0 6px; display: flex; min-width: 640px; }
@@ -275,6 +287,7 @@ export class ProjectOverviewComponent {
   @Input() set ed(v: any) { this._ed.set(v || {}); }
   @Input() set rp(v: any) { this._rp.set(v || {}); }
   @Input() set backendStages(v: any[]) { this._backendStages.set(Array.isArray(v) ? v : []); }
+  @Input() set deployReadiness(v: any) { this._readiness.set(v || null); }
   // Optionnel — colonnes Incident (errorReason/errorStep), pas dans ed/rp.
   // Absent quand ce composant est utilisé côté Report seul (project-detail) :
   // le diagnostic reste honnête (niveau "hypothèse" au lieu de "probable"),
@@ -286,6 +299,35 @@ export class ProjectOverviewComponent {
   private _ed = signal<any>({});
   private _rp = signal<any>({});
   private _backendStages = signal<any[]>([]);
+  private _readiness = signal<any>(null);
+  readiness = this._readiness.asReadonly();
+
+  readinessAction(): string {
+    const raw = String(this.readiness()?.recommendedNextAction || '').trim();
+    if (/^resolve tests:\s*(skipped|not_run)$/i.test(raw)) return 'Configurer et exécuter les tests, actuellement non exécutés.';
+    if (/^Guide développeur généré automatiquement \(agent IA indisponible/i.test(raw)) return 'Guide de correction généré automatiquement à partir des résultats des étapes.';
+    return raw || this.verdictSub();
+  }
+
+  isBlocking(key: string): boolean {
+    return !!this._backendStages().find((s: any) => s.stage === key && s.blocking === true);
+  }
+
+  blockerPriorities = computed(() => {
+    const stages = this._backendStages();
+    const result: {label:string;tab:string}[] = [];
+    const tests = stages.find((s: any) => s.stage === 'tests' && s.status === 'NOT_RUN');
+    if (tests) result.push({ label: 'Tests non exécutés', tab: 'jenkins' });
+    const labels: Record<string,string> = { sonar: 'problèmes SonarQube critiques', trivy: 'problèmes Trivy critiques', owasp: 'problèmes OWASP Dependency-Check critiques', zap: 'alertes ZAP' };
+    for (const key of ['sonar','trivy','owasp','zap']) {
+      const s = stages.find((x: any) => x.stage === key);
+      if (!s || !s.findingCount) continue;
+      const data = this._ed()?.[key] || {};
+      const critical = key === 'sonar' ? (data.issues || []).filter((x:any) => ['BLOCKER','CRITICAL'].includes(String(x.severity).toUpperCase())).length : (data.critical || data.alerts_high || 0);
+      if (critical > 0) result.push({ label: `${critical} ${labels[key]}`, tab: key === 'sonar' ? 'sonar' : `security:${key}` });
+    }
+    return result;
+  });
 
   private guide = computed<any>(() => this._rp()?.developerGuide || {});
   private issues = computed<any[]>(() => {
@@ -330,10 +372,12 @@ export class ProjectOverviewComponent {
     if (governed.length) {
       const tabs: Record<string, string> = { build: 'jenkins', tests: 'jenkins', sonar: 'sonar', trivy: 'security:trivy', owasp: 'security:owasp', zap: 'security:zap', container: 'jenkins', docker: 'jenkins', deploy: 'jenkins' };
       const state = (status: string): Stage['state'] => ({ PASSED: 'pass', FAILED: 'fail', WARNING: 'warn', RUNNING: 'warn', NOT_RUN: 'skip', NOT_REACHED: 'skip' } as any)[status] || 'skip';
+      const humanStatus: Record<string,string> = { PASSED:'Réussi', FAILED:'Échec', WARNING:'Avertissement', RUNNING:'En cours', NOT_RUN:'Non exécuté', NOT_REACHED:'Non atteint' };
+      const humanStage: Record<string,string> = { build:'Build', tests:'Tests', sonar:'SonarQube', trivy:'Trivy', owasp:'OWASP', zap:'ZAP', docker:'Docker', deploy:'Déploiement' };
       return governed.map(s => ({
         key: String(s.stage || 'unknown').toLowerCase(),
-        label: s.stage || 'Stage',
-        detail: `${s.status || 'NOT_RUN'} · ${Number(s.findingCount ?? s.findings?.length ?? 0)} finding(s)`,
+        label: humanStage[String(s.stage || '').toLowerCase()] || 'Étape',
+        detail: (() => { const count = Number(s.findingCount ?? s.findings?.length ?? 0); return `${humanStatus[String(s.status || 'NOT_RUN').toUpperCase()] || 'Non disponible'} · ${count} ${count === 1 ? 'problème' : 'problèmes'}`; })(),
         state: state(String(s.status || 'NOT_RUN').toUpperCase()),
         tab: tabs[String(s.stage || '').toLowerCase()] || null,
         source: s.source || null,

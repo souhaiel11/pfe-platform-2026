@@ -4,6 +4,9 @@ import { RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../core/services/api.service';
 import { ToastService } from '../../core/services/toast.service';
+import { PresentationLabelPipe } from '../../shared/presentation-label.pipe';
+import { FrenchDatePipe } from '../../shared/french-date.pipe';
+import { presentationLabel } from '../../shared/status-labels';
 
 // ═══════════════════════════════════════════════════════════════════
 //  AGENTS IA — Performance Dashboard v2.0
@@ -14,7 +17,7 @@ import { ToastService } from '../../core/services/toast.service';
 @Component({
   selector: 'app-analysis',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule],
+  imports: [CommonModule, RouterModule, FormsModule, PresentationLabelPipe, FrenchDatePipe],
   templateUrl: './analysis.component.html',
   styleUrls: ['./analysis.component.scss'],
 })
@@ -51,7 +54,7 @@ export class AnalysisComponent implements OnInit {
             return {
               id: inc.id,
               title: inc.title,
-              projectName: inc.project?.name || '—',
+              projectName: inc.project?.name || 'Projet non disponible',
               createdAt: inc.createdAt,
               decision: (a.decision || '').toUpperCase(),
               securityLevel: (a.securityLevel || '').toUpperCase(),
@@ -108,7 +111,7 @@ export class AnalysisComponent implements OnInit {
     this.decisionBars = Object.entries(decisionCounts)
       .sort((a: any, b: any) => b[1] - a[1])
       .map(([label, count]: any) => ({
-        label, count,
+        label: presentationLabel(label), count,
         pct: Math.round((count / maxDecision) * 100),
         color: decisionColors[label] || '#7ba8c8',
       }));
@@ -126,7 +129,7 @@ export class AnalysisComponent implements OnInit {
     this.severityBars = Object.entries(severityCounts)
       .sort((a: any, b: any) => b[1] - a[1])
       .map(([label, count]: any) => ({
-        label, count,
+        label: presentationLabel(label), count,
         pct: Math.round((count / maxSeverity) * 100),
         color: severityColors[label] || '#7ba8c8',
       }));

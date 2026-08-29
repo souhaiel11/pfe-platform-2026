@@ -10,16 +10,16 @@ import { ApiService } from '../../core/services/api.service';
     <div class="page">
       <div class="page-header">
         <div class="page-icon" style="background:var(--accent-orange-bg)"><i class="ti ti-activity" style="color:var(--accent-orange)"></i></div>
-        <div><h2>Monitoring — Grafana</h2><div class="page-sub">Métriques pods Kubernetes · Prometheus</div></div>
+        <div><h2>Supervision — Grafana</h2><div class="page-sub">Métriques des pods Kubernetes · Prometheus</div></div>
         <a *ngIf="grafanaUrl" [href]="grafanaUrl" target="_blank" rel="noopener" class="ext-btn"><i class="ti ti-external-link"></i> Ouvrir Grafana</a>
       </div>
 
       <div class="grafana-embed">
-        <div class="grafana-header"><i class="ti ti-chart-bar"></i> Dashboard Grafana</div>
+        <div class="grafana-header"><i class="ti ti-chart-bar"></i> Tableau de bord Grafana</div>
         <div class="grafana-body">
           <i class="ti ti-external-link grafana-ico"></i>
-          <div class="grafana-msg">Dashboard complet disponible sur Grafana</div>
-          <a *ngIf="grafanaUrl" [href]="grafanaUrl" target="_blank" rel="noopener" class="grafana-link">Ouvrir le dashboard →</a>
+          <div class="grafana-msg">Tableau de bord complet disponible dans Grafana</div>
+          <a *ngIf="grafanaUrl" [href]="grafanaUrl" target="_blank" rel="noopener" class="grafana-link">Ouvrir le tableau de bord →</a>
           <div *ngIf="!loading && !grafanaUrl" class="grafana-msg">Grafana n'est pas configuré dans les intégrations.</div>
           <button *ngIf="!loading && !grafanaUrl" class="retry" (click)="load()">Réessayer</button>
         </div>

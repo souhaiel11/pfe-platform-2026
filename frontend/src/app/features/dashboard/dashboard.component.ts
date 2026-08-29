@@ -6,6 +6,7 @@ import { ApiService } from '../../core/services/api.service';
 import { ThemeService } from '../../core/services/theme.service';
 import { ProjectEventsService } from '../../core/services/project-events.service';
 import { AuthService } from '../../core/services/auth.service';
+import { presentationLabel } from '../../shared/status-labels';
 
 @Component({
   selector: 'app-dashboard',
@@ -105,7 +106,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         this.activities = incidents.slice(0, 5).map(i => ({
           color: this.getIncidentColor(i.status),
           title: i.title,
-          meta: `${this.timeAgo(new Date(i.createdAt).getTime())} · ${i.project?.name || 'projet inconnu'} · ${i.status}`,
+          meta: `${this.timeAgo(new Date(i.createdAt).getTime())} · ${i.project?.name || 'projet inconnu'} · ${presentationLabel(i.status)}`,
         }));
         const OPEN_STATUSES = ['pending', 'blocked', 'failed'];
         this.notifications = incidents
@@ -113,7 +114,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
           .slice(0, 5)
           .map(i => ({
             level: i.status === 'failed' ? 'error' : 'warn',
-            title: `${i.status.toUpperCase()} — ${i.title}`,
+            title: `${presentationLabel(i.status)} — ${i.title || 'Incident sans titre'}`,
             meta: `${this.timeAgo(new Date(i.createdAt).getTime())} · ${i.project?.name || 'projet inconnu'}`,
           }));
         this.activitiesLoading = false;
@@ -139,6 +140,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
           (security?.byProject || []).map((p: any) => [p.projectId, p.securityScore]),
         );
         this.projects = (projects || []).map((p, i) => this.mapProject(p, i, liveScores));
+        this.loadReadinessForProjects();
         this.projectsLoading = false;
         setTimeout(() => this.buildRiskRings(), 50);
       },
@@ -152,16 +154,47 @@ export class DashboardComponent implements OnInit, OnDestroy {
     const score = liveScores.has(p.id) ? Math.round(liveScores.get(p.id)!) : null;
     return {
       id: p.id, name: p.name,
+      platformStatus: p.status,
       tech: `${p.cicdTool || 'jenkins'} · ${p.environment || 'dev'}`,
       initials, avatarBg: avatar.bg, avatarColor: avatar.color,
       incidents: (p.openIncidents || 0) + (p.analyzingIncidents || 0),
       buildStatus: this.jenkinsByProject.get(p.id)?.lastBuild?.result || null,
       buildNumber: this.jenkinsByProject.get(p.id)?.lastBuild?.number || null,
       health: score, riskScore: score,
-      lastUpdate: p.updatedAt ? this.timeAgo(new Date(p.updatedAt).getTime()) : '—',
+      lastUpdate: p.updatedAt ? this.timeAgo(new Date(p.updatedAt).getTime()) : 'Non disponible',
       riskBreakdown: score !== null ? [{ label: 'Score sécurité', value: score }] : [],
+      readiness: null,
     };
   }
+
+  private loadReadinessForProjects() {
+    if (!this.projects.length) return;
+    forkJoin(this.projects.map(p => forkJoin({
+      readiness: this.api.getDeployReadiness(p.id).pipe(catchError(() => of(null))),
+      jenkins: this.api.getJenkins(p.id).pipe(catchError(() => of(null))),
+    }))).subscribe(rows => {
+      this.projects = this.projects.map((p, i) => {
+        const readiness = rows[i].readiness;
+        const buildStage = readiness?.requiredStages?.find((s: any) => String(s.stage).toLowerCase() === 'build');
+        return {
+          ...p,
+          readiness,
+          // Le GET Jenkins est prioritaire. Si l’intégration est momentanément
+          // indisponible, le build corrélé et son stage gouverné du GET
+          // readiness restent une source canonique — jamais une valeur simulée.
+          buildStatus: rows[i].jenkins?._liveData ? rows[i].jenkins?.result || null : (buildStage?.status === 'PASSED' ? 'SUCCESS' : p.buildStatus),
+          buildNumber: rows[i].jenkins?._liveData ? rows[i].jenkins?.buildNumber || null : readiness?.currentBuild || p.buildNumber,
+        };
+      });
+    });
+  }
+
+  buildLabel(status: string | null): string { return status ? presentationLabel(status) : 'Indisponible'; }
+  platformLabel(p: any): string {
+    if (p.readiness?.reasons?.some((r: string) => /judgeDecision=BLOCK/i.test(r))) return 'Bloqué';
+    return p.platformStatus === 'critical' ? 'Bloqué' : p.platformStatus === 'warning' ? 'Attention' : 'Stable';
+  }
+  riskLabel(p: any): string { return p.platformStatus === 'critical' || (p.health !== null && p.health < 40) ? 'Critique' : p.platformStatus === 'warning' || (p.health !== null && p.health < 70) ? 'Élevé' : 'Faible'; }
 
   private timeAgo(ts: number): string {
     const diff = Date.now() - ts;

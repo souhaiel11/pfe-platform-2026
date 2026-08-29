@@ -14,7 +14,7 @@ export class ChatController {
 
   @Post('ask')
   async ask(@Body() body: { question: string; projectId?: string }) {
-    if (!body?.question?.trim()) throw new BadRequestException('question is required');
+    if (!body?.question?.trim()) throw new BadRequestException('Une question est requise.');
     const n8nUrl = this.config.get('N8N_URL', 'http://n8n:5678');
     try {
       const { data } = await firstValueFrom(

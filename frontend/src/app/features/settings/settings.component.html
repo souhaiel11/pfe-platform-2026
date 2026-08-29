@@ -73,7 +73,7 @@
                     </ng-container>
                   </div>
                   <div class="meta-checked" *ngIf="tool.lastChecked">
-                    Vérifié le {{tool.lastChecked | date:'dd/MM/yyyy à HH:mm'}}
+                    Vérifié le {{tool.lastChecked | frenchDate}}
                   </div>
                 </div>
 
@@ -119,7 +119,7 @@
           <div class="card governance-card">
             <div class="field-label">Gouvernance des décisions</div>
             <p class="field-hint governance-text">
-              La décision de déploiement (BLOCK / correction proposée / notification) est déterminée par des règles déterministes sur les findings réels : une CVE critique déclenche un blocage systématique ; les findings SonarQube (blockers, vulnérabilités critiques, bugs) déclenchent une proposition de correction. Le Judge Agent (IA) analyse le contexte et rédige la remédiation, mais ne prend jamais seul la décision de gouvernance — le score de confiance qu'il produit est informatif, jamais un seuil actionnable. Cette séparation garantit des décisions reproductibles et auditables, indépendantes de la variabilité d'un modèle.
+              La décision de déploiement (blocage, correction proposée ou notification) est déterminée par des règles appliquées aux problèmes réels : une CVE critique déclenche un blocage systématique ; les problèmes SonarQube bloquants, les vulnérabilités critiques et les anomalies déclenchent une proposition de correction. L’agent de gouvernance analyse le contexte et rédige la correction, mais ne prend jamais seul la décision — son score de confiance reste informatif. Cette séparation garantit des décisions reproductibles et auditables.
             </p>
           </div>
         </div>

@@ -6,11 +6,12 @@ import { ApiService } from '../../core/services/api.service';
 import { ToastService } from '../../core/services/toast.service';
 import { ProjectEventsService } from '../../core/services/project-events.service';
 import { AuthService } from '../../core/services/auth.service';
+import { FrenchDatePipe } from '../../shared/french-date.pipe';
 
 @Component({
   selector: 'app-projects',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, FrenchDatePipe],
   templateUrl: './projects.component.html',
   styleUrls: ['./projects.component.scss'],
 })

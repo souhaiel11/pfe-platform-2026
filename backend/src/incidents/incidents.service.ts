@@ -7,8 +7,9 @@ import { IncidentsGateway } from './incidents.gateway';
 import { Project } from '../projects/project.entity';
 import { sanitizeEntityProject } from '../common/sanitize-project';
 import { writeErrorToEntity } from '../common/workflow-error';
-import { randomUUID } from 'crypto';
+import { createHash, randomUUID } from 'crypto';
 import { buildConvergenceCycles } from '../common/governance';
+import { ManualRemediationService } from '../manual-remediation/manual-remediation.service';
 
 export function classifyJenkinsTriggerStatus(status: number): { accepted: boolean; code?: string } {
   if (status === 201) return { accepted: true };
@@ -90,12 +91,65 @@ export function selectJenkinsTriggerEndpoint(parameterized: boolean): 'build' | 
   return parameterized ? 'buildWithParameters' : 'build';
 }
 
+export type RemediationWorkflow = 'WF2' | 'WF4' | 'WF5';
+
+export function remediationWorkflowFor(finding: any): RemediationWorkflow | null {
+  const source = String(finding?.source || '').toUpperCase();
+  const stage = String(finding?.stage || '').toLowerCase();
+  return source === 'SONARQUBE' || stage === 'sonar' || stage === 'code' ? 'WF2'
+    : source === 'JENKINS' || stage === 'jenkins' || stage === 'jenkinsfile' ? 'WF4'
+    : source === 'DOCKER' || stage === 'docker' || stage === 'dockerfile' ? 'WF5' : null;
+}
+
+export function remediationBatchIdentity(incidentId: string, findingIds: string[]): string {
+  return createHash('sha256').update(`${incidentId}\n${[...new Set(findingIds)].sort().join('\n')}`).digest('hex');
+}
+
+export function resolveRemediationBatch(allFindings: any[], requestedIds: string[]) {
+  const findingIds = [...new Set((requestedIds || []).map(String).map(v => v.trim()).filter(Boolean))].sort();
+  if (!findingIds.length) throw new BadRequestException('Au moins un identifiant technique findingId exact est requis.');
+  const byId = new Map<string, any>();
+  for (const finding of allFindings) {
+    const id = String(finding?.id || finding?.key || '').trim();
+    if (id && !byId.has(id)) byId.set(id, finding);
+  }
+  const missing = findingIds.filter(id => !byId.has(id));
+  if (missing.length) throw new BadRequestException('Un ou plusieurs problèmes sélectionnés n’appartiennent pas à cet incident.');
+  const findings = findingIds.map(id => byId.get(id));
+  for (const finding of findings) {
+    const remediationType = finding.remediationType || (finding.resolution === 'AUTO' ? 'AUTO_FIX_ELIGIBLE' : null);
+    if (remediationType !== 'AUTO_FIX_ELIGIBLE') throw new BadRequestException('Tous les problèmes sélectionnés doivent être éligibles à une correction automatisable.');
+  }
+  const routes = [...new Set(findings.map(remediationWorkflowFor))];
+  if (routes.length !== 1 || !routes[0]) throw new BadRequestException('Tous les problèmes sélectionnés doivent utiliser la même stratégie de correction spécialisée.');
+  if (findings.length > 1 && routes[0] !== 'WF2') throw new BadRequestException('La correction groupée de plusieurs problèmes est actuellement disponible uniquement pour SonarQube.');
+  return { findingIds, findings, workflow: routes[0] as RemediationWorkflow };
+}
+
+export function workflowFinding(finding: any) {
+  return {
+    findingId: String(finding?.id || finding?.key),
+    rule: finding?.rule || finding?.ruleKey || null,
+    severity: finding?.severity || null,
+    type: finding?.type || finding?.category || null,
+    source: finding?.source || null,
+    stage: finding?.stage || null,
+    file: finding?.file || finding?.component || null,
+    line: finding?.line ?? null,
+    message: finding?.message || finding?.title || null,
+    evidence: finding?.evidence || null,
+    recommendation: finding?.recommendation || null,
+    remediationType: 'AUTO_FIX_ELIGIBLE',
+  };
+}
+
 @Injectable()
 export class IncidentsService {
   constructor(
     @InjectRepository(Incident) private readonly repo: Repository<Incident>,
     @InjectRepository(Project) private readonly projectRepo: Repository<Project>,
     private readonly gateway: IncidentsGateway,
+    private readonly manualRemediation: ManualRemediationService,
   ) {}
 
   /**
@@ -124,7 +178,7 @@ export class IncidentsService {
 
   async findOne(id: string) {
     const i = await this.repo.findOne({ where: { id }, relations: ['project'] });
-    if (!i) throw new NotFoundException('Incident not found');
+    if (!i) throw new NotFoundException('Incident introuvable.');
     return this.sanitizeIncident(i);
   }
 
@@ -154,6 +208,7 @@ export class IncidentsService {
 
     const incident = this.repo.create(dto);
     const saved = await this.repo.save(incident);
+    await this.manualRemediation.syncIncident(saved);
     this.gateway.emit('incident:created', saved);
     return saved;
   }
@@ -163,7 +218,7 @@ export class IncidentsService {
     // helper (normalise errorDetail/errorStep à null si absents) — un
     // update normal (statut, prUrl, metadata...) sans errorReason n'est pas
     // touché, comportement identique à avant.
-    const payload = (dto as any).errorReason
+    let payload: any = (dto as any).errorReason
       ? {
           ...dto,
           ...writeErrorToEntity({
@@ -173,8 +228,17 @@ export class IncidentsService {
           }),
         }
       : dto;
+    if ((dto as any).prUrl && (dto as any).status === IncidentStatus.FIX_GENERATED) {
+      const current = await this.repo.findOne({ where: { id } });
+      if (!current) throw new NotFoundException('Incident introuvable.');
+      const metadata = current.metadata || {};
+      payload = { ...payload, metadata: { ...metadata, fixRequest: {
+        ...((metadata as any).fixRequest || {}), status: 'PR_CREATED', prUrl: (dto as any).prUrl, prCreatedAt: new Date().toISOString(),
+      } } };
+    }
     await this.repo.update(id, payload);
     const updated = await this.findOne(id);
+    await this.manualRemediation.syncIncident(updated as Incident);
     this.gateway.emit('incident:updated', updated);
     return updated;
   }
@@ -182,45 +246,65 @@ export class IncidentsService {
   async remove(id: string) {
     const i = await this.findOne(id);
     await this.repo.remove(i);
-    return { message: 'Incident deleted' };
+    return { message: 'Incident supprimé.' };
   }
 
   async saveValidation(id: string, validation: any) {
     const incident = await this.repo.findOne({ where: { id }, relations: ['project'] });
-    if (!incident) throw new NotFoundException('Incident not found');
+    if (!incident) throw new NotFoundException('Incident introuvable.');
     const currentMeta = (incident as any).metadata || {};
     const fixRequest = currentMeta.fixRequest || {};
     const canonicalRepo = (value: string) => String(value || '').replace(/^https?:\/\/github\.com\//, '').replace(/\.git$/, '').toLowerCase();
     const repository = canonicalRepo(validation.repository);
     const projectRepository = canonicalRepo(incident.project?.githubRepo);
-    if (!validation.projectId || validation.projectId !== incident.projectId) throw new BadRequestException('Validation project correlation mismatch');
-    if (!validation.fixRequestId || validation.fixRequestId !== fixRequest.requestId) throw new ConflictException('Validation fix request correlation mismatch');
-    if (!repository || repository !== projectRepository) throw new ConflictException('Validation repository correlation mismatch');
+    if (!validation.projectId || validation.projectId !== incident.projectId) throw new BadRequestException('La validation ne correspond pas au projet de l’incident.');
+    if (!validation.fixRequestId || validation.fixRequestId !== fixRequest.requestId) throw new ConflictException('La validation ne correspond pas à la demande de correction.');
+    if (!repository || repository !== projectRepository) throw new ConflictException('La validation ne correspond pas au dépôt du projet.');
     const prNumber = Number(validation.prNumber);
     if (!Number.isInteger(prNumber) || prNumber <= 0 || !String(incident.prUrl || '').toLowerCase().includes(`${repository}/pull/${prNumber}`)) {
-      throw new ConflictException('Validation PR correlation mismatch');
+      throw new ConflictException('La validation ne correspond pas à la Pull Request attendue.');
     }
     const buildNumber = Number(validation.buildNumber ?? validation.build?.buildNumber);
-    if (!Number.isInteger(buildNumber) || buildNumber <= Number(incident.buildNumber || 0)) throw new ConflictException('Validation build is not newer than the incident build');
-    if (validation.jenkinsJob !== incident.jenkinsJobName) throw new ConflictException('Validation Jenkins job correlation mismatch');
+    if (!Number.isInteger(buildNumber) || buildNumber <= Number(incident.buildNumber || 0)) throw new ConflictException('Le build de validation doit être plus récent que celui de l’incident.');
+    if (validation.jenkinsJob !== incident.jenkinsJobName) throw new ConflictException('La validation ne correspond pas au job Jenkins attendu.');
     const jenkinsStatus = String(validation.jenkinsStatus ?? validation.build?.status ?? '').toUpperCase();
     const sonarStatus = String(validation.sonarStatus ?? validation.sonarQualityGate?.status ?? '').toUpperCase();
     const badStage = (validation.requiredStages || []).find((s: any) => s.required !== false && s.status !== 'PASSED' && !(s.status === 'WARNING' && !s.blocking));
     const correlationVerified = validation.correlationVerified === true && validation.sonarCorrelationVerified === true;
-    const passed = jenkinsStatus === 'SUCCESS' && sonarStatus === 'OK' && correlationVerified && !badStage;
+    const approvedFindingIds: string[] = Array.isArray(fixRequest.findingIds)
+      ? [...new Set<string>(fixRequest.findingIds.map((value: any) => String(value)))].sort()
+      : (fixRequest.findingId ? [String(fixRequest.findingId)] : []);
+    const submittedResults = Array.isArray(validation.findingResults) ? validation.findingResults : [];
+    const resultIds = submittedResults.map((r: any) => String(r?.findingId || ''));
+    const duplicatedResult = new Set(resultIds).size !== resultIds.length;
+    const unexpectedResult = resultIds.some((findingId: string) => !approvedFindingIds.includes(findingId));
+    const missingResult = approvedFindingIds.some(findingId => !resultIds.includes(findingId));
+    if (fixRequest.batchId && (duplicatedResult || unexpectedResult || missingResult)) {
+      throw new BadRequestException('La validation doit contenir exactement un résultat pour chaque problème approuvé.');
+    }
+    const findingResults = approvedFindingIds.map(findingId => {
+      const submitted = submittedResults.find((r: any) => String(r?.findingId) === findingId);
+      const result = String(submitted?.result || submitted?.status || 'INCONCLUSIVE').toUpperCase();
+      return { findingId, result: ['VALID', 'INVALID', 'INCONCLUSIVE'].includes(result) ? result : 'INCONCLUSIVE', evidence: submitted?.evidence || null };
+    });
+    const everyFindingValid = !fixRequest.batchId || (findingResults.length > 0 && findingResults.every(r => r.result === 'VALID' && !!r.evidence));
+    const hasInvalidFinding = findingResults.some(r => r.result === 'INVALID');
+    const passed = jenkinsStatus === 'SUCCESS' && sonarStatus === 'OK' && correlationVerified && !badStage && everyFindingValid;
+    const validationStatus = passed ? 'VALIDATED' : (hasInvalidFinding ? 'INVALID' : 'INCONCLUSIVE');
     const validationRecord = {
-      ...validation, passed, validationStatus: passed ? 'VALIDATED' : 'FAILED', projectId: incident.projectId,
+      ...validation, findingResults, passed, validationStatus, projectId: incident.projectId,
       incidentId: incident.id, fixRequestId: fixRequest.requestId, repository, prNumber, buildNumber,
       jenkinsStatus, sonarStatus, correlationVerified, validatedAt: new Date().toISOString(),
       failureReasons: [jenkinsStatus !== 'SUCCESS' ? `Jenkins=${jenkinsStatus || 'MISSING'}` : null,
         sonarStatus !== 'OK' ? `Sonar=${sonarStatus || 'MISSING'}` : null,
         !correlationVerified ? 'Sonar/build correlation unverified' : null,
+        !everyFindingValid ? 'One or more approved findings are invalid or inconclusive' : null,
         badStage ? `${badStage.stage}=${badStage.status}` : null].filter(Boolean),
     };
     const previousCycles = Array.isArray(currentMeta.cycles) ? currentMeta.cycles : [];
     const cycles = [...previousCycles, {
       cycle: previousCycles.length + 1, sourceBuildNumber: incident.buildNumber, validationBuildNumber: buildNumber,
-      incidentId: incident.id, findingId: fixRequest.findingId || null, fixRequestId: fixRequest.requestId,
+      incidentId: incident.id, findingId: fixRequest.findingId || null, findingIds: approvedFindingIds, fixRequestId: fixRequest.requestId,
       repository, prNumber, prUrl: incident.prUrl, status: passed ? 'PASSED' : 'FAILED',
       blockingCount: validation.unresolvedBlockingCount ?? null, startedAt: fixRequest.approvedAt || incident.createdAt,
       completedAt: validationRecord.validatedAt,
@@ -246,7 +330,7 @@ export class IncidentsService {
 
   private assertCanApprove(user: any) {
     if (!user || !['admin', 'developer'].includes(String(user.role || '').toLowerCase())) {
-      throw new ForbiddenException('User is not authorized to approve fixes for this project');
+      throw new ForbiddenException('Vous n’avez pas l’autorisation de demander une correction pour ce projet.');
     }
   }
 
@@ -261,7 +345,12 @@ export class IncidentsService {
     ];
     let guide: any = {};
     try { guide = typeof incident.aiAnalysis === 'string' ? JSON.parse(incident.aiAnalysis) : (incident.aiAnalysis || {}); } catch {}
-    return [...stageFindings, ...scannerFindings, ...(guide?.developerGuide?.issues || [])];
+    const unique = new Map<string, any>();
+    for (const finding of [...stageFindings, ...scannerFindings, ...(guide?.developerGuide?.issues || [])]) {
+      const id = String(finding?.id || finding?.key || '').trim();
+      if (id && !unique.has(id)) unique.set(id, finding);
+    }
+    return [...unique.values()];
   }
 
   private resolveApprovalContext(incident: any, findingId?: string) {
@@ -269,15 +358,15 @@ export class IncidentsService {
     const selected = findingId
       ? findings.find((f: any) => String(f.id || f.key) === String(findingId))
       : findings.find((f: any) => f.remediationType === 'AUTO_FIX_ELIGIBLE' || f.resolution === 'AUTO');
-    if (!selected) throw new BadRequestException('No AUTO_FIX_ELIGIBLE remediation finding is available');
+    if (!selected) throw new BadRequestException('Aucun problème éligible à une correction automatisable n’est disponible.');
     const remediationType = selected.remediationType || (selected.resolution === 'AUTO' ? 'AUTO_FIX_ELIGIBLE' : null);
-    if (remediationType !== 'AUTO_FIX_ELIGIBLE') throw new BadRequestException('Finding requires developer action and cannot start an automatic workflow');
+    if (remediationType !== 'AUTO_FIX_ELIGIBLE') throw new BadRequestException('Ce problème nécessite une intervention humaine et ne peut pas lancer une correction automatique.');
     const source = String(selected.source || '').toUpperCase();
     const stage = String(selected.stage || '').toLowerCase();
     const workflow = source === 'SONARQUBE' || stage === 'sonar' || stage === 'code' ? 'WF2'
       : source === 'JENKINS' || stage === 'jenkins' || stage === 'jenkinsfile' ? 'WF4'
       : source === 'DOCKER' || stage === 'docker' || stage === 'dockerfile' ? 'WF5' : null;
-    if (!workflow) throw new BadRequestException('No specialized workflow is defined for this finding source');
+    if (!workflow) throw new BadRequestException('Aucune stratégie de correction spécialisée n’est définie pour cette source.');
     return { finding: selected, workflow };
   }
 
@@ -309,38 +398,55 @@ export class IncidentsService {
     return { owner, repo, defaultBranch, content };
   }
 
-  async approveFix(id: string, user: any, body: { findingId?: string } = {}) {
+  async approveFix(id: string, user: any, body: { findingId?: string; findingIds?: string[] } = {}) {
     this.assertCanApprove(user);
     const claim = await this.repo.manager.transaction(async manager => {
       const repo = manager.getRepository(Incident);
       const incident = await repo.findOne({ where: { id }, relations: ['project'], lock: { mode: 'pessimistic_write' } });
-      if (!incident) throw new NotFoundException('Incident not found');
-      if (!incident.project) throw new BadRequestException('Incident project not found');
-      if (incident.prUrl) throw new ConflictException('A Pull Request already exists for this incident');
+      if (!incident) throw new NotFoundException('Incident introuvable.');
+      if (!incident.project) throw new BadRequestException('Le projet associé à cet incident est introuvable.');
+      if (incident.prUrl) throw new ConflictException('Une Pull Request existe déjà pour cet incident.');
       if ([IncidentStatus.COMPLETED, IncidentStatus.APPROVED, IncidentStatus.VALIDATING].includes(incident.status)) {
-        throw new ConflictException(`Incident status ${incident.status} does not allow a new fix request`);
+        throw new ConflictException(`L’état actuel de l’incident ne permet pas une nouvelle demande de correction.`);
       }
+      const legacy = body.findingId ? [body.findingId] : [];
+      if (body.findingIds !== undefined && !Array.isArray(body.findingIds)) throw new BadRequestException('Le champ technique findingIds doit être une liste.');
+      const requestedIds = body.findingIds?.length ? body.findingIds : legacy;
+      // Compatibilité limitée pour les anciens écrans WF4/WF5 : leur appel
+      // sans identifiant continue de choisir l’unique première action éligible.
+      const fallback = !requestedIds.length ? this.resolveApprovalContext(incident).finding : null;
+      const batch = resolveRemediationBatch(this.collectFindings(incident), requestedIds.length ? requestedIds : [fallback.id || fallback.key]);
+      const batchId = remediationBatchIdentity(id, batch.findingIds);
       const current = (incident.metadata as any)?.fixRequest;
-      if (current && ['APPROVAL_REQUESTED', 'FIX_STARTING', 'PR_CREATED'].includes(current.status)) {
-        throw new ConflictException('A fix request is already in progress');
+      if (current?.batchId === batchId || (!current?.batchId && batch.findingIds.length === 1 && current?.findingId === batch.findingIds[0])) {
+        return { duplicate: true as const, incident, requestId: current.requestId, batchId, metadata: incident.metadata, ...batch };
       }
-      const { finding, workflow } = this.resolveApprovalContext(incident, body.findingId);
+      if (current && ['APPROVAL_REQUESTED', 'FIX_STARTING', 'PR_CREATED', 'VALIDATING'].includes(current.status)) {
+        throw new ConflictException('Une demande de correction incompatible est déjà en cours.');
+      }
       const requestId = randomUUID();
+      const canonicalFindings = batch.findings.map(workflowFinding);
       const metadata = { ...(incident.metadata || {}), fixRequest: {
-        requestId, status: 'FIX_STARTING', workflow, findingId: finding.id || finding.key || null,
+        requestId, batchId, status: 'FIX_STARTING', workflow: batch.workflow,
+        findingId: batch.findingIds[0], findingIds: batch.findingIds, findings: canonicalFindings,
         approvedBy: user.id, approvedAt: new Date().toISOString(), lastError: null,
       }, cycles: Array.isArray((incident.metadata as any)?.cycles) ? (incident.metadata as any).cycles : [] };
       await repo.update(id, { metadata } as any);
-      return { incident, finding, workflow, requestId, metadata };
+      return { duplicate: false as const, incident, requestId, batchId, metadata, ...batch };
     });
 
+    if (claim.duplicate) {
+      return { success: true, duplicate: true, status: claim.metadata?.fixRequest?.status, incidentId: id, requestId: claim.requestId, batchId: claim.batchId };
+    }
+
     const project = claim.incident.project as Project;
+    const findings = claim.findings.map(workflowFinding);
     const payload: any = {
-      incidentId: id, projectId: project.id, findingId: claim.finding.id || claim.finding.key || null,
-      stage: claim.finding.stage || null, source: claim.finding.source || null,
+      incidentId: id, projectId: project.id, findingId: claim.findingIds[0], findingIds: claim.findingIds,
+      stage: findings[0].stage, source: findings[0].source,
       remediationType: 'AUTO_FIX_ELIGIBLE', requestId: claim.requestId,
       approvedBy: { id: user.id, role: user.role },
-      finding: claim.finding,
+      finding: findings[0], findings,
       repository: project.githubRepo,
       defaultBranch: (claim.incident.metadata as any)?.defaultBranch || null,
     };
@@ -348,10 +454,10 @@ export class IncidentsService {
       if (claim.workflow === 'WF4') {
         const ctx = await this.githubContext(project, 'Jenkinsfile');
         Object.assign(payload, { owner: ctx.owner, repo: ctx.repo, baseBranch: ctx.defaultBranch, filePath: 'Jenkinsfile', originalJenkinsfile: ctx.content,
-          retained: [{ ref: payload.findingId, title: claim.finding.title || claim.finding.message || payload.findingId, recommendation: claim.finding.recommendation || '' }], excluded: [] });
+          retained: [{ ref: payload.findingId, title: findings[0].message || payload.findingId, recommendation: findings[0].recommendation || '' }], excluded: [] });
       } else if (claim.workflow === 'WF5') {
         const ctx = await this.githubContext(project, 'Dockerfile');
-        Object.assign(payload, { owner: ctx.owner, repo: ctx.repo, baseBranch: ctx.defaultBranch, filePath: 'Dockerfile', dockerfile: ctx.content, findings: [claim.finding], context: {} });
+        Object.assign(payload, { owner: ctx.owner, repo: ctx.repo, baseBranch: ctx.defaultBranch, filePath: 'Dockerfile', dockerfile: ctx.content, findings, context: {} });
       }
       const response = await fetch(this.workflowUrl(claim.workflow), {
         method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Internal-Secret': process.env.N8N_INTERNAL_SECRET || '' },
@@ -361,17 +467,17 @@ export class IncidentsService {
     } catch (err: any) {
       const metadata = { ...claim.metadata, fixRequest: { ...claim.metadata.fixRequest, status: 'FIX_FAILED', lastError: err?.message || 'Workflow unavailable', failedAt: new Date().toISOString() } };
       await this.repo.update(id, { metadata } as any);
-      throw new ServiceUnavailableException({ code: 'FIX_WORKFLOW_UNAVAILABLE', message: 'The correction workflow could not be started; retry is allowed' });
+      throw new ServiceUnavailableException({ code: 'FIX_WORKFLOW_UNAVAILABLE', message: 'La correction n’a pas pu démarrer. Vous pouvez réessayer.' });
     }
     const updated = await this.findOne(id);
     this.gateway.emit('incident:updated', updated);
-    return { success: true, status: 'FIX_STARTING', incidentId: id, requestId: claim.requestId, workflow: claim.workflow };
+    return { success: true, duplicate: false, status: 'FIX_STARTING', incidentId: id, requestId: claim.requestId, batchId: claim.batchId, findingIds: claim.findingIds };
   }
 
   async rejectFix(id: string, user: any, body: { reason?: string } = {}) {
     this.assertCanApprove(user);
     const incident = await this.findOne(id);
-    if (incident.prUrl) throw new ConflictException('A Pull Request already exists for this incident');
+    if (incident.prUrl) throw new ConflictException('Une Pull Request existe déjà pour cet incident.');
     const metadata = { ...(incident.metadata || {}), fixRequest: {
       ...((incident.metadata as any)?.fixRequest || {}), status: 'REJECTED', rejectedBy: user.id,
       rejectedAt: new Date().toISOString(), rejectionReason: body.reason || null,

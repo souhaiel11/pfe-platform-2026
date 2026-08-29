@@ -25,7 +25,7 @@
             <option value="failed">Échec</option>
             <option value="rejected">Rejeté</option>
           </select>
-          <button class="btn btn-secondary btn-sm" (click)="resetFilters()">↺ Reset</button>
+          <button class="btn btn-secondary btn-sm" (click)="resetFilters()">↺ Réinitialiser</button>
         </div>
       </div>
 
@@ -36,7 +36,7 @@
         <table class="data-table" *ngIf="!loading">
           <thead>
             <tr>
-              <th>Incident ID</th>
+              <th>Identifiant</th>
               <th>Titre</th>
               <th>Source</th>
               <th>Sévérité</th>
@@ -58,22 +58,22 @@
                 </span>
               </td>
               <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
-                {{inc.title || 'Incident ' + inc.sourceType}}
+                {{inc.title || 'Incident sans titre'}}
               </td>
               <td>
-                <span class="source-tag">{{inc.sourceType}}</span>
+                <span class="source-tag">{{inc.sourceType || inc.source || 'Non disponible'}}</span>
               </td>
               <td>
-                <span *ngIf="inc._severity" class="badge" [class]="getSeverityBadgeClass(inc._severity)">{{inc._severity}}</span>
+                <span *ngIf="inc._severity" class="badge" [class]="getSeverityBadgeClass(inc._severity)">{{inc._severity | presentationLabel}}</span>
                 <span *ngIf="!inc._severity" class="badge severity-unknown">Non déterminée</span>
               </td>
-              <td><span class="badge {{inc.status?.toLowerCase()}}">{{inc.status}}</span></td>
+              <td><span class="badge {{inc.status?.toLowerCase()}}">{{inc.status | presentationLabel}}</span></td>
               <td style="font-family:var(--font-mono);font-size:11px;">
-                {{inc.createdAt | date:'dd/MM/yy HH:mm'}}
+                {{inc.createdAt | frenchDate}}
               </td>
               <td>
                 <a [routerLink]="['/incidents', inc.id]" class="btn btn-secondary btn-sm">
-                  Voir →
+                  Voir le détail →
                 </a>
               </td>
             </tr>

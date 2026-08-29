@@ -12,6 +12,8 @@ export interface GovernedStage {
 
 const ORDER = ['build', 'tests', 'sonar', 'security', 'trivy', 'owasp', 'zap', 'container', 'deploy'];
 const BAD_REQUIRED = new Set<StageStatus>(['FAILED', 'RUNNING', 'NOT_RUN', 'NOT_REACHED']);
+const STATUS_FR: Record<string, string> = { PASSED: 'réussi', FAILED: 'en échec', WARNING: 'en avertissement', RUNNING: 'en cours', NOT_RUN: 'non exécuté', NOT_REACHED: 'non atteint' };
+const STAGE_FR: Record<string, string> = { build: 'Build', tests: 'Tests', sonar: 'SonarQube', security: 'Sécurité', trivy: 'Trivy', owasp: 'OWASP Dependency-Check', zap: 'ZAP', container: 'Conteneur', docker: 'Docker', deploy: 'Déploiement' };
 
 export function prioritizeStages(stages: GovernedStage[]) {
   const ranked = stages.map((s, index) => ({ ...s, rank: ORDER.indexOf(s.stage.toLowerCase()) < 0 ? ORDER.length + index : ORDER.indexOf(s.stage.toLowerCase()) }));
@@ -22,7 +24,7 @@ export function prioritizeStages(stages: GovernedStage[]) {
     blockers,
     warnings,
     priority: first?.rank ?? null,
-    nextAction: first ? `Resolve ${first.stage}: ${first.message || first.status}` : null,
+    nextAction: first ? `Corriger l’étape ${STAGE_FR[first.stage.toLowerCase()] || first.stage} : ${first.message || STATUS_FR[first.status] || 'état indisponible'}` : null,
   };
 }
 
@@ -42,19 +44,19 @@ export interface ReadinessInput {
 export function evaluateReadiness(input: ReadinessInput) {
   const blockingReasons: string[] = [];
   const priority = prioritizeStages(input.stages);
-  if (!input.currentBuild || input.validatedBuild !== input.currentBuild) blockingReasons.push('Validation does not match the current build');
-  if (!input.validationPassed) blockingReasons.push('Post-fix validation has not passed');
-  if (!input.correlationVerified) blockingReasons.push('Project/build/incident/PR correlation is unverified');
-  if (input.sonarRequired && !input.sonarCorrelationVerified) blockingReasons.push('Sonar analysisId correlation is unverified');
-  if (input.sonarRequired && input.sonarStatus !== 'OK') blockingReasons.push(`Required Sonar quality gate is ${input.sonarStatus || 'unavailable'}`);
-  if (input.unresolvedBlockingCount > 0) blockingReasons.push(`${input.unresolvedBlockingCount} unresolved blocking finding(s)`);
-  if (['APPROVAL_REQUESTED', 'FIX_STARTING', 'PR_CREATED'].includes(input.fixRequestStatus || '')) blockingReasons.push(`Fix request is ${input.fixRequestStatus}`);
-  for (const stage of priority.blockers) blockingReasons.push(`${stage.stage}=${stage.status}`);
+  if (!input.currentBuild || input.validatedBuild !== input.currentBuild) blockingReasons.push('La validation ne correspond pas au build courant');
+  if (!input.validationPassed) blockingReasons.push('La validation après correction n’est pas réussie');
+  if (!input.correlationVerified) blockingReasons.push('La corrélation projet/build/incident/PR n’est pas vérifiée');
+  if (input.sonarRequired && !input.sonarCorrelationVerified) blockingReasons.push('La corrélation de l’analyse SonarQube n’est pas vérifiée');
+  if (input.sonarRequired && input.sonarStatus !== 'OK') blockingReasons.push('Le Quality Gate SonarQube requis n’est pas validé');
+  if (input.unresolvedBlockingCount > 0) blockingReasons.push(`${input.unresolvedBlockingCount} ${input.unresolvedBlockingCount === 1 ? 'problème bloquant non résolu' : 'problèmes bloquants non résolus'}`);
+  if (['APPROVAL_REQUESTED', 'FIX_STARTING', 'PR_CREATED'].includes(input.fixRequestStatus || '')) blockingReasons.push('Une demande de correction est en cours');
+  for (const stage of priority.blockers) blockingReasons.push(`${STAGE_FR[stage.stage.toLowerCase()] || stage.stage} : ${STATUS_FR[stage.status] || 'état indisponible'}`);
   return {
     status: blockingReasons.length ? 'NOT_READY' as const : 'READY' as const,
     ready: blockingReasons.length === 0,
     blockingReasons: [...new Set(blockingReasons)],
-    warnings: priority.warnings.map(w => `${w.stage}: ${w.message || w.status}`),
+    warnings: priority.warnings.map(w => `${STAGE_FR[w.stage.toLowerCase()] || w.stage} : ${w.message || STATUS_FR[w.status] || 'état indisponible'}`),
     currentBuild: input.currentBuild,
     validatedBuild: input.validatedBuild,
     unresolvedBlockingCount: input.unresolvedBlockingCount,

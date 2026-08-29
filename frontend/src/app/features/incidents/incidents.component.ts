@@ -4,11 +4,13 @@ import { RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../core/services/api.service';
 import { ToastService } from '../../core/services/toast.service';
+import { PresentationLabelPipe } from '../../shared/presentation-label.pipe';
+import { FrenchDatePipe } from '../../shared/french-date.pipe';
 
 @Component({
   selector: 'app-incidents',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule],
+  imports: [CommonModule, RouterModule, FormsModule, PresentationLabelPipe, FrenchDatePipe],
   templateUrl: './incidents.component.html',
   styleUrls: ['./incidents.component.scss'],
 })

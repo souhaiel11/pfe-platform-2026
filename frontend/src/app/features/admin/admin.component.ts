@@ -3,11 +3,13 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../core/services/api.service';
 import { ToastService } from '../../core/services/toast.service';
+import { FrenchDatePipe } from '../../shared/french-date.pipe';
+import { PresentationLabelPipe } from '../../shared/presentation-label.pipe';
 
 @Component({
   selector: 'app-admin',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, FrenchDatePipe, PresentationLabelPipe],
   templateUrl: './admin.component.html',
   styleUrls: ['./admin.component.scss'],
 })

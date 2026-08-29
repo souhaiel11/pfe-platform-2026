@@ -14,7 +14,7 @@ import { CommonModule } from '@angular/common';
 
       <div class="info-banner">
         <i class="ti ti-info-circle"></i>
-        Les métriques DORA sont les 4 indicateurs utilisés par Google et les grandes entreprises pour mesurer la performance DevOps. Un score <strong>ELITE</strong> = top 10% mondial.
+        Les métriques DORA sont les quatre indicateurs utilisés pour mesurer la performance DevOps. Le niveau <strong>Élite</strong> correspond aux 10 % les plus performants.
       </div>
 
       <div class="dora-grid">
@@ -76,16 +76,16 @@ import { CommonModule } from '@angular/common';
 })
 export class DoraComponent implements AfterViewInit, OnDestroy {
   doraMetrics = [
-    { icon: '🚀', value: '3.2/j', label: 'Deployment Frequency', desc: 'Fréquence de déploiement en production', level: 'ELITE', color: 'var(--accent-green)', badgeBg: 'var(--accent-green-bg)' },
-    { icon: '⏱️', value: '4h20', label: 'Lead Time for Changes', desc: 'Du commit au déploiement K8s', level: 'HIGH', color: 'var(--accent-green)', badgeBg: 'var(--accent-green-bg)' },
-    { icon: '📉', value: '18%', label: 'Change Failure Rate', desc: '% de déploiements causant un incident', level: 'MEDIUM', color: 'var(--accent-orange)', badgeBg: 'var(--accent-orange-bg)' },
-    { icon: '🔧', value: '45min', label: 'MTTR', desc: 'Temps moyen pour corriger un incident', level: 'ELITE', color: 'var(--accent-green)', badgeBg: 'var(--accent-green-bg)' },
+    { icon: '🚀', value: '3.2/j', label: 'Fréquence de déploiement', desc: 'Fréquence de déploiement en production', level: 'Élite', color: 'var(--accent-green)', badgeBg: 'var(--accent-green-bg)' },
+    { icon: '⏱️', value: '4h20', label: 'Délai de mise en production', desc: 'Du commit au déploiement Kubernetes', level: 'Élevé', color: 'var(--accent-green)', badgeBg: 'var(--accent-green-bg)' },
+    { icon: '📉', value: '18 %', label: 'Taux d’échec des changements', desc: 'Part des déploiements causant un incident', level: 'Moyen', color: 'var(--accent-orange)', badgeBg: 'var(--accent-orange-bg)' },
+    { icon: '🔧', value: '45 min', label: 'Temps moyen de rétablissement', desc: 'Temps moyen pour corriger un incident', level: 'Élite', color: 'var(--accent-green)', badgeBg: 'var(--accent-green-bg)' },
   ];
 
   goals = [
-    { metric: 'Change Failure Rate', current: '18%', target: '< 15%', color: 'var(--accent-orange)', action: 'Améliorer les tests unitaires' },
-    { metric: 'Lead Time', current: '4h20', target: '< 1h', color: 'var(--accent-green)', action: 'Optimiser le pipeline Jenkins' },
-    { metric: 'Deployment Frequency', current: '3.2/j', target: '> 5/j', color: 'var(--accent-green)', action: 'Automatiser les déploiements' },
+    { metric: 'Taux d’échec des changements', current: '18 %', target: '< 15 %', color: 'var(--accent-orange)', action: 'Améliorer les tests unitaires' },
+    { metric: 'Délai de mise en production', current: '4h20', target: '< 1h', color: 'var(--accent-green)', action: 'Optimiser le pipeline Jenkins' },
+    { metric: 'Fréquence de déploiement', current: '3.2/j', target: '> 5/j', color: 'var(--accent-green)', action: 'Automatiser les déploiements' },
   ];
 
   private chart: any;
@@ -106,8 +106,8 @@ export class DoraComponent implements AfterViewInit, OnDestroy {
         data: {
           labels: ['#128','#129','#130','#131','#132'],
           datasets: [
-            { label: 'Lead Time (min)', data: [280,260,270,240,260], borderColor: blue, borderWidth: 2, pointRadius: 3, fill: false, tension: .4 },
-            { label: 'CFR %', data: [20,15,18,22,18], borderColor: orange, borderWidth: 2, pointRadius: 3, fill: false, tension: .4 },
+            { label: 'Délai de mise en production (min)', data: [280,260,270,240,260], borderColor: blue, borderWidth: 2, pointRadius: 3, fill: false, tension: .4 },
+            { label: 'Taux d’échec (%)', data: [20,15,18,22,18], borderColor: orange, borderWidth: 2, pointRadius: 3, fill: false, tension: .4 },
           ]
         },
         options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true, labels: { color: muted, font: { size: 9 } } } }, scales: { x: { ticks: { color: muted, font: { size: 9 } }, grid: { color: 'rgba(128,128,128,.1)' } }, y: { ticks: { color: muted, font: { size: 9 } }, grid: { color: 'rgba(128,128,128,.1)' } } } }

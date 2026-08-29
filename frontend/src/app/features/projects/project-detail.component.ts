@@ -1,4 +1,4 @@
-import { Component, OnInit, Input } from '@angular/core';
+import { Component, OnInit, Input, ElementRef, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
@@ -12,15 +12,21 @@ import { ToastService } from '../../core/services/toast.service';
 import { RiskStateService } from '../../core/services/risk-state.service';
 import { AuthService } from '../../core/services/auth.service';
 import { StageStatusLabelPipe } from '../../shared/stage-status-label.pipe';
+import { PresentationLabelPipe } from '../../shared/presentation-label.pipe';
+import { FrenchDatePipe } from '../../shared/french-date.pipe';
+import { userHttpError } from '../../core/http-error-message';
+import { presentationLabel, remediationTypeLabel, riskLevelLabel } from '../../shared/status-labels';
 
 @Component({
   selector: 'app-project-detail',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, CveTableComponent, ZapTableComponent, ProjectOverviewComponent, JenkinsfileOptimizerComponent, DockerfileOptimizerComponent, StageStatusLabelPipe],
+  imports: [CommonModule, FormsModule, RouterModule, CveTableComponent, ZapTableComponent, ProjectOverviewComponent, JenkinsfileOptimizerComponent, DockerfileOptimizerComponent, StageStatusLabelPipe, PresentationLabelPipe, FrenchDatePipe],
   templateUrl: './project-detail.component.html',
   styleUrls: ['./project-detail.component.scss'],
 })
 export class ProjectDetailComponent implements OnInit {
+  @ViewChild('sonarDrawer') sonarDrawer?: ElementRef<HTMLElement>;
+  @ViewChild('batchDialog') batchDialog?: ElementRef<HTMLElement>;
   approving = false;
   buildTriggering = false;
   @Input() id!: string;
@@ -38,6 +44,11 @@ export class ProjectDetailComponent implements OnInit {
   readonly VALID_TABS = ['rapport', 'jenkins', 'sonarqube', 'docker', 'securite', 'incidents', 'config'];
   activeTab = 'rapport';
   securityFilter: 'all' | 'trivy' | 'owasp' | 'zap' = 'all';
+  manualTasks: any[] = [];
+  manualSummary = { todo: 0, doneByUser: 0, stillDetected: 0, verified: 0, total: 0 };
+  manualStatusFilter = 'ALL';
+  manualSeverityFilter = 'ALL';
+  get manualUserRole(): string { return String(this.auth.currentUser?.role || 'viewer'); }
 
   // Parsed report
   rp: any = {};
@@ -107,6 +118,15 @@ export class ProjectDetailComponent implements OnInit {
 
   // Analyse IA SonarQube extraite
   sonarAiAnalysis = '';
+  showAllHistory = false;
+  sonarSearch = '';
+  sonarSeverity = 'ALL';
+  sonarRemediation = 'ALL';
+  sonarOwner = 'ALL';
+  selectedSonarFinding: any = null;
+  selectedSonarIds = new Set<string>();
+  batchConfirmationOpen = false;
+  private sonarTrigger: HTMLElement | null = null;
 
   // Correction manuelle (section 3, colonne droite) — recommandations réparties par priorité
   manualHigh: { text: string; high: boolean }[] = [];
@@ -121,6 +141,136 @@ export class ProjectDetailComponent implements OnInit {
     public auth: AuthService,
   ) {}
   get canOperate() { return ['admin', 'developer'].includes(this.auth.currentUser?.role); }
+  editProject() { if (this.canOperate) this.router.navigate(['/projects', this.id, 'edit']); }
+
+  configHealthRows() {
+    const stage = (key: string) => this.deployReadiness?.requiredStages?.find((s: any) => s.stage === key);
+    return [
+      { name: 'GitHub', state: this.project?.githubRepo ? 'Configuré' : 'Non configuré', ok: !!this.project?.githubRepo },
+      { name: 'Jenkins', state: this.jenkinsMessage ? 'Indisponible' : (this.project?.jenkinsJobName ? 'Connecté' : 'Non configuré'), ok: !this.jenkinsMessage && !!this.project?.jenkinsJobName },
+      { name: 'SonarQube', state: !this.project?.sonarqubeKey ? 'Non configuré' : (this.ed?.sonar ? 'Configuré' : 'Attention'), ok: !!this.project?.sonarqubeKey && !!this.ed?.sonar },
+      { name: 'Docker', state: stage('docker')?.status === 'PASSED' ? 'Dockerfile détecté' : 'Attention', ok: stage('docker')?.status === 'PASSED' },
+      { name: 'Tests', state: stage('tests')?.status === 'NOT_RUN' ? 'Désactivé' : (stage('tests')?.status === 'PASSED' ? 'Configuré' : 'Attention'), ok: stage('tests')?.status === 'PASSED' },
+      { name: 'ZAP', state: this.ed?.zap?.target_url ? 'Configuré' : (stage('zap') ? 'Attention' : 'Non configuré'), ok: !!this.ed?.zap?.target_url },
+      { name: 'Azure', state: this.deploymentConfigured ? 'Configuré' : 'Non configuré', ok: this.deploymentConfigured },
+    ];
+  }
+  configStageStatus(key: string): string | null { return this.deployReadiness?.requiredStages?.find((s: any) => s.stage === key)?.status || null; }
+
+  readinessReasonLabel(raw: unknown): string {
+    const reason = String(raw || '').trim();
+    if (!reason) return 'Raison indisponible';
+    const count = reason.match(/^(\d+) unresolved blocking finding\(s\)$/i);
+    if (count) return `${count[1]} ${count[1] === '1' ? 'problème bloquant non résolu' : 'problèmes bloquants non résolus'}`;
+    const stage = reason.match(/^(tests|sonar|trivy|owasp|zap|docker|deploy)=(NOT_RUN|NOT_REACHED|FAILED|WARNING|RUNNING)$/i);
+    if (stage) return `${presentationLabel(stage[1])} : ${presentationLabel(stage[2])}`;
+    if (/^judgeDecision=BLOCK/i.test(reason)) return 'La décision de gouvernance bloque explicitement ce build.';
+    return reason;
+  }
+  readinessReasonsLabel(): string { return (this.deployReasons || []).map(r => this.readinessReasonLabel(r)).join(' · '); }
+
+  sonarFindings(): any[] {
+    const severityRank: Record<string, number> = { BLOCKER: 0, CRITICAL: 1, MAJOR: 2, HIGH: 2, MINOR: 3, MEDIUM: 3, LOW: 4, INFO: 5 };
+    const q = this.sonarSearch.trim().toLowerCase();
+    return [...(this.ed?.sonar?.issues || [])]
+      .filter((f: any) => this.sonarSeverity === 'ALL' || String(f.severity).toUpperCase() === this.sonarSeverity)
+      .filter((f: any) => this.sonarRemediation === 'ALL' || (f.remediationType || 'UNKNOWN') === this.sonarRemediation)
+      .filter((f: any) => this.sonarOwner === 'ALL' || (f.owner || 'UNASSIGNED') === this.sonarOwner)
+      .filter((f: any) => !q || [f.rule, f.ruleKey, f.message, f.title, f.file, f.component].some(v => String(v || '').toLowerCase().includes(q)))
+      .sort((a: any, b: any) => (severityRank[String(a.severity).toUpperCase()] ?? 9) - (severityRank[String(b.severity).toUpperCase()] ?? 9));
+  }
+
+  sonarOwners(): string[] {
+    return [...new Set<string>((this.ed?.sonar?.issues || []).map((f: any) => f.owner).filter(Boolean))].sort();
+  }
+
+  openSonarFinding(finding: any, trigger?: Event) {
+    this.selectedSonarFinding = finding;
+    this.sonarTrigger = trigger?.currentTarget as HTMLElement || null;
+    setTimeout(() => this.sonarDrawer?.nativeElement.focus());
+  }
+
+  closeSonarFinding() {
+    this.selectedSonarFinding = null;
+    setTimeout(() => this.sonarTrigger?.focus());
+  }
+
+  findingValue(value: any): string { return value === null || value === undefined || value === '' ? 'Non disponible' : String(value); }
+  findingEvidence(finding: any): string {
+    const evidence = String(finding?.evidence || '').trim();
+    const id = String(finding?.id || finding?.key || '').trim();
+    if (!evidence || evidence === id || /^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(evidence)) return this.findingValue(finding?.message);
+    return evidence;
+  }
+  findingFileName(f: any): string { return String(f?.file || f?.component || 'Non disponible').split('/').pop() || 'Non disponible'; }
+  remediationLabel(raw: string): string {
+    return remediationTypeLabel(raw);
+  }
+
+  findingId(finding: any): string { return String(finding?.id || finding?.key || ''); }
+  isAutoFixEligible(finding: any): boolean { return finding?.remediationType === 'AUTO_FIX_ELIGIBLE'; }
+  activeFixRequest(): any { return this.latestReport?.metadata?.fixRequest || null; }
+  activeFindingIds(): string[] {
+    const request = this.activeFixRequest();
+    if (!request || !['APPROVAL_REQUESTED','FIX_STARTING','PR_CREATED','VALIDATING'].includes(request.status)) return [];
+    return Array.isArray(request.findingIds) ? request.findingIds.map(String) : (request.findingId ? [String(request.findingId)] : []);
+  }
+  requestFindingIds(): string[] {
+    const request = this.activeFixRequest();
+    return Array.isArray(request?.findingIds) ? request.findingIds.map(String) : (request?.findingId ? [String(request.findingId)] : []);
+  }
+  isFindingLocked(finding: any): boolean { return this.activeFindingIds().includes(this.findingId(finding)); }
+  findingRequestState(finding: any): string | null {
+    if (!this.requestFindingIds().includes(this.findingId(finding))) return null;
+    const labels: Record<string,string> = { APPROVAL_REQUESTED:'Correction demandée', FIX_STARTING:'Correction demandée', PR_CREATED:'PR créée', VALIDATING:'Validation en cours', VALIDATED:'Validée', REJECTED:'Rejetée', FIX_FAILED:'Échec de la correction' };
+    return labels[this.activeFixRequest()?.status] || 'Correction en cours';
+  }
+  isSelected(finding: any): boolean { return this.selectedSonarIds.has(this.findingId(finding)); }
+  canSelectFinding(finding: any): boolean { return this.canOperate && this.isAutoFixEligible(finding) && !this.isFindingLocked(finding); }
+  toggleFindingSelection(finding: any, selected = !this.isSelected(finding)): void {
+    if (!this.canSelectFinding(finding)) return;
+    const id = this.findingId(finding);
+    if (selected) this.selectedSonarIds.add(id); else this.selectedSonarIds.delete(id);
+  }
+  eligibleFilteredFindings(): any[] { return this.sonarFindings().filter(f => this.canSelectFinding(f)); }
+  allEligibleFilteredSelected(): boolean {
+    const eligible = this.eligibleFilteredFindings();
+    return eligible.length > 0 && eligible.every(f => this.isSelected(f));
+  }
+  toggleFilteredSelection(): void {
+    const eligible = this.eligibleFilteredFindings();
+    const select = !this.allEligibleFilteredSelected();
+    for (const finding of eligible) this.toggleFindingSelection(finding, select);
+  }
+  clearSonarSelection(): void { this.selectedSonarIds.clear(); }
+  selectedSonarFindings(): any[] {
+    const selected = this.selectedSonarIds;
+    return (this.ed?.sonar?.issues || []).filter((f: any) => selected.has(this.findingId(f)));
+  }
+  openBatchConfirmation(): void {
+    if (!this.selectedSonarFindings().length) return;
+    this.batchConfirmationOpen = true;
+    setTimeout(() => this.batchDialog?.nativeElement.focus());
+  }
+  closeBatchConfirmation(): void { if (!this.approving) this.batchConfirmationOpen = false; }
+  confirmSonarCorrection(): void {
+    const findingIds = this.selectedSonarFindings().map(f => this.findingId(f));
+    if (!this.canOperate || !this.latestReport?.id || !findingIds.length) return;
+    this.approving = true;
+    this.api.approveFixBatch(this.latestReport.id, findingIds).subscribe({
+      next: (result: any) => {
+        this.approving = false;
+        this.batchConfirmationOpen = false;
+        this.latestReport.metadata = { ...(this.latestReport.metadata || {}), fixRequest: {
+          ...this.latestReport.metadata?.fixRequest, requestId: result.requestId, batchId: result.batchId,
+          findingIds, findingId: findingIds[0], status: result.status,
+        }};
+        this.clearSonarSelection();
+        this.toast.success('Correction demandée', result.duplicate ? 'Cette demande existe déjà.' : 'La demande gouvernée a été enregistrée.');
+      },
+      error: (e: any) => { this.approving = false; this.toast.error('Demande refusée', userHttpError(e, 'Impossible de proposer cette correction.')); },
+    });
+  }
 
   // Source unique de vérité pour changer d'onglet : met à jour activeTab ET
   // reflète le choix dans l'URL (?tab=xxx) sans recharger la page, pour que
@@ -200,12 +350,32 @@ export class ProjectDetailComponent implements OnInit {
         this.loadJudgeStatus();
         this.loadDeployReadiness();
         this.loadConvergence();
+        this.loadManualRemediation();
       },
       error: () => {
         this.toast.error('Erreur', 'Projet introuvable');
         this.loading = false;
         this.loadError = true;
       }
+    });
+  }
+
+  loadManualRemediation() {
+    this.api.getManualRemediationTasks(this.id).subscribe({ next: tasks => this.manualTasks = tasks || [], error: () => this.manualTasks = [] });
+    this.api.getManualRemediationSummary(this.id).subscribe({ next: summary => this.manualSummary = summary, error: () => {} });
+  }
+
+  completeManualTask(event: { task: any; note?: string }) {
+    this.api.completeManualRemediation(event.task.id, event.note).subscribe({
+      next: () => { this.toast.success('Traitement enregistré', 'La résolution technique sera confirmée par une prochaine analyse.'); this.loadManualRemediation(); },
+      error: (err) => this.toast.error('Action refusée', userHttpError(err, 'Impossible d’enregistrer le traitement.')),
+    });
+  }
+
+  reopenManualTask(task: any) {
+    this.api.reopenManualRemediation(task.id).subscribe({
+      next: () => { this.toast.success('Tâche rouverte', 'Le suivi manuel est de nouveau à traiter.'); this.loadManualRemediation(); },
+      error: (err) => this.toast.error('Action refusée', userHttpError(err, 'Impossible de rouvrir la tâche.')),
     });
   }
 
@@ -486,9 +656,9 @@ export class ProjectDetailComponent implements OnInit {
     try {
       const json = JSON.parse(summary);
       return {
-        build:            json.build || json.build_number || 'N/A',
-        job:              json.job   || 'N/A',
-        status:           json.status || 'N/A',
+        build:            json.build || json.build_number || null,
+        job:              json.job   || 'Non disponible',
+        status:           json.status || null,
         decision:         json.decision || 'NOTIFY_ONLY',
         confidence:       (json.confidenceScore || 0) + '%',
         errors:           this.fmt(json.errorsSummary),
@@ -591,14 +761,14 @@ export class ProjectDetailComponent implements OnInit {
     if (!this.project) return [];
     return [
       { label: 'ID',             value: this.project.id },
-      { label: 'Environnement',  value: this.project.environment || '—' },
+      { label: 'Environnement',  value: this.project.environment || 'Non disponible' },
       { label: 'Créé le',        value: this.project.createdAt ? new Date(this.project.createdAt).toLocaleDateString('fr-FR') : '—' },
-      { label: 'CI/CD Tool',     value: this.project.cicdTool || '—' },
-      { label: 'Jenkins Job',    value: this.project.jenkinsJobName || '—' },
-      { label: 'Jenkins URL',    value: this.project.jenkinsUrl || '—' },
-      { label: 'SonarQube Key',  value: this.project.sonarqubeKey || '—' },
-      { label: 'GitHub Repo',    value: this.project.githubRepo || '—' },
-      { label: 'Description',    value: this.project.description || '—' },
+      { label: 'Outil CI/CD',    value: this.project.cicdTool || 'Non configuré' },
+      { label: 'Job Jenkins',    value: this.project.jenkinsJobName || 'Non configuré' },
+      { label: 'URL Jenkins',    value: this.project.jenkinsUrl || 'Non configurée' },
+      { label: 'Clé SonarQube',  value: this.project.sonarqubeKey || 'Non configurée' },
+      { label: 'Dépôt GitHub',   value: this.project.githubRepo || 'Non configuré' },
+      { label: 'Description',    value: this.project.description || 'Non disponible' },
     ];
   }
 
@@ -613,6 +783,12 @@ export class ProjectDetailComponent implements OnInit {
     if (d === 'BLOCK')       return '#E24B4A';
     if (d === 'NOTIFY_ONLY') return '#888780';
     return '#888780';
+  }
+  decisionLabel(d: string): string {
+    return presentationLabel(d);
+  }
+  riskLevelLabel(level: string): string {
+    return riskLevelLabel(level);
   }
 
   getSecColor(level: string): string {

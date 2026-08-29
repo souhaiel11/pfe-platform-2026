@@ -16,14 +16,14 @@ export class AuthService {
   async login(email: string, password: string) {
     const user = await this.repo.findOne({ where: { email } });
     if (!user || !await bcrypt.compare(password, user.password))
-      throw new UnauthorizedException('Invalid credentials');
+      throw new UnauthorizedException('Adresse e-mail ou mot de passe incorrect.');
     const token = this.jwt.sign({ sub: user.id, email: user.email, role: user.role });
     return { token, user: { id: user.id, email: user.email, name: user.name, role: user.role } };
   }
 
   async register(email: string, password: string, name: string, role = UserRole.DEVELOPER) {
     const exists = await this.repo.findOne({ where: { email } });
-    if (exists) throw new ConflictException('Email already exists');
+    if (exists) throw new ConflictException('Un compte utilise déjà cette adresse e-mail.');
     const hashed = await bcrypt.hash(password, 10);
     const user = this.repo.create({ email, password: hashed, name, role });
     const saved = await this.repo.save(user);
@@ -44,6 +44,6 @@ export class AuthService {
 
   async remove(id: string) {
     await this.repo.delete(id);
-    return { message: 'User deleted' };
+    return { message: 'Utilisateur supprimé.' };
   }
 }

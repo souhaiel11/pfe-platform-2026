@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
@@ -50,7 +50,6 @@ export class ProjectFormComponent implements OnInit {
     );
     this.form.get('slackEnabled')?.valueChanges.subscribe(v => {
       v ? this.form.get('slackChannel')?.enable() : this.form.get('slackChannel')?.disable();
-      v ? this.form.get('slackToken')?.enable()   : this.form.get('slackToken')?.disable();
     });
   }
 
@@ -65,19 +64,15 @@ export class ProjectFormComponent implements OnInit {
       jenkinsUrl:     [''],
       jenkinsJobName: ['', [Validators.required, Validators.pattern(/^[a-zA-Z0-9._-]+$/)]],
       jenkinsJobPath: [''],
-      jenkinsToken:   [''],
       githubRepo:     ['', [Validators.required, Validators.pattern(/^[\w-]+\/[\w.-]+$/)]],
-      githubToken:    [''],
       // SonarQube
       sonarqubeUrl:   [''],
       sonarqubeKey:   [''],
-      sonarqubeToken: [''],
       // Notifications
       emailEnabled:   [false],
       emailRecipient: [{ value: '', disabled: true }],
       slackEnabled:   [false],
       slackChannel:   [{ value: '', disabled: true }],
-      slackToken:     [{ value: '', disabled: true }],
     });
   }
 
@@ -89,8 +84,8 @@ export class ProjectFormComponent implements OnInit {
         if (p.emailEnabled) this.form.get('emailRecipient')?.enable();
         if (p.slackEnabled) {
           this.form.get('slackChannel')?.enable();
-          this.form.get('slackToken')?.enable();
         }
+        this.form.markAsPristine();
         this.loading = false;
       },
       error: () => { this.loading = false; }
@@ -114,6 +109,7 @@ export class ProjectFormComponent implements OnInit {
       next: (p: any) => {
         this.loading = false;
         this.saveSuccess = true;
+        this.form.markAsPristine();
         if (!this.isEdit) { this.projectId = p.id; this.isEdit = true; }
         if (wasCreate) this.projectEvents.notifyChanged();
         this.validateProject();
@@ -135,7 +131,10 @@ export class ProjectFormComponent implements OnInit {
     });
   }
 
-  goBack()            { this.router.navigate(['/projects']); }
+  goBack()            { this.router.navigate(this.isEdit ? ['/projects', this.projectId] : ['/projects']); }
+  hasUnsavedChanges() { return !!this.form?.dirty && !this.saveSuccess; }
+  @HostListener('window:beforeunload', ['$event'])
+  warnUnsaved(event: BeforeUnloadEvent) { if (this.form?.dirty && !this.saveSuccess) event.preventDefault(); }
   setSection(id: string) { this.activeSection = id; }
   get f()             { return this.form.controls; }
   isInvalid(field: string) { const c = this.form.get(field); return !!(c?.invalid && (c.dirty || c.touched)); }

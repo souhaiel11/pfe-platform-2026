@@ -2,6 +2,7 @@ import { Component, Input, OnInit, OnDestroy, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Subscription, interval, switchMap } from 'rxjs';
+import { PresentationLabelPipe } from '../../shared/presentation-label.pipe';
 
 // ─────────────────────────────────────────────────────────────────────
 //  Optimiseur de Jenkinsfile — agent IA
@@ -25,7 +26,7 @@ import { Subscription, interval, switchMap } from 'rxjs';
 @Component({
   selector: 'app-jenkinsfile-optimizer',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, PresentationLabelPipe],
   template: `
     <!-- ── Saisie : import Git ou collage ── -->
     <section class="jo-input" *ngIf="!result()">
@@ -48,9 +49,9 @@ import { Subscription, interval, switchMap } from 'rxjs';
       <div *ngIf="mode() === 'git'">
         <p class="jo-sub">La plateforme récupère le Jenkinsfile directement depuis le dépôt GitHub.</p>
         <div class="jo-git-fields">
-          <input class="jo-repo-in" placeholder="owner (ex: souhaiel11)"
+          <input class="jo-repo-in" placeholder="propriétaire (ex. : souhaiel11)"
                  [value]="ownerInput()" (input)="ownerInput.set($any($event.target).value)" />
-          <input class="jo-repo-in" placeholder="repository"
+          <input class="jo-repo-in" placeholder="dépôt"
                  [value]="repoInput()" (input)="repoInput.set($any($event.target).value)" />
           <input class="jo-repo-in small" placeholder="branche (main)"
                  [value]="refInput()" (input)="refInput.set($any($event.target).value)" />
@@ -109,7 +110,7 @@ import { Subscription, interval, switchMap } from 'rxjs';
               ≈ <strong class="mono">−{{ r.estimatedTimeSavingPercent }}%</strong> de durée de pipeline estimée
             </span>
             <span class="jo-gain">
-              <strong class="mono">{{ r.issues.length }}</strong> point(s) d'amélioration
+              <strong class="mono">{{ r.issues.length }}</strong> {{ r.issues.length === 1 ? 'point d’amélioration' : 'points d’amélioration' }}
             </span>
           </div>
         </div>
@@ -125,7 +126,7 @@ import { Subscription, interval, switchMap } from 'rxjs';
               <input type="checkbox" class="jo-issue-check" [checked]="isSelected(i.id)"
                      (click)="$event.stopPropagation()" (change)="toggleSelection(i.id)"
                      [attr.aria-label]="'Retenir ' + i.id" />
-              <span class="sev" [attr.data-sev]="sevKey(i.severity)">{{ i.severity }}</span>
+              <span class="sev" [attr.data-sev]="sevKey(i.severity)">{{ i.severity | presentationLabel }}</span>
               <span class="jo-cat mono">{{ i.category }}</span>
               <strong class="jo-issue-title">{{ i.title }}</strong>
               <span class="jo-confirm-badge" *ngIf="i.needsConfirmation">À CONFIRMER</span>
@@ -145,7 +146,7 @@ import { Subscription, interval, switchMap } from 'rxjs';
              intermédiaire à régénérer ici). Purement informative. -->
         <div class="jo-selection-bar">
           <span class="jo-sub" style="margin:0">
-            <strong class="mono">{{ selectedIssueIds().size }}</strong> / {{ r.issues.length }} correction(s) retenue(s)
+            <strong class="mono">{{ selectedIssueIds().size }}</strong> / {{ r.issues.length }} {{ r.issues.length === 1 ? 'correction retenue' : 'corrections retenues' }}
           </span>
         </div>
         <p class="jo-hint" *ngIf="selectedIssueIds().size === 0">Sélectionnez au moins une correction avant de valider.</p>
@@ -161,9 +162,9 @@ import { Subscription, interval, switchMap } from 'rxjs';
               rien n'est poussé sur <code class="mono">{{ baseBranch }}</code> directement. Vous relisez et fusionnez depuis GitHub.
             </p>
             <div class="jo-repo-fields" *ngIf="!owner || !repo">
-              <input class="jo-repo-in" placeholder="owner (ex: souhaiel11)"
+              <input class="jo-repo-in" placeholder="propriétaire (ex. : souhaiel11)"
                      [value]="ownerInput()" (input)="ownerInput.set($any($event.target).value)" />
-              <input class="jo-repo-in" placeholder="repository"
+              <input class="jo-repo-in" placeholder="dépôt"
                      [value]="repoInput()" (input)="repoInput.set($any($event.target).value)" />
             </div>
           </div>

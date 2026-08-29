@@ -2,11 +2,12 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ApiService } from '../../core/services/api.service';
 import { ToastService } from '../../core/services/toast.service';
+import { FrenchDatePipe } from '../../shared/french-date.pipe';
 
 @Component({
   selector: 'app-notifications',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FrenchDatePipe],
   template: `
     <div class="page-container">
       <div class="page-header" style="display:flex;align-items:center;justify-content:space-between;">
@@ -34,7 +35,7 @@ import { ToastService } from '../../core/services/toast.service';
           <div style="flex:1;min-width:0;">
             <div class="notif-title">{{n.title}}</div>
             <div class="notif-message">{{n.message}}</div>
-            <div class="notif-time">{{n.createdAt | date:'dd/MM/yyyy HH:mm'}}</div>
+            <div class="notif-time">{{n.createdAt | frenchDate}}</div>
           </div>
           <span class="badge {{n.type?.toLowerCase()}}">{{n.type}}</span>
         </div>

@@ -15,25 +15,25 @@ import { CommonModule } from '@angular/common';
 
       <div class="gate-banner">
         <i class="ti ti-circle-check gate-icon"></i>
-        <div><div class="gate-title">Quality Gate : PASSED</div><div class="gate-sub">Tous les critères qualité sont satisfaits</div></div>
+        <div><div class="gate-title">Quality Gate : réussi</div><div class="gate-sub">Tous les critères de qualité sont satisfaits</div></div>
       </div>
 
       <div class="kpi-grid">
         <div class="kpi g"><div class="kpi-l">Bugs</div><div class="kpi-v">0</div></div>
         <div class="kpi g"><div class="kpi-l">Vulnérabilités</div><div class="kpi-v">0</div></div>
-        <div class="kpi o"><div class="kpi-l">Code smells</div><div class="kpi-v">4</div></div>
-        <div class="kpi b"><div class="kpi-l">Coverage</div><div class="kpi-v">74%</div></div>
+        <div class="kpi o"><div class="kpi-l">Problèmes de maintenabilité</div><div class="kpi-v">4</div></div>
+        <div class="kpi b"><div class="kpi-l">Couverture</div><div class="kpi-v">74 %</div></div>
         <div class="kpi g"><div class="kpi-l">Duplications</div><div class="kpi-v">0%</div></div>
         <div class="kpi b"><div class="kpi-l">Lignes</div><div class="kpi-v">847</div></div>
       </div>
 
       <div class="card">
-        <div class="card-title"><i class="ti ti-chart-line"></i> Évolution coverage</div>
+        <div class="card-title"><i class="ti ti-chart-line"></i> Évolution de la couverture</div>
         <canvas style="max-height:120px" id="sonar-chart" height="80"></canvas>
       </div>
 
       <div class="card">
-        <div class="card-title"><i class="ti ti-bug"></i> Code smells détectés</div>
+        <div class="card-title"><i class="ti ti-bug"></i> Problèmes de maintenabilité détectés</div>
         <div class="issue-list">
           <div class="issue-item" *ngFor="let i of issues">
             <span class="issue-sev" [style.background]="i.sevBg" [style.color]="i.sevColor">{{i.sev}}</span>
@@ -72,10 +72,10 @@ import { CommonModule } from '@angular/common';
 })
 export class SonarqubeComponent implements AfterViewInit, OnDestroy {
   issues = [
-    { sev: 'MINOR', sevBg: 'var(--accent-blue-bg)', sevColor: 'var(--accent-blue)', msg: 'Remove unused import', file: 'TaskService.java:12' },
-    { sev: 'MINOR', sevBg: 'var(--accent-blue-bg)', sevColor: 'var(--accent-blue)', msg: 'Add missing javadoc', file: 'TaskController.java:34' },
-    { sev: 'MINOR', sevBg: 'var(--accent-orange-bg)', sevColor: 'var(--accent-orange)', msg: 'Cognitive complexity too high', file: 'DevSecOpsApplication.java:8' },
-    { sev: 'MINOR', sevBg: 'var(--accent-blue-bg)', sevColor: 'var(--accent-blue)', msg: 'Use StringBuilder instead of concatenation', file: 'TaskRepository.java:67' },
+    { sev: 'Mineur', sevBg: 'var(--accent-blue-bg)', sevColor: 'var(--accent-blue)', msg: 'Supprimer l’import inutilisé', file: 'TaskService.java:12' },
+    { sev: 'Mineur', sevBg: 'var(--accent-blue-bg)', sevColor: 'var(--accent-blue)', msg: 'Ajouter la documentation Javadoc manquante', file: 'TaskController.java:34' },
+    { sev: 'Mineur', sevBg: 'var(--accent-orange-bg)', sevColor: 'var(--accent-orange)', msg: 'Complexité cognitive trop élevée', file: 'DevSecOpsApplication.java:8' },
+    { sev: 'Mineur', sevBg: 'var(--accent-blue-bg)', sevColor: 'var(--accent-blue)', msg: 'Utiliser StringBuilder au lieu de la concaténation', file: 'TaskRepository.java:67' },
   ];
 
   private chart: any;
@@ -92,7 +92,7 @@ export class SonarqubeComponent implements AfterViewInit, OnDestroy {
       const muted = getComputedStyle(document.body).getPropertyValue('--text-secondary').trim() || '#8b949e';
       this.chart = new (window as any).Chart(c, {
         type: 'line',
-        data: { labels: ['#128','#129','#130','#131','#132'], datasets: [{ label: 'Coverage %', data: [68,70,72,71,74], borderColor: blue, borderWidth: 2, pointRadius: 3, fill: true, backgroundColor: 'rgba(88,166,255,.1)', tension: .4 }] },
+        data: { labels: ['#128','#129','#130','#131','#132'], datasets: [{ label: 'Couverture (%)', data: [68,70,72,71,74], borderColor: blue, borderWidth: 2, pointRadius: 3, fill: true, backgroundColor: 'rgba(88,166,255,.1)', tension: .4 }] },
         options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { ticks: { color: muted, font: { size: 9 } }, grid: { color: 'rgba(128,128,128,.1)' } }, y: { ticks: { color: muted, font: { size: 9 } }, grid: { color: 'rgba(128,128,128,.1)' } } } }
       });
     }, 100);

@@ -2,6 +2,7 @@ import { Component, Input, OnInit, OnDestroy, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Subscription, interval, switchMap } from 'rxjs';
+import { PresentationLabelPipe } from '../../shared/presentation-label.pipe';
 
 // ─────────────────────────────────────────────────────────────────────
 //  Optimiseur de Dockerfile — agent IA (MVP minimal, calqué sur
@@ -20,7 +21,7 @@ import { Subscription, interval, switchMap } from 'rxjs';
 @Component({
   selector: 'app-dockerfile-optimizer',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, PresentationLabelPipe],
   template: `
     <!-- ── Saisie ── -->
     <section class="do-input" *ngIf="!result()">
@@ -29,9 +30,9 @@ import { Subscription, interval, switchMap } from 'rxjs';
       <p class="do-sub">Récupéré depuis le dépôt GitHub du projet, analysé en 3 volets : cohérence runtime (Dockerfile ↔ pom.xml/config), image de base, sécurité.</p>
 
       <div class="do-git-fields">
-        <input class="do-repo-in" placeholder="owner (ex: souhaiel11)"
+        <input class="do-repo-in" placeholder="propriétaire (ex. : souhaiel11)"
                [value]="ownerInput()" (input)="ownerInput.set($any($event.target).value)" />
-        <input class="do-repo-in" placeholder="repository"
+        <input class="do-repo-in" placeholder="dépôt"
                [value]="repoInput()" (input)="repoInput.set($any($event.target).value)" />
       </div>
 
@@ -67,7 +68,7 @@ import { Subscription, interval, switchMap } from 'rxjs';
         <div class="do-issues">
           <div class="do-issue" *ngFor="let i of g.items">
             <div class="do-issue-head">
-              <span class="sev" [attr.data-sev]="sevKey(i.severity)">{{ i.severity }}</span>
+              <span class="sev" [attr.data-sev]="sevKey(i.severity)">{{ i.severity | presentationLabel }}</span>
               <span class="do-det" *ngIf="i.deterministic">déterministe</span>
               <strong class="do-issue-cat mono">{{ i.category }}</strong>
             </div>
@@ -83,7 +84,7 @@ import { Subscription, interval, switchMap } from 'rxjs';
       <section class="block" *ngIf="!applyResult()">
         <div class="do-decision">
           <p class="do-sub" style="margin:0">
-            « Corriger » applique <strong>tous</strong> les findings ci-dessus et ouvre une Pull Request sur le dépôt —
+            « Corriger » applique <strong>tous</strong> les problèmes ci-dessus et ouvre une Pull Request sur le dépôt —
             rien n'est poussé directement sur <code class="mono">main</code>. Un gate déterministe vérifie la correction avant toute PR.
           </p>
           <button class="do-btn" [disabled]="applying() || !(r.issues || []).length" (click)="apply(r)">

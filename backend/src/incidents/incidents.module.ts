@@ -6,9 +6,10 @@ import { Project } from '../projects/project.entity';
 import { IncidentsService } from './incidents.service';
 import { IncidentsController } from './incidents.controller';
 import { IncidentsGateway } from './incidents.gateway';
+import { ManualRemediationModule } from '../manual-remediation/manual-remediation.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Incident, Project]), HttpModule],
+  imports: [TypeOrmModule.forFeature([Incident, Project]), HttpModule, ManualRemediationModule],
   providers: [IncidentsService, IncidentsGateway],
   controllers: [IncidentsController],
   exports: [IncidentsService],

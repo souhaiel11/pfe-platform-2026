@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
 import { editorGuard } from './core/guards/editor.guard';
 import { adminGuard } from './core/guards/admin.guard';
+import { unsavedChangesGuard } from './core/guards/unsaved-changes.guard';
 
 export const routes: Routes = [
   {
@@ -29,6 +30,13 @@ export const routes: Routes = [
       {
         path: 'projects/new',
         canActivate: [editorGuard],
+        loadComponent: () =>
+          import('./features/projects/project-form.component').then(m => m.ProjectFormComponent)
+      },
+      {
+        path: 'projects/:id/edit',
+        canActivate: [editorGuard],
+        canDeactivate: [unsavedChangesGuard],
         loadComponent: () =>
           import('./features/projects/project-form.component').then(m => m.ProjectFormComponent)
       },

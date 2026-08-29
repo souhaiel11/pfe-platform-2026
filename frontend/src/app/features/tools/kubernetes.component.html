@@ -5,10 +5,10 @@
       </div>
 
       <div class="kpi-grid">
-        <div class="kpi g"><div class="kpi-l">Pods Running</div><div class="kpi-v">4/4</div></div>
-        <div class="kpi g"><div class="kpi-l">Restarts</div><div class="kpi-v">0</div><div class="kpi-s">aujourd'hui</div></div>
-        <div class="kpi b"><div class="kpi-l">Namespace</div><div class="kpi-v" style="font-size:12px">pfe-devsecops</div></div>
-        <div class="kpi b"><div class="kpi-l">Node IP</div><div class="kpi-v" style="font-size:12px">192.168.49.2</div></div>
+        <div class="kpi g"><div class="kpi-l">Pods en cours</div><div class="kpi-v">4/4</div></div>
+        <div class="kpi g"><div class="kpi-l">Redémarrages</div><div class="kpi-v">0</div><div class="kpi-s">aujourd'hui</div></div>
+        <div class="kpi b"><div class="kpi-l">Espace de noms</div><div class="kpi-v" style="font-size:12px">pfe-devsecops</div></div>
+        <div class="kpi b"><div class="kpi-l">Adresse IP du nœud</div><div class="kpi-v" style="font-size:12px">192.168.49.2</div></div>
       </div>
 
       <div class="two-col">
@@ -18,7 +18,7 @@
             <div class="pod-item" *ngFor="let p of pods">
               <div class="pod-dot" [style.background]="p.status==='Running'?'var(--accent-green)':'var(--accent-red)'"></div>
               <div class="pod-name">{{p.name}}</div>
-              <span class="pod-status" [style.color]="p.status==='Running'?'var(--accent-green)':'var(--accent-red)'">{{p.status}}</span>
+              <span class="pod-status" [style.color]="p.status==='RUNNING'?'var(--accent-green)':'var(--accent-red)'">{{p.status === 'RUNNING' ? 'En cours' : 'Indisponible'}}</span>
               <div class="pod-meta">{{p.meta}}</div>
             </div>
           </div>

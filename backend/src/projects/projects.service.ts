@@ -30,9 +30,9 @@ export class ProjectsService {
 
   private normalizeAzureConfig(input: any) {
     if (input === null) return null;
-    if (!input || input.provider !== 'azure-container-instances') throw new BadRequestException('Unsupported Azure deployment provider');
+    if (!input || input.provider !== 'azure-container-instances') throw new BadRequestException('Ce fournisseur de déploiement Azure n’est pas pris en charge.');
     for (const key of ['resourceGroup', 'targetName', 'registry', 'imageRepository']) {
-      if (typeof input[key] !== 'string' || !input[key].trim()) throw new BadRequestException(`azureConfig.${key} is required`);
+      if (typeof input[key] !== 'string' || !input[key].trim()) throw new BadRequestException(`Le champ technique azureConfig.${key} est requis.`);
     }
     // Allow-list stricte : aucun token/password/credential arbitraire ne peut
     // être persisté dans Project.azureConfig.
@@ -85,20 +85,20 @@ export class ProjectsService {
 
   async findOne(id: string) {
     const p = await this.repo.findOne({ where: { id } });
-    if (!p) throw new NotFoundException('Project not found');
+    if (!p) throw new NotFoundException('Projet introuvable.');
     return this.sanitizeProject(p);
   }
 
   private async findOneInternal(id: string) {
     const p = await this.repo.findOne({ where: { id } });
-    if (!p) throw new NotFoundException('Project not found');
+    if (!p) throw new NotFoundException('Projet introuvable.');
     return p;
   }
 
   async resolveSonarCorrelation(projectId: string, ceTaskId: string) {
     const project = await this.findOneInternal(projectId);
     if (!ceTaskId || !/^[A-Za-z0-9_-]{8,128}$/.test(ceTaskId)) {
-      throw new BadRequestException('Valid ceTaskId is required');
+      throw new BadRequestException('Un identifiant technique ceTaskId valide est requis.');
     }
     if (!project.sonarqubeToken) {
       return { ceTaskId, analysisId: null, qualityGate: 'QUALITY_GATE_UNAVAILABLE', correlationVerified: false, state: 'SONAR_NOT_CONFIGURED' };
@@ -162,6 +162,7 @@ export class ProjectsService {
       if (existing) throw new ConflictException(`Un projet avec le job Jenkins "${dto.jenkinsJobName}" existe déjà`);
     }
     const payload: any = { ...dto };
+    for (const field of ['jenkinsToken', 'sonarqubeToken', 'githubToken', 'slackToken']) delete payload[field];
     if (Object.prototype.hasOwnProperty.call(payload, 'azureConfig')) payload.azureConfig = this.normalizeAzureConfig(payload.azureConfig);
     const p = this.repo.create(payload as Partial<Project>);
     const saved = await this.repo.save(p);
@@ -175,12 +176,8 @@ export class ProjectsService {
     // Le frontend ne recoit jamais les tokens en clair : il enverrait
     // sinon des chaines vides qui ecraseraient les vraies valeurs.
     const payload: any = { ...dto };
+    for (const field of ['jenkinsToken', 'sonarqubeToken', 'githubToken', 'slackToken']) delete payload[field];
     if (Object.prototype.hasOwnProperty.call(payload, 'azureConfig')) payload.azureConfig = this.normalizeAzureConfig(payload.azureConfig);
-    for (const field of ['jenkinsToken', 'sonarqubeToken', 'githubToken', 'slackToken']) {
-      if (payload[field] === '' || payload[field] === null || payload[field] === undefined) {
-        delete payload[field];
-      }
-    }
 
     await this.repo.update(id, payload);
     return this.findOne(id);
@@ -189,7 +186,7 @@ export class ProjectsService {
   async remove(id: string) {
     const p = await this.findOneInternal(id);
     await this.repo.remove(p);
-    return { message: 'Project deleted' };
+    return { message: 'Projet supprimé.' };
   }
 
   // ── Validation Jenkins + SonarQube ────────────────────────

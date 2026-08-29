@@ -1,5 +1,6 @@
 import { Component, EventEmitter, Input, Output, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { PresentationLabelPipe } from '../../shared/presentation-label.pipe';
 
 // ─────────────────────────────────────────────────────────────────────────
 //  Composant de remédiation unifié — Couche 2.
@@ -46,7 +47,7 @@ export interface RemediationIssue {
 @Component({
   selector: 'app-remediation-card',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, PresentationLabelPipe],
   template: `
     <div class="card rc-card">
       <div class="card-header" style="margin-bottom:12px;">
@@ -57,18 +58,19 @@ export interface RemediationIssue {
         <div style="display:flex;align-items:flex-start;gap:8px;">
           <input *ngIf="mode === 'auto-fix-selective'" type="checkbox"
                  class="rc-check" [checked]="isSelected(i.id)"
+                 [disabled]="i.remediationType !== 'AUTO_FIX_ELIGIBLE'"
                  (change)="toggle(i.id)" [attr.aria-label]="'Retenir ' + i.id" />
           <div style="flex:1;min-width:0;">
             <div style="font-size:12px;margin-bottom:4px;">
-              <span *ngIf="i.severity" class="sev" [attr.data-sev]="sevKey(i.severity)">{{ i.severity }}</span>
+              <span *ngIf="i.severity" class="sev" [attr.data-sev]="sevKey(i.severity)">{{ i.severity | presentationLabel }}</span>
               <strong>{{ i.title }}</strong>
             </div>
             <div *ngIf="i.detail" class="rc-detail">{{ i.detail }}</div>
             <div class="rc-meta" *ngIf="i.stage || i.source || i.remediationType">
-              <span *ngIf="i.stage">Stage: {{ i.stage }}</span>
-              <span *ngIf="i.source">Source: {{ i.source }}</span>
+              <span *ngIf="i.stage">Étape : {{ i.stage | presentationLabel }}</span>
+              <span *ngIf="i.source">Source : {{ i.source | presentationLabel }}</span>
               <span>{{ i.blocking ? 'Bloquant' : 'Non bloquant' }}</span>
-              <span *ngIf="i.remediationType">{{ i.remediationType }}</span>
+              <span *ngIf="i.remediationType">{{ i.remediationType | presentationLabel }}</span>
             </div>
             <div *ngIf="i.rootCause"><strong>Cause :</strong> {{ i.rootCause }}</div>
             <div *ngIf="i.impact"><strong>Impact :</strong> {{ i.impact }}</div>
@@ -83,12 +85,12 @@ export interface RemediationIssue {
 
       <!-- Récap sélection — mode sélectif uniquement -->
       <div *ngIf="mode === 'auto-fix-selective' && issues.length" class="rc-recap">
-        <strong class="mono">{{ selected.size }}</strong> / {{ issues.length }} correction(s) retenue(s)
+        <strong class="mono">{{ selected.size }}</strong> / {{ issues.length }} {{ issues.length === 1 ? 'correction retenue' : 'corrections retenues' }}
       </div>
 
       <!-- Note honnête — mode bulk : pas de sélection fine pour l'instant -->
       <p *ngIf="mode === 'auto-fix-bulk' && issues.length" class="rc-note">
-        Sélection par correctif : prochaine itération — la correction porte sur l'ensemble des findings ci-dessus.
+        La correction porte sur l’ensemble des problèmes ci-dessus.
       </p>
 
       <!-- Mode signal-only : garde-fou fixe, non paramétrable, jamais de bouton -->
@@ -151,12 +153,14 @@ export class RemediationCardComponent implements OnChanges {
   // (voir applyResult -> defaultSelected).
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['issues']) {
-      this.selected = new Set(this.issues.map(i => i.id));
+      this.selected = new Set();
     }
   }
 
   isSelected(id: string): boolean { return this.selected.has(id); }
   toggle(id: string): void {
+    const issue = this.issues.find(i => i.id === id);
+    if (issue?.remediationType !== 'AUTO_FIX_ELIGIBLE') return;
     const next = new Set(this.selected);
     if (next.has(id)) next.delete(id); else next.add(id);
     this.selected = next;

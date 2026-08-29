@@ -1,7 +1,7 @@
     <div class="page-container">
       <div class="page-header">
         <button class="btn btn-back" (click)="goBack()">← Retour</button>
-        <h1 class="page-title" style="margin-top:8px;">// incident_detail</h1>
+        <h1 class="page-title" style="margin-top:8px;">// détail de l’incident</h1>
       </div>
 
       <div *ngIf="loading" class="loading-overlay"><div class="spinner"></div><span>Chargement...</span></div>
@@ -27,10 +27,10 @@
                 {{dominantStatusLabel()}}
               </div>
               <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:11px;color:var(--text-muted);font-family:var(--font-mono);">
-                <span>statut : {{incident.status}}</span>
-                <span *ngIf="aiAnalysis?.securityLevel">· estimation IA : {{aiAnalysis.securityLevel}}</span>
+                <span>statut : {{incident.status | presentationLabel}}</span>
+                <span *ngIf="aiAnalysis?.securityLevel">· estimation IA : {{aiAnalysis.securityLevel | presentationLabel}}</span>
                 <span *ngIf="aiAnalysis?.confidenceScore">· confiance {{aiAnalysis.confidenceScore}}%</span>
-                <span>· {{incident.createdAt | date:'dd/MM/yyyy HH:mm'}}</span>
+                <span>· {{incident.createdAt | frenchDate}}</span>
               </div>
 
               <!-- Résultat WF2 (génération) — distinct de validation.prUrl (WF3, onglet
@@ -48,7 +48,7 @@
               </div>
               <div *ngIf="!incident.prUrl && prGenerationState === 'timeout'"
                    style="margin-top:10px;font-size:12px;color:var(--accent-orange);">
-                ⚠️ La génération n'a pas abouti (vérifier githubRepo et findings Sonar BLOCKER).
+                ⚠️ La génération n’a pas abouti (vérifiez le dépôt GitHub et les problèmes SonarQube bloquants).
               </div>
             </div>
             <div style="display:flex;gap:8px;flex-shrink:0;">
@@ -128,7 +128,7 @@
           <!-- 1) Barre de progression -->
           <div class="progress-block" *ngIf="enrichedData">
             <div class="progress-head">
-              <span class="progress-label">{{ progress().resolved }} sur {{ progress().total }} phase(s) résolue(s)</span>
+              <span class="progress-label">{{ progress().resolved }} sur {{ progress().total }} {{ progress().total === 1 ? 'phase résolue' : 'phases résolues' }}</span>
               <span class="progress-pct">{{ progress().percent }}%</span>
             </div>
             <div class="progress-bar">
@@ -210,17 +210,15 @@
                  [class.priority-slot]="isPriority(sonarRank())"
                  [class.later-slot]="hasPriorityPhase() && !isPriority(sonarRank())">
               <span class="priority-tag" *ngIf="isPriority(sonarRank())">🎯 Action prioritaire</span>
-              <!-- SonarQube — Couche 2, mode C (auto-fix-bulk). onSonarCorrect() appelle
-                   le MÊME approveFix() que le bouton "✓ Approuver le fix" du header —
-                   chemin déjà prouvé (18 PR réelles), aucun nouvel endpoint ni workflow. -->
+              <!-- Écran incident secondaire : même contrat batch atomique que la vue projet. -->
               <app-remediation-card
                 phaseLabel="🔍 SonarQube"
                 [mode]="sonarMode()"
                 [issues]="sonarIssues()"
                 advice="Examinez la correction proposée. GitHub ne sera modifié qu'après votre clic explicite."
-                actionLabel="Créer la Pull Request"
+                actionLabel="Proposer une correction"
                 [correcting]="sonarCorrecting()"
-                (correct)="onSonarCorrect()">
+                (correct)="onSonarCorrect($event)">
               </app-remediation-card>
             </div>
 
@@ -245,7 +243,7 @@
             <div *ngIf="!cleanliness().clean" class="deploy-box deploy-locked">
               <div class="deploy-headline">
                 <span class="deploy-icon">🔒</span>
-                <strong>Déploiement bloqué</strong> — {{ deploymentLines().length }} point(s) à traiter
+                <strong>Déploiement bloqué</strong> — {{ deploymentLines().length }} {{ deploymentLines().length === 1 ? 'point à traiter' : 'points à traiter' }}
               </div>
               <ul class="deploy-list">
                 <li *ngFor="let line of deploymentLines()">
@@ -258,9 +256,9 @@
             <div *ngIf="cleanliness().clean" class="deploy-box deploy-unlocked">
               <div class="deploy-headline">
                 <span class="deploy-icon">✓</span>
-                <strong>Aucun blocker détecté dans ce rapport</strong>
+                <strong>Aucun problème bloquant détecté dans ce rapport</strong>
               </div>
-              <p class="deploy-note">La readiness de déploiement reste calculée exclusivement par le backend du projet.</p>
+              <p class="deploy-note">L’état de préparation au déploiement reste calculé exclusivement par le serveur du projet.</p>
               <p class="deploy-note" *ngIf="nonBlockingSummary()">
                 Points non bloquants restants : {{ nonBlockingSummary() }}
               </p>
@@ -270,15 +268,15 @@
           <!-- Décision Judge -->
           <div *ngIf="aiAnalysis" class="card decision-card" style="margin-bottom:16px;">
             <div class="card-header" style="margin-bottom:12px;">
-              <span class="card-title">▣ Décision du Judge Agent</span>
+              <span class="card-title">▣ Décision de gouvernance</span>
               <span class="badge" [class]="getDecisionBadgeClass(aiAnalysis.decision)">
-                {{aiAnalysis.decision}}
+                {{aiAnalysis.decision | presentationLabel}}
               </span>
             </div>
-            <div style="font-size:12px;color:var(--text-secondary);line-height:1.7;white-space:pre-wrap;margin-bottom:12px;">
+            <div class="historical-narrative" style="font-size:12px;color:var(--text-secondary);line-height:1.7;white-space:pre-wrap;margin-bottom:12px;">
               {{aiAnalysis.justification}}
             </div>
-            <div *ngIf="aiAnalysis.errorsSummary" style="font-family:var(--font-mono);font-size:11px;color:var(--accent-orange);background:var(--bg-primary);padding:10px 12px;border-radius:var(--radius-sm);">
+            <div *ngIf="aiAnalysis.errorsSummary" class="historical-technical-evidence" style="font-family:var(--font-mono);font-size:11px;color:var(--accent-orange);background:var(--bg-primary);padding:10px 12px;border-radius:var(--radius-sm);">
               {{aiAnalysis.errorsSummary}}
             </div>
           </div>
@@ -300,7 +298,7 @@
                   </div>
                   <div style="text-align:center;">
                     <div style="font-size:18px;font-weight:700;color:var(--accent-orange);">{{enrichedData.sonar?.code_smells || 0}}</div>
-                    <div style="font-size:9px;color:var(--text-muted);">CODE SMELLS</div>
+                    <div style="font-size:9px;color:var(--text-muted);">PROBLÈMES DE MAINTENABILITÉ</div>
                   </div>
                 </div>
                 <div class="scanner-status" [class]="enrichedData.sonar?.status?.toLowerCase()">
@@ -370,7 +368,7 @@
             <div class="card-header" style="margin-bottom:10px;">
               <span class="card-title">Actions recommandées</span>
             </div>
-            <div style="font-size:12px;color:var(--text-secondary);line-height:1.8;white-space:pre-wrap;">
+            <div class="historical-narrative" style="font-size:12px;color:var(--text-secondary);line-height:1.8;white-space:pre-wrap;">
               {{aiAnalysis.developerActions}}
             </div>
           </div>
@@ -381,7 +379,7 @@
               Rapports des agents IA
             </div>
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;">
-              <div *ngFor="let r of reports" class="card agent-report-card">
+              <div *ngFor="let r of reports" class="card agent-report-card" data-content-language="historique-non-transformé">
                 <div class="card-header" style="margin-bottom:12px;">
                   <div style="display:flex;align-items:center;gap:8px;">
                     <span class="agent-badge" [style.color]="getAgentColor(r.agentType)"
@@ -434,7 +432,7 @@
                   </div>
                   <div style="font-size:12px;color:var(--text-secondary);">{{validation.verdict}}</div>
                   <div style="font-size:10px;color:var(--text-muted);font-family:var(--font-mono);margin-top:4px;">
-                    {{validation.validatedAt | date:'dd/MM/yyyy HH:mm:ss'}}
+                    {{validation.validatedAt | frenchDate}}
                   </div>
                 </div>
               </div>
@@ -458,7 +456,7 @@
                     <td style="padding:10px 0;font-size:12px;color:var(--text-primary);">Build Jenkins (PR)</td>
                     <td style="padding:10px 0;">
                       <span class="badge" [class]="validation.build?.status === 'SUCCESS' ? 'info' : 'high'">
-                        {{validation.build?.status || 'N/A'}}
+                        {{validation.build?.status | presentationLabel}}
                       </span>
                     </td>
                     <td style="padding:10px 0;font-size:11px;color:var(--text-muted);">
@@ -472,7 +470,7 @@
                     <td style="padding:10px 0;font-size:12px;color:var(--text-primary);">SonarQube Quality Gate</td>
                     <td style="padding:10px 0;">
                       <span class="badge" [class]="getSonarGateBadgeClass(validation.sonarQualityGate?.status)">
-                        {{validation.sonarQualityGate?.status || 'N/A'}}
+                        {{validation.sonarQualityGate?.status | presentationLabel}}
                       </span>
                     </td>
                     <td style="padding:10px 0;font-size:11px;color:var(--text-muted);">

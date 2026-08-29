@@ -2,11 +2,12 @@ import { Component, OnInit, AfterViewInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { HttpClientModule } from '@angular/common/http';
+import { PresentationLabelPipe } from '../../shared/presentation-label.pipe';
 
 @Component({
   selector: 'app-jenkins',
   standalone: true,
-  imports: [CommonModule, HttpClientModule],
+  imports: [CommonModule, HttpClientModule, PresentationLabelPipe],
   template: `
     <div class="page">
       <div class="page-header">
@@ -22,9 +23,9 @@ import { HttpClientModule } from '@angular/common/http';
         <div class="kpi" [class.r]="lastBuild?.result!=='SUCCESS'" [class.g]="lastBuild?.result==='SUCCESS'">
           <div class="kpi-l">Build actuel</div>
           <div class="kpi-v">#{{lastBuild?.buildNumber || '...'}}</div>
-          <div class="kpi-s" [style.color]="lastBuild?.result==='SUCCESS'?'var(--accent-green)':'var(--accent-red)'">{{lastBuild?.result || '...'}}</div>
+          <div class="kpi-s" [style.color]="lastBuild?.result==='SUCCESS'?'var(--accent-green)':'var(--accent-red)'">{{lastBuild?.result | presentationLabel}}</div>
         </div>
-        <div class="kpi g"><div class="kpi-l">Taux succès</div><div class="kpi-v">{{successRate}}%</div><div class="kpi-s">{{builds.length}} derniers builds</div></div>
+        <div class="kpi g"><div class="kpi-l">Taux de réussite</div><div class="kpi-v">{{successRate}} %</div><div class="kpi-s">{{builds.length}} derniers builds</div></div>
         <div class="kpi b"><div class="kpi-l">Durée moy.</div><div class="kpi-v">{{avgDuration}}s</div></div>
         <div class="kpi o"><div class="kpi-l">Échecs consec.</div><div class="kpi-v">{{consecutiveFails}}</div></div>
       </div>
@@ -43,7 +44,7 @@ import { HttpClientModule } from '@angular/common/http';
             <div class="build-msg">{{b.msg}}</div>
             <div class="build-dur">{{b.dur}}</div>
             <div class="build-time">{{b.time}}</div>
-            <span class="build-badge" [style.background]="b.status==='SUCCESS'?'var(--accent-green-bg)':'var(--accent-red-bg)'" [style.color]="b.status==='SUCCESS'?'var(--accent-green)':'var(--accent-red)'">{{b.status}}</span>
+            <span class="build-badge" [style.background]="b.status==='SUCCESS'?'var(--accent-green-bg)':'var(--accent-red-bg)'" [style.color]="b.status==='SUCCESS'?'var(--accent-green)':'var(--accent-red)'">{{b.status | presentationLabel}}</span>
           </div>
         </div>
       </div>
@@ -52,9 +53,9 @@ import { HttpClientModule } from '@angular/common/http';
         <div class="card-title"><i class="ti ti-settings"></i> Configuration pipeline</div>
         <div class="conf-list">
           <div class="conf-row"><span class="conf-k">Job</span><span class="conf-v">{{jobName}}</span></div>
-          <div class="conf-row"><span class="conf-k">Branch</span><span class="conf-v">origin/main</span></div>
+          <div class="conf-row"><span class="conf-k">Branche</span><span class="conf-v">origin/main</span></div>
           <div class="conf-row"><span class="conf-k">Webhook URL</span><span class="conf-v">http://n8n:5678/webhook/jenkins-event</span></div>
-          <div class="conf-row"><span class="conf-k">Deploy</span><span class="conf-v">kubectl set image → K8s</span></div>
+          <div class="conf-row"><span class="conf-k">Déploiement</span><span class="conf-v">kubectl set image → K8s</span></div>
         </div>
       </div>
     </div>
@@ -108,7 +109,7 @@ export class JenkinsComponent implements OnInit, AfterViewInit, OnDestroy {
       this.jobName = data.jobName || 'pfe-app-test';
       this.builds = (data.builds || []).map((b: any) => ({
         num: b.number,
-        msg: b.result === 'SUCCESS' ? 'Build réussi · Deploy K8s' : 'Build échoué',
+        msg: b.result === 'SUCCESS' ? 'Build réussi · Déploiement K8s' : 'Build échoué',
         dur: b.duration + 's',
         time: this.timeAgo(b.timestamp),
         status: b.result || 'UNKNOWN',

@@ -14,6 +14,7 @@ import { IntegrationsModule } from './integrations/integrations.module';
 import { JenkinsOptimizerModule } from './jenkins-optimizer/jenkins-optimizer.module';
 import { DockerfileOptimizerModule } from './dockerfile-optimizer/dockerfile-optimizer.module';
 import { AzureDeployModule } from './azure-deploy/azure-deploy.module';
+import { ManualRemediationModule } from './manual-remediation/manual-remediation.module';
 
 @Module({
   imports: [
@@ -28,7 +29,9 @@ import { AzureDeployModule } from './azure-deploy/azure-deploy.module';
         password: config.get('DB_PASS', 'devsecops123'),
         database: config.get('DB_NAME', 'devsecops'),
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
-        synchronize: true,
+        // Runtime schema changes are applied explicitly through reviewed,
+        // additive migrations. Never let application startup rewrite history.
+        synchronize: config.get('DB_SYNCHRONIZE', 'false') === 'true',
       }),
       inject: [ConfigService],
     }),
@@ -44,6 +47,7 @@ import { AzureDeployModule } from './azure-deploy/azure-deploy.module';
     JenkinsOptimizerModule,
     DockerfileOptimizerModule,
     AzureDeployModule,
+    ManualRemediationModule,
   ],
 })
 export class AppModule {}

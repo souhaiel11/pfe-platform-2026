@@ -10,10 +10,10 @@ import { CommonModule } from '@angular/common';
 })
 export class KubernetesComponent {
   pods = [
-    { name: 'frontend-5ffd87d65c', status: 'Running', meta: 'Angular · :30002' },
-    { name: 'backend-684bd59c9', status: 'Running', meta: 'NestJS · :30001' },
-    { name: 'app-test-678b5bff5d', status: 'Running', meta: 'Spring Boot · main-132 · :30003' },
-    { name: 'postgres-0', status: 'Running', meta: 'StatefulSet · ClusterIP :5432' },
+    { name: 'frontend-5ffd87d65c', status: 'RUNNING', meta: 'Angular · :30002' },
+    { name: 'backend-684bd59c9', status: 'RUNNING', meta: 'NestJS · :30001' },
+    { name: 'app-test-678b5bff5d', status: 'RUNNING', meta: 'Spring Boot · main-132 · :30003' },
+    { name: 'postgres-0', status: 'RUNNING', meta: 'StatefulSet · ClusterIP :5432' },
   ];
   services = [
     { name: 'frontend', type: 'NodePort', port: ':30002 → 80' },
@@ -22,9 +22,9 @@ export class KubernetesComponent {
     { name: 'postgres', type: 'ClusterIP', port: ':5432 (interne)' },
   ];
   events = [
-    { color: 'var(--accent-green)', text: 'app-test rollout completed — image main-132', meta: 'il y a 2h' },
-    { color: 'var(--accent-orange)', text: 'app-test CrashLoopBackOff — DB_HOST pfe-postgres', meta: 'il y a 6h · Corrigé' },
-    { color: 'var(--accent-green)', text: 'minikube restart après network conflict', meta: 'aujourd\'hui 11:30' },
+    { color: 'var(--accent-green)', text: 'Déploiement app-test terminé — image main-132', meta: 'il y a 2 h' },
+    { color: 'var(--accent-orange)', text: 'app-test CrashLoopBackOff — DB_HOST pfe-postgres', meta: 'il y a 6 h · Corrigé' },
+    { color: 'var(--accent-green)', text: 'Redémarrage minikube après un conflit réseau', meta: 'aujourd\'hui à 11:30' },
   ];
   commands = [
     { desc: 'État des pods', cmd: 'kubectl get pods -n pfe-devsecops' },

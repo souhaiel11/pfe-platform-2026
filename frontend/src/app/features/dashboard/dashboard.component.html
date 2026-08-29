@@ -12,7 +12,7 @@
     <nav class="sidebar-nav">
       <a class="nav-item active" [routerLink]="['/dashboard']">
         <span class="nav-icon">▤</span>
-        <span>Dashboard</span>
+        <span>Tableau de bord</span>
       </a>
       <a class="nav-item" [routerLink]="['/projects']">
         <span class="nav-icon">◫</span>
@@ -55,12 +55,12 @@
       <div class="breadcrumb">
         <span>Plateforme</span>
         <span class="sep">/</span>
-        <span class="current">Dashboard</span>
+        <span class="current">Tableau de bord</span>
       </div>
       <div class="topbar-actions">
         <div class="live-badge">
           <span class="live-dot"></span>
-          LIVE
+          EN DIRECT
         </div>
         <button class="btn-icon" (click)="toggleNotif()" [class.has-notif]="notifications.length">
           <i class="ti ti-bell"></i>
@@ -96,7 +96,7 @@
           <div class="sec-panel-title">
             <i class="ti ti-shield-check"></i>
             Sécurité plateforme
-            <span class="sec-panel-sub">{{securitySummary.totalProjects}} projet(s) · voir détail →</span>
+            <span class="sec-panel-sub">{{securitySummary.totalProjects}} {{securitySummary.totalProjects === 1 ? 'projet' : 'projets'}} · voir le détail →</span>
           </div>
         </div>
         <div class="sec-kpi-grid">
@@ -122,7 +122,7 @@
         <!-- Risk Scores -->
         <section class="panel wide">
           <div class="panel-header">
-            <h3><i class="ti ti-shield-half"></i> Score de risque global</h3>
+            <h3><i class="ti ti-shield-half"></i> Scores de sécurité des projets</h3>
           </div>
           <div class="loading-overlay" *ngIf="projectsLoading">
             <div class="spinner"></div><span>Chargement…</span>
@@ -187,15 +187,18 @@
               <span class="pill" [class.red]="p.incidents > 0" [class.green]="p.incidents === 0">
                 {{p.incidents}} incident{{p.incidents > 1 ? 's' : ''}}
               </span>
-              <span class="pill" [class.green]="p.buildStatus === 'SUCCESS'" [class.red]="p.buildStatus && p.buildStatus !== 'SUCCESS'">
-                Build {{p.buildStatus || 'indisponible'}}<ng-container *ngIf="p.buildNumber"> #{{p.buildNumber}}</ng-container>
-              </span>
+            </div>
+            <div class="truth-grid" aria-label="Statuts indépendants du projet">
+              <div class="truth"><span>Jenkins</span><strong [class.ok]="p.buildStatus === 'SUCCESS'">{{buildLabel(p.buildStatus)}}<ng-container *ngIf="p.buildNumber"> · Build #{{p.buildNumber}}</ng-container></strong></div>
+              <div class="truth"><span>Plateforme</span><strong [class.danger]="platformLabel(p) === 'Bloqué'">{{platformLabel(p)}}</strong></div>
+              <div class="truth"><span>Déploiement</span><strong [class.ok]="p.readiness?.ready" [class.danger]="p.readiness && !p.readiness.ready">{{p.readiness ? (p.readiness.ready ? 'Prêt' : 'Non prêt') : 'Vérification…'}}</strong></div>
+              <div class="truth"><span>Risque</span><strong [class.danger]="riskLabel(p) === 'Critique'">{{riskLabel(p)}}</strong></div>
             </div>
             <div class="health-track">
               <div class="health-fill" [style.width.%]="p.health !== null ? p.health : 0" [style.background]="p.health !== null ? getBarColor(p.health) : 'var(--text-secondary)'"></div>
             </div>
             <div class="health-meta">
-              <span>Santé globale</span>
+              <span>Score de sécurité</span>
               <span [style.color]="p.health !== null ? getBarColor(p.health) : 'var(--text-secondary)'">
                 {{p.health !== null ? p.health + '%' : 'indisponible'}}
               </span>
@@ -203,7 +206,7 @@
             <div class="proj-footer">
               <span class="proj-date">{{p.lastUpdate}}</span>
               <span class="proj-risk" [style.color]="p.riskScore !== null ? getRiskColor(p.riskScore) : 'var(--text-secondary)'">
-                Risque : {{p.riskScore !== null ? p.riskScore + '/100' : 'indisponible'}}
+                Score de sécurité : {{p.riskScore !== null ? p.riskScore + '/100' : 'indisponible'}}
               </span>
             </div>
           </a>
@@ -220,12 +223,12 @@
           </div>
           <div class="reliability-body" *ngIf="buildReliability?.rate != null">
             <div class="reliability-value" [style.color]="getRiskColor(buildReliability!.rate!)">{{buildReliability!.rate}}%</div>
-            <div class="reliability-sub" [title]="buildReliability!.sampleSize + ' build(s) pris en compte'">
+            <div class="reliability-sub" [title]="buildReliability!.sampleSize + (buildReliability!.sampleSize === 1 ? ' build pris en compte' : ' builds pris en compte')">
               sur {{buildReliability!.sampleSize}} build{{buildReliability!.sampleSize! > 1 ? 's' : ''}} (historique Jenkins)
             </div>
           </div>
           <div class="reliability-body" *ngIf="buildReliability?.rate == null">
-            <div class="reliability-value" style="color:var(--text-secondary)">—</div>
+            <div class="reliability-value" style="color:var(--text-secondary)">Non disponible</div>
             <div class="reliability-sub">Non disponible</div>
           </div>
         </section>

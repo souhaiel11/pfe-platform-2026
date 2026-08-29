@@ -51,7 +51,7 @@ export class IntegrationsService {
   // ceci directement dans une réponse HTTP.
   private async findOneRaw(id: string) {
     const i = await this.repo.findOne({ where: { id } });
-    if (!i) throw new NotFoundException('Integration not found');
+    if (!i) throw new NotFoundException('Intégration introuvable.');
     return i;
   }
 
@@ -81,7 +81,7 @@ export class IntegrationsService {
       await this.repo.update(id, { status: IntegrationStatus.CONNECTED, lastChecked: now, metadata });
       return { success: true, status: IntegrationStatus.CONNECTED, metadata };
     } catch (e: any) {
-      const error = e?.response?.data?.message || e?.message || 'Connection failed';
+      const error = e?.response?.data?.message || e?.message || 'Échec de la connexion.';
       await this.repo.update(id, {
         status: IntegrationStatus.ERROR,
         lastChecked: now,

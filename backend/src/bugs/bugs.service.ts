@@ -26,7 +26,7 @@ export class BugsService {
 
   async findOne(id: string) {
     const bug = await this.repo.findOne({ where: { id }, relations: ['project'] });
-    if (!bug) throw new NotFoundException('Bug not found');
+    if (!bug) throw new NotFoundException('Anomalie introuvable.');
     return sanitizeEntityProject(bug);
   }
 
@@ -65,7 +65,7 @@ export class BugsService {
       setTimeout(() => this.simulateAiFix(id), 3000);
     }
 
-    return { message: 'AI fix triggered', bugId: id };
+    return { message: 'Demande de correction par l’agent enregistrée.', bugId: id };
   }
 
   async updateFromN8n(id: string, data: {
@@ -86,7 +86,7 @@ export class BugsService {
   async remove(id: string) {
     const bug = await this.findOne(id);
     await this.repo.remove(bug);
-    return { message: 'Bug deleted' };
+    return { message: 'Anomalie supprimée.' };
   }
 
   async updateStatus(id: string, status: BugStatus) {

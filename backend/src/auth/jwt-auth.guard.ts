@@ -9,10 +9,10 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     if (err || !user) {
       const name = info?.name;
       if (name === 'TokenExpiredError') {
-        throw new UnauthorizedException({ statusCode: 401, code: 'TOKEN_EXPIRED', message: 'jwt expired' });
+        throw new UnauthorizedException({ statusCode: 401, code: 'TOKEN_EXPIRED', message: 'Votre session a expiré. Veuillez vous reconnecter.' });
       }
       if (name === 'JsonWebTokenError' || name === 'NotBeforeError') {
-        throw new UnauthorizedException({ statusCode: 401, code: 'TOKEN_INVALID', message: 'invalid token' });
+        throw new UnauthorizedException({ statusCode: 401, code: 'TOKEN_INVALID', message: 'Authentification invalide. Veuillez vous reconnecter.' });
       }
       throw err || new UnauthorizedException();
     }

@@ -63,7 +63,7 @@
         <label>Environnement</label>
         <select formControlName="environment">
           <option value="dev">Développement</option>
-          <option value="staging">Staging</option>
+          <option value="staging">Préproduction</option>
           <option value="prod">Production</option>
         </select>
       </div>
@@ -93,7 +93,7 @@
           <input formControlName="jenkinsUrl" placeholder="https://jenkins.example.internal">
         </div>
         <div class="field">
-          <label>Job Name</label>
+          <label>Nom du job</label>
           <input formControlName="jenkinsJobName" placeholder="pfe-devsecops-pipeline">
           <div class="field-error" *ngIf="isInvalid('jenkinsJobName')">Requis. Lettres, chiffres, points, tirets et underscores uniquement.</div>
         </div>
@@ -103,23 +103,13 @@
         <input formControlName="jenkinsJobPath" placeholder="mon-dossier/job/main">
         <span class="hint">Laisser vide pour un job simple (non multibranch) — le Job Name suffit alors.</span>
       </div>
-      <div class="field">
-        <label>Jenkins Token <span class="hint">(format: user:token)</span></label>
-        <input formControlName="jenkinsToken" type="password" placeholder="souhaiel.amri:11f686...">
-      </div>
-
       <div class="divider">🐙 GitHub</div>
-      <div class="field-row">
-        <div class="field">
-          <label>Repository <span class="hint">(owner/repo)</span></label>
-          <input formControlName="githubRepo" placeholder="organisation/repository">
-          <div class="field-error" *ngIf="isInvalid('githubRepo')">Requis, format owner/repository.</div>
-        </div>
-        <div class="field">
-          <label>GitHub Token <span class="hint">(optionnel)</span></label>
-          <input formControlName="githubToken" type="password" placeholder="ghp_xxx">
-        </div>
+      <div class="field">
+          <label>Dépôt <span class="hint">(propriétaire/dépôt)</span></label>
+          <input formControlName="githubRepo" placeholder="organisation/dépôt">
+          <div class="field-error" *ngIf="isInvalid('githubRepo')">Champ requis au format propriétaire/dépôt.</div>
       </div>
+      <p class="hint">Les identifiants Jenkins et GitHub sont gérés par la plateforme.</p>
     </div>
 
     <!-- ── SONARQUBE ───────────────────────────────────────── -->
@@ -130,15 +120,11 @@
           <input formControlName="sonarqubeUrl" placeholder="https://sonarqube.example.internal">
         </div>
         <div class="field">
-          <label>Project Key</label>
+          <label>Clé du projet</label>
           <input formControlName="sonarqubeKey" placeholder="pfe-devsecops-2026">
         </div>
       </div>
-      <div class="field">
-        <label>SonarQube Token</label>
-        <input formControlName="sonarqubeToken" type="password" placeholder="squ_xxx">
-        <span class="hint">SonarQube → My Account → Security → Generate Token</span>
-      </div>
+      <p class="hint">L'identifiant SonarQube est géré par la plateforme.</p>
       <div class="valid-inline" *ngIf="validationResult?.results?.sonarqube">
         {{ getValidIcon('sonarqube') }} {{ getValidMsg('sonarqube') }}
       </div>
@@ -172,16 +158,11 @@
           </label>
         </div>
         <div class="notif-body" *ngIf="form.get('slackEnabled')?.value">
-          <div class="field-row">
-            <div class="field">
-              <label>Channel</label>
+          <div class="field">
+              <label>Canal</label>
               <input formControlName="slackChannel" placeholder="#souhaiel">
-            </div>
-            <div class="field">
-              <label>Token</label>
-              <input formControlName="slackToken" type="password" placeholder="xoxb-xxx">
-            </div>
           </div>
+          <p class="hint">L'intégration Slack est administrée au niveau de la plateforme.</p>
         </div>
       </div>
 

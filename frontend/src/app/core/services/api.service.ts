@@ -15,6 +15,11 @@ export class ApiService {
   getJenkinsGlobal()  { return this.http.get<any>(`${this.base}/dashboard/jenkins-global`); }
   getRiskIndicators() { return this.http.get<any>(`${this.base}/dashboard/risk-indicators`); }
 
+  getManualRemediationTasks(projectId: string) { return this.http.get<any[]>(`${this.base}/manual-remediation`, { params: { projectId } }); }
+  getManualRemediationSummary(projectId: string) { return this.http.get<any>(`${this.base}/manual-remediation/summary`, { params: { projectId } }); }
+  completeManualRemediation(id: string, note?: string) { return this.http.patch<any>(`${this.base}/manual-remediation/${id}/complete`, { note: note || undefined }); }
+  reopenManualRemediation(id: string) { return this.http.patch<any>(`${this.base}/manual-remediation/${id}/reopen`, {}); }
+
   // ── Projects ─────────────────────────────────────────────
   getProjects()                          { return this.http.get<any[]>(`${this.base}/projects`); }
   getProject(id: string)                 { return this.http.get<any>(`${this.base}/projects/${id}`); }
@@ -83,6 +88,7 @@ export class ApiService {
   testIntegration(id: string)                    { return this.http.post<any>(`${this.base}/integrations/${id}/test`, {}); }
 
   approveFix(id: string, findingId?: string) { return this.http.post(`${this.base}/incidents/${id}/approve`, findingId ? { findingId } : {}); }
+  approveFixBatch(id: string, findingIds: string[]) { return this.http.post<any>(`${this.base}/incidents/${id}/approve`, { findingIds }); }
   rejectFix(id: string) { return this.http.post(`${this.base}/incidents/${id}/reject`, {}); }
 
   triggerBuild(projectId: string) { return this.http.post(`${this.base}/incidents/${projectId}/trigger-build`, {}); }

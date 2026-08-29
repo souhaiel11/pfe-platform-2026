@@ -51,7 +51,7 @@ export class AzureDeployReadinessService {
 
   async isReadyToDeploy(projectId: string): Promise<DeployReadiness> {
     const project = await this.projectRepo.findOne({ where: { id: projectId } });
-    if (!project) return { ready: false, status: 'NOT_READY', reasons: ['Project not found'], blockingReasons: ['Project not found'], deploymentConfigured: false };
+    if (!project) return { ready: false, status: 'NOT_READY', reasons: ['Projet introuvable'], blockingReasons: ['Projet introuvable'], deploymentConfigured: false };
     const deploymentConfigured = !!project.azureConfig;
     const deploymentTarget = project.azureConfig ? {
       provider: project.azureConfig.provider,
@@ -95,7 +95,7 @@ export class AzureDeployReadinessService {
     }
 
     const incident = await this.incidentRepo.findOne({ where: { projectId }, order: { createdAt: 'DESC' } });
-    if (!incident) return { ready: false, status: 'NOT_READY', reasons: ['No correlated incident exists'], blockingReasons: ['No correlated incident exists'] };
+    if (!incident) return { ready: false, status: 'NOT_READY', reasons: ['Aucun incident corrélé n’est disponible'], blockingReasons: ['Aucun incident corrélé n’est disponible'] };
     const metadata: any = incident.metadata || {};
     const validation: any = metadata.validation || {};
     const raw: any = report.rawData || {};
@@ -122,27 +122,27 @@ export class AzureDeployReadinessService {
     });
 
     const reasons: string[] = [...result.blockingReasons];
-    if (!deploymentConfigured) reasons.push('Azure deployment is not configured for this project');
+    if (!deploymentConfigured) reasons.push('Le déploiement Azure n’est pas configuré pour ce projet');
 
     // 1. Gouvernance — une valeur absente/inconnue n'est JAMAIS traitée comme
     // "différente de BLOCK" : elle doit être explicitement AUTO_FIX ou
     // NOTIFY_ONLY pour compter comme une décision de gouvernance confirmée.
     if (report.judgeDecision === 'BLOCK') {
-      reasons.push('judgeDecision=BLOCK (le Judge agent a explicitement bloqué ce build)');
+      reasons.push('La décision de gouvernance bloque explicitement ce build');
     }
 
     // 2. Sécurité
     const trivyCritical = normalized.trivy.critical || 0;
     const owaspCritical = normalized.owasp.critical || 0;
-    if (trivyCritical > 0) reasons.push(`${trivyCritical} CVE critique(s) Trivy`);
-    if (owaspCritical > 0) reasons.push(`${owaspCritical} CVE critique(s) OWASP`);
+    if (trivyCritical > 0) reasons.push(`${trivyCritical} ${trivyCritical === 1 ? 'CVE critique' : 'CVE critiques'} Trivy`);
+    if (owaspCritical > 0) reasons.push(`${owaspCritical} ${owaspCritical === 1 ? 'CVE critique' : 'CVE critiques'} OWASP Dependency-Check`);
 
     // 3. Qualité — même logique fail-closed que pour judgeDecision : seule
     // une valeur positivement connue comme "verte" fait passer le critère.
     if (BLOCKING_QUALITY_GATES.includes(gate)) {
-      reasons.push(`quality gate Sonar ${gate}`);
+      reasons.push(`Le Quality Gate SonarQube est en échec (${gate})`);
     } else if (!OK_QUALITY_GATES.includes(gate)) {
-      reasons.push(`quality gate Sonar indéterminée (valeur: ${gate ?? 'null'}) — refus par défaut`);
+      reasons.push(`Le Quality Gate SonarQube est indéterminé (${gate ?? 'valeur indisponible'}) — refus par défaut`);
     }
 
     return {

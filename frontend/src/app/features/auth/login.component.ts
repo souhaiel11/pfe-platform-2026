@@ -91,7 +91,7 @@ export class LoginComponent {
     { icon: '◈', title: 'Analyse IA automatique',    desc: '4 agents spécialisés analysent chaque incident en parallèle' },
     { icon: '⬡', title: 'Détection sécurité',         desc: 'Trivy + SonarQube intégrés dans le pipeline CI/CD' },
     { icon: '◆', title: 'Corrections gouvernées',      desc: 'Pull Request uniquement après approbation utilisateur explicite' },
-    { icon: '◉', title: 'Monitoring temps réel',      desc: 'Dashboard live avec WebSocket et alertes instantanées' }
+    { icon: '◉', title: 'Supervision en temps réel',  desc: 'Tableau de bord actualisé avec WebSocket et alertes instantanées' }
   ];
 
   constructor(

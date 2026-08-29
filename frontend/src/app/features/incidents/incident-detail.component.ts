@@ -11,6 +11,9 @@ import { RemediationCardComponent, RemediationIssue, RemediationMode } from './r
 import { StageStatusLabelPipe } from '../../shared/stage-status-label.pipe';
 import { evaluateProjectCleanliness, ProjectCleanliness } from './project-cleanliness';
 import { diagnoseTrivy, diagnoseOwasp, diagnoseZap, diagnoseSonar, diagnoseTests, diagnoseDocker, IncidentContext } from './phase-diagnostics';
+import { PresentationLabelPipe } from '../../shared/presentation-label.pipe';
+import { FrenchDatePipe } from '../../shared/french-date.pipe';
+import { userHttpError } from '../../core/http-error-message';
 
 // ═══════════════════════════════════════════════════════════════════
 //  INCIDENT DETAIL — v2.0
@@ -22,7 +25,7 @@ import { diagnoseTrivy, diagnoseOwasp, diagnoseZap, diagnoseSonar, diagnoseTests
 @Component({
   selector: 'app-incident-detail',
   standalone: true,
-  imports: [CommonModule, RouterModule, DeveloperGuideTabComponent, ProjectOverviewComponent, RemediationCardComponent, StageStatusLabelPipe],
+  imports: [CommonModule, RouterModule, DeveloperGuideTabComponent, ProjectOverviewComponent, RemediationCardComponent, StageStatusLabelPipe, PresentationLabelPipe, FrenchDatePipe],
   templateUrl: './incident-detail.component.html',
   styleUrls: ['./incident-detail.component.scss'],
 })
@@ -203,7 +206,8 @@ export class IncidentDetailComponent implements OnInit, OnDestroy {
   private aggregateFallback(t: any, phaseLabel: string): RemediationIssue[] {
     const total = (t?.critical || 0) + (t?.high || 0);
     if (!total) return [];
-    return [{ id: `${phaseLabel}-summary`, title: `${t.cves_count || total} CVE détectée(s) par ${phaseLabel}, détail indisponible dans ce scan`, detail: null }];
+    const count = t.cves_count || total;
+    return [{ id: `${phaseLabel}-summary`, title: `${count} ${count === 1 ? 'CVE détectée' : 'CVE détectées'} par ${phaseLabel}, détail indisponible dans cette analyse`, detail: null }];
   }
 
   // ── Carte Trivy (Couche 2, mode B — signalement) ─────────────────────────
@@ -419,7 +423,7 @@ export class IncidentDetailComponent implements OnInit, OnDestroy {
   // contredire, et `correcting` est branché sur le même signal de polling
   // pour que les deux reflètent "en cours" ensemble.
   sonarMode(): RemediationMode {
-    return this.sonarIssues().some(i => i.remediationType === 'AUTO_FIX_ELIGIBLE') ? 'auto-fix-bulk' : 'signal-only';
+    return this.sonarIssues().some(i => i.remediationType === 'AUTO_FIX_ELIGIBLE') ? 'auto-fix-selective' : 'signal-only';
   }
   sonarIssues(): RemediationIssue[] {
     const issues = this.enrichedData?.sonar?.issues || [];
@@ -436,7 +440,11 @@ export class IncidentDetailComponent implements OnInit, OnDestroy {
     }));
   }
   sonarCorrecting(): boolean { return this.approvalBusy || this.prGenerationState === 'polling'; }
-  onSonarCorrect(selected?: Set<string>): void { this.approveFix(selected?.values().next().value); }
+  onSonarCorrect(selected?: Set<string>): void {
+    const findingIds = selected ? [...selected] : [];
+    if (!findingIds.length || !globalThis.confirm(`Confirmer une demande unique pour ${findingIds.length} ${findingIds.length === 1 ? 'problème SonarQube sélectionné' : 'problèmes SonarQube sélectionnés'} ?`)) return;
+    this.approveFix(findingIds);
+  }
 
   hasAutoFixEligible(): boolean {
     const stages = this.enrichedData?.stages || {};
@@ -521,14 +529,17 @@ export class IncidentDetailComponent implements OnInit, OnDestroy {
     });
   }
 
-  approveFix(findingId?: string) {
+  approveFix(findingIds?: string[] | string) {
     if (this.approvalBusy) return;
     this.approvalBusy = true;
     this.approvalError = null;
-    this.api.approveFix(this.id, findingId).subscribe({
+    const request = Array.isArray(findingIds)
+      ? this.api.approveFixBatch(this.id, findingIds)
+      : this.api.approveFix(this.id, findingIds);
+    request.subscribe({
       next: (result: any) => {
         this.approvalBusy = false;
-        this.toast.success(`Demande de correction démarrée via ${result?.workflow || 'workflow spécialisé'}`);
+        this.toast.success(result?.duplicate ? 'Cette demande de correction existe déjà.' : 'Demande de correction enregistrée.');
         this.load();
         this.startPrPolling();
       },
@@ -732,8 +743,8 @@ export class IncidentDetailComponent implements OnInit, OnDestroy {
     return map[t] || '◉';
   }
   getAgentLabel(t: string) {
-    const map: any = { ROOT_CAUSE:'Root Cause Analysis', SECURITY:'Security Risk',
-      REMEDIATION:'Remediation', JUDGE:'Judge Agent' };
+    const map: any = { ROOT_CAUSE:'Analyse de la cause racine', SECURITY:'Analyse du risque de sécurité',
+      REMEDIATION:'Correction', JUDGE:'Décision de gouvernance' };
     return map[t] || t;
   }
 }

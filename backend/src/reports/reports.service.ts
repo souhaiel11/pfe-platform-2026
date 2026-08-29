@@ -161,7 +161,7 @@ export class ReportsService {
   async remove(id: string) {
     const r = await this.repo.findOne({ where: { id } });
     if (r) await this.repo.remove(r);
-    return { message: 'Report deleted' };
+    return { message: 'Rapport supprimé.' };
   }
 
   private async generateAiSummary(type: ReportType, data: any): Promise<string> {

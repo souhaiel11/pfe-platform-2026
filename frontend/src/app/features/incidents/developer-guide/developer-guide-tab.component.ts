@@ -1,6 +1,7 @@
 import { Component, Input, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { DeveloperGuide, DevGuideIssue, DevGuideFallbackFixOrderItem } from './developer-guide.model';
+import { PresentationLabelPipe } from '../../../shared/presentation-label.pipe';
 
 // ─────────────────────────────────────────────────────────────────────
 // Onglet "Guide de correction" — page détail incident
@@ -12,7 +13,7 @@ import { DeveloperGuide, DevGuideIssue, DevGuideFallbackFixOrderItem } from './d
 @Component({
   selector: 'app-developer-guide-tab',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, PresentationLabelPipe],
   template: `
     <ng-container *ngIf="guide && hasDetailedIssues(); else fallbackOrEmpty">
 
@@ -21,15 +22,15 @@ import { DeveloperGuide, DevGuideIssue, DevGuideFallbackFixOrderItem } from './d
         <div class="dg-plan-head">
           <h3>Plan de correction</h3>
           <div class="dg-plan-metrics">
-            <span class="dg-chip dg-chip-count">{{ guide.issues.length }} problème(s)</span>
+            <span class="dg-chip dg-chip-count">{{ guide.issues.length }} {{ guide.issues.length === 1 ? 'problème' : 'problèmes' }}</span>
             <span class="dg-chip dg-chip-time">~{{ guide.totalEstimatedMinutes }} min au total</span>
             <span class="dg-chip dg-chip-conf">confiance IA {{ (guide.confidence * 100) | number:'1.0-0' }}%</span>
           </div>
         </div>
-        <p class="dg-summary">{{ guide.summaryForDeveloper }}</p>
+        <p class="dg-summary">{{ summaryLabel(guide.summaryForDeveloper) }}</p>
 
         <div class="dg-quickwins" *ngIf="stringQuickWins().length">
-          <span class="dg-qw-label">⚡ Quick wins (&lt; 15 min) :</span>
+          <span class="dg-qw-label">⚡ Actions rapides (&lt; 15 min) :</span>
           <button class="dg-qw-btn" *ngFor="let id of stringQuickWins()" (click)="scrollTo(id)">{{ id }}</button>
         </div>
 
@@ -48,7 +49,7 @@ import { DeveloperGuide, DevGuideIssue, DevGuideFallbackFixOrderItem } from './d
 
         <header class="dg-issue-head" (click)="toggle(issue.id)">
           <span class="dg-priority">{{ issue.priority }}</span>
-          <span class="dg-sev" [attr.data-sev]="issue.severity">{{ issue.severity }}</span>
+          <span class="dg-sev" [attr.data-sev]="issue.severity">{{ issue.severity | presentationLabel }}</span>
           <span class="dg-source">{{ issue.source }}</span>
           <div class="dg-issue-title">
             <strong>{{ issue.title }}</strong>
@@ -118,16 +119,16 @@ import { DeveloperGuide, DevGuideIssue, DevGuideFallbackFixOrderItem } from './d
               Plan déterministe
             </span>
           </div>
-          <p class="dg-summary" *ngIf="guide?.summaryForDeveloper">{{ guide?.summaryForDeveloper }}</p>
+          <p class="dg-summary" *ngIf="guide?.summaryForDeveloper">{{ summaryLabel(guide?.summaryForDeveloper) }}</p>
 
           <div class="dg-block" *ngIf="fallbackFixOrder().length">
             <h4>Ordre de correction recommandé</h4>
             <ol class="dg-fallback-order">
               <li *ngFor="let item of fallbackFixOrder()">
-                <strong>{{ item.title }}</strong>
-                <span class="dg-fallback-detail" *ngIf="item.detail">{{ item.detail }}</span>
+                <strong>{{ fallbackText(item.title) }}</strong>
+                <span class="dg-fallback-detail" *ngIf="item.detail">{{ fallbackText(item.detail) }}</span>
                 <span class="dg-fallback-meta" *ngIf="item.owner || item.route">
-                  <span *ngIf="item.owner">Responsable : {{ item.owner }}</span>
+                  <span *ngIf="item.owner">Responsable : {{ item.owner | presentationLabel }}</span>
                   <span *ngIf="item.route && item.route !== 'NONE'"> · Route : {{ item.route }}</span>
                 </span>
               </li>
@@ -145,7 +146,7 @@ import { DeveloperGuide, DevGuideIssue, DevGuideFallbackFixOrderItem } from './d
     <ng-template #empty>
       <div class="dg-empty">
         <p>Aucun guide de correction disponible pour cet incident.</p>
-        <p class="dg-empty-hint">Le guide est généré par l'agent Developer Guidance lors de l'analyse du pipeline. Relancez une analyse pour l'obtenir.</p>
+        <p class="dg-empty-hint">Le guide est généré par l’agent de conseil aux développeurs lors de l’analyse du pipeline. Il sera disponible après une nouvelle analyse.</p>
       </div>
     </ng-template>
   `,
@@ -262,6 +263,20 @@ export class DeveloperGuideTabComponent {
       this.stringQuickWins().length > 0 ||
       (this.guide.summaryForDeveloper && this.guide.summaryForDeveloper.trim().length > 0)
     ));
+  }
+
+  summaryLabel(raw: string | null | undefined): string {
+    const value = String(raw || '').trim();
+    if (/^Guide développeur généré automatiquement \(agent IA indisponible/i.test(value)) {
+      return 'Guide de correction généré automatiquement. Ordre causal déterministe fondé sur les résultats des étapes.';
+    }
+    return value;
+  }
+
+  fallbackText(raw: string | null | undefined): string {
+    return String(raw || '')
+      .replace(/(\d+) finding\(s\)/gi, (_m, count) => `${count} ${count === '1' ? 'problème' : 'problèmes'}`)
+      .replace(/liste des findings/gi, 'liste des problèmes');
   }
 
   isOpen(id: string): boolean { return this.openIds().has(id); }

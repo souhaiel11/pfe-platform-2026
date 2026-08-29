@@ -27,16 +27,16 @@
             <tr *ngFor="let u of users">
               <td>
                 <div style="display:flex;align-items:center;gap:8px;">
-                  <div class="user-av">{{u.name?.substring(0,2).toUpperCase()}}</div>
-                  <span style="font-weight:500;color:var(--text-primary);">{{u.name}}</span>
+                  <div class="user-av">{{u.name?.substring(0,2).toUpperCase() || '—'}}</div>
+                  <span style="font-weight:500;color:var(--text-primary);">{{u.name || 'Non renseigné'}}</span>
                 </div>
               </td>
-              <td>{{u.email}}</td>
+              <td>{{u.email || 'Non renseigné'}}</td>
               <td>
-                <span class="badge" [class]="u.role === 'admin' ? 'high' : 'info'">{{u.role}}</span>
+                <span class="badge" [class]="u.role === 'admin' ? 'high' : 'info'">{{u.role | presentationLabel}}</span>
               </td>
               <td style="font-family:var(--font-mono);font-size:11px;">
-                {{u.createdAt | date:'dd/MM/yyyy'}}
+                {{u.createdAt | frenchDate:false}}
               </td>
               <td>
                 <button class="btn btn-danger btn-sm" (click)="deleteUser(u)"

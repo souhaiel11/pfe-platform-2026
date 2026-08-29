@@ -1,7 +1,7 @@
     <div class="page-container">
       <div class="page-header">
-        <h1 class="page-title">// agents_ia</h1>
-        <p class="page-subtitle">Performance et activité des agents IA — Root Cause, Security, Remediation, Judge</p>
+        <h1 class="page-title">// agents IA</h1>
+        <p class="page-subtitle">Performance et activité des agents IA — cause, sécurité, remédiation et gouvernance</p>
       </div>
 
       <div *ngIf="loading" class="loading-overlay"><div class="spinner"></div></div>
@@ -46,7 +46,7 @@
           <!-- Décisions du Judge -->
           <div class="card">
             <div class="card-header" style="margin-bottom:14px;">
-              <span class="card-title">▣ Décisions du Judge Agent</span>
+              <span class="card-title">▣ Décisions de gouvernance</span>
             </div>
             <div class="bar-chart">
               <div *ngFor="let d of decisionBars" class="bar-row">
@@ -97,14 +97,14 @@
           <div class="activity-list">
             <a *ngFor="let r of recentReports" [routerLink]="['/incidents', r.id]" class="activity-row">
               <span class="badge" [class]="getDecisionBadgeClass(r.decision)" style="min-width:110px;text-align:center;">
-                {{ r.decision || 'N/A' }}
+                {{ r.decision | presentationLabel }}
               </span>
               <div class="activity-main">
-                <div class="activity-title">{{ r.title }}</div>
-                <div class="activity-sub">{{ r.projectName }} · {{ r.securityLevel }} · confiance {{ r.confidence }}%</div>
+                <div class="activity-title">{{ r.title || 'Rapport sans titre' }}</div>
+                <div class="activity-sub">{{ r.projectName || 'Projet non disponible' }} · {{ r.securityLevel | presentationLabel }} · confiance {{ r.confidence ?? 'Non disponible' }}{{r.confidence != null ? ' %' : ''}}</div>
               </div>
               <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-faint);">
-                {{ r.createdAt | date:'dd/MM HH:mm' }}
+                {{ r.createdAt | frenchDate }}
               </span>
               <span style="color:var(--text-muted);">→</span>
             </a>

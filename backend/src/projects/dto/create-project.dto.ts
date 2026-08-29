@@ -29,15 +29,9 @@ export class CreateProjectDto {
   @IsOptional() @IsString()
   jenkinsJobPath?: string;
 
-  @IsOptional() @IsString()
-  jenkinsToken?: string;
-
   // GitHub
   @IsOptional() @IsString()
   githubRepo?: string;
-
-  @IsOptional() @IsString()
-  githubToken?: string;
 
   // SonarQube
   @IsOptional() @IsString()
@@ -45,9 +39,6 @@ export class CreateProjectDto {
 
   @IsOptional() @IsString()
   sonarqubeKey?: string;
-
-  @IsOptional() @IsString()
-  sonarqubeToken?: string;
 
   // Notifications
   @IsOptional() @IsBoolean()
@@ -61,9 +52,6 @@ export class CreateProjectDto {
 
   @IsOptional() @IsString()
   slackChannel?: string;
-
-  @IsOptional() @IsString()
-  slackToken?: string;
 
   @IsOptional() @IsObject()
   azureConfig?: AzureDeploymentConfig;

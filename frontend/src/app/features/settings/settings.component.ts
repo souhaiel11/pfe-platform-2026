@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ToastService } from '../../core/services/toast.service';
 import { ApiService } from '../../core/services/api.service';
 import { AuthService } from '../../core/services/auth.service';
+import { FrenchDatePipe } from '../../shared/french-date.pipe';
 
 interface ToolConfig {
   toolType: string;
@@ -34,7 +35,7 @@ interface ToolConfig {
 @Component({
   selector: 'app-settings',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, FrenchDatePipe],
   templateUrl: './settings.component.html',
   styleUrls: ['./settings.component.scss'],
 })
