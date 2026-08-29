@@ -321,7 +321,7 @@
             <label>Sévérité
               <select [(ngModel)]="sonarSeverity"><option value="ALL">Toutes</option><option value="BLOCKER">Bloquante</option><option value="CRITICAL">Critique</option><option value="MAJOR">Majeure</option><option value="MINOR">Mineure</option></select>
             </label>
-            <label>Remédiation
+            <label>Correction
               <select [(ngModel)]="sonarRemediation"><option value="ALL">Toutes</option><option value="AUTO_FIX_ELIGIBLE">Correction automatisable</option><option value="DEVELOPER_ACTION_REQUIRED">Action développeur requise</option><option value="ADMIN_ACTION_REQUIRED">Action administrateur requise</option></select>
             </label>
             <label>Responsable
@@ -337,11 +337,11 @@
           <div class="table-scroll">
           <table class="data-table">
             <thead>
-              <tr><th class="selection-cell"><span class="sr-only">Sélection</span></th><th>Sévérité</th><th>Règle</th><th>Message</th><th>Fichier</th><th>Ligne</th><th>Remédiation</th></tr>
+              <tr><th class="selection-cell"><span class="sr-only">Sélection</span></th><th>Sévérité</th><th>Règle</th><th>Message</th><th>Fichier</th><th>Ligne</th><th>Correction</th></tr>
             </thead>
             <tbody>
               <tr *ngFor="let issue of sonarFindings()" class="sonar-row" tabindex="0" role="button"
-                  [attr.aria-label]="'Voir la finding ' + (issue.rule || '') + ' dans ' + (issue.file || issue.component || '')"
+                  [attr.aria-label]="'Voir le problème ' + (issue.rule || '') + ' dans ' + (issue.file || issue.component || '')"
                   (click)="openSonarFinding(issue, $event)" (keydown.enter)="openSonarFinding(issue, $event)"
                   (keydown.space)="$event.preventDefault(); openSonarFinding(issue, $event)">
                 <td class="selection-cell" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">
