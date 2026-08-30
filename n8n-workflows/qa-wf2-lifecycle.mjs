@@ -72,14 +72,14 @@ assert.ok(failureContract.includes('/workflow-status'));
 for (const field of ['workflowId', 'executionId', 'incidentId', 'requestId', 'batchId', 'batchKey', 'attemptCount']) {
   assert.ok(node('Prepare WF2 Failure Status').parameters.jsCode.includes(field), `failure callback missing ${field}`);
 }
-assert.ok(node('Prepare WF2 Failure Status').parameters.jsCode.includes("$('Capture Correlation Envelope')"));
+assert.ok(node('Prepare WF2 Failure Status').parameters.jsCode.includes("$items('Capture Correlation Envelope',0,0)"));
 assert.ok(!node('Prepare WF2 Failure Status').parameters.jsCode.includes("$('Prepare Batch Context')"));
 const successContract = JSON.stringify(node('Save Execution Result to Backend').parameters);
 assert.ok(successContract.includes('/workflow-status'));
 for (const field of ['PR_CREATED', 'workflowId', 'executionId', 'requestId', 'batchId', 'batchKey', 'attemptCount', 'prUrl', 'prNumber']) {
   assert.ok(successContract.includes(field), `success callback missing ${field}`);
 }
-assert.ok(successContract.includes("$('Capture Correlation Envelope')"));
+assert.ok(successContract.includes("$items('Capture Correlation Envelope',0,0)"));
 assert.ok(!successContract.includes("$('Prepare Batch Context')"));
 for (const field of ['completenessPassed', 'processedFindingIds', 'updatedFiles', 'commitShas', 'prHeadSha']) {
   assert.ok(successContract.includes(field), `success completeness evidence missing ${field}`);
@@ -88,6 +88,10 @@ assert.equal(node('Prepare - Code Patch Body').parameters.mode, 'runOnceForEachI
 assert.equal(node('Parse - Code Patch Output').parameters.mode, 'runOnceForEachItem');
 assert.ok(!node('Prepare - Code Patch Body').parameters.jsCode.includes('$input.first()'));
 assert.ok(!node('Parse - Code Patch Output').parameters.jsCode.includes('$input.first()'));
+for (const perItem of ['Prepare - Code Patch Body', 'Parse - Code Patch Output', 'Build File Result']) {
+  assert.equal(node(perItem).parameters.mode, 'runOnceForEachItem');
+  assert.ok(!/return \[\{/.test(node(perItem).parameters.jsCode), `${perItem} returns an array in per-item mode`);
+}
 assert.ok(node('Validate Batch Completeness').parameters.jsCode.includes('missingFindingIds'));
 assert.ok(node('Validate Batch Completeness').parameters.jsCode.includes('missingFiles'));
 
@@ -152,6 +156,62 @@ const completeness = results => exact(payload.findingIds, results.flatMap(result
   && exact(payload.findings.map(f => f.file), results.filter(result => result.updateApplied).map(result => result.targetFile));
 assert.equal(completeness(completeResults), true);
 assert.equal(completeness(completeResults.slice(0, 1)), false);
+
+// Execute the exact per-item preparation contract twice. n8n requires the
+// returned item itself (and its json property) to be plain objects.
+const executeCode = (code, bindings) => Function(...Object.keys(bindings), code)(...Object.values(bindings));
+const gateForPerItem = {
+  ...payload, decision: 'FIX_PROPOSED', enrichedData: { sonar: { issues: payload.findings.map(f => ({
+    ...f, severity: 'MAJOR', type: 'CODE_SMELL', message: f.rule,
+  })) } }, target_file_path: payload.findings[0].file,
+};
+const preparedItems = payload.findings.map(finding => executeCode(node('Prepare - Code Patch Body').parameters.jsCode, {
+  $json: { path: finding.file, sha: `sha-${finding.rule}`, content: Buffer.from('class Example { private String value; }').toString('base64') },
+  $: () => ({ first: () => ({ json: gateForPerItem }) }), Buffer,
+}));
+assert.equal(preparedItems.length, 2);
+assert.ok(preparedItems.every(item => item && !Array.isArray(item) && item.json && !Array.isArray(item.json)));
+assert.deepEqual(preparedItems.map(item => item.json.targetFile).sort(), payload.findings.map(f => f.file).sort());
+assert.ok(preparedItems.every(item => item.json.approvedFindingIdsForFile.length === 1));
+const parsedItems = preparedItems.map(prepared => {
+  const response = { content: [{ text: JSON.stringify({
+    incidentId: payload.incidentId,
+    patchDescription: 'Correction simulée',
+    filePath: prepared.json.targetFile,
+    targetFile: prepared.json.targetFile,
+    processedFindingIds: prepared.json.approvedFindingIdsForFile,
+    patchedCode: 'class Example { private final String value = "corrected"; }',
+    commitMessage: `fix: ${prepared.json.targetFile}`,
+  }) }] };
+  return executeCode(node('Parse - Code Patch Output').parameters.jsCode, {
+    $json: response,
+    $: name => name === 'Prepare - Code Patch Body'
+      ? { item: { json: prepared.json } }
+      : { first: () => ({ json: gateForPerItem }) },
+  });
+});
+assert.equal(parsedItems.length, 2);
+assert.ok(parsedItems.every(item => item && !Array.isArray(item) && item.json && !Array.isArray(item.json)));
+assert.deepEqual(parsedItems.map(item => item.json.targetFile).sort(), payload.findings.map(f => f.file).sort());
+assert.deepEqual(parsedItems.flatMap(item => item.json.processedFindingIds).sort(), payload.findingIds.sort());
+
+const capturedEnvelope = { incidentId: payload.incidentId, projectId: payload.projectId,
+  buildNumber: payload.buildNumber, requestId: payload.requestId, batchId: payload.batchId,
+  batchKey: payload.batchKey, attemptCount: 4, workflowId: workflow.id, findingIds: payload.findingIds };
+const failureCode = node('Prepare WF2 Failure Status').parameters.jsCode;
+for (const failurePoint of ['Prepare - Code Patch Body', 'de Patch - HTTP Request', 'Parse - Code Patch Output',
+  'Update File in Branch', 'Build File Result', 'Validate Batch Completeness', 'Lookup Existing Batch PR',
+  'Create Pull Request1', 'Save Execution Result to Backend']) {
+  const output = executeCode(failureCode, {
+    $input: { first: () => ({ json: { error: { message: 'mock failure', node: { name: failurePoint } } } }) },
+    $items: name => name === 'Capture Correlation Envelope' ? [{ json: { correlationEnvelope: capturedEnvelope } }] : [],
+    $execution: { id: 'mock-execution' },
+  });
+  assert.equal(output.length, 1);
+  assert.equal(output[0].json.attemptCount, 4);
+  assert.equal(output[0].json.incidentId, payload.incidentId);
+  assert.equal(output[0].json.failureNode, failurePoint);
+}
 
 // Resume simulation: deterministic branch and the single matching PR are reused.
 const branchLookup = JSON.stringify(node('Lookup Remediation Branch').parameters);
