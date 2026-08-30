@@ -372,7 +372,10 @@
                 </td>
                 <td><span class="sev-badge" [style.background]="getSevColor(issue.severity)">{{issue.severity | presentationLabel}}</span></td>
                 <td class="mono-cell">{{issue.rule || issue.ruleKey || 'Non disponible'}}</td>
-                <td style="max-width:280px;font-size:11px">{{issue.message}}</td>
+                <td style="max-width:280px;font-size:11px">
+                  {{sonarFindingSummary(issue)}}
+                  <details *ngIf="issue.message"><summary>Preuve technique Sonar</summary><small>{{issue.message}}</small></details>
+                </td>
                 <td style="font-size:10px;color:var(--text-muted);font-family:var(--font-mono);max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"
                     [title]="issue.file || issue.component || ''">{{issue.file || issue.component || 'Non disponible'}}</td>
                 <td style="font-size:10px;text-align:center">{{issue.line || '-'}}</td>
@@ -394,7 +397,7 @@
           <div class="drawer-body">
             <section><h3>Identification</h3><dl><div><dt>Sévérité</dt><dd>{{selectedSonarFinding.severity | presentationLabel}}</dd></div><div><dt>Règle</dt><dd>{{findingValue(selectedSonarFinding.rule || selectedSonarFinding.ruleKey)}}</dd></div><div><dt>Type</dt><dd>{{selectedSonarFinding.type || selectedSonarFinding.category | presentationLabel}}</dd></div><div><dt>Source</dt><dd>{{selectedSonarFinding.source || selectedSonarFinding.stage | presentationLabel}}</dd></div></dl></section>
             <section><h3>Localisation</h3><p class="drawer-path">{{findingValue(selectedSonarFinding.file || selectedSonarFinding.component)}}<span *ngIf="selectedSonarFinding.line">:{{selectedSonarFinding.line}}</span></p></section>
-            <section><h3>Description</h3><p>{{findingValue(selectedSonarFinding.description || selectedSonarFinding.message || selectedSonarFinding.title)}}</p></section>
+            <section><h3>Description</h3><p>{{sonarFindingSummary(selectedSonarFinding)}}</p></section>
             <section><h3>Pourquoi c’est important</h3><p>{{findingValue(selectedSonarFinding.impact)}}</p></section>
             <section><h3>Preuve technique</h3><p>{{findingEvidence(selectedSonarFinding)}}</p></section>
             <section><h3>Correction</h3><dl><div><dt>Action recommandée</dt><dd>{{findingValue(selectedSonarFinding.recommendation)}}</dd></div><div><dt>Type</dt><dd>{{remediationLabel(selectedSonarFinding.remediationType)}}</dd></div><div><dt>Responsable</dt><dd>{{selectedSonarFinding.owner || 'UNASSIGNED' | presentationLabel}}</dd></div><div><dt>Éligibilité</dt><dd>{{selectedSonarFinding.remediationType === 'AUTO_FIX_ELIGIBLE' ? 'Correction automatisable' : 'Automatisation non disponible'}}</dd></div></dl></section>

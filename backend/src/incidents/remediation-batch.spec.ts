@@ -1,5 +1,5 @@
 import * as assert from 'node:assert/strict';
-import { IncidentsService, remediationBatchIdentity, resolveRemediationBatch } from './incidents.service';
+import { canRetryFixRequest, IncidentsService, remediationBatchIdentity, resolveRemediationBatch } from './incidents.service';
 
 const sonar = (id: string, extra: any = {}) => ({
   id, source: 'SONARQUBE', stage: 'sonar', remediationType: 'AUTO_FIX_ELIGIBLE',
@@ -13,6 +13,14 @@ assert.equal(remediationBatchIdentity('incident', ['b', 'a', 'a']), remediationB
 assert.throws(() => resolveRemediationBatch([sonar('a')], ['missing']), /appartiennent pas à cet incident/);
 assert.throws(() => resolveRemediationBatch([sonar('a', { remediationType: 'DEVELOPER_ACTION_REQUIRED' })], ['a']), /correction automatisable/);
 assert.throws(() => resolveRemediationBatch([sonar('a'), { ...sonar('b'), source: 'DOCKER', stage: 'docker' }], ['a', 'b']), /même stratégie/);
+const retryable = { status: 'FIX_FAILED', retryEligible: true, attemptCount: 3,
+  attempts: [{ attempt: 1, status: 'FIX_FAILED' }, { attempt: 2, status: 'FIX_FAILED' }, { attempt: 3, status: 'FIX_FAILED' }] };
+assert.equal(canRetryFixRequest(retryable), true);
+assert.equal(canRetryFixRequest({ ...retryable, status: 'FIX_STARTING' }), false);
+assert.equal(canRetryFixRequest({ ...retryable, status: 'DISPATCHED' }), false);
+assert.equal(canRetryFixRequest({ ...retryable, status: 'PR_CREATED' }), false);
+assert.equal(canRetryFixRequest({ ...retryable, status: 'VALIDATING' }), false);
+assert.equal(canRetryFixRequest({ ...retryable, attempts: [...retryable.attempts, { attempt: 4, status: 'DISPATCHED' }] }), false);
 
 // Double soumission équivalente : une seule transaction crée la demande et
 // une seule invocation future est dispatchée. Aucun service externe réel.
@@ -102,6 +110,8 @@ async function main() {
     /Une demande de correction existe déjà.*Réessayer la correction/,
   );
   assert.equal(retryDispatches, 0);
+  retryIncident.prUrl = 'https://github.com/owner/repo/pull/24';
+  retryIncident.metadata.fixRequest.branchName = 'fix/existing-logical-batch';
   const retried: any = await retryService.retryFix(retryIncident.id, user);
   assert.equal(retried.duplicate, false);
   assert.equal(retried.requestId, failedRequestId);
@@ -112,7 +122,7 @@ async function main() {
   assert.equal(retryDispatches, 1);
   await assert.rejects(
     () => retryService.approveFix(retryIncident.id, user, { findingIds: ['a', 'b'] }),
-    /Une demande de correction existe déjà/,
+    /Pull Request existe déjà/,
   );
   assert.equal(retryDispatches, 1);
 

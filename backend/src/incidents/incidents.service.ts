@@ -118,6 +118,17 @@ export type WorkflowBatchStatusInput = {
   reconciliation?: boolean;
 };
 
+export function canRetryFixRequest(fixRequest: any): boolean {
+  if (fixRequest?.status !== 'FIX_FAILED' || fixRequest?.retryEligible !== true) return false;
+  const attemptCount = Number(fixRequest.attemptCount);
+  if (!Number.isInteger(attemptCount) || attemptCount < 1) return false;
+  const attempts = Array.isArray(fixRequest.attempts) ? fixRequest.attempts : [];
+  const currentAttempt = attempts.find((attempt: any) => Number(attempt.attempt) === attemptCount);
+  if (!currentAttempt || currentAttempt.status !== 'FIX_FAILED') return false;
+  return !attempts.some((attempt: any) => Number(attempt.attempt) > attemptCount
+    && ['FIX_STARTING', 'DISPATCHED', 'PR_CREATED', 'VALIDATING'].includes(String(attempt.status)));
+}
+
 export function remediationWorkflowFor(finding: any): RemediationWorkflow | null {
   const source = String(finding?.source || '').toUpperCase();
   const stage = String(finding?.stage || '').toLowerCase();
@@ -565,7 +576,7 @@ export class IncidentsService {
       const project = await manager.getRepository(Project).findOne({ where: { id: incident.projectId } });
       if (!project) throw new BadRequestException('Le projet associé à cet incident est introuvable.');
       incident.project = project;
-      if (incident.prUrl) throw new ConflictException('Une Pull Request existe déjà pour cet incident.');
+      if (!explicitRetry && incident.prUrl) throw new ConflictException('Une Pull Request existe déjà pour cet incident.');
       if ([IncidentStatus.COMPLETED, IncidentStatus.APPROVED, IncidentStatus.VALIDATING].includes(incident.status)) {
         throw new ConflictException(`L’état actuel de l’incident ne permet pas une nouvelle demande de correction.`);
       }
@@ -575,7 +586,7 @@ export class IncidentsService {
       const requestedIds = explicitRetry
         ? (Array.isArray(current?.findingIds) ? current.findingIds.map(String) : (current?.findingId ? [String(current.findingId)] : []))
         : (body.findingIds?.length ? body.findingIds : legacy);
-      if (explicitRetry && (current?.status !== 'FIX_FAILED' || current?.retryEligible !== true || !requestedIds.length)) {
+      if (explicitRetry && (!canRetryFixRequest(current) || !requestedIds.length)) {
         throw new ConflictException('Cette demande de correction ne peut pas être réessayée.');
       }
       // Compatibilité limitée pour les anciens écrans WF4/WF5 : leur appel
