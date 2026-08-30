@@ -247,6 +247,16 @@ export class ProjectDetailComponent implements OnInit {
     const selected = this.selectedSonarIds;
     return (this.ed?.sonar?.issues || []).filter((f: any) => selected.has(this.findingId(f)));
   }
+  sonarFindingSummary(finding: any): string {
+    const rule = String(finding?.rule || finding?.ruleKey || '');
+    const message = String(finding?.message || '').trim();
+    if (rule === 'java:S1068') {
+      const field = message.match(/"([^"]+)"/)?.[1];
+      return field ? `Supprimer le champ privé « ${field} » inutilisé.` : 'Supprimer ce champ privé inutilisé.';
+    }
+    if (rule === 'java:S125') return 'Supprimer ce bloc de code commenté devenu inutile.';
+    return message || 'Description non disponible';
+  }
   openBatchConfirmation(): void {
     if (!this.selectedSonarFindings().length) return;
     this.batchConfirmationOpen = true;
@@ -254,6 +264,7 @@ export class ProjectDetailComponent implements OnInit {
   }
   closeBatchConfirmation(): void { if (!this.approving) this.batchConfirmationOpen = false; }
   confirmSonarCorrection(): void {
+    if (this.approving) return;
     const findingIds = this.selectedSonarFindings().map(f => this.findingId(f));
     if (!this.canOperate || !this.latestReport?.id || !findingIds.length) return;
     this.approving = true;
