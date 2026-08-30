@@ -188,10 +188,28 @@ async function main() {
   await assert.rejects(() => callbackService.saveWorkflowBatchStatus(callbackIncident.id, { ...failure, requestId: 'wrong' }), /ne correspond pas/);
   await assert.rejects(() => callbackService.saveWorkflowBatchStatus(callbackIncident.id, { ...failure, batchId: 'wrong', batchKey: 'wrong' }), /ne correspond pas/);
   await assert.rejects(() => callbackService.saveWorkflowBatchStatus(callbackIncident.id, { ...failure, attemptCount: 2 }), /ne correspond pas/);
+  await assert.rejects(() => callbackService.saveWorkflowBatchStatus(callbackIncident.id, { ...failure, attemptCount: null as any }), /ne correspond pas/);
   await assert.rejects(() => callbackService.saveWorkflowBatchStatus(callbackIncident.id, { ...failure, workflowId: 'wrong' }), /ne correspond pas/);
 
   // Une PR corrélée progresse vers PR_CREATED. Une erreur tardive ne peut
   // ensuite pas dégrader cet état plus récent.
+  callbackIncident.metadata.fixRequest = {
+    requestId: 'request-success', batchId: 'batch-success', workflow: 'WF2', status: 'DISPATCHED',
+    findingIds: ['a', 'b'], attemptCount: 2, attempts: [{ attempt: 2, status: 'DISPATCHED' }],
+  };
+  const attemptTwoFailure: any = { ...failure, executionId: '2000', requestId: 'request-success',
+    batchId: 'batch-success', batchKey: 'batch-success' };
+  await assert.rejects(() => callbackService.saveWorkflowBatchStatus(callbackIncident.id,
+    { ...attemptTwoFailure, attemptCount: 1 }), /ne correspond pas/);
+  await assert.rejects(() => callbackService.saveWorkflowBatchStatus(callbackIncident.id,
+    { ...attemptTwoFailure, attemptCount: 3 }), /ne correspond pas/);
+  await assert.rejects(() => callbackService.saveWorkflowBatchStatus(callbackIncident.id,
+    { ...attemptTwoFailure, attemptCount: null }), /ne correspond pas/);
+  const acceptedAttemptTwo: any = await callbackService.saveWorkflowBatchStatus(callbackIncident.id,
+    { ...attemptTwoFailure, attemptCount: 2, failureNode: 'Prepare Batch Context' });
+  assert.equal(acceptedAttemptTwo.applied, true);
+  assert.equal(callbackIncident.metadata.fixRequest.status, 'FIX_FAILED');
+  assert.equal(callbackIncident.metadata.fixRequest.attempts[0].workflowExecutionId, '2000');
   callbackIncident.metadata.fixRequest = {
     requestId: 'request-success', batchId: 'batch-success', workflow: 'WF2', status: 'DISPATCHED',
     findingIds: ['a', 'b'], attemptCount: 2, attempts: [{ attempt: 2, status: 'DISPATCHED' }],

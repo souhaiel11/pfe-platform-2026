@@ -181,7 +181,7 @@
       {
         "parameters": {
           "method": "POST",
-          "url": "=http://backend:3001/api/incidents/{{ $('Prepare Batch Context').first().json.incidentId }}/workflow-status",
+          "url": "=http://backend:3001/api/incidents/{{ $('Capture Correlation Envelope').first().json.correlationEnvelope.incidentId }}/workflow-status",
           "sendHeaders": true,
           "headerParameters": {
             "parameters": [
@@ -193,7 +193,7 @@
           },
           "sendBody": true,
           "specifyBody": "json",
-          "jsonBody": "={{ JSON.stringify({ status: 'PR_CREATED', workflowId: '9adcV31eaIgJyMR0', executionId: String($execution.id), incidentId: $('Prepare Batch Context').first().json.incidentId, requestId: $('Prepare Batch Context').first().json.requestId, batchId: $('Prepare Batch Context').first().json.batchId, batchKey: $('Prepare Batch Context').first().json.batchKey, attemptCount: $('Prepare Batch Context').first().json.attemptCount, prUrl: $json.html_url || $json.url || '', prNumber: $json.number }) }}",
+          "jsonBody": "={{ JSON.stringify({ status: 'PR_CREATED', workflowId: '9adcV31eaIgJyMR0', executionId: String($execution.id), incidentId: $('Capture Correlation Envelope').first().json.correlationEnvelope.incidentId, requestId: $('Capture Correlation Envelope').first().json.correlationEnvelope.requestId, batchId: $('Capture Correlation Envelope').first().json.correlationEnvelope.batchId, batchKey: $('Capture Correlation Envelope').first().json.correlationEnvelope.batchKey, attemptCount: $('Capture Correlation Envelope').first().json.correlationEnvelope.attemptCount, prUrl: $json.html_url || $json.url || '', prNumber: $json.number }) }}",
           "options": {}
         },
         "id": "032a9a80-ee21-4969-bed5-6513bfa31ae8",
@@ -364,7 +364,21 @@
       },
       {
         "parameters": {
-          "jsCode": "const input=$input.first().json;\nconst headers=input.headers||{};\nif(!headers['x-internal-secret']||headers['x-internal-secret']!==$env.N8N_INTERNAL_SECRET) throw new Error('UNAUTHORIZED_BACKEND_CALL');\nconst body=input.body||input;\nconst required=['incidentId','projectId','requestId','remediationType','repository'];\nconst missing=required.filter(k=>!body[k]);\nif(missing.length) throw new Error('INVALID_APPROVAL_CONTRACT:'+missing.join(','));\nif(body.remediationType!=='AUTO_FIX_ELIGIBLE') throw new Error('MANUAL_ACTION_REQUIRED');\nconst findings=Array.isArray(body.findings)?body.findings:body.finding?[body.finding]:[];\nconst findingIds=[...new Set((Array.isArray(body.findingIds)?body.findingIds:body.findingId?[body.findingId]:[]).map(String))].sort();\nif(!findings.length||!findingIds.length||findings.length!==findingIds.length) throw new Error('INVALID_BATCH_FINDINGS');\nfor(const finding of findings){if(finding.remediationType!=='AUTO_FIX_ELIGIBLE')throw new Error('MANUAL_ACTION_REQUIRED');if(!findingIds.includes(String(finding.findingId||finding.id||finding.key)))throw new Error('FINDING_CORRELATION_MISMATCH');}\nconst targetFiles=[...new Set(findings.map(f=>String(f.file||f.component||'').replace(/^[^:]+:/,'')).filter(Boolean))];\nif(!targetFiles.length||targetFiles.some(target=>target.startsWith('/')||target.includes('..'))) throw new Error('UNSAFE_OR_MISSING_TARGET_FILE');\nconst parts=String(body.repository).replace('https://github.com/','').replace(/\\.git$/,'').split('/').filter(Boolean);\nif(parts.length!==2) throw new Error('INVALID_REPOSITORY');\nreturn [{json:{incidentData:{incidentId:body.incidentId,projectId:body.projectId,buildNumber:body.buildNumber??null,batchKey:body.batchKey||body.batchId||null,batchId:body.batchId||body.batchKey||null,findingId:findingIds[0],findingIds,requestId:body.requestId,approvedBy:body.approvedBy||null,stage:'sonar',source:'SONARQUBE',remediationType:body.remediationType,githubRepo:parts.join('/'),repository_owner:parts[0],repository_name:parts[1],target_file_path:targetFiles[0],targetFiles,default_branch:body.defaultBranch||null,finding:findings[0],findings,decision:'FIX_PROPOSED',confidenceScore:1,riskLevel:String(findings[0].severity||'high').toLowerCase(),enrichedData:{sonar:{issues:findings}}}}}];"
+          "jsCode": "const input=$input.first().json||{};const body=input.body||input;const attemptCount=Number(body.attemptCount);const findingIds=Array.isArray(body.findingIds)?body.findingIds.map(String):[];const required=['incidentId','projectId','buildNumber','requestId','batchId','batchKey'];const missing=required.filter(k=>body[k]===undefined||body[k]===null||body[k]==='');if(missing.length)throw new Error('CORRELATION_ENVELOPE_MISSING:'+missing.join(','));if(!Number.isInteger(attemptCount)||attemptCount<1)throw new Error('INVALID_ATTEMPT_COUNT');if(body.batchId!==body.batchKey)throw new Error('BATCH_IDENTITY_MISMATCH');if(!findingIds.length)throw new Error('CORRELATION_FINDINGS_MISSING');return [{json:{...input,correlationEnvelope:{incidentId:String(body.incidentId),projectId:String(body.projectId),buildNumber:Number(body.buildNumber),requestId:String(body.requestId),batchId:String(body.batchId),batchKey:String(body.batchKey),attemptCount,workflowId:'9adcV31eaIgJyMR0',route:'WF2',findingIds}}}];"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          -4864,
+          3856
+        ],
+        "id": "wf2-capture-correlation-envelope",
+        "name": "Capture Correlation Envelope",
+        "onError": "continueErrorOutput"
+      },
+      {
+        "parameters": {
+          "jsCode": "const input=$input.first().json;\nconst headers=input.headers||{};\nif(!headers['x-internal-secret']||headers['x-internal-secret']!==$env.N8N_INTERNAL_SECRET) throw new Error('UNAUTHORIZED_BACKEND_CALL');\nconst body=input.body||input;\nconst envelope=input.correlationEnvelope||{};\nconst required=['incidentId','projectId','requestId','remediationType','repository'];\nconst missing=required.filter(k=>!body[k]);\nif(missing.length) throw new Error('INVALID_APPROVAL_CONTRACT:'+missing.join(','));\nif(body.remediationType!=='AUTO_FIX_ELIGIBLE') throw new Error('MANUAL_ACTION_REQUIRED');\nconst findings=Array.isArray(body.findings)?body.findings:body.finding?[body.finding]:[];\nconst findingIds=[...new Set((Array.isArray(body.findingIds)?body.findingIds:body.findingId?[body.findingId]:[]).map(String))].sort();\nif(!findings.length||!findingIds.length||findings.length!==findingIds.length) throw new Error('INVALID_BATCH_FINDINGS');\nfor(const finding of findings){if(finding.remediationType!=='AUTO_FIX_ELIGIBLE')throw new Error('MANUAL_ACTION_REQUIRED');if(!findingIds.includes(String(finding.findingId||finding.id||finding.key)))throw new Error('FINDING_CORRELATION_MISMATCH');}\nconst targetFiles=[...new Set(findings.map(f=>String(f.file||f.component||'').replace(/^[^:]+:/,'')).filter(Boolean))];\nif(!targetFiles.length||targetFiles.some(target=>target.startsWith('/')||target.includes('..'))) throw new Error('UNSAFE_OR_MISSING_TARGET_FILE');\nconst parts=String(body.repository).replace('https://github.com/','').replace(/\\.git$/,'').split('/').filter(Boolean);\nif(parts.length!==2) throw new Error('INVALID_REPOSITORY');\nreturn [{json:{incidentData:{incidentId:envelope.incidentId,projectId:envelope.projectId,buildNumber:envelope.buildNumber,batchKey:envelope.batchKey,batchId:envelope.batchId,attemptCount:envelope.attemptCount,findingId:findingIds[0],findingIds,requestId:envelope.requestId,approvedBy:body.approvedBy||null,stage:'sonar',source:'SONARQUBE',remediationType:body.remediationType,githubRepo:parts.join('/'),repository_owner:parts[0],repository_name:parts[1],target_file_path:targetFiles[0],targetFiles,default_branch:body.defaultBranch||null,finding:findings[0],findings,decision:'FIX_PROPOSED',confidenceScore:1,riskLevel:String(findings[0].severity||'high').toLowerCase(),enrichedData:{sonar:{issues:findings}}}}}];"
         },
         "type": "n8n-nodes-base.code",
         "typeVersion": 2,
@@ -373,7 +387,8 @@
           3584
         ],
         "id": "0844489a-b4f2-45f0-af5e-5934e55b92f3",
-        "name": "Adapt Webhook Payload"
+        "name": "Adapt Webhook Payload",
+        "onError": "continueErrorOutput"
       },
       {
         "parameters": {
@@ -627,7 +642,10 @@
         "name": "Prepare Batch Context",
         "type": "n8n-nodes-base.code",
         "typeVersion": 2,
-        "position": [-2816, 3456],
+        "position": [
+          -2816,
+          3456
+        ],
         "parameters": {
           "jsCode": "const gate=$('Policy Gate - Validate Constraints').first().json;const sha=String($input.first().json?.object?.sha||'');if(!sha)throw new Error('BASE_SHA_UNAVAILABLE');const required=['incidentId','projectId','buildNumber','requestId','batchId','batchKey','attemptCount','repository_owner','repository_name','default_branch'];const missing=required.filter(k=>gate[k]===undefined||gate[k]===null||gate[k]==='');if(missing.length)throw new Error('BATCH_CONTEXT_MISSING:'+missing.join(','));if(gate.batchId!==gate.batchKey)throw new Error('BATCH_IDENTITY_MISMATCH');return [{json:{...gate,baseSha:sha,baseBranch:String(gate.default_branch),targetBranchName:'fix/pfe-'+gate.incidentId+'-'+gate.requestId,findingIds:[...gate.findingIds],findings:[...gate.findings]}}];"
         },
@@ -638,9 +656,12 @@
         "name": "Prepare WF2 Failure Status",
         "type": "n8n-nodes-base.code",
         "typeVersion": 2,
-        "position": [-2240, 4160],
+        "position": [
+          -2240,
+          4160
+        ],
         "parameters": {
-          "jsCode": "const input=$input.first().json||{};let ctx={};try{ctx=$('Prepare Batch Context').first().json||{}}catch{}if(!ctx.incidentId){try{ctx=$('Policy Gate - Validate Constraints').first().json||{}}catch{}}if(!ctx.incidentId){try{ctx=$('Adapt Webhook Payload').first().json.incidentData||{}}catch{}}const err=input.error||input;const summary=String(err.message||input.message||input.reason||'workflow execution error').replace(/[\\r\\n]+/g,' ').slice(0,500);const failureNode=String(err.node?.name||err.context?.nodeCause||input.failureNode||'WF2').slice(0,120);return [{json:{status:'FAILED',workflowId:'9adcV31eaIgJyMR0',executionId:String($execution.id),incidentId:ctx.incidentId,requestId:ctx.requestId,batchId:ctx.batchId,batchKey:ctx.batchKey,attemptCount:Number(ctx.attemptCount),failureCode:'WF2_EXECUTION_ERROR',failureSummary:summary,failureNode}}];"
+          "jsCode": "const input=$input.first().json||{};let ctx={};try{ctx=$('Capture Correlation Envelope').first().json.correlationEnvelope||{}}catch{}const err=input.error||input;const summary=String(err.message||input.message||input.reason||'workflow execution error').replace(/[\\r\\n]+/g,' ').slice(0,500);const failureNode=String(err.node?.name||err.context?.nodeCause||input.failureNode||'WF2').slice(0,120);const required=['incidentId','requestId','batchId','batchKey','attemptCount'];const missing=required.filter(k=>ctx[k]===undefined||ctx[k]===null||ctx[k]==='');if(missing.length)throw new Error('FAILURE_CORRELATION_MISSING:'+missing.join(','));return [{json:{status:'FAILED',workflowId:ctx.workflowId,executionId:String($execution.id),incidentId:ctx.incidentId,requestId:ctx.requestId,batchId:ctx.batchId,batchKey:ctx.batchKey,attemptCount:ctx.attemptCount,failureCode:'WF2_EXECUTION_ERROR',failureSummary:summary,failureNode}}];"
         }
       },
       {
@@ -648,16 +669,32 @@
         "name": "Persist WF2 Failure Status",
         "type": "n8n-nodes-base.httpRequest",
         "typeVersion": 4.4,
-        "position": [-1984, 4160],
+        "position": [
+          -1984,
+          4160
+        ],
         "parameters": {
           "method": "POST",
           "url": "=http://backend:3001/api/incidents/{{ $json.incidentId }}/workflow-status",
           "sendHeaders": true,
-          "headerParameters": {"parameters":[{"name":"Content-Type","value":"application/json"},{"name":"X-Internal-Secret","value":"={{ $env.N8N_INTERNAL_SECRET }}"}]},
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "name": "X-Internal-Secret",
+                "value": "={{ $env.N8N_INTERNAL_SECRET }}"
+              }
+            ]
+          },
           "sendBody": true,
           "specifyBody": "json",
           "jsonBody": "={{ JSON.stringify($json) }}",
-          "options": {"timeout":15000}
+          "options": {
+            "timeout": 15000
+          }
         }
       }
     ],
@@ -671,7 +708,13 @@
               "index": 0
             }
           ],
-          [{"node":"Prepare WF2 Failure Status","type":"main","index":0}]
+          [
+            {
+              "node": "Prepare WF2 Failure Status",
+              "type": "main",
+              "index": 0
+            }
+          ]
         ]
       },
       "Patch Allowed?": {
@@ -766,7 +809,13 @@
               "index": 0
             }
           ],
-          [{"node":"Prepare WF2 Failure Status","type":"main","index":0}]
+          [
+            {
+              "node": "Prepare WF2 Failure Status",
+              "type": "main",
+              "index": 0
+            }
+          ]
         ]
       },
       "Prepare - Code Patch Body": {
@@ -778,7 +827,13 @@
               "index": 0
             }
           ],
-          [{"node":"Prepare WF2 Failure Status","type":"main","index":0}]
+          [
+            {
+              "node": "Prepare WF2 Failure Status",
+              "type": "main",
+              "index": 0
+            }
+          ]
         ]
       },
       "Parse - Code Patch Output": {
@@ -790,7 +845,13 @@
               "index": 0
             }
           ],
-          [{"node":"Prepare WF2 Failure Status","type":"main","index":0}]
+          [
+            {
+              "node": "Prepare WF2 Failure Status",
+              "type": "main",
+              "index": 0
+            }
+          ]
         ]
       },
       "Create Pull Request1": {
@@ -802,14 +863,20 @@
               "index": 0
             }
           ],
-          [{"node":"Prepare WF2 Failure Status","type":"main","index":0}]
+          [
+            {
+              "node": "Prepare WF2 Failure Status",
+              "type": "main",
+              "index": 0
+            }
+          ]
         ]
       },
       "Webhook": {
         "main": [
           [
             {
-              "node": "Adapt Webhook Payload",
+              "node": "Capture Correlation Envelope",
               "type": "main",
               "index": 0
             }
@@ -821,6 +888,13 @@
           [
             {
               "node": "Fetch Repository Metadata",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Prepare WF2 Failure Status",
               "type": "main",
               "index": 0
             }
@@ -847,7 +921,13 @@
               "index": 0
             }
           ],
-          [{"node":"Prepare WF2 Failure Status","type":"main","index":0}]
+          [
+            {
+              "node": "Prepare WF2 Failure Status",
+              "type": "main",
+              "index": 0
+            }
+          ]
         ]
       },
       "Get Main Branch SHA1": {
@@ -859,7 +939,13 @@
               "index": 0
             }
           ],
-          [{"node":"Prepare WF2 Failure Status","type":"main","index":0}]
+          [
+            {
+              "node": "Prepare WF2 Failure Status",
+              "type": "main",
+              "index": 0
+            }
+          ]
         ]
       },
       "Create Branch1": {
@@ -871,7 +957,13 @@
               "index": 0
             }
           ],
-          [{"node":"Prepare WF2 Failure Status","type":"main","index":0}]
+          [
+            {
+              "node": "Prepare WF2 Failure Status",
+              "type": "main",
+              "index": 0
+            }
+          ]
         ]
       },
       "Fetch Repository Metadata": {
@@ -883,7 +975,13 @@
               "index": 0
             }
           ],
-          [{"node":"Prepare WF2 Failure Status","type":"main","index":0}]
+          [
+            {
+              "node": "Prepare WF2 Failure Status",
+              "type": "main",
+              "index": 0
+            }
+          ]
         ]
       },
       "Apply Repository Metadata": {
@@ -895,7 +993,13 @@
               "index": 0
             }
           ],
-          [{"node":"Prepare WF2 Failure Status","type":"main","index":0}]
+          [
+            {
+              "node": "Prepare WF2 Failure Status",
+              "type": "main",
+              "index": 0
+            }
+          ]
         ]
       },
       "Expand Approved Target Files": {
@@ -907,23 +1011,71 @@
               "index": 0
             }
           ],
-          [{"node":"Prepare WF2 Failure Status","type":"main","index":0}]
+          [
+            {
+              "node": "Prepare WF2 Failure Status",
+              "type": "main",
+              "index": 0
+            }
+          ]
         ]
       },
       "Prepare Batch Context": {
         "main": [
-          [{"node":"Create Branch1","type":"main","index":0}],
-          [{"node":"Prepare WF2 Failure Status","type":"main","index":0}]
+          [
+            {
+              "node": "Create Branch1",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Prepare WF2 Failure Status",
+              "type": "main",
+              "index": 0
+            }
+          ]
         ]
       },
       "Prepare WF2 Failure Status": {
         "main": [
-          [{"node":"Persist WF2 Failure Status","type":"main","index":0}]
+          [
+            {
+              "node": "Persist WF2 Failure Status",
+              "type": "main",
+              "index": 0
+            }
+          ]
         ]
       },
       "Return Policy Rejected": {
         "main": [
-          [{"node":"Prepare WF2 Failure Status","type":"main","index":0}]
+          [
+            {
+              "node": "Prepare WF2 Failure Status",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Capture Correlation Envelope": {
+        "main": [
+          [
+            {
+              "node": "Adapt Webhook Payload",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Prepare WF2 Failure Status",
+              "type": "main",
+              "index": 0
+            }
+          ]
         ]
       }
     },
