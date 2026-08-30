@@ -195,7 +195,8 @@ async function main() {
   // ensuite pas dégrader cet état plus récent.
   callbackIncident.metadata.fixRequest = {
     requestId: 'request-success', batchId: 'batch-success', workflow: 'WF2', status: 'DISPATCHED',
-    findingIds: ['a', 'b'], attemptCount: 2, attempts: [{ attempt: 2, status: 'DISPATCHED' }],
+    findingIds: ['a', 'b'], findings: [{ findingId: 'a', file: 'TaskService.java' }, { findingId: 'b', file: 'SecurityConfig.java' }],
+    attemptCount: 2, attempts: [{ attempt: 2, status: 'DISPATCHED' }],
   };
   const attemptTwoFailure: any = { ...failure, executionId: '2000', requestId: 'request-success',
     batchId: 'batch-success', batchKey: 'batch-success' };
@@ -212,12 +213,23 @@ async function main() {
   assert.equal(callbackIncident.metadata.fixRequest.attempts[0].workflowExecutionId, '2000');
   callbackIncident.metadata.fixRequest = {
     requestId: 'request-success', batchId: 'batch-success', workflow: 'WF2', status: 'DISPATCHED',
-    findingIds: ['a', 'b'], attemptCount: 2, attempts: [{ attempt: 2, status: 'DISPATCHED' }],
+    findingIds: ['a', 'b'], findings: [{ findingId: 'a', file: 'TaskService.java' }, { findingId: 'b', file: 'SecurityConfig.java' }],
+    attemptCount: 2, attempts: [{ attempt: 2, status: 'DISPATCHED' }],
   };
-  const success: any = await callbackService.saveWorkflowBatchStatus(callbackIncident.id, {
+  const successBase: any = {
     status: 'PR_CREATED', workflowId: '9adcV31eaIgJyMR0', executionId: '2000', incidentId: callbackIncident.id,
     requestId: 'request-success', batchId: 'batch-success', batchKey: 'batch-success', attemptCount: 2,
-    prUrl: 'https://github.com/owner/repo/pull/24', prNumber: 24,
+    prUrl: 'https://github.com/owner/repo/pull/24', prNumber: 24, prHeadSha: '3333333333333333333333333333333333333333',
+  };
+  await assert.rejects(() => callbackService.saveWorkflowBatchStatus(callbackIncident.id, {
+    ...successBase, completenessPassed: true, processedFindingIds: ['a'], updatedFiles: ['TaskService.java'],
+    commitShas: ['1111111111111111111111111111111111111111'],
+  }), /ne couvre pas exactement/);
+  const success: any = await callbackService.saveWorkflowBatchStatus(callbackIncident.id, {
+    ...successBase, completenessPassed: true,
+    processedFindingIds: ['b', 'a'], updatedFiles: ['SecurityConfig.java', 'TaskService.java'],
+    commitShas: ['1111111111111111111111111111111111111111', '2222222222222222222222222222222222222222'],
+    prHeadSha: '3333333333333333333333333333333333333333',
   });
   assert.equal(success.applied, true);
   assert.equal(callbackIncident.metadata.fixRequest.status, 'PR_CREATED');
@@ -229,6 +241,15 @@ async function main() {
   });
   assert.equal(stale.stale, true);
   assert.equal(callbackIncident.metadata.fixRequest.status, 'PR_CREATED');
+  const reconciledIncomplete: any = await callbackService.saveWorkflowBatchStatus(callbackIncident.id, {
+    status: 'FAILED', workflowId: '9adcV31eaIgJyMR0', executionId: '2000', incidentId: callbackIncident.id,
+    requestId: 'request-success', batchId: 'batch-success', batchKey: 'batch-success', attemptCount: 2,
+    reconciliation: true, failureCode: 'WF2_BATCH_INCOMPLETE',
+    failureSummary: '1 correction appliquée sur 2', failureNode: 'Validate Batch Completeness',
+  });
+  assert.equal(reconciledIncomplete.applied, true);
+  assert.equal(callbackIncident.metadata.fixRequest.status, 'FIX_FAILED');
+  assert.equal(callbackIncident.metadata.fixRequest.retryEligible, true);
   } finally {
     globalThis.fetch = originalFetch;
   }

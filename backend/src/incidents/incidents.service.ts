@@ -109,6 +109,12 @@ export type WorkflowBatchStatusInput = {
   failureNode?: string;
   prUrl?: string;
   prNumber?: number;
+  completenessPassed?: boolean;
+  processedFindingIds?: string[];
+  updatedFiles?: string[];
+  commitShas?: string[];
+  prHeadSha?: string;
+  completionEvidence?: Record<string, unknown>;
   reconciliation?: boolean;
 };
 
@@ -304,16 +310,38 @@ export class IncidentsService {
         return { applied: false, duplicate: true, stale: false, incident, status: fix.status };
       }
 
-      // Une erreur tardive de la même tentative ne peut jamais dégrader une
-      // PR déjà créée ou une validation plus récente.
-      if (callbackStatus === 'FAILED' && ['PR_CREATED', 'VALIDATING', 'VALIDATED'].includes(fix.status)) {
+      const incompleteReconciliation = input.reconciliation === true
+        && String(input.failureCode || '') === 'WF2_BATCH_INCOMPLETE'
+        && fix.status === 'PR_CREATED';
+      // Une erreur tardive ne peut pas dégrader une PR, sauf réconciliation
+      // applicative auditée prouvant que le batch était fonctionnellement incomplet.
+      if (callbackStatus === 'FAILED' && ['PR_CREATED', 'VALIDATING', 'VALIDATED'].includes(fix.status)
+        && !incompleteReconciliation) {
         return { applied: false, duplicate: false, stale: true, incident, status: fix.status };
       }
       if (callbackStatus === 'PR_CREATED' && fix.status !== 'DISPATCHED') {
         return { applied: false, duplicate: false, stale: true, incident, status: fix.status };
       }
-      if (callbackStatus === 'FAILED' && !['FIX_STARTING', 'DISPATCHED'].includes(fix.status)) {
+      if (callbackStatus === 'FAILED' && !['FIX_STARTING', 'DISPATCHED'].includes(fix.status)
+        && !incompleteReconciliation) {
         return { applied: false, duplicate: false, stale: true, incident, status: fix.status };
+      }
+
+      const normalize = (values: unknown): string[] => [...new Set(Array.isArray(values)
+        ? values.map(String).map(value => value.trim()).filter(Boolean) : [])].sort();
+      const expectedFindingIds = normalize(fix.findingIds);
+      const expectedFiles = normalize((Array.isArray(fix.findings) ? fix.findings : [])
+        .map((finding: any) => finding.file || finding.component));
+      const processedFindingIds = normalize(input.processedFindingIds);
+      const updatedFiles = normalize(input.updatedFiles);
+      const commitShas = normalize(input.commitShas);
+      if (callbackStatus === 'PR_CREATED') {
+        const exactFindings = JSON.stringify(processedFindingIds) === JSON.stringify(expectedFindingIds);
+        const exactFiles = JSON.stringify(updatedFiles) === JSON.stringify(expectedFiles);
+        if (input.completenessPassed !== true || !exactFindings || !exactFiles
+          || commitShas.length < expectedFiles.length || !/^[a-f0-9]{40}$/i.test(String(input.prHeadSha || ''))) {
+          throw new ConflictException('La Pull Request WF2 ne couvre pas exactement le batch approuvé.');
+        }
       }
 
       const attempts = fix.attempts.map((entry: any) => Number(entry.attempt) === attemptCount
@@ -334,10 +362,13 @@ export class IncidentsService {
             lastErrorCode: String(input.failureCode || 'WF2_EXECUTION_ERROR').slice(0, 80),
             lastError: String(input.failureSummary || 'Erreur d’exécution WF2').slice(0, 500),
             failedNode: String(input.failureNode || '').slice(0, 120) || null,
-            workflowId, workflowExecutionId: executionId, retryEligible: true }
+            workflowId, workflowExecutionId: executionId,
+            completionEvidence: input.completionEvidence || fix.completionEvidence || null,
+            retryEligible: true }
         : { ...fix, status: 'PR_CREATED', attempts, workflowEvents: events, prUrl: input.prUrl,
             prNumber: Number(input.prNumber), prCreatedAt: now, workflowId, workflowExecutionId: executionId,
-            retryEligible: false };
+            completenessPassed: true, processedFindingIds, updatedFiles, commitShas,
+            prHeadSha: String(input.prHeadSha), retryEligible: false };
       const patch: any = { metadata: { ...metadata, fixRequest: nextFix } };
       if (callbackStatus === 'PR_CREATED') {
         if (!/^https:\/\/github\.com\/[^/]+\/[^/]+\/pull\/\d+$/i.test(String(input.prUrl || ''))

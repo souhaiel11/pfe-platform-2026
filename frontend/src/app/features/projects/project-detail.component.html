@@ -317,7 +317,14 @@
           <div *ngIf="activeFixRequest()?.status === 'FIX_FAILED'" class="alert alert-error" role="status">
             <strong>Échec de la correction</strong>
             <span> · Tentative {{activeFixRequest()?.attemptCount || 1}}</span>
-            <p>La correction automatique n’a pas abouti.</p>
+            <p *ngIf="activeFixRequest()?.lastErrorCode !== 'WF2_BATCH_INCOMPLETE'">La correction automatique n’a pas abouti.</p>
+            <ng-container *ngIf="activeFixRequest()?.lastErrorCode === 'WF2_BATCH_INCOMPLETE'">
+              <p>La proposition de correction est incomplète.</p>
+              <p *ngIf="activeFixRequest()?.completionEvidence as evidence">
+                {{evidence.processedFindingCount || 0}} correction appliquée sur {{evidence.approvedFindingCount || requestFindingIds().length}}.
+                <span *ngIf="evidence.missingFile"> {{evidence.missingFile}} non traité.</span>
+              </p>
+            </ng-container>
             <details *ngIf="activeFixRequest()?.workflowExecutionId || activeFixRequest()?.failedNode">
               <summary>Détails techniques</summary>
               <div *ngIf="activeFixRequest()?.workflowExecutionId">Exécution technique : {{activeFixRequest()?.workflowExecutionId}}</div>
