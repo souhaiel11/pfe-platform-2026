@@ -16,6 +16,7 @@
         "name": "Policy Gate - Validate Constraints",
         "type": "n8n-nodes-base.code",
         "typeVersion": 2,
+        "onError": "continueErrorOutput",
         "position": [
           -4368,
           3584
@@ -151,12 +152,12 @@
           "operation": "get",
           "owner": {
             "__rl": true,
-            "value": "={{ $('Parse - Code Patch Output').first().json.repository_owner }}\n",
+            "value": "={{ $('Prepare Batch Context').first().json.repository_owner }}",
             "mode": "name"
           },
           "repository": {
             "__rl": true,
-            "value": "={{ $('Parse - Code Patch Output').first().json.repository_name }}\n",
+            "value": "={{ $('Prepare Batch Context').first().json.repository_name }}",
             "mode": "name"
           }
         },
@@ -179,8 +180,8 @@
       },
       {
         "parameters": {
-          "method": "PUT",
-          "url": "=http://backend:3001/api/incidents/{{ $('Policy Gate - Validate Constraints').first().json.incidentId }}",
+          "method": "POST",
+          "url": "=http://backend:3001/api/incidents/{{ $('Prepare Batch Context').first().json.incidentId }}/workflow-status",
           "sendHeaders": true,
           "headerParameters": {
             "parameters": [
@@ -192,7 +193,7 @@
           },
           "sendBody": true,
           "specifyBody": "json",
-          "jsonBody": "={{ JSON.stringify({ status: \"fix_generated\", prUrl: $json.html_url || $json.url || \"\" }) }}",
+          "jsonBody": "={{ JSON.stringify({ status: 'PR_CREATED', workflowId: '9adcV31eaIgJyMR0', executionId: String($execution.id), incidentId: $('Prepare Batch Context').first().json.incidentId, requestId: $('Prepare Batch Context').first().json.requestId, batchId: $('Prepare Batch Context').first().json.batchId, batchKey: $('Prepare Batch Context').first().json.batchKey, attemptCount: $('Prepare Batch Context').first().json.attemptCount, prUrl: $json.html_url || $json.url || '', prNumber: $json.number }) }}",
           "options": {}
         },
         "id": "032a9a80-ee21-4969-bed5-6513bfa31ae8",
@@ -288,7 +289,8 @@
           3296
         ],
         "id": "9beebcc2-934f-431f-9366-ba2b234a483b",
-        "name": "Prepare - Code Patch Body"
+        "name": "Prepare - Code Patch Body",
+        "onError": "continueErrorOutput"
       },
       {
         "parameters": {
@@ -301,12 +303,13 @@
           3296
         ],
         "id": "1c2bced9-08dd-4dfb-8e5f-e3299390581a",
-        "name": "Parse - Code Patch Output"
+        "name": "Parse - Code Patch Output",
+        "onError": "continueErrorOutput"
       },
       {
         "parameters": {
           "method": "POST",
-          "url": "=https://api.github.com/repos/{{ $('Parse - Code Patch Output').first().json.repository_owner }}/{{ $('Parse - Code Patch Output').first().json.repository_name }}/pulls",
+          "url": "=https://api.github.com/repos/{{ $('Prepare Batch Context').first().json.repository_owner }}/{{ $('Prepare Batch Context').first().json.repository_name }}/pulls",
           "authentication": "predefinedCredentialType",
           "nodeCredentialType": "githubApi",
           "sendHeaders": true,
@@ -324,7 +327,7 @@
           },
           "sendBody": true,
           "specifyBody": "json",
-          "jsonBody": "={{ JSON.stringify({ title: 'Fix approved Sonar findings', body: 'Approved findings:\\n\\n' + $('Policy Gate - Validate Constraints').first().json.findings.map(f => '- ' + (f.rule || 'Unknown rule') + ' — ' + String(f.file || '').split('/').pop() + ':' + (f.line || '—')).join('\\n'), head: 'fix/pfe-' + $('Policy Gate - Validate Constraints').first().json.incidentId + '-' + $('Policy Gate - Validate Constraints').first().json.requestId, base: $('Policy Gate - Validate Constraints').first().json.default_branch }) }}",
+          "jsonBody": "={{ JSON.stringify({ title: 'Correction des problèmes Sonar approuvés', body: 'Problèmes approuvés :\\n\\n' + $('Prepare Batch Context').first().json.findings.map(f => '- ' + (f.rule || 'Règle inconnue') + ' — ' + String(f.file || '').split('/').pop() + ':' + (f.line || '—')).join('\\n') + '\\n\\nBuild #' + $('Prepare Batch Context').first().json.buildNumber + '\\nBatch : ' + $('Prepare Batch Context').first().json.batchId, head: $('Prepare Batch Context').first().json.targetBranchName, base: $('Prepare Batch Context').first().json.baseBranch }) }}",
           "options": {}
         },
         "type": "n8n-nodes-base.httpRequest",
@@ -335,6 +338,7 @@
         ],
         "id": "c34217ea-7834-4c99-8347-0de90c6b8796",
         "name": "Create Pull Request1",
+        "onError": "continueErrorOutput",
         "credentials": {
           "githubApi": {
             "id": "YBO0vWrPlyoYx4Kr",
@@ -465,6 +469,7 @@
         "retryOnFail": true,
         "maxTries": 3,
         "waitBetweenTries": 3000,
+        "onError": "continueErrorOutput",
         "credentials": {
           "httpHeaderAuth": {
             "id": "Ee9vVedmz84oXg5W",
@@ -496,6 +501,7 @@
         ],
         "id": "0d174f66-4ebc-43e1-adcb-458d84ed49ff",
         "name": "Get Main Branch SHA1",
+        "onError": "continueErrorOutput",
         "credentials": {
           "httpHeaderAuth": {
             "id": "6vGRWdhA0QO4Esy8",
@@ -506,7 +512,7 @@
       {
         "parameters": {
           "method": "POST",
-          "url": "=https://api.github.com/repos/{{ $('Parse - Code Patch Output').first().json.repository_owner }}/{{ $('Parse - Code Patch Output').first().json.repository_name }}/git/refs",
+          "url": "=https://api.github.com/repos/{{ $json.repository_owner }}/{{ $json.repository_name }}/git/refs",
           "authentication": "predefinedCredentialType",
           "nodeCredentialType": "githubApi",
           "sendHeaders": true,
@@ -520,7 +526,7 @@
           },
           "sendBody": true,
           "specifyBody": "json",
-          "jsonBody": "={\n  \"ref\": \"refs/heads/fix/pfe-{{ $('Policy Gate - Validate Constraints').first().json.incidentId }}-{{ $('Policy Gate - Validate Constraints').first().json.requestId }}\",\n  \"sha\": \"{{ $json.object.sha }}\"\n}",
+          "jsonBody": "={{ JSON.stringify({ ref: 'refs/heads/' + $json.targetBranchName, sha: $json.baseSha }) }}",
           "options": {}
         },
         "type": "n8n-nodes-base.httpRequest",
@@ -531,6 +537,7 @@
         ],
         "id": "ae21464b-5211-4052-b5ea-21e1e396fa58",
         "name": "Create Branch1",
+        "onError": "continueErrorOutput",
         "credentials": {
           "httpHeaderAuth": {
             "id": "6vGRWdhA0QO4Esy8",
@@ -579,6 +586,7 @@
         "name": "Apply Repository Metadata",
         "type": "n8n-nodes-base.code",
         "typeVersion": 2,
+        "onError": "continueErrorOutput",
         "position": [
           -4200,
           3584
@@ -605,12 +613,51 @@
         "name": "Expand Approved Target Files",
         "type": "n8n-nodes-base.code",
         "typeVersion": 2,
+        "onError": "continueErrorOutput",
         "position": [
           -2480,
           3584
         ],
         "parameters": {
-          "jsCode": "const gate=$input.first().json;const targets=Array.isArray(gate.targetFiles)?gate.targetFiles:[];if(!targets.length)throw new Error('NO_APPROVED_TARGET_FILES');return targets.map(target_file_path=>({json:{...gate,target_file_path}}));"
+          "jsCode": "const gate=$('Prepare Batch Context').first().json;const targets=Array.isArray(gate.targetFiles)?gate.targetFiles:[];if(!targets.length)throw new Error('NO_APPROVED_TARGET_FILES');return targets.map(target_file_path=>({json:{...gate,target_file_path}}));"
+        }
+      },
+      {
+        "id": "wf2-prepare-batch-context",
+        "name": "Prepare Batch Context",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [-2816, 3456],
+        "parameters": {
+          "jsCode": "const gate=$('Policy Gate - Validate Constraints').first().json;const sha=String($input.first().json?.object?.sha||'');if(!sha)throw new Error('BASE_SHA_UNAVAILABLE');const required=['incidentId','projectId','buildNumber','requestId','batchId','batchKey','attemptCount','repository_owner','repository_name','default_branch'];const missing=required.filter(k=>gate[k]===undefined||gate[k]===null||gate[k]==='');if(missing.length)throw new Error('BATCH_CONTEXT_MISSING:'+missing.join(','));if(gate.batchId!==gate.batchKey)throw new Error('BATCH_IDENTITY_MISMATCH');return [{json:{...gate,baseSha:sha,baseBranch:String(gate.default_branch),targetBranchName:'fix/pfe-'+gate.incidentId+'-'+gate.requestId,findingIds:[...gate.findingIds],findings:[...gate.findings]}}];"
+        },
+        "onError": "continueErrorOutput"
+      },
+      {
+        "id": "wf2-prepare-failure-status",
+        "name": "Prepare WF2 Failure Status",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [-2240, 4160],
+        "parameters": {
+          "jsCode": "const input=$input.first().json||{};let ctx={};try{ctx=$('Prepare Batch Context').first().json||{}}catch{}if(!ctx.incidentId){try{ctx=$('Policy Gate - Validate Constraints').first().json||{}}catch{}}if(!ctx.incidentId){try{ctx=$('Adapt Webhook Payload').first().json.incidentData||{}}catch{}}const err=input.error||input;const summary=String(err.message||input.message||input.reason||'workflow execution error').replace(/[\\r\\n]+/g,' ').slice(0,500);const failureNode=String(err.node?.name||err.context?.nodeCause||input.failureNode||'WF2').slice(0,120);return [{json:{status:'FAILED',workflowId:'9adcV31eaIgJyMR0',executionId:String($execution.id),incidentId:ctx.incidentId,requestId:ctx.requestId,batchId:ctx.batchId,batchKey:ctx.batchKey,attemptCount:Number(ctx.attemptCount),failureCode:'WF2_EXECUTION_ERROR',failureSummary:summary,failureNode}}];"
+        }
+      },
+      {
+        "id": "wf2-persist-failure-status",
+        "name": "Persist WF2 Failure Status",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.4,
+        "position": [-1984, 4160],
+        "parameters": {
+          "method": "POST",
+          "url": "=http://backend:3001/api/incidents/{{ $json.incidentId }}/workflow-status",
+          "sendHeaders": true,
+          "headerParameters": {"parameters":[{"name":"Content-Type","value":"application/json"},{"name":"X-Internal-Secret","value":"={{ $env.N8N_INTERNAL_SECRET }}"}]},
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify($json) }}",
+          "options": {"timeout":15000}
         }
       }
     ],
@@ -623,7 +670,8 @@
               "type": "main",
               "index": 0
             }
-          ]
+          ],
+          [{"node":"Prepare WF2 Failure Status","type":"main","index":0}]
         ]
       },
       "Patch Allowed?": {
@@ -655,7 +703,7 @@
           ],
           [
             {
-              "node": "Log Fetch Error",
+              "node": "Prepare WF2 Failure Status",
               "type": "main",
               "index": 0
             }
@@ -673,7 +721,7 @@
           ],
           [
             {
-              "node": "Persist File Update Failure",
+              "node": "Prepare WF2 Failure Status",
               "type": "main",
               "index": 0
             }
@@ -702,7 +750,7 @@
           ],
           [
             {
-              "node": "Persist PR Creation Failure",
+              "node": "Prepare WF2 Failure Status",
               "type": "main",
               "index": 0
             }
@@ -717,7 +765,8 @@
               "type": "main",
               "index": 0
             }
-          ]
+          ],
+          [{"node":"Prepare WF2 Failure Status","type":"main","index":0}]
         ]
       },
       "Prepare - Code Patch Body": {
@@ -728,7 +777,8 @@
               "type": "main",
               "index": 0
             }
-          ]
+          ],
+          [{"node":"Prepare WF2 Failure Status","type":"main","index":0}]
         ]
       },
       "Parse - Code Patch Output": {
@@ -739,7 +789,8 @@
               "type": "main",
               "index": 0
             }
-          ]
+          ],
+          [{"node":"Prepare WF2 Failure Status","type":"main","index":0}]
         ]
       },
       "Create Pull Request1": {
@@ -750,7 +801,8 @@
               "type": "main",
               "index": 0
             }
-          ]
+          ],
+          [{"node":"Prepare WF2 Failure Status","type":"main","index":0}]
         ]
       },
       "Webhook": {
@@ -794,18 +846,20 @@
               "type": "main",
               "index": 0
             }
-          ]
+          ],
+          [{"node":"Prepare WF2 Failure Status","type":"main","index":0}]
         ]
       },
       "Get Main Branch SHA1": {
         "main": [
           [
             {
-              "node": "Create Branch1",
+              "node": "Prepare Batch Context",
               "type": "main",
               "index": 0
             }
-          ]
+          ],
+          [{"node":"Prepare WF2 Failure Status","type":"main","index":0}]
         ]
       },
       "Create Branch1": {
@@ -816,7 +870,8 @@
               "type": "main",
               "index": 0
             }
-          ]
+          ],
+          [{"node":"Prepare WF2 Failure Status","type":"main","index":0}]
         ]
       },
       "Fetch Repository Metadata": {
@@ -827,7 +882,8 @@
               "type": "main",
               "index": 0
             }
-          ]
+          ],
+          [{"node":"Prepare WF2 Failure Status","type":"main","index":0}]
         ]
       },
       "Apply Repository Metadata": {
@@ -838,7 +894,8 @@
               "type": "main",
               "index": 0
             }
-          ]
+          ],
+          [{"node":"Prepare WF2 Failure Status","type":"main","index":0}]
         ]
       },
       "Expand Approved Target Files": {
@@ -849,7 +906,24 @@
               "type": "main",
               "index": 0
             }
-          ]
+          ],
+          [{"node":"Prepare WF2 Failure Status","type":"main","index":0}]
+        ]
+      },
+      "Prepare Batch Context": {
+        "main": [
+          [{"node":"Create Branch1","type":"main","index":0}],
+          [{"node":"Prepare WF2 Failure Status","type":"main","index":0}]
+        ]
+      },
+      "Prepare WF2 Failure Status": {
+        "main": [
+          [{"node":"Persist WF2 Failure Status","type":"main","index":0}]
+        ]
+      },
+      "Return Policy Rejected": {
+        "main": [
+          [{"node":"Prepare WF2 Failure Status","type":"main","index":0}]
         ]
       }
     },

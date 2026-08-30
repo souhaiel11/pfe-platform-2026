@@ -314,6 +314,16 @@
         <!-- Issues SonarQube détaillées -->
         <div class="card mt-10" *ngIf="ed.sonar?.issues?.length">
           <div class="card-title">🐛 {{ed.sonar.issues.length}} {{ed.sonar.issues.length === 1 ? 'problème détecté' : 'problèmes détectés'}}</div>
+          <div *ngIf="activeFixRequest()?.status === 'FIX_FAILED'" class="alert alert-error" role="status">
+            <strong>Échec de la correction</strong>
+            <span> · Tentative {{activeFixRequest()?.attemptCount || 1}}</span>
+            <p>La correction automatique n’a pas abouti.</p>
+            <details *ngIf="activeFixRequest()?.workflowExecutionId || activeFixRequest()?.failedNode">
+              <summary>Détails techniques</summary>
+              <div *ngIf="activeFixRequest()?.workflowExecutionId">Exécution technique : {{activeFixRequest()?.workflowExecutionId}}</div>
+              <div *ngIf="activeFixRequest()?.failedNode">Nœud en échec : {{activeFixRequest()?.failedNode}}</div>
+            </details>
+          </div>
           <div class="sonar-toolbar" aria-label="Filtres des problèmes SonarQube">
             <label class="sonar-search">Rechercher
               <input [(ngModel)]="sonarSearch" placeholder="Règle, message ou fichier" aria-label="Rechercher un problème SonarQube">
@@ -330,6 +340,9 @@
           </div>
           <div class="sonar-list-meta">
             <div class="sonar-result-count" aria-live="polite">{{ed.sonar.issues.length}} {{ed.sonar.issues.length === 1 ? 'problème au total' : 'problèmes au total'}} · {{sonarFindings().length}} {{sonarFindings().length === 1 ? 'affiché' : 'affichés'}}</div>
+            <button *ngIf="canRetryFixRequest()" type="button" class="btn btn-warning btn-sm" [disabled]="approving" (click)="retryFailedFix()">
+              Réessayer la correction
+            </button>
             <button type="button" class="btn btn-secondary btn-sm" [disabled]="!eligibleFilteredFindings().length" (click)="toggleFilteredSelection()">
               {{allEligibleFilteredSelected() ? 'Désélectionner la vue' : 'Sélectionner les problèmes éligibles de cette vue'}}
             </button>

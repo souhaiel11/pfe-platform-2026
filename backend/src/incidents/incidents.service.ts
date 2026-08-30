@@ -93,6 +93,25 @@ export function selectJenkinsTriggerEndpoint(parameterized: boolean): 'build' | 
 
 export type RemediationWorkflow = 'WF2' | 'WF4' | 'WF5';
 
+export type WorkflowBatchStatus = 'FAILED' | 'PR_CREATED';
+
+export type WorkflowBatchStatusInput = {
+  status: WorkflowBatchStatus;
+  workflowId: string;
+  executionId: string;
+  incidentId: string;
+  requestId: string;
+  batchId: string;
+  batchKey: string;
+  attemptCount: number;
+  failureCode?: string;
+  failureSummary?: string;
+  failureNode?: string;
+  prUrl?: string;
+  prNumber?: number;
+  reconciliation?: boolean;
+};
+
 export function remediationWorkflowFor(finding: any): RemediationWorkflow | null {
   const source = String(finding?.source || '').toUpperCase();
   const stage = String(finding?.stage || '').toLowerCase();
@@ -241,6 +260,103 @@ export class IncidentsService {
     await this.manualRemediation.syncIncident(updated as Incident);
     this.gateway.emit('incident:updated', updated);
     return updated;
+  }
+
+  /**
+   * Transition canonique appelée par WF2, et par la procédure contrôlée de
+   * réconciliation. Toutes les données de corrélation sont validées sous le
+   * verrou de l'incident. Aucun callback ne peut créer un nouveau batch.
+   */
+  async saveWorkflowBatchStatus(id: string, input: WorkflowBatchStatusInput) {
+    const result = await this.repo.manager.transaction(async manager => {
+      const repo = manager.getRepository(Incident);
+      const incident = await repo.findOne({ where: { id }, lock: { mode: 'pessimistic_write' } });
+      if (!incident) throw new NotFoundException('Incident introuvable.');
+      const metadata: any = incident.metadata || {};
+      const fix: any = metadata.fixRequest || {};
+      const attemptCount = Number(input.attemptCount);
+      const executionId = String(input.executionId || '').trim();
+      const workflowId = String(input.workflowId || '').trim();
+      if (input.incidentId !== id || fix.requestId !== input.requestId
+        || fix.batchId !== input.batchId || input.batchKey !== input.batchId
+        || fix.batchId !== input.batchKey || fix.workflow !== 'WF2'
+        || workflowId !== (process.env.N8N_WF2_ID || '9adcV31eaIgJyMR0')
+        || !Number.isInteger(attemptCount) || attemptCount !== Number(fix.attemptCount)
+        || !executionId) {
+        throw new ConflictException('Le statut WF2 ne correspond pas à la demande de correction active.');
+      }
+
+      const attempt = (Array.isArray(fix.attempts) ? fix.attempts : [])
+        .find((entry: any) => Number(entry.attempt) === attemptCount);
+      if (!attempt) throw new ConflictException('La tentative WF2 corrélée est introuvable.');
+      if (attempt.workflowExecutionId && String(attempt.workflowExecutionId) !== executionId) {
+        throw new ConflictException('L’exécution WF2 ne correspond pas à la tentative active.');
+      }
+
+      const callbackStatus = String(input.status || '').toUpperCase() as WorkflowBatchStatus;
+      if (!['FAILED', 'PR_CREATED'].includes(callbackStatus)) {
+        throw new BadRequestException('Statut de workflow non pris en charge.');
+      }
+      const now = new Date().toISOString();
+      const events = Array.isArray(fix.workflowEvents) ? [...fix.workflowEvents] : [];
+      const eventIdentity = `${workflowId}:${executionId}:${callbackStatus}`;
+      if (events.some((event: any) => event.identity === eventIdentity)) {
+        return { applied: false, duplicate: true, stale: false, incident, status: fix.status };
+      }
+
+      // Une erreur tardive de la même tentative ne peut jamais dégrader une
+      // PR déjà créée ou une validation plus récente.
+      if (callbackStatus === 'FAILED' && ['PR_CREATED', 'VALIDATING', 'VALIDATED'].includes(fix.status)) {
+        return { applied: false, duplicate: false, stale: true, incident, status: fix.status };
+      }
+      if (callbackStatus === 'PR_CREATED' && fix.status !== 'DISPATCHED') {
+        return { applied: false, duplicate: false, stale: true, incident, status: fix.status };
+      }
+      if (callbackStatus === 'FAILED' && !['FIX_STARTING', 'DISPATCHED'].includes(fix.status)) {
+        return { applied: false, duplicate: false, stale: true, incident, status: fix.status };
+      }
+
+      const attempts = fix.attempts.map((entry: any) => Number(entry.attempt) === attemptCount
+        ? callbackStatus === 'FAILED'
+          ? { ...entry, status: 'FIX_FAILED', workflowId, workflowExecutionId: executionId, failedAt: now,
+              failureCode: String(input.failureCode || 'WF2_EXECUTION_ERROR').slice(0, 80),
+              failureSummary: String(input.failureSummary || 'Erreur d’exécution WF2').slice(0, 500),
+              failureNode: String(input.failureNode || '').slice(0, 120) || null }
+          : { ...entry, status: 'PR_CREATED', workflowId, workflowExecutionId: executionId, prCreatedAt: now }
+        : entry);
+      events.push({
+        identity: eventIdentity, workflowId, executionId, attempt: attemptCount,
+        status: callbackStatus, recordedAt: now,
+        source: input.reconciliation ? 'RECONCILIATION' : 'WF2_CALLBACK',
+      });
+      const nextFix = callbackStatus === 'FAILED'
+        ? { ...fix, status: 'FIX_FAILED', attempts, workflowEvents: events, failedAt: now,
+            lastErrorCode: String(input.failureCode || 'WF2_EXECUTION_ERROR').slice(0, 80),
+            lastError: String(input.failureSummary || 'Erreur d’exécution WF2').slice(0, 500),
+            failedNode: String(input.failureNode || '').slice(0, 120) || null,
+            workflowId, workflowExecutionId: executionId, retryEligible: true }
+        : { ...fix, status: 'PR_CREATED', attempts, workflowEvents: events, prUrl: input.prUrl,
+            prNumber: Number(input.prNumber), prCreatedAt: now, workflowId, workflowExecutionId: executionId,
+            retryEligible: false };
+      const patch: any = { metadata: { ...metadata, fixRequest: nextFix } };
+      if (callbackStatus === 'PR_CREATED') {
+        if (!/^https:\/\/github\.com\/[^/]+\/[^/]+\/pull\/\d+$/i.test(String(input.prUrl || ''))
+          || !Number.isInteger(Number(input.prNumber)) || Number(input.prNumber) <= 0) {
+          throw new BadRequestException('La Pull Request WF2 est invalide.');
+        }
+        patch.prUrl = input.prUrl;
+        patch.status = IncidentStatus.FIX_GENERATED;
+      }
+      await repo.update(id, patch);
+      Object.assign(incident, patch);
+      return { applied: true, duplicate: false, stale: false, incident, status: nextFix.status };
+    });
+    if (result.applied) {
+      const updated = await this.findOne(id);
+      this.gateway.emit('incident:updated', updated);
+    }
+    return { success: true, applied: result.applied, duplicate: result.duplicate, stale: result.stale,
+      incidentId: id, status: result.status };
   }
 
   async remove(id: string) {
@@ -399,6 +515,14 @@ export class IncidentsService {
   }
 
   async approveFix(id: string, user: any, body: { findingId?: string; findingIds?: string[] } = {}) {
+    return this.startFix(id, user, body, false);
+  }
+
+  async retryFix(id: string, user: any) {
+    return this.startFix(id, user, {}, true);
+  }
+
+  private async startFix(id: string, user: any, body: { findingId?: string; findingIds?: string[] }, explicitRetry: boolean) {
     this.assertCanApprove(user);
     const claim = await this.repo.manager.transaction(async manager => {
       const repo = manager.getRepository(Incident);
@@ -414,38 +538,52 @@ export class IncidentsService {
       if ([IncidentStatus.COMPLETED, IncidentStatus.APPROVED, IncidentStatus.VALIDATING].includes(incident.status)) {
         throw new ConflictException(`L’état actuel de l’incident ne permet pas une nouvelle demande de correction.`);
       }
+      const current = (incident.metadata as any)?.fixRequest;
       const legacy = body.findingId ? [body.findingId] : [];
-      if (body.findingIds !== undefined && !Array.isArray(body.findingIds)) throw new BadRequestException('Le champ technique findingIds doit être une liste.');
-      const requestedIds = body.findingIds?.length ? body.findingIds : legacy;
+      if (!explicitRetry && body.findingIds !== undefined && !Array.isArray(body.findingIds)) throw new BadRequestException('Le champ technique findingIds doit être une liste.');
+      const requestedIds = explicitRetry
+        ? (Array.isArray(current?.findingIds) ? current.findingIds.map(String) : (current?.findingId ? [String(current.findingId)] : []))
+        : (body.findingIds?.length ? body.findingIds : legacy);
+      if (explicitRetry && (current?.status !== 'FIX_FAILED' || current?.retryEligible !== true || !requestedIds.length)) {
+        throw new ConflictException('Cette demande de correction ne peut pas être réessayée.');
+      }
       // Compatibilité limitée pour les anciens écrans WF4/WF5 : leur appel
       // sans identifiant continue de choisir l’unique première action éligible.
       const fallback = !requestedIds.length ? this.resolveApprovalContext(incident).finding : null;
       const batch = resolveRemediationBatch(this.collectFindings(incident), requestedIds.length ? requestedIds : [fallback.id || fallback.key]);
       const batchId = remediationBatchIdentity(id, batch.findingIds);
-      const current = (incident.metadata as any)?.fixRequest;
       const sameBatch = current?.batchId === batchId || (!current?.batchId && batch.findingIds.length === 1 && current?.findingId === batch.findingIds[0]);
-      if (sameBatch && current.status !== 'FIX_FAILED') {
+      const currentFindingIds = Array.isArray(current?.findingIds)
+        ? current.findingIds.map(String) : (current?.findingId ? [String(current.findingId)] : []);
+      const ownsRequestedFinding = batch.findingIds.some(findingId => currentFindingIds.includes(findingId));
+      if (!explicitRetry && ownsRequestedFinding) {
+        throw new ConflictException('Une demande de correction existe déjà pour ce problème. Utilisez « Réessayer la correction ».');
+      }
+      if (explicitRetry && !sameBatch) {
+        throw new ConflictException('La tentative de correction ne correspond pas au batch existant.');
+      }
+      if (!explicitRetry && sameBatch && current.status !== 'FIX_FAILED') {
         return { duplicate: true as const, attemptCount: Number(current.attemptCount || 1), incident, requestId: current.requestId, batchId, metadata: incident.metadata, ...batch };
       }
       if (current && ['APPROVAL_REQUESTED', 'FIX_STARTING', 'DISPATCHED', 'PR_CREATED', 'VALIDATING'].includes(current.status)) {
         throw new ConflictException('Une demande de correction incompatible est déjà en cours.');
       }
-      const requestId = sameBatch ? current.requestId : randomUUID();
+      const requestId = explicitRetry ? current.requestId : randomUUID();
       const canonicalFindings = batch.findings.map(workflowFinding);
-      const attemptCount = sameBatch ? Number(current.attemptCount || 1) + 1 : 1;
+      const attemptCount = explicitRetry ? Number(current.attemptCount || 1) + 1 : 1;
       const authorizedAt = new Date().toISOString();
       const attempts = [
-        ...(sameBatch && Array.isArray(current.attempts) ? current.attempts : []),
+        ...(explicitRetry && Array.isArray(current.attempts) ? current.attempts : []),
         { attempt: attemptCount, status: 'FIX_STARTING', authorizedBy: user.id, authorizedAt },
       ];
       const metadata = { ...(incident.metadata || {}), fixRequest: {
         requestId, batchId, status: 'FIX_STARTING', workflow: batch.workflow,
         findingId: batch.findingIds[0], findingIds: batch.findingIds, findings: canonicalFindings,
         approvedBy: user.id, approvedAt: current?.approvedAt || authorizedAt,
-        attemptCount, attempts, lastError: null, failedAt: null,
+        attemptCount, attempts, lastError: null, failedAt: null, retryEligible: false,
       }, cycles: Array.isArray((incident.metadata as any)?.cycles) ? (incident.metadata as any).cycles : [] };
       await repo.update(id, { metadata } as any);
-      return { duplicate: false as const, retry: sameBatch, attemptCount, incident, requestId, batchId, metadata, ...batch };
+      return { duplicate: false as const, retry: explicitRetry, attemptCount, incident, requestId, batchId, metadata, ...batch };
     });
 
     if (claim.duplicate) {
@@ -460,6 +598,7 @@ export class IncidentsService {
       batchKey: claim.batchId, batchId: claim.batchId,
       stage: findings[0].stage, source: findings[0].source,
       remediationType: 'AUTO_FIX_ELIGIBLE', requestId: claim.requestId,
+      attemptCount: claim.attemptCount,
       approvedBy: { id: user.id, role: user.role },
       finding: findings[0], findings,
       repository: project.githubRepo,
@@ -483,15 +622,25 @@ export class IncidentsService {
       const failedAt = new Date().toISOString();
       const attempts = (claim.metadata.fixRequest.attempts || []).map((attempt: any) => attempt.attempt === claim.attemptCount
         ? { ...attempt, status: 'FIX_FAILED', failedAt, error: err?.message || 'Workflow unavailable' } : attempt);
-      const metadata = { ...claim.metadata, fixRequest: { ...claim.metadata.fixRequest, status: 'FIX_FAILED', attempts, lastError: err?.message || 'Workflow unavailable', failedAt } };
+      const metadata = { ...claim.metadata, fixRequest: { ...claim.metadata.fixRequest, status: 'FIX_FAILED', attempts, lastError: err?.message || 'Workflow unavailable', failedAt, retryEligible: true } };
       await this.repo.update(id, { metadata } as any);
       throw new ServiceUnavailableException({ code: 'FIX_WORKFLOW_UNAVAILABLE', message: 'La correction n’a pas pu démarrer. Vous pouvez réessayer.' });
     }
     const dispatchedAt = new Date().toISOString();
-    const attempts = (claim.metadata.fixRequest.attempts || []).map((attempt: any) => attempt.attempt === claim.attemptCount
-      ? { ...attempt, status: 'DISPATCHED', dispatchedAt } : attempt);
-    const metadata = { ...claim.metadata, fixRequest: { ...claim.metadata.fixRequest, status: 'DISPATCHED', attempts, dispatchedAt } };
-    await this.repo.update(id, { metadata } as any);
+    await this.repo.manager.transaction(async manager => {
+      const repo = manager.getRepository(Incident);
+      const current = await repo.findOne({ where: { id }, lock: { mode: 'pessimistic_write' } });
+      if (!current) throw new NotFoundException('Incident introuvable.');
+      const currentMeta: any = current.metadata || {};
+      const fix = currentMeta.fixRequest || {};
+      // Un callback très rapide peut déjà avoir enregistré FIX_FAILED ou
+      // PR_CREATED. L'acquittement HTTP ne doit jamais écraser cet état.
+      if (fix.requestId !== claim.requestId || fix.batchId !== claim.batchId
+        || Number(fix.attemptCount) !== claim.attemptCount || fix.status !== 'FIX_STARTING') return;
+      const attempts = (fix.attempts || []).map((attempt: any) => attempt.attempt === claim.attemptCount
+        ? { ...attempt, status: 'DISPATCHED', dispatchedAt } : attempt);
+      await repo.update(id, { metadata: { ...currentMeta, fixRequest: { ...fix, status: 'DISPATCHED', attempts, dispatchedAt } } } as any);
+    });
     const updated = await this.findOne(id);
     this.gateway.emit('incident:updated', updated);
     return { success: true, duplicate: false, status: 'DISPATCHED', incidentId: id, requestId: claim.requestId, batchId: claim.batchId, batchKey: claim.batchId, attemptCount: claim.attemptCount, findingIds: claim.findingIds };

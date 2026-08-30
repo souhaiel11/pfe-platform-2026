@@ -212,7 +212,7 @@ export class ProjectDetailComponent implements OnInit {
   activeFixRequest(): any { return this.latestReport?.metadata?.fixRequest || null; }
   activeFindingIds(): string[] {
     const request = this.activeFixRequest();
-    if (!request || !['APPROVAL_REQUESTED','FIX_STARTING','PR_CREATED','VALIDATING'].includes(request.status)) return [];
+    if (!request || !['APPROVAL_REQUESTED','FIX_STARTING','DISPATCHED','PR_CREATED','VALIDATING'].includes(request.status)) return [];
     return Array.isArray(request.findingIds) ? request.findingIds.map(String) : (request.findingId ? [String(request.findingId)] : []);
   }
   requestFindingIds(): string[] {
@@ -220,13 +220,47 @@ export class ProjectDetailComponent implements OnInit {
     return Array.isArray(request?.findingIds) ? request.findingIds.map(String) : (request?.findingId ? [String(request.findingId)] : []);
   }
   isFindingLocked(finding: any): boolean { return this.activeFindingIds().includes(this.findingId(finding)); }
+  isFindingInFailedRequest(finding: any): boolean {
+    return this.activeFixRequest()?.status === 'FIX_FAILED'
+      && this.requestFindingIds().includes(this.findingId(finding));
+  }
+  isFindingOwnedByLogicalBatch(finding: any): boolean {
+    const request = this.activeFixRequest();
+    return !!(request?.requestId || request?.batchId)
+      && this.requestFindingIds().includes(this.findingId(finding));
+  }
+  canRetryFixRequest(): boolean {
+    const request = this.activeFixRequest();
+    return this.canOperate && request?.status === 'FIX_FAILED' && request?.retryEligible === true
+      && this.requestFindingIds().length > 0;
+  }
+  retryFailedFix(): void {
+    if (!this.canRetryFixRequest() || this.approving || !this.latestReport?.id) return;
+    this.approving = true;
+    this.api.retryFixBatch(this.latestReport.id).subscribe({
+      next: (result: any) => {
+        this.approving = false;
+        this.latestReport.metadata = { ...(this.latestReport.metadata || {}), fixRequest: {
+          ...this.latestReport.metadata?.fixRequest, status: result.status, attemptCount: result.attemptCount,
+          retryEligible: false,
+        }};
+        this.toast.success('Correction relancée', 'La nouvelle tentative du batch existant a été enregistrée.');
+      },
+      error: (e: any) => { this.approving = false; this.toast.error('Nouvelle tentative refusée', userHttpError(e, 'Impossible de réessayer cette correction.')); },
+    });
+  }
   findingRequestState(finding: any): string | null {
     if (!this.requestFindingIds().includes(this.findingId(finding))) return null;
-    const labels: Record<string,string> = { APPROVAL_REQUESTED:'Correction demandée', FIX_STARTING:'Correction demandée', PR_CREATED:'PR créée', VALIDATING:'Validation en cours', VALIDATED:'Validée', REJECTED:'Rejetée', FIX_FAILED:'Échec de la correction' };
+    const labels: Record<string,string> = { APPROVAL_REQUESTED:'Correction demandée', FIX_STARTING:'Correction demandée', DISPATCHED:'Correction en cours', PR_CREATED:'PR créée', VALIDATING:'Validation en cours', VALIDATED:'Validée', REJECTED:'Rejetée', FIX_FAILED:'Échec de la correction' };
     return labels[this.activeFixRequest()?.status] || 'Correction en cours';
   }
-  isSelected(finding: any): boolean { return this.selectedSonarIds.has(this.findingId(finding)); }
-  canSelectFinding(finding: any): boolean { return this.canOperate && this.isAutoFixEligible(finding) && !this.isFindingLocked(finding); }
+  isSelected(finding: any): boolean {
+    return this.canSelectFinding(finding) && this.selectedSonarIds.has(this.findingId(finding));
+  }
+  canSelectFinding(finding: any): boolean {
+    return this.canOperate && this.isAutoFixEligible(finding)
+      && !this.isFindingLocked(finding) && !this.isFindingOwnedByLogicalBatch(finding);
+  }
   toggleFindingSelection(finding: any, selected = !this.isSelected(finding)): void {
     if (!this.canSelectFinding(finding)) return;
     const id = this.findingId(finding);
@@ -245,7 +279,7 @@ export class ProjectDetailComponent implements OnInit {
   clearSonarSelection(): void { this.selectedSonarIds.clear(); }
   selectedSonarFindings(): any[] {
     const selected = this.selectedSonarIds;
-    return (this.ed?.sonar?.issues || []).filter((f: any) => selected.has(this.findingId(f)));
+    return (this.ed?.sonar?.issues || []).filter((f: any) => selected.has(this.findingId(f)) && this.canSelectFinding(f));
   }
   sonarFindingSummary(finding: any): string {
     const rule = String(finding?.rule || finding?.ruleKey || '');

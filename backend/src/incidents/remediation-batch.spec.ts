@@ -41,10 +41,11 @@ async function main() {
   const service = new IncidentsService(repository, transactionalProjectRepo as any, { emit: () => undefined } as any, { syncIncident: async () => undefined } as any);
   const user = { id: 'developer-1', role: 'developer' };
   const first: any = await service.approveFix(incident.id, user, { findingIds: ['b', 'a', 'a'] });
-  const second: any = await service.approveFix(incident.id, user, { findingIds: ['a', 'b'] });
   assert.equal(first.duplicate, false);
-  assert.equal(second.duplicate, true);
-  assert.equal(first.batchId, second.batchId);
+  await assert.rejects(
+    () => service.approveFix(incident.id, user, { findingIds: ['a', 'b'] }),
+    /Une demande de correction existe déjà.*Réessayer la correction/,
+  );
   assert.equal(dispatches, 1);
   assert.equal(lockedFindOptions.lock.mode, 'pessimistic_write');
   assert.equal(lockedFindOptions.relations, undefined, 'locked incident query must not join project');
@@ -96,7 +97,12 @@ async function main() {
   assert.equal(retryIncident.metadata.fixRequest.attemptCount, 1);
   let retryDispatches = 0;
   globalThis.fetch = async () => { retryDispatches++; return new Response('{}', { status: 200 }); };
-  const retried: any = await retryService.approveFix(retryIncident.id, user, { findingIds: ['b', 'a'] });
+  await assert.rejects(
+    () => retryService.approveFix(retryIncident.id, user, { findingIds: ['a'] }),
+    /Une demande de correction existe déjà.*Réessayer la correction/,
+  );
+  assert.equal(retryDispatches, 0);
+  const retried: any = await retryService.retryFix(retryIncident.id, user);
   assert.equal(retried.duplicate, false);
   assert.equal(retried.requestId, failedRequestId);
   assert.equal(retried.batchId, failedBatchId);
@@ -104,8 +110,10 @@ async function main() {
   assert.equal(retryIncident.metadata.fixRequest.status, 'DISPATCHED');
   assert.equal(retryIncident.metadata.fixRequest.attempts.length, 2);
   assert.equal(retryDispatches, 1);
-  const activeDuplicate: any = await retryService.approveFix(retryIncident.id, user, { findingIds: ['a', 'b'] });
-  assert.equal(activeDuplicate.duplicate, true);
+  await assert.rejects(
+    () => retryService.approveFix(retryIncident.id, user, { findingIds: ['a', 'b'] }),
+    /Une demande de correction existe déjà/,
+  );
   assert.equal(retryDispatches, 1);
 
   // Deux autorisations concurrentes après FIX_FAILED sont sérialisées par le
@@ -114,7 +122,7 @@ async function main() {
     id: 'incident-concurrent', projectId: 'project-1', status: 'blocked', prUrl: null, buildNumber: 136,
     metadata: { enrichedData: { sonar: { issues: [sonar('a'), sonar('b')] } }, fixRequest: {
       requestId: 'request-concurrent', batchId: remediationBatchIdentity('incident-concurrent', ['a', 'b']),
-      status: 'FIX_FAILED', findingId: 'a', findingIds: ['a', 'b'], attemptCount: 1,
+      status: 'FIX_FAILED', workflow: 'WF2', retryEligible: true, findingId: 'a', findingIds: ['a', 'b'], attemptCount: 1,
       attempts: [{ attempt: 1, status: 'FIX_FAILED' }],
     } },
   };
@@ -138,13 +146,71 @@ async function main() {
   const concurrentService = new IncidentsService(concurrentRepository, transactionalProjectRepo as any, { emit: () => undefined } as any, { syncIncident: async () => undefined } as any);
   let concurrentDispatches = 0;
   globalThis.fetch = async () => { concurrentDispatches++; return new Response('{}', { status: 200 }); };
-  const concurrentResults: any[] = await Promise.all([
-    concurrentService.approveFix(concurrentIncident.id, user, { findingIds: ['a', 'b'] }),
-    concurrentService.approveFix(concurrentIncident.id, user, { findingIds: ['b', 'a'] }),
+  const concurrentResults = await Promise.allSettled([
+    concurrentService.retryFix(concurrentIncident.id, user),
+    concurrentService.retryFix(concurrentIncident.id, user),
   ]);
   assert.equal(concurrentDispatches, 1);
-  assert.equal(concurrentResults.filter(result => result.duplicate === false).length, 1);
-  assert.equal(concurrentResults.filter(result => result.duplicate === true).length, 1);
+  assert.equal(concurrentResults.filter(result => result.status === 'fulfilled').length, 1);
+  assert.equal(concurrentResults.filter(result => result.status === 'rejected').length, 1);
+
+  // Le callback asynchrone WF2 est corrélé, idempotent et fail-closed.
+  const callbackIncident: any = {
+    id: 'incident-callback', projectId: 'project-1', status: 'blocked', prUrl: null, metadata: { fixRequest: {
+      requestId: 'request-callback', batchId: 'batch-callback', workflow: 'WF2', status: 'DISPATCHED',
+      findingIds: ['a', 'b'], attemptCount: 1, attempts: [{ attempt: 1, status: 'DISPATCHED' }],
+    } },
+  };
+  const callbackRepo: any = {
+    findOne: async () => callbackIncident,
+    update: async (_id: string, patch: any) => Object.assign(callbackIncident, patch),
+  };
+  const callbackRepository: any = {
+    manager: { transaction: async (fn: any) => fn({ getRepository: () => callbackRepo }) },
+    findOne: async () => callbackIncident,
+    update: callbackRepo.update,
+  };
+  const callbackService = new IncidentsService(callbackRepository, transactionalProjectRepo as any, { emit: () => undefined } as any, { syncIncident: async () => undefined } as any);
+  const failure = {
+    status: 'FAILED' as const, workflowId: '9adcV31eaIgJyMR0', executionId: '1887',
+    incidentId: callbackIncident.id, requestId: 'request-callback', batchId: 'batch-callback', batchKey: 'batch-callback',
+    attemptCount: 1, failureCode: 'WF2_EXECUTION_ERROR', failureSummary: 'workflow execution error', failureNode: 'Create Branch1',
+  };
+  const failed: any = await callbackService.saveWorkflowBatchStatus(callbackIncident.id, failure);
+  assert.equal(failed.applied, true);
+  assert.equal(callbackIncident.metadata.fixRequest.status, 'FIX_FAILED');
+  assert.equal(callbackIncident.metadata.fixRequest.attemptCount, 1);
+  assert.equal(callbackIncident.metadata.fixRequest.workflowEvents.length, 1);
+  assert.equal(callbackIncident.metadata.fixRequest.retryEligible, true);
+  const duplicateFailure: any = await callbackService.saveWorkflowBatchStatus(callbackIncident.id, failure);
+  assert.equal(duplicateFailure.duplicate, true);
+  assert.equal(callbackIncident.metadata.fixRequest.workflowEvents.length, 1);
+  await assert.rejects(() => callbackService.saveWorkflowBatchStatus(callbackIncident.id, { ...failure, requestId: 'wrong' }), /ne correspond pas/);
+  await assert.rejects(() => callbackService.saveWorkflowBatchStatus(callbackIncident.id, { ...failure, batchId: 'wrong', batchKey: 'wrong' }), /ne correspond pas/);
+  await assert.rejects(() => callbackService.saveWorkflowBatchStatus(callbackIncident.id, { ...failure, attemptCount: 2 }), /ne correspond pas/);
+  await assert.rejects(() => callbackService.saveWorkflowBatchStatus(callbackIncident.id, { ...failure, workflowId: 'wrong' }), /ne correspond pas/);
+
+  // Une PR corrélée progresse vers PR_CREATED. Une erreur tardive ne peut
+  // ensuite pas dégrader cet état plus récent.
+  callbackIncident.metadata.fixRequest = {
+    requestId: 'request-success', batchId: 'batch-success', workflow: 'WF2', status: 'DISPATCHED',
+    findingIds: ['a', 'b'], attemptCount: 2, attempts: [{ attempt: 2, status: 'DISPATCHED' }],
+  };
+  const success: any = await callbackService.saveWorkflowBatchStatus(callbackIncident.id, {
+    status: 'PR_CREATED', workflowId: '9adcV31eaIgJyMR0', executionId: '2000', incidentId: callbackIncident.id,
+    requestId: 'request-success', batchId: 'batch-success', batchKey: 'batch-success', attemptCount: 2,
+    prUrl: 'https://github.com/owner/repo/pull/24', prNumber: 24,
+  });
+  assert.equal(success.applied, true);
+  assert.equal(callbackIncident.metadata.fixRequest.status, 'PR_CREATED');
+  assert.equal(callbackIncident.prUrl, 'https://github.com/owner/repo/pull/24');
+  const stale: any = await callbackService.saveWorkflowBatchStatus(callbackIncident.id, {
+    status: 'FAILED', workflowId: '9adcV31eaIgJyMR0', executionId: '2000', incidentId: callbackIncident.id,
+    requestId: 'request-success', batchId: 'batch-success', batchKey: 'batch-success', attemptCount: 2,
+    failureSummary: 'late failure',
+  });
+  assert.equal(stale.stale, true);
+  assert.equal(callbackIncident.metadata.fixRequest.status, 'PR_CREATED');
   } finally {
     globalThis.fetch = originalFetch;
   }

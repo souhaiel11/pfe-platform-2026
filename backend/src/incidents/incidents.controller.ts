@@ -27,12 +27,20 @@ export class IncidentsController {
   @Put(':id') update(@Param('id') id: string, @Body() dto: any) { return this.service.update(id, dto); }
   @UseGuards(InternalSecretGuard)
   @Post(':id/validation') saveValidation(@Param('id') id: string, @Body() validation: any) { return this.service.saveValidation(id, validation); }
+  @UseGuards(InternalSecretGuard)
+  @Post(':id/workflow-status') saveWorkflowStatus(@Param('id') id: string, @Body() status: any) {
+    return this.service.saveWorkflowBatchStatus(id, status);
+  }
   @UseGuards(JwtAuthGuard)
   @Delete(':id') remove(@Param('id') id: string) { return this.service.remove(id); }
 
   @UseGuards(JwtAuthGuard)
   @Post(':id/approve') approveFix(@Param('id') id: string, @Body() body: any, @Req() req: any) {
     return this.service.approveFix(id, req.user, body || {});
+  }
+  @UseGuards(JwtAuthGuard)
+  @Post(':id/retry') retryFix(@Param('id') id: string, @Req() req: any) {
+    return this.service.retryFix(id, req.user);
   }
   @UseGuards(JwtAuthGuard)
   @Post(':id/reject') rejectFix(@Param('id') id: string, @Body() body: any, @Req() req: any) {
