@@ -3,14 +3,14 @@ import { IncidentsService } from './incidents.service';
 
 const sha = '10e90dd5a0d21941dea1a544c3026d0955a029b1';
 const incident: any = {
-  id: 'incident-1', projectId: 'project-1', status: 'fix_generated',
-  prUrl: 'https://github.com/owner/repo/pull/24', metadata: { fixRequest: {
-    status: 'PR_CREATED', requestId: 'request-1', batchId: 'batch-1', batchKey: 'batch-1',
+  id: 'd1f5e9ce-f039-475d-9a50-41f217e6444b', projectId: '3aa1c9b9-e114-40e4-884b-ebc7aa32e002', status: 'fix_generated',
+  prUrl: 'https://github.com/souhaiel11/pfe-app-test/pull/24', metadata: { fixRequest: {
+    status: 'PR_CREATED', requestId: '9b62e087-02a8-409d-bfb1-a951629a8814', batchId: '6396353230fd100bf80c3417271c70cb7808273ebd6500571a46c2a4505af431',
     attemptCount: 7, prNumber: 24, prHeadSha: sha, findingIds: ['a', 'b'],
   } },
 };
 const project: any = {
-  id: 'project-1', githubRepo: 'owner/repo', githubToken: 'not-printed',
+  id: '3aa1c9b9-e114-40e4-884b-ebc7aa32e002', githubRepo: 'souhaiel11/pfe-app-test', githubToken: null,
   jenkinsUrl: 'http://jenkins', jenkinsToken: 'user:not-printed', jenkinsJobName: 'pfe-app-test',
 };
 incident.project = project;
@@ -37,9 +37,12 @@ async function main() {
   const service = new IncidentsService(repository, projectRepo, { emit: () => undefined } as any, { syncIncident: async () => undefined } as any);
   const originalFetch = globalThis.fetch;
   let triggers = 0;
-  globalThis.fetch = async (url: any) => {
+  globalThis.fetch = async (url: any, init?: RequestInit) => {
     const value = String(url);
-    if (value.includes('api.github.com')) return new Response(JSON.stringify({ state: 'open', head: { sha, ref: `fix/pfe-${incident.id}-request-1` } }), { status: 200 });
+    if (value.includes('api.github.com')) {
+      assert.equal(new Headers(init?.headers).has('authorization'), false, 'public PR lookup must not fabricate authentication');
+      return new Response(JSON.stringify({ state: 'open', head: { sha, ref: `fix/pfe-${incident.id}-${incident.metadata.fixRequest.requestId}` } }), { status: 200 });
+    }
     if (value.includes('/api/json')) return new Response(JSON.stringify({ buildable: true, _class: 'org.jenkinsci.plugins.workflow.job.WorkflowJob', property: [{ _class: 'hudson.model.ParametersDefinitionProperty', parameterDefinitions: [{ name: 'PFE_VALIDATION_CONTEXT', type: 'StringParameterDefinition', defaultParameterValue: { value: '' } }] }] }), { status: 200 });
     if (value.includes('crumbIssuer')) return new Response(JSON.stringify({ crumbRequestField: 'Jenkins-Crumb', crumb: 'opaque' }), { status: 200 });
     if (value.includes('/buildWithParameters')) { triggers++; return new Response('', { status: 201, headers: { location: 'http://jenkins/queue/item/42/' } }); }
@@ -52,10 +55,12 @@ async function main() {
     assert.equal(results.filter((result: any) => result.duplicate).length, 1);
     assert.equal(incident.metadata.prValidationRequest.status, 'QUEUED');
     assert.equal(incident.metadata.prValidationRequest.expectedPrHeadSha, sha);
+    assert.equal(incident.metadata.prValidationRequest.batchKey, incident.metadata.fixRequest.batchId, 'historical missing batchKey must derive from canonical batchId');
+    assert.equal(incident.metadata.prValidationRequest.repository, 'souhaiel11/pfe-app-test');
 
     incident.metadata.prValidationRequest = null;
     globalThis.fetch = async (url: any) => {
-      if (String(url).includes('api.github.com')) return new Response(JSON.stringify({ state: 'open', head: { sha: 'b'.repeat(40), ref: `fix/pfe-${incident.id}-request-1` } }), { status: 200 });
+      if (String(url).includes('api.github.com')) return new Response(JSON.stringify({ state: 'open', head: { sha: 'b'.repeat(40), ref: `fix/pfe-${incident.id}-${incident.metadata.fixRequest.requestId}` } }), { status: 200 });
       triggers++;
       throw new Error('Jenkins must not be reached');
     };

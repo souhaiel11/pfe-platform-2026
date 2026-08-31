@@ -220,15 +220,20 @@ export class IncidentsService {
 
   private async githubPullRequest(project: Project, prNumber: number): Promise<any> {
     const repository = this.canonicalRepository(project.githubRepo);
-    if (!repository || repository.split('/').length !== 2 || !project.githubToken) {
+    if (!repository || repository.split('/').length !== 2) {
       throw new BadRequestException('GitHub n’est pas configuré pour valider cette Pull Request.');
     }
+    // Une remédiation historique peut avoir un dépôt GitHub public canonique
+    // sans jeton persisté sur le projet. La vérité distante d'une PR publique
+    // reste vérifiable en lecture seule : le jeton est utilisé lorsqu'il existe,
+    // mais son absence ne remplace jamais les contrôles exacts état/branche/SHA.
+    const headers: Record<string, string> = {
+      Accept: 'application/vnd.github+json',
+      'User-Agent': 'pfe-pr-validation',
+    };
+    if (project.githubToken) headers.Authorization = `Bearer ${project.githubToken}`;
     const response = await fetch(`https://api.github.com/repos/${repository}/pulls/${prNumber}`, {
-      headers: {
-        Authorization: `Bearer ${project.githubToken}`,
-        Accept: 'application/vnd.github+json',
-        'User-Agent': 'pfe-pr-validation',
-      },
+      headers,
       signal: AbortSignal.timeout(10_000),
     });
     if (!response.ok) {
