@@ -232,13 +232,21 @@ async function main() {
     prUrl: 'https://github.com/owner/repo/pull/24', prNumber: 24, prHeadSha: '3333333333333333333333333333333333333333',
   };
   await assert.rejects(() => callbackService.saveWorkflowBatchStatus(callbackIncident.id, {
-    ...successBase, completenessPassed: true, processedFindingIds: ['a'], updatedFiles: ['TaskService.java'],
+    ...successBase, completenessPassed: true, processedFindingIds: ['a', 'b'],
+    effectiveRemediatedFindingIds: ['a'], verifiedFiles: ['TaskService.java'], updatedFiles: ['TaskService.java'],
+    fileResults: [{ targetFile: 'TaskService.java', outcome: 'MODIFIED_AND_REMEDIATED', finalStateVerified: true }],
     commitShas: ['1111111111111111111111111111111111111111'],
   }), /ne couvre pas exactement/);
   const success: any = await callbackService.saveWorkflowBatchStatus(callbackIncident.id, {
     ...successBase, completenessPassed: true,
     processedFindingIds: ['b', 'a'], updatedFiles: ['SecurityConfig.java', 'TaskService.java'],
-    commitShas: ['1111111111111111111111111111111111111111', '2222222222222222222222222222222222222222'],
+    effectiveRemediatedFindingIds: ['b', 'a'], verifiedFiles: ['SecurityConfig.java', 'TaskService.java'],
+    fileResults: [
+      { targetFile: 'TaskService.java', outcome: 'MODIFIED_AND_REMEDIATED', finalStateVerified: true },
+      { targetFile: 'SecurityConfig.java', outcome: 'ALREADY_REMEDIATED', finalStateVerified: true },
+    ],
+    // Un fichier déjà correctement résolu n’exige aucun nouveau commit.
+    commitShas: ['1111111111111111111111111111111111111111'],
     prHeadSha: '3333333333333333333333333333333333333333',
   });
   assert.equal(success.applied, true);

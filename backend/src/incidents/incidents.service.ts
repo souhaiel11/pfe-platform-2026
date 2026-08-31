@@ -111,6 +111,9 @@ export type WorkflowBatchStatusInput = {
   prNumber?: number;
   completenessPassed?: boolean;
   processedFindingIds?: string[];
+  effectiveRemediatedFindingIds?: string[];
+  verifiedFiles?: string[];
+  fileResults?: Array<Record<string, unknown>>;
   updatedFiles?: string[];
   commitShas?: string[];
   prHeadSha?: string;
@@ -344,13 +347,20 @@ export class IncidentsService {
       const expectedFiles = normalize((Array.isArray(fix.findings) ? fix.findings : [])
         .map((finding: any) => finding.file || finding.component));
       const processedFindingIds = normalize(input.processedFindingIds);
+      const effectiveRemediatedFindingIds = normalize(input.effectiveRemediatedFindingIds);
+      const verifiedFiles = normalize(input.verifiedFiles);
       const updatedFiles = normalize(input.updatedFiles);
       const commitShas = normalize(input.commitShas);
       if (callbackStatus === 'PR_CREATED') {
-        const exactFindings = JSON.stringify(processedFindingIds) === JSON.stringify(expectedFindingIds);
-        const exactFiles = JSON.stringify(updatedFiles) === JSON.stringify(expectedFiles);
-        if (input.completenessPassed !== true || !exactFindings || !exactFiles
-          || commitShas.length < expectedFiles.length || !/^[a-f0-9]{40}$/i.test(String(input.prHeadSha || ''))) {
+        const fileResults = Array.isArray(input.fileResults) ? input.fileResults : [];
+        const exactFindings = JSON.stringify(effectiveRemediatedFindingIds) === JSON.stringify(expectedFindingIds);
+        const exactFiles = JSON.stringify(verifiedFiles) === JSON.stringify(expectedFiles);
+        const validOutcomes = fileResults.length === expectedFiles.length && fileResults.every((result: any) =>
+          result?.finalStateVerified === true
+          && ['MODIFIED_AND_REMEDIATED', 'ALREADY_REMEDIATED'].includes(String(result?.outcome))
+          && expectedFiles.includes(String(result?.targetFile)));
+        if (input.completenessPassed !== true || !exactFindings || !exactFiles || !validOutcomes
+          || !/^[a-f0-9]{40}$/i.test(String(input.prHeadSha || ''))) {
           throw new ConflictException('La Pull Request WF2 ne couvre pas exactement le batch approuvé.');
         }
       }
@@ -379,6 +389,7 @@ export class IncidentsService {
         : { ...fix, status: 'PR_CREATED', attempts, workflowEvents: events, prUrl: input.prUrl,
             prNumber: Number(input.prNumber), prCreatedAt: now, workflowId, workflowExecutionId: executionId,
             completenessPassed: true, processedFindingIds, updatedFiles, commitShas,
+            effectiveRemediatedFindingIds, verifiedFiles, fileResults: input.fileResults,
             prHeadSha: String(input.prHeadSha), retryEligible: false };
       const patch: any = { metadata: { ...metadata, fixRequest: nextFix } };
       if (callbackStatus === 'PR_CREATED') {

@@ -45,8 +45,8 @@ assert.ok(createBranch.includes('$json.targetBranchName') && createBranch.includ
 
 const orderedPath = [
   'Expand Approved Target Files', 'Fetch Repository Files',
-  'Prepare - Code Patch Body', 'de Patch - HTTP Request', 'Parse - Code Patch Output',
-  'Update File in Branch', 'Build File Result', 'Validate Batch Completeness', 'Lookup Existing Batch PR',
+  'Prepare - Code Patch Body', 'File Requires Patch?', 'de Patch - HTTP Request', 'Parse - Code Patch Output',
+  'Update File in Branch', 'Build File Result', 'Merge Effective File Results', 'Validate Batch Completeness', 'Lookup Existing Batch PR',
   'Select Existing PR', 'Existing PR?',
 ];
 for (let index = 0; index < orderedPath.length - 1; index += 1) {
@@ -62,7 +62,7 @@ for (const critical of ['Capture Correlation Envelope', 'Adapt Webhook Payload',
   'Expand Approved Target Files', 'Fetch Repository Files', 'Prepare - Code Patch Body',
   'de Patch - HTTP Request', 'Parse - Code Patch Output', 'Update File in Branch',
   'Build File Result', 'Validate Batch Completeness', 'Lookup Existing Batch PR', 'Select Existing PR',
-  'Use Existing PR', 'Create Pull Request1']) {
+  'Use Existing PR', 'Create Pull Request1', 'Build Already Remediated Result']) {
   assert.equal(node(critical).onError, 'continueErrorOutput', `${critical} must expose its error output`);
   assert.ok(targets(critical, 1).includes(failureNode), `${critical} error must reach failure callback`);
 }
@@ -94,6 +94,8 @@ for (const perItem of ['Prepare - Code Patch Body', 'Parse - Code Patch Output',
 }
 assert.ok(node('Validate Batch Completeness').parameters.jsCode.includes('missingFindingIds'));
 assert.ok(node('Validate Batch Completeness').parameters.jsCode.includes('missingFiles'));
+assert.ok(node('Validate Batch Completeness').parameters.jsCode.includes('effectiveRemediatedFindingIds'));
+assert.ok(node('Validate Batch Completeness').parameters.jsCode.includes('finalStateVerified'));
 
 // Safe mock traversal using the exact execution-1888 batch. No network node
 // is invoked: this validates only immutable context and graph order.
@@ -106,10 +108,11 @@ const payload = {
   repository_owner: 'souhaiel11', repository_name: 'pfe-app-test', default_branch: 'main',
   findingIds: ['39c99e32-2737-419c-b85d-f521ce541f41', 'b8305253-8e0c-4fb6-88a8-2eadb6d48a45'],
   findings: [
-    { findingId: '39c99e32-2737-419c-b85d-f521ce541f41', rule: 'java:S1068', file: 'src/main/java/com/pfe/devsecops/service/TaskService.java', line: 48 },
-    { findingId: 'b8305253-8e0c-4fb6-88a8-2eadb6d48a45', rule: 'java:S125', file: 'src/main/java/com/pfe/devsecops/config/SecurityConfig.java', line: 40 },
+    { findingId: '39c99e32-2737-419c-b85d-f521ce541f41', rule: 'java:S1068', file: 'src/main/java/com/pfe/devsecops/service/TaskService.java', line: 48, message: 'Remove this unused "userRepository" private field.' },
+    { findingId: 'b8305253-8e0c-4fb6-88a8-2eadb6d48a45', rule: 'java:S125', file: 'src/main/java/com/pfe/devsecops/config/SecurityConfig.java', line: 40, message: 'This block of commented-out lines of code should be removed.' },
   ],
 };
+payload.targetFiles = payload.findings.map(finding => finding.file);
 assert.equal(payload.findingIds.length, 2);
 assert.equal(payload.findings.length, 2);
 assert.equal(payload.batchId, payload.batchKey);
@@ -149,11 +152,13 @@ const grouped = Object.values(payload.findings.reduce((groups, finding) => {
 assert.equal(grouped.length, 2);
 assert.ok(grouped.every(group => group.approvedFindingIds.length === 1));
 const completeResults = grouped.map((group, index) => ({ ...group,
-  processedFindingIds: [...group.approvedFindingIds], updateApplied: true,
-  oldSha: `old-${index}`, newSha: `new-${index}`, commitSha: `${index + 1}`.repeat(40),
+  processedFindingIds: index ? [] : [...group.approvedFindingIds],
+  effectiveRemediatedFindingIds: [...group.approvedFindingIds], finalStateVerified: true,
+  outcome: index ? 'ALREADY_REMEDIATED' : 'MODIFIED_AND_REMEDIATED', updateApplied: index === 0,
+  oldSha: `old-${index}`, newSha: index ? `old-${index}` : `new-${index}`, commitSha: index ? null : '1'.repeat(40),
 }));
-const completeness = results => exact(payload.findingIds, results.flatMap(result => result.processedFindingIds))
-  && exact(payload.findings.map(f => f.file), results.filter(result => result.updateApplied).map(result => result.targetFile));
+const completeness = results => exact(payload.findingIds, results.flatMap(result => result.effectiveRemediatedFindingIds))
+  && exact(payload.findings.map(f => f.file), results.filter(result => result.finalStateVerified).map(result => result.targetFile));
 assert.equal(completeness(completeResults), true);
 assert.equal(completeness(completeResults.slice(0, 1)), false);
 
@@ -162,25 +167,32 @@ assert.equal(completeness(completeResults.slice(0, 1)), false);
 const executeCode = (code, bindings) => Function(...Object.keys(bindings), code)(...Object.values(bindings));
 const gateForPerItem = {
   ...payload, decision: 'FIX_PROPOSED', enrichedData: { sonar: { issues: payload.findings.map(f => ({
-    ...f, severity: 'MAJOR', type: 'CODE_SMELL', message: f.rule,
+    ...f, severity: 'MAJOR', type: 'CODE_SMELL',
   })) } }, target_file_path: payload.findings[0].file,
 };
+const currentSources = {
+  [payload.findings[0].file]: 'package p;\nimport p.UserRepository;\nclass TaskService { TaskService(TaskRepository taskRepository, UserRepository userRepository) {} }',
+  [payload.findings[1].file]: 'class SecurityConfig {\n// règle de sécurité expliquée\nvoid filterChain() { secure(); }\n}',
+};
 const preparedItems = payload.findings.map(finding => executeCode(node('Prepare - Code Patch Body').parameters.jsCode, {
-  $json: { path: finding.file, sha: `sha-${finding.rule}`, content: Buffer.from('class Example { private String value; }').toString('base64') },
+  $json: { path: finding.file, sha: `sha-${finding.rule}`, content: Buffer.from(currentSources[finding.file]).toString('base64') },
   $: () => ({ first: () => ({ json: gateForPerItem }) }), Buffer,
 }));
 assert.equal(preparedItems.length, 2);
 assert.ok(preparedItems.every(item => item && !Array.isArray(item) && item.json && !Array.isArray(item.json)));
 assert.deepEqual(preparedItems.map(item => item.json.targetFile).sort(), payload.findings.map(f => f.file).sort());
 assert.ok(preparedItems.every(item => item.json.approvedFindingIdsForFile.length === 1));
-const parsedItems = preparedItems.map(prepared => {
+assert.equal(preparedItems[0].json.requiresPatch, true);
+assert.equal(preparedItems[1].json.requiresPatch, false);
+assert.deepEqual(preparedItems[1].json.alreadyResolvedFindingIds, [payload.findingIds[1]]);
+const parsedItems = preparedItems.filter(prepared => prepared.json.requiresPatch).map(prepared => {
   const response = { content: [{ text: JSON.stringify({
     incidentId: payload.incidentId,
     patchDescription: 'Correction simulée',
     filePath: prepared.json.targetFile,
     targetFile: prepared.json.targetFile,
     processedFindingIds: prepared.json.approvedFindingIdsForFile,
-    patchedCode: 'class Example { private final String value = "corrected"; }',
+    patchedCode: 'package p;\nclass TaskService { TaskService(TaskRepository taskRepository) {} }',
     commitMessage: `fix: ${prepared.json.targetFile}`,
   }) }] };
   return executeCode(node('Parse - Code Patch Output').parameters.jsCode, {
@@ -190,10 +202,29 @@ const parsedItems = preparedItems.map(prepared => {
       : { first: () => ({ json: gateForPerItem }) },
   });
 });
-assert.equal(parsedItems.length, 2);
+assert.equal(parsedItems.length, 1);
 assert.ok(parsedItems.every(item => item && !Array.isArray(item) && item.json && !Array.isArray(item.json)));
-assert.deepEqual(parsedItems.map(item => item.json.targetFile).sort(), payload.findings.map(f => f.file).sort());
-assert.deepEqual(parsedItems.flatMap(item => item.json.processedFindingIds).sort(), payload.findingIds.sort());
+assert.deepEqual(parsedItems.map(item => item.json.targetFile), [payload.findings[0].file]);
+const modifiedResult = executeCode(node('Build File Result').parameters.jsCode, {
+  $json: { commit: { sha: '1'.repeat(40) }, content: { sha: 'new-task-sha' } },
+  $: () => ({ item: { json: parsedItems[0].json } }),
+}).json;
+const alreadyResult = executeCode(node('Build Already Remediated Result').parameters.jsCode, {
+  $json: preparedItems[1].json,
+}).json;
+assert.equal(modifiedResult.outcome, 'MODIFIED_AND_REMEDIATED');
+assert.equal(alreadyResult.outcome, 'ALREADY_REMEDIATED');
+assert.equal(alreadyResult.oldSha, alreadyResult.newSha);
+const completeV2 = executeCode(node('Validate Batch Completeness').parameters.jsCode, {
+  $input: { all: () => [{ json: modifiedResult }, { json: alreadyResult }] },
+  $: () => ({ first: () => ({ json: payload }) }),
+});
+assert.equal(completeV2[0].json.completenessPassed, true);
+assert.deepEqual(completeV2[0].json.effectiveRemediatedFindingIds, [...payload.findingIds].sort());
+assert.throws(() => executeCode(node('Validate Batch Completeness').parameters.jsCode, {
+  $input: { all: () => [{ json: modifiedResult }, { json: { ...alreadyResult, effectiveRemediatedFindingIds: [], finalStateVerified: false, outcome: 'FAILED' } }] },
+  $: () => ({ first: () => ({ json: payload }) }),
+}), /WF2_BATCH_INCOMPLETE/);
 
 const capturedEnvelope = { incidentId: payload.incidentId, projectId: payload.projectId,
   buildNumber: payload.buildNumber, requestId: payload.requestId, batchId: payload.batchId,
@@ -220,5 +251,20 @@ assert.deepEqual(targets('Branch Exists?'), ['Use Existing Branch']);
 assert.deepEqual(targets('Branch Exists?', 1), ['Create Missing Branch']);
 assert.deepEqual(targets('Existing PR?'), ['Use Existing PR']);
 assert.deepEqual(targets('Existing PR?', 1), ['Create Pull Request1']);
+
+const selectPr = inputItems => executeCode(node('Select Existing PR').parameters.jsCode, {
+  $input: { all: () => inputItems.map(json => ({ json })) },
+  $: () => ({ first: () => ({ json: { ...payload, githubRepo: 'souhaiel11/pfe-app-test', targetBranchName: 'fix/batch', baseBranch: 'main' } }) }),
+})[0].json;
+const pr24 = { number: 24, state: 'open', body: `Batch : ${payload.batchId}`,
+  head: { ref: 'fix/batch', repo: { full_name: 'souhaiel11/pfe-app-test' } },
+  base: { ref: 'main', repo: { full_name: 'souhaiel11/pfe-app-test' } } };
+assert.equal(selectPr([pr24]).existingPr.number, 24);
+assert.equal(selectPr([[pr24]]).existingPr.number, 24);
+assert.equal(selectPr([{ number: 7, state: 'closed' }, pr24]).existingPr.number, 24);
+assert.equal(selectPr([]).createRequired, true);
+assert.equal(selectPr([{ ...pr24, head: { ...pr24.head, ref: 'wrong' } }]).createRequired, true);
+assert.equal(selectPr([{ ...pr24, base: { ...pr24.base, ref: 'wrong' } }]).createRequired, true);
+assert.throws(() => selectPr([pr24, { ...pr24, number: 25 }]), /DUPLICATE_BATCH_PR/);
 
 console.log('wf2 lifecycle graph and exact two-finding mock: PASS');
