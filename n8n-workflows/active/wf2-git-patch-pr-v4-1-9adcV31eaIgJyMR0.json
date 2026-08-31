@@ -145,7 +145,7 @@
         ],
         "parameters": {
           "mode": "runOnceForEachItem",
-          "jsCode": "const verifyFinding=(finding,content)=>{const findingId=String(finding.findingId||finding.id||finding.key||'');const rule=String(finding.rule||finding.ruleKey||'');const lines=String(content).split('\\n');if(rule==='java:S1068'){const identifier=String(finding.message||'').match(/[\"“”]([^\"“”]+)[\"“”]/)?.[1]||'';if(!identifier)return {findingId,rule,resolved:false,evidence:'IDENTIFIER_MISSING'};const escaped=identifier.replace(/[^a-zA-Z0-9_]/g,'');const references=(String(content).match(new RegExp('\\\\b'+escaped+'\\\\b','g'))||[]).length;const typeName=identifier.charAt(0).toUpperCase()+identifier.slice(1);const obsoleteImport=new RegExp('^\\\\s*import\\\\s+[^;]*\\\\.'+typeName+'\\\\s*;','m').test(String(content));return {findingId,rule,resolved:references===0&&!obsoleteImport,evidence:{identifier,references,obsoleteImport}};}if(rule==='java:S125'){const line=Math.max(1,Number(finding.line)||1);const from=Math.max(0,line-13),to=Math.min(lines.length,line+12);const suspicious=lines.slice(from,to).filter(value=>/^\\s*\\/\\//.test(value)&&/\\.\\w+\\s*\\([^)]*\\)/.test(value.replace(/^\\s*\\/\\/\\s*/,'')));return {findingId,rule,resolved:suspicious.length===0,evidence:{window:[from+1,to],commentedCodeCandidates:suspicious}};}return {findingId,rule,resolved:false,evidence:'NO_DETERMINISTIC_VERIFIER'};};const update=$json;const patch=$('Parse - Code Patch Output').item.json;const commitSha=String(update.commit?.sha||'');const newSha=String(update.content?.sha||'');if(!commitSha||!newSha)throw new Error('FILE_UPDATE_EVIDENCE_MISSING');const validationEvidence=(patch.approvedFindings||[]).map(f=>verifyFinding(f,patch.patchedCode));const effectiveRemediatedFindingIds=validationEvidence.filter(result=>result.resolved).map(result=>result.findingId).sort();const expected=[...new Set((patch.approvedFindingIds||[]).map(String))].sort();if(JSON.stringify(effectiveRemediatedFindingIds)!==JSON.stringify(expected))throw new Error('EFFECTIVE_REMEDIATION_INCOMPLETE:'+patch.targetFile);return {json:{targetFile:patch.targetFile,approvedFindingIds:expected,processedFindingIds:patch.processedFindingIds,changedInThisAttemptFindingIds:patch.processedFindingIds,effectiveRemediatedFindingIds,validationEvidence,outcome:'MODIFIED_AND_REMEDIATED',finalStateVerified:true,updateApplied:true,oldSha:patch.oldSha,newSha,commitSha}};"
+          "jsCode": "const update=$json;const patch=$('Validate Candidate Remediation').item.json;const commitSha=String(update.commit?.sha||'');const newSha=String(update.content?.sha||'');if(!commitSha||!newSha)throw new Error('FILE_UPDATE_EVIDENCE_MISSING');return {json:{targetFile:patch.targetFile,approvedFindingIds:patch.approvedFindingIds,processedFindingIds:patch.processedFindingIds,changedInThisAttemptFindingIds:patch.processedFindingIds,effectiveRemediatedFindingIds:patch.effectiveRemediatedFindingIds,validationEvidence:patch.validationEvidence,outcome:'MODIFIED_AND_REMEDIATED',finalStateVerified:true,updateApplied:true,oldSha:patch.oldSha,newSha,commitSha}};"
         },
         "onError": "continueErrorOutput"
       },
@@ -322,7 +322,7 @@
       },
       {
         "parameters": {
-          "jsCode": "const input = $json;\nconst gate  = $('Policy Gate - Validate Constraints').first().json;\n\nconst CONFIG = {\n  blockSeverities: ['BLOCKER', 'CRITICAL'],\n  autoFixSeverities: ['CRITICAL', 'MAJOR'],\n  autoFixTypes: ['BUG', 'VULNERABILITY', 'CODE_SMELL'],\n  excludeAutoFixSeverities: ['BLOCKER'],\n  maxMajorIssues: 15,\n  maxTrivyHigh: 3,\n  maxOwaspItems: 5,\n  maxZapMedium: 2,\n  largeFileLineThreshold: 400,\n  maxTokens: 8192,\n  model: 'claude-haiku-4-5-20251001',\n};\n\nlet fileContent = '';\nlet fileSha     = '';\nlet filePath    = '';\n\ntry {\n  const raw = input.content;\n  if (typeof raw === 'string') {\n    fileContent = Buffer.from(raw.replace(/\\n/g, ''), 'base64').toString('utf-8');\n  } else if (Array.isArray(raw)) {\n    fileContent = Buffer.from(raw.join('').replace(/\\n/g, ''), 'base64').toString('utf-8');\n  }\n  fileSha  = input.sha  || '';\n  filePath = input.path || '';\n} catch (e) {\n  throw new Error(`Decodage GitHub impossible : ${e.message}`);\n}\n\nif (!fileContent || fileContent.length < 10) {\n  const preview = JSON.stringify(input.content ?? null).substring(0, 200);\n  throw new Error(`Fichier vide ou non decode. Contenu brut : ${preview}`);\n}\n\nconst fileName = filePath || gate.target_file_path;\nif (!fileName) {\n  throw new Error(\n    'Aucun fichier cible determine. Verifier que Policy Gate fournit ' +\n    'target_file_path ou que le noeud GitHub renvoie bien \"path\".'\n  );\n}\n\nconst approvedFindingsForFile=gate.findings.filter(f=>String(f.file||f.component||'')===fileName);\nconst approvedFindingIdsForFile=approvedFindingsForFile.map(f=>String(f.findingId||f.id||f.key)).sort();\nif(!approvedFindingIdsForFile.length)throw new Error('FILE_WITHOUT_APPROVED_FINDINGS:'+fileName);\nconst verifyFinding=(finding,content)=>{const findingId=String(finding.findingId||finding.id||finding.key||'');const rule=String(finding.rule||finding.ruleKey||'');const lines=String(content).split('\\n');if(rule==='java:S1068'){const identifier=String(finding.message||'').match(/[\"“”]([^\"“”]+)[\"“”]/)?.[1]||'';if(!identifier)return {findingId,rule,resolved:false,evidence:'IDENTIFIER_MISSING'};const escaped=identifier.replace(/[^a-zA-Z0-9_]/g,'');const references=(String(content).match(new RegExp('\\\\b'+escaped+'\\\\b','g'))||[]).length;const typeName=identifier.charAt(0).toUpperCase()+identifier.slice(1);const obsoleteImport=new RegExp('^\\\\s*import\\\\s+[^;]*\\\\.'+typeName+'\\\\s*;','m').test(String(content));return {findingId,rule,resolved:references===0&&!obsoleteImport,evidence:{identifier,references,obsoleteImport}};}if(rule==='java:S125'){const line=Math.max(1,Number(finding.line)||1);const from=Math.max(0,line-13),to=Math.min(lines.length,line+12);const suspicious=lines.slice(from,to).filter(value=>/^\\s*\\/\\//.test(value)&&/\\.\\w+\\s*\\([^)]*\\)/.test(value.replace(/^\\s*\\/\\/\\s*/,'')));return {findingId,rule,resolved:suspicious.length===0,evidence:{window:[from+1,to],commentedCodeCandidates:suspicious}};}return {findingId,rule,resolved:false,evidence:'NO_DETERMINISTIC_VERIFIER'};};\nconst validationEvidence=approvedFindingsForFile.map(f=>verifyFinding(f,fileContent));\nconst alreadyResolvedFindingIds=validationEvidence.filter(result=>result.resolved).map(result=>result.findingId).sort();\nif(alreadyResolvedFindingIds.length===approvedFindingIdsForFile.length){return {json:{requiresPatch:false,skipAutoFix:true,outcome:'ALREADY_REMEDIATED',file_sha:fileSha,file_path:fileName,targetFile:fileName,sourceContent:fileContent,repository_owner:gate.repository_owner||'',repository_name:gate.repository_name||'',default_branch:gate.default_branch,branchName:gate.targetBranchName,incidentId:gate.incidentId,projectId:gate.projectId,buildNumber:gate.buildNumber,attemptCount:gate.attemptCount,approvedFindingIdsForFile,approvedFindingsForFile,alreadyResolvedFindingIds,validationEvidence}};}\n\nconst shortName    = fileName.split('/').pop();\nconst lineCount    = fileContent.split('\\n').length;\nconst isLargeFile  = lineCount > CONFIG.largeFileLineThreshold;\n\nconst ext = (shortName.split('.').pop() || '').toLowerCase();\nconst LANG_MAP = {\n  java: { name: 'Java/Spring',  dependencyFile: 'pom.xml ou build.gradle', loggerPattern: 'SLF4J / Log4j / java.util.logging' },\n  kt:   { name: 'Kotlin',       dependencyFile: 'build.gradle', loggerPattern: 'SLF4J / Log4j' },\n  ts:   { name: 'TypeScript',   dependencyFile: 'package.json', loggerPattern: 'console / winston / pino' },\n  js:   { name: 'JavaScript',   dependencyFile: 'package.json', loggerPattern: 'console / winston / pino' },\n  py:   { name: 'Python',       dependencyFile: 'requirements.txt', loggerPattern: 'logging / loguru / structlog' },\n  cs:   { name: 'C#/.NET',      dependencyFile: '.csproj', loggerPattern: 'ILogger / Serilog / NLog' },\n  go:   { name: 'Go',           dependencyFile: 'go.mod', loggerPattern: 'log / slog / zap' },\n  php:  { name: 'PHP',          dependencyFile: 'composer.json', loggerPattern: 'monolog / error_log' },\n  rb:   { name: 'Ruby',         dependencyFile: 'Gemfile', loggerPattern: 'Rails.logger / Logger' },\n};\nconst lang = LANG_MAP[ext] || { name: 'code source', dependencyFile: 'fichier de dependances', loggerPattern: 'framework logger' };\n\nconst enriched = gate.enrichedData || {};\nconst ai       = gate.aiAnalysis   || {};\n\nconst sonarIssues = enriched.sonar?.issues || [];\nconst fileIssues  = sonarIssues.filter(i => {\n  const comp = i.file || i.component || '';\n  return comp.includes(fileName) || comp.endsWith(`/${shortName}`) || comp.endsWith(`:${shortName}`);\n});\n\nconst agentFixableIssues = fileIssues.filter(i => {\n  const sevOK   = CONFIG.autoFixSeverities.includes(i.severity);\n  const typeOK  = CONFIG.autoFixTypes.includes(i.type);\n  const notBlocker = !CONFIG.excludeAutoFixSeverities.includes(i.severity);\n  return sevOK && typeOK && notBlocker;\n});\n\nconst excludedBlockers = fileIssues.filter(i => CONFIG.excludeAutoFixSeverities.includes(i.severity));\n\nconst formatSonar = (b, idx) =>\n  `  SONAR-${idx}: [${b.severity}/${b.type}] ${b.rule ? b.rule + ' — ' : ''}${b.message} (ligne ${b.line ?? '?'})`;\n\nconst sonarList = agentFixableIssues.map((b, i) => formatSonar(b, i + 1));\n\nconst pickSeverity = (c) => (c.severity || c.Severity || '').toUpperCase();\nconst trivyCves    = enriched.trivy?.cves || [];\nconst trivyCrit    = trivyCves.filter(c => pickSeverity(c) === 'CRITICAL');\nconst trivyHigh    = trivyCves.filter(c => pickSeverity(c) === 'HIGH').slice(0, CONFIG.maxTrivyHigh);\n\nconst cveId  = (c) => c.VulnerabilityID || c.id || c.cve || 'CVE-inconnue';\nconst cvePkg = (c) => c.PkgName || c.pkg || c.package || 'paquet inconnu';\n\nconst trivyList = [\n  ...trivyCrit.map((c, i) =>\n    `  TRIVY-${i + 1}: [CRITICAL] ${cveId(c)} dans ${cvePkg(c)} — ${(c.Title || c.description || '').substring(0, 80)}`),\n  ...trivyHigh.map((c, i) =>\n    `  TRIVY-${trivyCrit.length + i + 1}: [HIGH] ${cveId(c)} dans ${cvePkg(c)}`),\n];\n\nconst owaspCritical = enriched.owasp?.critical || 0;\nconst owaspHigh     = enriched.owasp?.high     || 0;\nconst owaspCves     = (enriched.owasp?.cves || []).slice(0, CONFIG.maxOwaspItems);\nconst owaspList     = owaspCves.map((c, i) =>\n  `  OWASP-${i + 1}: [${c.severity || 'HIGH'}] ${c.name || c.id || 'CVE'} dans ${c.fileName || c.pkg || 'dependance'}`\n);\n\nconst zapAlerts = enriched.zap?.alerts || [];\nconst riskOf    = (a) => Number(a.riskcode ?? a.risk ?? 0);\nconst zapHigh   = zapAlerts.filter(a => riskOf(a) >= 3);\nconst zapMedium = zapAlerts.filter(a => riskOf(a) === 2).slice(0, CONFIG.maxZapMedium);\n\nconst zapList = [\n  ...zapHigh.map((a, i) =>\n    `  ZAP-${i + 1}: [HIGH] ${a.name || a.alert || 'Alerte'} — ${(a.description || a.desc || '').substring(0, 60)}`),\n  ...zapMedium.map((a, i) =>\n    `  ZAP-${zapHigh.length + i + 1}: [MEDIUM] ${a.name || a.alert || 'Alerte'}`),\n];\n\nconst totalSonar = sonarList.length;\nconst totalTrivy = trivyList.length;\nconst totalOwasp = owaspList.length;\nconst totalZap   = zapList.length;\nconst totalAll   = totalSonar + totalTrivy + totalOwasp + totalZap;\n\nif (totalAll === 0) {\n  return {\n    json: {\n      skipAutoFix: true,\n      reason: `Aucun finding auto-corrigeable pour ${shortName}. ` +\n              `${excludedBlockers.length} BLOCKER(s) exclu(s) par securite. ` +\n              `${fileIssues.length - excludedBlockers.length} autre(s) non eligible(s).`,\n      decision: gate.decision || 'UNKNOWN',\n      fileName: fileName,\n      excludedBlockers: excludedBlockers.length,\n      findingsTotal: fileIssues.length,\n    }\n  };\n}\n\nconst sections = [];\n\nif (totalSonar > 0) {\n  sections.push(`SONARQUBE — ${totalSonar} finding(s) auto-corrigeable(s) dans ${shortName} :\\n${sonarList.join('\\n')}`);\n}\nif (totalTrivy > 0) {\n  sections.push(\n    `TRIVY (image/conteneur) — ${totalTrivy} CVE :\\n${trivyList.join('\\n')}\\n` +\n    `  Note : ces CVE se corrigent dans le Dockerfile ou ${lang.dependencyFile}, pas dans ce fichier. Ajouter des commentaires TODO.`\n  );\n}\nif (totalOwasp > 0) {\n  sections.push(\n    `OWASP DEPENDENCY-CHECK — ${totalOwasp} vulnerabilite(s) :\\n${owaspList.join('\\n')}\\n` +\n    `  Note : mise a jour de ${lang.dependencyFile} necessaire. Ajouter des commentaires TODO.`\n  );\n} else if (owaspCritical > 0 || owaspHigh > 0) {\n  sections.push(\n    `OWASP DEPENDENCY-CHECK — ${owaspCritical} critique(s), ${owaspHigh} haute(s), sans detail disponible.`\n  );\n}\nif (totalZap > 0) {\n  sections.push(\n    `ZAP (DAST) — ${zapHigh.length} haute(s), ${zapMedium.length} moyenne(s) :\\n${zapList.join('\\n')}\\n` +\n    `  Note : peut necessiter validation d'entree, protection CSRF ou en-tetes de securite.`\n  );\n}\n\nif (excludedBlockers.length > 0) {\n  sections.push(\n    `BLOCKER EXCLU(S) DE L'AUTO-FIX (${excludedBlockers.length}) :\\n` +\n    excludedBlockers.map((b, i) => `  EXCLU-${i+1}: [${b.severity}/${b.type}] ${b.rule || ''} — ${b.message} (ligne ${b.line ?? '?'})`).join('\\n') +\n    `\\n  Ces findings necessitent une revue humaine obligatoire. Ne pas corriger automatiquement.`\n  );\n}\n\nif (ai.developerActions) sections.push(`ACTIONS DEVELOPPEUR :\\n${ai.developerActions}`);\nif (ai.securityIssues)   sections.push(`PROBLEMES DE SECURITE IDENTIFIES :\\n${ai.securityIssues}`);\n\n// ── Guide de correction de l'agent Developer Guidance (WF1) ──\nconst wfDevGuide  = gate.developerGuide || gate.aiAnalysis?.developerGuide || {};\nconst guideIssues = Array.isArray(wfDevGuide.issues) ? wfDevGuide.issues : [];\nconst guideForFile = guideIssues.filter(i =>\n  String(i.source || '').toUpperCase() === 'SONARQUBE' &&\n  ((i.file || '').endsWith(shortName) || (i.file || '').includes(fileName))\n);\nif (guideForFile.length > 0) {\n  sections.push(\n    `GUIDE DE CORRECTION DETAILLE (agent Developer Guidance) — suis PRECISEMENT ces demarches pour chaque finding correspondant :\\n` +\n    guideForFile.map(g =>\n      `  [${g.rule || g.id}] ligne ${g.line ?? '?'} — ${g.title || ''}\\n` +\n      `    Probleme : ${g.problem || ''}\\n` +\n      `    Etapes : ${(g.howToFix || []).join(' | ')}\\n` +\n      (g.codeExample && g.codeExample.after ? `    Exemple corrige : ${String(g.codeExample.after).substring(0, 250)}\\n` : '') +\n      `    Verification : ${g.verification || ''}`\n    ).join('\\n')\n  );\n}\n\nconst fixContext = sections.join('\\n\\n');\n\nconst incidentId = gate.incidentId || gate.incidentUUID || 'unknown';\nconst fileSlug   = shortName.replace(/\\.[^.]+$/, '').replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();\n\nconst decision = (gate.decision || 'UNKNOWN').toUpperCase();\nconst buildNum = gate.buildNumber || gate.build_number || 'unknown';\nconst branchPrefix = decision === 'BLOCK' ? 'fix/ai-blocked' : 'fix/ai';\nconst branchName   = `${branchPrefix}-${fileSlug}-${Date.now()}`;\n\nconst commitMsg = decision === 'BLOCK'\n  ? `fix(security): auto-remediation for BLOCKED build #${buildNum} — ${totalAll} finding(s) in ${shortName}`\n  : `fix(security): automated fix for ${totalAll} finding(s) in ${shortName}`;\n\nconst systemPrompt = `Tu es un ingenieur DevSecOps expert. All human-readable narrative fields MUST be written in clear, professional French. Keep JSON keys, canonical enum values, technical identifiers, file names, rules, CVEs, URLs and commands unchanged. Tu analyses les resultats de quatre scanners de securite : SonarQube (SAST), Trivy (image), OWASP Dependency-Check (dependances) et OWASP ZAP (DAST).\n\nTu produis UNIQUEMENT du JSON valide : pas de markdown, pas de backticks, aucune explication hors du JSON.\nLe champ patchedCode doit contenir le fichier COMPLET, avec tous les problemes corrigeables traites.\nEchappe correctement les caracteres speciaux JSON (retours ligne \\\\n, guillemets \\\", antislashs \\\\\\\\).\n\nREGLES DE SECURITE ABSOLUES :\n- Résous complètement chaque finding approuvé pour ce fichier tout en préservant le comportement.\n- Retourne targetFile et processedFindingIds; chaque identifiant doit appartenir aux findings approuvés de ce fichier.\n- Corrige TOUS les findings SonarQube listes pour ce fichier, en une seule passe.\n- Pour les CVE Trivy/OWASP : ajoute des commentaires TODO, ne modifie pas les versions ici.\n- Pour les alertes ZAP : applique les corrections possibles au niveau du code.\n- N'importe JAMAIS une classe ou un module qui n'existe pas deja dans le projet.\n- Ne reference JAMAIS un nouveau fichier (DTO, util, helper) absent du depot.\n- Si une correction exige de creer une nouvelle classe, mets un TODO a la place.\n- Ne supprime JAMAIS une methode, un champ ou une logique existante, sauf si explicitement identifie comme un bug.\n- Ne modifie JAMAIS une signature publique dont d'autres fichiers dependent.\n- Conserve tous les imports utilises.\n- Le fichier produit DOIT compiler sans erreur.\n- Preserve le style, l'indentation et la langue des commentaires du fichier d'origine.`;\n\nconst largeFileWarning = isLargeFile\n  ? `\\nATTENTION : fichier volumineux (${lineCount} lignes). Si le fichier complet ne tient pas dans ta reponse, corrige en priorite les findings CRITICAL et signale-le dans patchDescription.\\n`\n  : '';\n\nconst blockContext = decision === 'BLOCK'\n  ? `\\nCONTEXTE : Ce build est actuellement BLOQUE pour raison de securite (CVE critique ou BLOCKER detecte). ` +\n    `Cette correction est une remédiation partielle qui sera livree APRES resolution manuelle des bloqueurs. ` +\n    `Ne corrige PAS les BLOCKER listes dans la section \"BLOCKER EXCLU(S)\" — ils necessitent une revue humaine.\\n`\n  : '';\n\nconst userPrompt = `Corrige les problemes de securite dans ce fichier ${lang.name}.\n\nFichier : ${fileName} (${lineCount} lignes)\nStatut du build : ${decision}\nFindings auto-corrigeables : ${totalAll} au total — SonarQube ${totalSonar}, Trivy ${totalTrivy}, OWASP ${totalOwasp}, ZAP ${totalZap}\n${blockContext}${largeFileWarning}\n=== CONTENU ACTUEL DU FICHIER ===\n${fileContent}\n=== FIN DU CONTENU ===\n\n${fixContext}\n\nMOTIFS DE CORRECTION (applique le motif correspondant a chaque finding) :\n- Secret ou mot de passe en dur -> externaliser via variable d'environnement ou configuration\n- Requete construite par concatenation -> requete parametree\n- Algorithme cryptographique faible -> equivalent moderne et sur\n- Ressource non fermee -> gestion automatique de fermeture (try-with-resources ou equivalent)\n- Dereferencement potentiellement nul -> verification explicite avant usage\n- Comparaison d'objets avec == -> methode d'egalite appropriee du langage\n- Bloc catch vide -> journaliser ou propager l'exception\n- Sortie console directe -> logger du framework en place (${lang.loggerPattern})\n- Exception generique -> exception specifique ou personnalisee\n- Litteral duplique -> constante privee statique\n- Complexite cognitive elevee -> extraction en methodes privees plus courtes\n- Methode vide -> commentaire explicatif ou exception explicite\n- Variable inutilisee -> suppression\n- Conditions imbriquees inutilement -> fusion des conditions\n- Injection de commande ou path traversal -> validation stricte de l'entree\n- CVE de dependance ou d'image -> commentaire TODO uniquement\n\nReponds UNIQUEMENT avec ce JSON :\n{\"incidentId\":\"${incidentId}\",\"patchDescription\":\"resume des corrections appliquees\",\"filePath\":\"${fileName}\",\"patchedCode\":\"FICHIER_COMPLET_CORRIGE\",\"commitMessage\":\"${commitMsg}\",\"branchName\":\"${branchName}\",\"targetFile\":\"${fileName}\",\"processedFindingIds\":${JSON.stringify(approvedFindingIdsForFile)}}`;\n\nconst body = {\n  model: CONFIG.model,\n  max_tokens: CONFIG.maxTokens,\n  temperature: 0,\n  system: systemPrompt,\n  messages: [{ role: 'user', content: userPrompt }],\n};\n\nreturn {\n  json: {\n    requiresPatch: true,\n    claudeBodyString: JSON.stringify(body),\n    sourceContent: fileContent,\n    validationEvidence,\n    alreadyResolvedFindingIds,\n    file_sha:         fileSha,\n    file_path:        fileName,\n    repository_owner: gate.repository_owner || '',\n    repository_name:  gate.repository_name  || '',\n    default_branch:   gate.default_branch,\n    incidentId:       incidentId,\n    projectId:        gate.projectId || '',\n    branchName:       branchName,\n    commitMessage:    commitMsg,\n    decision:         decision,\n    buildNumber:      buildNum,\n    skipAutoFix:      false,\n    excludedBlockers: excludedBlockers.length,\n    excludedBlockerRules: excludedBlockers.map(b => b.rule || b.ruleKey || 'UNKNOWN'),\n    language:         lang.name,\n    findingsTotal:    totalAll,\n    approvedFindingIdsForFile,\n    approvedFindingsForFile,\n    targetFile: fileName,\n    findingsBySource: {\n      sonar: totalSonar,\n      trivy: totalTrivy,\n      owasp: totalOwasp,\n      zap:   totalZap,\n    },\n    fileLineCount:    lineCount,\n    largeFileWarning: isLargeFile,\n  }\n};",
+          "jsCode": "const input = $json;\nconst gate  = $('Policy Gate - Validate Constraints').first().json;\n\nconst CONFIG = {\n  blockSeverities: ['BLOCKER', 'CRITICAL'],\n  autoFixSeverities: ['CRITICAL', 'MAJOR'],\n  autoFixTypes: ['BUG', 'VULNERABILITY', 'CODE_SMELL'],\n  excludeAutoFixSeverities: ['BLOCKER'],\n  maxMajorIssues: 15,\n  maxTrivyHigh: 3,\n  maxOwaspItems: 5,\n  maxZapMedium: 2,\n  largeFileLineThreshold: 400,\n  maxTokens: 8192,\n  model: 'claude-haiku-4-5-20251001',\n};\n\nlet fileContent = '';\nlet fileSha     = '';\nlet filePath    = '';\n\ntry {\n  const raw = input.content;\n  if (typeof raw === 'string') {\n    fileContent = Buffer.from(raw.replace(/\\n/g, ''), 'base64').toString('utf-8');\n  } else if (Array.isArray(raw)) {\n    fileContent = Buffer.from(raw.join('').replace(/\\n/g, ''), 'base64').toString('utf-8');\n  }\n  fileSha  = input.sha  || '';\n  filePath = input.path || '';\n} catch (e) {\n  throw new Error(`Decodage GitHub impossible : ${e.message}`);\n}\n\nif (!fileContent || fileContent.length < 10) {\n  const preview = JSON.stringify(input.content ?? null).substring(0, 200);\n  throw new Error(`Fichier vide ou non decode. Contenu brut : ${preview}`);\n}\n\nconst fileName = filePath || gate.target_file_path;\nif (!fileName) {\n  throw new Error(\n    'Aucun fichier cible determine. Verifier que Policy Gate fournit ' +\n    'target_file_path ou que le noeud GitHub renvoie bien \"path\".'\n  );\n}\n\nconst approvedFindingsForFile=gate.findings.filter(f=>String(f.file||f.component||'')===fileName);\nconst approvedFindingIdsForFile=approvedFindingsForFile.map(f=>String(f.findingId||f.id||f.key)).sort();\nif(!approvedFindingIdsForFile.length)throw new Error('FILE_WITHOUT_APPROVED_FINDINGS:'+fileName);\nconst verifyFinding=(finding,content)=>{const findingId=String(finding.findingId||finding.id||finding.key||'');const rule=String(finding.rule||finding.ruleKey||'');const lines=String(content).split('\\n');if(rule==='java:S1068'){const identifier=String(finding.message||'').match(/[\"“”]([^\"“”]+)[\"“”]/)?.[1]||'';if(!identifier)return {findingId,rule,resolved:false,evidence:'IDENTIFIER_MISSING'};const escaped=identifier.replace(/[^a-zA-Z0-9_]/g,'');const references=(String(content).match(new RegExp('\\\\b'+escaped+'\\\\b','g'))||[]).length;const typeName=identifier.charAt(0).toUpperCase()+identifier.slice(1);const obsoleteImport=new RegExp('^\\\\s*import\\\\s+[^;]*\\\\.'+typeName+'\\\\s*;','m').test(String(content));return {findingId,rule,resolved:references===0&&!obsoleteImport,evidence:{identifier,references,obsoleteImport}};}if(rule==='java:S125'){const line=Math.max(1,Number(finding.line)||1);const from=Math.max(0,line-13),to=Math.min(lines.length,line+12);const suspicious=lines.slice(from,to).filter(value=>/^\\s*\\/\\//.test(value)&&/\\.\\w+\\s*\\([^)]*\\)/.test(value.replace(/^\\s*\\/\\/\\s*/,'')));return {findingId,rule,resolved:suspicious.length===0,evidence:{window:[from+1,to],commentedCodeCandidates:suspicious}};}return {findingId,rule,resolved:false,evidence:'NO_DETERMINISTIC_VERIFIER'};};\nconst validationEvidence=approvedFindingsForFile.map(f=>verifyFinding(f,fileContent));\nconst alreadyResolvedFindingIds=validationEvidence.filter(result=>result.resolved).map(result=>result.findingId).sort();\nif(alreadyResolvedFindingIds.length===approvedFindingIdsForFile.length){return {json:{requiresPatch:false,skipAutoFix:true,outcome:'ALREADY_REMEDIATED',file_sha:fileSha,file_path:fileName,targetFile:fileName,sourceContent:fileContent,repository_owner:gate.repository_owner||'',repository_name:gate.repository_name||'',default_branch:gate.default_branch,branchName:gate.targetBranchName,incidentId:gate.incidentId,projectId:gate.projectId,buildNumber:gate.buildNumber,attemptCount:gate.attemptCount,approvedFindingIdsForFile,approvedFindingsForFile,alreadyResolvedFindingIds,validationEvidence}};}\n\nconst shortName    = fileName.split('/').pop();\nconst lineCount    = fileContent.split('\\n').length;\nconst isLargeFile  = lineCount > CONFIG.largeFileLineThreshold;\n\nconst ext = (shortName.split('.').pop() || '').toLowerCase();\nconst LANG_MAP = {\n  java: { name: 'Java/Spring',  dependencyFile: 'pom.xml ou build.gradle', loggerPattern: 'SLF4J / Log4j / java.util.logging' },\n  kt:   { name: 'Kotlin',       dependencyFile: 'build.gradle', loggerPattern: 'SLF4J / Log4j' },\n  ts:   { name: 'TypeScript',   dependencyFile: 'package.json', loggerPattern: 'console / winston / pino' },\n  js:   { name: 'JavaScript',   dependencyFile: 'package.json', loggerPattern: 'console / winston / pino' },\n  py:   { name: 'Python',       dependencyFile: 'requirements.txt', loggerPattern: 'logging / loguru / structlog' },\n  cs:   { name: 'C#/.NET',      dependencyFile: '.csproj', loggerPattern: 'ILogger / Serilog / NLog' },\n  go:   { name: 'Go',           dependencyFile: 'go.mod', loggerPattern: 'log / slog / zap' },\n  php:  { name: 'PHP',          dependencyFile: 'composer.json', loggerPattern: 'monolog / error_log' },\n  rb:   { name: 'Ruby',         dependencyFile: 'Gemfile', loggerPattern: 'Rails.logger / Logger' },\n};\nconst lang = LANG_MAP[ext] || { name: 'code source', dependencyFile: 'fichier de dependances', loggerPattern: 'framework logger' };\n\nconst enriched = gate.enrichedData || {};\nconst ai       = gate.aiAnalysis   || {};\n\nconst sonarIssues = enriched.sonar?.issues || [];\nconst fileIssues  = sonarIssues.filter(i => {\n  const comp = i.file || i.component || '';\n  return comp.includes(fileName) || comp.endsWith(`/${shortName}`) || comp.endsWith(`:${shortName}`);\n});\n\nconst agentFixableIssues = fileIssues.filter(i => {\n  const sevOK   = CONFIG.autoFixSeverities.includes(i.severity);\n  const typeOK  = CONFIG.autoFixTypes.includes(i.type);\n  const notBlocker = !CONFIG.excludeAutoFixSeverities.includes(i.severity);\n  return sevOK && typeOK && notBlocker;\n});\n\nconst excludedBlockers = fileIssues.filter(i => CONFIG.excludeAutoFixSeverities.includes(i.severity));\n\nconst formatSonar = (b, idx) =>\n  `  SONAR-${idx}: [${b.severity}/${b.type}] ${b.rule ? b.rule + ' — ' : ''}${b.message} (ligne ${b.line ?? '?'})`;\n\nconst sonarList = agentFixableIssues.map((b, i) => formatSonar(b, i + 1));\n\nconst pickSeverity = (c) => (c.severity || c.Severity || '').toUpperCase();\nconst trivyCves    = enriched.trivy?.cves || [];\nconst trivyCrit    = trivyCves.filter(c => pickSeverity(c) === 'CRITICAL');\nconst trivyHigh    = trivyCves.filter(c => pickSeverity(c) === 'HIGH').slice(0, CONFIG.maxTrivyHigh);\n\nconst cveId  = (c) => c.VulnerabilityID || c.id || c.cve || 'CVE-inconnue';\nconst cvePkg = (c) => c.PkgName || c.pkg || c.package || 'paquet inconnu';\n\nconst trivyList = [\n  ...trivyCrit.map((c, i) =>\n    `  TRIVY-${i + 1}: [CRITICAL] ${cveId(c)} dans ${cvePkg(c)} — ${(c.Title || c.description || '').substring(0, 80)}`),\n  ...trivyHigh.map((c, i) =>\n    `  TRIVY-${trivyCrit.length + i + 1}: [HIGH] ${cveId(c)} dans ${cvePkg(c)}`),\n];\n\nconst owaspCritical = enriched.owasp?.critical || 0;\nconst owaspHigh     = enriched.owasp?.high     || 0;\nconst owaspCves     = (enriched.owasp?.cves || []).slice(0, CONFIG.maxOwaspItems);\nconst owaspList     = owaspCves.map((c, i) =>\n  `  OWASP-${i + 1}: [${c.severity || 'HIGH'}] ${c.name || c.id || 'CVE'} dans ${c.fileName || c.pkg || 'dependance'}`\n);\n\nconst zapAlerts = enriched.zap?.alerts || [];\nconst riskOf    = (a) => Number(a.riskcode ?? a.risk ?? 0);\nconst zapHigh   = zapAlerts.filter(a => riskOf(a) >= 3);\nconst zapMedium = zapAlerts.filter(a => riskOf(a) === 2).slice(0, CONFIG.maxZapMedium);\n\nconst zapList = [\n  ...zapHigh.map((a, i) =>\n    `  ZAP-${i + 1}: [HIGH] ${a.name || a.alert || 'Alerte'} — ${(a.description || a.desc || '').substring(0, 60)}`),\n  ...zapMedium.map((a, i) =>\n    `  ZAP-${zapHigh.length + i + 1}: [MEDIUM] ${a.name || a.alert || 'Alerte'}`),\n];\n\nconst totalSonar = sonarList.length;\nconst totalTrivy = trivyList.length;\nconst totalOwasp = owaspList.length;\nconst totalZap   = zapList.length;\nconst totalAll   = totalSonar + totalTrivy + totalOwasp + totalZap;\n\nif (totalAll === 0) {\n  return {\n    json: {\n      skipAutoFix: true,\n      reason: `Aucun finding auto-corrigeable pour ${shortName}. ` +\n              `${excludedBlockers.length} BLOCKER(s) exclu(s) par securite. ` +\n              `${fileIssues.length - excludedBlockers.length} autre(s) non eligible(s).`,\n      decision: gate.decision || 'UNKNOWN',\n      fileName: fileName,\n      excludedBlockers: excludedBlockers.length,\n      findingsTotal: fileIssues.length,\n    }\n  };\n}\n\nconst sections = [];\n\nif (totalSonar > 0) {\n  sections.push(`SONARQUBE — ${totalSonar} finding(s) auto-corrigeable(s) dans ${shortName} :\\n${sonarList.join('\\n')}`);\n}\nif (totalTrivy > 0) {\n  sections.push(\n    `TRIVY (image/conteneur) — ${totalTrivy} CVE :\\n${trivyList.join('\\n')}\\n` +\n    `  Note : ces CVE se corrigent dans le Dockerfile ou ${lang.dependencyFile}, pas dans ce fichier. Ajouter des commentaires TODO.`\n  );\n}\nif (totalOwasp > 0) {\n  sections.push(\n    `OWASP DEPENDENCY-CHECK — ${totalOwasp} vulnerabilite(s) :\\n${owaspList.join('\\n')}\\n` +\n    `  Note : mise a jour de ${lang.dependencyFile} necessaire. Ajouter des commentaires TODO.`\n  );\n} else if (owaspCritical > 0 || owaspHigh > 0) {\n  sections.push(\n    `OWASP DEPENDENCY-CHECK — ${owaspCritical} critique(s), ${owaspHigh} haute(s), sans detail disponible.`\n  );\n}\nif (totalZap > 0) {\n  sections.push(\n    `ZAP (DAST) — ${zapHigh.length} haute(s), ${zapMedium.length} moyenne(s) :\\n${zapList.join('\\n')}\\n` +\n    `  Note : peut necessiter validation d'entree, protection CSRF ou en-tetes de securite.`\n  );\n}\n\nif (excludedBlockers.length > 0) {\n  sections.push(\n    `BLOCKER EXCLU(S) DE L'AUTO-FIX (${excludedBlockers.length}) :\\n` +\n    excludedBlockers.map((b, i) => `  EXCLU-${i+1}: [${b.severity}/${b.type}] ${b.rule || ''} — ${b.message} (ligne ${b.line ?? '?'})`).join('\\n') +\n    `\\n  Ces findings necessitent une revue humaine obligatoire. Ne pas corriger automatiquement.`\n  );\n}\n\nif (ai.developerActions) sections.push(`ACTIONS DEVELOPPEUR :\\n${ai.developerActions}`);\nif (ai.securityIssues)   sections.push(`PROBLEMES DE SECURITE IDENTIFIES :\\n${ai.securityIssues}`);\n\n// ── Guide de correction de l'agent Developer Guidance (WF1) ──\nconst wfDevGuide  = gate.developerGuide || gate.aiAnalysis?.developerGuide || {};\nconst guideIssues = Array.isArray(wfDevGuide.issues) ? wfDevGuide.issues : [];\nconst guideForFile = guideIssues.filter(i =>\n  String(i.source || '').toUpperCase() === 'SONARQUBE' &&\n  ((i.file || '').endsWith(shortName) || (i.file || '').includes(fileName))\n);\nif (guideForFile.length > 0) {\n  sections.push(\n    `GUIDE DE CORRECTION DETAILLE (agent Developer Guidance) — suis PRECISEMENT ces demarches pour chaque finding correspondant :\\n` +\n    guideForFile.map(g =>\n      `  [${g.rule || g.id}] ligne ${g.line ?? '?'} — ${g.title || ''}\\n` +\n      `    Probleme : ${g.problem || ''}\\n` +\n      `    Etapes : ${(g.howToFix || []).join(' | ')}\\n` +\n      (g.codeExample && g.codeExample.after ? `    Exemple corrige : ${String(g.codeExample.after).substring(0, 250)}\\n` : '') +\n      `    Verification : ${g.verification || ''}`\n    ).join('\\n')\n  );\n}\n\nconst fixContext = sections.join('\\n\\n');\n\nconst incidentId = gate.incidentId || gate.incidentUUID || 'unknown';\nconst fileSlug   = shortName.replace(/\\.[^.]+$/, '').replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();\n\nconst decision = (gate.decision || 'UNKNOWN').toUpperCase();\nconst buildNum = gate.buildNumber || gate.build_number || 'unknown';\nconst branchPrefix = decision === 'BLOCK' ? 'fix/ai-blocked' : 'fix/ai';\nconst branchName   = `${branchPrefix}-${fileSlug}-${Date.now()}`;\n\nconst commitMsg = decision === 'BLOCK'\n  ? `fix(security): auto-remediation for BLOCKED build #${buildNum} — ${totalAll} finding(s) in ${shortName}`\n  : `fix(security): automated fix for ${totalAll} finding(s) in ${shortName}`;\n\nconst systemPrompt = `Tu es un ingenieur DevSecOps expert. All human-readable narrative fields MUST be written in clear, professional French. Keep JSON keys, canonical enum values, technical identifiers, file names, rules, CVEs, URLs and commands unchanged. Tu analyses les resultats de quatre scanners de securite : SonarQube (SAST), Trivy (image), OWASP Dependency-Check (dependances) et OWASP ZAP (DAST).\n\nTu produis UNIQUEMENT du JSON valide : pas de markdown, pas de backticks, aucune explication hors du JSON.\nLe champ patchedCode doit contenir le fichier COMPLET, avec tous les problemes corrigeables traites.\nEchappe correctement les caracteres speciaux JSON (retours ligne \\\\n, guillemets \\\", antislashs \\\\\\\\).\n\nREGLES DE SECURITE ABSOLUES :\n- Résous complètement chaque finding approuvé pour ce fichier tout en préservant le comportement.\n- Retourne targetFile et processedFindingIds; chaque identifiant doit appartenir aux findings approuvés de ce fichier.\n- Corrige TOUS les findings SonarQube listes pour ce fichier, en une seule passe.\n- Pour les CVE Trivy/OWASP : ajoute des commentaires TODO, ne modifie pas les versions ici.\n- Pour les alertes ZAP : applique les corrections possibles au niveau du code.\n- N'importe JAMAIS une classe ou un module qui n'existe pas deja dans le projet.\n- Ne reference JAMAIS un nouveau fichier (DTO, util, helper) absent du depot.\n- Si une correction exige de creer une nouvelle classe, mets un TODO a la place.\n- Ne supprime JAMAIS une methode, un champ ou une logique existante, sauf si explicitement identifie comme un bug.\n- Ne modifie JAMAIS une signature publique dont d'autres fichiers dependent.\n- Conserve tous les imports utilises.\n- Le fichier produit DOIT compiler sans erreur.\n- Preserve le style, l'indentation et la langue des commentaires du fichier d'origine.`;\n\nconst largeFileWarning = isLargeFile\n  ? `\\nATTENTION : fichier volumineux (${lineCount} lignes). Si le fichier complet ne tient pas dans ta reponse, corrige en priorite les findings CRITICAL et signale-le dans patchDescription.\\n`\n  : '';\n\nconst blockContext = decision === 'BLOCK'\n  ? `\\nCONTEXTE : Ce build est actuellement BLOQUE pour raison de securite (CVE critique ou BLOCKER detecte). ` +\n    `Cette correction est une remédiation partielle qui sera livree APRES resolution manuelle des bloqueurs. ` +\n    `Ne corrige PAS les BLOCKER listes dans la section \"BLOCKER EXCLU(S)\" — ils necessitent une revue humaine.\\n`\n  : '';\n\nconst userPrompt = `Corrige les problemes de securite dans ce fichier ${lang.name}.\n\nFichier : ${fileName} (${lineCount} lignes)\nStatut du build : ${decision}\nFindings auto-corrigeables : ${totalAll} au total — SonarQube ${totalSonar}, Trivy ${totalTrivy}, OWASP ${totalOwasp}, ZAP ${totalZap}\n${blockContext}${largeFileWarning}\n=== CONTENU ACTUEL DU FICHIER ===\n${fileContent}\n=== FIN DU CONTENU ===\n\nETAT FINAL ACTUEL DES FINDINGS (preuve deterministe sur la branche courante) :\n${JSON.stringify(validationEvidence)}\n\nPour java:S1068, supprime aussi toute dependance devenue obsolete liee au champ inutilise : parametre de constructeur, affectation et import, uniquement lorsqu'ils n'ont plus aucun usage. Le candidat final doit contenir zero reference a l'identifiant inutilise et aucun import devenu obsolete.\n\n${fixContext}\n\nMOTIFS DE CORRECTION (applique le motif correspondant a chaque finding) :\n- Secret ou mot de passe en dur -> externaliser via variable d'environnement ou configuration\n- Requete construite par concatenation -> requete parametree\n- Algorithme cryptographique faible -> equivalent moderne et sur\n- Ressource non fermee -> gestion automatique de fermeture (try-with-resources ou equivalent)\n- Dereferencement potentiellement nul -> verification explicite avant usage\n- Comparaison d'objets avec == -> methode d'egalite appropriee du langage\n- Bloc catch vide -> journaliser ou propager l'exception\n- Sortie console directe -> logger du framework en place (${lang.loggerPattern})\n- Exception generique -> exception specifique ou personnalisee\n- Litteral duplique -> constante privee statique\n- Complexite cognitive elevee -> extraction en methodes privees plus courtes\n- Methode vide -> commentaire explicatif ou exception explicite\n- Variable inutilisee -> suppression\n- Conditions imbriquees inutilement -> fusion des conditions\n- Injection de commande ou path traversal -> validation stricte de l'entree\n- CVE de dependance ou d'image -> commentaire TODO uniquement\n\nReponds UNIQUEMENT avec ce JSON :\n{\"incidentId\":\"${incidentId}\",\"patchDescription\":\"resume des corrections appliquees\",\"filePath\":\"${fileName}\",\"patchedCode\":\"FICHIER_COMPLET_CORRIGE\",\"commitMessage\":\"${commitMsg}\",\"branchName\":\"${branchName}\",\"targetFile\":\"${fileName}\",\"processedFindingIds\":${JSON.stringify(approvedFindingIdsForFile)}}`;\n\nconst body = {\n  model: CONFIG.model,\n  max_tokens: CONFIG.maxTokens,\n  temperature: 0,\n  system: systemPrompt,\n  messages: [{ role: 'user', content: userPrompt }],\n};\n\nreturn {\n  json: {\n    requiresPatch: true,\n    claudeBodyString: JSON.stringify(body),\n    sourceContent: fileContent,\n    validationEvidence,\n    alreadyResolvedFindingIds,\n    file_sha:         fileSha,\n    file_path:        fileName,\n    repository_owner: gate.repository_owner || '',\n    repository_name:  gate.repository_name  || '',\n    default_branch:   gate.default_branch,\n    incidentId:       incidentId,\n    projectId:        gate.projectId || '',\n    branchName:       branchName,\n    commitMessage:    commitMsg,\n    decision:         decision,\n    buildNumber:      buildNum,\n    skipAutoFix:      false,\n    excludedBlockers: excludedBlockers.length,\n    excludedBlockerRules: excludedBlockers.map(b => b.rule || b.ruleKey || 'UNKNOWN'),\n    language:         lang.name,\n    findingsTotal:    totalAll,\n    approvedFindingIdsForFile,\n    approvedFindingsForFile,\n    targetFile: fileName,\n    findingsBySource: {\n      sonar: totalSonar,\n      trivy: totalTrivy,\n      owasp: totalOwasp,\n      zap:   totalZap,\n    },\n    fileLineCount:    lineCount,\n    largeFileWarning: isLargeFile,\n  }\n};",
           "mode": "runOnceForEachItem"
         },
         "type": "n8n-nodes-base.code",
@@ -709,7 +709,7 @@
           4160
         ],
         "parameters": {
-          "jsCode": "const input=$input.first().json||{};const captured=$items('Capture Correlation Envelope',0,0);const ctx=captured?.[0]?.json?.correlationEnvelope||{};const err=input.error||input;const summary=String(err.message||input.message||input.reason||'workflow execution error').replace(/[\\r\\n]+/g,' ').slice(0,500);const failureNode=String(err.node?.name||err.context?.nodeCause||input.failureNode||'WF2').slice(0,120);const required=['incidentId','requestId','batchId','batchKey','attemptCount'];const missing=required.filter(k=>ctx[k]===undefined||ctx[k]===null||ctx[k]==='');if(missing.length)throw new Error('FAILURE_CORRELATION_MISSING:'+missing.join(','));return [{json:{status:'FAILED',workflowId:ctx.workflowId,executionId:String($execution.id),incidentId:ctx.incidentId,requestId:ctx.requestId,batchId:ctx.batchId,batchKey:ctx.batchKey,attemptCount:ctx.attemptCount,failureCode:'WF2_EXECUTION_ERROR',failureSummary:summary,failureNode}}];"
+          "jsCode": "const input=$input.first().json||{};const captured=$items('Capture Correlation Envelope',0,0);const ctx=captured?.[0]?.json?.correlationEnvelope||{};const err=input.error||input;const rawSummary=String(input.failureSummary||err.message||input.message||input.reason||'workflow execution error');const summary=rawSummary.replace(/[\\r\\n]+/g,' ').slice(0,500);const embedded=rawSummary.match(/^(WF2_PATCH_NOT_EFFECTIVE|WF2_PATCH_SCOPE_VIOLATION|GITHUB_[A-Z_]+)/)?.[1];const failureCode=String(input.failureCode||embedded||'WF2_EXECUTION_ERROR').slice(0,120);const failureNode=String(input.failureNode||err.node?.name||err.context?.nodeCause||(failureCode==='WF2_PATCH_NOT_EFFECTIVE'?'Validate Candidate Remediation':'WF2')).slice(0,120);const required=['incidentId','requestId','batchId','batchKey','attemptCount'];const missing=required.filter(k=>ctx[k]===undefined||ctx[k]===null||ctx[k]==='');if(missing.length)throw new Error('FAILURE_CORRELATION_MISSING:'+missing.join(','));return [{json:{status:'FAILED',workflowId:ctx.workflowId,executionId:String($execution.id),incidentId:ctx.incidentId,requestId:ctx.requestId,batchId:ctx.batchId,batchKey:ctx.batchKey,attemptCount:ctx.attemptCount,failureCode,failureSummary:summary,failureNode}}];"
         }
       },
       {
@@ -951,6 +951,216 @@
           3712
         ],
         "parameters": {}
+      },
+      {
+        "id": "wf2-validate-candidate-remediation",
+        "name": "Validate Candidate Remediation",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          -2496,
+          3552
+        ],
+        "onError": "continueErrorOutput",
+        "parameters": {
+          "mode": "runOnceForEachItem",
+          "language": "javaScript",
+          "jsCode": "const verifyFinding=(finding,content)=>{const findingId=String(finding.findingId||finding.id||finding.key||'');const rule=String(finding.rule||finding.ruleKey||'');const lines=String(content).split('\\n');if(rule==='java:S1068'){const identifier=String(finding.message||'').match(/[\"“”]([^\"“”]+)[\"“”]/)?.[1]||'';if(!identifier)return {findingId,rule,resolved:false,evidence:'IDENTIFIER_MISSING'};const escaped=identifier.replace(/[^a-zA-Z0-9_]/g,'');const references=(String(content).match(new RegExp('\\\\b'+escaped+'\\\\b','g'))||[]).length;const typeName=identifier.charAt(0).toUpperCase()+identifier.slice(1);const obsoleteImport=new RegExp('^\\\\s*import\\\\s+[^;]*\\\\.'+typeName+'\\\\s*;','m').test(String(content));return {findingId,rule,resolved:references===0&&!obsoleteImport,evidence:{identifier,references,obsoleteImport,remainingViolations:[references?identifier:null,obsoleteImport?'IMPORT_'+typeName:null].filter(Boolean)}};}if(rule==='java:S125'){const line=Math.max(1,Number(finding.line)||1);const from=Math.max(0,line-13),to=Math.min(lines.length,line+12);const suspicious=lines.slice(from,to).filter(value=>/^\\s*\\/\\//.test(value)&&/\\.\\w+\\s*\\([^)]*\\)/.test(value.replace(/^\\s*\\/\\/\\s*/,'')));return {findingId,rule,resolved:suspicious.length===0,evidence:{window:[from+1,to],commentedCodeCandidates:suspicious,remainingViolations:suspicious}};}return {findingId,rule,resolved:false,evidence:{reason:'NO_DETERMINISTIC_VERIFIER',remainingViolations:['VALIDATION_EVIDENCE_INSUFFICIENT']}};};\nconst patch=$json;const expected=[...new Set((patch.approvedFindingIds||[]).map(String))].sort();const validationEvidence=(patch.approvedFindings||[]).map(f=>verifyFinding(f,patch.patchedCode));const effective=validationEvidence.filter(result=>result.resolved).map(result=>result.findingId).sort();const remainingViolations=validationEvidence.filter(result=>!result.resolved).map(result=>({findingId:result.findingId,rule:result.rule,evidence:result.evidence}));if(JSON.stringify(expected)!==JSON.stringify(effective)){throw new Error('WF2_PATCH_NOT_EFFECTIVE:'+JSON.stringify({targetFile:patch.targetFile,remainingViolations}));}\nconst normalizeS1068=(content,finding)=>{const identifier=String(finding.message||'').match(/[\"“”]([^\"“”]+)[\"“”]/)?.[1]||'';if(!identifier)return String(content);const escaped=identifier.replace(/[^a-zA-Z0-9_]/g,'');const typeName=identifier.charAt(0).toUpperCase()+identifier.slice(1);return String(content).replace(new RegExp('^\\\\s*import\\\\s+[^;]*\\\\.'+typeName+'\\\\s*;\\\\s*','gm'),'').replace(new RegExp('^.*\\\\bprivate\\\\b.*\\\\b'+escaped+'\\\\b.*;\\\\s*$','gm'),'').replace(new RegExp('^.*\\\\bthis\\\\.'+escaped+'\\\\s*=\\\\s*'+escaped+'\\\\s*;\\\\s*$','gm'),'').replace(new RegExp('\\\\b[A-Za-z0-9_$.<>?]+\\\\s+'+escaped+'\\\\b\\\\s*,?','g'),'').replace(/\\(\\s*,/g,'(').replace(/,\\s*\\)/g,')').replace(/,\\s*,/g,',').replace(/\\\\s+/g,'');};\nfor(const finding of patch.approvedFindings||[]){if(String(finding.rule||finding.ruleKey||'')==='java:S1068'&&normalizeS1068(patch.sourceContent,finding)!==normalizeS1068(patch.patchedCode,finding))throw new Error('WF2_PATCH_SCOPE_VIOLATION:'+patch.targetFile);}\nreturn {json:{...patch,candidateValidationPassed:true,validationEvidence,effectiveRemediatedFindingIds:effective,finalStateVerified:true}};"
+        }
+      },
+      {
+        "id": "wf2-classify-github-write-error",
+        "name": "Classify GitHub Write Error",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          -2176,
+          3712
+        ],
+        "parameters": {
+          "mode": "runOnceForEachItem",
+          "language": "javaScript",
+          "jsCode": "const patch=$('Validate Candidate Remediation').item.json;const raw=$json.error||$json;const message=String(raw.message||$json.message||raw.description||'GitHub write transport failure').replace(/[\\r\\n]+/g,' ').slice(0,500);const code=String(raw.code||raw.errorCode||'');const dns=/EAI_AGAIN|ENOTFOUND|DNS server|name resolution|getaddrinfo/i.test(code+' '+message);return {json:{...patch,transportError:{code,message},requiresReadBack:!dns,failureCode:dns?'GITHUB_DNS_UNAVAILABLE':'GITHUB_WRITE_UNCERTAIN',failureNode:'Update File in Branch',failureSummary:message}};"
+        }
+      },
+      {
+        "id": "wf2-transport-requires-readback",
+        "name": "Transport Requires Read Back?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.3,
+        "position": [
+          -2000,
+          3712
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 3
+            },
+            "conditions": [
+              {
+                "id": "readback",
+                "leftValue": "={{ $json.requiresReadBack }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "equals"
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      },
+      {
+        "parameters": {
+          "resource": "file",
+          "operation": "get",
+          "owner": {
+            "__rl": true,
+            "mode": "name",
+            "value": "={{ $('Validate Candidate Remediation').item.json.repository_owner }}"
+          },
+          "repository": {
+            "__rl": true,
+            "mode": "name",
+            "value": "={{ $('Validate Candidate Remediation').item.json.repository_name }}"
+          },
+          "filePath": "={{ $('Validate Candidate Remediation').item.json.file_path }}",
+          "asBinaryProperty": false,
+          "additionalParameters": {
+            "reference": "={{ $('Validate Candidate Remediation').item.json.branchName }}"
+          }
+        },
+        "id": "wf2-readback-file-after-write-error",
+        "name": "Read Back File After Write Error",
+        "type": "n8n-nodes-base.github",
+        "typeVersion": 1.1,
+        "position": [
+          -1824,
+          3632
+        ],
+        "webhookId": "62f7404d-2d09-4530-868e-66df4a3abf02",
+        "credentials": {
+          "githubApi": {
+            "id": "fBueZWwflXWM3RoX",
+            "name": "GitHub account"
+          }
+        },
+        "onError": "continueErrorOutput"
+      },
+      {
+        "id": "wf2-evaluate-write-reconciliation",
+        "name": "Evaluate GitHub Write Reconciliation",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          -1648,
+          3632
+        ],
+        "onError": "continueErrorOutput",
+        "parameters": {
+          "mode": "runOnceForEachItem",
+          "language": "javaScript",
+          "jsCode": "const patch=$('Validate Candidate Remediation').item.json;const decoded=Buffer.from(String($json.content||'').replace(/\\n/g,''),'base64').toString('utf8');const normalize=value=>String(value).replace(/\\r\\n/g,'\\n');if(normalize(decoded)===normalize(patch.patchedCode))return {json:{...patch,reconciledWrite:true,newSha:String($json.sha||''),remoteState:'EXPECTED_CANDIDATE'}};if(normalize(decoded)===normalize(patch.sourceContent))return {json:{...patch,reconciledWrite:false,failureCode:'GITHUB_WRITE_UNCONFIRMED',failureNode:'Update File in Branch',failureSummary:'GitHub write failed and remote content is unchanged',remoteState:'UNCHANGED'}};return {json:{...patch,reconciledWrite:false,failureCode:'GITHUB_REMOTE_STATE_UNEXPECTED',failureNode:'Update File in Branch',failureSummary:'GitHub write failed and remote content differs from source and candidate',remoteState:'UNEXPECTED'}};"
+        }
+      },
+      {
+        "id": "wf2-remote-candidate-present",
+        "name": "Remote Candidate Present?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.3,
+        "position": [
+          -1472,
+          3632
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 3
+            },
+            "conditions": [
+              {
+                "id": "reconciled",
+                "leftValue": "={{ $json.reconciledWrite }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "equals"
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      },
+      {
+        "parameters": {
+          "method": "GET",
+          "url": "=https://api.github.com/repos/{{ $('Validate Candidate Remediation').item.json.repository_owner }}/{{ $('Validate Candidate Remediation').item.json.repository_name }}/git/ref/heads/{{ encodeURIComponent($('Validate Candidate Remediation').item.json.branchName) }}",
+          "authentication": "predefinedCredentialType",
+          "nodeCredentialType": "githubApi",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "X-GitHub-Api-Version",
+                "value": "2022-11-28"
+              }
+            ]
+          },
+          "options": {
+            "response": {
+              "response": {
+                "fullResponse": true,
+                "neverError": true
+              }
+            }
+          }
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.4,
+        "position": [
+          -1296,
+          3552
+        ],
+        "id": "wf2-lookup-head-after-reconciled-write",
+        "name": "Lookup Head After Reconciled Write",
+        "onError": "continueErrorOutput",
+        "credentials": {
+          "httpHeaderAuth": {
+            "id": "6vGRWdhA0QO4Esy8",
+            "name": "git-n8n"
+          },
+          "githubApi": {
+            "id": "YBO0vWrPlyoYx4Kr",
+            "name": "GitHub n8n"
+          }
+        }
+      },
+      {
+        "id": "wf2-build-reconciled-file-result",
+        "name": "Build Reconciled File Result",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          -1120,
+          3552
+        ],
+        "onError": "continueErrorOutput",
+        "parameters": {
+          "mode": "runOnceForEachItem",
+          "language": "javaScript",
+          "jsCode": "const patch=$('Evaluate GitHub Write Reconciliation').item.json;const commitSha=String($json.body?.object?.sha||$json.object?.sha||'');if(!commitSha||!patch.newSha)throw new Error('RECONCILED_WRITE_EVIDENCE_MISSING');return {json:{targetFile:patch.targetFile,approvedFindingIds:patch.approvedFindingIds,processedFindingIds:patch.processedFindingIds,changedInThisAttemptFindingIds:patch.processedFindingIds,effectiveRemediatedFindingIds:patch.effectiveRemediatedFindingIds,validationEvidence:patch.validationEvidence,outcome:'MODIFIED_AND_REMEDIATED',finalStateVerified:true,updateApplied:true,reconciledWrite:true,oldSha:patch.oldSha,newSha:patch.newSha,commitSha}};"
+        }
       }
     ],
     "connections": {
@@ -1019,7 +1229,7 @@
           ],
           [
             {
-              "node": "Prepare WF2 Failure Status",
+              "node": "Classify GitHub Write Error",
               "type": "main",
               "index": 0
             }
@@ -1066,7 +1276,7 @@
         "main": [
           [
             {
-              "node": "Update File in Branch",
+              "node": "Validate Candidate Remediation",
               "type": "main",
               "index": 0
             }
@@ -1507,6 +1717,143 @@
           [
             {
               "node": "Validate Batch Completeness",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Validate Candidate Remediation": {
+        "main": [
+          [
+            {
+              "node": "Update File in Branch",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Prepare WF2 Failure Status",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Classify GitHub Write Error": {
+        "main": [
+          [
+            {
+              "node": "Transport Requires Read Back?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Transport Requires Read Back?": {
+        "main": [
+          [
+            {
+              "node": "Read Back File After Write Error",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Prepare WF2 Failure Status",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Read Back File After Write Error": {
+        "main": [
+          [
+            {
+              "node": "Evaluate GitHub Write Reconciliation",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Prepare WF2 Failure Status",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Evaluate GitHub Write Reconciliation": {
+        "main": [
+          [
+            {
+              "node": "Remote Candidate Present?",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Prepare WF2 Failure Status",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Remote Candidate Present?": {
+        "main": [
+          [
+            {
+              "node": "Lookup Head After Reconciled Write",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Prepare WF2 Failure Status",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Lookup Head After Reconciled Write": {
+        "main": [
+          [
+            {
+              "node": "Build Reconciled File Result",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Prepare WF2 Failure Status",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Build Reconciled File Result": {
+        "main": [
+          [
+            {
+              "node": "Merge Effective File Results",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Prepare WF2 Failure Status",
               "type": "main",
               "index": 0
             }

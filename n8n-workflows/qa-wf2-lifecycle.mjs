@@ -46,7 +46,7 @@ assert.ok(createBranch.includes('$json.targetBranchName') && createBranch.includ
 const orderedPath = [
   'Expand Approved Target Files', 'Fetch Repository Files',
   'Prepare - Code Patch Body', 'File Requires Patch?', 'de Patch - HTTP Request', 'Parse - Code Patch Output',
-  'Update File in Branch', 'Build File Result', 'Merge Effective File Results', 'Validate Batch Completeness', 'Lookup Existing Batch PR',
+  'Validate Candidate Remediation', 'Update File in Branch', 'Build File Result', 'Merge Effective File Results', 'Validate Batch Completeness', 'Lookup Existing Batch PR',
   'Select Existing PR', 'Existing PR?',
 ];
 for (let index = 0; index < orderedPath.length - 1; index += 1) {
@@ -60,9 +60,10 @@ for (const critical of ['Capture Correlation Envelope', 'Adapt Webhook Payload',
   'Apply Repository Metadata', 'Get Main Branch SHA1', 'Prepare Batch Context', 'Lookup Remediation Branch',
   'Use Existing Branch', 'Create Missing Branch',
   'Expand Approved Target Files', 'Fetch Repository Files', 'Prepare - Code Patch Body',
-  'de Patch - HTTP Request', 'Parse - Code Patch Output', 'Update File in Branch',
+  'de Patch - HTTP Request', 'Parse - Code Patch Output', 'Validate Candidate Remediation',
   'Build File Result', 'Validate Batch Completeness', 'Lookup Existing Batch PR', 'Select Existing PR',
-  'Use Existing PR', 'Create Pull Request1', 'Build Already Remediated Result']) {
+  'Use Existing PR', 'Create Pull Request1', 'Build Already Remediated Result',
+  'Evaluate GitHub Write Reconciliation', 'Lookup Head After Reconciled Write', 'Build Reconciled File Result']) {
   assert.equal(node(critical).onError, 'continueErrorOutput', `${critical} must expose its error output`);
   assert.ok(targets(critical, 1).includes(failureNode), `${critical} error must reach failure callback`);
 }
@@ -88,7 +89,7 @@ assert.equal(node('Prepare - Code Patch Body').parameters.mode, 'runOnceForEachI
 assert.equal(node('Parse - Code Patch Output').parameters.mode, 'runOnceForEachItem');
 assert.ok(!node('Prepare - Code Patch Body').parameters.jsCode.includes('$input.first()'));
 assert.ok(!node('Parse - Code Patch Output').parameters.jsCode.includes('$input.first()'));
-for (const perItem of ['Prepare - Code Patch Body', 'Parse - Code Patch Output', 'Build File Result']) {
+for (const perItem of ['Prepare - Code Patch Body', 'Parse - Code Patch Output', 'Validate Candidate Remediation', 'Build File Result']) {
   assert.equal(node(perItem).parameters.mode, 'runOnceForEachItem');
   assert.ok(!/return \[\{/.test(node(perItem).parameters.jsCode), `${perItem} returns an array in per-item mode`);
 }
@@ -96,6 +97,14 @@ assert.ok(node('Validate Batch Completeness').parameters.jsCode.includes('missin
 assert.ok(node('Validate Batch Completeness').parameters.jsCode.includes('missingFiles'));
 assert.ok(node('Validate Batch Completeness').parameters.jsCode.includes('effectiveRemediatedFindingIds'));
 assert.ok(node('Validate Batch Completeness').parameters.jsCode.includes('finalStateVerified'));
+assert.deepEqual(targets('Validate Candidate Remediation'), ['Update File in Branch']);
+assert.ok(targets('Validate Candidate Remediation', 1).includes(failureNode));
+assert.ok(node('Validate Candidate Remediation').parameters.jsCode.includes('WF2_PATCH_NOT_EFFECTIVE'));
+assert.ok(node('Validate Candidate Remediation').parameters.jsCode.includes('WF2_PATCH_SCOPE_VIOLATION'));
+assert.deepEqual(targets('Update File in Branch', 1), ['Classify GitHub Write Error']);
+assert.ok(node('Classify GitHub Write Error').parameters.jsCode.includes('GITHUB_DNS_UNAVAILABLE'));
+assert.ok(node('Evaluate GitHub Write Reconciliation').parameters.jsCode.includes('GITHUB_WRITE_UNCONFIRMED'));
+assert.ok(node('Evaluate GitHub Write Reconciliation').parameters.jsCode.includes('GITHUB_REMOTE_STATE_UNEXPECTED'));
 
 // Safe mock traversal using the exact execution-1888 batch. No network node
 // is invoked: this validates only immutable context and graph order.
@@ -205,9 +214,18 @@ const parsedItems = preparedItems.filter(prepared => prepared.json.requiresPatch
 assert.equal(parsedItems.length, 1);
 assert.ok(parsedItems.every(item => item && !Array.isArray(item) && item.json && !Array.isArray(item.json)));
 assert.deepEqual(parsedItems.map(item => item.json.targetFile), [payload.findings[0].file]);
+const validatedItems = parsedItems.map(parsed => executeCode(node('Validate Candidate Remediation').parameters.jsCode, {
+  $json: parsed.json,
+}).json);
+assert.equal(validatedItems.length, 1);
+assert.equal(validatedItems[0].candidateValidationPassed, true);
+assert.throws(() => executeCode(node('Validate Candidate Remediation').parameters.jsCode, {
+  $json: { ...parsedItems[0].json,
+    patchedCode: 'package p;\nimport p.UserRepository;\nclass TaskService { TaskService(TaskRepository taskRepository, UserRepository userRepository) {} }' },
+}), /WF2_PATCH_NOT_EFFECTIVE/);
 const modifiedResult = executeCode(node('Build File Result').parameters.jsCode, {
   $json: { commit: { sha: '1'.repeat(40) }, content: { sha: 'new-task-sha' } },
-  $: () => ({ item: { json: parsedItems[0].json } }),
+  $: () => ({ item: { json: validatedItems[0] } }),
 }).json;
 const alreadyResult = executeCode(node('Build Already Remediated Result').parameters.jsCode, {
   $json: preparedItems[1].json,
@@ -215,6 +233,24 @@ const alreadyResult = executeCode(node('Build Already Remediated Result').parame
 assert.equal(modifiedResult.outcome, 'MODIFIED_AND_REMEDIATED');
 assert.equal(alreadyResult.outcome, 'ALREADY_REMEDIATED');
 assert.equal(alreadyResult.oldSha, alreadyResult.newSha);
+assert.equal(preparedItems[1].json.requiresPatch, false);
+
+// Safe transport recovery: no blind mutation retry. Read-back recognizes an
+// applied candidate, unchanged content fails safely, and unexpected content
+// fails closed.
+const evaluateReadBack = (content, sha = 'remote-sha') => executeCode(node('Evaluate GitHub Write Reconciliation').parameters.jsCode, {
+  $json: { content: Buffer.from(content).toString('base64'), sha },
+  $: () => ({ item: { json: validatedItems[0] } }), Buffer,
+}).json;
+assert.equal(evaluateReadBack(validatedItems[0].patchedCode).reconciledWrite, true);
+assert.equal(evaluateReadBack(validatedItems[0].sourceContent).failureCode, 'GITHUB_WRITE_UNCONFIRMED');
+assert.equal(evaluateReadBack('package p; class Unexpected {}').failureCode, 'GITHUB_REMOTE_STATE_UNEXPECTED');
+const dnsFailure = executeCode(node('Classify GitHub Write Error').parameters.jsCode, {
+  $json: { error: { message: 'The DNS server returned an error, perhaps the server is offline' } },
+  $: () => ({ item: { json: validatedItems[0] } }),
+}).json;
+assert.equal(dnsFailure.requiresReadBack, false);
+assert.equal(dnsFailure.failureCode, 'GITHUB_DNS_UNAVAILABLE');
 const completeV2 = executeCode(node('Validate Batch Completeness').parameters.jsCode, {
   $input: { all: () => [{ json: modifiedResult }, { json: alreadyResult }] },
   $: () => ({ first: () => ({ json: payload }) }),
