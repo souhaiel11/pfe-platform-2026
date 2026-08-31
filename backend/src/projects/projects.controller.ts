@@ -2,7 +2,9 @@ import { Controller, Get, Post, Put, Delete, Body, Param, Query, Headers, HttpEx
 import { ProjectsService } from './projects.service';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
+import { UpdateJenkinsCredentialsDto } from './dto/update-jenkins-credentials.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { UserRole } from '../auth/user.entity';
 
 // Volontairement pas de valeur par défaut : sans cette variable d'env définie,
 // la route rejette TOUJOURS (fail-closed) — même logique que N8N_CALLBACK_SECRET
@@ -14,6 +16,12 @@ export class ProjectsController {
   constructor(private readonly service: ProjectsService) {}
   private assertEditor(req: any) {
     if (!['admin', 'developer'].includes(String(req.user?.role || '').toLowerCase())) throw new ForbiddenException('Action non autorisée');
+  }
+  // Rotation de credential Jenkins — volontairement PLUS strict que
+  // assertEditor (admin uniquement, pas developer) : un secret d'infra
+  // partagé, pas une configuration de projet ordinaire.
+  private assertAdmin(req: any) {
+    if (String(req.user?.role || '').toLowerCase() !== UserRole.ADMIN) throw new ForbiddenException('Réservé aux administrateurs');
   }
 
   // Appelé par n8n (node "Lookup Project" de WF1) pour résoudre un jobName Jenkins
@@ -67,6 +75,18 @@ export class ProjectsController {
   update(@Param('id') id: string, @Body() dto: UpdateProjectDto, @Req() req: any) {
     this.assertEditor(req);
     return this.service.update(id, dto);
+  }
+
+  // Rotation de credential Jenkins — endpoint dédié, ADMIN-ONLY, jamais
+  // exposé via l'update() général (jenkinsToken y est explicitement exclu).
+  // Le nouveau credential n'est persisté qu'après vérification lecture-seule
+  // réelle contre Jenkins (voir ProjectsService.updateJenkinsCredentials) —
+  // jamais renvoyé au client, ni ici ni via GET.
+  @UseGuards(JwtAuthGuard)
+  @Put(':id/jenkins-credentials')
+  updateJenkinsCredentials(@Param('id') id: string, @Body() dto: UpdateJenkinsCredentialsDto, @Req() req: any) {
+    this.assertAdmin(req);
+    return this.service.updateJenkinsCredentials(id, dto);
   }
 
   @UseGuards(JwtAuthGuard)

@@ -9,6 +9,7 @@ import { sanitizeEntityProject } from '../common/sanitize-project';
 import { writeErrorToEntity } from '../common/workflow-error';
 import { createHash, randomUUID } from 'crypto';
 import { buildConvergenceCycles } from '../common/governance';
+import { resolveJenkinsInternalUrl } from '../common/jenkins-url';
 import { ManualRemediationService } from '../manual-remediation/manual-remediation.service';
 
 export function classifyJenkinsTriggerStatus(status: number): { accepted: boolean; code?: string } {
@@ -814,9 +815,21 @@ export class IncidentsService {
         throw new ConflictException('La demande de correction a changé avant le lancement de la validation.');
       }
       const existing = metadata.prValidationRequest;
-      if (existing?.validationRequestId === validationRequestId) {
+      const sameIdentity = existing?.validationRequestId === validationRequestId;
+      // Une transaction Jenkins FAILED (échec de mise en file, pas un
+      // résultat de remédiation) reste sur la même identité logique — un
+      // nouveau clic explicite doit pouvoir réessayer, jamais rester
+      // bloqué indéfiniment sur l'échec de transport précédent. Tout
+      // autre statut existant (REQUESTED/QUEUED/RUNNING/COMPLETED) reste
+      // un doublon : au plus une tentative active à la fois, garanti par
+      // le verrou pessimistic_write sur l'incident dans cette transaction.
+      if (sameIdentity && existing.status !== 'FAILED') {
         return { duplicate: true, request: existing, project };
       }
+      const retryAttempt = sameIdentity ? Number(existing.retryAttempt || 0) + 1 : 0;
+      const previousAttempts = sameIdentity
+        ? [...(Array.isArray(existing.previousAttempts) ? existing.previousAttempts : []), existing]
+        : [];
       const request = {
         validationRequestId, validationType: 'PR_VALIDATION', status: 'REQUESTED',
         projectId: incident.projectId, incidentId: incident.id, fixRequestId: fix.requestId,
@@ -824,6 +837,7 @@ export class IncidentsService {
         attemptCount: Number(fix.attemptCount), repository, prNumber, prUrl: incident.prUrl,
         prHeadBranch: remoteHeadBranch, expectedPrHeadSha: remoteHeadSha,
         createdBy: user.id, createdAt: now, updatedAt: now,
+        retryAttempt, previousAttempts,
       };
       await incidents.update(id, { metadata: { ...metadata, prValidationRequest: request } } as any);
       return { duplicate: false, request, project };
@@ -833,7 +847,8 @@ export class IncidentsService {
     }
 
     const project: Project = claim.project;
-    if (!project.jenkinsUrl || !project.jenkinsToken || !project.jenkinsJobName) {
+    const jenkinsInternalUrl = resolveJenkinsInternalUrl(project);
+    if (!jenkinsInternalUrl || !project.jenkinsToken || !project.jenkinsJobName) {
       throw new BadRequestException('Jenkins n’est pas configuré pour la validation de Pull Request.');
     }
     const separator = project.jenkinsToken.indexOf(':');
@@ -847,7 +862,7 @@ export class IncidentsService {
     const context = { ...claim.request, jenkinsJob: project.jenkinsJobName, prValidationJob };
     try {
       const metadataTree = 'name,fullName,buildable,_class,property[_class,parameterDefinitions[name,type,_class,defaultParameterValue[value,_class]]]';
-      const metadataResponse = await fetch(`${project.jenkinsUrl}${resolvedJobPath}/api/json?tree=${metadataTree}`, {
+      const metadataResponse = await fetch(`${jenkinsInternalUrl}${resolvedJobPath}/api/json?tree=${metadataTree}`, {
         headers: { Authorization: authHeader }, signal: AbortSignal.timeout(10_000),
       });
       if (!metadataResponse.ok) throw new Error(`Jenkins metadata HTTP ${metadataResponse.status}`);
@@ -855,13 +870,13 @@ export class IncidentsService {
       if (!isConcreteJenkinsBuildJob(jobMetadata)) throw new Error('Jenkins PR target is not buildable');
       const definitions = getJenkinsParameterDefinitions(jobMetadata);
       if (!definitions.some(definition => definition.name === 'PFE_VALIDATION_CONTEXT')) throw new Error('Jenkins PR validation parameter is unavailable');
-      const crumbResponse = await fetch(`${project.jenkinsUrl}/crumbIssuer/api/json`, {
+      const crumbResponse = await fetch(`${jenkinsInternalUrl}/crumbIssuer/api/json`, {
         headers: { Authorization: authHeader }, signal: AbortSignal.timeout(10_000),
       });
       if (!crumbResponse.ok) throw new Error(`Jenkins crumb HTTP ${crumbResponse.status}`);
       const crumb: any = await crumbResponse.json();
       const resolvedParameters = resolveJenkinsParameters(definitions, { PFE_VALIDATION_CONTEXT: encodePrValidationContext(context) });
-      const buildResponse = await fetch(`${project.jenkinsUrl}${resolvedJobPath}/buildWithParameters`, {
+      const buildResponse = await fetch(`${jenkinsInternalUrl}${resolvedJobPath}/buildWithParameters`, {
         method: 'POST', headers: { Authorization: authHeader, [crumb.crumbRequestField]: crumb.crumb, 'Content-Type': 'application/x-www-form-urlencoded' },
         body: resolvedParameters.body,
         signal: AbortSignal.timeout(10_000),
@@ -885,10 +900,10 @@ export class IncidentsService {
 
   async triggerBuild(projectId: string) {
     const project = await this.projectRepo.findOne({ where: { id: projectId } });
-    if (!project || !project.jenkinsToken) {
+    const jenkinsUrl = project ? resolveJenkinsInternalUrl(project) : null;
+    if (!project || !jenkinsUrl || !project.jenkinsToken) {
       throw new BadRequestException({ success: false, code: 'JENKINS_NOT_CONFIGURED', message: 'Jenkins non configuré pour ce projet' });
     }
-    const jenkinsUrl = project.jenkinsUrl || 'http://172.31.172.61:8082';
     const separator = project.jenkinsToken.indexOf(':');
     if (separator <= 0 || separator === project.jenkinsToken.length - 1) {
       throw new BadRequestException({ success: false, code: 'JENKINS_NOT_CONFIGURED', message: 'Credential Jenkins invalide' });

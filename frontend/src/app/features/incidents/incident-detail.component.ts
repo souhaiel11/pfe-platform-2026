@@ -570,7 +570,8 @@ export class IncidentDetailComponent implements OnInit, OnDestroy {
   canRequestPrValidation(): boolean {
     const fix = this.incident?.metadata?.fixRequest;
     const state = this.prValidationRequest?.status;
-    return fix?.status === 'PR_CREATED' && !!this.incident?.prUrl && !state;
+    // Un échec de transport Jenkins (FAILED) reste réessayable explicitement.
+    return fix?.status === 'PR_CREATED' && !!this.incident?.prUrl && (!state || state === 'FAILED');
   }
 
   requestPrValidation(): void {

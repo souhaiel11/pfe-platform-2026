@@ -89,9 +89,15 @@
       <div class="divider">🔧 Jenkins</div>
       <div class="field-row">
         <div class="field">
-          <label>Jenkins URL</label>
-          <input formControlName="jenkinsUrl" placeholder="https://jenkins.example.internal">
+          <label>Jenkins URL interne <span class="hint">(appels serveur, jamais un lien navigateur)</span></label>
+          <input formControlName="jenkinsInternalUrl" placeholder="http://jenkins:8080">
         </div>
+        <div class="field">
+          <label>Jenkins URL publique <span class="hint">(liens ouverts dans le navigateur)</span></label>
+          <input formControlName="jenkinsPublicUrl" placeholder="http://localhost:8082">
+        </div>
+      </div>
+      <div class="field-row">
         <div class="field">
           <label>Nom du job</label>
           <input formControlName="jenkinsJobName" placeholder="pfe-devsecops-pipeline">
@@ -103,13 +109,37 @@
         <input formControlName="jenkinsJobPath" placeholder="mon-dossier/job/main">
         <span class="hint">Laisser vide pour un job simple (non multibranch) — le Job Name suffit alors.</span>
       </div>
+
+      <div class="field" *ngIf="isEdit && auth.isAdmin">
+        <label>Identifiants Jenkins</label>
+        <p class="hint">
+          <ng-container *ngIf="jenkinsCredentialConfigured">Identifiants Jenkins configurés</ng-container>
+          <ng-container *ngIf="!jenkinsCredentialConfigured">Identifiants Jenkins non configurés</ng-container>
+        </p>
+        <div class="field-row">
+          <div class="field">
+            <label>Utilisateur Jenkins</label>
+            <input [(ngModel)]="jenkinsCredUsername" [ngModelOptions]="{standalone: true}" autocomplete="off" placeholder="platform-build">
+          </div>
+          <div class="field">
+            <label>Nouveau token Jenkins</label>
+            <input type="password" [(ngModel)]="jenkinsCredToken" [ngModelOptions]="{standalone: true}" autocomplete="new-password" placeholder="••••••••">
+          </div>
+        </div>
+        <button type="button" class="btn btn-sm" [disabled]="jenkinsCredBusy || !jenkinsCredUsername || !jenkinsCredToken" (click)="saveJenkinsCredentials()">
+          {{ jenkinsCredBusy ? 'Vérification…' : 'Enregistrer les identifiants' }}
+        </button>
+        <p *ngIf="jenkinsCredMessage" [class]="jenkinsCredSuccess ? 'field-success' : 'field-error'">{{ jenkinsCredMessage }}</p>
+      </div>
+      <p class="hint" *ngIf="isEdit && !auth.isAdmin">Les identifiants Jenkins sont réservés aux administrateurs.</p>
+
       <div class="divider">🐙 GitHub</div>
       <div class="field">
           <label>Dépôt <span class="hint">(propriétaire/dépôt)</span></label>
           <input formControlName="githubRepo" placeholder="organisation/dépôt">
           <div class="field-error" *ngIf="isInvalid('githubRepo')">Champ requis au format propriétaire/dépôt.</div>
       </div>
-      <p class="hint">Les identifiants Jenkins et GitHub sont gérés par la plateforme.</p>
+      <p class="hint">Le token GitHub est géré par la plateforme.</p>
     </div>
 
     <!-- ── SONARQUBE ───────────────────────────────────────── -->

@@ -20,8 +20,17 @@ export class CreateProjectDto {
   @IsOptional() @IsEnum(CicdTool)
   cicdTool?: CicdTool;
 
+  // DEPRECATED — voir jenkinsInternalUrl / jenkinsPublicUrl.
   @IsOptional() @IsString()
   jenkinsUrl?: string;
+
+  // URL Jenkins serveur-à-serveur (jamais un lien navigateur).
+  @IsOptional() @IsString()
+  jenkinsInternalUrl?: string;
+
+  // URL Jenkins affichée/cliquée dans le navigateur (jamais un appel backend).
+  @IsOptional() @IsString()
+  jenkinsPublicUrl?: string;
 
   @IsOptional() @IsString()
   jenkinsJobName?: string;

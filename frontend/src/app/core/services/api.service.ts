@@ -26,6 +26,10 @@ export class ApiService {
   createProject(data: any)               { return this.http.post<any>(`${this.base}/projects`, data); }
   updateProject(id: string, data: any)   { return this.http.put<any>(`${this.base}/projects/${id}`, data); }
   validateProject(id: string) { return this.http.post<any>(`${this.base}/projects/${id}/validate`, {}); }
+  // ADMIN-ONLY, write-only : le token n'est jamais relu depuis une réponse.
+  updateJenkinsCredentials(id: string, username: string, token: string) {
+    return this.http.put<any>(`${this.base}/projects/${id}/jenkins-credentials`, { username, token });
+  }
   deleteProject(id: string)              { return this.http.delete(`${this.base}/projects/${id}`); }
 
   // ── Incidents ────────────────────────────────────────────

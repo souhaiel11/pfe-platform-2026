@@ -8,6 +8,7 @@ import { UpdateProjectDto } from './dto/update-project.dto';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 import { sanitizeProject } from '../common/sanitize-project';
+import { resolveJenkinsInternalUrl, assertValidJenkinsUrlInput } from '../common/jenkins-url';
 import { computeBuildSuccessRate } from '../common/build-success-rate';
 
 const OPEN_STATUSES = [IncidentStatus.PENDING, IncidentStatus.BLOCKED, IncidentStatus.FAILED];
@@ -156,11 +157,21 @@ export class ProjectsService {
     return { ceTaskId, analysisId: null, qualityGate: 'SONAR_ANALYSIS_TIMEOUT', correlationVerified: false, state: 'TIMEOUT', attempts: 60 };
   }
 
+  private validateJenkinsUrlFields(dto: { jenkinsInternalUrl?: string; jenkinsPublicUrl?: string }) {
+    try {
+      if (dto.jenkinsInternalUrl) assertValidJenkinsUrlInput(dto.jenkinsInternalUrl, 'jenkinsInternalUrl');
+      if (dto.jenkinsPublicUrl) assertValidJenkinsUrlInput(dto.jenkinsPublicUrl, 'jenkinsPublicUrl');
+    } catch (e: any) {
+      throw new BadRequestException(e.message);
+    }
+  }
+
   async create(dto: CreateProjectDto) {
     if (dto.jenkinsJobName) {
       const existing = await this.repo.findOne({ where: { jenkinsJobName: dto.jenkinsJobName } });
       if (existing) throw new ConflictException(`Un projet avec le job Jenkins "${dto.jenkinsJobName}" existe déjà`);
     }
+    this.validateJenkinsUrlFields(dto);
     const payload: any = { ...dto };
     for (const field of ['jenkinsToken', 'sonarqubeToken', 'githubToken', 'slackToken']) delete payload[field];
     if (Object.prototype.hasOwnProperty.call(payload, 'azureConfig')) payload.azureConfig = this.normalizeAzureConfig(payload.azureConfig);
@@ -171,6 +182,7 @@ export class ProjectsService {
 
   async update(id: string, dto: UpdateProjectDto) {
     await this.findOneInternal(id);
+    this.validateJenkinsUrlFields(dto);
 
     // Un champ token vide signifie "ne pas modifier", pas "effacer".
     // Le frontend ne recoit jamais les tokens en clair : il enverrait
@@ -181,6 +193,38 @@ export class ProjectsService {
 
     await this.repo.update(id, payload);
     return this.findOne(id);
+  }
+
+  // ADMIN-ONLY, appelé par PUT /projects/:id/jenkins-credentials — jamais
+  // par l'update() général de configuration projet. Le nouveau credential
+  // n'est persisté QUE si une vérification lecture-seule réelle contre
+  // Jenkins (whoAmI) confirme une authentification effective — jamais un
+  // simple HTTP 200 (whoAmI répond 200 même en anonyme, avec
+  // authenticated:false). Le token n'est jamais journalisé, jamais
+  // renvoyé, jamais inclus dans une réponse GET.
+  async updateJenkinsCredentials(id: string, dto: { username: string; token: string }) {
+    const project = await this.findOneInternal(id);
+    const jenkinsInternalUrl = resolveJenkinsInternalUrl(project);
+    if (!jenkinsInternalUrl) {
+      throw new BadRequestException('Aucune URL Jenkins interne n’est configurée pour ce projet.');
+    }
+    const authHeader = `Basic ${Buffer.from(`${dto.username}:${dto.token}`).toString('base64')}`;
+    let identityName: string | null = null;
+    try {
+      const { data } = await firstValueFrom(
+        this.http.get(`${jenkinsInternalUrl}/whoAmI/api/json`, {
+          headers: { Authorization: authHeader }, timeout: 8000,
+        }),
+      );
+      if (!data || data.authenticated !== true) {
+        throw new Error('not authenticated');
+      }
+      identityName = typeof data.name === 'string' ? data.name : null;
+    } catch {
+      throw new ConflictException('Les identifiants Jenkins sont invalides.');
+    }
+    await this.repo.update(id, { jenkinsToken: `${dto.username}:${dto.token}` } as any);
+    return { success: true, message: 'Connexion Jenkins vérifiée.', jenkinsUsername: identityName };
   }
 
   async remove(id: string) {
@@ -214,14 +258,15 @@ export class ProjectsService {
     }
 
     // Validation Jenkins
-    if (project.jenkinsUrl && project.jenkinsToken) {
+    const validateJenkinsUrl = resolveJenkinsInternalUrl(project);
+    if (validateJenkinsUrl && project.jenkinsToken) {
       try {
         const [user, token] = project.jenkinsToken.split(':');
         const headers = {
           Authorization: `Basic ${Buffer.from(`${user}:${token}`).toString('base64')}`
         };
         await firstValueFrom(
-          this.http.get(`${project.jenkinsUrl}/job/${project.jenkinsJobName}/api/json`, { headers, timeout: 5000 })
+          this.http.get(`${validateJenkinsUrl}/job/${project.jenkinsJobName}/api/json`, { headers, timeout: 5000 })
         );
         results.jenkins = { valid: true, message: 'Jenkins connecté — job trouvé', checkedAt: now };
       } catch (e) {
@@ -272,7 +317,8 @@ export class ProjectsService {
 
   async getJenkinsStatus(id: string) {
     const project = await this.findOneInternal(id);
-    if (!project.jenkinsUrl || !project.jenkinsJobName) {
+    const jenkinsInternalUrl = resolveJenkinsInternalUrl(project);
+    if (!jenkinsInternalUrl || !project.jenkinsJobName) {
       return this.emptyJenkinsStatus(project, 'Jenkins non configuré pour ce projet');
     }
     try {
@@ -285,12 +331,12 @@ export class ProjectsService {
       // de jenkinsJobName (identité du job, utilisée pour le lookup webhook).
       // Vide = fallback sur jenkinsJobName, comportement inchangé.
       const jobPath = project.jenkinsJobPath || project.jenkinsJobName;
-      const lastUrl = `${project.jenkinsUrl}/job/${jobPath}/lastBuild/api/json`;
+      const lastUrl = `${jenkinsInternalUrl}/job/${jobPath}/lastBuild/api/json`;
       const { data: last } = await firstValueFrom(this.http.get(lastUrl, { headers, timeout }));
       // {0,20} : capture tout l'historique dispo aujourd'hui (15 builds/projet
       // vérifiés en réel) avec marge, plutôt qu'une fenêtre calendaire qui
       // risquerait un échantillon vide sur un historique ancien.
-      const histUrl = `${project.jenkinsUrl}/job/${jobPath}/api/json?tree=builds[number,result,duration,timestamp,url]{0,20}`;
+      const histUrl = `${jenkinsInternalUrl}/job/${jobPath}/api/json?tree=builds[number,result,duration,timestamp,url]{0,20}`;
       const { data: hist } = await firstValueFrom(this.http.get(histUrl, { headers, timeout }));
       const builds = (hist.builds || []).map((b: any) => ({
         number: b.number, result: b.result,

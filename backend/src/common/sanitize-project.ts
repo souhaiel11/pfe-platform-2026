@@ -16,6 +16,10 @@ export function sanitizeProject<T extends Record<string, any>>(
 ): T | null | undefined {
   if (!project) return project;
   const clone: any = { ...project };
+  // Dérivé AVANT suppression — jamais le contenu du token, seulement sa
+  // présence, pour que l'UI sache afficher "Identifiants Jenkins configurés"
+  // sans jamais recevoir la valeur.
+  clone.jenkinsCredentialConfigured = !!clone.jenkinsToken;
   for (const field of SENSITIVE_PROJECT_FIELDS) delete clone[field];
   return clone;
 }

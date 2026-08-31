@@ -214,9 +214,12 @@ export class ProjectDetailComponent implements OnInit {
   prValidationRequest(): any { return this.latestReport?.metadata?.prValidationRequest || null; }
   canRequestPrValidation(): boolean {
     const request = this.activeFixRequest();
+    const validationState = this.prValidationRequest()?.status;
+    // Un échec de transport Jenkins (FAILED) reste réessayable explicitement —
+    // seul un statut actif/résolu (REQUESTED/QUEUED/RUNNING/COMPLETED) verrouille le bouton.
     return this.canOperate && request?.status === 'PR_CREATED'
       && !!this.latestReport?.prUrl && !!request?.prNumber
-      && !this.prValidationRequest()?.status;
+      && (!validationState || validationState === 'FAILED');
   }
   requestPrValidation(): void {
     if (this.prValidationBusy || !this.canRequestPrValidation() || !this.latestReport?.id) return;
@@ -686,11 +689,19 @@ export class ProjectDetailComponent implements OnInit {
     return `${base.replace(/\/$/, '')}${path}`;
   }
 
+  // URL Jenkins publique/navigateur — jamais jenkinsInternalUrl (résolution
+  // DNS Docker, injoignable depuis le navigateur). Repli sur le champ legacy
+  // jenkinsUrl pour les projets non migrés. Miroir de resolveJenkinsPublicUrl
+  // côté backend.
+  jenkinsPublicUrl(): string | null {
+    return this.project?.jenkinsPublicUrl || this.project?.jenkinsUrl || null;
+  }
+
   buildUrl(url: string | null | undefined): string | null {
     if (!url) return null;
     try {
       const source = new URL(url);
-      const configured = this.toolUrl(this.project?.jenkinsUrl);
+      const configured = this.toolUrl(this.jenkinsPublicUrl());
       if (!configured) return null;
       const target = new URL(configured);
       target.pathname = source.pathname;
@@ -838,7 +849,9 @@ export class ProjectDetailComponent implements OnInit {
       { label: 'Créé le',        value: this.project.createdAt ? new Date(this.project.createdAt).toLocaleDateString('fr-FR') : '—' },
       { label: 'Outil CI/CD',    value: this.project.cicdTool || 'Non configuré' },
       { label: 'Job Jenkins',    value: this.project.jenkinsJobName || 'Non configuré' },
-      { label: 'URL Jenkins',    value: this.project.jenkinsUrl || 'Non configurée' },
+      { label: 'URL Jenkins publique',  value: this.jenkinsPublicUrl() || 'Non configurée' },
+      { label: 'URL Jenkins interne',   value: this.project.jenkinsInternalUrl || this.project.jenkinsUrl || 'Non configurée' },
+      { label: 'Identifiants Jenkins',  value: this.project.jenkinsCredentialConfigured ? 'Configurés' : 'Non configurés' },
       { label: 'Clé SonarQube',  value: this.project.sonarqubeKey || 'Non configurée' },
       { label: 'Dépôt GitHub',   value: this.project.githubRepo || 'Non configuré' },
       { label: 'Description',    value: this.project.description || 'Non disponible' },

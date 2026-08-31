@@ -82,8 +82,27 @@ export class Project {
   @Column({ type: 'enum', enum: CicdTool, default: CicdTool.JENKINS })
   cicdTool: CicdTool;
 
+  // DEPRECATED — historiquement utilisé à la fois pour les appels
+  // serveur-à-serveur ET les liens navigateur (URL surchargée : une IP
+  // Docker interne comme http://jenkins:8080 casse silencieusement le lien
+  // "Ouvrir Jenkins" en navigateur ; une URL publique comme
+  // http://localhost:8082 n'est pas résoluble depuis le backend en conteneur).
+  // Conservé uniquement comme repli pour les projets non migrés — voir
+  // jenkinsInternalUrl / jenkinsPublicUrl et common/jenkins-url.ts.
   @Column({ nullable: true })
   jenkinsUrl: string;
+
+  // URL Jenkins pour les appels serveur-à-serveur (backend → Jenkins :
+  // métadonnées, crumb, déclenchement, statut). Jamais utilisée pour un
+  // lien cliqué dans le navigateur. Voir resolveJenkinsInternalUrl().
+  @Column({ nullable: true })
+  jenkinsInternalUrl: string;
+
+  // URL Jenkins pour les liens affichés/cliqués dans le navigateur
+  // ("Ouvrir Jenkins", liens de build). Jamais utilisée pour un appel
+  // backend. Voir resolveJenkinsPublicUrl().
+  @Column({ nullable: true })
+  jenkinsPublicUrl: string;
 
   // Identité du job — utilisée pour le lookup webhook/n8n
   // (findByJobNameInternal, exact match), toujours la forme COURTE que

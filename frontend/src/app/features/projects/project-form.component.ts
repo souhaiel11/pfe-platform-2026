@@ -1,14 +1,15 @@
 import { Component, OnInit, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { ReactiveFormsModule, FormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { ApiService } from '../../core/services/api.service';
 import { ProjectEventsService } from '../../core/services/project-events.service';
+import { AuthService } from '../../core/services/auth.service';
 
 @Component({
   selector: 'app-project-form',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule],
   templateUrl: './project-form.component.html',
 })
 export class ProjectFormComponent implements OnInit {
@@ -21,6 +22,16 @@ export class ProjectFormComponent implements OnInit {
   saveError   = '';
   validationResult: any = null;
   activeSection = 'general';
+
+  // Identifiants Jenkins — flux séparé, write-only, ADMIN-ONLY (jamais
+  // mélangé au formulaire général : le token n'est jamais préchargé, jamais
+  // relu). Voir PUT /projects/:id/jenkins-credentials.
+  jenkinsCredentialConfigured = false;
+  jenkinsCredUsername = '';
+  jenkinsCredToken = '';
+  jenkinsCredBusy = false;
+  jenkinsCredMessage = '';
+  jenkinsCredSuccess = false;
 
   sections = [
     { id: 'general',       label: 'Général',      icon: '📋' },
@@ -35,6 +46,7 @@ export class ProjectFormComponent implements OnInit {
     private router: Router,
     private route: ActivatedRoute,
     private projectEvents: ProjectEventsService,
+    public auth: AuthService,
   ) {}
 
   ngOnInit() {
@@ -61,7 +73,9 @@ export class ProjectFormComponent implements OnInit {
       environment: ['dev'],
       // CI/CD
       cicdTool:       ['jenkins'],
-      jenkinsUrl:     [''],
+      jenkinsUrl:         [''],
+      jenkinsInternalUrl: [''],
+      jenkinsPublicUrl:   [''],
       jenkinsJobName: ['', [Validators.required, Validators.pattern(/^[a-zA-Z0-9._-]+$/)]],
       jenkinsJobPath: [''],
       githubRepo:     ['', [Validators.required, Validators.pattern(/^[\w-]+\/[\w.-]+$/)]],
@@ -81,6 +95,7 @@ export class ProjectFormComponent implements OnInit {
     this.api.getProject(this.projectId).subscribe({
       next: (p: any) => {
         this.form.patchValue(p);
+        this.jenkinsCredentialConfigured = !!p.jenkinsCredentialConfigured;
         if (p.emailEnabled) this.form.get('emailRecipient')?.enable();
         if (p.slackEnabled) {
           this.form.get('slackChannel')?.enable();
@@ -118,6 +133,29 @@ export class ProjectFormComponent implements OnInit {
         this.loading = false;
         this.saveError = e?.error?.message || 'Erreur lors de la sauvegarde';
       }
+    });
+  }
+
+  saveJenkinsCredentials() {
+    if (!this.projectId || !this.jenkinsCredUsername || !this.jenkinsCredToken) return;
+    this.jenkinsCredBusy = true;
+    this.jenkinsCredMessage = '';
+    this.api.updateJenkinsCredentials(this.projectId, this.jenkinsCredUsername, this.jenkinsCredToken).subscribe({
+      next: () => {
+        this.jenkinsCredBusy = false;
+        this.jenkinsCredSuccess = true;
+        this.jenkinsCredMessage = 'Connexion Jenkins vérifiée.';
+        this.jenkinsCredentialConfigured = true;
+        // Le token n'est jamais reconservé côté client une fois envoyé.
+        this.jenkinsCredUsername = '';
+        this.jenkinsCredToken = '';
+      },
+      error: (e: any) => {
+        this.jenkinsCredBusy = false;
+        this.jenkinsCredSuccess = false;
+        this.jenkinsCredMessage = e?.error?.message || 'Les identifiants Jenkins sont invalides.';
+        this.jenkinsCredToken = '';
+      },
     });
   }
 

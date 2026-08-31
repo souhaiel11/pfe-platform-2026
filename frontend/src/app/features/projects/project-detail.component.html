@@ -230,7 +230,7 @@
           <button *ngIf="canOperate" class="btn btn-action green" (click)="triggerBuild()" [disabled]="buildTriggering">
             {{ buildTriggering ? '⏳ Déclenchement…' : '🔄 Déclencher un build' }}
           </button>
-          <a *ngIf="toolUrl(project.jenkinsUrl, '/job/' + (project.jenkinsJobName || '')) as jenkinsLink" [href]="jenkinsLink" target="_blank" rel="noopener" class="btn btn-action">
+          <a *ngIf="toolUrl(jenkinsPublicUrl(), '/job/' + (project.jenkinsJobName || '')) as jenkinsLink" [href]="jenkinsLink" target="_blank" rel="noopener" class="btn btn-action">
             🔗 Ouvrir Jenkins
           </a>
           <a [href]="buildUrl(ed.build?.url)" target="_blank" rel="noopener" class="btn btn-action" *ngIf="buildUrl(ed.build?.url)">
@@ -320,7 +320,7 @@
             </div>
             <button *ngIf="canRequestPrValidation()" type="button" class="btn btn-success btn-sm"
                     [disabled]="prValidationBusy" (click)="requestPrValidation()">
-              {{prValidationBusy ? 'Validation en attente…' : 'Valider la Pull Request'}}
+              {{prValidationBusy ? 'Validation en attente…' : (prValidationRequest()?.status === 'FAILED' ? 'Réessayer la validation' : 'Valider la Pull Request')}}
             </button>
             <span *ngIf="prValidationRequest()?.status === 'REQUESTED' || prValidationRequest()?.status === 'QUEUED'"
                   class="badge medium">Validation en attente</span>
