@@ -28,6 +28,7 @@ export class ProjectDetailComponent implements OnInit {
   @ViewChild('sonarDrawer') sonarDrawer?: ElementRef<HTMLElement>;
   @ViewChild('batchDialog') batchDialog?: ElementRef<HTMLElement>;
   approving = false;
+  prValidationBusy = false;
   buildTriggering = false;
   @Input() id!: string;
 
@@ -210,6 +211,33 @@ export class ProjectDetailComponent implements OnInit {
   findingId(finding: any): string { return String(finding?.id || finding?.key || ''); }
   isAutoFixEligible(finding: any): boolean { return finding?.remediationType === 'AUTO_FIX_ELIGIBLE'; }
   activeFixRequest(): any { return this.latestReport?.metadata?.fixRequest || null; }
+  prValidationRequest(): any { return this.latestReport?.metadata?.prValidationRequest || null; }
+  canRequestPrValidation(): boolean {
+    const request = this.activeFixRequest();
+    return this.canOperate && request?.status === 'PR_CREATED'
+      && !!this.latestReport?.prUrl && !!request?.prNumber
+      && !this.prValidationRequest()?.status;
+  }
+  requestPrValidation(): void {
+    if (this.prValidationBusy || !this.canRequestPrValidation() || !this.latestReport?.id) return;
+    this.prValidationBusy = true;
+    this.api.requestPrValidation(this.latestReport.id).subscribe({
+      next: (result: any) => {
+        this.prValidationBusy = false;
+        this.latestReport.metadata = {
+          ...(this.latestReport.metadata || {}),
+          prValidationRequest: result?.validationRequest || this.prValidationRequest(),
+        };
+        this.toast.success(result?.duplicate ? 'Cette validation existe déjà.' : 'Validation de la Pull Request mise en attente.');
+        this.loadReports();
+      },
+      error: (error: any) => {
+        this.prValidationBusy = false;
+        this.toast.error('Validation refusée', userHttpError(error, 'Impossible de demander la validation de la Pull Request.'));
+        this.loadReports();
+      },
+    });
+  }
   activeFindingIds(): string[] {
     const request = this.activeFixRequest();
     if (!request || !['APPROVAL_REQUESTED','FIX_STARTING','DISPATCHED','PR_CREATED','VALIDATING'].includes(request.status)) return [];

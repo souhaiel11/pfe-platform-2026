@@ -311,6 +311,27 @@
           </div>
         </div>
 
+        <!-- Action unique du batch de remédiation : jamais une action par finding. -->
+        <div class="card mt-10" *ngIf="activeFixRequest()?.status === 'PR_CREATED' && activeFixRequest()?.prNumber">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+            <div>
+              <div class="card-title">Pull Request de correction</div>
+              <div style="font-size:13px;color:var(--text-secondary);">PR #{{activeFixRequest()?.prNumber}} créée</div>
+            </div>
+            <button *ngIf="canRequestPrValidation()" type="button" class="btn btn-success btn-sm"
+                    [disabled]="prValidationBusy" (click)="requestPrValidation()">
+              {{prValidationBusy ? 'Validation en attente…' : 'Valider la Pull Request'}}
+            </button>
+            <span *ngIf="prValidationRequest()?.status === 'REQUESTED' || prValidationRequest()?.status === 'QUEUED'"
+                  class="badge medium">Validation en attente</span>
+            <span *ngIf="prValidationRequest()?.status === 'RUNNING'" class="badge info">Validation en cours</span>
+            <span *ngIf="prValidationRequest()?.status === 'COMPLETED'" class="badge info">Validée</span>
+            <span *ngIf="prValidationRequest()?.status === 'FAILED'" class="badge high">
+              {{prValidationRequest()?.result === 'INCONCLUSIVE' ? 'Validation non concluante' : 'Validation échouée'}}
+            </span>
+          </div>
+        </div>
+
         <!-- Issues SonarQube détaillées -->
         <div class="card mt-10" *ngIf="ed.sonar?.issues?.length">
           <div class="card-title">🐛 {{ed.sonar.issues.length}} {{ed.sonar.issues.length === 1 ? 'problème détecté' : 'problèmes détectés'}}</div>
