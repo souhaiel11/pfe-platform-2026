@@ -101,8 +101,8 @@ export function isFullGitSha(value: unknown): value is string {
   return typeof value === 'string' && /^[a-f0-9]{40}$/i.test(value);
 }
 
-export function encodePrValidationCause(context: Record<string, unknown>): string {
-  return `PFE_PR_VALIDATION:${Buffer.from(JSON.stringify(context)).toString('base64url')}`;
+export function encodePrValidationContext(context: Record<string, unknown>): string {
+  return Buffer.from(JSON.stringify(context)).toString('base64url');
 }
 
 export type RemediationWorkflow = 'WF2' | 'WF4' | 'WF5';
@@ -841,19 +841,24 @@ export class IncidentsService {
     const resolvedJobPath = resolveJenkinsJobPath(prValidationJob);
     const context = { ...claim.request, jenkinsJob: project.jenkinsJobName, prValidationJob };
     try {
-      const metadataResponse = await fetch(`${project.jenkinsUrl}${resolvedJobPath}/api/json?tree=name,fullName,buildable,_class`, {
+      const metadataTree = 'name,fullName,buildable,_class,property[_class,parameterDefinitions[name,type,_class,defaultParameterValue[value,_class]]]';
+      const metadataResponse = await fetch(`${project.jenkinsUrl}${resolvedJobPath}/api/json?tree=${metadataTree}`, {
         headers: { Authorization: authHeader }, signal: AbortSignal.timeout(10_000),
       });
       if (!metadataResponse.ok) throw new Error(`Jenkins metadata HTTP ${metadataResponse.status}`);
-      if (!isConcreteJenkinsBuildJob(await metadataResponse.json())) throw new Error('Jenkins PR target is not buildable');
+      const jobMetadata: any = await metadataResponse.json();
+      if (!isConcreteJenkinsBuildJob(jobMetadata)) throw new Error('Jenkins PR target is not buildable');
+      const definitions = getJenkinsParameterDefinitions(jobMetadata);
+      if (!definitions.some(definition => definition.name === 'PFE_VALIDATION_CONTEXT')) throw new Error('Jenkins PR validation parameter is unavailable');
       const crumbResponse = await fetch(`${project.jenkinsUrl}/crumbIssuer/api/json`, {
         headers: { Authorization: authHeader }, signal: AbortSignal.timeout(10_000),
       });
       if (!crumbResponse.ok) throw new Error(`Jenkins crumb HTTP ${crumbResponse.status}`);
       const crumb: any = await crumbResponse.json();
-      const cause = encodePrValidationCause(context);
-      const buildResponse = await fetch(`${project.jenkinsUrl}${resolvedJobPath}/build?cause=${encodeURIComponent(cause)}`, {
-        method: 'POST', headers: { Authorization: authHeader, [crumb.crumbRequestField]: crumb.crumb },
+      const resolvedParameters = resolveJenkinsParameters(definitions, { PFE_VALIDATION_CONTEXT: encodePrValidationContext(context) });
+      const buildResponse = await fetch(`${project.jenkinsUrl}${resolvedJobPath}/buildWithParameters`, {
+        method: 'POST', headers: { Authorization: authHeader, [crumb.crumbRequestField]: crumb.crumb, 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: resolvedParameters.body,
         signal: AbortSignal.timeout(10_000),
       });
       const queueUrl = buildResponse.headers.get('location');

@@ -1,5 +1,5 @@
 import * as assert from 'node:assert/strict';
-import { canRetryFixRequest, encodePrValidationCause, IncidentsService, isFullGitSha, prValidationIdentity, remediationBatchIdentity, resolveRemediationBatch } from './incidents.service';
+import { canRetryFixRequest, encodePrValidationContext, IncidentsService, isFullGitSha, prValidationIdentity, remediationBatchIdentity, resolveRemediationBatch } from './incidents.service';
 
 const sonar = (id: string, extra: any = {}) => ({
   id, source: 'SONARQUBE', stage: 'sonar', remediationType: 'AUTO_FIX_ELIGIBLE',
@@ -24,7 +24,7 @@ assert.equal(canRetryFixRequest({ ...retryable, attempts: [...retryable.attempts
 assert.equal(isFullGitSha('a'.repeat(40)), true);
 assert.equal(isFullGitSha('a'.repeat(8)), false);
 assert.equal(prValidationIdentity('p', 24, 'A'.repeat(40), 'b'), prValidationIdentity('p', 24, 'a'.repeat(40), 'b'));
-assert.match(encodePrValidationCause({ validationRequestId: 'v' }), /^PFE_PR_VALIDATION:/);
+assert.match(encodePrValidationContext({ validationRequestId: 'v' }), /^[A-Za-z0-9_-]+$/);
 
 // Double soumission équivalente : une seule transaction crée la demande et
 // une seule invocation future est dispatchée. Aucun service externe réel.

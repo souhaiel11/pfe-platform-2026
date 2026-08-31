@@ -40,9 +40,9 @@ async function main() {
   globalThis.fetch = async (url: any) => {
     const value = String(url);
     if (value.includes('api.github.com')) return new Response(JSON.stringify({ state: 'open', head: { sha, ref: `fix/pfe-${incident.id}-request-1` } }), { status: 200 });
-    if (value.includes('/api/json')) return new Response(JSON.stringify({ buildable: true, _class: 'org.jenkinsci.plugins.workflow.job.WorkflowJob' }), { status: 200 });
+    if (value.includes('/api/json')) return new Response(JSON.stringify({ buildable: true, _class: 'org.jenkinsci.plugins.workflow.job.WorkflowJob', property: [{ _class: 'hudson.model.ParametersDefinitionProperty', parameterDefinitions: [{ name: 'PFE_VALIDATION_CONTEXT', type: 'StringParameterDefinition', defaultParameterValue: { value: '' } }] }] }), { status: 200 });
     if (value.includes('crumbIssuer')) return new Response(JSON.stringify({ crumbRequestField: 'Jenkins-Crumb', crumb: 'opaque' }), { status: 200 });
-    if (value.includes('/build?cause=')) { triggers++; return new Response('', { status: 201, headers: { location: 'http://jenkins/queue/item/42/' } }); }
+    if (value.includes('/buildWithParameters')) { triggers++; return new Response('', { status: 201, headers: { location: 'http://jenkins/queue/item/42/' } }); }
     throw new Error(`unexpected URL ${value}`);
   };
   try {

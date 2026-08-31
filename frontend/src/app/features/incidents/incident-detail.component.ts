@@ -570,8 +570,7 @@ export class IncidentDetailComponent implements OnInit, OnDestroy {
   canRequestPrValidation(): boolean {
     const fix = this.incident?.metadata?.fixRequest;
     const state = this.prValidationRequest?.status;
-    return fix?.status === 'PR_CREATED' && !!this.incident?.prUrl
-      && !['REQUESTED', 'QUEUED', 'RUNNING', 'COMPLETED'].includes(state);
+    return fix?.status === 'PR_CREATED' && !!this.incident?.prUrl && !state;
   }
 
   requestPrValidation(): void {
