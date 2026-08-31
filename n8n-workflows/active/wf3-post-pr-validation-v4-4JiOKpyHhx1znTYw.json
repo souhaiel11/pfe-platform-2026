@@ -1,1 +1,256 @@
-[{"name":"WF3 - Post-PR Validation v4","nodes":[{"parameters":{"workflowInputs":{"values":[{"name":"payload"}]}},"type":"n8n-nodes-base.executeWorkflowTrigger","typeVersion":1.1,"position":[-1728,128],"id":"4200503d-a782-49a2-973a-8d8fac526508","name":"WF3 Trigger"},{"parameters":{"jsCode":"let input=$input.first().json; if(input.payload) input=typeof input.payload==='string'?JSON.parse(input.payload):input.payload; if(input.body) input=input.body;\nconst required=['projectId','incidentId','fixRequestId','repository','prNumber','buildNumber','jenkinsJob','jenkinsStatus']; const missing=required.filter(k=>input[k]===undefined||input[k]===null||input[k]===''); if(missing.length) throw new Error('INVALID_VALIDATION_CONTRACT:'+missing.join(','));\nconst repository=String(input.repository).replace(/^https?:\\/\\/github\\.com\\//,'').replace(/\\.git$/,'').toLowerCase(); if(repository.split('/').length!==2) throw new Error('INVALID_REPOSITORY');\nreturn [{json:{projectId:String(input.projectId),incidentId:String(input.incidentId),fixRequestId:String(input.fixRequestId),repository,prNumber:Number(input.prNumber),prUrl:String(input.prUrl||''),buildNumber:Number(input.buildNumber),buildUrl:String(input.buildUrl||''),jenkinsJob:String(input.jenkinsJob),jenkinsStatus:String(input.jenkinsStatus).toUpperCase(),analysisId:input.analysisId?String(input.analysisId):null,requiredStages:Array.isArray(input.requiredStages)?input.requiredStages:[],unresolvedBlockingCount:Number(input.unresolvedBlockingCount||0)}}];"},"type":"n8n-nodes-base.code","typeVersion":2,"position":[-1488,128],"id":"2c269fb4-a7f8-48c2-b789-1b2fb5e73278","name":"Extract Validation Context"},{"parameters":{"url":"=http://sonarqube:9000/api/qualitygates/project_status?analysisId={{ $('Extract Validation Context').first().json.analysisId || '__CORRELATION_MISSING__' }}","authentication":"predefinedCredentialType","nodeCredentialType":"httpBasicAuth","options":{"timeout":15000}},"type":"n8n-nodes-base.httpRequest","typeVersion":4.2,"position":[-1008,128],"id":"d01c0218-7f24-47ba-88ef-fd72ef3f7e48","name":"Get SonarQube PR Quality Gate","retryOnFail":true,"maxTries":5,"waitBetweenTries":10000,"onError":"continueRegularOutput"},{"parameters":{"operation":"executeQuery","query":"SELECT i.id, i.\"projectId\", i.\"prUrl\", i.\"jenkinsJobName\", i.\"buildNumber\", i.metadata, p.\"sonarqubeKey\"\nFROM incidents i JOIN projects p ON p.id=i.\"projectId\"\nWHERE i.id = '{{ $(\"Extract Validation Context\").first().json.incidentId }}'\nAND i.\"projectId\" = '{{ $(\"Extract Validation Context\").first().json.projectId }}'\nAND lower(regexp_replace(p.\"githubRepo\", '^(https?://github.com/)?|[.]git$', '', 'g')) = '{{ $(\"Extract Validation Context\").first().json.repository }}'\nAND i.\"prUrl\" LIKE '%/' || '{{ $(\"Extract Validation Context\").first().json.repository }}' || '/pull/' || '{{ $(\"Extract Validation Context\").first().json.prNumber }}'\nAND i.metadata->'fixRequest'->>'requestId' = '{{ $(\"Extract Validation Context\").first().json.fixRequestId }}'\nLIMIT 1;","options":{}},"type":"n8n-nodes-base.postgres","typeVersion":2.4,"position":[-768,128],"id":"ecac5010-71af-40cd-bbda-c92b7005e9e1","name":"Get Incident From DB","credentials":{"postgres":{"id":"QbldelWaygwFqFUL","name":"Postgres account"}},"onError":"continueRegularOutput"},{"parameters":{"jsCode":"const ctx=$('Extract Validation Context').first().json;let incident={};try{incident=$('Get Incident From DB').first().json||{}}catch{};let sonar={};try{sonar=$('Get SonarQube PR Quality Gate').first().json||{}}catch{};let findingSearch={};try{findingSearch=$('Get SonarQube Approved Findings').first().json||{}}catch{};const prepared=$('Prepare Approved Finding Validation').first().json;\nconst sonarCorrelationVerified=!!ctx.analysisId&&!!sonar.projectStatus;const sonarStatus=sonarCorrelationVerified?String(sonar.projectStatus.status||'UNAVAILABLE').toUpperCase():'CORRELATION_PENDING';const jenkinsStatus=ctx.jenkinsStatus;const requiredFailures=ctx.requiredStages.filter(s=>s.required!==false&&s.status!=='PASSED'&&!(s.status==='WARNING'&&!s.blocking));\nconst searchAvailable=Array.isArray(findingSearch.issues);const normalizeFile=value=>String(value||'').replace(/^[^:]+:/,'').replace(/^\\/+/, '');const openIssues=searchAvailable?findingSearch.issues:[];const findingResults=prepared.findings.map(f=>{if(!searchAvailable)return{findingId:String(f.findingId),result:'INCONCLUSIVE',evidence:'Sonar PR issue search unavailable'};const match=openIssues.find(issue=>String(issue.rule||'')===String(f.rule||'')&&normalizeFile(issue.component).endsWith(normalizeFile(f.file))&&(!f.line||!issue.line||Number(issue.line)===Number(f.line)));return match?{findingId:String(f.findingId),result:'INVALID',evidence:'Sonar PR issue '+String(match.key||match.rule)+' remains open'}:{findingId:String(f.findingId),result:'VALID',evidence:'Sonar PR analysis '+String(ctx.analysisId)+': approved finding is absent'};});\nconst everyFindingValid=findingResults.length===prepared.findingIds.length&&findingResults.every(r=>r.result==='VALID');const correlationVerified=!!incident?.id&&incident.id===ctx.incidentId&&Number(ctx.buildNumber)>Number(incident.buildNumber||0)&&sonarCorrelationVerified;const passed=jenkinsStatus==='SUCCESS'&&sonarStatus==='OK'&&correlationVerified&&requiredFailures.length===0&&ctx.unresolvedBlockingCount===0&&everyFindingValid;const anyInvalid=findingResults.some(r=>r.result==='INVALID');\nreturn [{json:{...ctx,findingResults,validationStatus:passed?'VALIDATED':anyInvalid?'INVALID':'INCONCLUSIVE',passed,sonarStatus,sonarCorrelationVerified,correlationVerified,requiredStagesStatus:requiredFailures.length?'FAILED':'PASSED',failureReasons:[jenkinsStatus!=='SUCCESS'?'Jenkins='+jenkinsStatus:null,sonarStatus!=='OK'?'Sonar='+sonarStatus:null,!correlationVerified?'Correlation unverified':null,!everyFindingValid?'Approved finding validation incomplete':null,...requiredFailures.map(s=>s.stage+'='+s.status),ctx.unresolvedBlockingCount?ctx.unresolvedBlockingCount+' unresolved blockers':null].filter(Boolean),timestamp:new Date().toISOString()}}];"},"type":"n8n-nodes-base.code","typeVersion":2,"position":[-528,128],"id":"38d6151c-6ca8-413d-9cd1-7fea15405da4","name":"Consolidate Validation Result"},{"parameters":{"method":"POST","url":"=http://backend:3001/api/incidents/{{ $('Consolidate Validation Result').first().json.incidentId }}/validation","sendHeaders":true,"headerParameters":{"parameters":[{"name":"Content-Type","value":"application/json"},{"name":"X-Internal-Secret","value":"={{ $env.N8N_INTERNAL_SECRET }}"}]},"sendBody":true,"specifyBody":"json","jsonBody":"={{ JSON.stringify($('Consolidate Validation Result').first().json) }}","options":{"timeout":15000}},"type":"n8n-nodes-base.httpRequest","typeVersion":4.2,"position":[272,0],"id":"0b96257e-f9f4-442e-bf95-ba69a550585c","name":"Persist Correlated Validation","onError":"continueRegularOutput"},{"id":"wf3-prepare-approved-findings","name":"Prepare Approved Finding Validation","type":"n8n-nodes-base.code","typeVersion":2,"position":[-640,0],"parameters":{"jsCode":"const incident=$input.first().json||{};let metadata=incident.metadata||{};if(typeof metadata==='string')metadata=JSON.parse(metadata);const fix=metadata.fixRequest||{};const findings=Array.isArray(fix.findings)?fix.findings:[];const findingIds=Array.isArray(fix.findingIds)?fix.findingIds.map(String):[];if(!findingIds.length||findings.length!==findingIds.length)throw new Error('APPROVED_FINDING_BATCH_UNAVAILABLE');const projectKey=String(incident.sonarqubeKey||'');if(!projectKey)throw new Error('SONAR_PROJECT_KEY_UNAVAILABLE');const rules=[...new Set(findings.map(f=>f.rule).filter(Boolean))];const pr=$('Extract Validation Context').first().json.prNumber;const url='http://sonarqube:9000/api/issues/search?componentKeys='+encodeURIComponent(projectKey)+'&pullRequest='+encodeURIComponent(pr)+'&rules='+encodeURIComponent(rules.join(','))+'&ps=500';return [{json:{url,findings,findingIds,analysisId:$('Extract Validation Context').first().json.analysisId}}];"}},{"id":"wf3-get-approved-findings","name":"Get SonarQube Approved Findings","type":"n8n-nodes-base.httpRequest","typeVersion":4.2,"position":[-416,0],"onError":"continueErrorOutput","parameters":{"url":"={{ $json.url }}","authentication":"predefinedCredentialType","nodeCredentialType":"httpBasicAuth","options":{"timeout":15000}}}],"connections":{"WF3 Trigger":{"main":[[{"node":"Extract Validation Context","type":"main","index":0}]]},"Extract Validation Context":{"main":[[{"node":"Get SonarQube PR Quality Gate","type":"main","index":0}]]},"Get SonarQube PR Quality Gate":{"main":[[{"node":"Get Incident From DB","type":"main","index":0}]]},"Get Incident From DB":{"main":[[{"node":"Prepare Approved Finding Validation","type":"main","index":0}]]},"Consolidate Validation Result":{"main":[[{"node":"Persist Correlated Validation","type":"main","index":0}]]},"Prepare Approved Finding Validation":{"main":[[{"node":"Get SonarQube Approved Findings","type":"main","index":0}]]},"Get SonarQube Approved Findings":{"main":[[{"node":"Consolidate Validation Result","type":"main","index":0}],[{"node":"Consolidate Validation Result","type":"main","index":0}]]}},"active":true,"settings":{"executionOrder":"v1","binaryMode":"separate"},"id":"4JiOKpyHhx1znTYw","meta":{},"pinData":{}}]
+[
+  {
+    "name": "WF3 - Post-PR Validation v4",
+    "nodes": [
+      {
+        "parameters": {
+          "workflowInputs": {
+            "values": [
+              {
+                "name": "payload"
+              }
+            ]
+          }
+        },
+        "type": "n8n-nodes-base.executeWorkflowTrigger",
+        "typeVersion": 1.1,
+        "position": [
+          -1728,
+          128
+        ],
+        "id": "4200503d-a782-49a2-973a-8d8fac526508",
+        "name": "WF3 Trigger"
+      },
+      {
+        "parameters": {
+          "jsCode": "let input=$input.first().json;if(input.payload)input=typeof input.payload==='string'?JSON.parse(input.payload):input.payload;if(input.body)input=input.body;\nconst required=[\"validationRequestId\",\"projectId\",\"incidentId\",\"fixRequestId\",\"batchId\",\"batchKey\",\"attemptCount\",\"repository\",\"prNumber\",\"prHeadBranch\",\"expectedPrHeadSha\",\"checkoutSha\",\"jenkinsJob\",\"prValidationJob\",\"jenkinsBuildNumber\",\"jenkinsBuildUrl\",\"jenkinsStatus\",\"ceTaskId\",\"analysisId\",\"requiredStages\"];const missing=required.filter(k=>input[k]===undefined||input[k]===null||input[k]===''||(k==='requiredStages'&&!Array.isArray(input[k])));if(missing.length)throw new Error('INVALID_VALIDATION_CONTRACT:'+missing.join(','));\nconst fullSha=v=>/^[a-f0-9]{40}$/i.test(String(v||''));if(!fullSha(input.expectedPrHeadSha)||!fullSha(input.checkoutSha)||String(input.expectedPrHeadSha).toLowerCase()!==String(input.checkoutSha).toLowerCase())throw new Error('PR_HEAD_SHA_MISMATCH');\nconst repository=String(input.repository).replace(/^https?:\\/\\/github\\.com\\//,'').replace(/\\.git$/,'').toLowerCase();if(repository.split('/').length!==2)throw new Error('INVALID_REPOSITORY');\nreturn [{json:{...input,repository,prNumber:Number(input.prNumber),attemptCount:Number(input.attemptCount),buildNumber:Number(input.jenkinsBuildNumber),buildUrl:String(input.jenkinsBuildUrl),jenkinsStatus:String(input.jenkinsStatus).toUpperCase(),expectedPrHeadSha:String(input.expectedPrHeadSha).toLowerCase(),checkoutSha:String(input.checkoutSha).toLowerCase(),requiredStages:input.requiredStages}}];"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          -1488,
+          128
+        ],
+        "id": "2c269fb4-a7f8-48c2-b789-1b2fb5e73278",
+        "name": "Extract Validation Context"
+      },
+      {
+        "parameters": {
+          "url": "=http://sonarqube:9000/api/qualitygates/project_status?analysisId={{ $('Extract Validation Context').first().json.analysisId || '__CORRELATION_MISSING__' }}",
+          "authentication": "predefinedCredentialType",
+          "nodeCredentialType": "httpBasicAuth",
+          "options": {
+            "timeout": 15000
+          }
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          -1008,
+          128
+        ],
+        "id": "d01c0218-7f24-47ba-88ef-fd72ef3f7e48",
+        "name": "Get SonarQube PR Quality Gate",
+        "retryOnFail": true,
+        "maxTries": 5,
+        "waitBetweenTries": 10000,
+        "onError": "continueRegularOutput"
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "SELECT i.id, i.\"projectId\", i.\"prUrl\", i.\"jenkinsJobName\", i.\"buildNumber\", i.metadata, p.\"sonarqubeKey\"\nFROM incidents i JOIN projects p ON p.id=i.\"projectId\"\nWHERE i.id = '{{ $(\"Extract Validation Context\").first().json.incidentId }}'\nAND i.\"projectId\" = '{{ $(\"Extract Validation Context\").first().json.projectId }}'\nAND lower(regexp_replace(p.\"githubRepo\", '^(https?://github.com/)?|[.]git$', '', 'g')) = '{{ $(\"Extract Validation Context\").first().json.repository }}'\nAND i.\"prUrl\" LIKE '%/' || '{{ $(\"Extract Validation Context\").first().json.repository }}' || '/pull/' || '{{ $(\"Extract Validation Context\").first().json.prNumber }}'\nAND i.metadata->'fixRequest'->>'requestId' = '{{ $(\"Extract Validation Context\").first().json.fixRequestId }}'\nAND i.metadata->'fixRequest'->>'batchId' = '{{ $(\"Extract Validation Context\").first().json.batchId }}'\nAND COALESCE(i.metadata->'fixRequest'->>'batchKey',i.metadata->'fixRequest'->>'batchId') = '{{ $(\"Extract Validation Context\").first().json.batchKey }}'\nAND (i.metadata->'fixRequest'->>'attemptCount')::int = {{ $(\"Extract Validation Context\").first().json.attemptCount }}\nAND i.metadata->'prValidationRequest'->>'validationRequestId' = '{{ $(\"Extract Validation Context\").first().json.validationRequestId }}'\nAND lower(i.metadata->'prValidationRequest'->>'expectedPrHeadSha') = '{{ $(\"Extract Validation Context\").first().json.expectedPrHeadSha }}'\nLIMIT 1;",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.4,
+        "position": [
+          -768,
+          128
+        ],
+        "id": "ecac5010-71af-40cd-bbda-c92b7005e9e1",
+        "name": "Get Incident From DB",
+        "credentials": {
+          "postgres": {
+            "id": "QbldelWaygwFqFUL",
+            "name": "Postgres account"
+          }
+        },
+        "onError": "continueRegularOutput"
+      },
+      {
+        "parameters": {
+          "jsCode": "const ctx=$('Extract Validation Context').first().json;let incident={};try{incident=$('Get Incident From DB').first().json||{}}catch{};let sonar={};try{sonar=$('Get SonarQube PR Quality Gate').first().json||{}}catch{};let findingSearch={};try{findingSearch=$('Get SonarQube Approved Findings').first().json||{}}catch{};const prepared=$('Prepare Approved Finding Validation').first().json;\nconst sonarCorrelationVerified=!!ctx.ceTaskId&&!!ctx.analysisId&&!!sonar.projectStatus;const sonarStatus=sonarCorrelationVerified?String(sonar.projectStatus.status||'UNAVAILABLE').toUpperCase():'CORRELATION_PENDING';const requiredNames=['build','tests','sonar'];const missingStage=requiredNames.filter(name=>!ctx.requiredStages.some(s=>s.stage===name&&s.required===true));const requiredFailures=ctx.requiredStages.filter(s=>s.required!==false&&s.status!=='PASSED'&&!(s.status==='WARNING'&&!s.blocking));\nconst searchAvailable=Array.isArray(findingSearch.issues);const normalizeFile=value=>String(value||'').replace(/^[^:]+:/,'').replace(/^\\/+/, '');const openIssues=searchAvailable?findingSearch.issues:[];const findingResults=prepared.findings.map(f=>{if(!searchAvailable)return{findingId:String(f.findingId),rule:f.rule,result:'INCONCLUSIVE',evidence:'Sonar PR issue search unavailable'};const match=openIssues.find(issue=>String(issue.rule||'')===String(f.rule||'')&&normalizeFile(issue.component).endsWith(normalizeFile(f.file))&&(!f.line||!issue.line||Number(issue.line)===Number(f.line)));return match?{findingId:String(f.findingId),rule:f.rule,result:'INVALID',evidence:'Sonar PR issue '+String(match.key||match.rule)+' remains open'}:{findingId:String(f.findingId),rule:f.rule,result:'VALID',evidence:'Exact PR analysis '+ctx.analysisId+' at '+ctx.checkoutSha+': approved finding absent'};});\nconst everyFindingValid=findingResults.length===prepared.findingIds.length&&findingResults.every(r=>r.result==='VALID');const shaVerified=ctx.expectedPrHeadSha===ctx.checkoutSha;const correlationVerified=!!incident?.id&&incident.id===ctx.incidentId&&sonarCorrelationVerified&&shaVerified;const passed=ctx.jenkinsStatus==='SUCCESS'&&sonarStatus==='OK'&&correlationVerified&&!missingStage.length&&!requiredFailures.length&&Number(ctx.unresolvedBlockingCount||0)===0&&everyFindingValid;const anyInvalid=findingResults.some(r=>r.result==='INVALID');\nreturn [{json:{...ctx,findingResults,validationStatus:passed?'VALIDATED':anyInvalid?'INVALID':'INCONCLUSIVE',passed,sonarStatus,sonarCorrelationVerified,correlationVerified,finalStateVerified:shaVerified,requiredStagesStatus:(!missingStage.length&&!requiredFailures.length)?'PASSED':'FAILED',failureReasons:[ctx.jenkinsStatus!=='SUCCESS'?'Jenkins='+ctx.jenkinsStatus:null,sonarStatus!=='OK'?'Sonar='+sonarStatus:null,!shaVerified?'PR HEAD mismatch':null,!correlationVerified?'Correlation unverified':null,!everyFindingValid?'Approved finding validation incomplete':null,...missingStage.map(s=>'Required stage missing='+s),...requiredFailures.map(s=>s.stage+'='+s.status)].filter(Boolean),timestamp:new Date().toISOString()}}];"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          -528,
+          128
+        ],
+        "id": "38d6151c-6ca8-413d-9cd1-7fea15405da4",
+        "name": "Consolidate Validation Result"
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "=http://backend:3001/api/incidents/{{ $('Consolidate Validation Result').first().json.incidentId }}/validation",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "name": "X-Internal-Secret",
+                "value": "={{ $env.N8N_INTERNAL_SECRET }}"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify($('Consolidate Validation Result').first().json) }}",
+          "options": {
+            "timeout": 15000
+          }
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          272,
+          0
+        ],
+        "id": "0b96257e-f9f4-442e-bf95-ba69a550585c",
+        "name": "Persist Correlated Validation",
+        "onError": "continueRegularOutput"
+      },
+      {
+        "id": "wf3-prepare-approved-findings",
+        "name": "Prepare Approved Finding Validation",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          -640,
+          0
+        ],
+        "parameters": {
+          "jsCode": "const incident=$input.first().json||{};let metadata=incident.metadata||{};if(typeof metadata==='string')metadata=JSON.parse(metadata);const fix=metadata.fixRequest||{};const findings=Array.isArray(fix.findings)?fix.findings:[];const findingIds=Array.isArray(fix.findingIds)?fix.findingIds.map(String):[];if(!findingIds.length||findings.length!==findingIds.length)throw new Error('APPROVED_FINDING_BATCH_UNAVAILABLE');const projectKey=String(incident.sonarqubeKey||'');if(!projectKey)throw new Error('SONAR_PROJECT_KEY_UNAVAILABLE');const rules=[...new Set(findings.map(f=>f.rule).filter(Boolean))];const pr=$('Extract Validation Context').first().json.prNumber;const url='http://sonarqube:9000/api/issues/search?componentKeys='+encodeURIComponent(projectKey)+'&pullRequest='+encodeURIComponent(pr)+'&rules='+encodeURIComponent(rules.join(','))+'&ps=500';return [{json:{url,findings,findingIds,analysisId:$('Extract Validation Context').first().json.analysisId}}];"
+        }
+      },
+      {
+        "id": "wf3-get-approved-findings",
+        "name": "Get SonarQube Approved Findings",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          -416,
+          0
+        ],
+        "onError": "continueErrorOutput",
+        "parameters": {
+          "url": "={{ $json.url }}",
+          "authentication": "predefinedCredentialType",
+          "nodeCredentialType": "httpBasicAuth",
+          "options": {
+            "timeout": 15000
+          }
+        }
+      }
+    ],
+    "connections": {
+      "WF3 Trigger": {
+        "main": [
+          [
+            {
+              "node": "Extract Validation Context",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Extract Validation Context": {
+        "main": [
+          [
+            {
+              "node": "Get SonarQube PR Quality Gate",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Get SonarQube PR Quality Gate": {
+        "main": [
+          [
+            {
+              "node": "Get Incident From DB",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Get Incident From DB": {
+        "main": [
+          [
+            {
+              "node": "Prepare Approved Finding Validation",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Consolidate Validation Result": {
+        "main": [
+          [
+            {
+              "node": "Persist Correlated Validation",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Prepare Approved Finding Validation": {
+        "main": [
+          [
+            {
+              "node": "Get SonarQube Approved Findings",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Get SonarQube Approved Findings": {
+        "main": [
+          [
+            {
+              "node": "Consolidate Validation Result",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Consolidate Validation Result",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "active": true,
+    "settings": {
+      "executionOrder": "v1",
+      "binaryMode": "separate"
+    },
+    "id": "4JiOKpyHhx1znTYw",
+    "meta": {},
+    "pinData": {}
+  }
+]

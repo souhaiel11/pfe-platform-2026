@@ -742,7 +742,7 @@
           "workflowInputs": {
             "mappingMode": "defineBelow",
             "value": {
-              "payload": "={{ JSON.stringify($json.body || $json) }}"
+              "payload": "={{ JSON.stringify($json) }}"
             },
             "matchingColumns": [
               "payload"
@@ -1130,6 +1130,19 @@
           31616,
           23032
         ]
+      },
+      {
+        "id": "wf1-validate-pr-contract",
+        "name": "Validate PR Validation Contract",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          2464,
+          -96
+        ],
+        "parameters": {
+          "jsCode": "let input=$input.first().json; if(input.body) input=input.body;\nconst required=[\"validationRequestId\",\"projectId\",\"incidentId\",\"fixRequestId\",\"batchId\",\"batchKey\",\"attemptCount\",\"repository\",\"prNumber\",\"prHeadBranch\",\"expectedPrHeadSha\",\"checkoutSha\",\"jenkinsJob\",\"prValidationJob\",\"jenkinsBuildNumber\",\"jenkinsBuildUrl\",\"jenkinsStatus\",\"ceTaskId\",\"analysisId\",\"requiredStages\"];\nconst missing=required.filter(k=>input[k]===undefined||input[k]===null||input[k]===''||(k==='requiredStages'&&!Array.isArray(input[k])));\nif(missing.length) throw new Error('INVALID_PR_VALIDATION_CONTRACT:'+missing.join(','));\nconst sha=v=>/^[a-f0-9]{40}$/i.test(String(v||''));\nif(!sha(input.expectedPrHeadSha)||!sha(input.checkoutSha)||String(input.expectedPrHeadSha).toLowerCase()!==String(input.checkoutSha).toLowerCase()) throw new Error('PR_HEAD_SHA_MISMATCH');\nif(!Number.isInteger(Number(input.attemptCount))||Number(input.attemptCount)<1) throw new Error('INVALID_ATTEMPT');\nif(!Number.isInteger(Number(input.prNumber))||Number(input.prNumber)<1) throw new Error('INVALID_PR_NUMBER');\nreturn [{json:input}];"
+        }
       }
     ],
     "connections": {
@@ -1534,7 +1547,7 @@
         "main": [
           [
             {
-              "node": "Call WF3 - Post-PR Validation",
+              "node": "Validate PR Validation Contract",
               "type": "main",
               "index": 0
             }
@@ -1659,6 +1672,17 @@
           [
             {
               "node": "Fetch Trivy Report1",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Validate PR Validation Contract": {
+        "main": [
+          [
+            {
+              "node": "Call WF3 - Post-PR Validation",
               "type": "main",
               "index": 0
             }

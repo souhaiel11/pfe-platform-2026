@@ -60,6 +60,15 @@
                       class="btn btn-secondary btn-sm" [disabled]="approvalBusy" (click)="rejectFix()">
                 ✕ Refuser / corriger manuellement
               </button>
+              <button *ngIf="hasRealPr() && canRequestPrValidation()"
+                      class="btn btn-success btn-sm" [disabled]="prValidationBusy" (click)="requestPrValidation()">
+                {{prValidationBusy ? 'Validation en attente…' : 'Valider la Pull Request'}}
+              </button>
+              <span *ngIf="prValidationRequest?.status === 'REQUESTED' || prValidationRequest?.status === 'QUEUED'"
+                    class="badge medium">Validation en attente</span>
+              <span *ngIf="prValidationRequest?.status === 'RUNNING'" class="badge info">Validation en cours</span>
+              <span *ngIf="prValidationRequest?.status === 'COMPLETED'" class="badge info">Validée</span>
+              <span *ngIf="prValidationRequest?.status === 'FAILED'" class="badge high">Validation échouée</span>
             </div>
           </div>
           <div *ngIf="approvalError" style="margin-top:10px;color:var(--accent-red);font-size:12px;">{{approvalError}}</div>

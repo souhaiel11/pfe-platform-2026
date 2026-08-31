@@ -47,6 +47,8 @@ export class IncidentDetailComponent implements OnInit, OnDestroy {
   generatingWF4Fix = false;
   generatingWF5Fix = false;
   approvalBusy = false;
+  prValidationBusy = false;
+  prValidationRequest: any = null;
   approvalError: string | null = null;
   decision:    any  = null;   // legacy
   loading      = true;
@@ -515,6 +517,7 @@ export class IncidentDetailComponent implements OnInit, OnDestroy {
         this.enrichedData = inc.metadata?.enrichedData || null;
         // ── Données WF3 ──
         this.validation   = inc.metadata?.validation || null;
+        this.prValidationRequest = inc.metadata?.prValidationRequest || null;
         // ── Build Jenkins direct (source='jenkins') ──
         this.classification = inc.source === 'jenkins'
           ? classify(inc.errorReason)
@@ -561,6 +564,31 @@ export class IncidentDetailComponent implements OnInit, OnDestroy {
     this.api.rejectFix(this.id).subscribe({
       next: () => { this.approvalBusy = false; this.toast.success('Correction refusée — action manuelle conservée'); this.load(); },
       error: (err: any) => { this.approvalBusy = false; this.approvalError = err?.error?.message || 'Impossible de rejeter'; this.toast.error('Erreur', this.approvalError || 'Impossible de rejeter'); }
+    });
+  }
+
+  canRequestPrValidation(): boolean {
+    const fix = this.incident?.metadata?.fixRequest;
+    const state = this.prValidationRequest?.status;
+    return fix?.status === 'PR_CREATED' && !!this.incident?.prUrl
+      && !['REQUESTED', 'QUEUED', 'RUNNING', 'COMPLETED'].includes(state);
+  }
+
+  requestPrValidation(): void {
+    if (this.prValidationBusy || !this.canRequestPrValidation()) return;
+    this.prValidationBusy = true;
+    this.api.requestPrValidation(this.id).subscribe({
+      next: (result: any) => {
+        this.prValidationBusy = false;
+        this.prValidationRequest = result?.validationRequest || this.prValidationRequest;
+        this.toast.success(result?.duplicate ? 'Cette validation existe déjà.' : 'Validation de la Pull Request mise en attente.');
+        this.load();
+      },
+      error: (err: any) => {
+        this.prValidationBusy = false;
+        this.toast.error('Validation refusée', userHttpError(err, 'Impossible de demander la validation de la Pull Request.'));
+        this.load();
+      },
     });
   }
 

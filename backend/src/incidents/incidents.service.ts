@@ -91,6 +91,20 @@ export function selectJenkinsTriggerEndpoint(parameterized: boolean): 'build' | 
   return parameterized ? 'buildWithParameters' : 'build';
 }
 
+export type PrValidationStatus = 'REQUESTED' | 'QUEUED' | 'RUNNING' | 'COMPLETED' | 'FAILED';
+
+export function prValidationIdentity(projectId: string, prNumber: number, prHeadSha: string, batchId: string): string {
+  return createHash('sha256').update(`${projectId}\n${prNumber}\n${prHeadSha.toLowerCase()}\n${batchId}`).digest('hex');
+}
+
+export function isFullGitSha(value: unknown): value is string {
+  return typeof value === 'string' && /^[a-f0-9]{40}$/i.test(value);
+}
+
+export function encodePrValidationCause(context: Record<string, unknown>): string {
+  return `PFE_PR_VALIDATION:${Buffer.from(JSON.stringify(context)).toString('base64url')}`;
+}
+
 export type RemediationWorkflow = 'WF2' | 'WF4' | 'WF5';
 
 export type WorkflowBatchStatus = 'FAILED' | 'PR_CREATED';
@@ -198,6 +212,29 @@ export class IncidentsService {
    */
   private sanitizeIncident(incident: any) {
     return sanitizeEntityProject(incident);
+  }
+
+  private canonicalRepository(value: string): string {
+    return String(value || '').replace(/^https?:\/\/github\.com\//, '').replace(/\.git$/, '').replace(/^\/+|\/+$/g, '').toLowerCase();
+  }
+
+  private async githubPullRequest(project: Project, prNumber: number): Promise<any> {
+    const repository = this.canonicalRepository(project.githubRepo);
+    if (!repository || repository.split('/').length !== 2 || !project.githubToken) {
+      throw new BadRequestException('GitHub n’est pas configuré pour valider cette Pull Request.');
+    }
+    const response = await fetch(`https://api.github.com/repos/${repository}/pulls/${prNumber}`, {
+      headers: {
+        Authorization: `Bearer ${project.githubToken}`,
+        Accept: 'application/vnd.github+json',
+        'User-Agent': 'pfe-pr-validation',
+      },
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (!response.ok) {
+      throw new BadGatewayException('La Pull Request ne peut pas être vérifiée auprès de GitHub.');
+    }
+    return response.json();
   }
 
   async findAll(projectId?: string, status?: string, size?: number) {
@@ -427,18 +464,37 @@ export class IncidentsService {
     const repository = canonicalRepo(validation.repository);
     const projectRepository = canonicalRepo(incident.project?.githubRepo);
     if (!validation.projectId || validation.projectId !== incident.projectId) throw new BadRequestException('La validation ne correspond pas au projet de l’incident.');
+    const validationRequest: any = currentMeta.prValidationRequest || null;
     if (!validation.fixRequestId || validation.fixRequestId !== fixRequest.requestId) throw new ConflictException('La validation ne correspond pas à la demande de correction.');
+    if (!validationRequest || validation.validationRequestId !== validationRequest.validationRequestId) throw new ConflictException('La validation ne correspond pas à la demande de validation active.');
+    if (validationRequest.status === 'COMPLETED' && currentMeta.validation?.validationRequestId === validation.validationRequestId) {
+      return this.sanitizeIncident(incident);
+    }
+    if (!['QUEUED', 'RUNNING'].includes(String(validationRequest.status))) throw new ConflictException('La demande de validation n’est pas active.');
+    if (validation.batchId !== fixRequest.batchId || validation.batchKey !== (fixRequest.batchKey || fixRequest.batchId)
+      || Number(validation.attemptCount) !== Number(fixRequest.attemptCount)) throw new ConflictException('La validation ne correspond pas au batch de correction.');
     if (!repository || repository !== projectRepository) throw new ConflictException('La validation ne correspond pas au dépôt du projet.');
     const prNumber = Number(validation.prNumber);
     if (!Number.isInteger(prNumber) || prNumber <= 0 || !String(incident.prUrl || '').toLowerCase().includes(`${repository}/pull/${prNumber}`)) {
       throw new ConflictException('La validation ne correspond pas à la Pull Request attendue.');
     }
     const buildNumber = Number(validation.buildNumber ?? validation.build?.buildNumber);
-    if (!Number.isInteger(buildNumber) || buildNumber <= Number(incident.buildNumber || 0)) throw new ConflictException('Le build de validation doit être plus récent que celui de l’incident.');
+    if (!Number.isInteger(buildNumber) || buildNumber <= 0) throw new ConflictException('Le build de validation est invalide.');
     if (validation.jenkinsJob !== incident.jenkinsJobName) throw new ConflictException('La validation ne correspond pas au job Jenkins attendu.');
+    const expectedPrJob = `${incident.jenkinsJobName}-multibranch/PR-${prNumber}`;
+    if (validation.prValidationJob !== expectedPrJob) throw new ConflictException('La validation ne correspond pas au job PR attendu.');
+    if (!isFullGitSha(validation.expectedPrHeadSha) || !isFullGitSha(validation.checkoutSha)
+      || validation.expectedPrHeadSha.toLowerCase() !== validation.checkoutSha.toLowerCase()
+      || validation.expectedPrHeadSha.toLowerCase() !== String(validationRequest.expectedPrHeadSha).toLowerCase()) {
+      throw new ConflictException('Le commit validé ne correspond pas au HEAD attendu de la Pull Request.');
+    }
+    if (!validation.analysisId || !validation.ceTaskId) throw new ConflictException('La corrélation Sonar exacte est absente.');
     const jenkinsStatus = String(validation.jenkinsStatus ?? validation.build?.status ?? '').toUpperCase();
     const sonarStatus = String(validation.sonarStatus ?? validation.sonarQualityGate?.status ?? '').toUpperCase();
-    const badStage = (validation.requiredStages || []).find((s: any) => s.required !== false && s.status !== 'PASSED' && !(s.status === 'WARNING' && !s.blocking));
+    const requiredStages = Array.isArray(validation.requiredStages) ? validation.requiredStages : [];
+    const requiredNames = ['build', 'tests', 'sonar'];
+    const missingRequiredStage = requiredNames.find(name => !requiredStages.some((stage: any) => stage.stage === name && stage.required === true));
+    const badStage = requiredStages.find((s: any) => s.required !== false && s.status !== 'PASSED' && !(s.status === 'WARNING' && !s.blocking));
     const correlationVerified = validation.correlationVerified === true && validation.sonarCorrelationVerified === true;
     const approvedFindingIds: string[] = Array.isArray(fixRequest.findingIds)
       ? [...new Set<string>(fixRequest.findingIds.map((value: any) => String(value)))].sort()
@@ -458,7 +514,7 @@ export class IncidentsService {
     });
     const everyFindingValid = !fixRequest.batchId || (findingResults.length > 0 && findingResults.every(r => r.result === 'VALID' && !!r.evidence));
     const hasInvalidFinding = findingResults.some(r => r.result === 'INVALID');
-    const passed = jenkinsStatus === 'SUCCESS' && sonarStatus === 'OK' && correlationVerified && !badStage && everyFindingValid;
+    const passed = jenkinsStatus === 'SUCCESS' && sonarStatus === 'OK' && correlationVerified && !missingRequiredStage && !badStage && everyFindingValid;
     const validationStatus = passed ? 'VALIDATED' : (hasInvalidFinding ? 'INVALID' : 'INCONCLUSIVE');
     const validationRecord = {
       ...validation, findingResults, passed, validationStatus, projectId: incident.projectId,
@@ -468,6 +524,7 @@ export class IncidentsService {
         sonarStatus !== 'OK' ? `Sonar=${sonarStatus || 'MISSING'}` : null,
         !correlationVerified ? 'Sonar/build correlation unverified' : null,
         !everyFindingValid ? 'One or more approved findings are invalid or inconclusive' : null,
+        missingRequiredStage ? `Required stage missing=${missingRequiredStage}` : null,
         badStage ? `${badStage.stage}=${badStage.status}` : null].filter(Boolean),
     };
     const previousCycles = Array.isArray(currentMeta.cycles) ? currentMeta.cycles : [];
@@ -482,7 +539,10 @@ export class IncidentsService {
       ...currentMeta,
       validation: validationRecord,
       cycles,
-      fixRequest: { ...fixRequest, status: passed ? 'VALIDATED' : 'FIX_FAILED', validationBuildNumber: buildNumber },
+      prValidationRequest: { ...validationRequest, status: passed ? 'COMPLETED' : 'FAILED', result: validationStatus,
+        buildNumber, checkoutSha: validation.checkoutSha, analysisId: validation.analysisId,
+        findingResults, completedAt: validationRecord.validatedAt, updatedAt: validationRecord.validatedAt },
+      fixRequest: { ...fixRequest, status: passed ? 'VALIDATED' : 'PR_CREATED', validationBuildNumber: buildNumber },
     };
 
     const newStatus = passed ? 'completed' : 'failed';
@@ -711,6 +771,105 @@ export class IncidentsService {
     const updated = await this.findOne(id);
     this.gateway.emit('incident:updated', updated);
     return { success: true, status: 'rejected', incidentId: id };
+  }
+
+  async requestPrValidation(id: string, user: any) {
+    this.assertCanApprove(user);
+    const snapshot = await this.repo.findOne({ where: { id }, relations: ['project'] });
+    if (!snapshot) throw new NotFoundException('Incident introuvable.');
+    const initialFix: any = (snapshot.metadata as any)?.fixRequest || {};
+    if (initialFix.status !== 'PR_CREATED' || !snapshot.prUrl || !initialFix.prNumber) {
+      throw new ConflictException('Aucune Pull Request de correction n’est prête à être validée.');
+    }
+    if (!isFullGitSha(initialFix.prHeadSha)) {
+      throw new ConflictException('Le HEAD exact de la Pull Request n’est pas disponible.');
+    }
+    const prNumber = Number(initialFix.prNumber);
+    const pull = await this.githubPullRequest(snapshot.project, prNumber);
+    const remoteHeadSha = String(pull?.head?.sha || '').toLowerCase();
+    const remoteHeadBranch = String(pull?.head?.ref || '');
+    const expectedBranch = `fix/pfe-${snapshot.id}-${initialFix.requestId}`;
+    if (pull?.state !== 'open' || remoteHeadBranch !== expectedBranch || remoteHeadSha !== String(initialFix.prHeadSha).toLowerCase()) {
+      throw new ConflictException('La Pull Request a changé. Actualisez la cible avant de demander sa validation.');
+    }
+    const repository = this.canonicalRepository(snapshot.project.githubRepo);
+    const validationRequestId = prValidationIdentity(snapshot.projectId, prNumber, remoteHeadSha, initialFix.batchId);
+    const now = new Date().toISOString();
+    const claim: any = await this.repo.manager.transaction(async manager => {
+      const incidents = manager.getRepository(Incident);
+      const projects = manager.getRepository(Project);
+      const incident: any = await incidents.findOne({ where: { id }, lock: { mode: 'pessimistic_write' } });
+      if (!incident) throw new NotFoundException('Incident introuvable.');
+      const project = await projects.findOne({ where: { id: incident.projectId } });
+      if (!project) throw new NotFoundException('Projet introuvable.');
+      const metadata: any = incident.metadata || {};
+      const fix: any = metadata.fixRequest || {};
+      if (fix.status !== 'PR_CREATED' || fix.requestId !== initialFix.requestId || fix.batchId !== initialFix.batchId
+        || String(fix.prHeadSha || '').toLowerCase() !== remoteHeadSha || Number(fix.prNumber) !== prNumber) {
+        throw new ConflictException('La demande de correction a changé avant le lancement de la validation.');
+      }
+      const existing = metadata.prValidationRequest;
+      if (existing?.validationRequestId === validationRequestId) {
+        return { duplicate: true, request: existing, project };
+      }
+      const request = {
+        validationRequestId, validationType: 'PR_VALIDATION', status: 'REQUESTED',
+        projectId: incident.projectId, incidentId: incident.id, fixRequestId: fix.requestId,
+        requestId: fix.requestId, batchId: fix.batchId, batchKey: fix.batchKey || fix.batchId,
+        attemptCount: Number(fix.attemptCount), repository, prNumber, prUrl: incident.prUrl,
+        prHeadBranch: remoteHeadBranch, expectedPrHeadSha: remoteHeadSha,
+        createdBy: user.id, createdAt: now, updatedAt: now,
+      };
+      await incidents.update(id, { metadata: { ...metadata, prValidationRequest: request } } as any);
+      return { duplicate: false, request, project };
+    });
+    if (claim.duplicate) {
+      return { success: true, duplicate: true, validationRequest: claim.request };
+    }
+
+    const project: Project = claim.project;
+    if (!project.jenkinsUrl || !project.jenkinsToken || !project.jenkinsJobName) {
+      throw new BadRequestException('Jenkins n’est pas configuré pour la validation de Pull Request.');
+    }
+    const separator = project.jenkinsToken.indexOf(':');
+    if (separator <= 0 || separator === project.jenkinsToken.length - 1) {
+      throw new BadRequestException('Credential Jenkins invalide.');
+    }
+    const authHeader = 'Basic ' + Buffer.from(project.jenkinsToken).toString('base64');
+    const prJobName = `${project.jenkinsJobName}-multibranch`;
+    const prValidationJob = `${prJobName}/job/PR-${prNumber}`;
+    const resolvedJobPath = resolveJenkinsJobPath(prValidationJob);
+    const context = { ...claim.request, jenkinsJob: project.jenkinsJobName, prValidationJob };
+    try {
+      const metadataResponse = await fetch(`${project.jenkinsUrl}${resolvedJobPath}/api/json?tree=name,fullName,buildable,_class`, {
+        headers: { Authorization: authHeader }, signal: AbortSignal.timeout(10_000),
+      });
+      if (!metadataResponse.ok) throw new Error(`Jenkins metadata HTTP ${metadataResponse.status}`);
+      if (!isConcreteJenkinsBuildJob(await metadataResponse.json())) throw new Error('Jenkins PR target is not buildable');
+      const crumbResponse = await fetch(`${project.jenkinsUrl}/crumbIssuer/api/json`, {
+        headers: { Authorization: authHeader }, signal: AbortSignal.timeout(10_000),
+      });
+      if (!crumbResponse.ok) throw new Error(`Jenkins crumb HTTP ${crumbResponse.status}`);
+      const crumb: any = await crumbResponse.json();
+      const cause = encodePrValidationCause(context);
+      const buildResponse = await fetch(`${project.jenkinsUrl}${resolvedJobPath}/build?cause=${encodeURIComponent(cause)}`, {
+        method: 'POST', headers: { Authorization: authHeader, [crumb.crumbRequestField]: crumb.crumb },
+        signal: AbortSignal.timeout(10_000),
+      });
+      const queueUrl = buildResponse.headers.get('location');
+      if (!isAcceptedJenkinsBuildResponse(buildResponse.status, queueUrl)) throw new Error(`Jenkins trigger HTTP ${buildResponse.status}`);
+      const current: any = await this.repo.findOne({ where: { id } });
+      const currentMeta: any = current.metadata || {};
+      const queued = { ...claim.request, status: 'QUEUED', queueUrl, queuedAt: new Date().toISOString(), updatedAt: new Date().toISOString(), prValidationJob };
+      await this.repo.update(id, { metadata: { ...currentMeta, prValidationRequest: queued } } as any);
+      return { success: true, duplicate: false, validationRequest: queued };
+    } catch (error: any) {
+      const current: any = await this.repo.findOne({ where: { id } });
+      const currentMeta: any = current.metadata || {};
+      const failed = { ...claim.request, status: 'FAILED', failureCode: 'JENKINS_TRIGGER_FAILED', failureSummary: 'Le build PR n’a pas pu être mis en file.', failedAt: new Date().toISOString(), updatedAt: new Date().toISOString(), prValidationJob };
+      await this.repo.update(id, { metadata: { ...currentMeta, prValidationRequest: failed } } as any);
+      throw new ServiceUnavailableException('La validation PR n’a pas pu être mise en file dans Jenkins.');
+    }
   }
 
 

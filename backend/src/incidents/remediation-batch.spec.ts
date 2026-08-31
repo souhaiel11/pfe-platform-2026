@@ -1,5 +1,5 @@
 import * as assert from 'node:assert/strict';
-import { canRetryFixRequest, IncidentsService, remediationBatchIdentity, resolveRemediationBatch } from './incidents.service';
+import { canRetryFixRequest, encodePrValidationCause, IncidentsService, isFullGitSha, prValidationIdentity, remediationBatchIdentity, resolveRemediationBatch } from './incidents.service';
 
 const sonar = (id: string, extra: any = {}) => ({
   id, source: 'SONARQUBE', stage: 'sonar', remediationType: 'AUTO_FIX_ELIGIBLE',
@@ -21,6 +21,10 @@ assert.equal(canRetryFixRequest({ ...retryable, status: 'DISPATCHED' }), false);
 assert.equal(canRetryFixRequest({ ...retryable, status: 'PR_CREATED' }), false);
 assert.equal(canRetryFixRequest({ ...retryable, status: 'VALIDATING' }), false);
 assert.equal(canRetryFixRequest({ ...retryable, attempts: [...retryable.attempts, { attempt: 4, status: 'DISPATCHED' }] }), false);
+assert.equal(isFullGitSha('a'.repeat(40)), true);
+assert.equal(isFullGitSha('a'.repeat(8)), false);
+assert.equal(prValidationIdentity('p', 24, 'A'.repeat(40), 'b'), prValidationIdentity('p', 24, 'a'.repeat(40), 'b'));
+assert.match(encodePrValidationCause({ validationRequestId: 'v' }), /^PFE_PR_VALIDATION:/);
 
 // Double soumission équivalente : une seule transaction crée la demande et
 // une seule invocation future est dispatchée. Aucun service externe réel.
@@ -66,15 +70,24 @@ async function main() {
   incident.prUrl = 'https://github.com/owner/repo/pull/7';
   incident.buildNumber = 136;
   incident.jenkinsJobName = 'project-job';
+  incident.metadata.fixRequest.prNumber = 7;
+  incident.metadata.fixRequest.prHeadSha = 'a'.repeat(40);
+  incident.metadata.prValidationRequest = {
+    validationRequestId: 'validation-1', status: 'QUEUED', expectedPrHeadSha: 'a'.repeat(40),
+  };
+  const validationContract = {
+    validationRequestId: 'validation-1', projectId: 'project-1', fixRequestId: first.requestId,
+    batchId: first.batchId, batchKey: first.batchId, attemptCount: 1, repository: 'owner/repo', prNumber: 7,
+    prValidationJob: 'project-job-multibranch/PR-7', expectedPrHeadSha: 'a'.repeat(40), checkoutSha: 'a'.repeat(40),
+    ceTaskId: 'ce-1', analysisId: 'analysis-1', buildNumber: 1, jenkinsJob: 'project-job', jenkinsStatus: 'SUCCESS', sonarStatus: 'OK',
+    correlationVerified: true, sonarCorrelationVerified: true,
+    requiredStages: ['build','tests','sonar'].map(stage => ({ stage, required: true, status: 'PASSED' })),
+  };
   await assert.rejects(() => service.saveValidation(incident.id, {
-    projectId: 'project-1', fixRequestId: first.requestId, repository: 'owner/repo', prNumber: 7,
-    buildNumber: 137, jenkinsJob: 'project-job', jenkinsStatus: 'SUCCESS', sonarStatus: 'OK',
-    correlationVerified: true, sonarCorrelationVerified: true, findingResults: [{ findingId: 'a', result: 'VALID', evidence: 'analysis-a' }],
+    ...validationContract, findingResults: [{ findingId: 'a', result: 'VALID', evidence: 'analysis-a' }],
   }), /exactement un résultat/);
   const validated: any = await service.saveValidation(incident.id, {
-    projectId: 'project-1', fixRequestId: first.requestId, repository: 'owner/repo', prNumber: 7,
-    buildNumber: 137, jenkinsJob: 'project-job', jenkinsStatus: 'SUCCESS', sonarStatus: 'OK',
-    correlationVerified: true, sonarCorrelationVerified: true,
+    ...validationContract,
     findingResults: [{ findingId: 'a', result: 'VALID', evidence: 'analysis-a' }, { findingId: 'b', result: 'VALID', evidence: 'analysis-b' }],
   });
   assert.equal(validated.validation.validationStatus, 'VALIDATED');

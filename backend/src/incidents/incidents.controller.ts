@@ -43,6 +43,10 @@ export class IncidentsController {
     return this.service.retryFix(id, req.user);
   }
   @UseGuards(JwtAuthGuard)
+  @Post(':id/pr-validation') requestPrValidation(@Param('id') id: string, @Req() req: any) {
+    return this.service.requestPrValidation(id, req.user);
+  }
+  @UseGuards(JwtAuthGuard)
   @Post(':id/reject') rejectFix(@Param('id') id: string, @Body() body: any, @Req() req: any) {
     return this.service.rejectFix(id, req.user, body || {});
   }
