@@ -22,6 +22,19 @@ export function classifyJenkinsTriggerStatus(status: number): { accepted: boolea
   return { accepted: false, code: 'JENKINS_TRIGGER_FAILED' };
 }
 
+// R49 — single canonical builder for the PR validation job identity. This
+// value is issued to Jenkins once (requestPrValidation), threaded verbatim
+// through PFE_VALIDATION_CONTEXT -> Jenkins -> PlatformReporter -> WF1 -> WF3,
+// and must match byte-for-byte when saveValidation() re-derives its own
+// expectation at write-back time. Proven live on real PR-24 build #3: a
+// second, independently-written `/PR-${n}` (missing `/job/`) formula in
+// saveValidation() rejected the exact value this function issues, with a 409
+// -- Jenkins' own REST job path convention (`/job/<multibranch>/job/PR-<n>`)
+// is canonical, not a shortened display form.
+export function buildPrValidationJobName(baseJobName: string, prNumber: number): string {
+  return `${baseJobName}-multibranch/job/PR-${prNumber}`;
+}
+
 export function resolveJenkinsJobPath(configuredPath: string): string {
   const value = String(configuredPath || '').trim();
   if (!value || value.includes('://') || /[?#\\\x00-\x1f]/.test(value)) {
@@ -487,7 +500,7 @@ export class IncidentsService {
     const buildNumber = Number(validation.buildNumber ?? validation.build?.buildNumber);
     if (!Number.isInteger(buildNumber) || buildNumber <= 0) throw new ConflictException('Le build de validation est invalide.');
     if (validation.jenkinsJob !== incident.jenkinsJobName) throw new ConflictException('La validation ne correspond pas au job Jenkins attendu.');
-    const expectedPrJob = `${incident.jenkinsJobName}-multibranch/PR-${prNumber}`;
+    const expectedPrJob = buildPrValidationJobName(incident.jenkinsJobName, prNumber);
     if (validation.prValidationJob !== expectedPrJob) throw new ConflictException('La validation ne correspond pas au job PR attendu.');
     if (!isFullGitSha(validation.expectedPrHeadSha) || !isFullGitSha(validation.checkoutSha)
       || validation.expectedPrHeadSha.toLowerCase() !== validation.checkoutSha.toLowerCase()
@@ -859,8 +872,7 @@ export class IncidentsService {
       throw new BadRequestException('Aucune clé SonarQube n’est configurée pour ce projet.');
     }
     const authHeader = 'Basic ' + Buffer.from(project.jenkinsToken).toString('base64');
-    const prJobName = `${project.jenkinsJobName}-multibranch`;
-    const prValidationJob = `${prJobName}/job/PR-${prNumber}`;
+    const prValidationJob = buildPrValidationJobName(project.jenkinsJobName, prNumber);
     const resolvedJobPath = resolveJenkinsJobPath(prValidationJob);
     // R45 — clés Sonar déterministes pour le mode COMMUNITY_EXACT_SHA (isole
     // toujours l'analyse PR du projet principal, même quand une édition
@@ -971,10 +983,34 @@ export class IncidentsService {
     // because SonarQube Community Edition cannot produce native PR analysis
     // evidence. Labeling this JENKINS_PIPELINE_FAILED ("no callback sent")
     // would misstate what actually happened -- use the truthful code instead.
-    const isUnsupportedSonarPr = buildData.result === 'UNSTABLE';
-    const failureCode = isUnsupportedSonarPr ? 'SONAR_PR_ANALYSIS_UNSUPPORTED' : 'JENKINS_PIPELINE_FAILED';
+    //
+    // R49 — UNSTABLE alone does not distinguish build #2 (Sonar never even
+    // completed -- no ceTaskId) from build #3 (Sonar DID complete -- real
+    // ceTaskId/analysisId/CE SUCCESS -- but WF3's evidence retrieval and the
+    // backend write-back both failed downstream, for unrelated reasons: a
+    // missing n8n Sonar credential and a job-format mismatch, both proven and
+    // fixed). Extracting ceTaskId from the Jenkins console log itself (the
+    // exact source ScannerRunner.resolveExactAnalysis() reads from) is real,
+    // unfakeable evidence that Sonar analysis actually ran, without asserting
+    // anything this endpoint cannot itself verify (it stays Jenkins-only,
+    // never queries n8n).
+    let sonarAnalysisRan = false;
+    if (buildData.result === 'UNSTABLE') {
+      const consoleRes = await fetch(`${jenkinsInternalUrl}${jobPath}/${buildData.number}/consoleText`, {
+        headers: { Authorization: authHeader }, signal: AbortSignal.timeout(15_000),
+      });
+      const consoleText = consoleRes.ok ? await consoleRes.text() : '';
+      sonarAnalysisRan = /ce\/task\?id=[A-Za-z0-9_-]+/.test(consoleText);
+    }
+    const isUnsupportedSonarPr = buildData.result === 'UNSTABLE' && !sonarAnalysisRan;
+    const isInconclusiveEvidence = buildData.result === 'UNSTABLE' && sonarAnalysisRan;
+    const failureCode = isUnsupportedSonarPr ? 'SONAR_PR_ANALYSIS_UNSUPPORTED'
+      : isInconclusiveEvidence ? 'PR_VALIDATION_EVIDENCE_INCONCLUSIVE'
+      : 'JENKINS_PIPELINE_FAILED';
     const failureSummary = isUnsupportedSonarPr
       ? `Jenkins build #${buildData.number} s’est terminé en UNSTABLE : l’analyse SonarQube Pull Request native n’est pas supportée par cette édition Community (ceTaskId/analysisId indisponibles), rejetée fail-closed par WF1.`
+      : isInconclusiveEvidence
+      ? `Jenkins build #${buildData.number} s’est terminé en UNSTABLE : l’analyse Sonar exact-SHA a bien abouti (ceTaskId présent dans les logs Jenkins) mais l’évidence de validation n’a pas pu être établie de façon concluante en aval (récupération WF3 et/ou écriture backend en échec).`
       : `Jenkins build #${buildData.number} s’est terminé en ${buildData.result} avant l’envoi du callback de validation.`;
     const reconciled = {
       ...request, status: 'FAILED',

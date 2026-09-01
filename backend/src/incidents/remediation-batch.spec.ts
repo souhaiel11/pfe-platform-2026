@@ -1,5 +1,5 @@
 import * as assert from 'node:assert/strict';
-import { canRetryFixRequest, encodePrValidationContext, IncidentsService, isFullGitSha, prValidationIdentity, remediationBatchIdentity, resolveRemediationBatch } from './incidents.service';
+import { buildPrValidationJobName, canRetryFixRequest, encodePrValidationContext, IncidentsService, isFullGitSha, prValidationIdentity, remediationBatchIdentity, resolveRemediationBatch } from './incidents.service';
 
 const sonar = (id: string, extra: any = {}) => ({
   id, source: 'SONARQUBE', stage: 'sonar', remediationType: 'AUTO_FIX_ELIGIBLE',
@@ -78,7 +78,7 @@ async function main() {
   const validationContract = {
     validationRequestId: 'validation-1', projectId: 'project-1', fixRequestId: first.requestId,
     batchId: first.batchId, batchKey: first.batchId, attemptCount: 1, repository: 'owner/repo', prNumber: 7,
-    prValidationJob: 'project-job-multibranch/PR-7', expectedPrHeadSha: 'a'.repeat(40), checkoutSha: 'a'.repeat(40),
+    prValidationJob: buildPrValidationJobName('project-job', 7), expectedPrHeadSha: 'a'.repeat(40), checkoutSha: 'a'.repeat(40),
     ceTaskId: 'ce-1', analysisId: 'analysis-1', buildNumber: 1, jenkinsJob: 'project-job', jenkinsStatus: 'SUCCESS', sonarStatus: 'OK',
     correlationVerified: true, sonarCorrelationVerified: true,
     requiredStages: ['build','tests','sonar'].map(stage => ({ stage, required: true, status: 'PASSED' })),
