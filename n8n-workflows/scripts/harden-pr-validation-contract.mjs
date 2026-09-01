@@ -7,6 +7,14 @@ const load = path => { const raw = JSON.parse(fs.readFileSync(path)); return Arr
 const save = (path, workflow) => fs.writeFileSync(path, JSON.stringify([workflow], null, 2) + '\n');
 const node = (workflow, name) => workflow.nodes.find(candidate => candidate.name === name);
 
+// R52 -- single source of truth for the Sonar credential reference, used by
+// every Sonar HTTP node across WF1 and WF3. 'SONARQUBE credential 2'
+// (httpBasicAuth) started failing Sonar auth with a real 401 (proven live on
+// PR-24 build #4); replaced by the new, manually-created Header Auth
+// credential 'n8n-sonarqube-api'. Never a raw token -- id/name reference only.
+const SONAR_CREDENTIAL_TYPE = 'httpHeaderAuth';
+const SONAR_CREDENTIAL = { id: 'DUFtkRTI3V05MJ3X', name: 'n8n-sonarqube-api' };
+
 const required = [
   'validationRequestId','projectId','incidentId','fixRequestId','batchId','batchKey','attemptCount',
   'repository','prNumber','prHeadBranch','expectedPrHeadSha','checkoutSha','jenkinsJob','prValidationJob',
@@ -46,6 +54,15 @@ if (!wf1Validator) {
 wf1.connections['Is PR Validation'].main[0] = [{node:'Validate PR Validation Contract',type:'main',index:0}];
 wf1.connections['Validate PR Validation Contract'] = {main:[[{node:'Call WF3 - Post-PR Validation',type:'main',index:0}]]};
 node(wf1, 'Call WF3 - Post-PR Validation').parameters.workflowInputs.value.payload = '={{ JSON.stringify($json) }}';
+
+// R52 -- the SonarQube credential 'SONARQUBE credential 2' (httpBasicAuth)
+// started failing Sonar auth (401 "Authorization failed", proven live on
+// real PR-24 build #4). Rewire to the new, manually-created Header Auth
+// credential 'n8n-sonarqube-api'. Same builder as the WF3 nodes below --
+// keep both in sync here, one source of truth for the Sonar credential.
+const wf1SonarNode = node(wf1, 'Fetch SonarQube Issues');
+wf1SonarNode.parameters.genericAuthType = SONAR_CREDENTIAL_TYPE;
+wf1SonarNode.credentials = { [SONAR_CREDENTIAL_TYPE]: SONAR_CREDENTIAL };
 save(wf1Path, wf1);
 
 const wf3 = load(wf3Path);
@@ -101,16 +118,16 @@ const everyFindingValid=findingResults.length===prepared.findingIds.length&&find
 return [{json:{...ctx,findingResults,validationStatus:passed?'VALIDATED':anyInvalid?'INVALID':'INCONCLUSIVE',passed,sonarStatus,sonarAnalysisMode:analysisMode,sonarCorrelationVerified,correlationVerified,finalStateVerified:shaVerified,requiredStagesStatus:(!missingStage.length&&!requiredFailures.length)?'PASSED':'FAILED',failureReasons:[ctx.jenkinsStatus!=='SUCCESS'?'Jenkins='+ctx.jenkinsStatus:null,sonarStatus!=='OK'?'Sonar='+sonarStatus:null,!shaVerified?'PR HEAD mismatch':null,!correlationVerified?'Correlation unverified':null,!everyFindingValid?'Approved finding validation incomplete':null,...missingStage.map(s=>'Required stage missing='+s),...requiredFailures.map(s=>s.stage+'='+s.status)].filter(Boolean),timestamp:new Date().toISOString()}}];`;
 
 // R49 -- both nodes were created with authentication:'predefinedCredentialType'
-// + nodeCredentialType:'httpBasicAuth' but no credentials block was ever
-// attached (proven live: real PR-24 build #3's WF3 execution 1896 -- both
-// nodes errored "Credentials not found"). Reuse the existing, already-working
-// Sonar credential 'SONARQUBE credential 2' (id AxQb6AG51EcWcXik) -- proven
-// live-valid: WF1's sibling "Fetch SonarQube Issues" node already
-// authenticates with it successfully (execution 1886). Never a new/hardcoded
-// token -- reference by id only, exactly like n8n's own credential system.
-const SONAR_CREDENTIAL = { id: 'AxQb6AG51EcWcXik', name: 'SONARQUBE credential 2' };
+// but no credentials block was ever attached (proven live: real PR-24 build
+// #3's WF3 execution 1896 -- both nodes errored "Credentials not found").
+// R52 -- the httpBasicAuth credential wired in R49 subsequently started
+// failing Sonar auth with a real 401 (proven live on build #4); rewired to
+// the httpHeaderAuth SONAR_CREDENTIAL defined at the top of this file. Never
+// a raw token -- reference by id only, exactly like n8n's own credential system.
 for (const nodeName of ['Get SonarQube PR Quality Gate', 'Get SonarQube Approved Findings']) {
-  node(wf3, nodeName).credentials = { httpBasicAuth: SONAR_CREDENTIAL };
+  const sonarNode = node(wf3, nodeName);
+  sonarNode.parameters.nodeCredentialType = SONAR_CREDENTIAL_TYPE;
+  sonarNode.credentials = { [SONAR_CREDENTIAL_TYPE]: SONAR_CREDENTIAL };
 }
 
 save(wf3Path, wf3);

@@ -38,7 +38,7 @@
         "parameters": {
           "url": "=http://sonarqube:9000/api/qualitygates/project_status?analysisId={{ $('Extract Validation Context').first().json.analysisId || '__CORRELATION_MISSING__' }}",
           "authentication": "predefinedCredentialType",
-          "nodeCredentialType": "httpBasicAuth",
+          "nodeCredentialType": "httpHeaderAuth",
           "options": {
             "timeout": 15000
           }
@@ -56,9 +56,9 @@
         "waitBetweenTries": 10000,
         "onError": "continueRegularOutput",
         "credentials": {
-          "httpBasicAuth": {
-            "id": "AxQb6AG51EcWcXik",
-            "name": "SONARQUBE credential 2"
+          "httpHeaderAuth": {
+            "id": "DUFtkRTI3V05MJ3X",
+            "name": "n8n-sonarqube-api"
           }
         }
       },
@@ -157,15 +157,15 @@
         "parameters": {
           "url": "={{ $json.url }}",
           "authentication": "predefinedCredentialType",
-          "nodeCredentialType": "httpBasicAuth",
+          "nodeCredentialType": "httpHeaderAuth",
           "options": {
             "timeout": 15000
           }
         },
         "credentials": {
-          "httpBasicAuth": {
-            "id": "AxQb6AG51EcWcXik",
-            "name": "SONARQUBE credential 2"
+          "httpHeaderAuth": {
+            "id": "DUFtkRTI3V05MJ3X",
+            "name": "n8n-sonarqube-api"
           }
         }
       }

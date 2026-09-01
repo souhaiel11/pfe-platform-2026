@@ -76,11 +76,21 @@ assert.ok(!communityBranch.includes('&pullRequest='));
 // R49 -- both Sonar HTTP nodes must have a real credential reference wired up.
 // Proven live: real PR-24 build #3's WF3 execution errored "Credentials not
 // found" on both nodes because neither had ever had one attached.
+// R52 -- the original httpBasicAuth credential subsequently started failing
+// Sonar auth with a real 401 (proven live on build #4); rewired to the new
+// Header Auth credential 'n8n-sonarqube-api'. No old credential id/name may
+// remain referenced anywhere in either workflow's Sonar-facing nodes.
+const OLD_SONAR_CREDENTIAL_ID = 'AxQb6AG51EcWcXik';
 for (const nodeName of ['Get SonarQube PR Quality Gate', 'Get SonarQube Approved Findings']) {
   const sonarNode = byName(wf3, nodeName);
   assert.equal(sonarNode.parameters.authentication, 'predefinedCredentialType');
-  assert.equal(sonarNode.parameters.nodeCredentialType, 'httpBasicAuth');
-  assert.ok(sonarNode.credentials?.httpBasicAuth?.id, `${nodeName} must have an httpBasicAuth credential id wired up`);
+  assert.equal(sonarNode.parameters.nodeCredentialType, 'httpHeaderAuth');
+  assert.equal(sonarNode.credentials?.httpHeaderAuth?.id, 'DUFtkRTI3V05MJ3X', `${nodeName} must reference the new n8n-sonarqube-api credential`);
+  assert.ok(!JSON.stringify(sonarNode.credentials).includes(OLD_SONAR_CREDENTIAL_ID), `${nodeName} must not still reference the old Sonar credential`);
 }
+const wf1SonarNode = byName(wf1, 'Fetch SonarQube Issues');
+assert.equal(wf1SonarNode.parameters.genericAuthType, 'httpHeaderAuth');
+assert.equal(wf1SonarNode.credentials?.httpHeaderAuth?.id, 'DUFtkRTI3V05MJ3X', 'WF1 Fetch SonarQube Issues must reference the new n8n-sonarqube-api credential');
+assert.ok(!JSON.stringify(wf1SonarNode.credentials).includes(OLD_SONAR_CREDENTIAL_ID), 'WF1 Fetch SonarQube Issues must not still reference the old Sonar credential');
 
 console.log('PR validation WF1/WF3 contract: PASS');

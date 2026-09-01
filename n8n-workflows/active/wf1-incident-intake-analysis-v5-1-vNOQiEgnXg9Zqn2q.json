@@ -225,7 +225,7 @@
         "parameters": {
           "url": "=http://sonarqube:9000/api/issues/search?componentKeys={{ $json.projectConfig.sonarqubeKey }}&severities=BLOCKER,CRITICAL,MAJOR&statuses=OPEN,CONFIRMED,REOPENED&ps=50",
           "authentication": "genericCredentialType",
-          "genericAuthType": "httpBasicAuth",
+          "genericAuthType": "httpHeaderAuth",
           "sendHeaders": true,
           "headerParameters": {
             "parameters": [
@@ -251,9 +251,9 @@
           22816
         ],
         "credentials": {
-          "httpBasicAuth": {
-            "id": "AxQb6AG51EcWcXik",
-            "name": "SONARQUBE credential 2"
+          "httpHeaderAuth": {
+            "id": "DUFtkRTI3V05MJ3X",
+            "name": "n8n-sonarqube-api"
           }
         },
         "onError": "continueRegularOutput"
