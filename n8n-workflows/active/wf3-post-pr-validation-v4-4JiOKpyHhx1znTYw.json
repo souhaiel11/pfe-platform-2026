@@ -54,7 +54,13 @@
         "retryOnFail": true,
         "maxTries": 5,
         "waitBetweenTries": 10000,
-        "onError": "continueRegularOutput"
+        "onError": "continueRegularOutput",
+        "credentials": {
+          "httpBasicAuth": {
+            "id": "AxQb6AG51EcWcXik",
+            "name": "SONARQUBE credential 2"
+          }
+        }
       },
       {
         "parameters": {
@@ -154,6 +160,12 @@
           "nodeCredentialType": "httpBasicAuth",
           "options": {
             "timeout": 15000
+          }
+        },
+        "credentials": {
+          "httpBasicAuth": {
+            "id": "AxQb6AG51EcWcXik",
+            "name": "SONARQUBE credential 2"
           }
         }
       }

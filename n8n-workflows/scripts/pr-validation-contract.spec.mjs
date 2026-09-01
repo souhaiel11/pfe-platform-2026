@@ -73,4 +73,14 @@ assert.ok(prepareCode.includes('SONAR_VALIDATION_PROJECT_KEY_UNAVAILABLE'));
 const communityBranch = prepareCode.slice(prepareCode.indexOf("mode==='COMMUNITY_EXACT_SHA'"), prepareCode.indexOf('}else{'));
 assert.ok(!communityBranch.includes('&pullRequest='));
 
+// R49 -- both Sonar HTTP nodes must have a real credential reference wired up.
+// Proven live: real PR-24 build #3's WF3 execution errored "Credentials not
+// found" on both nodes because neither had ever had one attached.
+for (const nodeName of ['Get SonarQube PR Quality Gate', 'Get SonarQube Approved Findings']) {
+  const sonarNode = byName(wf3, nodeName);
+  assert.equal(sonarNode.parameters.authentication, 'predefinedCredentialType');
+  assert.equal(sonarNode.parameters.nodeCredentialType, 'httpBasicAuth');
+  assert.ok(sonarNode.credentials?.httpBasicAuth?.id, `${nodeName} must have an httpBasicAuth credential id wired up`);
+}
+
 console.log('PR validation WF1/WF3 contract: PASS');
