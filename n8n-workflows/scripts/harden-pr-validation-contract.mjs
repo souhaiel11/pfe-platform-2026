@@ -11,11 +11,26 @@ const required = [
   'validationRequestId','projectId','incidentId','fixRequestId','batchId','batchKey','attemptCount',
   'repository','prNumber','prHeadBranch','expectedPrHeadSha','checkoutSha','jenkinsJob','prValidationJob',
   'jenkinsBuildNumber','jenkinsBuildUrl','jenkinsStatus','ceTaskId','analysisId','requiredStages',
+  // R45 -- explicit, always present, never inferred from missing fields.
+  'sonarAnalysisMode',
 ];
+// COMMUNITY_EXACT_SHA-only requirement: a dedicated per-PR project key was
+// actually analyzed (Community Edition cannot run native PR analysis --
+// proven on real PR-24 build #2). DEVELOPER_NATIVE_PR does not need these.
+const communityRequired = ['baseSonarProjectKey', 'validationSonarProjectKey'];
+const validModes = ['COMMUNITY_EXACT_SHA', 'DEVELOPER_NATIVE_PR'];
+
 const validatorCode = `let input=$input.first().json; if(input.body) input=input.body;
 const required=${JSON.stringify(required)};
 const missing=required.filter(k=>input[k]===undefined||input[k]===null||input[k]===''||(k==='requiredStages'&&!Array.isArray(input[k])));
 if(missing.length) throw new Error('INVALID_PR_VALIDATION_CONTRACT:'+missing.join(','));
+const validModes=${JSON.stringify(validModes)};
+if(!validModes.includes(input.sonarAnalysisMode)) throw new Error('INVALID_SONAR_ANALYSIS_MODE:'+input.sonarAnalysisMode);
+if(input.sonarAnalysisMode==='COMMUNITY_EXACT_SHA'){
+  const communityRequired=${JSON.stringify(communityRequired)};
+  const communityMissing=communityRequired.filter(k=>input[k]===undefined||input[k]===null||input[k]==='');
+  if(communityMissing.length) throw new Error('INVALID_PR_VALIDATION_CONTRACT:'+communityMissing.join(','));
+}
 const sha=v=>/^[a-f0-9]{40}$/i.test(String(v||''));
 if(!sha(input.expectedPrHeadSha)||!sha(input.checkoutSha)||String(input.expectedPrHeadSha).toLowerCase()!==String(input.checkoutSha).toLowerCase()) throw new Error('PR_HEAD_SHA_MISMATCH');
 if(!Number.isInteger(Number(input.attemptCount))||Number(input.attemptCount)<1) throw new Error('INVALID_ATTEMPT');
@@ -36,6 +51,8 @@ save(wf1Path, wf1);
 const wf3 = load(wf3Path);
 node(wf3, 'Extract Validation Context').parameters.jsCode = `let input=$input.first().json;if(input.payload)input=typeof input.payload==='string'?JSON.parse(input.payload):input.payload;if(input.body)input=input.body;
 const required=${JSON.stringify(required)};const missing=required.filter(k=>input[k]===undefined||input[k]===null||input[k]===''||(k==='requiredStages'&&!Array.isArray(input[k])));if(missing.length)throw new Error('INVALID_VALIDATION_CONTRACT:'+missing.join(','));
+const validModes=${JSON.stringify(validModes)};if(!validModes.includes(input.sonarAnalysisMode))throw new Error('INVALID_SONAR_ANALYSIS_MODE:'+input.sonarAnalysisMode);
+if(input.sonarAnalysisMode==='COMMUNITY_EXACT_SHA'){const communityRequired=${JSON.stringify(communityRequired)};const communityMissing=communityRequired.filter(k=>input[k]===undefined||input[k]===null||input[k]==='');if(communityMissing.length)throw new Error('INVALID_VALIDATION_CONTRACT:'+communityMissing.join(','));}
 const fullSha=v=>/^[a-f0-9]{40}$/i.test(String(v||''));if(!fullSha(input.expectedPrHeadSha)||!fullSha(input.checkoutSha)||String(input.expectedPrHeadSha).toLowerCase()!==String(input.checkoutSha).toLowerCase())throw new Error('PR_HEAD_SHA_MISMATCH');
 const repository=String(input.repository).replace(/^https?:\\/\\/github\\.com\\//,'').replace(/\\.git$/,'').toLowerCase();if(repository.split('/').length!==2)throw new Error('INVALID_REPOSITORY');
 return [{json:{...input,repository,prNumber:Number(input.prNumber),attemptCount:Number(input.attemptCount),buildNumber:Number(input.jenkinsBuildNumber),buildUrl:String(input.jenkinsBuildUrl),jenkinsStatus:String(input.jenkinsStatus).toUpperCase(),expectedPrHeadSha:String(input.expectedPrHeadSha).toLowerCase(),checkoutSha:String(input.checkoutSha).toLowerCase(),requiredStages:input.requiredStages}}];`;
@@ -54,9 +71,32 @@ AND i.metadata->'prValidationRequest'->>'validationRequestId' = '{{ $("Extract V
 AND lower(i.metadata->'prValidationRequest'->>'expectedPrHeadSha') = '{{ $("Extract Validation Context").first().json.expectedPrHeadSha }}'
 LIMIT 1;`;
 
+// R45 -- Community mode analyzed a dedicated per-PR project (isolated from
+// the main project's history), never native PR-scoped issues. Search that
+// project's plain (non-PR-scoped) open issues instead of componentKeys=
+// <main project>&pullRequest=<n>, which is itself a Developer-only Sonar
+// feature and meaningless here (the validation project never has more than
+// one exact-SHA snapshot in it). Developer mode is unchanged.
+node(wf3, 'Prepare Approved Finding Validation').parameters.jsCode = `const incident=$input.first().json||{};let metadata=incident.metadata||{};if(typeof metadata==='string')metadata=JSON.parse(metadata);const fix=metadata.fixRequest||{};const findings=Array.isArray(fix.findings)?fix.findings:[];const findingIds=Array.isArray(fix.findingIds)?fix.findingIds.map(String):[];if(!findingIds.length||findings.length!==findingIds.length)throw new Error('APPROVED_FINDING_BATCH_UNAVAILABLE');
+const ctx=$('Extract Validation Context').first().json;const mode=ctx.sonarAnalysisMode;const pr=ctx.prNumber;
+let projectKey;let url;
+if(mode==='COMMUNITY_EXACT_SHA'){
+  projectKey=String(ctx.validationSonarProjectKey||'');if(!projectKey)throw new Error('SONAR_VALIDATION_PROJECT_KEY_UNAVAILABLE');
+  const rules=[...new Set(findings.map(f=>f.rule).filter(Boolean))];
+  url='http://sonarqube:9000/api/issues/search?componentKeys='+encodeURIComponent(projectKey)+'&rules='+encodeURIComponent(rules.join(','))+'&ps=500';
+}else{
+  projectKey=String(incident.sonarqubeKey||'');if(!projectKey)throw new Error('SONAR_PROJECT_KEY_UNAVAILABLE');
+  const rules=[...new Set(findings.map(f=>f.rule).filter(Boolean))];
+  url='http://sonarqube:9000/api/issues/search?componentKeys='+encodeURIComponent(projectKey)+'&pullRequest='+encodeURIComponent(pr)+'&rules='+encodeURIComponent(rules.join(','))+'&ps=500';
+}
+return [{json:{url,findings,findingIds,analysisId:ctx.analysisId,sonarAnalysisMode:mode,validationSonarProjectKey:projectKey}}];`;
+
+// R45 -- evidence wording never claims native PR analysis when Community
+// exact-SHA mode ran (WF3 must explicitly know analysisMode, per contract).
 node(wf3, 'Consolidate Validation Result').parameters.jsCode = `const ctx=$('Extract Validation Context').first().json;let incident={};try{incident=$('Get Incident From DB').first().json||{}}catch{};let sonar={};try{sonar=$('Get SonarQube PR Quality Gate').first().json||{}}catch{};let findingSearch={};try{findingSearch=$('Get SonarQube Approved Findings').first().json||{}}catch{};const prepared=$('Prepare Approved Finding Validation').first().json;
+const analysisMode=ctx.sonarAnalysisMode;const analysisLabel=analysisMode==='COMMUNITY_EXACT_SHA'?'Sonar Community exact-SHA validation':'Sonar native PR analysis';
 const sonarCorrelationVerified=!!ctx.ceTaskId&&!!ctx.analysisId&&!!sonar.projectStatus;const sonarStatus=sonarCorrelationVerified?String(sonar.projectStatus.status||'UNAVAILABLE').toUpperCase():'CORRELATION_PENDING';const requiredNames=['build','tests','sonar'];const missingStage=requiredNames.filter(name=>!ctx.requiredStages.some(s=>s.stage===name&&s.required===true));const requiredFailures=ctx.requiredStages.filter(s=>s.required!==false&&s.status!=='PASSED'&&!(s.status==='WARNING'&&!s.blocking));
-const searchAvailable=Array.isArray(findingSearch.issues);const normalizeFile=value=>String(value||'').replace(/^[^:]+:/,'').replace(/^\\/+/, '');const openIssues=searchAvailable?findingSearch.issues:[];const findingResults=prepared.findings.map(f=>{if(!searchAvailable)return{findingId:String(f.findingId),rule:f.rule,result:'INCONCLUSIVE',evidence:'Sonar PR issue search unavailable'};const match=openIssues.find(issue=>String(issue.rule||'')===String(f.rule||'')&&normalizeFile(issue.component).endsWith(normalizeFile(f.file))&&(!f.line||!issue.line||Number(issue.line)===Number(f.line)));return match?{findingId:String(f.findingId),rule:f.rule,result:'INVALID',evidence:'Sonar PR issue '+String(match.key||match.rule)+' remains open'}:{findingId:String(f.findingId),rule:f.rule,result:'VALID',evidence:'Exact PR analysis '+ctx.analysisId+' at '+ctx.checkoutSha+': approved finding absent'};});
+const searchAvailable=Array.isArray(findingSearch.issues);const normalizeFile=value=>String(value||'').replace(/^[^:]+:/,'').replace(/^\\/+/, '');const openIssues=searchAvailable?findingSearch.issues:[];const findingResults=prepared.findings.map(f=>{if(!searchAvailable)return{findingId:String(f.findingId),rule:f.rule,result:'INCONCLUSIVE',evidence:analysisLabel+' issue search unavailable'};const match=openIssues.find(issue=>String(issue.rule||'')===String(f.rule||'')&&normalizeFile(issue.component).endsWith(normalizeFile(f.file))&&(!f.line||!issue.line||Number(issue.line)===Number(f.line)));return match?{findingId:String(f.findingId),rule:f.rule,result:'INVALID',evidence:analysisLabel+' issue '+String(match.key||match.rule)+' remains open'}:{findingId:String(f.findingId),rule:f.rule,result:'VALID',evidence:analysisLabel+' '+ctx.analysisId+' at '+ctx.checkoutSha+': approved finding absent'};});
 const everyFindingValid=findingResults.length===prepared.findingIds.length&&findingResults.every(r=>r.result==='VALID');const shaVerified=ctx.expectedPrHeadSha===ctx.checkoutSha;const correlationVerified=!!incident?.id&&incident.id===ctx.incidentId&&sonarCorrelationVerified&&shaVerified;const passed=ctx.jenkinsStatus==='SUCCESS'&&sonarStatus==='OK'&&correlationVerified&&!missingStage.length&&!requiredFailures.length&&Number(ctx.unresolvedBlockingCount||0)===0&&everyFindingValid;const anyInvalid=findingResults.some(r=>r.result==='INVALID');
-return [{json:{...ctx,findingResults,validationStatus:passed?'VALIDATED':anyInvalid?'INVALID':'INCONCLUSIVE',passed,sonarStatus,sonarCorrelationVerified,correlationVerified,finalStateVerified:shaVerified,requiredStagesStatus:(!missingStage.length&&!requiredFailures.length)?'PASSED':'FAILED',failureReasons:[ctx.jenkinsStatus!=='SUCCESS'?'Jenkins='+ctx.jenkinsStatus:null,sonarStatus!=='OK'?'Sonar='+sonarStatus:null,!shaVerified?'PR HEAD mismatch':null,!correlationVerified?'Correlation unverified':null,!everyFindingValid?'Approved finding validation incomplete':null,...missingStage.map(s=>'Required stage missing='+s),...requiredFailures.map(s=>s.stage+'='+s.status)].filter(Boolean),timestamp:new Date().toISOString()}}];`;
+return [{json:{...ctx,findingResults,validationStatus:passed?'VALIDATED':anyInvalid?'INVALID':'INCONCLUSIVE',passed,sonarStatus,sonarAnalysisMode:analysisMode,sonarCorrelationVerified,correlationVerified,finalStateVerified:shaVerified,requiredStagesStatus:(!missingStage.length&&!requiredFailures.length)?'PASSED':'FAILED',failureReasons:[ctx.jenkinsStatus!=='SUCCESS'?'Jenkins='+ctx.jenkinsStatus:null,sonarStatus!=='OK'?'Sonar='+sonarStatus:null,!shaVerified?'PR HEAD mismatch':null,!correlationVerified?'Correlation unverified':null,!everyFindingValid?'Approved finding validation incomplete':null,...missingStage.map(s=>'Required stage missing='+s),...requiredFailures.map(s=>s.stage+'='+s.status)].filter(Boolean),timestamp:new Date().toISOString()}}];`;
 save(wf3Path, wf3);

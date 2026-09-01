@@ -855,11 +855,19 @@ export class IncidentsService {
     if (separator <= 0 || separator === project.jenkinsToken.length - 1) {
       throw new BadRequestException('Credential Jenkins invalide.');
     }
+    if (!project.sonarqubeKey) {
+      throw new BadRequestException('Aucune clé SonarQube n’est configurée pour ce projet.');
+    }
     const authHeader = 'Basic ' + Buffer.from(project.jenkinsToken).toString('base64');
     const prJobName = `${project.jenkinsJobName}-multibranch`;
     const prValidationJob = `${prJobName}/job/PR-${prNumber}`;
     const resolvedJobPath = resolveJenkinsJobPath(prValidationJob);
-    const context = { ...claim.request, jenkinsJob: project.jenkinsJobName, prValidationJob };
+    // R45 — clés Sonar déterministes pour le mode COMMUNITY_EXACT_SHA (isole
+    // toujours l'analyse PR du projet principal, même quand une édition
+    // Developer future utiliserait sonar.pullrequest.* nativement à la place).
+    const baseSonarProjectKey = project.sonarqubeKey;
+    const validationSonarProjectKey = `${baseSonarProjectKey}-pr-${prNumber}`;
+    const context = { ...claim.request, jenkinsJob: project.jenkinsJobName, prValidationJob, baseSonarProjectKey, validationSonarProjectKey };
     try {
       const metadataTree = 'name,fullName,buildable,_class,property[_class,parameterDefinitions[name,type,_class,defaultParameterValue[value,_class]]]';
       const metadataResponse = await fetch(`${jenkinsInternalUrl}${resolvedJobPath}/api/json?tree=${metadataTree}`, {

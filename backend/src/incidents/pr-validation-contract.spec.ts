@@ -1,6 +1,13 @@
 import * as assert from 'node:assert/strict';
 import { IncidentsService } from './incidents.service';
 
+function decodePrValidationContext(body: unknown): any {
+  const form = new URLSearchParams(String(body));
+  const encoded = form.get('PFE_VALIDATION_CONTEXT');
+  assert.ok(encoded, 'PFE_VALIDATION_CONTEXT parameter must be present in the Jenkins trigger body');
+  return JSON.parse(Buffer.from(String(encoded), 'base64url').toString('utf8'));
+}
+
 const sha = '10e90dd5a0d21941dea1a544c3026d0955a029b1';
 const incident: any = {
   id: 'd1f5e9ce-f039-475d-9a50-41f217e6444b', projectId: '3aa1c9b9-e114-40e4-884b-ebc7aa32e002', status: 'fix_generated',
@@ -12,6 +19,7 @@ const incident: any = {
 const project: any = {
   id: '3aa1c9b9-e114-40e4-884b-ebc7aa32e002', githubRepo: 'souhaiel11/pfe-app-test', githubToken: null,
   jenkinsUrl: 'http://jenkins', jenkinsToken: 'user:not-printed', jenkinsJobName: 'pfe-app-test',
+  sonarqubeKey: 'pfe-app-test',
 };
 incident.project = project;
 const incidentRepo: any = {
@@ -37,6 +45,7 @@ async function main() {
   const service = new IncidentsService(repository, projectRepo, { emit: () => undefined } as any, { syncIncident: async () => undefined } as any);
   const originalFetch = globalThis.fetch;
   let triggers = 0;
+  let lastTriggerContext: any = null;
   globalThis.fetch = async (url: any, init?: RequestInit) => {
     const value = String(url);
     if (value.includes('api.github.com')) {
@@ -45,7 +54,7 @@ async function main() {
     }
     if (value.includes('/api/json')) return new Response(JSON.stringify({ buildable: true, _class: 'org.jenkinsci.plugins.workflow.job.WorkflowJob', property: [{ _class: 'hudson.model.ParametersDefinitionProperty', parameterDefinitions: [{ name: 'PFE_VALIDATION_CONTEXT', type: 'StringParameterDefinition', defaultParameterValue: { value: '' } }] }] }), { status: 200 });
     if (value.includes('crumbIssuer')) return new Response(JSON.stringify({ crumbRequestField: 'Jenkins-Crumb', crumb: 'opaque' }), { status: 200 });
-    if (value.includes('/buildWithParameters')) { triggers++; return new Response('', { status: 201, headers: { location: 'http://jenkins/queue/item/42/' } }); }
+    if (value.includes('/buildWithParameters')) { triggers++; lastTriggerContext = decodePrValidationContext(init?.body); return new Response('', { status: 201, headers: { location: 'http://jenkins/queue/item/42/' } }); }
     throw new Error(`unexpected URL ${value}`);
   };
   try {
@@ -58,6 +67,27 @@ async function main() {
     assert.equal(incident.metadata.prValidationRequest.batchKey, incident.metadata.fixRequest.batchId, 'historical missing batchKey must derive from canonical batchId');
     assert.equal(incident.metadata.prValidationRequest.repository, 'souhaiel11/pfe-app-test');
     const realValidationRequestId = incident.metadata.prValidationRequest.validationRequestId;
+
+    // R45 — le contexte envoyé à Jenkins porte les clés Sonar déterministes
+    // (isolation du projet principal), jamais dérivées/devinées côté Jenkins.
+    assert.equal(lastTriggerContext.baseSonarProjectKey, 'pfe-app-test');
+    assert.equal(lastTriggerContext.validationSonarProjectKey, 'pfe-app-test-pr-24', 'validation project key is deterministic: <base>-pr-<prNumber>');
+
+    // R45 — sans sonarqubeKey configuré sur le projet, la validation PR échoue
+    // explicitement (fail closed) plutôt que de déclencher Jenkins sans clé Sonar.
+    incident.metadata.prValidationRequest = null;
+    const originalSonarqubeKey = project.sonarqubeKey;
+    project.sonarqubeKey = null;
+    let triggeredWithoutSonarKey = false;
+    globalThis.fetch = async (url: any) => {
+      const value = String(url);
+      if (value.includes('api.github.com')) return new Response(JSON.stringify({ state: 'open', head: { sha, ref: `fix/pfe-${incident.id}-${incident.metadata.fixRequest.requestId}` } }), { status: 200 });
+      triggeredWithoutSonarKey = true;
+      throw new Error('Jenkins must not be reached without a configured sonarqubeKey');
+    };
+    await assert.rejects(() => service.requestPrValidation(incident.id, user), /SonarQube/);
+    assert.equal(triggeredWithoutSonarKey, false, 'Jenkins is never reached when sonarqubeKey is missing');
+    project.sonarqubeKey = originalSonarqubeKey;
 
     incident.metadata.prValidationRequest = null;
     globalThis.fetch = async (url: any) => {
