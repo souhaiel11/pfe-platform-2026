@@ -49,6 +49,13 @@ export class IncidentDetailComponent implements OnInit, OnDestroy {
   approvalBusy = false;
   prValidationBusy = false;
   prValidationRequest: any = null;
+  // R65 — la Pull Request a légitimement changé (nouveau commit de
+  // remédiation approuvé sur la même PR/branche) depuis la demande de
+  // correction initiale. Deux actions humaines distinctes et explicites :
+  // « Actualiser la cible » puis, séparément, « Réessayer la validation ».
+  // Jamais de nouvelle tentative automatique après actualisation.
+  prValidationTargetStale = false;
+  refreshValidationTargetBusy = false;
   approvalError: string | null = null;
   decision:    any  = null;   // legacy
   loading      = true;
@@ -577,6 +584,7 @@ export class IncidentDetailComponent implements OnInit, OnDestroy {
   requestPrValidation(): void {
     if (this.prValidationBusy || !this.canRequestPrValidation()) return;
     this.prValidationBusy = true;
+    this.prValidationTargetStale = false;
     this.api.requestPrValidation(this.id).subscribe({
       next: (result: any) => {
         this.prValidationBusy = false;
@@ -586,7 +594,36 @@ export class IncidentDetailComponent implements OnInit, OnDestroy {
       },
       error: (err: any) => {
         this.prValidationBusy = false;
+        // R65 — ce conflit précis signifie qu'un nouveau commit légitime est
+        // arrivé sur la même PR/branche depuis la demande de correction
+        // initiale (ex. une remédiation Sonar approuvée ultérieure). Ce n'est
+        // pas une erreur générique : l'action gouvernée « Actualiser la
+        // cible » doit être proposée explicitement, jamais déclenchée seule.
+        const message = err?.error?.message;
+        this.prValidationTargetStale = err?.status === 409 && typeof message === 'string' && message.includes('a changé');
         this.toast.error('Validation refusée', userHttpError(err, 'Impossible de demander la validation de la Pull Request.'));
+        this.load();
+      },
+    });
+  }
+
+  refreshValidationTarget(): void {
+    if (this.refreshValidationTargetBusy) return;
+    this.refreshValidationTargetBusy = true;
+    this.api.refreshPrValidationTarget(this.id).subscribe({
+      next: (result: any) => {
+        this.refreshValidationTargetBusy = false;
+        this.prValidationTargetStale = false;
+        this.toast.success(result?.changed
+          ? 'Cible de validation actualisée — vous pouvez maintenant réessayer la validation.'
+          : 'La cible de validation est déjà à jour.');
+        // Ne jamais relancer la validation automatiquement : l'utilisateur
+        // doit cliquer explicitement sur « Réessayer la validation » ensuite.
+        this.load();
+      },
+      error: (err: any) => {
+        this.refreshValidationTargetBusy = false;
+        this.toast.error('Actualisation refusée', userHttpError(err, 'Impossible d’actualiser la cible de validation.'));
         this.load();
       },
     });

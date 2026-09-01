@@ -29,6 +29,10 @@ export class ProjectDetailComponent implements OnInit {
   @ViewChild('batchDialog') batchDialog?: ElementRef<HTMLElement>;
   approving = false;
   prValidationBusy = false;
+  // R65 — voir incident-detail.component.ts : même conflit gouverné, même
+  // UX en deux actions humaines distinctes (jamais de retry automatique).
+  prValidationTargetStale = false;
+  refreshValidationTargetBusy = false;
   buildTriggering = false;
   @Input() id!: string;
 
@@ -224,6 +228,7 @@ export class ProjectDetailComponent implements OnInit {
   requestPrValidation(): void {
     if (this.prValidationBusy || !this.canRequestPrValidation() || !this.latestReport?.id) return;
     this.prValidationBusy = true;
+    this.prValidationTargetStale = false;
     this.api.requestPrValidation(this.latestReport.id).subscribe({
       next: (result: any) => {
         this.prValidationBusy = false;
@@ -236,7 +241,29 @@ export class ProjectDetailComponent implements OnInit {
       },
       error: (error: any) => {
         this.prValidationBusy = false;
+        const message = error?.error?.message;
+        this.prValidationTargetStale = error?.status === 409 && typeof message === 'string' && message.includes('a changé');
         this.toast.error('Validation refusée', userHttpError(error, 'Impossible de demander la validation de la Pull Request.'));
+        this.loadReports();
+      },
+    });
+  }
+
+  refreshValidationTarget(): void {
+    if (this.refreshValidationTargetBusy || !this.latestReport?.id) return;
+    this.refreshValidationTargetBusy = true;
+    this.api.refreshPrValidationTarget(this.latestReport.id).subscribe({
+      next: (result: any) => {
+        this.refreshValidationTargetBusy = false;
+        this.prValidationTargetStale = false;
+        this.toast.success(result?.changed
+          ? 'Cible de validation actualisée — vous pouvez maintenant réessayer la validation.'
+          : 'La cible de validation est déjà à jour.');
+        this.loadReports();
+      },
+      error: (error: any) => {
+        this.refreshValidationTargetBusy = false;
+        this.toast.error('Actualisation refusée', userHttpError(error, 'Impossible d’actualiser la cible de validation.'));
         this.loadReports();
       },
     });

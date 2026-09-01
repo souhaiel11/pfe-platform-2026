@@ -54,6 +54,15 @@ export class IncidentsController {
   @Post(':id/pr-validation/reconcile') reconcilePrValidation(@Param('id') id: string, @Req() req: any) {
     return this.service.reconcilePrValidation(id, req.user);
   }
+  // R65 — action gouvernée explicite pour accepter un commit de remédiation
+  // suivant légitime (même PR, même branche) comme nouvelle cible de
+  // validation, sans jamais écraser fixRequest.prHeadSha (provenance
+  // d'origine). Ne déclenche jamais Jenkins/WF1/WF3. Même garde que
+  // requestPrValidation (admin/developer).
+  @UseGuards(JwtAuthGuard)
+  @Post(':id/pr-validation/refresh-target') refreshPrValidationTarget(@Param('id') id: string, @Req() req: any) {
+    return this.service.refreshPrValidationTarget(id, req.user);
+  }
   @UseGuards(JwtAuthGuard)
   @Post(':id/reject') rejectFix(@Param('id') id: string, @Body() body: any, @Req() req: any) {
     return this.service.rejectFix(id, req.user, body || {});

@@ -95,6 +95,7 @@ export class ApiService {
   approveFixBatch(id: string, findingIds: string[]) { return this.http.post<any>(`${this.base}/incidents/${id}/approve`, { findingIds }); }
   retryFixBatch(id: string) { return this.http.post<any>(`${this.base}/incidents/${id}/retry`, {}); }
   requestPrValidation(id: string) { return this.http.post<any>(`${this.base}/incidents/${id}/pr-validation`, {}); }
+  refreshPrValidationTarget(id: string) { return this.http.post<any>(`${this.base}/incidents/${id}/pr-validation/refresh-target`, {}); }
   rejectFix(id: string) { return this.http.post(`${this.base}/incidents/${id}/reject`, {}); }
 
   triggerBuild(projectId: string) { return this.http.post(`${this.base}/incidents/${projectId}/trigger-build`, {}); }

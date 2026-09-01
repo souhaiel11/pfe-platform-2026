@@ -808,7 +808,16 @@ export class IncidentsService {
     const remoteHeadSha = String(pull?.head?.sha || '').toLowerCase();
     const remoteHeadBranch = String(pull?.head?.ref || '');
     const expectedBranch = `fix/pfe-${snapshot.id}-${initialFix.requestId}`;
-    if (pull?.state !== 'open' || remoteHeadBranch !== expectedBranch || remoteHeadSha !== String(initialFix.prHeadSha).toLowerCase()) {
+    // R65 — fixRequest.prHeadSha is immutable provenance (the SHA WF2 itself
+    // verified at PR-creation time). The actual comparison baseline is the
+    // governed validation target: prHeadSha until a human explicitly accepts
+    // a legitimate follow-up commit via refresh-target (POST
+    // :id/pr-validation/refresh-target), which then becomes
+    // fixRequest.validationTargetSha. Never silently trust a live GitHub SHA
+    // that diverges from the governed target — that would defeat the
+    // freshness gate this proven bug protects (PR-24 R64).
+    const initialTargetSha = String(initialFix.validationTargetSha || initialFix.prHeadSha).toLowerCase();
+    if (pull?.state !== 'open' || remoteHeadBranch !== expectedBranch || remoteHeadSha !== initialTargetSha) {
       throw new ConflictException('La Pull Request a changé. Actualisez la cible avant de demander sa validation.');
     }
     const repository = this.canonicalRepository(snapshot.project.githubRepo);
@@ -823,8 +832,9 @@ export class IncidentsService {
       if (!project) throw new NotFoundException('Projet introuvable.');
       const metadata: any = incident.metadata || {};
       const fix: any = metadata.fixRequest || {};
+      const fixTargetSha = String(fix.validationTargetSha || fix.prHeadSha || '').toLowerCase();
       if (fix.status !== 'PR_CREATED' || fix.requestId !== initialFix.requestId || fix.batchId !== initialFix.batchId
-        || String(fix.prHeadSha || '').toLowerCase() !== remoteHeadSha || Number(fix.prNumber) !== prNumber) {
+        || fixTargetSha !== remoteHeadSha || Number(fix.prNumber) !== prNumber) {
         throw new ConflictException('La demande de correction a changé avant le lancement de la validation.');
       }
       const existing = metadata.prValidationRequest;
@@ -915,6 +925,82 @@ export class IncidentsService {
       await this.repo.update(id, { metadata: { ...currentMeta, prValidationRequest: failed } } as any);
       throw new ServiceUnavailableException('La validation PR n’a pas pu être mise en file dans Jenkins.');
     }
+  }
+
+  // R65 — action gouvernée explicite pour accepter un commit de remédiation
+  // suivant légitime (même PR, même branche) comme nouvelle cible de
+  // validation. Proven-necessary: fixRequest.prHeadSha is frozen provenance
+  // (the SHA WF2 verified at PR-creation time) and requestPrValidation()
+  // rejects any drift from it with 409 -- including a genuine, approved,
+  // human-driven follow-up remediation commit on the SAME PR/branch (real
+  // case: PR-24's S125 fix, R64). Never touches fixRequest.prHeadSha. Never
+  // silently trusts GitHub -- only a human explicitly invoking this endpoint
+  // can move the governed target, and only after the same open/branch checks
+  // requestPrValidation itself performs. Never triggers Jenkins/WF1/WF3.
+  async refreshPrValidationTarget(id: string, user: any) {
+    this.assertCanApprove(user);
+    const snapshot = await this.repo.findOne({ where: { id }, relations: ['project'] });
+    if (!snapshot) throw new NotFoundException('Incident introuvable.');
+    const fix: any = (snapshot.metadata as any)?.fixRequest || {};
+    if (fix.status !== 'PR_CREATED' || !snapshot.prUrl || !fix.prNumber) {
+      throw new ConflictException('Aucune Pull Request de correction n’est prête à être validée.');
+    }
+    if (!isFullGitSha(fix.prHeadSha)) {
+      throw new ConflictException('Le HEAD exact de la Pull Request n’est pas disponible.');
+    }
+    const prNumber = Number(fix.prNumber);
+    const pull = await this.githubPullRequest(snapshot.project, prNumber);
+    const remoteHeadSha = String(pull?.head?.sha || '').toLowerCase();
+    const remoteHeadBranch = String(pull?.head?.ref || '');
+    const expectedBranch = `fix/pfe-${snapshot.id}-${fix.requestId}`;
+    const defaultBranch = (snapshot.metadata as any)?.defaultBranch;
+    if (pull?.state !== 'open' || remoteHeadBranch !== expectedBranch
+      || (defaultBranch && String(pull?.base?.ref || '') !== defaultBranch)) {
+      throw new ConflictException('La Pull Request ne correspond plus à cette demande de correction — actualisation refusée.');
+    }
+    if (!isFullGitSha(remoteHeadSha)) {
+      throw new BadGatewayException('Le HEAD de la Pull Request est introuvable auprès de GitHub.');
+    }
+    const currentTarget = String(fix.validationTargetSha || fix.prHeadSha).toLowerCase();
+    if (currentTarget === remoteHeadSha) {
+      // Idempotent: no DB write, no audit entry, nothing to refresh.
+      return { success: true, changed: false, validationTargetSha: currentTarget, originalPrHeadSha: fix.prHeadSha };
+    }
+    const now = new Date().toISOString();
+    const historyEntry = {
+      event: 'PR_VALIDATION_TARGET_REFRESHED', from: currentTarget, to: remoteHeadSha,
+      refreshedAt: now, refreshedBy: user.id, prNumber, branch: remoteHeadBranch,
+    };
+    const result: any = await this.repo.manager.transaction(async manager => {
+      const incidents = manager.getRepository(Incident);
+      const incident: any = await incidents.findOne({ where: { id }, lock: { mode: 'pessimistic_write' } });
+      if (!incident) throw new NotFoundException('Incident introuvable.');
+      const metadata: any = incident.metadata || {};
+      const currentFix: any = metadata.fixRequest || {};
+      if (currentFix.status !== 'PR_CREATED' || currentFix.requestId !== fix.requestId
+        || currentFix.batchId !== fix.batchId || Number(currentFix.prNumber) !== prNumber) {
+        throw new ConflictException('La demande de correction a changé avant l’actualisation de la cible.');
+      }
+      const priorTarget = String(currentFix.validationTargetSha || currentFix.prHeadSha).toLowerCase();
+      if (priorTarget === remoteHeadSha) {
+        return { changed: false, validationTargetSha: priorTarget };
+      }
+      const nextFix = {
+        ...currentFix,
+        validationTargetSha: remoteHeadSha,
+        validationTargetHistory: [
+          ...(Array.isArray(currentFix.validationTargetHistory) ? currentFix.validationTargetHistory : []),
+          historyEntry,
+        ],
+      };
+      await incidents.update(id, { metadata: { ...metadata, fixRequest: nextFix } } as any);
+      return { changed: true, validationTargetSha: remoteHeadSha };
+    });
+    if (result.changed) {
+      const updated = await this.findOne(id);
+      this.gateway.emit('incident:updated', updated);
+    }
+    return { success: true, changed: result.changed, validationTargetSha: result.validationTargetSha, originalPrHeadSha: fix.prHeadSha };
   }
 
   // R42A — réconciliation gouvernée d'une validation PR restée QUEUED/RUNNING

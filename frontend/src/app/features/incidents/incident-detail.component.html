@@ -70,6 +70,14 @@
               <span *ngIf="prValidationRequest?.status === 'COMPLETED'" class="badge info">Validée</span>
               <span *ngIf="prValidationRequest?.status === 'FAILED'" class="badge high">Validation échouée</span>
             </div>
+            <div *ngIf="prValidationTargetStale" style="margin-top:10px;padding:10px;border-radius:6px;background:var(--accent-red-bg, rgba(220,53,69,0.08));color:var(--accent-red);font-size:13px;">
+              La Pull Request a changé depuis la demande de correction initiale (un nouveau commit de remédiation approuvé a été détecté). Actualisez la cible de validation avant de réessayer.
+              <div style="margin-top:8px;">
+                <button class="btn btn-secondary btn-sm" [disabled]="refreshValidationTargetBusy" (click)="refreshValidationTarget()">
+                  {{refreshValidationTargetBusy ? 'Actualisation…' : 'Actualiser la cible'}}
+                </button>
+              </div>
+            </div>
           </div>
           <div *ngIf="approvalError" style="margin-top:10px;color:var(--accent-red);font-size:12px;">{{approvalError}}</div>
         </div>

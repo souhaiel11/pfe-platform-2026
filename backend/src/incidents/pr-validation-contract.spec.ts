@@ -363,6 +363,141 @@ async function main() {
       'correct job format combined with a SHA mismatch must still fail closed on the SHA gate',
     );
     assert.equal(incident.metadata.prValidationRequest.status, 'QUEUED', 'no write on a rejected SHA correlation');
+
+    // R65 — governed PR-head refresh. Proven live on real PR-24: a genuine
+    // approved follow-up remediation commit (S125 fix, R63) on the SAME
+    // PR/branch was rejected by requestPrValidation() with 409 "La Pull
+    // Request a changé" because fixRequest.prHeadSha is frozen provenance
+    // (R64). refresh-target lets a human explicitly accept the new HEAD as
+    // the governed validation baseline without ever touching prHeadSha.
+    const r65OriginalSha = sha;
+    const r65NewSha = '5cf69aaed7a89953fc0eab882bf269b4509a36cc';
+    const r65EvenNewerSha = 'c'.repeat(40);
+    const r65Branch = `fix/pfe-${incident.id}-9b62e087-02a8-409d-bfb1-a951629a8814`;
+    const resetR65Fix = (overrides: any = {}) => {
+      incident.metadata = {
+        ...incident.metadata,
+        fixRequest: {
+          status: 'PR_CREATED', requestId: '9b62e087-02a8-409d-bfb1-a951629a8814',
+          batchId: '6396353230fd100bf80c3417271c70cb7808273ebd6500571a46c2a4505af431',
+          attemptCount: 7, prNumber: 24, prHeadSha: r65OriginalSha, findingIds: ['a', 'b'],
+          ...overrides,
+        },
+        prValidationRequest: null,
+      };
+    };
+    const githubPull = (headSha: string, opts: { state?: string; ref?: string; base?: string } = {}) => ({
+      state: opts.state ?? 'open',
+      head: { sha: headSha, ref: opts.ref ?? r65Branch },
+      base: { ref: opts.base ?? 'main' },
+    });
+    const mockGithubOnly = (pull: any) => async (url: any) => {
+      if (String(url).includes('api.github.com')) {
+        assert.ok(String(url).includes('souhaiel11/pfe-app-test'), 'refresh-target must query the project-scoped repository (H: correlation is structural, not user-suppliable)');
+        return new Response(JSON.stringify(pull), { status: 200 });
+      }
+      throw new Error(`unexpected URL in R65 test: ${url}`);
+    };
+
+    // R65-TEST A — unchanged PR (stored target == live HEAD): validation allowed.
+    resetR65Fix();
+    globalThis.fetch = async (url: any, init?: RequestInit) => {
+      const value = String(url);
+      if (value.includes('api.github.com')) return new Response(JSON.stringify(githubPull(r65OriginalSha)), { status: 200 });
+      if (value.includes('/api/json')) return new Response(JSON.stringify({ buildable: true, _class: 'org.jenkinsci.plugins.workflow.job.WorkflowJob', property: [{ _class: 'hudson.model.ParametersDefinitionProperty', parameterDefinitions: [{ name: 'PFE_VALIDATION_CONTEXT', type: 'StringParameterDefinition', defaultParameterValue: { value: '' } }] }] }), { status: 200 });
+      if (value.includes('crumbIssuer')) return new Response(JSON.stringify({ crumbRequestField: 'Jenkins-Crumb', crumb: 'opaque' }), { status: 200 });
+      if (value.includes('/buildWithParameters')) { triggers++; return new Response('', { status: 201, headers: { location: 'http://jenkins/queue/item/9001/' } }); }
+      throw new Error(`unexpected URL in R65-TEST A: ${value}`);
+    };
+    triggers = 0;
+    const r65A: any = await service.requestPrValidation(incident.id, user);
+    assert.equal(r65A.duplicate, false, 'unchanged PR head must be accepted without a refresh');
+    assert.equal(triggers, 1);
+    assert.equal(incident.metadata.prValidationRequest.expectedPrHeadSha, r65OriginalSha);
+
+    // R65-TEST B — changed PR without refresh: 409, Jenkins not called.
+    resetR65Fix();
+    globalThis.fetch = mockGithubOnly(githubPull(r65NewSha));
+    triggers = 0;
+    await assert.rejects(() => service.requestPrValidation(incident.id, user), /Pull Request a changé/);
+    assert.equal(triggers, 0, 'Jenkins must never be reached when the PR head diverges from the governed target');
+    assert.equal(incident.metadata.prValidationRequest, null, 'no prValidationRequest written on a rejected freshness check');
+
+    // R65-TEST C — explicit refresh, same PR/branch, new SHA: target updated, provenance preserved.
+    resetR65Fix();
+    globalThis.fetch = mockGithubOnly(githubPull(r65NewSha));
+    const r65C: any = await service.refreshPrValidationTarget(incident.id, user);
+    assert.equal(r65C.success, true);
+    assert.equal(r65C.changed, true);
+    assert.equal(r65C.validationTargetSha, r65NewSha);
+    assert.equal(incident.metadata.fixRequest.validationTargetSha, r65NewSha);
+    assert.equal(incident.metadata.fixRequest.prHeadSha, r65OriginalSha, 'L: original remediation SHA must remain preserved, never overwritten');
+    assert.equal(incident.metadata.fixRequest.validationTargetHistory.length, 1);
+    assert.equal(incident.metadata.fixRequest.validationTargetHistory[0].from, r65OriginalSha);
+    assert.equal(incident.metadata.fixRequest.validationTargetHistory[0].to, r65NewSha);
+    assert.equal(incident.metadata.fixRequest.validationTargetHistory[0].event, 'PR_VALIDATION_TARGET_REFRESHED');
+    assert.equal(incident.metadata.fixRequest.validationTargetHistory[0].refreshedBy, user.id);
+
+    // R65-TEST D — validation after refresh: allowed, expectedPrHeadSha snapshots the NEW SHA.
+    globalThis.fetch = async (url: any) => {
+      const value = String(url);
+      if (value.includes('api.github.com')) return new Response(JSON.stringify(githubPull(r65NewSha)), { status: 200 });
+      if (value.includes('/api/json')) return new Response(JSON.stringify({ buildable: true, _class: 'org.jenkinsci.plugins.workflow.job.WorkflowJob', property: [{ _class: 'hudson.model.ParametersDefinitionProperty', parameterDefinitions: [{ name: 'PFE_VALIDATION_CONTEXT', type: 'StringParameterDefinition', defaultParameterValue: { value: '' } }] }] }), { status: 200 });
+      if (value.includes('crumbIssuer')) return new Response(JSON.stringify({ crumbRequestField: 'Jenkins-Crumb', crumb: 'opaque' }), { status: 200 });
+      if (value.includes('/buildWithParameters')) { triggers++; return new Response('', { status: 201, headers: { location: 'http://jenkins/queue/item/9002/' } }); }
+      throw new Error(`unexpected URL in R65-TEST D: ${value}`);
+    };
+    triggers = 0;
+    const r65D: any = await service.requestPrValidation(incident.id, user);
+    assert.equal(r65D.duplicate, false);
+    assert.equal(triggers, 1);
+    assert.equal(incident.metadata.prValidationRequest.expectedPrHeadSha, r65NewSha, 'validation attempt snapshots the governed target, not the original provenance SHA');
+    assert.equal(incident.metadata.prValidationRequest.retryAttempt, 0, 'N: a brand-new SHA identity starts its own lineage, unaffected by refresh-target itself');
+    const r65DExpectedSha = incident.metadata.prValidationRequest.expectedPrHeadSha;
+
+    // R65-TEST E — PR changes again after refresh (no second refresh yet): 409.
+    globalThis.fetch = mockGithubOnly(githubPull(r65EvenNewerSha));
+    triggers = 0;
+    await assert.rejects(() => service.requestPrValidation(incident.id, user), /Pull Request a changé/);
+    assert.equal(triggers, 0);
+    assert.equal(incident.metadata.prValidationRequest.expectedPrHeadSha, r65DExpectedSha, 'M: the already-created validation attempt is immutable, never rewritten by a later drift/refresh');
+
+    // R65-TEST F — PR closed: refresh rejected.
+    resetR65Fix();
+    globalThis.fetch = mockGithubOnly(githubPull(r65NewSha, { state: 'closed' }));
+    await assert.rejects(() => service.refreshPrValidationTarget(incident.id, user), /ne correspond plus/);
+    assert.equal(incident.metadata.fixRequest.validationTargetSha, undefined, 'no target change on a rejected refresh');
+
+    // R65-TEST G — branch changed: refresh rejected.
+    resetR65Fix();
+    globalThis.fetch = mockGithubOnly(githubPull(r65NewSha, { ref: 'some-other-branch' }));
+    await assert.rejects(() => service.refreshPrValidationTarget(incident.id, user), /ne correspond plus/);
+    assert.equal(incident.metadata.fixRequest.validationTargetSha, undefined);
+
+    // R65-TEST I — repeated refresh with the same SHA: idempotent, no duplicate audit entry.
+    resetR65Fix();
+    globalThis.fetch = mockGithubOnly(githubPull(r65NewSha));
+    const r65I1: any = await service.refreshPrValidationTarget(incident.id, user);
+    assert.equal(r65I1.changed, true);
+    assert.equal(incident.metadata.fixRequest.validationTargetHistory.length, 1);
+    const r65I2: any = await service.refreshPrValidationTarget(incident.id, user);
+    assert.equal(r65I2.changed, false, 'I: repeating the same target must be a no-op');
+    assert.equal(r65I2.validationTargetSha, r65NewSha);
+    assert.equal(incident.metadata.fixRequest.validationTargetHistory.length, 1, 'no duplicate audit entry on an idempotent refresh');
+
+    // R65-TEST J/K — refresh never triggers Jenkins/WF1/WF3 (mockGithubOnly
+    // throws on any URL other than api.github.com, so any accidental call to
+    // Jenkins or an n8n workflow endpoint would already have failed the
+    // tests above; this asserts the explicit trigger counter too).
+    resetR65Fix();
+    triggers = 0;
+    globalThis.fetch = mockGithubOnly(githubPull(r65NewSha));
+    await service.refreshPrValidationTarget(incident.id, user);
+    assert.equal(triggers, 0, 'J/K: refresh-target must never trigger Jenkins/WF1/WF3');
+
+    // R65-TEST A (idempotency variant already covered above via I). Final
+    // sanity: original provenance survives every refresh in this whole block.
+    assert.equal(incident.metadata.fixRequest.prHeadSha, r65OriginalSha);
   } finally {
     globalThis.fetch = originalFetch;
   }
