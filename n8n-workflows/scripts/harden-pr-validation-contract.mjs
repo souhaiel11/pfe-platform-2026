@@ -7,15 +7,18 @@ const load = path => { const raw = JSON.parse(fs.readFileSync(path)); return Arr
 const save = (path, workflow) => fs.writeFileSync(path, JSON.stringify([workflow], null, 2) + '\n');
 const node = (workflow, name) => workflow.nodes.find(candidate => candidate.name === name);
 
-// R52/R57 -- single source of truth for the Sonar credential reference, used
-// by every Sonar HTTP node across WF1 and WF3. 'SONARQUBE credential 2'
+// R52/R57/R60 -- single source of truth for the Sonar credential reference,
+// used by every Sonar HTTP node across WF1 and WF3. 'SONARQUBE credential 2'
 // (httpBasicAuth) started failing Sonar auth with a real 401 (proven live on
-// PR-24 build #4). 'n8n-sonarqube-api' (R52) also failed auth (valid=false).
-// R57 -- rewired to 'sonar' (id bMpqrUPOkyVVn6G2), the correct credential
-// name confirmed by the user after 'sanar' (typo) did not exist. Never a raw
-// token -- id/name reference only.
+// PR-24 build #4). 'n8n-sonarqube-api' (R52) and 'sonar' (R57, id
+// bMpqrUPOkyVVn6G2) both subsequently failed auth (valid=false) despite the
+// underlying token itself being independently proven valid via direct curl --
+// the stored credential value was wrong, not the token or the wiring. R60 --
+// rewired to 'sonar-direct-token' (id r60SonarDirectCred1), created directly
+// from the user-provided token and proven live (valid=true, Quality Gate OK,
+// issue search real data). Never a raw token in source -- id/name reference only.
 const SONAR_CREDENTIAL_TYPE = 'httpHeaderAuth';
-const SONAR_CREDENTIAL = { id: 'bMpqrUPOkyVVn6G2', name: 'sonar' };
+const SONAR_CREDENTIAL = { id: 'r60SonarDirectCred1', name: 'sonar-direct-token' };
 
 const required = [
   'validationRequestId','projectId','incidentId','fixRequestId','batchId','batchKey','attemptCount',

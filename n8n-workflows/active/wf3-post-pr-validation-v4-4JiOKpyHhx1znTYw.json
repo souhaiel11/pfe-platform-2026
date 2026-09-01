@@ -57,8 +57,8 @@
         "onError": "continueRegularOutput",
         "credentials": {
           "httpHeaderAuth": {
-            "id": "bMpqrUPOkyVVn6G2",
-            "name": "sonar"
+            "id": "r60SonarDirectCred1",
+            "name": "sonar-direct-token"
           }
         }
       },
@@ -164,8 +164,8 @@
         },
         "credentials": {
           "httpHeaderAuth": {
-            "id": "bMpqrUPOkyVVn6G2",
-            "name": "sonar"
+            "id": "r60SonarDirectCred1",
+            "name": "sonar-direct-token"
           }
         }
       }

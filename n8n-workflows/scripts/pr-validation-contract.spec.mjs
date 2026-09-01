@@ -80,22 +80,26 @@ assert.ok(!communityBranch.includes('&pullRequest='));
 // Sonar auth with a real 401 (proven live on build #4); rewired to Header
 // Auth credential 'n8n-sonarqube-api', which also failed (valid=false).
 // R57 -- rewired again to 'sonar' (id bMpqrUPOkyVVn6G2), confirmed by the
-// user as the correct credential after 'sanar' (typo) did not exist. No old
+// user as the correct credential after 'sanar' (typo) did not exist -- this
+// also failed (valid=false) despite the token itself being independently
+// proven valid via direct curl. R60 -- rewired to 'sonar-direct-token' (id
+// r60SonarDirectCred1), created directly from the user-provided token and
+// proven live (valid=true, Quality Gate OK, real issue data). No old
 // credential id/name may remain referenced anywhere in either workflow's
 // Sonar-facing nodes.
-const OLD_SONAR_CREDENTIAL_IDS = ['AxQb6AG51EcWcXik', 'DUFtkRTI3V05MJ3X'];
+const OLD_SONAR_CREDENTIAL_IDS = ['AxQb6AG51EcWcXik', 'DUFtkRTI3V05MJ3X', 'bMpqrUPOkyVVn6G2'];
 for (const nodeName of ['Get SonarQube PR Quality Gate', 'Get SonarQube Approved Findings']) {
   const sonarNode = byName(wf3, nodeName);
   assert.equal(sonarNode.parameters.authentication, 'predefinedCredentialType');
   assert.equal(sonarNode.parameters.nodeCredentialType, 'httpHeaderAuth');
-  assert.equal(sonarNode.credentials?.httpHeaderAuth?.id, 'bMpqrUPOkyVVn6G2', `${nodeName} must reference the 'sonar' credential`);
+  assert.equal(sonarNode.credentials?.httpHeaderAuth?.id, 'r60SonarDirectCred1', `${nodeName} must reference the 'sonar-direct-token' credential`);
   for (const oldId of OLD_SONAR_CREDENTIAL_IDS) {
     assert.ok(!JSON.stringify(sonarNode.credentials).includes(oldId), `${nodeName} must not still reference an old Sonar credential`);
   }
 }
 const wf1SonarNode = byName(wf1, 'Fetch SonarQube Issues');
 assert.equal(wf1SonarNode.parameters.genericAuthType, 'httpHeaderAuth');
-assert.equal(wf1SonarNode.credentials?.httpHeaderAuth?.id, 'bMpqrUPOkyVVn6G2', "WF1 Fetch SonarQube Issues must reference the 'sonar' credential");
+assert.equal(wf1SonarNode.credentials?.httpHeaderAuth?.id, 'r60SonarDirectCred1', "WF1 Fetch SonarQube Issues must reference the 'sonar-direct-token' credential");
 for (const oldId of OLD_SONAR_CREDENTIAL_IDS) {
   assert.ok(!JSON.stringify(wf1SonarNode.credentials).includes(oldId), 'WF1 Fetch SonarQube Issues must not still reference an old Sonar credential');
 }
