@@ -252,8 +252,8 @@
         ],
         "credentials": {
           "httpHeaderAuth": {
-            "id": "DUFtkRTI3V05MJ3X",
-            "name": "n8n-sonarqube-api"
+            "id": "bMpqrUPOkyVVn6G2",
+            "name": "sonar"
           }
         },
         "onError": "continueRegularOutput"
