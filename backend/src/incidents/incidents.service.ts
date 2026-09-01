@@ -961,10 +961,24 @@ export class IncidentsService {
       throw new ConflictException('Le build Jenkins est SUCCESS sans callback reçu — réconciliation manuelle requise, non automatisée ici.');
     }
     const now = new Date().toISOString();
+    // R47 — UNSTABLE is not the same failure shape as FAILURE/ABORTED: the
+    // Shared Library wraps Sonar/Trivy/OWASP/ZAP in catchError(buildResult:
+    // 'UNSTABLE'), so an UNSTABLE build always still completes and reaches its
+    // terminal report/callback step (unlike a genuine pipeline crash, which
+    // never gets there). Proven directly against real PR-24 build #2: its
+    // callback DID reach n8n (WF1 execution 1894), which rejected the contract
+    // fail-closed with INVALID_PR_VALIDATION_CONTRACT:ceTaskId,analysisId
+    // because SonarQube Community Edition cannot produce native PR analysis
+    // evidence. Labeling this JENKINS_PIPELINE_FAILED ("no callback sent")
+    // would misstate what actually happened -- use the truthful code instead.
+    const isUnsupportedSonarPr = buildData.result === 'UNSTABLE';
+    const failureCode = isUnsupportedSonarPr ? 'SONAR_PR_ANALYSIS_UNSUPPORTED' : 'JENKINS_PIPELINE_FAILED';
+    const failureSummary = isUnsupportedSonarPr
+      ? `Jenkins build #${buildData.number} s’est terminé en UNSTABLE : l’analyse SonarQube Pull Request native n’est pas supportée par cette édition Community (ceTaskId/analysisId indisponibles), rejetée fail-closed par WF1.`
+      : `Jenkins build #${buildData.number} s’est terminé en ${buildData.result} avant l’envoi du callback de validation.`;
     const reconciled = {
       ...request, status: 'FAILED',
-      failureCode: 'JENKINS_PIPELINE_FAILED',
-      failureSummary: `Jenkins build #${buildData.number} s’est terminé en ${buildData.result} avant l’envoi du callback de validation.`,
+      failureCode, failureSummary,
       jenkinsBuildNumber: buildData.number, jenkinsBuildResult: buildData.result,
       reconciledAt: now, reconciledBy: user.id, updatedAt: now,
     };

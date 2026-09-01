@@ -226,6 +226,33 @@ async function main() {
     };
     await assert.rejects(() => service.reconcilePrValidation(incident.id, user), /SUCCESS sans callback/);
     assert.equal(incident.metadata.prValidationRequest.status, 'QUEUED', 'a SUCCESS build is never auto-reconciled to VALIDATED');
+
+    // R47-TEST F — UNSTABLE must NOT be mislabeled as "no callback sent"
+    // (JENKINS_PIPELINE_FAILED): the Shared Library wraps scanner stages in
+    // catchError(buildResult:'UNSTABLE'), so an UNSTABLE build always still
+    // reaches its terminal report/callback step. Proven directly against real
+    // PR-24 build #2: its callback DID reach n8n (WF1 execution 1894), which
+    // rejected the contract fail-closed on missing ceTaskId/analysisId because
+    // SonarQube Community Edition cannot produce native PR analysis evidence.
+    const unstableWithHistory = { ...queuedWithHistory, status: 'QUEUED', queueUrl: 'http://jenkins:8080/queue/item/1899/', retryAttempt: 2, previousAttempts: [priorFailed, { ...priorFailed, failureCode: 'JENKINS_PIPELINE_FAILED' }] };
+    incident.metadata.prValidationRequest = unstableWithHistory;
+    const fixRequestStatusBeforeUnstable = incident.metadata.fixRequest.status;
+    globalThis.fetch = async (url: any) => {
+      const value = String(url);
+      if (value.includes('/job/PR-24/api/json')) return new Response(JSON.stringify({ builds: [{ number: 2, queueId: 1899, building: false, result: 'UNSTABLE' }] }), { status: 200 });
+      throw new Error(`unexpected URL in reconcile test F: ${value}`);
+    };
+    const unstableReconcile: any = await service.reconcilePrValidation(incident.id, user);
+    assert.equal(unstableReconcile.reconciled, true);
+    assert.equal(incident.metadata.prValidationRequest.status, 'FAILED');
+    assert.equal(incident.metadata.prValidationRequest.failureCode, 'SONAR_PR_ANALYSIS_UNSUPPORTED', 'UNSTABLE gets the truthful code, never the generic no-callback one');
+    assert.notEqual(incident.metadata.prValidationRequest.failureCode, 'JENKINS_PIPELINE_FAILED');
+    assert.ok(!/avant l.{1,2}envoi du callback/.test(incident.metadata.prValidationRequest.failureSummary), 'must not claim the callback was never sent -- it was, and WF1 rejected it');
+    assert.match(incident.metadata.prValidationRequest.failureSummary, /Community/);
+    assert.equal(incident.metadata.prValidationRequest.jenkinsBuildNumber, 2);
+    assert.equal(incident.metadata.prValidationRequest.jenkinsBuildResult, 'UNSTABLE');
+    assert.equal(incident.metadata.prValidationRequest.expectedPrHeadSha, sha, 'expected SHA is never rewritten by reconciliation');
+    assert.equal(incident.metadata.fixRequest.status, fixRequestStatusBeforeUnstable, 'reconciliation never touches fixRequest.status (stays PR_CREATED)');
   } finally {
     globalThis.fetch = originalFetch;
   }
