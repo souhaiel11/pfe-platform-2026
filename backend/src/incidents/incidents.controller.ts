@@ -46,6 +46,14 @@ export class IncidentsController {
   @Post(':id/pr-validation') requestPrValidation(@Param('id') id: string, @Req() req: any) {
     return this.service.requestPrValidation(id, req.user);
   }
+  // R42A — réconciliation gouvernée d'une validation PR restée QUEUED/RUNNING
+  // face à un build Jenkins déjà terminal sans callback reçu. Ne déclenche
+  // jamais Jenkins ; lecture seule côté Jenkins, une seule écriture DB via le
+  // service. Même garde que requestPrValidation (admin/developer).
+  @UseGuards(JwtAuthGuard)
+  @Post(':id/pr-validation/reconcile') reconcilePrValidation(@Param('id') id: string, @Req() req: any) {
+    return this.service.reconcilePrValidation(id, req.user);
+  }
   @UseGuards(JwtAuthGuard)
   @Post(':id/reject') rejectFix(@Param('id') id: string, @Body() body: any, @Req() req: any) {
     return this.service.rejectFix(id, req.user, body || {});

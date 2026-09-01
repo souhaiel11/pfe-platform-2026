@@ -897,6 +897,72 @@ export class IncidentsService {
     }
   }
 
+  // R42A — réconciliation gouvernée d'une validation PR restée QUEUED/RUNNING
+  // alors que son build Jenkins exact est déjà terminal, sans callback jamais
+  // reçu (ex: crash pipeline avant l'étape de notification). Ne fabrique
+  // jamais un résultat VALIDATED : un build SUCCESS sans callback reste en
+  // échec fail-closed, nécessitant une intervention distincte. Ne touche
+  // jamais fixRequest.status ni les findings — seule prValidationRequest est
+  // mise à jour, avec l'historique précédent intact dans previousAttempts.
+  async reconcilePrValidation(id: string, user: any) {
+    this.assertCanApprove(user);
+    const snapshot = await this.repo.findOne({ where: { id }, relations: ['project'] });
+    if (!snapshot) throw new NotFoundException('Incident introuvable.');
+    const metadata: any = snapshot.metadata || {};
+    const request = metadata.prValidationRequest;
+    if (!request || !['QUEUED', 'RUNNING'].includes(String(request.status))) {
+      throw new ConflictException('Aucune validation PR active à réconcilier.');
+    }
+    const project = snapshot.project;
+    const jenkinsInternalUrl = resolveJenkinsInternalUrl(project);
+    if (!jenkinsInternalUrl || !project.jenkinsToken) {
+      throw new BadRequestException('Jenkins n’est pas configuré pour la réconciliation.');
+    }
+    if (!request.queueUrl || !request.prValidationJob) {
+      throw new ConflictException('Aucune référence de file Jenkins persistée pour cette validation.');
+    }
+    // Jenkins purges resolved queue items from /queue/item/:id/api/json after a
+    // while (proven directly against this real stale request: 404, item already
+    // long resolved) -- the queueId Jenkins stamps permanently onto the build
+    // itself is the reliable correlation, not the ephemeral queue endpoint.
+    const queueIdMatch = String(request.queueUrl).match(/\/queue\/item\/(\d+)\//);
+    if (!queueIdMatch) {
+      throw new ConflictException('Référence de file Jenkins illisible pour cette validation.');
+    }
+    const queueId = Number(queueIdMatch[1]);
+    const authHeader = 'Basic ' + Buffer.from(project.jenkinsToken).toString('base64');
+    const jobPath = resolveJenkinsJobPath(request.prValidationJob);
+    const buildsRes = await fetch(`${jenkinsInternalUrl}${jobPath}/api/json?tree=builds[number,result,building,queueId]{0,50}`, {
+      headers: { Authorization: authHeader }, signal: AbortSignal.timeout(10_000),
+    });
+    if (!buildsRes.ok) throw new ServiceUnavailableException('Impossible de vérifier l’état du job Jenkins.');
+    const buildsData: any = await buildsRes.json();
+    const buildData = (buildsData?.builds || []).find((b: any) => b.queueId === queueId);
+    if (!buildData) {
+      // Not found among recent builds: either genuinely still queued/not yet
+      // started, or older than the lookback window. Never guessed either way.
+      return { reconciled: false, reason: 'STILL_QUEUED', validationRequest: request };
+    }
+    if (buildData.building || !buildData.result) {
+      return { reconciled: false, reason: 'STILL_RUNNING', validationRequest: request };
+    }
+    if (buildData.result === 'SUCCESS') {
+      // Fail-closed on purpose: a SUCCESS build with no callback is a different,
+      // more delicate gap (evidence may still be recoverable) than the proven
+      // early-crash case this reconciliation targets. Never guess VALIDATED.
+      throw new ConflictException('Le build Jenkins est SUCCESS sans callback reçu — réconciliation manuelle requise, non automatisée ici.');
+    }
+    const now = new Date().toISOString();
+    const reconciled = {
+      ...request, status: 'FAILED',
+      failureCode: 'JENKINS_PIPELINE_FAILED',
+      failureSummary: `Jenkins build #${buildData.number} s’est terminé en ${buildData.result} avant l’envoi du callback de validation.`,
+      jenkinsBuildNumber: buildData.number, jenkinsBuildResult: buildData.result,
+      reconciledAt: now, reconciledBy: user.id, updatedAt: now,
+    };
+    await this.repo.update(id, { metadata: { ...metadata, prValidationRequest: reconciled } } as any);
+    return { reconciled: true, validationRequest: reconciled };
+  }
 
   async triggerBuild(projectId: string) {
     const project = await this.projectRepo.findOne({ where: { id: projectId } });
