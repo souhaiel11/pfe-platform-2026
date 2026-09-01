@@ -105,11 +105,15 @@ let projectKey;let url;
 if(mode==='COMMUNITY_EXACT_SHA'){
   projectKey=String(ctx.validationSonarProjectKey||'');if(!projectKey)throw new Error('SONAR_VALIDATION_PROJECT_KEY_UNAVAILABLE');
   const rules=[...new Set(findings.map(f=>f.rule).filter(Boolean))];
-  url='http://sonarqube:9000/api/issues/search?componentKeys='+encodeURIComponent(projectKey)+'&rules='+encodeURIComponent(rules.join(','))+'&ps=500';
+  // R67 -- resolved=false reduces historical noise (a long-lived, reused
+  // validation project keeps CLOSED/FIXED issues in its history, proven live
+  // on PR-24 build #6). Query-level filtering alone is never trusted --
+  // Consolidate Validation Result still defensively checks issue status.
+  url='http://sonarqube:9000/api/issues/search?componentKeys='+encodeURIComponent(projectKey)+'&resolved=false&rules='+encodeURIComponent(rules.join(','))+'&ps=500';
 }else{
   projectKey=String(incident.sonarqubeKey||'');if(!projectKey)throw new Error('SONAR_PROJECT_KEY_UNAVAILABLE');
   const rules=[...new Set(findings.map(f=>f.rule).filter(Boolean))];
-  url='http://sonarqube:9000/api/issues/search?componentKeys='+encodeURIComponent(projectKey)+'&pullRequest='+encodeURIComponent(pr)+'&rules='+encodeURIComponent(rules.join(','))+'&ps=500';
+  url='http://sonarqube:9000/api/issues/search?componentKeys='+encodeURIComponent(projectKey)+'&pullRequest='+encodeURIComponent(pr)+'&resolved=false&rules='+encodeURIComponent(rules.join(','))+'&ps=500';
 }
 return [{json:{url,findings,findingIds,analysisId:ctx.analysisId,sonarAnalysisMode:mode,validationSonarProjectKey:projectKey}}];`;
 
@@ -118,7 +122,20 @@ return [{json:{url,findings,findingIds,analysisId:ctx.analysisId,sonarAnalysisMo
 node(wf3, 'Consolidate Validation Result').parameters.jsCode = `const ctx=$('Extract Validation Context').first().json;let incident={};try{incident=$('Get Incident From DB').first().json||{}}catch{};let sonar={};try{sonar=$('Get SonarQube PR Quality Gate').first().json||{}}catch{};let findingSearch={};try{findingSearch=$('Get SonarQube Approved Findings').first().json||{}}catch{};const prepared=$('Prepare Approved Finding Validation').first().json;
 const analysisMode=ctx.sonarAnalysisMode;const analysisLabel=analysisMode==='COMMUNITY_EXACT_SHA'?'Sonar Community exact-SHA validation':'Sonar native PR analysis';
 const sonarCorrelationVerified=!!ctx.ceTaskId&&!!ctx.analysisId&&!!sonar.projectStatus;const sonarStatus=sonarCorrelationVerified?String(sonar.projectStatus.status||'UNAVAILABLE').toUpperCase():'CORRELATION_PENDING';const requiredNames=['build','tests','sonar'];const missingStage=requiredNames.filter(name=>!ctx.requiredStages.some(s=>s.stage===name&&s.required===true));const requiredFailures=ctx.requiredStages.filter(s=>s.required!==false&&s.status!=='PASSED'&&!(s.status==='WARNING'&&!s.blocking));
-const searchAvailable=Array.isArray(findingSearch.issues);const normalizeFile=value=>String(value||'').replace(/^[^:]+:/,'').replace(/^\\/+/, '');const openIssues=searchAvailable?findingSearch.issues:[];const findingResults=prepared.findings.map(f=>{if(!searchAvailable)return{findingId:String(f.findingId),rule:f.rule,result:'INCONCLUSIVE',evidence:analysisLabel+' issue search unavailable'};const match=openIssues.find(issue=>String(issue.rule||'')===String(f.rule||'')&&normalizeFile(issue.component).endsWith(normalizeFile(f.file))&&(!f.line||!issue.line||Number(issue.line)===Number(f.line)));return match?{findingId:String(f.findingId),rule:f.rule,result:'INVALID',evidence:analysisLabel+' issue '+String(match.key||match.rule)+' remains open'}:{findingId:String(f.findingId),rule:f.rule,result:'VALID',evidence:analysisLabel+' '+ctx.analysisId+' at '+ctx.checkoutSha+': approved finding absent'};});
+const searchAvailable=Array.isArray(findingSearch.issues);const normalizeFile=value=>String(value||'').replace(/^[^:]+:/,'').replace(/^\\/+/, '');const openIssues=searchAvailable?findingSearch.issues:[];
+// R67 -- a matching rule/file/line issue alone is NOT enough to prove a
+// finding still exists: Sonar keeps CLOSED/FIXED issues in a reused
+// validation project's history (proven live on PR-24 build #6, issue
+// 19a6499c... status=CLOSED resolution=FIXED was wrongly read as "remains
+// open"). Single source of truth for "is this issue still a live problem",
+// grounded in this Sonar instance's real payload (both the legacy
+// status/resolution pair and the newer simplified issueStatus field are
+// present and mutually consistent here). resolution set => never active,
+// regardless of status. No usable status field at all => fail closed
+// (treat as still active -- never silently grant VALID without positive
+// proof of resolution).
+const isActiveSonarIssue=issue=>{if(!issue)return false;if(issue.resolution)return false;const LIVE_STATUSES=['OPEN','CONFIRMED','REOPENED'];const status=String(issue.status||'').toUpperCase();if(status)return LIVE_STATUSES.includes(status);const LIVE_ISSUE_STATUSES=['OPEN','CONFIRMED'];const issueStatus=String(issue.issueStatus||'').toUpperCase();if(issueStatus)return LIVE_ISSUE_STATUSES.includes(issueStatus);return true;};
+const findingResults=prepared.findings.map(f=>{if(!searchAvailable)return{findingId:String(f.findingId),rule:f.rule,result:'INCONCLUSIVE',evidence:analysisLabel+' issue search unavailable'};const match=openIssues.find(issue=>String(issue.rule||'')===String(f.rule||'')&&normalizeFile(issue.component).endsWith(normalizeFile(f.file))&&(!f.line||!issue.line||Number(issue.line)===Number(f.line))&&isActiveSonarIssue(issue));return match?{findingId:String(f.findingId),rule:f.rule,result:'INVALID',evidence:analysisLabel+' issue '+String(match.key||match.rule)+' remains open'}:{findingId:String(f.findingId),rule:f.rule,result:'VALID',evidence:analysisLabel+' '+ctx.analysisId+' at '+ctx.checkoutSha+': approved finding absent'};});
 const everyFindingValid=findingResults.length===prepared.findingIds.length&&findingResults.every(r=>r.result==='VALID');const shaVerified=ctx.expectedPrHeadSha===ctx.checkoutSha;const correlationVerified=!!incident?.id&&incident.id===ctx.incidentId&&sonarCorrelationVerified&&shaVerified;const passed=ctx.jenkinsStatus==='SUCCESS'&&sonarStatus==='OK'&&correlationVerified&&!missingStage.length&&!requiredFailures.length&&Number(ctx.unresolvedBlockingCount||0)===0&&everyFindingValid;const anyInvalid=findingResults.some(r=>r.result==='INVALID');
 return [{json:{...ctx,findingResults,validationStatus:passed?'VALIDATED':anyInvalid?'INVALID':'INCONCLUSIVE',passed,sonarStatus,sonarAnalysisMode:analysisMode,sonarCorrelationVerified,correlationVerified,finalStateVerified:shaVerified,requiredStagesStatus:(!missingStage.length&&!requiredFailures.length)?'PASSED':'FAILED',failureReasons:[ctx.jenkinsStatus!=='SUCCESS'?'Jenkins='+ctx.jenkinsStatus:null,sonarStatus!=='OK'?'Sonar='+sonarStatus:null,!shaVerified?'PR HEAD mismatch':null,!correlationVerified?'Correlation unverified':null,!everyFindingValid?'Approved finding validation incomplete':null,...missingStage.map(s=>'Required stage missing='+s),...requiredFailures.map(s=>s.stage+'='+s.status)].filter(Boolean),timestamp:new Date().toISOString()}}];`;
 
