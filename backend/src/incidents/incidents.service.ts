@@ -115,6 +115,73 @@ export function isFullGitSha(value: unknown): value is string {
   return typeof value === 'string' && /^[a-f0-9]{40}$/i.test(value);
 }
 
+// Canonical `owner/repo` form of any GitHub remote (URL or already-canonical
+// string). Single source of truth so the reconciler's SHA correlation compares
+// Jenkins' git remoteUrls against the project repo exactly as requestPrValidation
+// derived it.
+export function canonicalGitRepo(value: unknown): string {
+  return String(value || '')
+    .replace(/^git@github\.com:/, '')
+    .replace(/^ssh:\/\/git@github\.com\//, '')
+    .replace(/^https?:\/\/github\.com\//, '')
+    .replace(/\.git$/, '')
+    .replace(/^\/+|\/+$/g, '')
+    .toLowerCase();
+}
+
+// The exact PFE_VALIDATION_CONTEXT string the platform issued to Jenkins
+// (encodePrValidationContext -> base64url). Jenkins echoes it back verbatim as a
+// build parameter; decoding it is the strongest correlation the Jenkins-only
+// reconciler has — it carries the exact validationRequestId.
+export function decodeJenkinsValidationContext(rawValue: unknown): any | null {
+  if (typeof rawValue !== 'string' || !rawValue) return null;
+  for (const encoding of ['base64url', 'base64'] as const) {
+    try {
+      const parsed = JSON.parse(Buffer.from(rawValue, encoding).toString('utf8'));
+      if (parsed && typeof parsed === 'object') return parsed;
+    } catch { /* try next encoding */ }
+  }
+  return null;
+}
+
+// R72B — deterministic fallback correlation for a stale QUEUED/RUNNING validation
+// whose persisted queueId matches no Jenkins build (proven live on PR-24: the
+// platform POSTed queue item 1496, but Jenkins' multibranch machinery superseded
+// it and the WorkflowRun that actually executed carries queueId 1505). Never
+// guesses by "latest build": a build only qualifies when EVERY independent fact
+// lines up — terminal, started after the request, exact PR-head SHA on the
+// project's own repo (never the shared library), and the exact validationRequestId
+// carried in PFE_VALIDATION_CONTEXT. The caller must still reject 0 matches
+// (STILL_QUEUED) and >1 matches (CORRELATION_AMBIGUOUS).
+export function jenkinsBuildMatchesPrValidation(
+  build: any,
+  criteria: { expectedPrHeadSha: string; validationRequestId: string; repository: string; notBefore: number },
+): boolean {
+  if (!build || build.building === true || !build.result) return false;
+  if (!Number.isFinite(criteria.notBefore)) return false;
+  const timestamp = Number(build.timestamp);
+  if (!Number.isFinite(timestamp) || timestamp < criteria.notBefore) return false;
+  const expectedSha = String(criteria.expectedPrHeadSha || '').toLowerCase();
+  const repository = String(criteria.repository || '').toLowerCase();
+  if (!/^[a-f0-9]{40}$/.test(expectedSha) || !repository) return false;
+  const actions: any[] = Array.isArray(build.actions) ? build.actions : [];
+  const shaOnProjectRepo = actions.some((action: any) => {
+    if (String(action?.lastBuiltRevision?.SHA1 || '').toLowerCase() !== expectedSha) return false;
+    const remotes: any[] = Array.isArray(action?.remoteUrls) ? action.remoteUrls : [];
+    return remotes.some((url: any) => canonicalGitRepo(url) === repository);
+  });
+  if (!shaOnProjectRepo) return false;
+  const contexts = actions
+    .flatMap((action: any) => (Array.isArray(action?.parameters) ? action.parameters : []))
+    .filter((parameter: any) => parameter?.name === 'PFE_VALIDATION_CONTEXT')
+    .map((parameter: any) => decodeJenkinsValidationContext(parameter.value))
+    .filter(Boolean);
+  if (!contexts.length) return false;
+  return contexts.every((context: any) =>
+    String(context.validationRequestId) === String(criteria.validationRequestId)
+    && String(context.expectedPrHeadSha || '').toLowerCase() === expectedSha);
+}
+
 export function encodePrValidationContext(context: Record<string, unknown>): string {
   return Buffer.from(JSON.stringify(context)).toString('base64url');
 }
@@ -229,7 +296,7 @@ export class IncidentsService {
   }
 
   private canonicalRepository(value: string): string {
-    return String(value || '').replace(/^https?:\/\/github\.com\//, '').replace(/\.git$/, '').replace(/^\/+|\/+$/g, '').toLowerCase();
+    return canonicalGitRepo(value);
   }
 
   private async githubPullRequest(project: Project, prNumber: number): Promise<any> {
@@ -1035,19 +1102,45 @@ export class IncidentsService {
     if (!queueIdMatch) {
       throw new ConflictException('Référence de file Jenkins illisible pour cette validation.');
     }
-    const queueId = Number(queueIdMatch[1]);
+    const submittedQueueId = Number(queueIdMatch[1]);
     const authHeader = 'Basic ' + Buffer.from(project.jenkinsToken).toString('base64');
     const jobPath = resolveJenkinsJobPath(request.prValidationJob);
-    const buildsRes = await fetch(`${jenkinsInternalUrl}${jobPath}/api/json?tree=builds[number,result,building,queueId]{0,50}`, {
-      headers: { Authorization: authHeader }, signal: AbortSignal.timeout(10_000),
-    });
+    const buildsRes = await fetch(
+      `${jenkinsInternalUrl}${jobPath}/api/json?tree=builds[number,result,building,queueId,timestamp,` +
+      `actions[lastBuiltRevision[SHA1],remoteUrls,parameters[name,value]]]{0,50}`,
+      { headers: { Authorization: authHeader }, signal: AbortSignal.timeout(10_000) },
+    );
     if (!buildsRes.ok) throw new ServiceUnavailableException('Impossible de vérifier l’état du job Jenkins.');
     const buildsData: any = await buildsRes.json();
-    const buildData = (buildsData?.builds || []).find((b: any) => b.queueId === queueId);
+    const builds: any[] = Array.isArray(buildsData?.builds) ? buildsData.builds : [];
+    // Primary correlation: the queueId Jenkins stamps permanently onto the build.
+    let buildData = builds.find((b: any) => b.queueId === submittedQueueId);
+    let correlationMethod: 'QUEUE_ID' | 'FALLBACK_SHA_CONTEXT' = 'QUEUE_ID';
     if (!buildData) {
-      // Not found among recent builds: either genuinely still queued/not yet
-      // started, or older than the lookback window. Never guessed either way.
-      return { reconciled: false, reason: 'STILL_QUEUED', validationRequest: request };
+      // R72B — the persisted queue item never became this build (Jenkins
+      // multibranch supersession: POSTed item 1496, run stamped 1505). Fall
+      // back to a deterministic multi-fact correlation. Never "latest build".
+      const candidates = builds.filter((b: any) => jenkinsBuildMatchesPrValidation(b, {
+        expectedPrHeadSha: String(request.expectedPrHeadSha || '').toLowerCase(),
+        validationRequestId: String(request.validationRequestId || ''),
+        repository: this.canonicalRepository(project.githubRepo),
+        notBefore: Date.parse(String(request.createdAt || '')),
+      }));
+      if (candidates.length === 0) {
+        // Either genuinely still queued/not yet started, or older than the
+        // lookback window. Never guessed either way.
+        return { reconciled: false, reason: 'STILL_QUEUED', validationRequest: request };
+      }
+      if (candidates.length > 1) {
+        // More than one build satisfies every correlation fact — refuse rather
+        // than pick one. A human must disambiguate.
+        return {
+          reconciled: false, reason: 'CORRELATION_AMBIGUOUS',
+          candidateBuildNumbers: candidates.map((b: any) => b.number), validationRequest: request,
+        };
+      }
+      buildData = candidates[0];
+      correlationMethod = 'FALLBACK_SHA_CONTEXT';
     }
     if (buildData.building || !buildData.result) {
       return { reconciled: false, reason: 'STILL_RUNNING', validationRequest: request };
@@ -1102,6 +1195,10 @@ export class IncidentsService {
       ...request, status: 'FAILED',
       failureCode, failureSummary,
       jenkinsBuildNumber: buildData.number, jenkinsBuildResult: buildData.result,
+      // Forensic audit: the queueId mismatch that forced the fallback is
+      // preserved, never rewritten as if the submitted item had been the run.
+      correlationMethod, submittedQueueId,
+      matchedBuildQueueId: typeof buildData.queueId === 'number' ? buildData.queueId : null,
       reconciledAt: now, reconciledBy: user.id, updatedAt: now,
     };
     await this.repo.update(id, { metadata: { ...metadata, prValidationRequest: reconciled } } as any);
