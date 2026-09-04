@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Project } from './project.entity';
@@ -15,8 +15,25 @@ const OPEN_STATUSES = [IncidentStatus.PENDING, IncidentStatus.BLOCKED, IncidentS
 const ANALYZING_STATUSES = [IncidentStatus.ANALYZING, IncidentStatus.ANALYZED, IncidentStatus.FIX_GENERATED, IncidentStatus.VALIDATING];
 const RESOLVED_STATUSES = [IncidentStatus.APPROVED, IncidentStatus.COMPLETED];
 
+function normalizeLogCode(value: unknown): string {
+  const text = String(value ?? '').trim();
+  return /^[A-Za-z0-9._-]{1,40}$/.test(text) ? text : 'n/a';
+}
+
+function normalizeHttpStatus(value: unknown): string {
+  const status = Number(value);
+  return Number.isInteger(status) && status >= 100 && status <= 599 ? String(status) : 'n/a';
+}
+
+function normalizeContentType(value: unknown): string {
+  const mediaType = String(value ?? '').split(';', 1)[0].trim().toLowerCase();
+  return /^[a-z0-9.+-]+\/[a-z0-9.+-]+$/.test(mediaType) ? mediaType : 'n/a';
+}
+
 @Injectable()
 export class ProjectsService {
+  private readonly logger = new Logger(ProjectsService.name);
+
   constructor(
     @InjectRepository(Project)
     private readonly repo: Repository<Project>,
@@ -220,10 +237,17 @@ export class ProjectsService {
         throw new Error('not authenticated');
       }
       identityName = typeof data.name === 'string' ? data.name : null;
-    } catch {
+    } catch (error: any) {
+      this.logger.warn(
+        `jenkins-credentials validation-failed projectId=${normalizeLogCode(id)} ` +
+        `httpStatus=${normalizeHttpStatus(error?.response?.status)} ` +
+        `transportCode=${normalizeLogCode(error?.code)} ` +
+        `contentType=${normalizeContentType(error?.response?.headers?.['content-type'])}`,
+      );
       throw new ConflictException('Les identifiants Jenkins sont invalides.');
     }
     await this.repo.update(id, { jenkinsToken: `${dto.username}:${dto.token}` } as any);
+    this.logger.debug(`jenkins-credentials validation-success projectId=${normalizeLogCode(id)}`);
     return { success: true, message: 'Connexion Jenkins vérifiée.', jenkinsUsername: identityName };
   }
 
