@@ -281,6 +281,48 @@ async function main() {
   assert.equal(reconciledIncomplete.applied, true);
   assert.equal(callbackIncident.metadata.fixRequest.status, 'FIX_FAILED');
   assert.equal(callbackIncident.metadata.fixRequest.retryEligible, true);
+
+  // R19.3C neutral candidate evidence supports supplemental planned files
+  // without claiming that the scanner finding is resolved before WF3.
+  callbackIncident.status = 'blocked';
+  callbackIncident.prUrl = null;
+  callbackIncident.metadata.fixRequest = {
+    requestId: 'request-candidate', batchId: 'batch-candidate', workflow: 'WF2', status: 'DISPATCHED',
+    findingIds: ['a'], findings: [{ findingId: 'a', file: 'ThingController.java' }],
+    attemptCount: 3, attempts: [{ attempt: 3, status: 'DISPATCHED' }],
+  };
+  const candidatePayload: any = {
+    status: 'PR_CREATED', workflowId: '9adcV31eaIgJyMR0', executionId: '2001', incidentId: callbackIncident.id,
+    requestId: 'request-candidate', batchId: 'batch-candidate', batchKey: 'batch-candidate', attemptCount: 3,
+    completenessPassed: true, processedFindingIds: ['a'], candidateAcceptedFindingIds: ['a'],
+    plannedFiles: ['ThingController.java', 'ThingRequest.java'],
+    candidateVerifiedFiles: ['ThingController.java', 'ThingRequest.java'],
+    updatedFiles: ['ThingController.java', 'ThingRequest.java'],
+    fileResults: [
+      { targetFile: 'ThingController.java', outcome: 'CANDIDATE_ACCEPTABLE_FOR_SCANNER_VALIDATION', candidateStateVerified: true },
+      { targetFile: 'ThingRequest.java', outcome: 'CANDIDATE_ACCEPTABLE_FOR_SCANNER_VALIDATION', candidateStateVerified: true },
+    ],
+    commitShas: ['4444444444444444444444444444444444444444'],
+    prUrl: 'https://github.com/owner/repo/pull/25', prNumber: 25,
+    prHeadSha: '5555555555555555555555555555555555555555',
+  };
+  await assert.rejects(() => callbackService.saveWorkflowBatchStatus(callbackIncident.id, {
+    ...candidatePayload,
+    candidateVerifiedFiles: ['ThingController.java'],
+    updatedFiles: ['ThingController.java'],
+    fileResults: [candidatePayload.fileResults[0]],
+  }), /ne couvre pas exactement/);
+  await assert.rejects(() => callbackService.saveWorkflowBatchStatus(callbackIncident.id, {
+    ...candidatePayload, prHeadSha: 'not-a-sha',
+  }), /ne couvre pas exactement/);
+  // The first R19.3C staged draft predates the optional plannedFiles evidence.
+  // Its three-field neutral contract remains accepted and complete because the
+  // verified-file set must still exactly match the per-file results.
+  const { plannedFiles: _optionalPlannedFiles, ...stagedCandidatePayload } = candidatePayload;
+  const candidateSuccess: any = await callbackService.saveWorkflowBatchStatus(callbackIncident.id, stagedCandidatePayload);
+  assert.equal(candidateSuccess.applied, true);
+  assert.deepEqual(callbackIncident.metadata.fixRequest.candidateAcceptedFindingIds, ['a']);
+  assert.deepEqual(callbackIncident.metadata.fixRequest.effectiveRemediatedFindingIds, []);
   } finally {
     globalThis.fetch = originalFetch;
   }

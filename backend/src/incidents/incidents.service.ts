@@ -206,6 +206,9 @@ export type WorkflowBatchStatusInput = {
   prNumber?: number;
   completenessPassed?: boolean;
   processedFindingIds?: string[];
+  candidateAcceptedFindingIds?: string[];
+  candidateVerifiedFiles?: string[];
+  plannedFiles?: string[];
   effectiveRemediatedFindingIds?: string[];
   verifiedFiles?: string[];
   fileResults?: Array<Record<string, unknown>>;
@@ -470,18 +473,35 @@ export class IncidentsService {
       const expectedFiles = normalize((Array.isArray(fix.findings) ? fix.findings : [])
         .map((finding: any) => finding.file || finding.component));
       const processedFindingIds = normalize(input.processedFindingIds);
-      const effectiveRemediatedFindingIds = normalize(input.effectiveRemediatedFindingIds);
-      const verifiedFiles = normalize(input.verifiedFiles);
+      // R19.3C: candidate acceptance is deliberately distinct from scanner
+      // resolution. Legacy WF2 callbacks remain supported during migration.
+      const candidateAcceptedFindingIds = normalize(input.candidateAcceptedFindingIds);
+      const acceptedFindingIds = candidateAcceptedFindingIds.length
+        ? candidateAcceptedFindingIds : normalize(input.effectiveRemediatedFindingIds);
+      const candidateVerifiedFiles = normalize(input.candidateVerifiedFiles);
+      const verifiedFiles = candidateVerifiedFiles.length
+        ? candidateVerifiedFiles : normalize(input.verifiedFiles);
+      const declaredPlannedFiles = normalize(input.plannedFiles);
+      const plannedFiles = candidateAcceptedFindingIds.length
+        ? (declaredPlannedFiles.length ? declaredPlannedFiles : candidateVerifiedFiles)
+        : expectedFiles;
       const updatedFiles = normalize(input.updatedFiles);
       const commitShas = normalize(input.commitShas);
       if (callbackStatus === 'PR_CREATED') {
         const fileResults = Array.isArray(input.fileResults) ? input.fileResults : [];
-        const exactFindings = JSON.stringify(effectiveRemediatedFindingIds) === JSON.stringify(expectedFindingIds);
-        const exactFiles = JSON.stringify(verifiedFiles) === JSON.stringify(expectedFiles);
-        const validOutcomes = fileResults.length === expectedFiles.length && fileResults.every((result: any) =>
-          result?.finalStateVerified === true
-          && ['MODIFIED_AND_REMEDIATED', 'ALREADY_REMEDIATED'].includes(String(result?.outcome))
-          && expectedFiles.includes(String(result?.targetFile)));
+        const exactFindings = JSON.stringify(acceptedFindingIds) === JSON.stringify(expectedFindingIds);
+        const resultFiles = normalize(fileResults.map((result: any) => result?.targetFile));
+        const exactFiles = plannedFiles.length > 0
+          && expectedFiles.every(file => plannedFiles.includes(file))
+          && JSON.stringify(plannedFiles) === JSON.stringify(verifiedFiles)
+          && JSON.stringify(resultFiles) === JSON.stringify(verifiedFiles);
+        const validOutcomes = fileResults.length === verifiedFiles.length && fileResults.every((result: any) => {
+          const neutralCandidate = result?.candidateStateVerified === true
+            && String(result?.outcome) === 'CANDIDATE_ACCEPTABLE_FOR_SCANNER_VALIDATION';
+          const legacyRemediation = result?.finalStateVerified === true
+            && ['MODIFIED_AND_REMEDIATED', 'ALREADY_REMEDIATED'].includes(String(result?.outcome));
+          return (neutralCandidate || legacyRemediation) && verifiedFiles.includes(String(result?.targetFile));
+        });
         if (input.completenessPassed !== true || !exactFindings || !exactFiles || !validOutcomes
           || !/^[a-f0-9]{40}$/i.test(String(input.prHeadSha || ''))) {
           throw new ConflictException('La Pull Request WF2 ne couvre pas exactement le batch approuvé.');
@@ -512,7 +532,13 @@ export class IncidentsService {
         : { ...fix, status: 'PR_CREATED', attempts, workflowEvents: events, prUrl: input.prUrl,
             prNumber: Number(input.prNumber), prCreatedAt: now, workflowId, workflowExecutionId: executionId,
             completenessPassed: true, processedFindingIds, updatedFiles, commitShas,
-            effectiveRemediatedFindingIds, verifiedFiles, fileResults: input.fileResults,
+            candidateAcceptedFindingIds: acceptedFindingIds,
+            candidateVerifiedFiles: verifiedFiles,
+            plannedFiles,
+            // Compatibility only: preserve legacy evidence if an old workflow
+            // supplied it, but never synthesize scanner-resolution semantics.
+            effectiveRemediatedFindingIds: normalize(input.effectiveRemediatedFindingIds),
+            verifiedFiles: normalize(input.verifiedFiles), fileResults: input.fileResults,
             prHeadSha: String(input.prHeadSha), retryEligible: false };
       const patch: any = { metadata: { ...metadata, fixRequest: nextFix } };
       if (callbackStatus === 'PR_CREATED') {
