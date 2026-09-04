@@ -1,19 +1,16 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { GoneException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Bug, BugStatus } from './bug.entity';
-import { HttpService } from '@nestjs/axios';
-import { ConfigService } from '@nestjs/config';
-import { firstValueFrom } from 'rxjs';
 import { BugsGateway } from './bugs.gateway';
 import { sanitizeEntityProject } from '../common/sanitize-project';
+
+export const LEGACY_REMEDIATION_DISABLED = 'LEGACY_REMEDIATION_DISABLED';
 
 @Injectable()
 export class BugsService {
   constructor(
     @InjectRepository(Bug) private readonly repo: Repository<Bug>,
-    private readonly http: HttpService,
-    private readonly config: ConfigService,
     private readonly gateway: BugsGateway,
   ) {}
 
@@ -37,38 +34,11 @@ export class BugsService {
     return saved;
   }
 
-  async triggerAiFix(id: string) {
-    const bug = await this.findOne(id);
-    bug.status = BugStatus.AI_FIXING;
-    await this.repo.save(bug);
-    this.gateway.emitBugUpdated(bug);
-
-    // Trigger n8n workflow
-    const n8nUrl = this.config.get('N8N_URL', 'http://n8n:5678');
-    const webhookPath = this.config.get('N8N_BUG_FIX_WEBHOOK', '/webhook/bug-fix');
-    try {
-      await firstValueFrom(
-        this.http.post(`${n8nUrl}${webhookPath}`, {
-          bugId: bug.id,
-          projectId: bug.projectId,
-          title: bug.title,
-          rawMessage: bug.rawMessage,
-          filePath: bug.filePath,
-          lineNumber: bug.lineNumber,
-          severity: bug.severity,
-          source: bug.source,
-          metadata: bug.metadata,
-        }),
-      );
-    } catch (e) {
-      // n8n might not be running, simulate for demo
-      setTimeout(() => this.simulateAiFix(id), 3000);
-    }
-
-    return { message: 'Demande de correction par l’agent enregistrée.', bugId: id };
+  async triggerAiFix(_id: string): Promise<never> {
+    throw new GoneException(LEGACY_REMEDIATION_DISABLED);
   }
 
-  async updateFromN8n(id: string, data: {
+  async updateFromN8n(_id: string, _data: {
     humanReadableExplanation?: string;
     aiFixSuggestion?: string;
     prUrl?: string;
@@ -76,11 +46,7 @@ export class BugsService {
     fixConfidence?: number;
     status?: BugStatus;
   }) {
-    const bug = await this.findOne(id);
-    Object.assign(bug, data);
-    const saved = await this.repo.save(bug);
-    this.gateway.emitBugUpdated(saved);
-    return saved;
+    throw new GoneException(LEGACY_REMEDIATION_DISABLED);
   }
 
   async remove(id: string) {
@@ -89,25 +55,7 @@ export class BugsService {
     return { message: 'Anomalie supprimée.' };
   }
 
-  async updateStatus(id: string, status: BugStatus) {
-    const bug = await this.findOne(id);
-    bug.status = status;
-    const saved = await this.repo.save(bug);
-    this.gateway.emitBugUpdated(saved);
-    return saved;
-  }
-
-  private async simulateAiFix(id: string) {
-    try {
-      const bug = await this.findOne(id);
-      bug.status = BugStatus.PR_CREATED;
-      bug.humanReadableExplanation = `Ce bug est causé par une mauvaise validation des entrées utilisateur. L'application ne vérifie pas correctement les paramètres avant de les utiliser, ce qui peut causer des comportements inattendus.`;
-      bug.aiFixSuggestion = `Ajouter une validation stricte des entrées avec des guards NestJS et des DTOs avec class-validator. Utiliser @IsString(), @IsNotEmpty() et sanitiser les données avant traitement.`;
-      bug.prUrl = `https://github.com/example/repo/pull/${Math.floor(Math.random() * 100)}`;
-      bug.prNumber = Math.floor(Math.random() * 100);
-      bug.fixConfidence = Math.floor(75 + Math.random() * 20);
-      await this.repo.save(bug);
-      this.gateway.emitBugUpdated(bug);
-    } catch {}
+  async updateStatus(_id: string, _status: BugStatus): Promise<never> {
+    throw new GoneException(LEGACY_REMEDIATION_DISABLED);
   }
 }
