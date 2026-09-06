@@ -11,12 +11,14 @@ import { createHash, randomUUID } from 'crypto';
 import { buildConvergenceCycles } from '../common/governance';
 import { resolveJenkinsInternalUrl } from '../common/jenkins-url';
 import { ManualRemediationService } from '../manual-remediation/manual-remediation.service';
+import { deriveFindingsAndHealth } from '../validation/finding-pipeline-separation';
 
 export function classifyJenkinsTriggerStatus(status: number): { accepted: boolean; code?: string } {
   if (status === 201) return { accepted: true };
   if (status >= 200 && status < 300) return { accepted: false, code: 'JENKINS_TRIGGER_NOT_ACCEPTED' };
   if (status === 401 || status === 403) return { accepted: false, code: 'JENKINS_AUTH_FAILED' };
   if (status === 404) return { accepted: false, code: 'JENKINS_JOB_NOT_FOUND' };
+  if (status === 400) return { accepted: false, code: 'JENKINS_TRIGGER_REJECTED' };
   if (status === 409) return { accepted: false, code: 'JENKINS_TRIGGER_CONFLICT' };
   if (status >= 500) return { accepted: false, code: 'JENKINS_UNAVAILABLE' };
   return { accepted: false, code: 'JENKINS_TRIGGER_FAILED' };
@@ -45,6 +47,52 @@ export function resolveJenkinsJobPath(configuredPath: string): string {
     throw new Error('Invalid Jenkins job path');
   }
   return '/job/' + names.map(name => encodeURIComponent(name)).join('/job/');
+}
+
+// R21-AS — the REST job path (`/job/<a>/job/<b>`) and Jenkins' internal item
+// "full name" (`<a>/<b>`, used by Jenkins.instance.getItemByFullName) are two
+// different encodings of the same item identity. Deriving the full name from
+// an already-`resolveJenkinsJobPath`-validated path (rather than accepting
+// one directly from a caller) means the strict segment characters that path
+// already enforced apply here too. A second, narrower allowlist is still
+// applied, since this value is embedded into a Groovy script string, not
+// just a URL.
+export function jenkinsWorkflowFullName(resolvedJobPath: string): string {
+  const segments = String(resolvedJobPath || '').split('/job/').map(decodeURIComponent).filter(Boolean);
+  if (!segments.length || segments.some(segment => !/^[A-Za-z0-9._-]+$/.test(segment))) {
+    throw new Error('Invalid Jenkins job path for script targeting');
+  }
+  return segments.join('/');
+}
+
+function escapeGroovySingleQuoted(value: string): string {
+  return value.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+}
+
+// R21-AS — reuses exactly the parameter-injection semantics already present
+// in jenkins-config/init.groovy.d/pfe-pr-head-discovery.groovy (add/replace
+// only the PFE_VALIDATION_CONTEXT definition, preserving every other existing
+// parameter), but scoped to one caller-identified WorkflowJob by exact full
+// name, invocable on demand instead of only at Jenkins startup. The script is
+// always built internally from a validated job identity -- no caller input
+// is ever concatenated into Groovy source beyond that one escaped identifier.
+export function buildParameterBootstrapScript(fullName: string): string {
+  const safeName = escapeGroovySingleQuoted(fullName);
+  return [
+    'import jenkins.model.Jenkins',
+    'import org.jenkinsci.plugins.workflow.job.WorkflowJob',
+    'import hudson.model.ParametersDefinitionProperty',
+    'import hudson.model.StringParameterDefinition',
+    `def job = Jenkins.instance.getItemByFullName('${safeName}', WorkflowJob.class)`,
+    "if (!job) { println 'PFE_BOOTSTRAP_RESULT:JOB_NOT_FOUND'; return }",
+    'def existing = job.getProperty(ParametersDefinitionProperty)',
+    "def definitions = existing?.parameterDefinitions?.findAll { it.name != 'PFE_VALIDATION_CONTEXT' } ?: []",
+    "definitions << new StringParameterDefinition('PFE_VALIDATION_CONTEXT', '', 'Opaque non-secret PR validation correlation supplied by the authenticated platform.')",
+    'job.removeProperty(ParametersDefinitionProperty)',
+    'job.addProperty(new ParametersDefinitionProperty(definitions))',
+    'job.save()',
+    "println 'PFE_BOOTSTRAP_RESULT:OK'",
+  ].join('\n');
 }
 
 export function isConcreteJenkinsBuildJob(metadata: any): boolean {
@@ -217,6 +265,11 @@ export type WorkflowBatchStatusInput = {
   prHeadSha?: string;
   completionEvidence?: Record<string, unknown>;
   reconciliation?: boolean;
+};
+
+export type StaleDispatchRecoveryInput = {
+  batchId: string;
+  attemptCount: number;
 };
 
 export function canRetryFixRequest(fixRequest: any): boolean {
@@ -427,17 +480,14 @@ export class IncidentsService {
         || fix.batchId !== input.batchId || input.batchKey !== input.batchId
         || fix.batchId !== input.batchKey || fix.workflow !== 'WF2'
         || workflowId !== (process.env.N8N_WF2_ID || '9adcV31eaIgJyMR0')
-        || !Number.isInteger(attemptCount) || attemptCount !== Number(fix.attemptCount)
+        || !Number.isInteger(attemptCount) || attemptCount < 1 || attemptCount > Number(fix.attemptCount)
         || !executionId) {
         throw new ConflictException('Le statut WF2 ne correspond pas à la demande de correction active.');
       }
 
       const attempt = (Array.isArray(fix.attempts) ? fix.attempts : [])
         .find((entry: any) => Number(entry.attempt) === attemptCount);
-      if (!attempt) throw new ConflictException('La tentative WF2 corrélée est introuvable.');
-      if (attempt.workflowExecutionId && String(attempt.workflowExecutionId) !== executionId) {
-        throw new ConflictException('L’exécution WF2 ne correspond pas à la tentative active.');
-      }
+      if (!attempt) throw new ConflictException('La tentative WF2 corrélée ne correspond pas à la demande active.');
 
       const callbackStatus = String(input.status || '').toUpperCase() as WorkflowBatchStatus;
       if (!['FAILED', 'PR_CREATED'].includes(callbackStatus)) {
@@ -453,6 +503,24 @@ export class IncidentsService {
       const incompleteReconciliation = input.reconciliation === true
         && String(input.failureCode || '') === 'WF2_BATCH_INCOMPLETE'
         && fix.status === 'PR_CREATED';
+      // R21-AE — a callback belongs to exactly one attempt. Once another
+      // human-authorized attempt exists, or once this attempt has reached a
+      // terminal state (including governed stale-dispatch recovery), it can
+      // never mutate the current request again. This check deliberately runs
+      // under the same pessimistic lock as recovery: first terminal writer
+      // wins and state can never be resurrected.
+      const terminalAttempt = ['FIX_FAILED', 'PR_CREATED', 'VALIDATING', 'VALIDATED', 'REJECTED']
+        .includes(String(attempt.status));
+      if (attemptCount !== Number(fix.attemptCount) || (terminalAttempt && !incompleteReconciliation)) {
+        return {
+          applied: false, duplicate: false, stale: true, incident, status: fix.status,
+          code: 'STALE_OR_TERMINAL_ATTEMPT_CALLBACK',
+        };
+      }
+      if (attempt.workflowExecutionId && String(attempt.workflowExecutionId) !== executionId) {
+        throw new ConflictException('L’exécution WF2 ne correspond pas à la tentative active.');
+      }
+
       // Une erreur tardive ne peut pas dégrader une PR, sauf réconciliation
       // applicative auditée prouvant que le batch était fonctionnellement incomplet.
       if (callbackStatus === 'FAILED' && ['PR_CREATED', 'VALIDATING', 'VALIDATED'].includes(fix.status)
@@ -558,7 +626,99 @@ export class IncidentsService {
       this.gateway.emit('incident:updated', updated);
     }
     return { success: true, applied: result.applied, duplicate: result.duplicate, stale: result.stale,
-      incidentId: id, status: result.status };
+      incidentId: id, status: result.status, ...(result.code ? { code: result.code } : {}) };
+  }
+
+  /**
+   * R21-AE — explicit human/admin lifecycle reconciliation for a WF2 dispatch
+   * that never produced a terminal callback. WF2 may already have performed
+   * external side effects, so elapsed time never starts a retry automatically:
+   * this action only moves DISPATCHED -> FIX_FAILED and records who authorized
+   * that lifecycle correction. It never reverses GitHub effects and never
+   * changes scanner/finding evidence.
+   */
+  async reconcileStaleDispatch(id: string, requestId: string, input: StaleDispatchRecoveryInput, user: any) {
+    if (!user || String(user.role || '').toLowerCase() !== 'admin') {
+      throw new ForbiddenException('Seul un administrateur peut réconcilier un dispatch WF2 obsolète.');
+    }
+    const configuredThreshold = Number(process.env.WF2_STALE_DISPATCH_MS || 30 * 60 * 1000);
+    if (!Number.isFinite(configuredThreshold) || configuredThreshold <= 0) {
+      throw new ServiceUnavailableException('Le seuil de dispatch WF2 obsolète est invalide.');
+    }
+    const result = await this.repo.manager.transaction(async manager => {
+      const repo = manager.getRepository(Incident);
+      const incident = await repo.findOne({ where: { id }, lock: { mode: 'pessimistic_write' } });
+      if (!incident) throw new NotFoundException('Incident introuvable.');
+      const metadata: any = incident.metadata || {};
+      const fix: any = metadata.fixRequest || {};
+      const attemptCount = Number(input?.attemptCount);
+      if (fix.requestId !== requestId || fix.batchId !== input?.batchId || fix.workflow !== 'WF2') {
+        throw new ConflictException('La récupération ne correspond pas au batch WF2 demandé.');
+      }
+      if (!Number.isInteger(attemptCount) || attemptCount < 1 || attemptCount !== Number(fix.attemptCount)) {
+        throw new ConflictException('La récupération ne correspond pas à la tentative WF2 active.');
+      }
+      const attempts = Array.isArray(fix.attempts) ? fix.attempts : [];
+      const attempt = attempts.find((entry: any) => Number(entry.attempt) === attemptCount);
+      if (!attempt) throw new ConflictException('La tentative WF2 à récupérer est introuvable.');
+      const recoveries = Array.isArray(fix.lifecycleRecoveries) ? [...fix.lifecycleRecoveries] : [];
+      const priorRecovery = recoveries.find((entry: any) => entry?.recoveryType === 'STALE_DISPATCH'
+        && Number(entry?.recoveredAttempt) === attemptCount);
+      if (priorRecovery) {
+        return { applied: false, duplicate: true, incident, status: fix.status, recovery: priorRecovery };
+      }
+      if (fix.status !== 'DISPATCHED' || attempt.status !== 'DISPATCHED' || fix.retryEligible !== false) {
+        throw new ConflictException('La tentative WF2 n’est pas un dispatch actif récupérable.');
+      }
+      if (incident.prUrl || fix.prUrl || fix.prNumber) {
+        throw new ConflictException('Une Pull Request existe déjà pour cette tentative WF2.');
+      }
+      const terminalCallback = (Array.isArray(fix.workflowEvents) ? fix.workflowEvents : [])
+        .some((event: any) => Number(event?.attempt) === attemptCount
+          && ['FAILED', 'PR_CREATED'].includes(String(event?.status)));
+      if (terminalCallback) {
+        throw new ConflictException('Un callback terminal WF2 est déjà enregistré pour cette tentative.');
+      }
+      const dispatchedAt = Date.parse(String(attempt.dispatchedAt || fix.dispatchedAt || ''));
+      if (!Number.isFinite(dispatchedAt)) {
+        throw new ConflictException('L’horodatage de dispatch WF2 est absent ou invalide.');
+      }
+      const recoveredAt = new Date().toISOString();
+      if (Date.parse(recoveredAt) - dispatchedAt < configuredThreshold) {
+        throw new ConflictException('Le dispatch WF2 n’a pas dépassé le seuil de récupération.');
+      }
+      const recovery = {
+        recoveryType: 'STALE_DISPATCH', recoveredAttempt: attemptCount,
+        previousStatus: 'DISPATCHED', newStatus: 'FIX_FAILED',
+        reason: 'WF2_STALE_DISPATCH_RECONCILED', recoveredAt,
+        authorizedBy: String(user.id || ''),
+      };
+      const nextAttempts = attempts.map((entry: any) => Number(entry.attempt) === attemptCount
+        ? { ...entry, status: 'FIX_FAILED', failedAt: recoveredAt,
+            failureCode: recovery.reason, failureSummary: 'Dispatch WF2 obsolète réconcilié par un administrateur.',
+            recovery }
+        : entry);
+      const nextFix = {
+        ...fix, status: 'FIX_FAILED', retryEligible: true, attempts: nextAttempts,
+        failedAt: recoveredAt, lastErrorCode: recovery.reason,
+        lastError: 'Dispatch WF2 obsolète réconcilié par un administrateur.',
+        lifecycleRecoveries: [...recoveries, recovery],
+      };
+      const patch: any = { metadata: { ...metadata, fixRequest: nextFix } };
+      await repo.update(id, patch);
+      Object.assign(incident, patch);
+      return { applied: true, duplicate: false, incident, status: nextFix.status, recovery };
+    });
+    if (result.applied) {
+      const updated = await this.findOne(id);
+      this.gateway.emit('incident:updated', updated);
+    }
+    return {
+      success: true, applied: result.applied, duplicate: result.duplicate,
+      incidentId: id, requestId, batchId: input.batchId, attemptCount: input.attemptCount,
+      status: result.status, retryEligible: result.applied ? true : result.incident?.metadata?.fixRequest?.retryEligible,
+      recovery: result.recovery,
+    };
   }
 
   async remove(id: string) {
@@ -639,6 +799,13 @@ export class IncidentsService {
         missingRequiredStage ? `Required stage missing=${missingRequiredStage}` : null,
         badStage ? `${badStage.stage}=${badStage.status}` : null].filter(Boolean),
     };
+    // R22-A Phase 7/8 — additive derived structure alongside the raw payload
+    // above (never a replacement): separates per-finding verdicts from
+    // overall pipeline health so a consumer can never mistake "the pipeline
+    // was healthy" for "this specific finding is VALID", or vice versa.
+    // Existing flat fields (validation.passed, validation.sonarStatus, ...)
+    // are all still present, unchanged, for backward compatibility.
+    (validationRecord as any).derived = deriveFindingsAndHealth(validationRecord);
     const previousCycles = Array.isArray(currentMeta.cycles) ? currentMeta.cycles : [];
     const cycles = [...previousCycles, {
       cycle: previousCycles.length + 1, sourceBuildNumber: incident.buildNumber, validationBuildNumber: buildNumber,
@@ -885,6 +1052,93 @@ export class IncidentsService {
     return { success: true, status: 'rejected', incidentId: id };
   }
 
+  // R21-AS — narrow, self-contained fix for exactly one proven gap: a freshly
+  // multibranch-indexed PR job exists but has never run its pipeline script,
+  // so PFE_VALIDATION_CONTEXT (declared via a scripted properties() step) is
+  // not yet registered in its parameter definitions. This does NOT address
+  // the separate multibranch indexing race (job not existing at all is
+  // classified JENKINS_JOB_NOT_FOUND by the metadata fetch itself, both here
+  // and in requestPrValidation, and never reaches this function transparently
+  // pretending to fix it) and it never triggers a build.
+  private async ensurePrValidationParameter(jenkinsInternalUrl: string, authHeader: string, resolvedJobPath: string):
+    Promise<{ status: 'ALREADY_PRESENT' | 'INJECTED'; definitions: ReturnType<typeof getJenkinsParameterDefinitions> }> {
+    const jenkinsFailure = (code: string, message: string) => Object.assign(new Error(message), { jenkinsFailureCode: code });
+    const metadataTree = 'name,fullName,buildable,_class,property[_class,parameterDefinitions[name,type,_class,defaultParameterValue[value,_class]]]';
+    const fetchMetadata = async () => {
+      const response = await fetch(`${jenkinsInternalUrl}${resolvedJobPath}/api/json?tree=${metadataTree}`, {
+        headers: { Authorization: authHeader }, signal: AbortSignal.timeout(10_000),
+      });
+      if (!response.ok) throw jenkinsFailure(classifyJenkinsTriggerStatus(response.status).code || 'JENKINS_JOB_NOT_FOUND', `Jenkins metadata HTTP ${response.status}`);
+      let metadata: any;
+      try { metadata = await response.json(); }
+      catch { throw jenkinsFailure('JENKINS_RESPONSE_INVALID', 'Jenkins metadata response was not valid JSON'); }
+      if (!isConcreteJenkinsBuildJob(metadata)) throw jenkinsFailure('JENKINS_TARGET_NOT_BUILDABLE', 'Jenkins PR target is not a concrete buildable job');
+      return metadata;
+    };
+    const hasParameter = (definitions: ReturnType<typeof getJenkinsParameterDefinitions>) =>
+      definitions.some(definition => definition.name === 'PFE_VALIDATION_CONTEXT');
+
+    const initialDefinitions = getJenkinsParameterDefinitions(await fetchMetadata());
+    if (hasParameter(initialDefinitions)) return { status: 'ALREADY_PRESENT', definitions: initialDefinitions };
+
+    const fullName = jenkinsWorkflowFullName(resolvedJobPath);
+    const script = buildParameterBootstrapScript(fullName);
+    const scriptResponse = await fetch(`${jenkinsInternalUrl}/scriptText`, {
+      method: 'POST', headers: { Authorization: authHeader, 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ script }).toString(),
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (!scriptResponse.ok) {
+      throw jenkinsFailure(classifyJenkinsTriggerStatus(scriptResponse.status).code || 'JENKINS_PARAMETER_UNAVAILABLE', `Jenkins script console HTTP ${scriptResponse.status}`);
+    }
+    let scriptOutput = '';
+    try { scriptOutput = await scriptResponse.text(); } catch { /* checked as empty below */ }
+    if (!/PFE_BOOTSTRAP_RESULT:OK/.test(scriptOutput)) {
+      // Covers JOB_NOT_FOUND-from-script (race: job removed between our two
+      // fetches) and any other non-OK marker -- fail closed either way.
+      throw jenkinsFailure('JENKINS_PARAMETER_UNAVAILABLE', 'Jenkins parameter bootstrap script did not report success');
+    }
+    const afterDefinitions = getJenkinsParameterDefinitions(await fetchMetadata());
+    if (!hasParameter(afterDefinitions)) {
+      throw jenkinsFailure('JENKINS_PARAMETER_UNAVAILABLE', 'PFE_VALIDATION_CONTEXT still absent after bootstrap injection');
+    }
+    return { status: 'INJECTED', definitions: afterDefinitions };
+  }
+
+  // R21-AS Phase 8 — read/heal-only entry point: proves and, if needed, fixes
+  // the parameter bootstrap without ever reaching crumb issuance or
+  // buildWithParameters. Never mutates prValidationRequest.
+  async ensurePrValidationBootstrap(id: string, user: any) {
+    this.assertCanApprove(user);
+    const snapshot = await this.repo.findOne({ where: { id }, relations: ['project'] });
+    if (!snapshot) throw new NotFoundException('Incident introuvable.');
+    const fix: any = (snapshot.metadata as any)?.fixRequest || {};
+    if (fix.status !== 'PR_CREATED' || !fix.prNumber) {
+      throw new ConflictException('Aucune Pull Request de correction n’est prête à être validée.');
+    }
+    const project = snapshot.project;
+    const jenkinsInternalUrl = resolveJenkinsInternalUrl(project);
+    if (!jenkinsInternalUrl || !project.jenkinsToken || !project.jenkinsJobName) {
+      throw new BadRequestException('Jenkins n’est pas configuré pour la validation de Pull Request.');
+    }
+    const separator = project.jenkinsToken.indexOf(':');
+    if (separator <= 0 || separator === project.jenkinsToken.length - 1) {
+      throw new BadRequestException('Credential Jenkins invalide.');
+    }
+    const authHeader = 'Basic ' + Buffer.from(project.jenkinsToken).toString('base64');
+    const prValidationJob = buildPrValidationJobName(project.jenkinsJobName, Number(fix.prNumber));
+    const resolvedJobPath = resolveJenkinsJobPath(prValidationJob);
+    try {
+      const result = await this.ensurePrValidationParameter(jenkinsInternalUrl, authHeader, resolvedJobPath);
+      return { success: true, status: result.status, prValidationJob, parameterCount: result.definitions.length };
+    } catch (error: any) {
+      throw new ServiceUnavailableException({
+        success: false, code: error?.jenkinsFailureCode || 'JENKINS_PARAMETER_UNAVAILABLE',
+        message: 'Le paramètre de validation Jenkins n’a pas pu être vérifié.',
+      });
+    }
+  }
+
   async requestPrValidation(id: string, user: any) {
     this.assertCanApprove(user);
     const snapshot = await this.repo.findOne({ where: { id }, relations: ['project'] });
@@ -983,21 +1237,52 @@ export class IncidentsService {
     const baseSonarProjectKey = project.sonarqubeKey;
     const validationSonarProjectKey = `${baseSonarProjectKey}-pr-${prNumber}`;
     const context = { ...claim.request, jenkinsJob: project.jenkinsJobName, prValidationJob, baseSonarProjectKey, validationSonarProjectKey };
+    // R21-AR — every failure below is classified with the same granular
+    // taxonomy already proven in triggerBuild() (classifyJenkinsTriggerStatus),
+    // instead of collapsing every Jenkins-side failure into one opaque
+    // JENKINS_TRIGGER_FAILED. This matters specifically for a freshly
+    // multibranch-indexed PR job: Jenkins only registers PFE_VALIDATION_CONTEXT
+    // in job metadata once its declarative `properties([parameters([...])])`
+    // step has executed at least once (proven live: PR-25's job existed after
+    // indexing but its config.xml carried no ParametersDefinitionProperty yet).
+    // JENKINS_PARAMETER_UNAVAILABLE names that exact bootstrap gap so it is
+    // observable and distinguishable from every other Jenkins failure mode,
+    // without attempting an automatic hidden bootstrap build here (rejected:
+    // that would be an uncorrelated build using default/empty parameters, and
+    // the shared library deliberately fails PR builds with an empty
+    // PFE_VALIDATION_CONTEXT rather than run unauthenticated).
+    const jenkinsFailure = (code: string, message: string) => Object.assign(new Error(message), { jenkinsFailureCode: code });
     try {
       const metadataTree = 'name,fullName,buildable,_class,property[_class,parameterDefinitions[name,type,_class,defaultParameterValue[value,_class]]]';
       const metadataResponse = await fetch(`${jenkinsInternalUrl}${resolvedJobPath}/api/json?tree=${metadataTree}`, {
         headers: { Authorization: authHeader }, signal: AbortSignal.timeout(10_000),
       });
-      if (!metadataResponse.ok) throw new Error(`Jenkins metadata HTTP ${metadataResponse.status}`);
-      const jobMetadata: any = await metadataResponse.json();
-      if (!isConcreteJenkinsBuildJob(jobMetadata)) throw new Error('Jenkins PR target is not buildable');
-      const definitions = getJenkinsParameterDefinitions(jobMetadata);
-      if (!definitions.some(definition => definition.name === 'PFE_VALIDATION_CONTEXT')) throw new Error('Jenkins PR validation parameter is unavailable');
+      if (!metadataResponse.ok) {
+        throw jenkinsFailure(classifyJenkinsTriggerStatus(metadataResponse.status).code || 'JENKINS_TRIGGER_FAILED', `Jenkins metadata HTTP ${metadataResponse.status}`);
+      }
+      let jobMetadata: any;
+      try { jobMetadata = await metadataResponse.json(); }
+      catch { throw jenkinsFailure('JENKINS_RESPONSE_INVALID', 'Jenkins metadata response was not valid JSON'); }
+      if (!isConcreteJenkinsBuildJob(jobMetadata)) throw jenkinsFailure('JENKINS_TARGET_NOT_BUILDABLE', 'Jenkins PR target is not a concrete buildable job');
+      let definitions = getJenkinsParameterDefinitions(jobMetadata);
+      if (!definitions.some(definition => definition.name === 'PFE_VALIDATION_CONTEXT')) {
+        // R21-AS — job exists but has never run its pipeline script, so the
+        // parameter it declares isn't registered yet. Heal on demand instead
+        // of failing closed forever; any failure inside still propagates as a
+        // classified jenkinsFailure into the same catch block below.
+        const bootstrap = await this.ensurePrValidationParameter(jenkinsInternalUrl, authHeader, resolvedJobPath);
+        definitions = bootstrap.definitions;
+      }
       const crumbResponse = await fetch(`${jenkinsInternalUrl}/crumbIssuer/api/json`, {
         headers: { Authorization: authHeader }, signal: AbortSignal.timeout(10_000),
       });
-      if (!crumbResponse.ok) throw new Error(`Jenkins crumb HTTP ${crumbResponse.status}`);
-      const crumb: any = await crumbResponse.json();
+      if (!crumbResponse.ok) {
+        throw jenkinsFailure(classifyJenkinsTriggerStatus(crumbResponse.status).code || 'JENKINS_CRUMB_FAILED', `Jenkins crumb HTTP ${crumbResponse.status}`);
+      }
+      let crumb: any;
+      try { crumb = await crumbResponse.json(); }
+      catch { throw jenkinsFailure('JENKINS_RESPONSE_INVALID', 'Jenkins crumb response was not valid JSON'); }
+      if (!crumb?.crumbRequestField || !crumb?.crumb) throw jenkinsFailure('JENKINS_CRUMB_FAILED', 'Jenkins crumb response was missing required fields');
       const resolvedParameters = resolveJenkinsParameters(definitions, { PFE_VALIDATION_CONTEXT: encodePrValidationContext(context) });
       const buildResponse = await fetch(`${jenkinsInternalUrl}${resolvedJobPath}/buildWithParameters`, {
         method: 'POST', headers: { Authorization: authHeader, [crumb.crumbRequestField]: crumb.crumb, 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -1005,16 +1290,25 @@ export class IncidentsService {
         signal: AbortSignal.timeout(10_000),
       });
       const queueUrl = buildResponse.headers.get('location');
-      if (!isAcceptedJenkinsBuildResponse(buildResponse.status, queueUrl)) throw new Error(`Jenkins trigger HTTP ${buildResponse.status}`);
+      if (!isAcceptedJenkinsBuildResponse(buildResponse.status, queueUrl)) {
+        const classification = classifyJenkinsTriggerStatus(buildResponse.status);
+        const code = classification.accepted ? 'JENKINS_TRIGGER_NOT_ACCEPTED' : (classification.code || 'JENKINS_TRIGGER_FAILED');
+        throw jenkinsFailure(code, `Jenkins trigger HTTP ${buildResponse.status}`);
+      }
       const current: any = await this.repo.findOne({ where: { id } });
       const currentMeta: any = current.metadata || {};
       const queued = { ...claim.request, status: 'QUEUED', queueUrl, queuedAt: new Date().toISOString(), updatedAt: new Date().toISOString(), prValidationJob };
       await this.repo.update(id, { metadata: { ...currentMeta, prValidationRequest: queued } } as any);
       return { success: true, duplicate: false, validationRequest: queued };
     } catch (error: any) {
+      const timeout = error?.name === 'AbortError' || error?.name === 'TimeoutError';
+      const failureCode = timeout ? 'JENKINS_TIMEOUT' : String(error?.jenkinsFailureCode || 'JENKINS_TRIGGER_FAILED');
+      // Bounded, sanitized: HTTP status numbers and fixed messages only, never
+      // a Jenkins response body (which could carry stack traces or config).
+      const failureSummary = String(error?.message || 'Le build PR n’a pas pu être mis en file.').slice(0, 300);
       const current: any = await this.repo.findOne({ where: { id } });
       const currentMeta: any = current.metadata || {};
-      const failed = { ...claim.request, status: 'FAILED', failureCode: 'JENKINS_TRIGGER_FAILED', failureSummary: 'Le build PR n’a pas pu être mis en file.', failedAt: new Date().toISOString(), updatedAt: new Date().toISOString(), prValidationJob };
+      const failed = { ...claim.request, status: 'FAILED', failureCode, failureSummary, failedAt: new Date().toISOString(), updatedAt: new Date().toISOString(), prValidationJob };
       await this.repo.update(id, { metadata: { ...currentMeta, prValidationRequest: failed } } as any);
       throw new ServiceUnavailableException('La validation PR n’a pas pu être mise en file dans Jenkins.');
     }
