@@ -60,6 +60,14 @@ export type FailureClass =
   | 'CANDIDATE_TEST_REGRESSION'
   | 'WORKSPACE_TIMEOUT'
   | 'WORKSPACE_INFRA_FAILURE'
+  // R22-E2C2 — transport-layer failures talking to the candidate-verifier
+  // worker (connection refused, timeout, malformed response). These are
+  // INFRA/INCONCLUSIVE facts about reachability, never evidence about the
+  // candidate itself -- a caller must map all three to overall:'INCONCLUSIVE',
+  // never 'FAIL', and never anywhere near a scanner finding verdict.
+  | 'VERIFIER_UNAVAILABLE'
+  | 'VERIFIER_TIMEOUT'
+  | 'VERIFIER_PROTOCOL_ERROR'
   | 'UNKNOWN';
 
 export interface RegressionTestResult {

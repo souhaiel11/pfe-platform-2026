@@ -8,9 +8,9 @@
 import { Injectable, Optional } from '@nestjs/common';
 import * as fs from 'fs';
 import * as path from 'path';
-import { CandidateFile, CandidateManifest } from './candidate-verification.types';
-import { computeContentSha256 } from './candidate-digest';
-import { ScopeLockService } from '../context/scope-lock.service';
+import { CandidateFile, CandidateManifest } from '../../backend/src/candidate-verification/candidate-verification.types';
+import { computeContentSha256 } from '../../backend/src/candidate-verification/candidate-digest';
+import { ScopeLockService } from '../../backend/src/context/scope-lock.service';
 
 export class MaterializationError extends Error {
   constructor(message: string, public readonly failureClass: 'CANDIDATE_MANIFEST_INVALID' | 'CANDIDATE_MATERIALIZATION_FAILED' | 'CANDIDATE_CONTENT_MISMATCH') {

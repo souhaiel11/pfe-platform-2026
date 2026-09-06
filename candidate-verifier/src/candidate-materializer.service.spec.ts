@@ -3,8 +3,8 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { CandidateMaterializer, MaterializationError } from './candidate-materializer.service';
-import { computeContentSha256 } from './candidate-digest';
-import { CandidateManifest } from './candidate-verification.types';
+import { computeContentSha256 } from '../../backend/src/candidate-verification/candidate-digest';
+import { CandidateManifest } from '../../backend/src/candidate-verification/candidate-verification.types';
 
 function freshWorkspace(): string {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pfe-materializer-spec-'));

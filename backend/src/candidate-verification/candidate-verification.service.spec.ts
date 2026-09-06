@@ -1,114 +1,126 @@
+// R22-E2C2 — CandidateVerificationService is now a thin HTTP client to the
+// candidate-verifier worker. These tests mock global fetch (the ONLY
+// dependency this class has) rather than exercising real git/Maven --
+// that real, unmocked, real-repository proof now lives in
+// candidate-verifier/src/candidate-verification-executor.spec.ts, moved
+// along with the execution logic it tests.
 import * as assert from 'node:assert/strict';
-import * as fs from 'fs';
-import * as os from 'os';
-import * as path from 'path';
 import { CandidateVerificationService } from './candidate-verification.service';
-import { WorkspaceManager } from './workspace-manager.service';
-import { CandidateMaterializer } from './candidate-materializer.service';
 import { computeCandidateDigest, computeContentSha256 } from './candidate-digest';
-import { CandidateManifest } from './candidate-verification.types';
+import { CandidateManifest, CandidateVerification } from './candidate-verification.types';
 
-// Full real end-to-end integration: real git worktree, real Maven compile,
-// real Surefire run, against the real pfe-app-test repo at the exact
-// commits this whole session diagnosed. No mocking of git/mvn anywhere.
-const REPO_PATH = '/home/souhaiel/pfe-2026/pfe-app-test';
-const FIXED_SHA = '8a315b0dd508eb9843bb3037fe2827f02f6faa78';
-
-const SP = '/tmp/claude-1000/-home-souhaiel-pfe-2026-platform/bdcb2d19-e972-4e6c-b19f-1e99e7f70174/scratchpad/r22c-fixtures';
-const fixedTaskDTOTest = fs.readFileSync(path.join(SP, 'TaskDTOTest.fixed.java'), 'utf8');
-const brokenTaskDTO = fs.readFileSync(path.join(SP, 'TaskDTO.broken.java'), 'utf8');
-// Same file as fixedTaskDTOTest but with one assertion's expected value
-// flipped (TODO -> DONE), producing a real, deterministic JUnit failure.
-const testRegressionContent = fixedTaskDTOTest.replace(
-  'assertEquals(Task.TaskStatus.TODO, dto.toEntity().getStatus());',
-  'assertEquals(Task.TaskStatus.DONE, dto.toEntity().getStatus());',
-);
-assert.notEqual(testRegressionContent, fixedTaskDTOTest, 'sanity: the regression fixture actually differs from the real fixed test file');
-
-function file(p: string, content: string, operation: 'MODIFY' = 'MODIFY') {
-  return { path: p, operation, content, contentSha256: computeContentSha256(content) };
-}
-
-function buildManifest(requestId: string, files: CandidateManifest['files']): CandidateManifest {
-  const manifest: CandidateManifest = {
-    candidateId: `cand-${requestId}`, requestId, batchId: 'r22c-batch', candidateAttempt: 0,
-    repository: 'souhaiel11/pfe-app-test', candidateBaseSha: FIXED_SHA, files,
+function manifest(overrides: Partial<CandidateManifest> = {}): CandidateManifest {
+  const m: CandidateManifest = {
+    candidateId: 'c1', requestId: 'r1', batchId: 'b1', candidateAttempt: 0,
+    repository: 'souhaiel11/pfe-app-test', candidateBaseSha: '8a315b0dd508eb9843bb3037fe2827f02f6faa78',
+    files: [{ path: 'A.java', operation: 'MODIFY', content: 'x', contentSha256: computeContentSha256('x') }],
+    ...overrides,
   };
-  manifest.candidateDigest = computeCandidateDigest(manifest);
-  return manifest;
+  m.candidateDigest = m.candidateDigest ?? computeCandidateDigest(m);
+  return m;
 }
 
-const scratchRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'pfe-candidate-verification-spec-'));
-const workspaceManager = new WorkspaceManager(scratchRoot);
-const service = new CandidateVerificationService(workspaceManager, new CandidateMaterializer());
-
-const allVerificationLevels = new Set<string>();
+function fakeVerification(m: CandidateManifest, overrides: Partial<CandidateVerification> = {}): CandidateVerification {
+  return {
+    identity: { candidateId: m.candidateId, requestId: m.requestId, batchId: m.batchId, candidateAttempt: m.candidateAttempt, candidateBaseSha: m.candidateBaseSha, candidateDigest: m.candidateDigest! },
+    workspace: { workspaceId: `${m.requestId}/${m.batchId}/attempt-${m.candidateAttempt}`, exactShaVerified: true, created: true, cleaned: true },
+    manifestValidation: { status: 'PASS', errors: [] },
+    compile: { status: 'SUCCESS', exitCode: 0, durationMs: 100, evidenceRef: null },
+    tests: { targeted: { status: 'NOT_RUN', reason: 'NO_HIGH_CONFIDENCE_TARGET_SELECTION' }, regression: { status: 'SUCCESS', total: 22, failures: 0, errors: 0, skipped: 0, durationMs: 5000, evidenceRef: null } },
+    staticAnalysis: { status: 'NOT_RUN', reason: 'SUPPORTED_STATIC_ADAPTER_NOT_CONFIGURED', newIssues: [], evidenceRef: null },
+    overall: 'PASS',
+    verificationLevel: 'COMPILE_TEST_VERIFIED',
+    failureClass: null,
+    ...overrides,
+  };
+}
 
 async function main() {
-  // --- PASS scenario: a harmless, real, compiling+passing MODIFY ---
+  const originalFetch = globalThis.fetch;
+  const originalTimeout = AbortSignal.timeout;
+
+  // --- Test 1/2/3 (spec): backend sends the exact manifest, candidateDigest, candidateBaseSha to the worker ---
   {
-    const harmlessContent = fixedTaskDTOTest + '\n// R22-C harmless candidate marker, changes nothing behaviorally\n';
-    const manifest = buildManifest('reqPass', [file('src/test/java/com/pfe/devsecops/dto/TaskDTOTest.java', harmlessContent)]);
-    const result = service.verify(manifest, { repoPath: REPO_PATH });
-    allVerificationLevels.add(result.verificationLevel);
-    assert.equal(result.overall, 'PASS', `expected PASS: ${JSON.stringify(result.compile)} / ${JSON.stringify(result.tests.regression)}`);
-    assert.equal(result.compile.status, 'SUCCESS');
-    assert.equal(result.tests.regression.status, 'SUCCESS');
-    assert.equal(result.tests.regression.total, 22, 'the real 22-test suite aggregates correctly through the full orchestrating service');
-    assert.equal(result.tests.regression.failures, 0);
-    assert.equal(result.identity.candidateDigest, manifest.candidateDigest, 'returned verification references the exact digest that was supplied (Critical Invariant 3)');
-    assert.equal(result.workspace.exactShaVerified, true);
-    assert.equal(result.workspace.cleaned, true, 'workspace marked cleaned in the returned result');
-    assert.equal(fs.existsSync(path.join(scratchRoot, result.workspace.workspaceId)), false, 'workspace directory actually removed from disk after a PASS run');
+    let capturedUrl: string | undefined;
+    let capturedBody: any;
+    const m = manifest();
+    const workerResponse = fakeVerification(m);
+    globalThis.fetch = (async (url: any, init: any) => {
+      capturedUrl = String(url);
+      capturedBody = JSON.parse(init.body);
+      return new Response(JSON.stringify(workerResponse), { status: 200 });
+    }) as any;
+
+    const service = new CandidateVerificationService();
+    const result = await service.verify(m, { allowedPaths: ['A.java'] });
+
+    assert.equal(capturedUrl, 'http://candidate-verifier:4100/verify', 'Test - default worker URL used');
+    assert.deepEqual(capturedBody.manifest, m, 'Test 1 - the exact CandidateManifest is sent to the worker, unchanged');
+    assert.equal(capturedBody.manifest.candidateDigest, m.candidateDigest, 'Test 2 - candidateDigest preserved exactly in transit');
+    assert.equal(capturedBody.manifest.candidateBaseSha, m.candidateBaseSha, 'Test 3 - candidateBaseSha preserved exactly in transit');
+    assert.deepEqual(result, workerResponse, 'Test 18 - the worker\'s result passes through the backend completely unchanged');
   }
 
-  // --- Test 12 (service level): compile failure classified correctly, via real materialization of the real broken TaskDTO onto a workspace checked out at the FIXED sha ---
+  // --- Test 15 (spec): worker unavailable -> INCONCLUSIVE / VERIFIER_UNAVAILABLE, not a candidate FAIL ---
   {
-    const manifest = buildManifest('reqCompileFail', [file('src/main/java/com/pfe/devsecops/dto/TaskDTO.java', brokenTaskDTO)]);
-    const result = service.verify(manifest, { repoPath: REPO_PATH });
-    allVerificationLevels.add(result.verificationLevel);
-    assert.equal(result.overall, 'FAIL');
-    assert.equal(result.failureClass, 'CANDIDATE_COMPILE_FAILURE', 'Test 12 - a real compile failure is classified as CANDIDATE_COMPILE_FAILURE, not a generic UNKNOWN');
-    assert.equal(result.compile.status, 'FAILED');
-    assert.equal(result.tests.regression.status, 'NOT_RUN', 'tests never run after a compile failure');
-    assert.equal(result.workspace.cleaned, true, 'Test 19 - cleanup occurs after a FAIL result too');
+    globalThis.fetch = (async () => { throw Object.assign(new Error('connect ECONNREFUSED'), { name: 'TypeError' }); }) as any;
+    const service = new CandidateVerificationService();
+    const result = await service.verify(manifest());
+    assert.equal(result.overall, 'INCONCLUSIVE', 'Test 15 - connection failure is INCONCLUSIVE, never FAIL');
+    assert.equal(result.failureClass, 'VERIFIER_UNAVAILABLE');
   }
 
-  // --- Test 14: test failure classified correctly, via a real failing assertion ---
+  // --- Test 16 (spec): worker timeout -> INCONCLUSIVE / VERIFIER_TIMEOUT ---
   {
-    const manifest = buildManifest('reqTestFail', [file('src/test/java/com/pfe/devsecops/dto/TaskDTOTest.java', testRegressionContent)]);
-    const result = service.verify(manifest, { repoPath: REPO_PATH });
-    allVerificationLevels.add(result.verificationLevel);
-    assert.equal(result.overall, 'FAIL');
-    assert.equal(result.failureClass, 'CANDIDATE_TEST_REGRESSION', 'Test 14 - a real JUnit assertion failure is classified as CANDIDATE_TEST_REGRESSION');
-    assert.equal(result.compile.status, 'SUCCESS', 'the candidate still compiles -- only the test assertion is wrong');
-    assert.equal(result.tests.regression.status, 'FAILED');
-    assert.ok((result.tests.regression.failures ?? 0) >= 1, 'at least one real aggregated failure recorded');
-    assert.equal(result.workspace.cleaned, true, 'Test 19b - cleanup occurs after a test-regression FAIL result too');
+    globalThis.fetch = (async (_url: any, init: any) => {
+      if (init?.signal?.aborted) throw Object.assign(new Error('The operation was aborted'), { name: 'TimeoutError' });
+      throw new Error('unreachable: signal was not pre-aborted');
+    }) as any;
+    (AbortSignal as any).timeout = () => { const c = new AbortController(); c.abort(); return c.signal; };
+    const service = new CandidateVerificationService();
+    const result = await service.verify(manifest());
+    assert.equal(result.overall, 'INCONCLUSIVE', 'Test 16 - a timeout is INCONCLUSIVE, never FAIL');
+    assert.equal(result.failureClass, 'VERIFIER_TIMEOUT');
+    (AbortSignal as any).timeout = originalTimeout;
   }
 
-  // --- Test 15/16/17 across every scenario above ---
-  assert.deepEqual(allVerificationLevels, new Set(['COMPILE_TEST_VERIFIED']), 'Test 17 - FULL_PREFLIGHT_VERIFIED is never emitted by this phase\'s code, in any scenario');
-
-  // --- Test 15/16 (manifest-invalid path, cheapest way to also prove targeted/static shape without a full build) ---
+  // --- Test 17 (spec): malformed/unexpected worker response -> INCONCLUSIVE / VERIFIER_PROTOCOL_ERROR ---
   {
-    const manifest = buildManifest('reqShapeCheck', [file('src/test/java/com/pfe/devsecops/dto/TaskDTOTest.java', fixedTaskDTOTest)]);
-    const result = service.verify(manifest, { repoPath: REPO_PATH });
-    assert.deepEqual(result.tests.targeted, { status: 'NOT_RUN', reason: 'NO_HIGH_CONFIDENCE_TARGET_SELECTION' }, 'Test 15 - targeted tests explicitly NOT_RUN with the documented reason');
-    assert.deepEqual(result.staticAnalysis, { status: 'NOT_RUN', reason: 'SUPPORTED_STATIC_ADAPTER_NOT_CONFIGURED', newIssues: [], evidenceRef: null }, 'Test 16 - static analysis explicitly NOT_RUN with the documented reason');
+    globalThis.fetch = (async () => new Response('not json', { status: 200 })) as any;
+    const service = new CandidateVerificationService();
+    const result = await service.verify(manifest());
+    assert.equal(result.overall, 'INCONCLUSIVE', 'Test 17a - unparseable worker response is INCONCLUSIVE');
+    assert.equal(result.failureClass, 'VERIFIER_PROTOCOL_ERROR');
+  }
+  {
+    globalThis.fetch = (async () => new Response(JSON.stringify({ unexpected: 'shape' }), { status: 200 })) as any;
+    const service = new CandidateVerificationService();
+    const result = await service.verify(manifest());
+    assert.equal(result.overall, 'INCONCLUSIVE', 'Test 17b - well-formed JSON but wrong shape is still VERIFIER_PROTOCOL_ERROR');
+    assert.equal(result.failureClass, 'VERIFIER_PROTOCOL_ERROR');
+  }
+  {
+    globalThis.fetch = (async () => new Response('', { status: 500 })) as any;
+    const service = new CandidateVerificationService();
+    const result = await service.verify(manifest());
+    assert.equal(result.overall, 'INCONCLUSIVE', 'Test 17c - a non-2xx HTTP status is VERIFIER_PROTOCOL_ERROR');
+    assert.equal(result.failureClass, 'VERIFIER_PROTOCOL_ERROR');
   }
 
-  // --- manifest-invalid short-circuit: no workspace ever created ---
+  // --- Test: a genuine candidate FAIL from the worker (e.g. real compile failure) still passes through as FAIL, never reclassified as a transport issue ---
   {
-    const manifest = buildManifest('reqInvalidManifest', []); // zero files
-    const result = service.verify(manifest, { repoPath: REPO_PATH });
-    assert.equal(result.overall, 'FAIL');
-    assert.equal(result.failureClass, 'CANDIDATE_MANIFEST_INVALID');
-    assert.equal(result.workspace.created, false, 'an invalid manifest never even attempts workspace creation');
+    const m = manifest();
+    const workerResponse = fakeVerification(m, { overall: 'FAIL', failureClass: 'CANDIDATE_COMPILE_FAILURE', compile: { status: 'FAILED', exitCode: 1, durationMs: 200, evidenceRef: 'COMPILATION ERROR' } });
+    globalThis.fetch = (async () => new Response(JSON.stringify(workerResponse), { status: 200 })) as any;
+    const service = new CandidateVerificationService();
+    const result = await service.verify(m);
+    assert.equal(result.overall, 'FAIL', 'a real candidate defect reported by the worker stays FAIL, not INCONCLUSIVE');
+    assert.equal(result.failureClass, 'CANDIDATE_COMPILE_FAILURE');
   }
 
-  fs.rmSync(scratchRoot, { recursive: true, force: true });
-  console.log('CandidateVerificationService: PASS');
+  globalThis.fetch = originalFetch;
+  (AbortSignal as any).timeout = originalTimeout;
+  console.log('CandidateVerificationService (thin HTTP client): PASS');
 }
 
 main().catch(err => { console.error(err); process.exitCode = 1; });

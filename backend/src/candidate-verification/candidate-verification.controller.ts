@@ -7,29 +7,29 @@
 // GitHub credential); these endpoints only make the three R22-C/R22-E
 // decisions reusable from n8n instead of being reimplemented as duplicate
 // Code-node logic that could drift from the backend's own tested version.
+//
+// R22-E2C2: /verify no longer resolves a repository path itself (that moved
+// to the candidate-verifier worker, along with RepoCacheService) -- this
+// controller forwards the manifest and lets CandidateVerificationService's
+// thin HTTP client talk to the worker.
 import { Body, Controller, Post, UseGuards, BadRequestException } from '@nestjs/common';
 import { InternalSecretGuard } from '../auth/internal-secret.guard';
 import { CandidateVerificationService } from './candidate-verification.service';
-import { RepoCacheService } from './repo-cache.service';
 import { assertCandidateStillValidForWrite } from './write-guard';
 import { assertRemoteHeadMatchesCandidateBase } from './remote-head-drift';
 import { CandidateManifest, CandidateVerification } from './candidate-verification.types';
 
 @Controller('candidate-verification')
 export class CandidateVerificationController {
-  constructor(
-    private readonly service: CandidateVerificationService,
-    private readonly repoCache: RepoCacheService,
-  ) {}
+  constructor(private readonly service: CandidateVerificationService) {}
 
   @UseGuards(InternalSecretGuard)
   @Post('verify')
-  verify(@Body() body: { manifest: CandidateManifest; allowedPaths?: string[] }) {
+  verify(@Body() body: { manifest: CandidateManifest; allowedPaths?: string[]; options?: { timeoutMs?: number } }) {
     if (!body?.manifest || !Array.isArray(body.manifest.files)) {
       throw new BadRequestException('A CandidateManifest with a files[] array is required.');
     }
-    const repoPath = this.repoCache.ensureRepo(body.manifest.repository);
-    return this.service.verify(body.manifest, { repoPath, allowedPaths: body.allowedPaths });
+    return this.service.verify(body.manifest, { allowedPaths: body.allowedPaths, timeoutMs: body.options?.timeoutMs });
   }
 
   @UseGuards(InternalSecretGuard)

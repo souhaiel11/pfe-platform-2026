@@ -2,9 +2,24 @@ networks:
   pfe-network:
     external: true
     name: pfe-network
+  # R22-E2C2 — isolates the candidate-verifier worker from Postgres/n8n/
+  # Jenkins/SonarQube (none of which it has any legitimate reason to reach,
+  # per R22-E2C1 Phase 4/5/10's audit): backend joins this network in
+  # ADDITION to pfe-network; candidate-verifier joins ONLY this network.
+  # Deliberately not `internal: true` -- the worker still needs outbound
+  # internet for Maven dependency downloads (R22-E2C1 Phase 10); isolation
+  # here comes from network SEPARATION (no path to pfe-network's members),
+  # not from blocking all egress.
+  candidate-verification-net:
+    driver: bridge
 
 volumes:
   postgres_data:
+  # R22-E2C2 Phase 9 — worker-owned repository cache (clone-once/fetch-
+  # thereafter git object database + ephemeral per-candidate worktrees).
+  # Mounted only into candidate-verifier; the backend has no repository
+  # filesystem access at all after this migration.
+  candidate_repo_cache:
 
 services:
   postgres:
@@ -43,13 +58,54 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       N8N_URL: http://n8n:5678
       AZURE_DEPLOY_AGENT_URL: http://172.19.0.1:7799
+      # R22-E2C2 — internal DNS name of the worker; not a secret, not a
+      # credential, just an address. Backend never receives a worker
+      # credential at all (see candidate-verification-net's own comment).
+      CANDIDATE_VERIFIER_URL: http://candidate-verifier:4100/verify
     networks:
       pfe-network:
         aliases:
           - backend
+      candidate-verification-net:
     depends_on:
       postgres:
         condition: service_healthy
+    restart: unless-stopped
+
+  # R22-E2C2 — execution-plane worker (R22-E2C1's audited architecture).
+  # Receives a CandidateManifest from the backend, materializes it onto an
+  # exact-SHA git worktree, compiles/tests it with Maven, and returns a
+  # CandidateVerification result. Owns no secret: no DB_PASS, no
+  # JWT_SECRET, no N8N_INTERNAL_SECRET, no GitHub/Jenkins/Sonar credential
+  # of any kind (verified by a structural test, not just this comment --
+  # see candidate-verifier/isolation.spec.ts). Not started this phase.
+  candidate-verifier:
+    # Build context is the repo root (not ./candidate-verifier): the image
+    # needs the two shared-contract files plus scope-lock.service.ts from
+    # backend/src/ (see Dockerfile), which Docker cannot COPY from outside
+    # its build context.
+    build:
+      context: .
+      dockerfile: candidate-verifier/Dockerfile
+    container_name: pfe-candidate-verifier
+    hostname: candidate-verifier
+    # No `ports:` — never published to the host, reachable only from
+    # `backend` over candidate-verification-net.
+    environment:
+      PORT: 4100
+      WORKSPACE_ROOT: /var/pfe-remediation-workspaces
+      REPO_CACHE_ROOT: /var/pfe-remediation-repos
+    volumes:
+      - candidate_repo_cache:/var/pfe-remediation-repos
+    networks:
+      candidate-verification-net:
+        aliases:
+          - candidate-verifier
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2g
     restart: unless-stopped
 
   frontend:

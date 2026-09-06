@@ -5,7 +5,7 @@ import { execFileSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 import { BuildAdapter, CompileResult } from './build-adapter';
-import { RegressionTestResult } from './candidate-verification.types';
+import { RegressionTestResult } from '../../backend/src/candidate-verification/candidate-verification.types';
 import { aggregateSurefireReports } from './surefire-aggregation';
 
 const DEFAULT_TIMEOUT_MS = 5 * 60 * 1000;
