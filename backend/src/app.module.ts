@@ -15,6 +15,7 @@ import { JenkinsOptimizerModule } from './jenkins-optimizer/jenkins-optimizer.mo
 import { DockerfileOptimizerModule } from './dockerfile-optimizer/dockerfile-optimizer.module';
 import { AzureDeployModule } from './azure-deploy/azure-deploy.module';
 import { ManualRemediationModule } from './manual-remediation/manual-remediation.module';
+import { ContextModule } from './context/context.module';
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import { ManualRemediationModule } from './manual-remediation/manual-remediation
     DockerfileOptimizerModule,
     AzureDeployModule,
     ManualRemediationModule,
+    ContextModule,
   ],
 })
 export class AppModule {}
