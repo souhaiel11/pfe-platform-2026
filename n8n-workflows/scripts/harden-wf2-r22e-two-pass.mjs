@@ -295,6 +295,28 @@ const ownFailureEnvelopeIf = [
 workflow.nodes.push(...codeAndHttpNodesNeedingEnvelopes, ...nodesWithoutEnvelopes, ...newFailureEnvelopes, ...ownFailureEnvelopeIf);
 
 // ---------------------------------------------------------------------
+// R22-E2B Phase 4 — credential references for the 5 new GitHub-calling
+// nodes, copied verbatim (reference only, never a secret value) from their
+// proven live siblings. httpRequest-type GitHub reads reuse the same
+// githubApi reference as the existing 'Lookup Remediation Branch'; the one
+// native n8n-nodes-base.github node reuses the same reference as the
+// existing 'Create File in Branch'. Fails loudly if either sibling's
+// credential is somehow absent, rather than silently shipping an unbound
+// node a second time.
+// ---------------------------------------------------------------------
+function requireCredential(siblingName, credentialType) {
+  const cred = assertNode(siblingName).credentials?.[credentialType];
+  if (!cred) throw new Error(`R22-E2B generator: sibling node '${siblingName}' has no '${credentialType}' credential reference to copy -- refusing to ship an unbound node.`);
+  return { [credentialType]: { id: cred.id, name: cred.name } };
+}
+const httpGithubCredential = requireCredential('Lookup Remediation Branch', 'githubApi');
+const nativeGithubCredential = requireCredential('Create File in Branch', 'githubApi');
+for (const n of [recheckExistingBranchHead, relookupBaselineRefBeforeCreation, relookupRemediationBranchBeforeCreate, lookupHeadAfterReconciledWritePass2]) {
+  n.credentials = httpGithubCredential;
+}
+readBackFileAfterWriteErrorPass2.credentials = nativeGithubCredential;
+
+// ---------------------------------------------------------------------
 // Mutate existing nodes in place (Phase 2/4/12). No other existing node's
 // jsCode/parameters are touched.
 // ---------------------------------------------------------------------
@@ -376,5 +398,37 @@ wireWithErrorOutput('Lookup Head After Reconciled Write (Pass 2)', ['Build Recon
 // untouched. Only its success target changes.
 setMainTwoOutputs('Build Reconciled File Result', [['Merge Effective File Results 2'], ['Failure Envelope - Build Reconciled File Result']]);
 
+// ---------------------------------------------------------------------
+// R22-E2B Phases 1-3 — make this an independent, inactive, non-colliding
+// TEST workflow. This is the ONLY place the production identity
+// (id/name/active/webhook) is touched, and only in THIS generated
+// artifact's in-memory object -- the live export loaded above is never
+// written back anywhere.
+// ---------------------------------------------------------------------
+const PRODUCTION_WORKFLOW_ID = '9adcV31eaIgJyMR0';
+const PRODUCTION_WEBHOOK_PATH = 'wf2-approve';
+const TEST_WORKFLOW_NAME = 'WF2 - Git Patch & PR R22E TEST';
+const TEST_WEBHOOK_PATH = 'wf2-r22e-test';
+
+if (workflow.id === PRODUCTION_WORKFLOW_ID) delete workflow.id; // n8n assigns a fresh, non-colliding id on import
+workflow.name = TEST_WORKFLOW_NAME;
+workflow.active = false;
+
+const webhookNode = assertNode('Webhook');
+if (webhookNode.parameters.path === PRODUCTION_WEBHOOK_PATH) webhookNode.parameters.path = TEST_WEBHOOK_PATH;
+
+// Defense in depth: refuse to write an artifact that still carries the
+// production identity/settings, even if a future edit to this script
+// accidentally reintroduces one of them above.
+const guardFailures = [];
+if (workflow.id === PRODUCTION_WORKFLOW_ID) guardFailures.push(`workflow.id still equals the production id ${PRODUCTION_WORKFLOW_ID}`);
+if (workflow.active !== false) guardFailures.push(`workflow.active is ${JSON.stringify(workflow.active)}, must be false`);
+if (workflow.name !== TEST_WORKFLOW_NAME) guardFailures.push(`workflow.name is ${JSON.stringify(workflow.name)}, must be ${JSON.stringify(TEST_WORKFLOW_NAME)}`);
+if (assertNode('Webhook').parameters.path !== TEST_WEBHOOK_PATH) guardFailures.push(`Webhook path is not ${JSON.stringify(TEST_WEBHOOK_PATH)}`);
+if (workflow.nodes.some(n => n.name === 'Webhook' && n.parameters.path === PRODUCTION_WEBHOOK_PATH)) guardFailures.push('a node still exposes the production webhook path');
+if (guardFailures.length) {
+  throw new Error('R22-E2B safety guard refused to write an unsafe artifact:\n' + guardFailures.join('\n'));
+}
+
 fs.writeFileSync(outputPath, JSON.stringify([workflow], null, 2) + '\n');
-console.log('Wrote', outputPath.pathname);
+console.log('Wrote', outputPath.pathname, '(test workflow, inactive, non-colliding id)');

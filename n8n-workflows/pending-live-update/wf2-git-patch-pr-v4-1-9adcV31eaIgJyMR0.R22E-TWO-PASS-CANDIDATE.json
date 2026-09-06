@@ -2,10 +2,9 @@
   {
     "updatedAt": "2026-09-05T18:58:13.000Z",
     "createdAt": "2026-07-23T17:59:09.457Z",
-    "id": "9adcV31eaIgJyMR0",
-    "name": "WF2 - Git Patch & PR v4.1",
+    "name": "WF2 - Git Patch & PR R22E TEST",
     "description": null,
-    "active": true,
+    "active": false,
     "isArchived": false,
     "nodes": [
       {
@@ -397,7 +396,7 @@
       {
         "parameters": {
           "httpMethod": "POST",
-          "path": "wf2-approve",
+          "path": "wf2-r22e-test",
           "options": {}
         },
         "type": "n8n-nodes-base.webhook",
@@ -2029,7 +2028,7 @@
         "onError": "continueErrorOutput"
       },
       {
-        "id": "da7991d8-832f-47a1-9672-3c62952399d9",
+        "id": "19819109-58dd-4446-9eb0-c18acd074d20",
         "name": "Record New Branch Baseline",
         "type": "n8n-nodes-base.code",
         "typeVersion": 2,
@@ -2044,7 +2043,7 @@
         "onError": "continueErrorOutput"
       },
       {
-        "id": "eab94b8f-f140-4e74-9f8e-6ecac42dd257",
+        "id": "679450ea-00bb-42e7-880b-8024df99d73b",
         "name": "Accumulate Candidate File",
         "type": "n8n-nodes-base.code",
         "typeVersion": 2,
@@ -2059,7 +2058,7 @@
         "onError": "continueErrorOutput"
       },
       {
-        "id": "ef0f72ec-ea6e-42b7-9ce2-3502ddace091",
+        "id": "f9ff429f-57c0-4809-98e2-86e97e965ee4",
         "name": "Assemble Candidate Manifest",
         "type": "n8n-nodes-base.code",
         "typeVersion": 2,
@@ -2074,7 +2073,7 @@
         "onError": "continueErrorOutput"
       },
       {
-        "id": "d8f750e3-01a9-415b-a0b0-2897f5b69c6a",
+        "id": "3e75fab3-c250-4f27-ad8a-af0eef71130d",
         "name": "Call Candidate Verification",
         "type": "n8n-nodes-base.httpRequest",
         "typeVersion": 4.4,
@@ -2104,7 +2103,7 @@
         }
       },
       {
-        "id": "aa6acb16-c81f-4e21-b4aa-1f3f66494b3d",
+        "id": "6c09af1f-49f3-45ae-bbb8-7929c73a0dad",
         "name": "Call Write Guard",
         "type": "n8n-nodes-base.httpRequest",
         "typeVersion": 4.4,
@@ -2134,7 +2133,7 @@
         }
       },
       {
-        "id": "4251f80c-cee8-467d-87e0-8f02c22e42f5",
+        "id": "0ff875f0-e3cc-4665-bbb7-e8a1d8d3b955",
         "name": "Re-check Existing Branch Head",
         "type": "n8n-nodes-base.httpRequest",
         "typeVersion": 4.4,
@@ -2164,10 +2163,16 @@
               }
             }
           }
+        },
+        "credentials": {
+          "githubApi": {
+            "id": "YBO0vWrPlyoYx4Kr",
+            "name": "GitHub n8n"
+          }
         }
       },
       {
-        "id": "9e80d365-44c4-48d5-99e4-7921d26912ea",
+        "id": "dbfb0df3-ee5a-4c39-9d4a-6cb7099e7675",
         "name": "Re-lookup Baseline Ref Before Creation",
         "type": "n8n-nodes-base.httpRequest",
         "typeVersion": 4.4,
@@ -2197,10 +2202,16 @@
               }
             }
           }
+        },
+        "credentials": {
+          "githubApi": {
+            "id": "YBO0vWrPlyoYx4Kr",
+            "name": "GitHub n8n"
+          }
         }
       },
       {
-        "id": "9ba3a7df-59ed-4003-b809-c828493eac71",
+        "id": "c1ae8f98-ef42-4328-9c29-8b2f62fa91f7",
         "name": "Call Remote Head Drift Guard",
         "type": "n8n-nodes-base.httpRequest",
         "typeVersion": 4.4,
@@ -2230,7 +2241,7 @@
         }
       },
       {
-        "id": "fe101890-7f3c-4697-9026-14593865b362",
+        "id": "a8816057-614f-4332-9951-88dced56cdda",
         "name": "Re-lookup Remediation Branch Before Create",
         "type": "n8n-nodes-base.httpRequest",
         "typeVersion": 4.4,
@@ -2260,10 +2271,16 @@
               }
             }
           }
+        },
+        "credentials": {
+          "githubApi": {
+            "id": "YBO0vWrPlyoYx4Kr",
+            "name": "GitHub n8n"
+          }
         }
       },
       {
-        "id": "02173910-72e8-42dc-8295-27ee775069c3",
+        "id": "a59dbaaa-dc2f-42cb-9bae-7abc1e33b606",
         "name": "Expand Manifest Files",
         "type": "n8n-nodes-base.code",
         "typeVersion": 2,
@@ -2278,7 +2295,7 @@
         "onError": "continueErrorOutput"
       },
       {
-        "id": "e1074b2d-37ae-47a3-9f9b-47ae88d678db",
+        "id": "88210d52-e745-44a0-871c-4b3895de7bf4",
         "name": "Verify Content Hash Before Send",
         "type": "n8n-nodes-base.code",
         "typeVersion": 2,
@@ -2293,7 +2310,7 @@
         "onError": "continueErrorOutput"
       },
       {
-        "id": "cd4e6448-c502-4b13-8e02-dcec46608cb3",
+        "id": "4fa45e34-4b28-4634-8610-34506d0e3e5f",
         "name": "Build File Result (Pass 2)",
         "type": "n8n-nodes-base.code",
         "typeVersion": 2,
@@ -2308,7 +2325,7 @@
         "onError": "continueErrorOutput"
       },
       {
-        "id": "d1077758-807c-4eff-849a-83639c9d8f0c",
+        "id": "6d0fb607-c094-4d21-9426-1fa45716335a",
         "name": "Read Back File After Write Error (Pass 2)",
         "type": "n8n-nodes-base.github",
         "typeVersion": 1,
@@ -2335,10 +2352,16 @@
           "additionalParameters": {
             "reference": "={{ $('Expand Manifest Files').item.json.branchName }}"
           }
+        },
+        "credentials": {
+          "githubApi": {
+            "id": "fBueZWwflXWM3RoX",
+            "name": "GitHub account"
+          }
         }
       },
       {
-        "id": "a0e5ef3f-14bc-4b26-bee7-c5bbd9c26355",
+        "id": "e2716531-08a3-4002-a6c2-4d1b8e5193f9",
         "name": "Lookup Head After Reconciled Write (Pass 2)",
         "type": "n8n-nodes-base.httpRequest",
         "typeVersion": 4.4,
@@ -2368,10 +2391,16 @@
               }
             }
           }
+        },
+        "credentials": {
+          "githubApi": {
+            "id": "YBO0vWrPlyoYx4Kr",
+            "name": "GitHub n8n"
+          }
         }
       },
       {
-        "id": "8838b091-40af-4e4c-acd5-b9302f81d5a2",
+        "id": "e42c9a4b-b4a8-4272-a7aa-64555d267419",
         "name": "Persist Verification Failure",
         "type": "n8n-nodes-base.code",
         "typeVersion": 2,
@@ -2385,7 +2414,7 @@
         }
       },
       {
-        "id": "c7ca25e0-ad53-499c-a0f9-0c728fa7fd81",
+        "id": "48aeb72b-23c2-4fc6-89c8-9c49c2e0c23d",
         "name": "Branch Existed At Generation?",
         "type": "n8n-nodes-base.if",
         "typeVersion": 2.2,
@@ -2418,7 +2447,7 @@
         }
       },
       {
-        "id": "88b0b392-a598-4ed4-8cc6-c9f6057099f3",
+        "id": "ef8f7b29-df2f-4a3f-a683-8c01a56e0be7",
         "name": "Remote Head Drift Passed?",
         "type": "n8n-nodes-base.if",
         "typeVersion": 2.2,
@@ -2451,7 +2480,7 @@
         }
       },
       {
-        "id": "28925324-cb7c-4f88-957a-9e49496ea965",
+        "id": "cbe1d711-28d8-4e22-a7f5-bcbca1237086",
         "name": "Persist Base Moved Failure",
         "type": "n8n-nodes-base.code",
         "typeVersion": 2,
@@ -2465,7 +2494,7 @@
         }
       },
       {
-        "id": "1b6f5389-ec01-4263-bd1d-9e7366581a09",
+        "id": "58477410-3979-4fac-99b7-0c6bc34e61d8",
         "name": "Branch Existed At Generation? (Pass 2 Entry)",
         "type": "n8n-nodes-base.if",
         "typeVersion": 2.2,
@@ -2498,7 +2527,7 @@
         }
       },
       {
-        "id": "965b635c-c94e-4417-99c4-67606e7172ec",
+        "id": "845befcb-e481-4dcf-a6c5-345901fc50c4",
         "name": "Loop Over Manifest Files",
         "type": "n8n-nodes-base.splitInBatches",
         "typeVersion": 3,
@@ -2512,7 +2541,7 @@
         }
       },
       {
-        "id": "fdba5d58-dbe9-487d-af2f-15ba86c39038",
+        "id": "8b6a07a0-b078-40b1-83d4-0ca0c90b96fe",
         "name": "Classify GitHub Write Error (Pass 2)",
         "type": "n8n-nodes-base.code",
         "typeVersion": 2,
@@ -2526,7 +2555,7 @@
         }
       },
       {
-        "id": "97d9f782-56d9-41a6-8c3a-265542a79bcb",
+        "id": "c3a46dc2-54ad-4ee1-868f-94f5aa3f9986",
         "name": "Evaluate GitHub Write Reconciliation (Pass 2)",
         "type": "n8n-nodes-base.code",
         "typeVersion": 2,
@@ -2540,7 +2569,7 @@
         }
       },
       {
-        "id": "4689c58b-05f5-4e29-aedb-2b1fc4ce4074",
+        "id": "1ffd8c71-a1ff-4af0-8d66-b690df41ef68",
         "name": "Transport Requires Read Back? (Pass 2)",
         "type": "n8n-nodes-base.if",
         "typeVersion": 2.2,
@@ -2573,7 +2602,7 @@
         }
       },
       {
-        "id": "ad65c546-3b07-4679-b482-2a08a2a575b1",
+        "id": "693385fd-8156-4ea7-bcfd-4c9fb36f69b3",
         "name": "Remote Candidate Present? (Pass 2)",
         "type": "n8n-nodes-base.if",
         "typeVersion": 2.2,
@@ -2606,7 +2635,7 @@
         }
       },
       {
-        "id": "23ccf35c-fa10-452a-a865-cd2ca280ed7a",
+        "id": "89588340-b0f0-4b87-83a7-699ddea927dc",
         "name": "Merge Effective File Results 2",
         "type": "n8n-nodes-base.noOp",
         "typeVersion": 1,
@@ -2617,7 +2646,7 @@
         "parameters": {}
       },
       {
-        "id": "302d9168-1aa1-4a20-912b-e30152023189",
+        "id": "b2216eab-e0ae-4e92-b769-68840e621fb9",
         "name": "Write Guard Passed?",
         "type": "n8n-nodes-base.if",
         "typeVersion": 2.2,
@@ -2650,7 +2679,7 @@
         }
       },
       {
-        "id": "6c634bbc-d274-47e4-a844-4bcce1d16c6a",
+        "id": "9ee66952-1d83-4661-adc4-fb44e0dc7f95",
         "name": "Failure Envelope - Record New Branch Baseline",
         "type": "n8n-nodes-base.code",
         "typeVersion": 2,
@@ -2664,7 +2693,7 @@
         }
       },
       {
-        "id": "1dbfe81c-3a5d-4def-809e-4c953696e5a5",
+        "id": "16e11e69-a02e-492f-b9d5-7f58bbc6f0e9",
         "name": "Failure Envelope - Accumulate Candidate File",
         "type": "n8n-nodes-base.code",
         "typeVersion": 2,
@@ -2678,7 +2707,7 @@
         }
       },
       {
-        "id": "9ccc3eaf-b632-4213-a098-0b135f932f76",
+        "id": "1d166a5a-2853-4925-b1dd-dbbd3df65263",
         "name": "Failure Envelope - Assemble Candidate Manifest",
         "type": "n8n-nodes-base.code",
         "typeVersion": 2,
@@ -2692,7 +2721,7 @@
         }
       },
       {
-        "id": "2156984b-4fed-4377-b059-db615b28fb14",
+        "id": "5a0b55ba-9c1b-4c10-88e3-fdbc79bc0a09",
         "name": "Failure Envelope - Call Candidate Verification",
         "type": "n8n-nodes-base.code",
         "typeVersion": 2,
@@ -2706,7 +2735,7 @@
         }
       },
       {
-        "id": "c341f99a-f983-41d2-a86a-d5e0ca1c0814",
+        "id": "2000487b-1f88-4654-9b8d-5f597d6191d4",
         "name": "Failure Envelope - Call Write Guard",
         "type": "n8n-nodes-base.code",
         "typeVersion": 2,
@@ -2720,7 +2749,7 @@
         }
       },
       {
-        "id": "f904ab99-a94c-4ca6-8bff-07ddf36827ed",
+        "id": "f3134fc1-86f6-4604-8504-0fc0aea6ce62",
         "name": "Failure Envelope - Re-check Existing Branch Head",
         "type": "n8n-nodes-base.code",
         "typeVersion": 2,
@@ -2734,7 +2763,7 @@
         }
       },
       {
-        "id": "685002f4-1a87-40b2-9057-d52c4c323e42",
+        "id": "1e5b359b-9a66-42a6-b4c1-9f37d98776c9",
         "name": "Failure Envelope - Re-lookup Baseline Ref Before Creation",
         "type": "n8n-nodes-base.code",
         "typeVersion": 2,
@@ -2748,7 +2777,7 @@
         }
       },
       {
-        "id": "907a22c7-0013-4100-a37a-1e38d40d841f",
+        "id": "db489ffc-588e-4277-9788-61e17de5f7f0",
         "name": "Failure Envelope - Call Remote Head Drift Guard",
         "type": "n8n-nodes-base.code",
         "typeVersion": 2,
@@ -2762,7 +2791,7 @@
         }
       },
       {
-        "id": "213f011f-5e5d-44d7-800c-2450d5234df5",
+        "id": "cec9a59e-faee-4afc-bb90-9fa8d2707b9c",
         "name": "Failure Envelope - Re-lookup Remediation Branch Before Create",
         "type": "n8n-nodes-base.code",
         "typeVersion": 2,
@@ -2776,7 +2805,7 @@
         }
       },
       {
-        "id": "a7e90a6d-a845-4816-8f7f-5c37da388aaa",
+        "id": "5b1e1e5b-14ed-4331-939e-4eeec38a5b44",
         "name": "Failure Envelope - Expand Manifest Files",
         "type": "n8n-nodes-base.code",
         "typeVersion": 2,
@@ -2790,7 +2819,7 @@
         }
       },
       {
-        "id": "5db37470-808a-4259-a645-66cac53495d5",
+        "id": "ff4f38d5-5cb8-4acc-b30f-c4e6f7293640",
         "name": "Failure Envelope - Verify Content Hash Before Send",
         "type": "n8n-nodes-base.code",
         "typeVersion": 2,
@@ -2804,7 +2833,7 @@
         }
       },
       {
-        "id": "39959dd1-d309-48f0-94e6-31b8943f08bb",
+        "id": "97abfa74-9dde-4d08-81ea-65a2235478c4",
         "name": "Failure Envelope - Build File Result (Pass 2)",
         "type": "n8n-nodes-base.code",
         "typeVersion": 2,
@@ -2818,7 +2847,7 @@
         }
       },
       {
-        "id": "a6aca934-5931-4c97-bc2d-3293e56f6b0c",
+        "id": "8aadedd5-230c-4da1-ba21-df95ae36bd01",
         "name": "Failure Envelope - Read Back File After Write Error (Pass 2)",
         "type": "n8n-nodes-base.code",
         "typeVersion": 2,
@@ -2832,7 +2861,7 @@
         }
       },
       {
-        "id": "edf17c9e-1769-4071-b42a-e619fabbec42",
+        "id": "a9e9c971-8e50-4f5e-b230-3ef23f30d8d1",
         "name": "Failure Envelope - Lookup Head After Reconciled Write (Pass 2)",
         "type": "n8n-nodes-base.code",
         "typeVersion": 2,
@@ -2846,7 +2875,7 @@
         }
       },
       {
-        "id": "51519dfc-0471-4111-a94c-a8eff8e69112",
+        "id": "5432cc7b-831a-433a-97fe-bb5edfa536c4",
         "name": "Failure Envelope - Transport Requires Read Back? (Pass 2)",
         "type": "n8n-nodes-base.code",
         "typeVersion": 2,
@@ -2860,7 +2889,7 @@
         }
       },
       {
-        "id": "530c48ac-fe2f-42da-85b2-4fddfd6b945d",
+        "id": "6ca9ce62-3fb9-4182-9c94-ed1f2a614d38",
         "name": "Failure Envelope - Remote Candidate Present? (Pass 2)",
         "type": "n8n-nodes-base.code",
         "typeVersion": 2,
