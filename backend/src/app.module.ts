@@ -16,6 +16,7 @@ import { DockerfileOptimizerModule } from './dockerfile-optimizer/dockerfile-opt
 import { AzureDeployModule } from './azure-deploy/azure-deploy.module';
 import { ManualRemediationModule } from './manual-remediation/manual-remediation.module';
 import { ContextModule } from './context/context.module';
+import { CandidateVerificationModule } from './candidate-verification/candidate-verification.module';
 
 @Module({
   imports: [
@@ -50,6 +51,7 @@ import { ContextModule } from './context/context.module';
     AzureDeployModule,
     ManualRemediationModule,
     ContextModule,
+    CandidateVerificationModule,
   ],
 })
 export class AppModule {}
