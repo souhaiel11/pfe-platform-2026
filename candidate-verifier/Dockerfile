@@ -23,7 +23,15 @@ RUN apt-get update \
         maven \
     && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /app
+# WORKDIR is named /candidate-verifier (not /app) so tsc's rootDir
+# auto-computation (tsconfig's rootDir:"../", relative to wherever this
+# tsconfig.json actually lives) mirrors the SAME relative shape as the
+# local dev checkout (platform/candidate-verifier/ + platform/backend/,
+# both one level under platform/) -- proven empirically: naming this /app
+# instead put the compiled entry point at dist/app/src/server.js, not
+# dist/candidate-verifier/src/server.js as package.json's `start` script
+# and CMD below both assume.
+WORKDIR /candidate-verifier
 COPY candidate-verifier/package*.json ./
 RUN npm install
 COPY candidate-verifier/tsconfig.json ./
@@ -36,6 +44,16 @@ COPY candidate-verifier/src ./src
 COPY backend/src/candidate-verification/candidate-verification.types.ts /backend/src/candidate-verification/candidate-verification.types.ts
 COPY backend/src/candidate-verification/candidate-digest.ts /backend/src/candidate-verification/candidate-digest.ts
 COPY backend/src/context/scope-lock.service.ts /backend/src/context/scope-lock.service.ts
+
+# scope-lock.service.ts's `import { Injectable } from '@nestjs/common'`
+# resolves via Node's normal upward node_modules search starting at
+# /backend/src/context/ -- which finds nothing in this image (unlike the
+# local dev checkout, where backend/ has its own real `npm install`).
+# Symlinking /backend/node_modules to the worker's own node_modules (which
+# already has @nestjs/common/reflect-metadata/rxjs, per package.json) makes
+# that lookup succeed the same way the sibling backend/ checkout does
+# locally, without vendoring a second copy of the packages.
+RUN ln -s /candidate-verifier/node_modules /backend/node_modules
 
 RUN npm run build
 
