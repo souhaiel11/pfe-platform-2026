@@ -422,6 +422,115 @@ const sha256hex = (s) => require('node:crypto').createHash('sha256').update(Stri
 }
 
 // ============================================================
+// R22-E2R — Pass 2 expands the FROZEN CandidateManifest, never $json.
+// Root cause of R22-E2O-R4 execution 1953: 'Expand Manifest Files' read
+// `const manifest = $json`. In Pass 2 $json is whichever predecessor fired
+// — 'Create Missing Branch' (a GitHub ref-creation response) or the
+// 'Branch Existed At Generation? (Pass 2 Entry)' IF node passing through
+// the 'Call Remote Head Drift Guard' {ok:true} item. Neither carries
+// `.files`, so `manifest.files.map(...)` threw
+// `Cannot read properties of undefined (reading 'map')` and Pass 2
+// dead-ended before any Git write. This test reproduces both real
+// predecessor shapes; the pre-fix code (from the accepted baseline) MUST
+// fail on them, the shipped code MUST expand exactly the frozen manifest.
+// ============================================================
+{
+  const node = nodesByName.get('Expand Manifest Files');
+
+  const baselineArtifact = JSON.parse(readFileSync(
+    path.join(here, '..', 'pending-live-update', 'wf2-git-patch-pr-v4-1-9adcV31eaIgJyMR0.R22E-TWO-PASS-CANDIDATE.baseline.json'), 'utf8'))[0];
+  const preFixNode = baselineArtifact.nodes.find(n => n.name === 'Expand Manifest Files');
+  assert.ok(preFixNode, 'R22-E2R - baseline carries the pre-fix Expand Manifest Files node');
+  assert.match(preFixNode.parameters.jsCode, /const manifest\s*=\s*\$json/,
+    'R22-E2R - the baseline (pre-fix) really did read $json — this is the bug being fixed');
+
+  const mkFile = (pathName, content, op) => ({
+    path: pathName, operation: op, originalBlobSha: op === 'CREATE' ? null : `blob-${pathName}`,
+    content, contentSha256: sha256hex(content),
+    file_path: pathName, repository_owner: 'souhaiel11', repository_name: 'pfe-app-test',
+    branchName: 'fix/pfe-x', commitMessage: 'fix: remove commented-out code',
+    sourceContent: op === 'CREATE' ? null : `old ${pathName}`,
+    approvedFindingIds: ['f1'], processedFindingIds: ['f1'], candidateAcceptedFindingIds: ['f1'], validationEvidence: { verified: true },
+  });
+  const frozenManifest = {
+    candidateId: 'batch-1-attempt-1', requestId: 'req-1', batchId: 'batch-1', candidateAttempt: 1,
+    repository: 'souhaiel11/pfe-app-test',
+    candidateBaseSha: '1aded596713cbe8477a4bf652cd081b9aec00aa7',
+    candidateDigest: 'a'.repeat(64), branchExists: false,
+    targetBranchName: 'fix/pfe-x', baseBranch: 'main',
+    files: [mkFile('src/main/java/com/pfe/devsecops/controller/TaskController.java', 'cleaned controller', 'MODIFY')],
+  };
+
+  // The two real Pass-2 predecessor item shapes — NEITHER has `.files`.
+  const predecessorShapes = [
+    { __label: 'Create Missing Branch → GitHub ref response', ref: 'refs/heads/fix/pfe-x', object: { sha: 'c'.repeat(40), type: 'commit', url: 'https://api.github.com/...' } },
+    { __label: 'Branch Existed At Generation? (Pass 2 Entry) → drift-guard passthrough', ok: true },
+  ];
+
+  for (const predecessor of predecessorShapes) {
+    // PRE-FIX: the baseline code throws on the real predecessor input.
+    assert.throws(
+      () => runCode(preFixNode, makeMockRuntime({ 'Assemble Candidate Manifest': [frozenManifest], __CURRENT_JSON__: predecessor })),
+      /Cannot read properties of undefined \(reading 'map'\)|\.files/,
+      `R22-E2R PRE-FIX - baseline '$json.files.map' throws on predecessor: ${predecessor.__label}`,
+    );
+
+    // POST-FIX: the shipped code expands exactly the frozen manifest,
+    // regardless of which predecessor triggered Pass 2.
+    const manifestCopy = JSON.parse(JSON.stringify(frozenManifest));
+    const out = runCode(node, makeMockRuntime({ 'Assemble Candidate Manifest': [manifestCopy], __CURRENT_JSON__: predecessor }));
+    assert.equal(out.length, frozenManifest.files.length, `R22-E2R - one expanded item per frozen manifest file (${predecessor.__label})`);
+    const f = out[0].json;
+    assert.equal(f.target_file_path, 'src/main/java/com/pfe/devsecops/controller/TaskController.java');
+    assert.equal(f.file_path, 'src/main/java/com/pfe/devsecops/controller/TaskController.java');
+    assert.equal(f.fileOperation, 'MODIFY');
+    assert.equal(f.patchedCode, 'cleaned controller', 'R22-E2R - expanded content is the frozen manifest content');
+    assert.equal(f.contentSha256, sha256hex('cleaned controller'), 'R22-E2R - frozen contentSha256 is preserved unchanged through Pass-2 expansion');
+    assert.equal(f.oldSha, 'blob-src/main/java/com/pfe/devsecops/controller/TaskController.java');
+    assert.deepEqual(f.approvedFindingIds, ['f1']);
+    assert.deepEqual(f.validationEvidence, { verified: true });
+    // Manifest itself is not mutated (candidateDigest / candidateBaseSha lineage intact).
+    assert.deepEqual(manifestCopy, frozenManifest, 'R22-E2R - Expand Manifest Files does not mutate the frozen manifest');
+  }
+
+  // Output is independent of the incidental predecessor: both shapes give
+  // byte-identical expansion.
+  const outA = runCode(node, makeMockRuntime({ 'Assemble Candidate Manifest': [frozenManifest], __CURRENT_JSON__: predecessorShapes[0] }));
+  const outB = runCode(node, makeMockRuntime({ 'Assemble Candidate Manifest': [frozenManifest], __CURRENT_JSON__: predecessorShapes[1] }));
+  assert.equal(JSON.stringify(outA), JSON.stringify(outB),
+    'R22-E2R - Pass-2 expansion does not depend on the incidental predecessor carrying manifest.files');
+
+  // Multi-file manifest: every file expanded once, each keeps its own frozen hash.
+  const multi = { ...frozenManifest, files: [
+    mkFile('src/main/java/com/pfe/devsecops/controller/TaskController.java', 'cleaned controller', 'MODIFY'),
+    mkFile('src/main/java/com/pfe/devsecops/dto/TaskDTO.java', 'cleaned dto', 'MODIFY'),
+    mkFile('src/test/java/com/pfe/devsecops/controller/TaskControllerTest.java', 'new test', 'CREATE'),
+  ] };
+  const multiOut = runCode(node, makeMockRuntime({ 'Assemble Candidate Manifest': [multi], __CURRENT_JSON__: predecessorShapes[1] }));
+  assert.equal(multiOut.length, 3);
+  assert.deepEqual(multiOut.map(i => i.json.contentSha256),
+    [sha256hex('cleaned controller'), sha256hex('cleaned dto'), sha256hex('new test')],
+    'R22-E2R - each expanded file carries its own frozen contentSha256');
+
+  // Fail closed if the manifest is somehow unavailable.
+  assert.throws(
+    () => runCode(node, makeMockRuntime({ 'Assemble Candidate Manifest': [{ files: [] }], __CURRENT_JSON__: predecessorShapes[0] })),
+    /CANDIDATE_MANIFEST_UNAVAILABLE_FOR_PASS2/,
+    'R22-E2R - empty/absent manifest fails closed, never a silent 0-file PR',
+  );
+
+  // Static guarantees on the shipped node.
+  assert.match(node.parameters.jsCode, /\$\(\s*['"]Assemble Candidate Manifest['"]\s*\)\s*\.first\(\)\.json/,
+    'R22-E2R - reads the pinned frozen-manifest node');
+  assert.doesNotMatch(node.parameters.jsCode, /const manifest\s*=\s*\$json/,
+    'R22-E2R - never reads the incidental $json as the manifest again');
+  assert.doesNotMatch(node.parameters.jsCode, /http|anthropic|require\(/i,
+    'R22-E2R - Pass-2 expansion is a pure transform: no LLM, no network, no require');
+
+  console.log('R22-E2R PASS - Expand Manifest Files reads the frozen CandidateManifest (both real predecessor shapes), preserves frozen contentSha256, does not mutate the manifest, fails closed when absent');
+}
+
+// ============================================================
 // R22-E2Q FIX A.4 — Evaluate GitHub Write Reconciliation (Pass 2) now reads
 // the pre-decoded content + pre-computed hash; all four outcomes preserved.
 // ============================================================
@@ -561,13 +670,19 @@ const sha256hex = (s) => require('node:crypto').createHash('sha256').update(Stri
     'Hash Candidate File Content', 'Prepare Candidate Manifest', 'Hash Candidate Manifest',
     'Recompute Content Hash Before Send', 'Decode Reconciled Remote Content', 'Hash Reconciled Remote Content',
   ]);
+  // R22-E2R — the ONE additional node this later fix is authorised to change
+  // (the Pass-2 manifest-context fix; execution 1953). Pre-existing node, in
+  // the baseline, so it must be exempted here or the preservation diff would
+  // flag it as an unrelated change.
+  const R22ER_AUTHORISED = new Set(['Expand Manifest Files']);
+  const AUTHORISED = new Set([...R22EQ_AUTHORISED, ...R22ER_AUTHORISED]);
   const baselinePath = path.join(here, '..', 'pending-live-update', 'wf2-git-patch-pr-v4-1-9adcV31eaIgJyMR0.R22E-TWO-PASS-CANDIDATE.baseline.json');
   const baseline = JSON.parse(readFileSync(baselinePath, 'utf8'))[0];
   const baselineByName = new Map(baseline.nodes.map(n => [n.name, n]));
 
   const unrelatedChanges = [];
   for (const node of workflow.nodes) {
-    if (R22EQ_AUTHORISED.has(node.name)) continue;
+    if (AUTHORISED.has(node.name)) continue;
     const baselineNode = baselineByName.get(node.name);
     if (!baselineNode) { unrelatedChanges.push(`${node.name}: NEW (not authorised, not in baseline)`); continue; }
     if (JSON.stringify(baselineNode.parameters) !== JSON.stringify(node.parameters)) {
@@ -584,11 +699,16 @@ const sha256hex = (s) => require('node:crypto').createHash('sha256').update(Stri
     && baselineByName.has(n.name)
     && JSON.stringify(baselineByName.get(n.name).parameters) !== JSON.stringify(n.parameters)).map(n => n.name).sort();
   assert.deepEqual(authorisedChanged, ['Accumulate Candidate File', 'Assemble Candidate Manifest', 'Evaluate GitHub Write Reconciliation (Pass 2)', 'Verify Content Hash Before Send'],
-    'exactly the 4 authorised nodes changed vs baseline');
+    'exactly the 4 authorised R22-E2Q nodes changed vs baseline');
   const authorisedAdded = workflow.nodes.filter(n => !baselineByName.has(n.name)).map(n => n.name).sort();
   assert.deepEqual(authorisedAdded, ['Decode Reconciled Remote Content', 'Hash Candidate File Content', 'Hash Candidate Manifest', 'Hash Reconciled Remote Content', 'Prepare Candidate Manifest', 'Recompute Content Hash Before Send'],
-    'exactly the 6 authorised nodes added vs baseline');
-  console.log(`Preservation diff PASS - ${workflow.nodes.length - 10} unchanged nodes byte-identical to the accepted baseline; exactly 4 authorised param changes + 6 authorised additions`);
+    'exactly the 6 authorised R22-E2Q nodes added vs baseline');
+  // R22-E2R changed exactly one pre-existing node and added none.
+  const r22erChanged = workflow.nodes.filter(n => R22ER_AUTHORISED.has(n.name)
+    && baselineByName.has(n.name)
+    && JSON.stringify(baselineByName.get(n.name).parameters) !== JSON.stringify(n.parameters)).map(n => n.name).sort();
+  assert.deepEqual(r22erChanged, ['Expand Manifest Files'], 'R22-E2R changed exactly Expand Manifest Files vs baseline');
+  console.log(`Preservation diff PASS - ${workflow.nodes.length - AUTHORISED.size} unchanged nodes byte-identical to the accepted baseline; exactly 4 R22-E2Q param changes + 6 R22-E2Q additions + 1 R22-E2R param change`);
 }
 
 // ============================================================

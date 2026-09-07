@@ -2296,7 +2296,7 @@
         ],
         "parameters": {
           "mode": "runOnceForAllItems",
-          "jsCode": "const manifest=$json;return manifest.files.map(f=>({json:{target_file_path:f.path,file_path:f.file_path||f.path,fileOperation:f.operation,patchedCode:f.content,contentSha256:f.contentSha256,oldSha:f.originalBlobSha,repository_owner:f.repository_owner,repository_name:f.repository_name,branchName:f.branchName,commitMessage:f.commitMessage,sourceContent:f.sourceContent,approvedFindingIds:f.approvedFindingIds,processedFindingIds:f.processedFindingIds,candidateAcceptedFindingIds:f.candidateAcceptedFindingIds,validationEvidence:f.validationEvidence}}));"
+          "jsCode": "const manifest=$('Assemble Candidate Manifest').first().json;if(!manifest||!Array.isArray(manifest.files)||!manifest.files.length)throw new Error('CANDIDATE_MANIFEST_UNAVAILABLE_FOR_PASS2');return manifest.files.map(f=>({json:{target_file_path:f.path,file_path:f.file_path||f.path,fileOperation:f.operation,patchedCode:f.content,contentSha256:f.contentSha256,oldSha:f.originalBlobSha,repository_owner:f.repository_owner,repository_name:f.repository_name,branchName:f.branchName,commitMessage:f.commitMessage,sourceContent:f.sourceContent,approvedFindingIds:f.approvedFindingIds,processedFindingIds:f.processedFindingIds,candidateAcceptedFindingIds:f.candidateAcceptedFindingIds,validationEvidence:f.validationEvidence}}));"
         },
         "onError": "continueErrorOutput"
       },

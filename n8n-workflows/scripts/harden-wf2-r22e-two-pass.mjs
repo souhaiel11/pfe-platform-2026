@@ -252,7 +252,21 @@ const relookupRemediationBranchBeforeCreate = githubReadRefNode(
   "{{ encodeURIComponent($('Assemble Candidate Manifest').first().json.targetBranchName) }}",
 );
 
-const expandManifestFiles = codeNode('Expand Manifest Files', String.raw`const manifest=$json;return manifest.files.map(f=>({json:{target_file_path:f.path,file_path:f.file_path||f.path,fileOperation:f.operation,patchedCode:f.content,contentSha256:f.contentSha256,oldSha:f.originalBlobSha,repository_owner:f.repository_owner,repository_name:f.repository_name,branchName:f.branchName,commitMessage:f.commitMessage,sourceContent:f.sourceContent,approvedFindingIds:f.approvedFindingIds,processedFindingIds:f.processedFindingIds,candidateAcceptedFindingIds:f.candidateAcceptedFindingIds,validationEvidence:f.validationEvidence}}));`);
+// R22-E2R — Pass 2 must expand the FROZEN CandidateManifest, never $json.
+// This node has two Pass-2 predecessors: 'Create Missing Branch' (emits a
+// GitHub ref-creation response `{ref, object:{sha}, ...}`) and 'Branch
+// Existed At Generation? (Pass 2 Entry)' (an IF node that passes through
+// the 'Call Remote Head Drift Guard' `{ok:true}` item). Neither carries
+// `.files`, so `const manifest=$json; manifest.files.map(...)` threw
+// `Cannot read properties of undefined (reading 'map')` and dead-ended
+// Pass 2 before any Git write (R22-E2O-R4 execution 1953). Read the exact
+// manifest that already passed CandidateVerification + Write Guard +
+// Remote Head Drift Guard — the same pinned reference every other Pass-2
+// node uses (`$('Assemble Candidate Manifest').first().json`) — and fail
+// closed if it is somehow unavailable. Generic: no project/finding/rule/
+// language/test-mode branch; the manifest is expanded identically however
+// Pass 2 was entered.
+const expandManifestFiles = codeNode('Expand Manifest Files', String.raw`const manifest=$('Assemble Candidate Manifest').first().json;if(!manifest||!Array.isArray(manifest.files)||!manifest.files.length)throw new Error('CANDIDATE_MANIFEST_UNAVAILABLE_FOR_PASS2');return manifest.files.map(f=>({json:{target_file_path:f.path,file_path:f.file_path||f.path,fileOperation:f.operation,patchedCode:f.content,contentSha256:f.contentSha256,oldSha:f.originalBlobSha,repository_owner:f.repository_owner,repository_name:f.repository_name,branchName:f.branchName,commitMessage:f.commitMessage,sourceContent:f.sourceContent,approvedFindingIds:f.approvedFindingIds,processedFindingIds:f.processedFindingIds,candidateAcceptedFindingIds:f.candidateAcceptedFindingIds,validationEvidence:f.validationEvidence}}));`);
 
 const loopOverManifestFiles = { id: crypto.randomUUID(), name: 'Loop Over Manifest Files', type: 'n8n-nodes-base.splitInBatches', typeVersion: 3, position: nextPosition(), parameters: { batchSize: 1, options: {} } };
 
@@ -627,6 +641,13 @@ const R22EQ_AUTHORISED_NODES = new Set([
   'Hash Candidate File Content', 'Prepare Candidate Manifest', 'Hash Candidate Manifest',
   'Recompute Content Hash Before Send', 'Decode Reconciled Remote Content', 'Hash Reconciled Remote Content',
 ]);
+// R22-E2R — the Pass-2 manifest-context fix (execution 1953). 'Expand
+// Manifest Files' is a PRE-EXISTING two-pass node (it is in the accepted
+// baseline artifact with the buggy `const manifest=$json` form), so the
+// scope-cleanup reconciliation below would otherwise revert the generator's
+// fix straight back to the bug. Exempt it. It is the ONLY node R22-E2R
+// changes — 0 nodes added, 0 connections changed.
+const R22ER_AUTHORISED_NODES = new Set(['Expand Manifest Files']);
 const baselineArtifactPath = new URL('../pending-live-update/wf2-git-patch-pr-v4-1-9adcV31eaIgJyMR0.R22E-TWO-PASS-CANDIDATE.baseline.json', import.meta.url);
 if (fs.existsSync(baselineArtifactPath)) {
   const baseline = JSON.parse(fs.readFileSync(baselineArtifactPath));
@@ -634,7 +655,7 @@ if (fs.existsSync(baselineArtifactPath)) {
   const baselineParamsByName = new Map(baselineWorkflow.nodes.map(n => [n.name, n.parameters]));
   let reconciled = 0;
   for (const generatedNode of workflow.nodes) {
-    if (R22EQ_AUTHORISED_NODES.has(generatedNode.name)) continue;
+    if (R22EQ_AUTHORISED_NODES.has(generatedNode.name) || R22ER_AUTHORISED_NODES.has(generatedNode.name)) continue;
     const baselineParams = baselineParamsByName.get(generatedNode.name);
     if (baselineParams === undefined) continue;
     if (JSON.stringify(baselineParams) !== JSON.stringify(generatedNode.parameters)) {
