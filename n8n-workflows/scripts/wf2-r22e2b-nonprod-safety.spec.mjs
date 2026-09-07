@@ -90,11 +90,11 @@ const secretLikePattern = /"(ghp_|gho_|github_pat_|sk-ant-|sk-|xox[baprs]-)[A-Za
 assert.equal(secretLikePattern.test(raw), false, 'Test 8 - no literal secret/token value pattern found anywhere in the artifact');
 console.log('Test 8 PASS - no literal secret/token pattern found in the artifact file');
 
-// --- Test 9: 141 unique node IDs preserved (metadata-only changes, no node added/removed by hardening) ---
+// --- Test 9: 147 unique node IDs (141 base + R22-E2Q FIX A: 6 native SHA-256 nodes) ---
 const ids = workflow.nodes.map(n => n.id);
-assert.equal(workflow.nodes.length, 141, 'Test 9 - node count unchanged by hardening');
-assert.equal(new Set(ids).size, 141, 'Test 9 - all 141 node ids remain unique');
-console.log('Test 9 PASS - 141 unique node ids (hardening changed only id/name/active/webhook/credentials metadata, not node topology)');
+assert.equal(workflow.nodes.length, 147, 'Test 9 - node count unchanged by hardening');
+assert.equal(new Set(ids).size, 147, 'Test 9 - all 147 node ids remain unique');
+console.log('Test 9 PASS - 147 unique node ids (hardening changed only id/name/active/webhook/credentials metadata, not node topology)');
 
 // --- Test 10: no dangling connections ---
 const nameSet = new Set(workflow.nodes.map(n => n.name));

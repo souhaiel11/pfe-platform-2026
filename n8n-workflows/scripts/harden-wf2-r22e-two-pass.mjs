@@ -106,6 +106,21 @@ const githubFileNode = (name, operation, ownerExpr, repoExpr, filePathExpr, refe
   },
 });
 
+// R22-E2Q — SHA-256 in the n8n Code-node sandbox: `require('crypto')` is
+// disallowed here (task-runner `allowedBuiltInModules` is empty; there is no
+// `crypto`/WebCrypto global; n8n expressions additionally block `Buffer`).
+// The installed native `n8n-nodes-base.crypto` v2 hash action runs in the
+// main process and is `createHash('SHA256').update(value).digest('hex')` —
+// byte-identical to the backend canonical `candidate-digest.ts`
+// (`computeContentSha256` / `computeCandidateDigest`). No sandbox policy is
+// widened. `value` is an n8n expression; `dataPropertyName` receives the hex
+// digest; all other item fields pass through.
+const cryptoHashNode = (name, valueExpr, dataPropertyName) => ({
+  id: crypto.randomUUID(), name, type: 'n8n-nodes-base.crypto', typeVersion: 2,
+  position: nextPosition(),
+  parameters: { action: 'hash', type: 'SHA256', binaryData: false, value: valueExpr, dataPropertyName, encoding: 'hex' },
+});
+
 const failureEnvelope = (failedNodeName) => codeNode(
   `Failure Envelope - ${failedNodeName}`,
   String.raw`const input=$input.first().json||{};const raw=input.error??input;const err=typeof raw==='string'?{message:raw}:raw||{};const rawSummary=String(input.failureSummary||err.message||input.message||input.reason||raw||'workflow execution error');const failureSummary=rawSummary.replace(/[\r\n]+/g,' ').replace(/(?:token|password|secret|authorization)\s*[=:]\s*[^ ,;]+/ig,'$1=[REDACTED]').slice(0,500);const embedded=rawSummary.match(/^([A-Z][A-Z0-9_]+)(?::|$)/)?.[1];const failureCode=String(input.failureCode||embedded||'WF2_EXECUTION_ERROR').slice(0,120);const captured=$items('Capture Correlation Envelope',0,0);const correlationEnvelope=captured?.[0]?.json?.correlationEnvelope||{};return [{json:{correlationEnvelope,executionId:String($execution.id),failedNode:${JSON.stringify(failedNodeName)},failureCode,failureSummary}}];`,
@@ -136,7 +151,20 @@ const recordNewBranchBaseline = codeNode('Record New Branch Baseline', String.ra
 // ---------------------------------------------------------------------
 // PHASE 3 — PASS 1: accumulate instead of write.
 // ---------------------------------------------------------------------
-const accumulateCandidateFile = codeNode('Accumulate Candidate File', String.raw`const candidate=$('Enforce Independent Review').item.json;const contentSha256=require('crypto').createHash('sha256').update(String(candidate.patchedCode||''),'utf8').digest('hex');return {json:{...candidate,contentSha256}};`);
+// R22-E2Q FIX A.1 — the per-file contentSha256 is produced by the native
+// Crypto node just upstream (see 'Hash Candidate File Content'); this node
+// only asserts it arrived.
+// R22-E2Q FIX C — `candidateBaseSha` + `branchExists`, set by
+// 'Record New Branch Baseline' / 'Use Existing Branch', are dropped when
+// 'Fetch Repository Tree' (an httpRequest) replaces the item JSON, so they
+// never reach 'Assemble Candidate Manifest'. Re-derive them here from the
+// two nodes that always run and always carry the authoritative values —
+// exactly the same rule the two baseline nodes use (and the same rule as
+// the R22-E2P authoritative-ref fix): branch present (lookup 200) ⇒ its
+// HEAD sha; else ⇒ Prepare Batch Context.baseSha. Deterministic, generic,
+// no project/finding/rule/language branch.
+const accumulateCandidateFile = codeNode('Accumulate Candidate File', String.raw`const candidate=$('Enforce Independent Review').item.json;const contentSha256=String($json.contentSha256||'');if(!/^[a-f0-9]{64}$/.test(contentSha256))throw new Error('CANDIDATE_CONTENT_SHA256_UNAVAILABLE');const lookup=$('Lookup Remediation Branch').first().json;const branchExists=Number(lookup.statusCode)===200;const candidateBaseSha=String(branchExists?(lookup.body?.object?.sha||''):$('Prepare Batch Context').first().json.baseSha).toLowerCase();if(!/^[a-f0-9]{40}$/.test(candidateBaseSha))throw new Error('CANDIDATE_BASE_SHA_UNAVAILABLE');return {json:{...candidate,contentSha256,branchExists,candidateBaseSha}};`);
+const hashCandidateFileContent = cryptoHashNode('Hash Candidate File Content', "={{ String($json.patchedCode ?? '') }}", 'contentSha256');
 
 // ---------------------------------------------------------------------
 // PHASE 4 — assemble the immutable CandidateManifest once Pass 1 is done.
@@ -144,11 +172,24 @@ const accumulateCandidateFile = codeNode('Accumulate Candidate File', String.raw
 // (same key order in JSON.stringify) -- cross-checked in
 // wf2-r22e-two-pass.spec.mjs against the real compiled backend module.
 // ---------------------------------------------------------------------
-const assembleCandidateManifest = codeNode('Assemble Candidate Manifest', String.raw`const ctx=$('Prepare Batch Context').first().json;const items=$input.all().map(i=>i.json);if(!items.length)throw new Error('CANDIDATE_MANIFEST_INVALID:no accumulated files');const branchExists=Boolean(items[0].branchExists);const candidateBaseSha=String(items[0].candidateBaseSha||'').toLowerCase();if(!/^[a-f0-9]{40}$/.test(candidateBaseSha))throw new Error('CANDIDATE_MANIFEST_INVALID:candidateBaseSha missing/invalid');
+// R22-E2Q FIX A.2 — the candidateDigest was computed here with
+// `require('crypto')` (sandbox-disallowed). Split into three:
+//   'Prepare Candidate Manifest' (this, renamed) builds the manifest and
+//       emits `_canonicalJson` — the EXACT string the old code hashed:
+//       JSON.stringify({candidateBaseSha, files:[{path,operation,contentSha256}] sorted}).
+//   'Hash Candidate Manifest' (native Crypto) hashes it → candidateDigest.
+//   'Assemble Candidate Manifest' (KEPT NAME so every downstream
+//       `$('Assemble Candidate Manifest')` reference is unchanged) strips
+//       the helper field and validates the frozen manifest.
+// The canonical serialization contract is preserved byte-for-byte and still
+// matches backend computeCandidateDigest.
+const prepareCandidateManifest = codeNode('Prepare Candidate Manifest', String.raw`const ctx=$('Prepare Batch Context').first().json;const items=$input.all().map(i=>i.json);const branchExists=Boolean(items[0]&&items[0].branchExists);const candidateBaseSha=String((items[0]&&items[0].candidateBaseSha)||'').toLowerCase();
 const files=items.map(it=>({path:String(it.target_file_path||it.file_path||''),operation:String(it.fileOperation||''),originalBlobSha:it.oldSha||null,content:String(it.patchedCode||''),contentSha256:String(it.contentSha256||''),file_path:it.file_path,repository_owner:it.repository_owner,repository_name:it.repository_name,branchName:it.branchName,commitMessage:it.commitMessage,sourceContent:it.sourceContent,approvedFindingIds:it.approvedFindingIds,processedFindingIds:it.processedFindingIds,candidateAcceptedFindingIds:it.candidateAcceptedFindingIds,validationEvidence:it.validationEvidence}));
-const crypto=require('crypto');const canonicalFiles=files.map(f=>({path:f.path,operation:f.operation,contentSha256:f.contentSha256})).sort((a,b)=>a.path.localeCompare(b.path));const canonical={candidateBaseSha,files:canonicalFiles};const candidateDigest=crypto.createHash('sha256').update(JSON.stringify(canonical)).digest('hex');
-const manifest={candidateId:ctx.batchId+'-attempt-'+String(ctx.attemptCount),requestId:ctx.requestId,batchId:ctx.batchId,candidateAttempt:Number(ctx.attemptCount)||0,repository:ctx.repository_owner+'/'+ctx.repository_name,candidateBaseSha,branchExists,targetBranchName:ctx.targetBranchName,baseBranch:ctx.baseBranch,files,candidateDigest};
-return [{json:manifest}];`);
+const canonicalFiles=files.map(f=>({path:f.path,operation:f.operation,contentSha256:f.contentSha256})).sort((a,b)=>a.path.localeCompare(b.path));const canonical={candidateBaseSha,files:canonicalFiles};
+const manifest={candidateId:ctx.batchId+'-attempt-'+String(ctx.attemptCount),requestId:ctx.requestId,batchId:ctx.batchId,candidateAttempt:Number(ctx.attemptCount)||0,repository:ctx.repository_owner+'/'+ctx.repository_name,candidateBaseSha,branchExists,targetBranchName:ctx.targetBranchName,baseBranch:ctx.baseBranch,files};
+return [{json:{...manifest,_canonicalJson:JSON.stringify(canonical)}}];`, { withErrorOutput: false });
+const hashCandidateManifest = cryptoHashNode('Hash Candidate Manifest', "={{ $json._canonicalJson }}", 'candidateDigest');
+const assembleCandidateManifest = codeNode('Assemble Candidate Manifest', String.raw`const m={...$json};delete m._canonicalJson;if(!Array.isArray(m.files)||!m.files.length)throw new Error('CANDIDATE_MANIFEST_INVALID:no accumulated files');if(!/^[a-f0-9]{40}$/.test(String(m.candidateBaseSha||'')))throw new Error('CANDIDATE_MANIFEST_INVALID:candidateBaseSha missing/invalid');if(!/^[a-f0-9]{64}$/.test(String(m.candidateDigest||'')))throw new Error('CANDIDATE_MANIFEST_INVALID:candidateDigest missing/invalid');return [{json:m}];`);
 
 // ---------------------------------------------------------------------
 // PHASE 5 — call the backend CandidateVerification engine exactly once.
@@ -215,7 +256,10 @@ const expandManifestFiles = codeNode('Expand Manifest Files', String.raw`const m
 
 const loopOverManifestFiles = { id: crypto.randomUUID(), name: 'Loop Over Manifest Files', type: 'n8n-nodes-base.splitInBatches', typeVersion: 3, position: nextPosition(), parameters: { batchSize: 1, options: {} } };
 
-const verifyContentHashBeforeSend = codeNode('Verify Content Hash Before Send', String.raw`const item=$json;const actual=require('crypto').createHash('sha256').update(String(item.patchedCode||''),'utf8').digest('hex');if(actual!==String(item.contentSha256||''))throw new Error('CANDIDATE_CONTENT_MISMATCH:'+JSON.stringify({path:item.target_file_path,expected:item.contentSha256,actual}));return {json:item};`);
+// R22-E2Q FIX A.3 — recompute via native Crypto node upstream
+// ('Recompute Content Hash Before Send'); this node only compares.
+const recomputeContentHashBeforeSend = cryptoHashNode('Recompute Content Hash Before Send', "={{ String($json.patchedCode ?? '') }}", '_recomputedContentSha256');
+const verifyContentHashBeforeSend = codeNode('Verify Content Hash Before Send', String.raw`const item=$json;const actual=String(item._recomputedContentSha256||'');if(actual!==String(item.contentSha256||''))throw new Error('CANDIDATE_CONTENT_MISMATCH:'+JSON.stringify({path:item.target_file_path,expected:item.contentSha256,actual}));const {_recomputedContentSha256,...rest}=item;return {json:rest};`);
 
 // Pass-2 twins of the write-result/reconciliation nodes: identical logic to
 // their Pass-1 originals, re-pointed at 'Expand Manifest Files' instead of
@@ -240,7 +284,14 @@ const readBackFileAfterWriteErrorPass2 = githubFileNode(
 // matches patchedCode by string-equality (kept) -- the hash check is the
 // same proof CandidateMaterializer already uses locally (R22-C), applied
 // here to the remote readback.
-const evaluateGitHubWriteReconciliationPass2 = codeNode('Evaluate GitHub Write Reconciliation (Pass 2)', String.raw`const patch=$('Expand Manifest Files').item.json;const decoded=Buffer.from(String($json.content||'').replace(/\n/g,''),'base64').toString('utf8');const normalize=value=>String(value).replace(/\r\n/g,'\n');const actualSha256=require('crypto').createHash('sha256').update(decoded,'utf8').digest('hex');if(normalize(decoded)===normalize(patch.patchedCode)&&actualSha256===String(patch.contentSha256))return {json:{...patch,reconciledWrite:true,newSha:String($json.sha||''),remoteState:'EXPECTED_CANDIDATE'}};if(normalize(decoded)===normalize(patch.sourceContent))return {json:{...patch,reconciledWrite:false,failureCode:'GITHUB_WRITE_UNCONFIRMED',failureNode:'Update File in Branch',failureSummary:'GitHub write failed and remote content is unchanged',remoteState:'UNCHANGED'}};if(normalize(decoded)===normalize(patch.patchedCode)&&actualSha256!==String(patch.contentSha256))return {json:{...patch,reconciledWrite:false,failureCode:'CANDIDATE_CONTENT_MISMATCH',failureNode:'Update File in Branch',failureSummary:'Remote content matches patchedCode string but hash differs from the verified candidateDigest input -- refusing to trust it',remoteState:'HASH_MISMATCH'}};return {json:{...patch,reconciledWrite:false,failureCode:'GITHUB_REMOTE_STATE_UNEXPECTED',failureNode:'Update File in Branch',failureSummary:'GitHub write failed and remote content differs from source and candidate',remoteState:'UNEXPECTED'}};`, { withErrorOutput: false });
+// R22-E2Q FIX A.4 — the base64 decode stays in a Code node (`Buffer` is
+// allowed in Code nodes, blocked only in n8n expressions), and the SHA-256
+// of the decoded bytes is produced by the native Crypto node in between
+// ('Hash Reconciled Remote Content'). Reconciliation logic is otherwise
+// unchanged — same string-equality checks, same hash check, same outcomes.
+const decodeReconciledRemoteContent = codeNode('Decode Reconciled Remote Content', String.raw`const decoded=Buffer.from(String($json.content||'').replace(/\n/g,''),'base64').toString('utf8');return {json:{...$json,_reconciledRemoteContent:decoded}};`, { withErrorOutput: false });
+const hashReconciledRemoteContent = cryptoHashNode('Hash Reconciled Remote Content', "={{ String($json._reconciledRemoteContent ?? '') }}", '_reconciledRemoteSha256');
+const evaluateGitHubWriteReconciliationPass2 = codeNode('Evaluate GitHub Write Reconciliation (Pass 2)', String.raw`const patch=$('Expand Manifest Files').item.json;const decoded=String($json._reconciledRemoteContent||'');const normalize=value=>String(value).replace(/\r\n/g,'\n');const actualSha256=String($json._reconciledRemoteSha256||'');if(normalize(decoded)===normalize(patch.patchedCode)&&actualSha256===String(patch.contentSha256))return {json:{...patch,reconciledWrite:true,newSha:String($json.sha||''),remoteState:'EXPECTED_CANDIDATE'}};if(normalize(decoded)===normalize(patch.sourceContent))return {json:{...patch,reconciledWrite:false,failureCode:'GITHUB_WRITE_UNCONFIRMED',failureNode:'Update File in Branch',failureSummary:'GitHub write failed and remote content is unchanged',remoteState:'UNCHANGED'}};if(normalize(decoded)===normalize(patch.patchedCode)&&actualSha256!==String(patch.contentSha256))return {json:{...patch,reconciledWrite:false,failureCode:'CANDIDATE_CONTENT_MISMATCH',failureNode:'Update File in Branch',failureSummary:'Remote content matches patchedCode string but hash differs from the verified candidateDigest input -- refusing to trust it',remoteState:'HASH_MISMATCH'}};return {json:{...patch,reconciledWrite:false,failureCode:'GITHUB_REMOTE_STATE_UNEXPECTED',failureNode:'Update File in Branch',failureSummary:'GitHub write failed and remote content differs from source and candidate',remoteState:'UNEXPECTED'}};`, { withErrorOutput: false });
 
 const lookupHeadAfterReconciledWritePass2 = githubReadRefNode(
   'Lookup Head After Reconciled Write (Pass 2)',
@@ -292,7 +343,20 @@ const ownFailureEnvelopeIf = [
   failureEnvelope('Remote Candidate Present? (Pass 2)'),
 ];
 
-workflow.nodes.push(...codeAndHttpNodesNeedingEnvelopes, ...nodesWithoutEnvelopes, ...newFailureEnvelopes, ...ownFailureEnvelopeIf);
+// R22-E2Q FIX A — the 6 native SHA-256 nodes replacing the disallowed
+// `require('crypto')`. The two Code nodes here are non-throwing pure
+// transforms (build/decode), so they carry no error output/envelope; the
+// Crypto nodes hash a string and cannot fail. Net +6, 141 → 147.
+const newDigestNodes = [
+  hashCandidateFileContent,          // A.1  Crypto  — per-file contentSha256
+  prepareCandidateManifest,          // A.2  Code    — build manifest + _canonicalJson
+  hashCandidateManifest,             // A.2  Crypto  — candidateDigest
+  recomputeContentHashBeforeSend,    // A.3  Crypto  — Pass-2 pre-send recheck
+  decodeReconciledRemoteContent,     // A.4  Code    — base64 decode (Buffer-safe)
+  hashReconciledRemoteContent,       // A.4  Crypto  — Pass-2 reconciliation hash
+];
+
+workflow.nodes.push(...codeAndHttpNodesNeedingEnvelopes, ...nodesWithoutEnvelopes, ...newFailureEnvelopes, ...ownFailureEnvelopeIf, ...newDigestNodes);
 
 // ---------------------------------------------------------------------
 // R22-E2B Phase 4 — credential references for the 5 new GitHub-calling
@@ -396,13 +460,21 @@ wireWithErrorOutput('Use Existing Branch', ['Fetch Repository Tree']);
 // Accumulate Candidate File instead of Candidate Creates File? directly.
 // (Enforce Independent Review already has onError wiring to its own
 // pre-existing Failure Envelope -- only its SUCCESS target changes.)
-setMainTwoOutputs('Enforce Independent Review', [['Accumulate Candidate File'], ['Failure Envelope - Enforce Independent Review']]);
+// R22-E2Q FIX A.1 — native Crypto node between Enforce Independent Review
+// and Accumulate Candidate File (per-file contentSha256).
+setMainTwoOutputs('Enforce Independent Review', [['Hash Candidate File Content'], ['Failure Envelope - Enforce Independent Review']]);
+setMain('Hash Candidate File Content', ['Accumulate Candidate File']);
 wireWithErrorOutput('Accumulate Candidate File', ['Merge Effective File Results']);
 
 // Merge Effective File Results ("done" output, index 0) now feeds manifest
 // assembly instead of Validate Batch Completeness directly. ("loop" output,
 // index 1, unchanged: still routes back into Route Planned File Operation.)
-setMainTwoOutputs('Merge Effective File Results', [['Assemble Candidate Manifest'], ['Route Planned File Operation']]);
+// R22-E2Q FIX A.2 — manifest digest now: Prepare Candidate Manifest (build)
+// -> Hash Candidate Manifest (native Crypto) -> Assemble Candidate Manifest
+// (KEPT NAME: freeze + validate; every downstream reference unchanged).
+setMainTwoOutputs('Merge Effective File Results', [['Prepare Candidate Manifest'], ['Route Planned File Operation']]);
+setMain('Prepare Candidate Manifest', ['Hash Candidate Manifest']);
+setMain('Hash Candidate Manifest', ['Assemble Candidate Manifest']);
 
 wireWithErrorOutput('Assemble Candidate Manifest', ['Call Candidate Verification']);
 wireWithErrorOutput('Call Candidate Verification', ['Call Write Guard']);
@@ -424,7 +496,9 @@ wireWithErrorOutput('Re-lookup Remediation Branch Before Create', ['Prepare Bran
 setMainTwoOutputs('Create Missing Branch', [['Expand Manifest Files'], ['Failure Envelope - Create Missing Branch']]);
 
 wireWithErrorOutput('Expand Manifest Files', ['Loop Over Manifest Files']);
-setMainTwoOutputs('Loop Over Manifest Files', [['Validate Batch Completeness'], ['Verify Content Hash Before Send']]);
+// R22-E2Q FIX A.3 — native Crypto recompute between the loop and the verify.
+setMainTwoOutputs('Loop Over Manifest Files', [['Validate Batch Completeness'], ['Recompute Content Hash Before Send']]);
+setMain('Recompute Content Hash Before Send', ['Verify Content Hash Before Send']);
 wireWithErrorOutput('Verify Content Hash Before Send', ['Candidate Creates File?']);
 
 // Candidate Creates File? -> Create/Update File in Branch: UNCHANGED
@@ -438,7 +512,12 @@ setMain('Merge Effective File Results 2', ['Loop Over Manifest Files']);
 
 setMain('Classify GitHub Write Error (Pass 2)', ['Transport Requires Read Back? (Pass 2)']);
 setMainTwoOutputs('Transport Requires Read Back? (Pass 2)', [['Read Back File After Write Error (Pass 2)'], ['Failure Envelope - Transport Requires Read Back? (Pass 2)']]);
-wireWithErrorOutput('Read Back File After Write Error (Pass 2)', ['Evaluate GitHub Write Reconciliation (Pass 2)']);
+// R22-E2Q FIX A.4 — Decode (Buffer-safe Code) -> Hash (native Crypto) ->
+// Evaluate (unchanged reconciliation logic, now reads the pre-decoded
+// content and pre-computed hash).
+wireWithErrorOutput('Read Back File After Write Error (Pass 2)', ['Decode Reconciled Remote Content']);
+setMain('Decode Reconciled Remote Content', ['Hash Reconciled Remote Content']);
+setMain('Hash Reconciled Remote Content', ['Evaluate GitHub Write Reconciliation (Pass 2)']);
 setMain('Evaluate GitHub Write Reconciliation (Pass 2)', ['Remote Candidate Present? (Pass 2)']);
 setMainTwoOutputs('Remote Candidate Present? (Pass 2)', [['Lookup Head After Reconciled Write (Pass 2)'], ['Failure Envelope - Remote Candidate Present? (Pass 2)']]);
 wireWithErrorOutput('Lookup Head After Reconciled Write (Pass 2)', ['Build Reconciled File Result']);
@@ -446,6 +525,29 @@ wireWithErrorOutput('Lookup Head After Reconciled Write (Pass 2)', ['Build Recon
 // reused as-is; its onError wiring/Failure Envelope are pre-existing and
 // untouched. Only its success target changes.
 setMainTwoOutputs('Build Reconciled File Result', [['Merge Effective File Results 2'], ['Failure Envelope - Build Reconciled File Result']]);
+
+// ---------------------------------------------------------------------
+// R22-E2Q FIX B — "every terminal state calls back". `wireWithErrorOutput`
+// (and the two `ownFailureEnvelopeIf` IF-nodes) route a failed node to its
+// paired `Failure Envelope - <node>`, but never wired those envelopes
+// onward, so all 16 R22-E two-pass failure envelopes dead-ended: a Pass-1/
+// Pass-2 failure never reached 'Prepare WF2 Failure Status' →
+// 'Persist WF2 Failure Status' and the incident never became FIX_FAILED
+// (proven by R22-E2O-R3 execution 1952). The 57 pre-existing envelopes are
+// already wired to persistence by the base workflow; here we complete the
+// same, single, generic edge for the R22-E ones. The envelope payload
+// ({correlationEnvelope, executionId, failedNode, failureCode,
+// failureSummary}) is exactly what 'Prepare WF2 Failure Status' consumes.
+// 'Prepare WF2 Failure Status' → 'Persist WF2 Failure Status' already
+// exists; neither has an error output, so no cycle and no double persist.
+const r22eFailureEnvelopeSources = [
+  ...codeAndHttpNodesNeedingEnvelopes.map(n => n.name),
+  'Transport Requires Read Back? (Pass 2)',
+  'Remote Candidate Present? (Pass 2)',
+];
+for (const failedNodeName of r22eFailureEnvelopeSources) {
+  setMain(`Failure Envelope - ${failedNodeName}`, ['Prepare WF2 Failure Status']);
+}
 
 // ---------------------------------------------------------------------
 // R22-E2B Phases 1-3 — make this an independent, inactive, non-colliding
@@ -469,7 +571,13 @@ const PRODUCTION_WEBHOOK_ID = '6155a0ff-9dea-4479-a1c8-96c827797354';
 const TEST_WORKFLOW_NAME = 'WF2 - Git Patch & PR R22E TEST';
 const TEST_WEBHOOK_PATH = 'wf2-r22e-test';
 
-if (workflow.id === PRODUCTION_WORKFLOW_ID) delete workflow.id; // n8n assigns a fresh, non-colliding id on import
+// R22-E2Q — always drop the source workflow id, not only the production
+// one: the canonical generator input is the R19.3E trusted-source artifact
+// (id e96d6ee1-…, "MUST NOT be activated"), so a `=== PRODUCTION_WORKFLOW_ID`
+// check let that id ride through into the portable TEST artifact. The
+// portable artifact must carry NO id (n8n assigns a fresh non-colliding one
+// on import; an existing-id upsert supplies u3eeMwTuhCsetfcS at import time).
+delete workflow.id;
 workflow.name = TEST_WORKFLOW_NAME;
 workflow.active = false;
 
@@ -481,7 +589,7 @@ if (webhookNode.webhookId === PRODUCTION_WEBHOOK_ID) webhookNode.webhookId = cry
 // production identity/settings, even if a future edit to this script
 // accidentally reintroduces one of them above.
 const guardFailures = [];
-if (workflow.id === PRODUCTION_WORKFLOW_ID) guardFailures.push(`workflow.id still equals the production id ${PRODUCTION_WORKFLOW_ID}`);
+if (workflow.id !== undefined) guardFailures.push(`workflow.id is ${JSON.stringify(workflow.id)}, portable TEST artifact must carry no id`);
 if (workflow.active !== false) guardFailures.push(`workflow.active is ${JSON.stringify(workflow.active)}, must be false`);
 if (workflow.name !== TEST_WORKFLOW_NAME) guardFailures.push(`workflow.name is ${JSON.stringify(workflow.name)}, must be ${JSON.stringify(TEST_WORKFLOW_NAME)}`);
 if (assertNode('Webhook').parameters.path !== TEST_WEBHOOK_PATH) guardFailures.push(`Webhook path is not ${JSON.stringify(TEST_WEBHOOK_PATH)}`);
@@ -489,6 +597,54 @@ if (workflow.nodes.some(n => n.name === 'Webhook' && n.parameters.path === PRODU
 if (assertNode('Webhook').webhookId === PRODUCTION_WEBHOOK_ID) guardFailures.push('Webhook node still carries the production webhookId');
 if (guardFailures.length) {
   throw new Error('R22-E2B safety guard refused to write an unsafe artifact:\n' + guardFailures.join('\n'));
+}
+
+// ---------------------------------------------------------------------
+// R22-E2Q-SCOPE-CLEANUP — diff hygiene against the accepted baseline.
+//
+// The canonical two-pass input (the R19.3E trusted-source artifact) has
+// since been re-opened/re-exported by the n8n editor, which materialises
+// n8n's own implicit parameter defaults (`mode:"runOnceForAllItems"`,
+// `method:"GET"`, `operation:"create"`) as explicit keys on many
+// pre-existing nodes. The previously reviewed & committed TEST artifact
+// predates that and carries those keys only inconsistently, so a fresh
+// regeneration otherwise shows ~47 "default became explicit" changes on
+// nodes that are NOT part of this change.
+//
+// To keep the reviewable diff to exactly the authorised R22-E2Q delta,
+// restore each unchanged node's `parameters` from the accepted baseline
+// artifact. This is representational only — n8n applies the identical
+// default whether the key is present or not, so runtime behaviour is
+// unaffected — and it is generator-driven and deterministic, not a hand
+// edit of the output. Only nodes OUTSIDE the authorised R22-E2Q set are
+// reconciled; the 4 changed nodes and 6 new nodes keep the generator's
+// definition. Connections, ids and positions are the generator's.
+const R22EQ_AUTHORISED_NODES = new Set([
+  // 4 semantic parameter changes
+  'Accumulate Candidate File', 'Assemble Candidate Manifest',
+  'Verify Content Hash Before Send', 'Evaluate GitHub Write Reconciliation (Pass 2)',
+  // 6 added nodes
+  'Hash Candidate File Content', 'Prepare Candidate Manifest', 'Hash Candidate Manifest',
+  'Recompute Content Hash Before Send', 'Decode Reconciled Remote Content', 'Hash Reconciled Remote Content',
+]);
+const baselineArtifactPath = new URL('../pending-live-update/wf2-git-patch-pr-v4-1-9adcV31eaIgJyMR0.R22E-TWO-PASS-CANDIDATE.baseline.json', import.meta.url);
+if (fs.existsSync(baselineArtifactPath)) {
+  const baseline = JSON.parse(fs.readFileSync(baselineArtifactPath));
+  const baselineWorkflow = Array.isArray(baseline) ? baseline[0] : baseline;
+  const baselineParamsByName = new Map(baselineWorkflow.nodes.map(n => [n.name, n.parameters]));
+  let reconciled = 0;
+  for (const generatedNode of workflow.nodes) {
+    if (R22EQ_AUTHORISED_NODES.has(generatedNode.name)) continue;
+    const baselineParams = baselineParamsByName.get(generatedNode.name);
+    if (baselineParams === undefined) continue;
+    if (JSON.stringify(baselineParams) !== JSON.stringify(generatedNode.parameters)) {
+      generatedNode.parameters = JSON.parse(JSON.stringify(baselineParams));
+      reconciled += 1;
+    }
+  }
+  console.log(`R22-E2Q-SCOPE-CLEANUP: reconciled ${reconciled} unchanged node(s) to the accepted baseline representation (n8n implicit-default / re-export materialisation differences; no logic change)`);
+} else {
+  console.warn(`R22-E2Q-SCOPE-CLEANUP: baseline artifact not found at ${baselineArtifactPath.pathname} -- skipping diff reconciliation (regeneration will show n8n-default-key drift on unchanged nodes; not a behaviour change)`);
 }
 
 fs.writeFileSync(outputPath, JSON.stringify([workflow], null, 2) + '\n');

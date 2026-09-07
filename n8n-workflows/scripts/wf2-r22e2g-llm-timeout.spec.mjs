@@ -119,9 +119,9 @@ for (const name of LLM_NODES) {
   console.log(`Test 11 PASS - '${name}' credential unchanged: ${cred.name} (${cred.id})`);
 }
 
-// --- Test 12: node count/topology unchanged except the timeout parameter ---
-assert.equal(workflow.nodes.length, 141, 'Test 12 - node count unchanged (141)');
-assert.equal(new Set(workflow.nodes.map(n => n.id)).size, 141, 'Test 12 - all node ids still unique');
-console.log('Test 12 PASS - 141 unique nodes, topology unchanged');
+// --- Test 12: node count 147 (141 base + R22-E2Q FIX A: 6 SHA-256 nodes); topology otherwise unchanged ---
+assert.equal(workflow.nodes.length, 147, 'Test 12 - node count 147 (141 base + R22-E2Q FIX A)');
+assert.equal(new Set(workflow.nodes.map(n => n.id)).size, 147, 'Test 12 - all node ids still unique');
+console.log('Test 12 PASS - 147 unique nodes (141 + R22-E2Q FIX A + 6 native SHA-256 nodes)');
 
 console.log('\nALL R22-E2G LLM TIMEOUT HARDENING PROOFS PASSED');
