@@ -347,6 +347,14 @@ function mutateExistingNodes() {
   const fetchRepositoryTree = assertNode('Fetch Repository Tree');
   fetchRepositoryTree.parameters.url = "=https://api.github.com/repos/{{ $('Prepare Batch Context').first().json.repository_owner }}/{{ $('Prepare Batch Context').first().json.repository_name }}/git/trees/{{ encodeURIComponent($json.branchExists ? $json.targetBranchName : $json.baseBranch) }}";
 
+  // R22-E2J — Pass 1 deliberately defers creation of a missing remediation
+  // branch until after CandidateVerification. Source-context reads therefore
+  // must use the immutable SHA that actually supplied the repository tree:
+  // the existing remediation branch HEAD when lookup returned 200, otherwise
+  // the authoritative base SHA. Never dereference a not-yet-created branch.
+  const fetchFindingSourceContext = assertNode('Fetch Finding Source Context');
+  fetchFindingSourceContext.parameters.additionalParameters.reference = "={{ Number($('Lookup Remediation Branch').first().json.statusCode) === 200 ? $('Lookup Remediation Branch').first().json.body?.object?.sha : $('Prepare Batch Context').first().json.baseSha }}";
+
   const validateBatchCompleteness = assertNode('Validate Batch Completeness');
   validateBatchCompleteness.parameters.jsCode = validateBatchCompletenessV2Code;
 

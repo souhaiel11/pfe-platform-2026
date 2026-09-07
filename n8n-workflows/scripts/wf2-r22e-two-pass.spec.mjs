@@ -120,6 +120,54 @@ function runCode(node, runtime) {
 }
 
 // ============================================================
+// R22-E2J: source context is read from the exact authoritative tree SHA.
+// This is intentionally independent of repository, language, framework,
+// scanner, finding category/rule, file name, incident, and branch naming.
+// ============================================================
+{
+  const fetch = nodesByName.get('Fetch Finding Source Context');
+  const reference = fetch.parameters.additionalParameters.reference;
+  assert.match(reference, /Lookup Remediation Branch/);
+  assert.match(reference, /statusCode/);
+  assert.match(reference, /body\?\.object\?\.sha/);
+  assert.match(reference, /Prepare Batch Context/);
+  assert.match(reference, /baseSha/);
+  assert.doesNotMatch(reference, /targetBranchName/,
+    'an absent remediation branch must never be dereferenced by source-context fetch');
+
+  const resolveAuthoritativeSourceSha = ({ lookupStatus, branchHeadSha, baseSha }) =>
+    Number(lookupStatus) === 200 ? branchHeadSha : baseSha;
+  const fixtures = [
+    { project: 'maven', path: 'src/main/java/org/example/Service.java', category: 'SAST', lookupStatus: 200, branchHeadSha: '1'.repeat(40), baseSha: '2'.repeat(40), expected: '1'.repeat(40) },
+    { project: 'npm', path: 'src/services/account.ts', category: 'CODE', lookupStatus: 404, branchHeadSha: undefined, baseSha: '3'.repeat(40), expected: '3'.repeat(40) },
+    { project: 'npm', path: 'packages/api/src/router.ts', category: 'DEPENDENCY', lookupStatus: 200, branchHeadSha: '4'.repeat(40), baseSha: '5'.repeat(40), expected: '4'.repeat(40) },
+    { project: 'maven', path: 'missing/source/File.kt', category: 'SECRET', lookupStatus: 404, branchHeadSha: undefined, baseSha: '6'.repeat(40), expected: '6'.repeat(40) },
+  ];
+  for (const fixture of fixtures) {
+    assert.equal(resolveAuthoritativeSourceSha(fixture), fixture.expected,
+      `${fixture.project}/${fixture.category}/${fixture.path}: source ref derives only from authoritative branch/base state`);
+  }
+  console.log('R22-E2J PASS - source-context ref is authoritative-SHA based across Maven/npm, existing/absent branch, varied paths/categories, including missing source');
+}
+
+{
+  const policyNode = nodesByName.get('Build Independent Repository Policy');
+  const verifyFixture = ({ file, source, tree, manifest }) => {
+    const runtime = makeMockRuntime({
+      'Prepare Batch Context': [{ findings: [{ file, source }], repository_owner: 'fixture-owner', repository_name: 'fixture-repository' }],
+      __CURRENT_JSON__: { truncated: false, tree: [...tree, { type: 'blob', path: manifest }] },
+    });
+    return runCode(policyNode, runtime)[0].json.repositoryPolicy;
+  };
+  const maven = verifyFixture({ file: 'src/main/java/org/example/Service.java', source: 'SAST', tree: [{ type: 'blob', path: 'src/main/java/org/example/Service.java' }], manifest: 'pom.xml' });
+  const npm = verifyFixture({ file: 'packages/api/src/router.ts', source: 'CODE', tree: [{ type: 'blob', path: 'packages/api/src/router.ts' }], manifest: 'package.json' });
+  assert.deepEqual(maven.targetFiles, ['src/main/java/org/example/Service.java']);
+  assert.deepEqual(npm.targetFiles, ['packages/api/src/router.ts']);
+  assert.throws(() => verifyFixture({ file: 'src/missing.ts', source: 'SECRET', tree: [{ type: 'blob', path: 'src/other.ts' }], manifest: 'package.json' }), /FINDING_SOURCE_NOT_IN_REPOSITORY/);
+  console.log('R22-E2J PASS - repository policy accepts Maven/Java and npm/TypeScript fixtures and fails closed for a missing source');
+}
+
+// ============================================================
 // Test 4: Assemble Candidate Manifest produces the correct shape and its
 // candidateDigest matches the REAL compiled backend module byte-for-byte
 // (cross-language consistency proof, not just internal self-consistency).
