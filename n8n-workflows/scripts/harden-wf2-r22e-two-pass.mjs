@@ -336,6 +336,17 @@ readBackFileAfterWriteErrorPass2.credentials = nativeGithubCredential;
 const LLM_TIMEOUT_MS = 180000;
 const LLM_HTTP_REQUEST_NODES = ['Generate Remediation Plan', 'de Patch - HTTP Request', 'Independent Semantic Review'];
 
+// R22-E2P — the one authoritative reference every Pass-1 repository read must
+// use. Pass 1 defers creation of a missing remediation branch until after
+// CandidateVerification, so a Pass-1 read must resolve to an IMMUTABLE SHA:
+// the existing remediation branch HEAD when `Lookup Remediation Branch`
+// returned 200, otherwise the authoritative base SHA. A branch NAME is never
+// an acceptable Pass-1 file-read reference. This is repository-reference
+// lifecycle logic only -- no project/finding/rule/language/test-mode branch.
+// Shared verbatim by 'Fetch Finding Source Context' and 'Fetch Repository
+// Files' so the two Pass-1 github file:get reads can never diverge again.
+const PASS1_AUTHORITATIVE_REF = "={{ Number($('Lookup Remediation Branch').first().json.statusCode) === 200 ? $('Lookup Remediation Branch').first().json.body?.object?.sha : $('Prepare Batch Context').first().json.baseSha }}";
+
 // ---------------------------------------------------------------------
 // Mutate existing nodes in place (Phase 2/4/12). No other existing node's
 // jsCode/parameters are touched.
@@ -347,13 +358,18 @@ function mutateExistingNodes() {
   const fetchRepositoryTree = assertNode('Fetch Repository Tree');
   fetchRepositoryTree.parameters.url = "=https://api.github.com/repos/{{ $('Prepare Batch Context').first().json.repository_owner }}/{{ $('Prepare Batch Context').first().json.repository_name }}/git/trees/{{ encodeURIComponent($json.branchExists ? $json.targetBranchName : $json.baseBranch) }}";
 
-  // R22-E2J — Pass 1 deliberately defers creation of a missing remediation
-  // branch until after CandidateVerification. Source-context reads therefore
-  // must use the immutable SHA that actually supplied the repository tree:
-  // the existing remediation branch HEAD when lookup returned 200, otherwise
-  // the authoritative base SHA. Never dereference a not-yet-created branch.
-  const fetchFindingSourceContext = assertNode('Fetch Finding Source Context');
-  fetchFindingSourceContext.parameters.additionalParameters.reference = "={{ Number($('Lookup Remediation Branch').first().json.statusCode) === 200 ? $('Lookup Remediation Branch').first().json.body?.object?.sha : $('Prepare Batch Context').first().json.baseSha }}";
+  // R22-E2J / R22-E2P — every Pass-1 github file:get read resolves to the
+  // immutable SHA that actually supplied the repository tree (existing
+  // remediation branch HEAD when lookup returned 200, otherwise the
+  // authoritative base SHA). Never dereference a not-yet-created branch.
+  //   - Fetch Finding Source Context: planner input read      (R22-E2J)
+  //   - Fetch Repository Files:        Pass-1 patch-target read (R22-E2P,
+  //     proven root cause of execution 1950's GitHub 404 -- it still
+  //     referenced $('Prepare Batch Context').targetBranchName, a branch
+  //     that does not exist on a first remediation attempt).
+  for (const nodeName of ['Fetch Finding Source Context', 'Fetch Repository Files']) {
+    assertNode(nodeName).parameters.additionalParameters.reference = PASS1_AUTHORITATIVE_REF;
+  }
 
   const validateBatchCompleteness = assertNode('Validate Batch Completeness');
   validateBatchCompleteness.parameters.jsCode = validateBatchCompletenessV2Code;

@@ -72,7 +72,7 @@
           "filePath": "={{ $json.target_file_path }}",
           "asBinaryProperty": false,
           "additionalParameters": {
-            "reference": "={{ $('Prepare Batch Context').first().json.targetBranchName }}"
+            "reference": "={{ Number($('Lookup Remediation Branch').first().json.statusCode) === 200 ? $('Lookup Remediation Branch').first().json.body?.object?.sha : $('Prepare Batch Context').first().json.baseSha }}"
           }
         },
         "id": "27285dc3-5e61-4cad-a0a4-2fb6f499da79",

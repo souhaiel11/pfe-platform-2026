@@ -168,6 +168,105 @@ function runCode(node, runtime) {
 }
 
 // ============================================================
+// R22-E2P: EVERY Pass-1 github file:get read (planner-input read AND the
+// Pass-1 patch-target read) resolves from the authoritative immutable SHA,
+// never from the not-yet-created remediation branch name. Root cause of
+// execution 1950's GitHub 404: 'Fetch Repository Files' still referenced
+// $('Prepare Batch Context').targetBranchName during Pass 1.
+// Independent of repository, language, framework, scanner, finding
+// category/rule, file name, incident id, and branch naming.
+// ============================================================
+{
+  const PASS1_FILE_READ_NODES = ['Fetch Finding Source Context', 'Fetch Repository Files'];
+
+  // Evaluate the real n8n reference expression the same way n8n would.
+  const evalReference = (referenceExpr, { lookupStatus, branchHeadSha, baseSha }) => {
+    const inner = referenceExpr.replace(/^=\{\{\s*/, '').replace(/\s*\}\}$/, '');
+    const $ = (name) => ({
+      first: () => ({
+        json: name === 'Lookup Remediation Branch'
+          ? { statusCode: lookupStatus, body: { object: { sha: branchHeadSha } } }
+          : { baseSha },
+      }),
+    });
+    // eslint-disable-next-line no-new-func
+    return new Function('$', `return (${inner});`)($);
+  };
+
+  const references = PASS1_FILE_READ_NODES.map(name => {
+    const node = nodesByName.get(name);
+    assert.ok(node, `R22-E2P - node '${name}' must exist`);
+    assert.equal(node.type, 'n8n-nodes-base.github');
+    assert.equal(node.parameters.operation, 'get');
+    return node.parameters.additionalParameters.reference;
+  });
+
+  // CASE C + shared-expression: the two Pass-1 file reads use the SAME
+  // authoritative-ref policy, byte-for-byte (they can never diverge again).
+  assert.equal(references[0], references[1],
+    'CASE C - Fetch Finding Source Context and Fetch Repository Files must share one authoritative-ref expression');
+
+  for (const [name, reference] of PASS1_FILE_READ_NODES.map((n, i) => [n, references[i]])) {
+    // CASE D - a branch NAME is never the Pass-1 file-read reference.
+    assert.doesNotMatch(reference, /targetBranchName/,
+      `CASE D - '${name}' must not reference targetBranchName for a Pass-1 repository read`);
+    assert.match(reference, /Lookup Remediation Branch/, `${name} keys off the branch-lookup result`);
+    assert.match(reference, /statusCode/);
+    assert.match(reference, /body\?\.object\?\.sha/, `${name} uses the immutable branch HEAD sha`);
+    assert.match(reference, /Prepare Batch Context.+baseSha/s, `${name} falls back to the authoritative base sha`);
+
+    // Genericity: no project / finding / rule / language / test-mode literal.
+    for (const forbidden of [/pfe-app-test/i, /TaskController/, /S125/, /\bjava\b/i, /\bmaven\b/i, /c95bffd4/i, /1950/, /test[_-]?mode/i]) {
+      assert.doesNotMatch(reference, forbidden, `${name} reference must stay generic (no ${forbidden})`);
+    }
+
+    // CASE A - remediation branch absent (lookup != 200) -> base sha.
+    assert.equal(
+      evalReference(reference, { lookupStatus: 404, branchHeadSha: undefined, baseSha: 'a'.repeat(40) }),
+      'a'.repeat(40),
+      `CASE A - '${name}': absent remediation branch resolves to Prepare Batch Context.baseSha`,
+    );
+    // CASE B - remediation branch exists (lookup 200) -> exact branch HEAD sha.
+    assert.equal(
+      evalReference(reference, { lookupStatus: 200, branchHeadSha: 'b'.repeat(40), baseSha: 'c'.repeat(40) }),
+      'b'.repeat(40),
+      `CASE B - '${name}': existing remediation branch resolves to the exact Lookup Remediation Branch HEAD sha`,
+    );
+  }
+  console.log('R22-E2P PASS - CASE A (absent->baseSha), CASE B (exists->branch HEAD sha), CASE C (shared expr), CASE D (no targetBranchName) for both Pass-1 file reads');
+}
+
+// ============================================================
+// R22-E2P CASE E + CASE F: branch creation and every Git mutation remain
+// unreachable from the Pass-1 patch-target read until CandidateVerification,
+// Write Guard and Remote Head Drift Guard have all been passed.
+// ============================================================
+{
+  const GIT_MUTATION_NODES = ['Create Missing Branch', 'Create File in Branch', 'Update File in Branch'];
+
+  // CASE F - from the Pass-1 read node, no Git mutation is reachable if we
+  // stop expansion at Call Candidate Verification.
+  const fromPass1ReadStoppingAtVerification = reachableFrom('Fetch Repository Files', { stopAt: new Set(['Call Candidate Verification']) });
+  for (const gitNode of GIT_MUTATION_NODES) {
+    assert.equal(fromPass1ReadStoppingAtVerification.has(gitNode), false,
+      `CASE F - '${gitNode}' must not be reachable from the Pass-1 read without passing Call Candidate Verification`);
+  }
+
+  // CASE E - branch creation is gated behind ALL THREE guards in order.
+  // Stop at any one guard and 'Create Missing Branch' is unreachable.
+  for (const guard of ['Call Candidate Verification', 'Call Write Guard', 'Call Remote Head Drift Guard']) {
+    const stopped = reachableFrom('Webhook', { stopAt: new Set([guard]) });
+    assert.equal(stopped.has('Create Missing Branch'), false,
+      `CASE E - 'Create Missing Branch' must not be reachable from Webhook without passing '${guard}'`);
+  }
+  // Sanity: with no stop node it IS reachable (graph is connected).
+  assert.equal(reachableFrom('Webhook').has('Create Missing Branch'), true,
+    'CASE E sanity - Create Missing Branch is reachable at all');
+
+  console.log('R22-E2P PASS - CASE E (branch creation after all 3 guards) + CASE F (no Git mutation from the Pass-1 read pre-verification)');
+}
+
+// ============================================================
 // Test 4: Assemble Candidate Manifest produces the correct shape and its
 // candidateDigest matches the REAL compiled backend module byte-for-byte
 // (cross-language consistency proof, not just internal self-consistency).
