@@ -432,6 +432,16 @@ setMainTwoOutputs('Build Reconciled File Result', [['Merge Effective File Result
 // ---------------------------------------------------------------------
 const PRODUCTION_WORKFLOW_ID = '9adcV31eaIgJyMR0';
 const PRODUCTION_WEBHOOK_PATH = 'wf2-approve';
+// R22-E2H — the Webhook node is copied verbatim from the live export
+// (only `parameters.path` was previously rewritten below), so its
+// `webhookId` GUID silently stayed identical to production's. That GUID
+// is inert for static-path routing today (n8n's webhookId-keyed lookup
+// only applies to parameterized `:id`-style paths, confirmed by reading
+// active-workflow-manager.js), but two workflows sharing one node-level
+// identity is still a latent hazard worth removing on principle -- not
+// claimed as the R22-E2F-RO stale-registration root cause (that was
+// proven separately: unpublish:workflow never calls clearWebhooks).
+const PRODUCTION_WEBHOOK_ID = '6155a0ff-9dea-4479-a1c8-96c827797354';
 const TEST_WORKFLOW_NAME = 'WF2 - Git Patch & PR R22E TEST';
 const TEST_WEBHOOK_PATH = 'wf2-r22e-test';
 
@@ -441,6 +451,7 @@ workflow.active = false;
 
 const webhookNode = assertNode('Webhook');
 if (webhookNode.parameters.path === PRODUCTION_WEBHOOK_PATH) webhookNode.parameters.path = TEST_WEBHOOK_PATH;
+if (webhookNode.webhookId === PRODUCTION_WEBHOOK_ID) webhookNode.webhookId = crypto.randomUUID();
 
 // Defense in depth: refuse to write an artifact that still carries the
 // production identity/settings, even if a future edit to this script
@@ -451,6 +462,7 @@ if (workflow.active !== false) guardFailures.push(`workflow.active is ${JSON.str
 if (workflow.name !== TEST_WORKFLOW_NAME) guardFailures.push(`workflow.name is ${JSON.stringify(workflow.name)}, must be ${JSON.stringify(TEST_WORKFLOW_NAME)}`);
 if (assertNode('Webhook').parameters.path !== TEST_WEBHOOK_PATH) guardFailures.push(`Webhook path is not ${JSON.stringify(TEST_WEBHOOK_PATH)}`);
 if (workflow.nodes.some(n => n.name === 'Webhook' && n.parameters.path === PRODUCTION_WEBHOOK_PATH)) guardFailures.push('a node still exposes the production webhook path');
+if (assertNode('Webhook').webhookId === PRODUCTION_WEBHOOK_ID) guardFailures.push('Webhook node still carries the production webhookId');
 if (guardFailures.length) {
   throw new Error('R22-E2B safety guard refused to write an unsafe artifact:\n' + guardFailures.join('\n'));
 }

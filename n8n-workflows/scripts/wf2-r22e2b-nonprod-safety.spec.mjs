@@ -45,6 +45,14 @@ const anyProductionWebhook = workflow.nodes.some(n => n.type === 'n8n-nodes-base
 assert.equal(anyProductionWebhook, false, 'Test 5 - no node may expose the production webhook path');
 console.log('Test 4/5 PASS - webhook is wf2-r22e-test, production path wf2-approve not exposed anywhere');
 
+// --- Test 5b (R22-E2H) - TEST Webhook node's own node-level identity
+// (webhookId) must differ from production's, not just the human-readable
+// path. Identity hygiene, not a claimed root cause for the separately
+// R22-E2F-RO-proven stale-registration issue. ---
+const PRODUCTION_WEBHOOK_ID = '6155a0ff-9dea-4479-a1c8-96c827797354';
+assert.notEqual(webhookNodes[0].webhookId, PRODUCTION_WEBHOOK_ID, 'Test 5b - TEST Webhook node webhookId must differ from production webhookId');
+console.log('Test 5b PASS - TEST webhookId (' + webhookNodes[0].webhookId + ') distinct from production webhookId');
+
 // --- Test 6/7: credential coverage + no unapproved credential IDs ---
 const githubCallingTypes = new Set(['n8n-nodes-base.github']);
 const isGithubHttpCall = (n) => n.type === 'n8n-nodes-base.httpRequest' && typeof n.parameters?.url === 'string' && n.parameters.url.includes('api.github.com');
