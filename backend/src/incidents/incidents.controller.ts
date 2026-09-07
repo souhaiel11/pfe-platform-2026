@@ -42,9 +42,24 @@ export class IncidentsController {
   @Post(':id/retry') retryFix(@Param('id') id: string, @Req() req: any) {
     return this.service.retryFix(id, req.user);
   }
+  // R21-AE — explicit admin action only. The stale threshold is a
+  // precondition; no scheduler invokes this endpoint automatically.
+  @UseGuards(JwtAuthGuard)
+  @Post(':id/remediation/:requestId/reconcile-stale-dispatch')
+  reconcileStaleDispatch(@Param('id') id: string, @Param('requestId') requestId: string,
+    @Body() body: any, @Req() req: any) {
+    return this.service.reconcileStaleDispatch(id, requestId, body || {}, req.user);
+  }
   @UseGuards(JwtAuthGuard)
   @Post(':id/pr-validation') requestPrValidation(@Param('id') id: string, @Req() req: any) {
     return this.service.requestPrValidation(id, req.user);
+  }
+  // R21-AS — read/heal-only: proves and, if needed, fixes the Jenkins
+  // PFE_VALIDATION_CONTEXT bootstrap gap without issuing a crumb or queuing a
+  // build. Never mutates prValidationRequest. Same guard as requestPrValidation.
+  @UseGuards(JwtAuthGuard)
+  @Post(':id/pr-validation/ensure-parameter') ensurePrValidationBootstrap(@Param('id') id: string, @Req() req: any) {
+    return this.service.ensurePrValidationBootstrap(id, req.user);
   }
   // R42A — réconciliation gouvernée d'une validation PR restée QUEUED/RUNNING
   // face à un build Jenkins déjà terminal sans callback reçu. Ne déclenche
