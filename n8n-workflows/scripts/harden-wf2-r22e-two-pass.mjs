@@ -317,6 +317,26 @@ for (const n of [recheckExistingBranchHead, relookupBaselineRefBeforeCreation, r
 readBackFileAfterWriteErrorPass2.credentials = nativeGithubCredential;
 
 // ---------------------------------------------------------------------
+// R22-E2G — bounded LLM request latency. These three pre-existing
+// httpRequest nodes call api.anthropic.com directly with no explicit
+// `options.timeout`, which per the installed HttpRequestV3 node
+// (n8n-nodes-base, typeVersion 4.4) means each falls back to the node's
+// own code-level default of 300_000ms (5 minutes) -- not literally
+// unbounded, but long enough to leave a stalled/slow LLM call
+// indistinguishable from a hung workflow for a very long time, and it
+// is not an explicit, deliberate, reviewable policy. 180000ms (3
+// minutes) is deliberately below CandidateVerification's own 300000ms
+// timeout and gives a single LLM turn ample time while still failing
+// fast into the existing onError:'continueErrorOutput' -> Failure
+// Envelope path (proven: HttpRequestV3 catches request errors,
+// including a client-side timeout, in the same try/catch gated by
+// continueOnFail() that onError:'continueErrorOutput' controls -- a
+// timeout becomes an ordinary routed node error, not a hang, not a
+// retry, and not a fabricated success).
+const LLM_TIMEOUT_MS = 180000;
+const LLM_HTTP_REQUEST_NODES = ['Generate Remediation Plan', 'de Patch - HTTP Request', 'Independent Semantic Review'];
+
+// ---------------------------------------------------------------------
 // Mutate existing nodes in place (Phase 2/4/12). No other existing node's
 // jsCode/parameters are touched.
 // ---------------------------------------------------------------------
@@ -329,6 +349,11 @@ function mutateExistingNodes() {
 
   const validateBatchCompleteness = assertNode('Validate Batch Completeness');
   validateBatchCompleteness.parameters.jsCode = validateBatchCompletenessV2Code;
+
+  for (const name of LLM_HTTP_REQUEST_NODES) {
+    const llmNode = assertNode(name);
+    llmNode.parameters.options = { ...llmNode.parameters.options, timeout: LLM_TIMEOUT_MS };
+  }
 }
 mutateExistingNodes();
 
