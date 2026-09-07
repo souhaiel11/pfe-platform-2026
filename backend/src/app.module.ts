@@ -17,6 +17,7 @@ import { AzureDeployModule } from './azure-deploy/azure-deploy.module';
 import { ManualRemediationModule } from './manual-remediation/manual-remediation.module';
 import { ContextModule } from './context/context.module';
 import { CandidateVerificationModule } from './candidate-verification/candidate-verification.module';
+import { IntegrationFixturesModule } from './integration-fixtures/integration-fixtures.module';
 
 @Module({
   imports: [
@@ -52,6 +53,7 @@ import { CandidateVerificationModule } from './candidate-verification/candidate-
     ManualRemediationModule,
     ContextModule,
     CandidateVerificationModule,
+    IntegrationFixturesModule,
   ],
 })
 export class AppModule {}
