@@ -18,6 +18,7 @@ import { CandidateMaterializer, MaterializationError } from './candidate-materia
 import { BuildAdapter } from './build-adapter';
 import { MavenBuildAdapter } from './maven-build-adapter';
 import { GradleBuildAdapter } from './gradle-build-adapter';
+import { NpmBuildAdapter } from './npm-build-adapter';
 import { RepoCacheService } from './repo-cache.service';
 
 export interface ExecuteVerifyOptions {
@@ -49,7 +50,7 @@ export class CandidateVerificationExecutor {
     @Optional() private readonly repoCache: RepoCacheService = new RepoCacheService(),
     @Optional() buildAdapters?: BuildAdapter[],
   ) {
-    this.buildAdapters = buildAdapters ?? [new MavenBuildAdapter(), new GradleBuildAdapter()];
+    this.buildAdapters = buildAdapters ?? [new MavenBuildAdapter(), new GradleBuildAdapter(), new NpmBuildAdapter()];
   }
 
   execute(manifest: CandidateManifest, options: ExecuteVerifyOptions = {}): CandidateVerification {
