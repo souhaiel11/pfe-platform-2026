@@ -19,6 +19,7 @@ import { BuildAdapter } from './build-adapter';
 import { MavenBuildAdapter } from './maven-build-adapter';
 import { GradleBuildAdapter } from './gradle-build-adapter';
 import { NpmBuildAdapter } from './npm-build-adapter';
+import { PythonBuildAdapter } from './python-build-adapter';
 import { RepoCacheService } from './repo-cache.service';
 
 export interface ExecuteVerifyOptions {
@@ -50,7 +51,7 @@ export class CandidateVerificationExecutor {
     @Optional() private readonly repoCache: RepoCacheService = new RepoCacheService(),
     @Optional() buildAdapters?: BuildAdapter[],
   ) {
-    this.buildAdapters = buildAdapters ?? [new MavenBuildAdapter(), new GradleBuildAdapter(), new NpmBuildAdapter()];
+    this.buildAdapters = buildAdapters ?? [new MavenBuildAdapter(), new GradleBuildAdapter(), new NpmBuildAdapter(), new PythonBuildAdapter()];
   }
 
   execute(manifest: CandidateManifest, options: ExecuteVerifyOptions = {}): CandidateVerification {

@@ -18,6 +18,11 @@ FROM node:20-bookworm-slim
 # (headless), no unnecessary packages.
 # curl + unzip: fetch/extract the pinned Gradle binary distribution below
 # (Debian's `gradle` package is 4.4.1 -- far too old for any modern build).
+# python3 + python3-venv + python3-pip: PythonBuildAdapter builds a throwaway
+# venv per candidate and runs pytest in it (Bookworm ships Python 3.11, new
+# enough for pytest 8.x). Unpinned, like git/maven/openjdk above -- Debian
+# point-release drift on these is acceptable and pinning is impractical once
+# apt lists are removed.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         git \
@@ -25,6 +30,9 @@ RUN apt-get update \
         maven \
         curl \
         unzip \
+        python3 \
+        python3-venv \
+        python3-pip \
     && rm -rf /var/lib/apt/lists/*
 
 # JAVA_HOME is unset in the base image (Maven resolves Java via /usr/bin/java);
