@@ -16,12 +16,35 @@ FROM node:20-bookworm-slim
 # openjdk-17-jdk-headless + maven: compile/test the audited target project
 # (pfe-app-test targets Java 17, per R22-B). No GUI/X11 dependencies
 # (headless), no unnecessary packages.
+# curl + unzip: fetch/extract the pinned Gradle binary distribution below
+# (Debian's `gradle` package is 4.4.1 -- far too old for any modern build).
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         git \
         openjdk-17-jdk-headless \
         maven \
+        curl \
+        unzip \
     && rm -rf /var/lib/apt/lists/*
+
+# JAVA_HOME is unset in the base image (Maven resolves Java via /usr/bin/java);
+# set it explicitly so Gradle's toolchain auto-detection is deterministic and
+# reuses the SAME JDK 17 already installed above -- no second JDK.
+ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+
+# Gradle: installed from the official binary distribution (not the ancient
+# Debian package), pinned + SHA-256 verified against gradle.org/release-checksums
+# -- same anti-drift rule this Dockerfile already applies to apt packages.
+# Any recent 8.x runs on JDK 17; bump GRADLE_VERSION + GRADLE_SHA256 together.
+ENV GRADLE_VERSION=8.10.2
+ENV GRADLE_SHA256=31c55713e40233a8303827ceb42ca48a47267a0ad4bab9177123121e71524c26
+ENV GRADLE_HOME=/opt/gradle/gradle-${GRADLE_VERSION}
+RUN curl -fsSL -o /tmp/gradle.zip "https://services.gradle.org/distributions/gradle-${GRADLE_VERSION}-bin.zip" \
+    && echo "${GRADLE_SHA256}  /tmp/gradle.zip" | sha256sum -c - \
+    && mkdir -p /opt/gradle \
+    && unzip -q /tmp/gradle.zip -d /opt/gradle \
+    && rm /tmp/gradle.zip \
+    && ln -s "${GRADLE_HOME}/bin/gradle" /usr/local/bin/gradle
 
 # WORKDIR is named /candidate-verifier (not /app) so tsc's rootDir
 # auto-computation (tsconfig's rootDir:"../", relative to wherever this
