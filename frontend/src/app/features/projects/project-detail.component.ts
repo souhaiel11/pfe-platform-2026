@@ -302,6 +302,56 @@ export class ProjectDetailComponent implements OnInit {
     return !!(request?.requestId || request?.batchId)
       && this.requestFindingIds().includes(this.findingId(finding));
   }
+
+  // ── Verdict per-finding AUTORITAIRE (WF3 / Sonar exact-SHA) ─────────────
+  // Seule source de vérité pour l'état « corrigé/vert » : la preuve par
+  // finding produite par WF3, jamais un statut global. Ordre de lecture :
+  //   1. validation.derived.findings[].verdict   (records R22-A récents)
+  //   2. validation.findingResults[].result      (repli, incidents antérieurs
+  //   3. prValidationRequest.findingResults[].result   ex. 65e35d1b)
+  // Ne consulte JAMAIS incident.status / fixRequest.status / prUrl / prNumber.
+  private findingResultEntries(): any[] {
+    const meta: any = this.latestReport?.metadata || {};
+    const derived = meta.validation?.derived?.findings;
+    if (Array.isArray(derived) && derived.length) return derived;
+    if (Array.isArray(meta.validation?.findingResults)) return meta.validation.findingResults;
+    if (Array.isArray(meta.prValidationRequest?.findingResults)) return meta.prValidationRequest.findingResults;
+    return [];
+  }
+  findingVerdict(finding: any): string | null {
+    const id = this.findingId(finding);
+    const entry = this.findingResultEntries().find((e: any) => String(e?.findingId) === id);
+    if (!entry) return null;
+    return String(entry.verdict ?? entry.result ?? '').toUpperCase() || null;
+  }
+  isFindingValidated(finding: any): boolean { return this.findingVerdict(finding) === 'VALID'; }
+
+  // ── Provenance PR du batch de remédiation ──────────────────────────────
+  // prUrl RÉEL stocké (fixRequest.prUrl, repli latestReport.prUrl) — jamais
+  // reconstruit. N'est rattaché qu'aux findings de fixRequest.findingIds.
+  findingInActiveBatch(finding: any): boolean {
+    return this.requestFindingIds().includes(this.findingId(finding));
+  }
+  batchPrUrl(): string | null {
+    const url = this.activeFixRequest()?.prUrl || this.latestReport?.prUrl || '';
+    return /^https?:\/\//i.test(String(url)) ? String(url) : null;
+  }
+  batchPrNumber(): number | null {
+    const n = Number(this.activeFixRequest()?.prNumber);
+    return Number.isInteger(n) && n > 0 ? n : null;
+  }
+  showFindingPrLink(finding: any): boolean {
+    return this.findingInActiveBatch(finding) && !!this.batchPrUrl();
+  }
+  // Libellé du badge « Correction » quand le finding n'est PAS validé par WF3.
+  // Hors batch : éligibilité. Dans le batch : état de cycle, sauf « PR créée »
+  // / « Validée » qui seraient redondants ou non autoritaires (le lien PR et le
+  // badge vert per-finding portent déjà ces deux faits).
+  findingCellStatus(finding: any): string | null {
+    if (!this.findingInActiveBatch(finding)) return this.remediationLabel(finding.remediationType);
+    const state = this.findingRequestState(finding);
+    return state === 'PR créée' || state === 'Validée' ? null : state;
+  }
   canRetryFixRequest(): boolean {
     const request = this.activeFixRequest();
     return this.canOperate && request?.status === 'FIX_FAILED' && request?.retryEligible === true
@@ -332,6 +382,7 @@ export class ProjectDetailComponent implements OnInit {
   }
   canSelectFinding(finding: any): boolean {
     return this.canOperate && this.isAutoFixEligible(finding) && !this.newCorrectionBlocked()
+      && !this.isFindingValidated(finding)
       && !this.isFindingLocked(finding) && !this.isFindingOwnedByLogicalBatch(finding);
   }
   toggleFindingSelection(finding: any, selected = !this.isSelected(finding)): void {

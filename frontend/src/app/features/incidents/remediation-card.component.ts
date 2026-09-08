@@ -54,16 +54,19 @@ export interface RemediationIssue {
         <span class="card-title">{{ phaseLabel }}</span>
       </div>
 
-      <div *ngFor="let i of issues" class="rc-issue">
+      <div *ngFor="let i of issues" class="rc-issue" [class.rc-validated]="isValidated(i.id)">
         <div style="display:flex;align-items:flex-start;gap:8px;">
           <input *ngIf="mode === 'auto-fix-selective'" type="checkbox"
-                 class="rc-check" [checked]="isSelected(i.id)"
-                 [disabled]="locked || i.remediationType !== 'AUTO_FIX_ELIGIBLE'"
+                 class="rc-check" [class.rc-check-validated]="isValidated(i.id)"
+                 [checked]="isValidated(i.id) || isSelected(i.id)"
+                 [disabled]="isValidated(i.id) || locked || i.remediationType !== 'AUTO_FIX_ELIGIBLE'"
                  (change)="toggle(i.id)" [attr.aria-label]="'Retenir ' + i.id" />
           <div style="flex:1;min-width:0;">
             <div style="font-size:12px;margin-bottom:4px;">
               <span *ngIf="i.severity" class="sev" [attr.data-sev]="sevKey(i.severity)">{{ i.severity | presentationLabel }}</span>
               <strong>{{ i.title }}</strong>
+              <span *ngIf="isValidated(i.id)" class="rc-badge-validated">✓ Validée</span>
+              <a *ngIf="isValidated(i.id) && prUrl" class="rc-pr-link" [href]="prUrl" target="_blank" rel="noopener noreferrer">{{ prLabel || 'Voir la Pull Request' }}</a>
             </div>
             <div *ngIf="i.detail" class="rc-detail">{{ i.detail }}</div>
             <div class="rc-meta" *ngIf="i.stage || i.source || i.remediationType">
@@ -101,8 +104,12 @@ export interface RemediationIssue {
 
       <!-- Verrou de cycle de vie — une PR de correction existe déjà pour cet
            incident : aucune nouvelle demande n'est possible (modèle backend
-           un incident → une PR). Décidé par le parent, jamais deviné ici. -->
-      <p *ngIf="locked && lockedNote" class="rc-note">{{ lockedNote }}</p>
+           un incident → une PR). Décidé par le parent, jamais deviné ici.
+           La provenance PR (lien cliquable) reste visible dans tous les cas. -->
+      <p *ngIf="(locked && lockedNote) || prUrl" class="rc-note">
+        <ng-container *ngIf="locked && lockedNote">{{ lockedNote }} </ng-container>
+        <a *ngIf="prUrl" class="rc-pr-link" [href]="prUrl" target="_blank" rel="noopener noreferrer">{{ prLabel || 'Voir la Pull Request' }}</a>
+      </p>
 
       <!-- Bouton d'action — modes auto-fix uniquement, jamais quand verrouillé -->
       <button *ngIf="mode === 'auto-fix-selective' && !locked" class="jo-btn"
@@ -130,6 +137,19 @@ export interface RemediationIssue {
     .rc-recap { font-size: 12px; margin: 12px 0 8px; }
     .rc-note { font-size: 11px; color: var(--text-secondary); font-style: italic; margin: 10px 0; }
     .rc-guard { font-size: 11px; color: var(--text-secondary); }
+    .rc-validated .rc-detail { color: var(--accent-green); }
+    .rc-check-validated { accent-color: var(--accent-green); }
+    .rc-badge-validated {
+      display: inline-block; margin-left: 6px; font-size: 9.5px; font-weight: 800;
+      letter-spacing: .04em; padding: 2px 7px; border-radius: 999px;
+      background: var(--accent-green-bg); color: var(--accent-green);
+    }
+    .rc-pr-link {
+      display: inline-block; margin-left: 6px; font-size: 10px; font-weight: 700;
+      padding: 2px 7px; border-radius: 999px; text-decoration: none;
+      background: var(--accent-blue-bg); color: var(--accent-blue);
+    }
+    .rc-pr-link:hover { text-decoration: underline; }
     .rc-meta { display:flex;gap:8px;flex-wrap:wrap;font-size:10px;color:var(--text-secondary);margin:5px 0; }
     .mono { font-family: var(--font-mono); }
     .sev {
@@ -153,6 +173,12 @@ export class RemediationCardComponent implements OnChanges {
   // existe déjà). true = pas de sélection, pas de bouton d'action, note affichée.
   @Input() locked = false;
   @Input() lockedNote: string | null = null;
+  // Verdict per-finding AUTORITAIRE (WF3) + provenance PR — décidés par le
+  // parent à partir de validation.derived.findings / findingResults et de
+  // fixRequest.prUrl. Le composant ne fait que les afficher.
+  @Input() validatedIds: readonly string[] | Set<string> = [];
+  @Input() prUrl: string | null = null;
+  @Input() prLabel = '';
   @Output() correct = new EventEmitter<Set<string>>();
 
   selected = new Set<string>();
@@ -167,9 +193,13 @@ export class RemediationCardComponent implements OnChanges {
   }
 
   isSelected(id: string): boolean { return this.selected.has(id); }
+  isValidated(id: string): boolean {
+    const v = this.validatedIds;
+    return v instanceof Set ? v.has(id) : Array.isArray(v) && v.includes(id);
+  }
   toggle(id: string): void {
     const issue = this.issues.find(i => i.id === id);
-    if (issue?.remediationType !== 'AUTO_FIX_ELIGIBLE') return;
+    if (issue?.remediationType !== 'AUTO_FIX_ELIGIBLE' || this.isValidated(id)) return;
     const next = new Set(this.selected);
     if (next.has(id)) next.delete(id); else next.add(id);
     this.selected = next;

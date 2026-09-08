@@ -236,6 +236,9 @@
                 actionLabel="Proposer une correction"
                 [locked]="newCorrectionBlocked()"
                 [lockedNote]="hasRealPr() ? 'Une Pull Request de correction existe déjà pour cet incident. Les autres problèmes seront traités lors d’un nouveau cycle après le prochain scan.' : null"
+                [validatedIds]="validatedSonarIds()"
+                [prUrl]="batchPrUrl()"
+                [prLabel]="batchPrLabel()"
                 [correcting]="sonarCorrecting()"
                 (correct)="onSonarCorrect($event)">
               </app-remediation-card>

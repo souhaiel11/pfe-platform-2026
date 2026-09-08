@@ -766,6 +766,29 @@ export class IncidentDetailComponent implements OnInit, OnDestroy {
     return ['APPROVAL_REQUESTED', 'FIX_STARTING', 'DISPATCHED', 'PR_CREATED', 'VALIDATING']
       .includes(this.incident?.metadata?.fixRequest?.status);
   }
+  // Verdict per-finding AUTORITAIRE (WF3) — jamais un statut global. Ordre :
+  // validation.derived.findings[].verdict puis findingResults[].result.
+  private findingResultEntries(): any[] {
+    const m: any = this.incident?.metadata || {};
+    const derived = m.validation?.derived?.findings;
+    if (Array.isArray(derived) && derived.length) return derived;
+    if (Array.isArray(m.validation?.findingResults)) return m.validation.findingResults;
+    if (Array.isArray(m.prValidationRequest?.findingResults)) return m.prValidationRequest.findingResults;
+    return [];
+  }
+  validatedSonarIds(): Set<string> {
+    return new Set(this.findingResultEntries()
+      .filter(e => String(e?.verdict ?? e?.result ?? '').toUpperCase() === 'VALID')
+      .map(e => String(e.findingId)));
+  }
+  batchPrUrl(): string | null {
+    const u = this.incident?.metadata?.fixRequest?.prUrl || this.incident?.prUrl || '';
+    return /^https?:\/\//i.test(String(u)) ? String(u) : null;
+  }
+  batchPrLabel(): string {
+    const n = Number(this.incident?.metadata?.fixRequest?.prNumber);
+    return Number.isInteger(n) && n > 0 ? `PR #${n}` : 'Voir la Pull Request';
+  }
   getSeverityBadgeClass(s: string) {
     const map: any = { CRITICAL:'high', HIGH:'high', MEDIUM:'medium', LOW:'info' };
     return map[s] || '';

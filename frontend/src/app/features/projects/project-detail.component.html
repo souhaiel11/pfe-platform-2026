@@ -401,13 +401,17 @@
             </thead>
             <tbody>
               <tr *ngFor="let issue of sonarFindings()" class="sonar-row" tabindex="0" role="button"
+                  [class.row-validated]="isFindingValidated(issue)"
                   [attr.aria-label]="'Voir le problème ' + (issue.rule || '') + ' dans ' + (issue.file || issue.component || '')"
                   (click)="openSonarFinding(issue, $event)" (keydown.enter)="openSonarFinding(issue, $event)"
                   (keydown.space)="$event.preventDefault(); openSonarFinding(issue, $event)">
                 <td class="selection-cell" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">
-                  <input type="checkbox" [checked]="isSelected(issue)" [disabled]="!canSelectFinding(issue)"
-                         [attr.aria-label]="(isSelected(issue) ? 'Retirer de la sélection ' : 'Ajouter à la sélection ') + (issue.rule || issue.id)"
-                         [title]="isFindingLocked(issue) ? 'Une correction est déjà active' : remediationLabel(issue.remediationType)"
+                  <input type="checkbox"
+                         [checked]="isFindingValidated(issue) || isSelected(issue)"
+                         [disabled]="isFindingValidated(issue) || !canSelectFinding(issue)"
+                         [class.check-validated]="isFindingValidated(issue)"
+                         [attr.aria-label]="isFindingValidated(issue) ? ('Problème corrigé et validé — ' + (issue.rule || issue.id)) : ((isSelected(issue) ? 'Retirer de la sélection ' : 'Ajouter à la sélection ') + (issue.rule || issue.id))"
+                         [title]="isFindingValidated(issue) ? 'Corrigée et validée par la validation post-PR (WF3)' : (isFindingLocked(issue) ? 'Une correction est déjà active' : remediationLabel(issue.remediationType))"
                          (change)="toggleFindingSelection(issue, $any($event.target).checked)">
                 </td>
                 <td><span class="sev-badge" [style.background]="getSevColor(issue.severity)">{{issue.severity | presentationLabel}}</span></td>
@@ -419,7 +423,17 @@
                 <td style="font-size:10px;color:var(--text-muted);font-family:var(--font-mono);max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"
                     [title]="issue.file || issue.component || ''">{{issue.file || issue.component || 'Non disponible'}}</td>
                 <td style="font-size:10px;text-align:center">{{issue.line || '-'}}</td>
-                <td><span class="remediation-badge">{{findingRequestState(issue) || remediationLabel(issue.remediationType)}}</span></td>
+                <td>
+                  <div class="remediation-cell">
+                    <span *ngIf="isFindingValidated(issue)" class="remediation-badge badge-validated">✓ Validée</span>
+                    <span *ngIf="!isFindingValidated(issue) && findingCellStatus(issue)" class="remediation-badge">{{findingCellStatus(issue)}}</span>
+                    <a *ngIf="showFindingPrLink(issue)" class="pr-link" [href]="batchPrUrl()" target="_blank" rel="noopener noreferrer"
+                       (click)="$event.stopPropagation()" (keydown.enter)="$event.stopPropagation()"
+                       [attr.aria-label]="batchPrNumber() ? ('Ouvrir la Pull Request #' + batchPrNumber() + ' sur GitHub') : 'Ouvrir la Pull Request de correction sur GitHub'">
+                      {{batchPrNumber() ? 'PR #' + batchPrNumber() : 'Voir la Pull Request'}}
+                    </a>
+                  </div>
+                </td>
               </tr>
               <tr *ngIf="!sonarFindings().length"><td colspan="7" class="sonar-empty">Aucun résultat pour ces filtres.</td></tr>
             </tbody>
@@ -440,12 +454,13 @@
             <section><h3>Description</h3><p>{{sonarFindingSummary(selectedSonarFinding)}}</p></section>
             <section><h3>Pourquoi c’est important</h3><p>{{findingValue(selectedSonarFinding.impact)}}</p></section>
             <section><h3>Preuve technique</h3><p>{{findingEvidence(selectedSonarFinding)}}</p></section>
-            <section><h3>Correction</h3><dl><div><dt>Action recommandée</dt><dd>{{findingValue(selectedSonarFinding.recommendation)}}</dd></div><div><dt>Type</dt><dd>{{remediationLabel(selectedSonarFinding.remediationType)}}</dd></div><div><dt>Responsable</dt><dd>{{selectedSonarFinding.owner || 'UNASSIGNED' | presentationLabel}}</dd></div><div><dt>Éligibilité</dt><dd>{{selectedSonarFinding.remediationType === 'AUTO_FIX_ELIGIBLE' ? 'Correction automatisable' : 'Automatisation non disponible'}}</dd></div></dl></section>
-            <section><h3>Traçabilité</h3><dl><div><dt>Projet</dt><dd>{{project?.name || 'Non disponible'}}</dd></div><div><dt>Build</dt><dd>{{latestReport?.buildNumber ? '#' + latestReport.buildNumber : 'Non disponible'}}</dd></div><div><dt>Identifiant du problème</dt><dd class="drawer-id">{{findingValue(selectedSonarFinding.id || selectedSonarFinding.key)}}</dd></div></dl></section>
+            <section><h3>Correction</h3><dl><div><dt>Action recommandée</dt><dd>{{findingValue(selectedSonarFinding.recommendation)}}</dd></div><div><dt>Type</dt><dd>{{remediationLabel(selectedSonarFinding.remediationType)}}</dd></div><div><dt>Responsable</dt><dd>{{selectedSonarFinding.owner || 'UNASSIGNED' | presentationLabel}}</dd></div><div><dt>Éligibilité</dt><dd>{{selectedSonarFinding.remediationType === 'AUTO_FIX_ELIGIBLE' ? 'Correction automatisable' : 'Automatisation non disponible'}}</dd></div><div *ngIf="findingVerdict(selectedSonarFinding)"><dt>Validation post-PR (WF3)</dt><dd>{{findingVerdict(selectedSonarFinding) === 'VALID' ? 'Validée — problème corrigé' : (findingVerdict(selectedSonarFinding) === 'INVALID' ? 'Non corrigée' : 'Non concluante')}}</dd></div></dl></section>
+            <section><h3>Traçabilité</h3><dl><div><dt>Projet</dt><dd>{{project?.name || 'Non disponible'}}</dd></div><div><dt>Build</dt><dd>{{latestReport?.buildNumber ? '#' + latestReport.buildNumber : 'Non disponible'}}</dd></div><div><dt>Identifiant du problème</dt><dd class="drawer-id">{{findingValue(selectedSonarFinding.id || selectedSonarFinding.key)}}</dd></div><div *ngIf="showFindingPrLink(selectedSonarFinding)"><dt>Pull Request</dt><dd><a class="pr-link" [href]="batchPrUrl()" target="_blank" rel="noopener noreferrer">{{batchPrNumber() ? 'PR #' + batchPrNumber() : 'Voir la Pull Request'}}</a></dd></div></dl></section>
           </div>
           <footer class="drawer-footer">
             <button *ngIf="canSelectFinding(selectedSonarFinding)" type="button" class="btn btn-primary" (click)="toggleFindingSelection(selectedSonarFinding)">{{isSelected(selectedSonarFinding) ? 'Retirer de la sélection' : 'Ajouter à la sélection'}}</button>
-            <span *ngIf="findingRequestState(selectedSonarFinding)" class="action-required">{{findingRequestState(selectedSonarFinding)}}</span>
+            <span *ngIf="isFindingValidated(selectedSonarFinding)" class="remediation-badge badge-validated">✓ Validée</span>
+            <span *ngIf="!isFindingValidated(selectedSonarFinding) && findingRequestState(selectedSonarFinding)" class="action-required">{{findingRequestState(selectedSonarFinding)}}</span>
             <span *ngIf="selectedSonarFinding.remediationType === 'DEVELOPER_ACTION_REQUIRED'" class="action-required">Action développeur requise</span>
             <span *ngIf="selectedSonarFinding.remediationType === 'ADMIN_ACTION_REQUIRED'" class="action-required">Action administrateur requise</span>
           </footer>
