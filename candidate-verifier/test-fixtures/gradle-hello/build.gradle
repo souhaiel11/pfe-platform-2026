@@ -1,0 +1,28 @@
+// Minimal Gradle fixture proving GradleBuildAdapter: `gradle compileJava`
+// succeeds and `gradle test` writes build/test-results/test/*.xml with one
+// green test. Deliberately tiny -- no wrapper (the adapter falls back to the
+// `gradle` on PATH), no toolchain block (uses the container's running JDK 17
+// directly, so Gradle never tries to auto-provision a JDK).
+plugins {
+    id 'java'
+}
+
+repositories {
+    mavenCentral()
+}
+
+// JUnit 5 (Jupiter) 5.10.2 -- runs on JDK 8+, fully compatible with the
+// container's OpenJDK 17.
+dependencies {
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
+test {
+    useJUnitPlatform()
+}
