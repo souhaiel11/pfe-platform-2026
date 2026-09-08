@@ -17,6 +17,7 @@ import { WorkspaceManager, WorkspaceError } from './workspace-manager.service';
 import { CandidateMaterializer, MaterializationError } from './candidate-materializer.service';
 import { BuildAdapter } from './build-adapter';
 import { MavenBuildAdapter } from './maven-build-adapter';
+import { GradleBuildAdapter } from './gradle-build-adapter';
 import { RepoCacheService } from './repo-cache.service';
 
 export interface ExecuteVerifyOptions {
@@ -48,7 +49,7 @@ export class CandidateVerificationExecutor {
     @Optional() private readonly repoCache: RepoCacheService = new RepoCacheService(),
     @Optional() buildAdapters?: BuildAdapter[],
   ) {
-    this.buildAdapters = buildAdapters ?? [new MavenBuildAdapter()];
+    this.buildAdapters = buildAdapters ?? [new MavenBuildAdapter(), new GradleBuildAdapter()];
   }
 
   execute(manifest: CandidateManifest, options: ExecuteVerifyOptions = {}): CandidateVerification {
