@@ -234,6 +234,8 @@
                 [issues]="sonarIssues()"
                 advice="Examinez la correction proposée. GitHub ne sera modifié qu'après votre clic explicite."
                 actionLabel="Proposer une correction"
+                [locked]="newCorrectionBlocked()"
+                [lockedNote]="hasRealPr() ? 'Une Pull Request de correction existe déjà pour cet incident. Les autres problèmes seront traités lors d’un nouveau cycle après le prochain scan.' : null"
                 [correcting]="sonarCorrecting()"
                 (correct)="onSonarCorrect($event)">
               </app-remediation-card>

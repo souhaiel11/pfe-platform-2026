@@ -451,6 +451,9 @@ export class IncidentDetailComponent implements OnInit, OnDestroy {
   sonarCorrecting(): boolean { return this.approvalBusy || this.prGenerationState === 'polling'; }
   onSonarCorrect(selected?: Set<string>): void {
     const findingIds = selected ? [...selected] : [];
+    // PR existante ou cycle en cours : le backend rejetterait (409). Le verrou
+    // du composant masque déjà le bouton ; garde contre un appel résiduel.
+    if (this.newCorrectionBlocked()) return;
     if (!findingIds.length || !globalThis.confirm(`Confirmer une demande unique pour ${findingIds.length} ${findingIds.length === 1 ? 'problème SonarQube sélectionné' : 'problèmes SonarQube sélectionnés'} ?`)) return;
     this.approveFix(findingIds);
   }
@@ -755,6 +758,14 @@ export class IncidentDetailComponent implements OnInit, OnDestroy {
   }
 
   hasRealPr(): boolean { return /^https?:\/\//i.test(String(this.incident?.prUrl || '')); }
+  // Miroir exact des gardes backend startFix (incidents.service.ts:929 + :960) :
+  // aucune nouvelle demande de correction tant qu'une PR existe OU qu'un cycle
+  // est déjà en cours. FIX_FAILED / REJECTED sans PR restent permis.
+  newCorrectionBlocked(): boolean {
+    if (this.hasRealPr()) return true;
+    return ['APPROVAL_REQUESTED', 'FIX_STARTING', 'DISPATCHED', 'PR_CREATED', 'VALIDATING']
+      .includes(this.incident?.metadata?.fixRequest?.status);
+  }
   getSeverityBadgeClass(s: string) {
     const map: any = { CRITICAL:'high', HIGH:'high', MEDIUM:'medium', LOW:'info' };
     return map[s] || '';

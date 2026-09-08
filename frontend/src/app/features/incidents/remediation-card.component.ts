@@ -58,7 +58,7 @@ export interface RemediationIssue {
         <div style="display:flex;align-items:flex-start;gap:8px;">
           <input *ngIf="mode === 'auto-fix-selective'" type="checkbox"
                  class="rc-check" [checked]="isSelected(i.id)"
-                 [disabled]="i.remediationType !== 'AUTO_FIX_ELIGIBLE'"
+                 [disabled]="locked || i.remediationType !== 'AUTO_FIX_ELIGIBLE'"
                  (change)="toggle(i.id)" [attr.aria-label]="'Retenir ' + i.id" />
           <div style="flex:1;min-width:0;">
             <div style="font-size:12px;margin-bottom:4px;">
@@ -99,13 +99,18 @@ export interface RemediationIssue {
         correction automatique de pipeline ou de fichier.
       </div>
 
-      <!-- Bouton d'action — modes auto-fix uniquement -->
-      <button *ngIf="mode === 'auto-fix-selective'" class="jo-btn"
+      <!-- Verrou de cycle de vie — une PR de correction existe déjà pour cet
+           incident : aucune nouvelle demande n'est possible (modèle backend
+           un incident → une PR). Décidé par le parent, jamais deviné ici. -->
+      <p *ngIf="locked && lockedNote" class="rc-note">{{ lockedNote }}</p>
+
+      <!-- Bouton d'action — modes auto-fix uniquement, jamais quand verrouillé -->
+      <button *ngIf="mode === 'auto-fix-selective' && !locked" class="jo-btn"
               [disabled]="correcting || (issues.length > 0 && selected.size === 0)"
               (click)="emitCorrect()">
         {{ correcting ? 'Lancement…' : actionLabel }}
       </button>
-      <button *ngIf="mode === 'auto-fix-bulk'" class="jo-btn" [disabled]="correcting"
+      <button *ngIf="mode === 'auto-fix-bulk' && !locked" class="jo-btn" [disabled]="correcting"
               (click)="emitCorrect()">
         {{ correcting ? 'Lancement…' : actionLabel }}
       </button>
@@ -144,6 +149,10 @@ export class RemediationCardComponent implements OnChanges {
   @Input() advice: string | null = null;
   @Input() actionLabel = 'Corriger';
   @Input() correcting = false;
+  // Verrou de cycle de vie décidé par le parent (ex: une PR de correction
+  // existe déjà). true = pas de sélection, pas de bouton d'action, note affichée.
+  @Input() locked = false;
+  @Input() lockedNote: string | null = null;
   @Output() correct = new EventEmitter<Set<string>>();
 
   selected = new Set<string>();

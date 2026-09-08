@@ -216,6 +216,21 @@ export class ProjectDetailComponent implements OnInit {
   isAutoFixEligible(finding: any): boolean { return finding?.remediationType === 'AUTO_FIX_ELIGIBLE'; }
   activeFixRequest(): any { return this.latestReport?.metadata?.fixRequest || null; }
   prValidationRequest(): any { return this.latestReport?.metadata?.prValidationRequest || null; }
+  // Une vraie PR de correction existe déjà pour cet incident. Modèle backend :
+  // un incident → une fixRequest → une PR (incidents.service.ts:929). Tant que
+  // cette PR existe, aucune nouvelle demande de correction n'est acceptée ;
+  // seule la revalidation de la MÊME PR reste possible.
+  hasRealPr(): boolean { return /^https?:\/\//i.test(String(this.latestReport?.prUrl || '')); }
+  // Le backend refuse toute NOUVELLE demande de correction tant qu'un cycle est
+  // en cours (startFix ligne 960) ou qu'une PR existe (ligne 929). L'UI reflète
+  // exactement cette règle : plus de sélection ni de « Proposer une correction ».
+  // Reste permis : aucun cycle, ou cycle FIX_FAILED / REJECTED sans PR
+  // (→ « Réessayer la correction » gère ce cas séparément).
+  newCorrectionBlocked(): boolean {
+    if (this.hasRealPr()) return true;
+    return ['APPROVAL_REQUESTED', 'FIX_STARTING', 'DISPATCHED', 'PR_CREATED', 'VALIDATING']
+      .includes(this.activeFixRequest()?.status);
+  }
   canRequestPrValidation(): boolean {
     const request = this.activeFixRequest();
     const validationState = this.prValidationRequest()?.status;
@@ -316,7 +331,7 @@ export class ProjectDetailComponent implements OnInit {
     return this.canSelectFinding(finding) && this.selectedSonarIds.has(this.findingId(finding));
   }
   canSelectFinding(finding: any): boolean {
-    return this.canOperate && this.isAutoFixEligible(finding)
+    return this.canOperate && this.isAutoFixEligible(finding) && !this.newCorrectionBlocked()
       && !this.isFindingLocked(finding) && !this.isFindingOwnedByLogicalBatch(finding);
   }
   toggleFindingSelection(finding: any, selected = !this.isSelected(finding)): void {
@@ -350,7 +365,7 @@ export class ProjectDetailComponent implements OnInit {
     return message || 'Description non disponible';
   }
   openBatchConfirmation(): void {
-    if (!this.selectedSonarFindings().length) return;
+    if (this.newCorrectionBlocked() || !this.selectedSonarFindings().length) return;
     this.batchConfirmationOpen = true;
     setTimeout(() => this.batchDialog?.nativeElement.focus());
   }
@@ -358,7 +373,7 @@ export class ProjectDetailComponent implements OnInit {
   confirmSonarCorrection(): void {
     if (this.approving) return;
     const findingIds = this.selectedSonarFindings().map(f => this.findingId(f));
-    if (!this.canOperate || !this.latestReport?.id || !findingIds.length) return;
+    if (this.newCorrectionBlocked() || !this.canOperate || !this.latestReport?.id || !findingIds.length) return;
     this.approving = true;
     this.api.approveFixBatch(this.latestReport.id, findingIds).subscribe({
       next: (result: any) => {

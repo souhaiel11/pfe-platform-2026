@@ -312,11 +312,11 @@
         </div>
 
         <!-- Action unique du batch de remédiation : jamais une action par finding. -->
-        <div class="card mt-10" *ngIf="activeFixRequest()?.status === 'PR_CREATED' && activeFixRequest()?.prNumber">
+        <div class="card mt-10" *ngIf="hasRealPr() && activeFixRequest()?.prNumber">
           <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
             <div>
               <div class="card-title">Pull Request de correction</div>
-              <div style="font-size:13px;color:var(--text-secondary);">PR #{{activeFixRequest()?.prNumber}} créée</div>
+              <div style="font-size:13px;color:var(--text-secondary);">PR #{{activeFixRequest()?.prNumber}}{{activeFixRequest()?.status === 'VALIDATED' ? ' validée' : ' créée'}}</div>
             </div>
             <button *ngIf="canRequestPrValidation()" type="button" class="btn btn-success btn-sm"
                     [disabled]="prValidationBusy" (click)="requestPrValidation()">
@@ -338,6 +338,17 @@
               </button>
             </div>
           </div>
+        </div>
+
+        <!-- Verrou de cycle de vie : une PR de correction existe déjà pour cet
+             incident (modèle un incident → une PR). Les autres findings ne sont
+             plus sélectionnables ; seule la revalidation de la MÊME PR reste possible. -->
+        <div class="card mt-10" *ngIf="hasRealPr()" role="note"
+             style="border-left:3px solid var(--accent-blue);">
+          <p style="margin:0;font-size:12.5px;color:var(--text-secondary);line-height:1.55;">
+            Une Pull Request de correction existe déjà pour cet incident.
+            Les autres problèmes seront traités lors d’un nouveau cycle après le prochain scan.
+          </p>
         </div>
 
         <!-- Issues SonarQube détaillées -->
@@ -379,7 +390,7 @@
             <button *ngIf="canRetryFixRequest()" type="button" class="btn btn-warning btn-sm" [disabled]="approving" (click)="retryFailedFix()">
               Réessayer la correction
             </button>
-            <button type="button" class="btn btn-secondary btn-sm" [disabled]="!eligibleFilteredFindings().length" (click)="toggleFilteredSelection()">
+            <button *ngIf="!newCorrectionBlocked()" type="button" class="btn btn-secondary btn-sm" [disabled]="!eligibleFilteredFindings().length" (click)="toggleFilteredSelection()">
               {{allEligibleFilteredSelected() ? 'Désélectionner la vue' : 'Sélectionner les problèmes éligibles de cette vue'}}
             </button>
           </div>
@@ -440,7 +451,7 @@
           </footer>
         </aside>
 
-        <div class="selection-bar" *ngIf="selectedSonarIds.size" role="region" aria-label="Sélection de remédiation">
+        <div class="selection-bar" *ngIf="selectedSonarIds.size && !newCorrectionBlocked()" role="region" aria-label="Sélection de remédiation">
           <strong>{{selectedSonarIds.size}} problème{{selectedSonarIds.size > 1 ? 's' : ''}} sélectionné{{selectedSonarIds.size > 1 ? 's' : ''}}</strong>
           <div><button type="button" class="btn btn-secondary" (click)="clearSonarSelection()">Effacer la sélection</button><button type="button" class="btn btn-primary" (click)="openBatchConfirmation()">Proposer une correction</button></div>
         </div>
