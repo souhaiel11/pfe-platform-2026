@@ -17,7 +17,7 @@ import { InternalSecretGuard } from '../auth/internal-secret.guard';
 import { CandidateVerificationService } from './candidate-verification.service';
 import { assertCandidateStillValidForWrite } from './write-guard';
 import { assertRemoteHeadMatchesCandidateBase } from './remote-head-drift';
-import { CandidateManifest, CandidateVerification } from './candidate-verification.types';
+import { CandidateManifest, CandidateVerification, VerificationRequest, VerificationResult, assertHeadVerificationRequest } from './candidate-verification.types';
 
 @Controller('candidate-verification')
 export class CandidateVerificationController {
@@ -25,7 +25,11 @@ export class CandidateVerificationController {
 
   @UseGuards(InternalSecretGuard)
   @Post('verify')
-  verify(@Body() body: { manifest: CandidateManifest; allowedPaths?: string[]; options?: { timeoutMs?: number } }) {
+  verify(@Body() body: VerificationRequest) {
+    if (body?.verifyHeadOnly === true) {
+      try { assertHeadVerificationRequest(body); } catch { throw new BadRequestException('INVALID_HEAD_VERIFICATION_REQUEST'); }
+      return this.service.verifyHead(body);
+    }
     if (!body?.manifest || !Array.isArray(body.manifest.files)) {
       throw new BadRequestException('A CandidateManifest with a files[] array is required.');
     }
@@ -34,7 +38,7 @@ export class CandidateVerificationController {
 
   @UseGuards(InternalSecretGuard)
   @Post('write-guard')
-  writeGuard(@Body() body: { verification: CandidateVerification; candidateManifest: CandidateManifest }) {
+  writeGuard(@Body() body: { verification: VerificationResult; candidateManifest: CandidateManifest }) {
     if (!body?.verification || !body?.candidateManifest) {
       throw new BadRequestException('Both verification and candidateManifest are required.');
     }

@@ -13,7 +13,7 @@ import { CandidateVerificationExecutor } from './candidate-verification-executor
 import { WorkspaceManager } from './workspace-manager.service';
 import { CandidateMaterializer } from './candidate-materializer.service';
 import { RepoCacheService } from './repo-cache.service';
-import { CandidateManifest } from '../../backend/src/candidate-verification/candidate-verification.types';
+import { VerificationRequest, assertHeadVerificationRequest } from '../../backend/src/candidate-verification/candidate-verification.types';
 
 const PORT = Number(process.env.PORT) || 4100;
 const WORKSPACE_ROOT = process.env.WORKSPACE_ROOT || undefined;
@@ -51,11 +51,19 @@ const server = http.createServer(async (req, res) => {
   }
   try {
     const raw = await readBody(req);
-    let body: { manifest: CandidateManifest; allowedPaths?: string[]; options?: { timeoutMs?: number } };
+    let body: VerificationRequest;
     try {
       body = JSON.parse(raw);
     } catch {
       sendJson(res, 400, { error: 'MALFORMED_JSON_BODY' });
+      return;
+    }
+    if (body?.verifyHeadOnly === true) {
+      try { assertHeadVerificationRequest(body); } catch {
+        sendJson(res, 400, { error: 'INVALID_HEAD_VERIFICATION_REQUEST' });
+        return;
+      }
+      sendJson(res, 200, executor.executeHead(body));
       return;
     }
     if (!body?.manifest || !Array.isArray(body.manifest.files)) {

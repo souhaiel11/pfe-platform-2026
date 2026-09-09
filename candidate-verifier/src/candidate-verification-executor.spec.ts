@@ -6,6 +6,7 @@
 // and repoPath is no longer passed in (RepoCacheService, also moved here,
 // now resolves it internally from manifest.repository).
 import * as assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
@@ -19,9 +20,13 @@ import { CandidateManifest } from '../../backend/src/candidate-verification/cand
 const REPO_PATH = '/home/souhaiel/pfe-2026/pfe-app-test';
 const FIXED_SHA = '8a315b0dd508eb9843bb3037fe2827f02f6faa78';
 
-const SP = '/tmp/claude-1000/-home-souhaiel-pfe-2026-platform/bdcb2d19-e972-4e6c-b19f-1e99e7f70174/scratchpad/r22c-fixtures';
-const fixedTaskDTOTest = fs.readFileSync(path.join(SP, 'TaskDTOTest.fixed.java'), 'utf8');
-const brokenTaskDTO = fs.readFileSync(path.join(SP, 'TaskDTO.broken.java'), 'utf8');
+// Derive fixtures from the same immutable commit as the workspace. No
+// dependency on a temporary file left behind by an earlier audit session.
+const fixtureAtCommit = (file: string) => execFileSync('git', ['-C', REPO_PATH, 'show', `${FIXED_SHA}:${file}`], { encoding: 'utf8' });
+const fixedTaskDTOTest = fixtureAtCommit('src/test/java/com/pfe/devsecops/dto/TaskDTOTest.java');
+const sourceDTO = fixtureAtCommit('src/main/java/com/pfe/devsecops/dto/TaskDTO.java');
+const brokenTaskDTO = sourceDTO.replace('private Long id;', 'private MissingCandidateType id;');
+assert.notEqual(brokenTaskDTO, sourceDTO, 'compile-failure fixture actually changes the source');
 const testRegressionContent = fixedTaskDTOTest.replace(
   'assertEquals(Task.TaskStatus.TODO, dto.toEntity().getStatus());',
   'assertEquals(Task.TaskStatus.DONE, dto.toEntity().getStatus());',

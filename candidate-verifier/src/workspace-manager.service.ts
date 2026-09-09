@@ -26,6 +26,7 @@ export interface WorkspaceHandle {
   workspaceId: string;
   path: string;
   exactShaVerified: boolean;
+  checkoutSha: string;
 }
 
 interface RegistryEntry {
@@ -111,7 +112,7 @@ export class WorkspaceManager {
       );
     }
 
-    return { workspaceId, path: workspacePath, exactShaVerified: true };
+    return { workspaceId, path: workspacePath, exactShaVerified: true, checkoutSha: workspaceHeadSha };
   }
 
   cleanupWorkspace(workspaceId: string, repoPath: string): void {

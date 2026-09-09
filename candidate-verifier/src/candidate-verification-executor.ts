@@ -11,7 +11,7 @@
 // decides a business retry -- identical invariants to the code this was
 // moved from.
 import { Injectable, Optional } from '@nestjs/common';
-import { CandidateManifest, CandidateVerification, FailureClass } from '../../backend/src/candidate-verification/candidate-verification.types';
+import { CandidateManifest, CandidateVerification, FailureClass, HeadVerificationRequest, HeadVerification, VerificationResult, assertHeadVerificationRequest } from '../../backend/src/candidate-verification/candidate-verification.types';
 import { computeCandidateDigest } from '../../backend/src/candidate-verification/candidate-digest';
 import { WorkspaceManager, WorkspaceError } from './workspace-manager.service';
 import { CandidateMaterializer, MaterializationError } from './candidate-materializer.service';
@@ -55,40 +55,59 @@ export class CandidateVerificationExecutor {
   }
 
   execute(manifest: CandidateManifest, options: ExecuteVerifyOptions = {}): CandidateVerification {
-    const candidateDigest = manifest.candidateDigest ?? computeCandidateDigest(manifest);
-    const workspaceId = this.workspaceManager.workspaceId(manifest.requestId, manifest.batchId, manifest.candidateAttempt);
-    const identity = {
+    return this.run(manifest, options) as CandidateVerification;
+  }
+
+  executeHead(request: HeadVerificationRequest): HeadVerification {
+    assertHeadVerificationRequest(request);
+    return this.run(null, { timeoutMs: request.options?.timeoutMs }, request) as HeadVerification;
+  }
+
+  private run(manifest: CandidateManifest | null, options: ExecuteVerifyOptions, head?: HeadVerificationRequest): VerificationResult {
+    const context = head || manifest;
+    const targetSha = head ? head.targetSha.toLowerCase() : manifest.candidateBaseSha;
+    let checkoutSha: string | null = null;
+    const candidateDigest = head ? undefined : (manifest.candidateDigest ?? computeCandidateDigest(manifest));
+    const workspaceId = this.workspaceManager.workspaceId(context.requestId, context.batchId, context.candidateAttempt);
+    const identity = head ? { repository: head.repository, targetSha, validationRequestId: head.validationRequestId,
+      requestId: head.requestId, batchId: head.batchId, candidateAttempt: head.candidateAttempt } : {
       candidateId: manifest.candidateId, requestId: manifest.requestId, batchId: manifest.batchId,
       candidateAttempt: manifest.candidateAttempt, candidateBaseSha: manifest.candidateBaseSha, candidateDigest,
     };
     const targeted = { status: 'NOT_RUN' as const, reason: 'NO_HIGH_CONFIDENCE_TARGET_SELECTION' as const };
     const staticAnalysis = { status: 'NOT_RUN' as const, reason: 'SUPPORTED_STATIC_ADAPTER_NOT_CONFIGURED' as const, newIssues: [] as unknown[], evidenceRef: null };
 
-    const base = (overrides: Partial<CandidateVerification>): CandidateVerification => ({
-      identity,
-      workspace: { workspaceId, exactShaVerified: false, created: false, cleaned: false },
-      manifestValidation: { status: 'FAIL', errors: [] },
-      compile: { status: 'NOT_RUN', exitCode: null, durationMs: null, evidenceRef: null },
-      tests: { targeted, regression: { status: 'NOT_RUN', total: null, failures: null, errors: null, skipped: null, durationMs: null, evidenceRef: null } },
-      staticAnalysis,
-      overall: 'FAIL',
-      verificationLevel: 'COMPILE_TEST_VERIFIED',
-      failureClass: null,
-      ...overrides,
-    });
+    const base = (overrides: Partial<CandidateVerification>): VerificationResult => {
+      const result: CandidateVerification = {
+        identity: identity as CandidateVerification['identity'],
+        workspace: { workspaceId, exactShaVerified: false, created: false, cleaned: false },
+        manifestValidation: { status: 'FAIL', errors: [] },
+        compile: { status: 'NOT_RUN', exitCode: null, durationMs: null, evidenceRef: null },
+        tests: { targeted, regression: { status: 'NOT_RUN', total: null, failures: null, errors: null, skipped: null, durationMs: null, evidenceRef: null } },
+        staticAnalysis,
+        overall: 'FAIL',
+        verificationLevel: 'COMPILE_TEST_VERIFIED',
+        failureClass: null,
+        ...overrides,
+      };
+      if (!head) return result;
+      const { manifestValidation, ...common } = result;
+      return { ...common, mode: 'HEAD_ONLY', identity: identity as HeadVerification['identity'],
+        workspace: { ...result.workspace, checkoutSha } };
+    };
 
-    const manifestErrors = validateManifest(manifest);
+    const manifestErrors = head ? [] : validateManifest(manifest);
     if (manifestErrors.length > 0) {
       return base({ manifestValidation: { status: 'FAIL', errors: manifestErrors }, overall: 'FAIL', failureClass: 'CANDIDATE_MANIFEST_INVALID' });
     }
 
     let repoPath: string;
     try {
-      repoPath = this.repoCache.ensureRepo(manifest.repository);
+      repoPath = this.repoCache.ensureRepo(context.repository);
     } catch (err: any) {
       return base({
         manifestValidation: { status: 'PASS', errors: [] },
-        overall: 'FAIL', failureClass: 'WORKSPACE_INFRA_FAILURE',
+        overall: head ? 'INCONCLUSIVE' : 'FAIL', failureClass: 'WORKSPACE_INFRA_FAILURE',
       });
     }
 
@@ -97,30 +116,39 @@ export class CandidateVerificationExecutor {
     let exactShaVerified = false;
     try {
       const handle = this.workspaceManager.createWorkspace({
-        repoPath, candidateBaseSha: manifest.candidateBaseSha,
-        requestId: manifest.requestId, batchId: manifest.batchId, candidateAttempt: manifest.candidateAttempt,
+        repoPath, candidateBaseSha: targetSha,
+        requestId: context.requestId, batchId: context.batchId, candidateAttempt: context.candidateAttempt,
       });
       workspacePath = handle.path;
       workspaceCreated = true;
       exactShaVerified = handle.exactShaVerified;
+      if (head) {
+        checkoutSha = handle.checkoutSha || null;
+        if (!exactShaVerified || checkoutSha?.toLowerCase() !== targetSha) {
+          this.workspaceManager.cleanupWorkspace(workspaceId, repoPath);
+          const failure = base({ overall: 'INCONCLUSIVE', workspace: { workspaceId, exactShaVerified: false, created: true, cleaned: true } }) as HeadVerification;
+          return { ...failure, failureClass: 'SHA_UNAVAILABLE' };
+        }
+      }
     } catch (err: any) {
       const failureClass: FailureClass = err instanceof WorkspaceError ? err.failureClass : 'WORKSPACE_INFRA_FAILURE';
       // Nothing was created (or WorkspaceManager already force-cleaned a
       // SHA-mismatched worktree itself) — no cleanup step needed here.
-      return base({
+      const failure = base({
         manifestValidation: { status: 'PASS', errors: [] },
         workspace: { workspaceId, exactShaVerified: false, created: false, cleaned: false },
-        overall: 'FAIL', failureClass,
+        overall: head ? 'INCONCLUSIVE' : 'FAIL', failureClass,
       });
+      return head ? { ...failure, failureClass: 'SHA_UNAVAILABLE' } as HeadVerification : failure;
     }
 
     // From here on a workspace exists and MUST be cleaned up no matter how
     // this function exits (return, thrown error) — captured in `result` and
     // patched with cleaned:true right before returning, in `finally`.
-    let result!: CandidateVerification;
+    let result!: VerificationResult;
     try {
       try {
-        this.materializer.materialize(workspacePath, manifest, options.allowedPaths);
+        if (!head) this.materializer.materialize(workspacePath, manifest, options.allowedPaths);
       } catch (err: any) {
         const failureClass: FailureClass = err instanceof MaterializationError ? err.failureClass : 'CANDIDATE_MATERIALIZATION_FAILED';
         result = base({
@@ -156,7 +184,7 @@ export class CandidateVerificationExecutor {
 
       const regression = adapter.runRegressionTests(workspacePath, timeoutMs);
       const testsFailed = regression.status === 'FAILED';
-      const testsUnknown = regression.status === 'UNKNOWN';
+      const testsUnknown = regression.status === 'UNKNOWN' || (!!head && regression.status !== 'SUCCESS' && !testsFailed);
       const overall = testsFailed ? 'FAIL' : testsUnknown ? 'INCONCLUSIVE' : 'PASS';
       const failureClass: FailureClass | null = testsFailed ? 'CANDIDATE_TEST_REGRESSION' : testsUnknown ? 'UNKNOWN' : null;
 

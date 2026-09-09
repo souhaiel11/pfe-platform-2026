@@ -8,7 +8,7 @@
 // failures -- it makes no verification decision of its own, and passes the
 // worker's real result through unchanged.
 import { Injectable } from '@nestjs/common';
-import { CandidateManifest, CandidateVerification, FailureClass } from './candidate-verification.types';
+import { CandidateManifest, CandidateVerification, FailureClass, HeadVerificationRequest, HeadVerification, assertHeadVerificationRequest } from './candidate-verification.types';
 import { computeCandidateDigest } from './candidate-digest';
 
 export interface VerifyOptions {
@@ -88,4 +88,44 @@ export class CandidateVerificationService {
     // separately by the caller, never folded into this result).
     return body;
   }
+  async verifyHead(request: HeadVerificationRequest): Promise<HeadVerification> {
+    assertHeadVerificationRequest(request);
+    const identity = { repository: request.repository, targetSha: request.targetSha.toLowerCase(),
+      validationRequestId: request.validationRequestId, requestId: request.requestId,
+      batchId: request.batchId, candidateAttempt: request.candidateAttempt };
+    const failure = (failureClass: FailureClass): HeadVerification => ({
+      mode: 'HEAD_ONLY', identity,
+      workspace: { workspaceId: `${request.requestId}/${request.batchId}/attempt-${request.candidateAttempt}`,
+        checkoutSha: null, exactShaVerified: false, created: false, cleaned: false },
+      compile: { status: 'NOT_RUN', exitCode: null, durationMs: null, evidenceRef: null },
+      tests: { targeted: { status: 'NOT_RUN', reason: 'NO_HIGH_CONFIDENCE_TARGET_SELECTION' },
+        regression: { status: 'NOT_RUN', total: null, failures: null, errors: null, skipped: null, durationMs: null, evidenceRef: null } },
+      staticAnalysis: { status: 'NOT_RUN', reason: 'SUPPORTED_STATIC_ADAPTER_NOT_CONFIGURED', newIssues: [], evidenceRef: null },
+      overall: 'INCONCLUSIVE', verificationLevel: 'COMPILE_TEST_VERIFIED', failureClass,
+    });
+    let response: Response;
+    try {
+      response = await fetch(this.workerUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(request), signal: AbortSignal.timeout((request.options?.timeoutMs ?? DEFAULT_TIMEOUT_MS) + 10_000) });
+    } catch (err: any) {
+      return failure(err?.name === 'AbortError' || err?.name === 'TimeoutError' ? 'VERIFIER_TIMEOUT' : 'VERIFIER_UNAVAILABLE');
+    }
+    if (!response.ok) return failure('VERIFIER_PROTOCOL_ERROR');
+    let body: any;
+    try { body = await response.json(); } catch { return failure('VERIFIER_PROTOCOL_ERROR'); }
+    if (!body || body.mode !== 'HEAD_ONLY' || 'manifestValidation' in body
+      || !body.identity || Object.entries(identity).some(([key, value]) => body.identity[key] !== value)
+      || !body.workspace || typeof body.workspace.exactShaVerified !== 'boolean'
+      || !(body.workspace.checkoutSha === null || (typeof body.workspace.checkoutSha === 'string' && /^[a-f0-9]{40}$/i.test(body.workspace.checkoutSha)))
+      || !['SUCCESS', 'FAILED', 'NOT_RUN'].includes(body.compile?.status)
+      || !['SUCCESS', 'FAILED', 'NOT_RUN', 'UNKNOWN'].includes(body.tests?.regression?.status)
+      || !['PASS', 'FAIL', 'INCONCLUSIVE'].includes(body.overall)
+      || body.verificationLevel !== 'COMPILE_TEST_VERIFIED'
+      || (body.workspace.exactShaVerified && body.workspace.checkoutSha?.toLowerCase() !== identity.targetSha)
+      || (body.overall === 'PASS' && (!body.workspace.exactShaVerified || body.compile.status !== 'SUCCESS' || body.tests.regression.status !== 'SUCCESS'))) {
+      return failure('VERIFIER_PROTOCOL_ERROR');
+    }
+    return body;
+  }
+
 }

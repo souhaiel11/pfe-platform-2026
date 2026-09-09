@@ -3,9 +3,10 @@
 // GitHub, and MUST consume the exact same CandidateManifest object that was
 // verified. This function is the only place that decision is made, so a
 // later phase cannot accidentally skip it by inlining an ad hoc check.
-import { CandidateManifest, CandidateVerification } from './candidate-verification.types';
+import { CandidateManifest, CandidateVerification, VerificationResult } from './candidate-verification.types';
 
 export type WriteGuardRejectionReason =
+  | 'HEAD_ONLY_NOT_WRITABLE'
   | 'VERIFICATION_NOT_PASS'
   | 'CANDIDATE_DIGEST_MISMATCH'
   | 'CANDIDATE_BASE_SHA_MISMATCH'
@@ -14,17 +15,19 @@ export type WriteGuardRejectionReason =
 export type WriteGuardResult = { ok: true } | { ok: false; reason: WriteGuardRejectionReason };
 
 export function assertCandidateStillValidForWrite(
-  verification: CandidateVerification,
+  verification: VerificationResult,
   candidateManifest: CandidateManifest,
 ): WriteGuardResult {
+  if ('mode' in verification && verification.mode === 'HEAD_ONLY') return { ok: false, reason: 'HEAD_ONLY_NOT_WRITABLE' };
+  const candidate = verification as CandidateVerification;
   if (verification.overall !== 'PASS') {
     return { ok: false, reason: 'VERIFICATION_NOT_PASS' };
   }
   const manifestDigest = candidateManifest.candidateDigest;
-  if (!manifestDigest || verification.identity.candidateDigest !== manifestDigest) {
+  if (!manifestDigest || candidate.identity.candidateDigest !== manifestDigest) {
     return { ok: false, reason: 'CANDIDATE_DIGEST_MISMATCH' };
   }
-  if (verification.identity.candidateBaseSha.toLowerCase() !== candidateManifest.candidateBaseSha.toLowerCase()) {
+  if (candidate.identity.candidateBaseSha.toLowerCase() !== candidateManifest.candidateBaseSha.toLowerCase()) {
     return { ok: false, reason: 'CANDIDATE_BASE_SHA_MISMATCH' };
   }
   if (verification.workspace.exactShaVerified !== true) {

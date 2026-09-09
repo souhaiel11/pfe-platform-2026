@@ -119,3 +119,54 @@ export interface CandidateVerification {
   verificationLevel: VerificationLevel;
   failureClass: FailureClass | null;
 }
+
+/** Read-only verification of an existing commit, without candidate overlays. */
+export interface HeadVerificationRequest {
+  verifyHeadOnly: true;
+  repository: string;
+  targetSha: string;
+  validationRequestId: string;
+  requestId: string;
+  batchId: string;
+  candidateAttempt: number;
+  options?: { timeoutMs?: number };
+  manifest?: never;
+}
+
+export interface HeadVerification extends Omit<CandidateVerification, 'identity' | 'workspace' | 'manifestValidation' | 'failureClass'> {
+  mode: 'HEAD_ONLY';
+  identity: {
+    repository: string;
+    targetSha: string;
+    validationRequestId: string;
+    requestId: string;
+    batchId: string;
+    candidateAttempt: number;
+  };
+  workspace: CandidateVerification['workspace'] & { checkoutSha: string | null };
+  failureClass: FailureClass | 'SHA_UNAVAILABLE';
+}
+
+export type VerificationResult = CandidateVerification | HeadVerification;
+export type VerificationRequest = HeadVerificationRequest | {
+  verifyHeadOnly?: false;
+  manifest: CandidateManifest;
+  allowedPaths?: string[];
+  options?: { timeoutMs?: number };
+};
+
+/** Shared by both HTTP boundaries; no Git or build side effects. */
+export function assertHeadVerificationRequest(value: HeadVerificationRequest): void {
+  const id = /^[A-Za-z0-9_-]{1,128}$/;
+  if (!value || value.verifyHeadOnly !== true || 'manifest' in value
+    || 'candidateDigest' in value || 'files' in value
+    || typeof value.targetSha !== 'string' || !/^[a-f0-9]{40}$/i.test(value.targetSha)
+    || typeof value.repository !== 'string'
+    || !/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(value.repository)
+    || value.repository.split('/').some(s => s === '.' || s === '..')
+    || ![value.validationRequestId, value.requestId, value.batchId].every(v => typeof v === 'string' && id.test(v))
+    || !Number.isInteger(value.candidateAttempt) || value.candidateAttempt < 0
+    || (value.options?.timeoutMs !== undefined && (!Number.isFinite(value.options.timeoutMs) || value.options.timeoutMs <= 0))) {
+    throw new Error('INVALID_HEAD_VERIFICATION_REQUEST');
+  }
+}
