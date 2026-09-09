@@ -3,21 +3,22 @@ import { analyzeRegression, conservativeRegressionPolicy, RegressionFinding, Reg
 import { computeFindingFingerprint, normalizeFindingPath } from './finding-fingerprint';
 import { normalizeSonarFindings, isActiveSonarIssue, RawSonarIssue } from './sonar-regression-adapter';
 
-// BRIQUE 3 — proves the generic regression engine's PHASE 11 test matrix
-// (Cases A-I; Case J -- Brique 1/2 must remain green -- is the unmodified
-// regression suite re-run alongside this file, see the closeout report).
-// Cases A/E/F/G/H/I run on the pure engine directly with synthetic findings
-// (source 'TEST') -- they are about engine SEMANTICS, not any scanner. Case
-// B/C also use the pure engine to prove policy is respected exactly as
-// given, never fabricated. Case D and the PR #25 fixture go through the
-// real Sonar adapter, since line-number tolerance and componentKey-prefix
-// stripping are adapter-boundary concerns.
+// BRIQUE 3 (original Phase 11 Cases A-I) + CLOSEOUT (Part 9 Tests A-L,
+// letters re-used for closely related scenarios -- see the closeout report
+// for the exact mapping). Cases A/E/F/G/H/I and closeout TEST J run on the
+// pure engine directly with synthetic findings (source 'TEST') -- they are
+// about engine SEMANTICS, not any scanner. Case B/C also use the pure
+// engine to prove policy is respected exactly as given, never fabricated.
+// Case D and the PR #25 fixture go through the real Sonar adapter, since
+// line-number tolerance and componentKey-prefix stripping are
+// adapter-boundary concerns. Closeout TEST L (Brique 1/2 must remain green)
+// is the unmodified regression suite re-run alongside this file.
 
 const ABC = 'a'.repeat(40);
 const DEF = 'd'.repeat(40);
 
-function finding(rule: string, path = 'Service.java'): RegressionFinding {
-  return { source: 'TEST', rule, path };
+function finding(rule: string, path = 'Service.java', message?: string): RegressionFinding {
+  return { source: 'TEST', rule, path, message: message ?? null };
 }
 
 const alwaysBlocking: RegressionPolicy = { isBlocking: () => true };
@@ -121,6 +122,48 @@ function main() {
     });
     assert.ok(out.ambiguousFindings.length > 0, 'CASE E: ambiguous findings are recorded');
     assert.equal(out.result, 'INCONCLUSIVE', 'CASE E: ambiguous evidence never resolves to CLEAN or CHANGES_REQUIRED');
+  }
+
+  // ------------------------------------------------------------------
+  // CLOSEOUT TEST J — same rule + same file + multiple occurrences
+  // (a fingerprint collision), with insufficient secondary evidence to pair
+  // them confidently: a plausible resolution (baseline-only message) and a
+  // plausible introduction (candidate-only message) coexist at the exact
+  // same (source, rule, path) identity. Equal or unequal counts must never
+  // be silently trusted here -- expected AMBIGUOUS / INCONCLUSIVE.
+  // ------------------------------------------------------------------
+  {
+    const out = analyzeRegression({
+      expectedCandidateSha: ABC,
+      baseline: { sha: ABC, findings: [finding('DUP', 'Same.java', 'msg A'), finding('DUP', 'Same.java', 'msg B')], complete: true },
+      candidate: { sha: ABC, findings: [finding('DUP', 'Same.java', 'msg A'), finding('DUP', 'Same.java', 'msg C')], complete: true },
+      policy: alwaysBlocking,
+    });
+    // "msg A" pairs confidently (present on both sides) -> pre-existing.
+    assert.equal(out.preExistingFindings.length, 1);
+    // "msg B" (baseline-only) and "msg C" (candidate-only) cannot be
+    // confidently told apart from "the same finding whose message changed" --
+    // both must be ambiguous, never RESOLVED+INTRODUCED by raw count delta.
+    assert.equal(out.ambiguousFindings.length, 2, 'TEST J: the unpaired leftovers on both sides are ambiguous');
+    assert.equal(out.resolvedFindings.length, 0, 'TEST J: never silently RESOLVED when an equally-plausible introduction coexists');
+    assert.equal(out.introducedFindings.length, 0, 'TEST J: never silently INTRODUCED when an equally-plausible resolution coexists');
+    assert.equal(out.result, 'INCONCLUSIVE', 'TEST J: fail-closed ambiguity, never a false CLEAN or a fabricated CHANGES_REQUIRED');
+  }
+  // Same collision, but ONE-DIRECTIONAL evidence (no candidate-only leftover
+  // exists to conflate with): a purely-resolved instance IS still
+  // confidently classified, proving the design is not needlessly
+  // conservative when there is genuinely nothing to disambiguate.
+  {
+    const out = analyzeRegression({
+      expectedCandidateSha: ABC,
+      baseline: { sha: ABC, findings: [finding('DUP', 'Same.java', 'msg A'), finding('DUP', 'Same.java', 'msg B')], complete: true },
+      candidate: { sha: ABC, findings: [finding('DUP', 'Same.java', 'msg A')], complete: true },
+      policy: alwaysBlocking,
+    });
+    assert.equal(out.preExistingFindings.length, 1);
+    assert.equal(out.resolvedFindings.length, 1, 'msg B has no candidate-side counterpart to conflate with -- confidently RESOLVED');
+    assert.equal(out.ambiguousFindings.length, 0);
+    assert.equal(out.result, 'CLEAN', 'one-directional collision evidence is not needlessly flagged ambiguous');
   }
 
   // ------------------------------------------------------------------

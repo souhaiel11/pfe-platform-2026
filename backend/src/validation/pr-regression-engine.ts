@@ -70,11 +70,24 @@ export type RegressionResult = 'CLEAN' | 'CHANGES_REQUIRED' | 'INCONCLUSIVE';
 export interface RegressionOutput {
   baselineSha: string | null;
   candidateSha: string | null;
+  baselineSnapshotComplete: boolean;
+  candidateSnapshotComplete: boolean;
   preExistingFindings: IdentifiedFinding[];
   resolvedFindings: IdentifiedFinding[];
   introducedFindings: IdentifiedFinding[];
+  /**
+   * Findings that cannot be confidently classified: either no fingerprint
+   * could be computed at all, or (Phase 5 closeout) a fingerprint collision
+   * left a plausible resolution and a plausible introduction unpaired at
+   * the same (source, rule, path) identity. May contain findings from
+   * EITHER side -- this is deliberately not candidate-only.
+   */
   ambiguousFindings: IdentifiedFinding[];
   blockingIntroducedFindings: IdentifiedFinding[];
+  preExistingCount: number;
+  resolvedCount: number;
+  introducedCount: number;
+  ambiguousCount: number;
   warnings: string[];
   result: RegressionResult;
 }
@@ -94,9 +107,15 @@ export const conservativeRegressionPolicy: RegressionPolicy = { isBlocking: () =
 function inconclusive(baseline: RegressionSnapshot, candidate: RegressionSnapshot, warnings: string[]): RegressionOutput {
   return {
     baselineSha: baseline.sha ?? null, candidateSha: candidate.sha ?? null,
+    baselineSnapshotComplete: baseline.complete === true, candidateSnapshotComplete: candidate.complete === true,
     preExistingFindings: [], resolvedFindings: [], introducedFindings: [], ambiguousFindings: [], blockingIntroducedFindings: [],
+    preExistingCount: 0, resolvedCount: 0, introducedCount: 0, ambiguousCount: 0,
     warnings, result: 'INCONCLUSIVE',
   };
+}
+
+function normalizedMessage(finding: RegressionFinding): string {
+  return String(finding.message ?? '').trim();
 }
 
 function identify(finding: RegressionFinding): IdentifiedFinding {
@@ -150,18 +169,76 @@ export function analyzeRegression(input: RegressionInput): RegressionOutput {
   const blockingIntroducedFindings: IdentifiedFinding[] = [];
   const resolvedFindings: IdentifiedFinding[] = [];
 
+  const introduce = (finding: IdentifiedFinding) => {
+    introducedFindings.push(finding);
+    if (policy.isBlocking(finding)) blockingIntroducedFindings.push(finding);
+  };
+
   const allFingerprints = new Set([...baselineBuckets.keys(), ...candidateBuckets.keys()]);
   for (const fingerprint of allFingerprints) {
     const baselineOccurrences = baselineBuckets.get(fingerprint) ?? [];
     const candidateOccurrences = candidateBuckets.get(fingerprint) ?? [];
-    const matched = Math.min(baselineOccurrences.length, candidateOccurrences.length);
-    for (let i = 0; i < matched; i++) preExistingFindings.push(candidateOccurrences[i]);
-    for (let i = matched; i < candidateOccurrences.length; i++) {
-      const introduced = candidateOccurrences[i];
-      introducedFindings.push(introduced);
-      if (policy.isBlocking(introduced)) blockingIntroducedFindings.push(introduced);
+
+    // PHASE 5 (Brique 3 closeout) — a singleton on both sides has no
+    // collision to resolve: a direct 1:1/1:0/0:1 correspondence is the only
+    // possible reading, regardless of whether incidental evidence (message
+    // text, line number) differs -- e.g. Case D/Test I, a line moving when
+    // surrounding code changes.
+    if (baselineOccurrences.length <= 1 && candidateOccurrences.length <= 1) {
+      const matched = Math.min(baselineOccurrences.length, candidateOccurrences.length);
+      for (let i = 0; i < matched; i++) preExistingFindings.push(candidateOccurrences[i]);
+      for (let i = matched; i < candidateOccurrences.length; i++) introduce(candidateOccurrences[i]);
+      for (let i = matched; i < baselineOccurrences.length; i++) resolvedFindings.push(baselineOccurrences[i]);
+      continue;
     }
-    for (let i = matched; i < baselineOccurrences.length; i++) resolvedFindings.push(baselineOccurrences[i]);
+
+    // COLLISION — two or more findings share this exact (source, rule, path)
+    // identity on at least one side. Equal counts must never be silently
+    // assumed to mean "identical logical findings": a resolved instance and
+    // an unrelated newly-introduced one at the very same fingerprint can
+    // cancel out numerically and hide a real regression. Secondary evidence
+    // (the scanner-reported message text, the next most specific fact this
+    // platform has) disambiguates confidently paired instances; whatever is
+    // left over is fail-closed AMBIGUOUS rather than guessed, deliberately
+    // NOT a brittle full-field fingerprint (Phase 3/5): message text alone,
+    // as a secondary signal on top of the primary identity, not folded into
+    // the identity itself.
+    const groupByMessage = (findings: IdentifiedFinding[]) => {
+      const groups = new Map<string, IdentifiedFinding[]>();
+      const noEvidence: IdentifiedFinding[] = [];
+      for (const finding of findings) {
+        const message = normalizedMessage(finding);
+        if (!message) { noEvidence.push(finding); continue; } // no message text = no secondary evidence at all
+        const group = groups.get(message);
+        if (group) group.push(finding); else groups.set(message, [finding]);
+      }
+      return { groups, noEvidence };
+    };
+    const baselineByMessage = groupByMessage(baselineOccurrences);
+    const candidateByMessage = groupByMessage(candidateOccurrences);
+    const baselineLeftover: IdentifiedFinding[] = [...baselineByMessage.noEvidence];
+    const candidateLeftover: IdentifiedFinding[] = [...candidateByMessage.noEvidence];
+
+    const allMessages = new Set([...baselineByMessage.groups.keys(), ...candidateByMessage.groups.keys()]);
+    for (const message of allMessages) {
+      const baselineGroup = baselineByMessage.groups.get(message) ?? [];
+      const candidateGroup = candidateByMessage.groups.get(message) ?? [];
+      const matched = Math.min(baselineGroup.length, candidateGroup.length);
+      for (let i = 0; i < matched; i++) preExistingFindings.push(candidateGroup[i]);
+      for (let i = matched; i < candidateGroup.length; i++) candidateLeftover.push(candidateGroup[i]);
+      for (let i = matched; i < baselineGroup.length; i++) baselineLeftover.push(baselineGroup[i]);
+    }
+
+    if (baselineLeftover.length > 0 && candidateLeftover.length > 0) {
+      // Both a plausible resolution AND a plausible introduction coexist at
+      // the same identity with no way to pair them -- never silently
+      // classify either way (Phase 5: never false CLEAN).
+      ambiguousFindings.push(...baselineLeftover, ...candidateLeftover);
+    } else if (candidateLeftover.length > 0) {
+      for (const finding of candidateLeftover) introduce(finding);
+    } else if (baselineLeftover.length > 0) {
+      resolvedFindings.push(...baselineLeftover);
+    }
   }
 
   // PHASE 5 — any ambiguous evidence is treated as blocking-significant: we
@@ -175,7 +252,10 @@ export function analyzeRegression(input: RegressionInput): RegressionOutput {
 
   return {
     baselineSha: baseline.sha, candidateSha: candidate.sha,
+    baselineSnapshotComplete: baseline.complete === true, candidateSnapshotComplete: candidate.complete === true,
     preExistingFindings, resolvedFindings, introducedFindings, ambiguousFindings, blockingIntroducedFindings,
+    preExistingCount: preExistingFindings.length, resolvedCount: resolvedFindings.length,
+    introducedCount: introducedFindings.length, ambiguousCount: ambiguousFindings.length,
     warnings, result,
   };
 }

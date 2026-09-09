@@ -841,22 +841,39 @@ export class IncidentsService {
     // Ne mélange JAMAIS ceci avec findingResults (verdict de remédiation
     // ci-dessus) : les deux peuvent être simultanément VALIDATED/CLEAN,
     // VALIDATED/CHANGES_REQUIRED, etc. Fail closed par construction
-    // (analyzeRegression) : tant qu'aucun producteur ne renseigne
-    // fixRequest.baselineSha ni validation.candidateFindingsSnapshot (aucun
-    // aujourd'hui — voir pr-regression-engine.ts), le résultat reste
-    // INCONCLUSIVE, exactement le comportement précédent codé en dur.
+    // (analyzeRegression).
+    //
+    // BRIQUE 3 CLOSEOUT — PART 2 : incident.metadata.enrichedData.sonar.issues
+    // et incident.metadata.sourceCommitSha sont écrits ATOMIQUEMENT en un seul
+    // PUT WF1 ("Save Final Decision to Backend" -> metadata: rawData), donc ne
+    // peuvent pas diverger aujourd'hui par construction -- mais on ne se fie
+    // JAMAIS à cette seule garantie architecturale : on revérifie ici que le
+    // sourceCommitSha ACTUELLEMENT persisté sur l'incident correspond encore
+    // exactement au baselineSha GELÉ dans fixRequest (startFix()). Si l'un des
+    // deux dérive (ex: un futur appel écrase enrichedData sans sourceCommitSha),
+    // la baseline devient non attribuable -> INCONCLUSIVE, jamais une
+    // comparaison silencieuse entre deux builds différents.
     const baselineSonarIssues = (currentMeta as any)?.enrichedData?.sonar?.issues;
+    const frozenBaselineSha = isFullGitSha((fixRequest as any).baselineSha) ? String((fixRequest as any).baselineSha).toLowerCase() : null;
+    const currentSourceCommitSha = isFullGitSha((currentMeta as any)?.sourceCommitSha) ? String((currentMeta as any).sourceCommitSha).toLowerCase() : null;
+    const baselineCorrelated = !!frozenBaselineSha && frozenBaselineSha === currentSourceCommitSha;
+    // BRIQUE 3 CLOSEOUT — PART 3/4 : la complétude du candidat est un booléen
+    // explicite fourni par WF3 ("Get Full Candidate Sonar Snapshot" ->
+    // candidateSnapshotComplete), jamais inférée de "c'est un tableau" (un
+    // tableau tronqué par une pagination incomplète serait sinon traité comme
+    // complet). L'égalité exacte candidateSha == expectedCandidateSha reste
+    // revérifiée à l'intérieur même d'analyzeRegression.
     const regression = analyzeRegression({
       expectedCandidateSha: validation.expectedPrHeadSha,
       baseline: {
-        sha: isFullGitSha((fixRequest as any).baselineSha) ? String((fixRequest as any).baselineSha).toLowerCase() : null,
+        sha: baselineCorrelated ? frozenBaselineSha : null,
         findings: normalizeSonarFindings(baselineSonarIssues),
-        complete: Array.isArray(baselineSonarIssues),
+        complete: baselineCorrelated && Array.isArray(baselineSonarIssues),
       },
       candidate: {
         sha: isFullGitSha(validation.checkoutSha) ? String(validation.checkoutSha).toLowerCase() : null,
         findings: normalizeSonarFindings((validation as any).candidateFindingsSnapshot),
-        complete: Array.isArray((validation as any).candidateFindingsSnapshot),
+        complete: (validation as any).candidateSnapshotComplete === true && Array.isArray((validation as any).candidateFindingsSnapshot),
       },
       policy: conservativeRegressionPolicy,
     });
@@ -1057,10 +1074,26 @@ export class IncidentsService {
         ...(explicitRetry && Array.isArray(current.attempts) ? current.attempts : []),
         { attempt: attemptCount, status: 'FIX_STARTING', authorizedBy: user.id, authorizedAt },
       ];
+      // BRIQUE 3 CLOSEOUT — PART 1: incident.metadata.sourceCommitSha is the
+      // exact source commit Jenkins/WF1 reported for the build that produced
+      // this incident's findings (threaded from "Normalize Incident
+      // Payload"'s commitSha, see wf1-incident-intake-analysis-v5-1's
+      // "Prepare Final Report" node). Frozen here, once, at remediation
+      // start -- never re-derived from a live/"latest main" lookup, and
+      // never refreshed on retry (an explicit retry reuses the SAME frozen
+      // value the original attempt captured, exactly like prHeadSha/
+      // validationTargetSha elsewhere in this file). Absent/invalid source
+      // SHA -> baselineSha stays null, which the regression engine already
+      // treats as INCONCLUSIVE (never guessed).
+      const baselineSha = explicitRetry && isFullGitSha(current?.baselineSha)
+        ? String(current.baselineSha).toLowerCase()
+        : (isFullGitSha((incident.metadata as any)?.sourceCommitSha)
+          ? String((incident.metadata as any).sourceCommitSha).toLowerCase()
+          : null);
       const metadata = { ...(incident.metadata || {}), fixRequest: {
         requestId, batchId, status: 'FIX_STARTING', workflow: batch.workflow,
         findingId: batch.findingIds[0], findingIds: batch.findingIds, findings: canonicalFindings,
-        approvedBy: user.id, approvedAt: current?.approvedAt || authorizedAt,
+        approvedBy: user.id, approvedAt: current?.approvedAt || authorizedAt, baselineSha,
         attemptCount, attempts, lastError: null, failedAt: null, retryEligible: false,
       }, cycles: Array.isArray((incident.metadata as any)?.cycles) ? (incident.metadata as any).cycles : [] };
       await repo.update(id, { metadata } as any);
