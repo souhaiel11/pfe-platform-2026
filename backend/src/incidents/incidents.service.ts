@@ -12,6 +12,7 @@ import { buildConvergenceCycles } from '../common/governance';
 import { resolveJenkinsInternalUrl } from '../common/jenkins-url';
 import { ManualRemediationService } from '../manual-remediation/manual-remediation.service';
 import { deriveFindingsAndHealth } from '../validation/finding-pipeline-separation';
+import { computeMergeAuthorization, deriveRemediationResult, deriveExactCorrelationVerified } from '../validation/merge-authorization';
 
 export function classifyJenkinsTriggerStatus(status: number): { accepted: boolean; code?: string } {
   if (status === 201) return { accepted: true };
@@ -806,6 +807,38 @@ export class IncidentsService {
     // Existing flat fields (validation.passed, validation.sonarStatus, ...)
     // are all still present, unchanged, for backward compatibility.
     (validationRecord as any).derived = deriveFindingsAndHealth(validationRecord);
+
+    // ── ÉTAPE 2 — autorisation de merge (ADDITIF STRICT) ──────────────────
+    // Projection PURE de signaux DÉJÀ calculés ci-dessus. NE MODIFIE NI
+    // validation.passed NI validation.validationStatus NI la transition
+    // incident.status plus bas : un consommateur futur lira uniquement
+    // validation.mergeAuthorization, le lifecycle actuel est inchangé.
+    // Découple le verdict de remédiation (findingResults) du Quality Gate
+    // Sonar global — ce dernier n'est ici qu'un advisory ; il reste bloquant
+    // pour le DÉPLOIEMENT via DeployReadiness (intouché).
+    // regressionResult = 'INCONCLUSIVE' en dur : la détection de régression
+    // (baseline findings + diff candidat) n'existe pas encore — chantier Phase 3.
+    // Robuste aux records incomplets : deriveRemediationResult([]) => INCONCLUSIVE,
+    // computeMergeAuthorization est pur et total (jamais d'exception).
+    (validationRecord as any).mergeAuthorization = {
+      ...computeMergeAuthorization({
+        remediationResult: deriveRemediationResult(
+          findingResults.map(r => r.result as 'VALID' | 'INVALID' | 'INCONCLUSIVE'),
+        ),
+        exactCorrelationVerified: deriveExactCorrelationVerified({
+          correlationVerified: validation.correlationVerified,
+          checkoutSha: validation.checkoutSha,
+          expectedPrHeadSha: validation.expectedPrHeadSha,
+        }),
+        requiredStagesComplete: !missingRequiredStage && !badStage,
+        regressionResult: 'INCONCLUSIVE', // TODO Phase 3 : baseline findings + diff candidat
+        pipelineHealth: (validationRecord as any).derived?.pipelineHealth ?? null,
+        validationInProgress: false, // saveValidation est terminal
+      }),
+      computedAt: validationRecord.validatedAt,
+      forSha: validation.checkoutSha ?? null,
+    };
+
     const previousCycles = Array.isArray(currentMeta.cycles) ? currentMeta.cycles : [];
     const cycles = [...previousCycles, {
       cycle: previousCycles.length + 1, sourceBuildNumber: incident.buildNumber, validationBuildNumber: buildNumber,
