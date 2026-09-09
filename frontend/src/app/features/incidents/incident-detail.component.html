@@ -443,78 +443,107 @@
           <!-- Résultat WF3 disponible -->
           <ng-container *ngIf="validation">
 
-            <!-- Verdict principal -->
-            <div class="card" style="margin-bottom:16px;"
-                 [style.border-left]="'3px solid ' + (validation.passed ? 'var(--accent-green)' : 'var(--accent-red)')">
-              <div style="display:flex;align-items:center;gap:16px;">
-                <div style="font-size:36px;">{{validation.passed ? '✅' : '❌'}}</div>
-                <div>
-                  <div style="font-size:15px;font-weight:600;color:var(--text-primary);margin-bottom:4px;">
-                    Validation automatique {{validation.passed ? 'RÉUSSIE' : 'ÉCHOUÉE'}}
-                  </div>
-                  <div style="font-size:12px;color:var(--text-secondary);">{{validation.verdict}}</div>
-                  <div style="font-size:10px;color:var(--text-muted);font-family:var(--font-mono);margin-top:4px;">
-                    {{validation.validatedAt | frenchDate}}
+            <!-- ══ AUTORISATION DE MERGE (4 états) ══ -->
+            <ng-container *ngIf="mergeAuthorization() as ma; else mergeAuthFallback">
+              <div class="card" style="margin-bottom:16px;"
+                   [style.border-left]="'3px solid ' + mergeAuthMeta(ma.authorization).color">
+                <div style="display:flex;align-items:flex-start;gap:16px;">
+                  <div style="font-size:32px;line-height:1;">{{ mergeAuthMeta(ma.authorization).icon }}</div>
+                  <div style="flex:1;min-width:0;">
+                    <div style="font-size:15px;font-weight:600;color:var(--text-primary);margin-bottom:4px;">
+                      {{ mergeAuthMeta(ma.authorization).title }}
+                    </div>
+                    <div style="font-size:12px;color:var(--text-secondary);line-height:1.5;">
+                      {{ mergeAuthMeta(ma.authorization).subtitle }}
+                    </div>
+
+                    <!-- MERGE_READY : lien PR (lecture seule, aucune fusion auto) -->
+                    <div *ngIf="ma.authorization === 'MERGE_READY' && batchPrUrl()" style="margin-top:8px;">
+                      <a [href]="batchPrUrl()" target="_blank" rel="noopener noreferrer"
+                         style="color:var(--accent-blue);text-decoration:none;font-family:var(--font-mono);font-size:12px;">
+                        {{ batchPrLabel() }} ↗
+                      </a>
+                    </div>
+
+                    <!-- BLOCKED / INCONCLUSIVE : causes machine → libellés FR -->
+                    <ul *ngIf="(ma.authorization === 'BLOCKED' || ma.authorization === 'INCONCLUSIVE') && ma.blockingReasons?.length"
+                        style="margin:10px 0 0;padding-left:18px;font-size:12px;color:var(--text-secondary);line-height:1.6;">
+                      <li *ngFor="let r of ma.blockingReasons">{{ mergeBlockingLabel(r) }}</li>
+                    </ul>
+
+                    <!-- Traçabilité : commit + horodatage -->
+                    <div style="margin-top:10px;font-size:10px;color:var(--text-muted);font-family:var(--font-mono);">
+                      <span *ngIf="ma.forSha">commit {{ shortSha(ma.forSha) }}</span>
+                      <span *ngIf="ma.computedAt"> · {{ ma.computedAt | frenchDate }}</span>
+                    </div>
+                    <div *ngIf="mergeAuthForShaStale()"
+                         style="margin-top:8px;padding:8px 10px;border-radius:6px;background:var(--accent-orange-bg, rgba(234,88,12,0.1));color:var(--accent-orange);font-size:11px;line-height:1.5;">
+                      Autorisation calculée pour un commit différent du HEAD actuel de la PR — relancez la validation.
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
+            </ng-container>
 
-            <!-- Tableau des contrôles -->
-            <div class="card" style="margin-bottom:16px;">
-              <div class="card-header" style="margin-bottom:12px;">
-                <span class="card-title">Résultats des contrôles</span>
+            <!-- Fallback : incidents antérieurs sans mergeAuthorization persisté -->
+            <ng-template #mergeAuthFallback>
+              <div class="card" style="margin-bottom:16px;"
+                   [style.border-left]="'3px solid ' + (validation.passed ? 'var(--accent-green)' : 'var(--accent-red)')">
+                <div style="display:flex;align-items:center;gap:16px;">
+                  <div style="font-size:32px;">{{ validation.passed ? '✅' : '❌' }}</div>
+                  <div style="flex:1;min-width:0;">
+                    <div style="font-size:15px;font-weight:600;color:var(--text-primary);margin-bottom:4px;">
+                      Validation automatique {{ validation.passed ? 'RÉUSSIE' : 'ÉCHOUÉE' }}
+                    </div>
+                    <div style="font-size:12px;color:var(--text-secondary);">
+                      {{ validation.validationStatus | presentationLabel }}
+                    </div>
+                    <ul *ngIf="validation.failureReasons?.length"
+                        style="margin:8px 0 0;padding-left:18px;font-size:12px;color:var(--text-secondary);line-height:1.6;">
+                      <li *ngFor="let r of validation.failureReasons">{{ r }}</li>
+                    </ul>
+                    <div style="font-size:10px;color:var(--text-muted);font-family:var(--font-mono);margin-top:6px;">
+                      {{ validation.validatedAt | frenchDate }}
+                    </div>
+                    <div style="margin-top:8px;font-size:11px;color:var(--text-muted);">
+                      Autorisation de merge détaillée indisponible pour cette validation (antérieure).
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </ng-template>
+
+            <!-- ══ QUALITÉ GLOBALE DU PROJET (séparé — informatif) ══ -->
+            <div class="card" style="margin-bottom:16px;" *ngIf="pipelineHealth() as ph">
+              <div class="card-header" style="margin-bottom:6px;">
+                <span class="card-title">Qualité globale du projet</span>
+              </div>
+              <div style="font-size:11px;color:var(--text-muted);margin-bottom:12px;line-height:1.5;">
+                Informatif pour la fusion ; peut rester bloquant pour le déploiement.
               </div>
               <table style="width:100%;border-collapse:collapse;">
-                <thead>
-                  <tr style="border-bottom:1px solid var(--border);">
-                    <th style="text-align:left;padding:8px 0;font-size:10px;color:var(--text-muted);font-family:var(--font-mono);font-weight:400;letter-spacing:1px;">CONTRÔLE</th>
-                    <th style="text-align:left;padding:8px 0;font-size:10px;color:var(--text-muted);font-family:var(--font-mono);font-weight:400;letter-spacing:1px;">RÉSULTAT</th>
-                    <th style="text-align:left;padding:8px 0;font-size:10px;color:var(--text-muted);font-family:var(--font-mono);font-weight:400;letter-spacing:1px;">DÉTAIL</th>
-                  </tr>
-                </thead>
                 <tbody>
-                  <tr style="border-bottom:1px solid var(--border);">
-                    <td style="padding:10px 0;font-size:12px;color:var(--text-primary);">Build Jenkins (PR)</td>
-                    <td style="padding:10px 0;">
-                      <span class="badge" [class]="validation.build?.status === 'SUCCESS' ? 'info' : 'high'">
-                        {{validation.build?.status | presentationLabel}}
-                      </span>
-                    </td>
-                    <td style="padding:10px 0;font-size:11px;color:var(--text-muted);">
-                      <a *ngIf="validation.build?.buildUrl" [href]="validation.build.buildUrl" target="_blank"
-                         style="color:var(--accent-blue);text-decoration:none;font-family:var(--font-mono);">
-                        Build #{{validation.build?.buildNumber}} ↗
-                      </a>
-                    </td>
-                  </tr>
-                  <tr style="border-bottom:1px solid var(--border);">
-                    <td style="padding:10px 0;font-size:12px;color:var(--text-primary);">SonarQube Quality Gate</td>
-                    <td style="padding:10px 0;">
-                      <span class="badge" [class]="getSonarGateBadgeClass(validation.sonarQualityGate?.status)">
-                        {{validation.sonarQualityGate?.status | presentationLabel}}
-                      </span>
-                    </td>
-                    <td style="padding:10px 0;font-size:11px;color:var(--text-muted);">
-                      {{validation.sonarQualityGate?.detail}}
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style="padding:10px 0;font-size:12px;color:var(--text-primary);">Commentaire GitHub posté</td>
-                    <td style="padding:10px 0;">
-                      <span class="badge" [class]="validation.commentPosted ? 'info' : 'medium'">
-                        {{validation.commentPosted ? 'OUI' : 'NON'}}
-                      </span>
-                    </td>
-                    <td style="padding:10px 0;font-size:11px;color:var(--text-muted);">
-                      <a *ngIf="validation.prUrl" [href]="validation.prUrl" target="_blank"
-                         style="color:var(--accent-blue);text-decoration:none;font-family:var(--font-mono);">
-                        PR #{{validation.prNumber}} ↗
-                      </a>
+                  <tr *ngFor="let row of pipelineHealthRows(); let last = last"
+                      [style.border-bottom]="last ? 'none' : '1px solid var(--border)'">
+                    <td style="padding:9px 0;font-size:12px;color:var(--text-primary);">{{ row.label }}</td>
+                    <td style="padding:9px 0;text-align:right;">
+                      <span class="badge" [class]="healthBadgeClass(row.value)">{{ healthLabel(row.value) }}</span>
                     </td>
                   </tr>
                 </tbody>
               </table>
+              <div *ngIf="ph.technicalFailure" style="margin-top:10px;font-size:11px;color:var(--accent-red);">
+                Défaillance technique signalée : {{ ph.technicalFailure }}
+              </div>
+              <div *ngIf="showPreexistingSonarNote()"
+                   style="margin-top:10px;padding:8px 10px;border-radius:6px;background:var(--accent-orange-bg, rgba(234,88,12,0.1));color:var(--accent-orange);font-size:11px;line-height:1.5;">
+                Des problèmes préexistants (hors du lot corrigé) maintiennent le Quality Gate en échec — ils seront
+                traités lors des prochains cycles de correction et ne bloquent pas la fusion de cette PR.
+              </div>
+              <ul *ngIf="mergeAuthorization()?.advisories?.length"
+                  style="margin:12px 0 0;padding-left:18px;font-size:11px;color:var(--text-secondary);line-height:1.6;">
+                <li *ngFor="let a of mergeAuthorization().advisories">{{ a.message || advisoryLabel(a) }}</li>
+              </ul>
             </div>
 
             <!-- Info Pull Request -->

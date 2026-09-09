@@ -789,6 +789,97 @@ export class IncidentDetailComponent implements OnInit, OnDestroy {
     const n = Number(this.incident?.metadata?.fixRequest?.prNumber);
     return Number.isInteger(n) && n > 0 ? `PR #${n}` : 'Voir la Pull Request';
   }
+
+  // ── UI-1 : autorisation de merge + santé globale (LECTURE PURE) ─────────
+  // validation.mergeAuthorization : null sur les incidents antérieurs à bb32694
+  // → l'onglet retombe sur validation.passed (fallback template).
+  mergeAuthorization(): any { return this.validation?.mergeAuthorization ?? null; }
+  pipelineHealth(): any { return this.validation?.derived?.pipelineHealth ?? null; }
+
+  private readonly MERGE_AUTH_META: Record<string, { color: string; icon: string; title: string; subtitle: string }> = {
+    VALIDATING:   { color: 'var(--accent-blue)',   icon: '⏳', title: 'Analyse de la Pull Request en cours',
+                    subtitle: 'Les corrections, les tests et les éventuelles régressions sont en cours de vérification.' },
+    MERGE_READY:  { color: 'var(--accent-green)',  icon: '✅', title: 'Pull Request autorisée pour fusion',
+                    subtitle: "Les problèmes ciblés sont corrigés et aucune régression bloquante n'a été détectée." },
+    BLOCKED:      { color: 'var(--accent-red)',    icon: '⛔', title: 'Pull Request bloquée',
+                    subtitle: 'La fusion est déconseillée tant que les points ci-dessous ne sont pas résolus.' },
+    INCONCLUSIVE: { color: 'var(--accent-orange)', icon: '⚠️', title: 'Validation non concluante',
+                    subtitle: 'La fusion ne peut pas être certifiée automatiquement — une revue humaine est nécessaire.' },
+  };
+  mergeAuthMeta(a: string): { color: string; icon: string; title: string; subtitle: string } {
+    return this.MERGE_AUTH_META[a] || { color: 'var(--border)', icon: 'ℹ️', title: 'État de validation inconnu', subtitle: '' };
+  }
+
+  private readonly MERGE_BLOCKING_LABELS: Record<string, string> = {
+    FINDING_INVALID: "Un finding approuvé n'est pas corrigé",
+    REMEDIATION_INCONCLUSIVE: 'Correction non concluante',
+    REGRESSION_CHANGES_REQUIRED: 'Nouvelle régression bloquante introduite',
+    REGRESSION_UNVERIFIED: "Absence de régression non vérifiable (analyse de référence indisponible)",
+    STAGE_INCOMPLETE: 'Étapes de validation incomplètes',
+    SHA_MISMATCH: 'Le commit validé ne correspond pas à la PR',
+    VALIDATION_IN_PROGRESS: 'Analyse en cours',
+  };
+  mergeBlockingLabel(code: string): string { return this.MERGE_BLOCKING_LABELS[code] || String(code); }
+
+  advisoryLabel(a: any): string {
+    const code = String(a?.code || '');
+    if (code.startsWith('SONAR_QUALITY_GATE_')) {
+      return `Quality Gate SonarQube global : ${code.replace('SONAR_QUALITY_GATE_', '')}`;
+    }
+    if (code === 'PIPELINE_TECHNICAL_FAILURE') return 'Défaillance technique du pipeline de validation';
+    return a?.message || code;
+  }
+
+  shortSha(s: string): string { return String(s || '').slice(0, 10); }
+
+  // forSha lie l'autorisation à un commit précis : signaler si ce commit n'est
+  // plus la cible de validation courante (nouveau commit de remédiation, etc.).
+  mergeAuthForShaStale(): boolean {
+    const forSha = String(this.mergeAuthorization()?.forSha || '').toLowerCase();
+    const target = String(
+      this.incident?.metadata?.fixRequest?.validationTargetSha
+      || this.incident?.metadata?.fixRequest?.prHeadSha || '',
+    ).toLowerCase();
+    return !!forSha && !!target && forSha !== target;
+  }
+
+  pipelineHealthRows(): { label: string; value: string }[] {
+    const h = this.pipelineHealth();
+    if (!h) return [];
+    return [
+      { label: 'Build', value: h.build },
+      { label: 'Tests', value: h.tests },
+      { label: 'Quality Gate SonarQube', value: h.sonarQualityGate },
+      { label: 'Conteneur (Trivy)', value: h.trivy },
+      { label: 'Dépendances (OWASP)', value: h.owasp },
+      { label: 'DAST (ZAP)', value: h.zap },
+      { label: 'Étapes requises', value: h.requiredStagesStatus },
+    ];
+  }
+  healthBadgeClass(v: string): string {
+    const s = String(v || '').toUpperCase();
+    if (['OK', 'PASSED', 'SUCCESS', 'COMPLETED'].includes(s)) return 'info';
+    if (['ERROR', 'FAILED'].includes(s)) return 'high';
+    return 'medium';
+  }
+  healthLabel(v: string): string {
+    const map: Record<string, string> = {
+      OK: 'OK', PASSED: 'Réussi', SUCCESS: 'Réussi', COMPLETED: 'Exécuté',
+      ERROR: 'Échec', FAILED: 'Échec', NOT_RUN: 'Non exécuté', SKIPPED: 'Ignoré',
+      RUNNING: 'En cours', UNKNOWN: 'Inconnu',
+    };
+    const s = String(v || 'UNKNOWN').toUpperCase();
+    return map[s] || s;
+  }
+  // QG global rouge, mais le merge n'est PAS bloqué à cause de Sonar → ce sont
+  // des problèmes préexistants hors du lot corrigé.
+  showPreexistingSonarNote(): boolean {
+    const ma = this.mergeAuthorization();
+    const qgRed = String(this.pipelineHealth()?.sonarQualityGate || '').toUpperCase() === 'ERROR';
+    const blockedBySonar = (ma?.blockingReasons || []).some((r: string) => String(r).startsWith('SONAR'));
+    return qgRed && !!ma && !blockedBySonar;
+  }
+
   getSeverityBadgeClass(s: string) {
     const map: any = { CRITICAL:'high', HIGH:'high', MEDIUM:'medium', LOW:'info' };
     return map[s] || '';
