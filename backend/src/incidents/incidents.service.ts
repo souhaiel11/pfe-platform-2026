@@ -15,6 +15,8 @@ import { deriveFindingsAndHealth } from '../validation/finding-pipeline-separati
 import { computeMergeAuthorization, deriveRemediationResult, deriveExactCorrelationVerified } from '../validation/merge-authorization';
 import { CandidateVerificationService } from '../candidate-verification/candidate-verification.service';
 import { HeadVerificationRequest, HeadVerification } from '../candidate-verification/candidate-verification.types';
+import { analyzeRegression, conservativeRegressionPolicy } from '../validation/pr-regression-engine';
+import { normalizeSonarFindings } from '../validation/sonar-regression-adapter';
 
 export function classifyJenkinsTriggerStatus(status: number): { accepted: boolean; code?: string } {
   if (status === 201) return { accepted: true };
@@ -833,6 +835,33 @@ export class IncidentsService {
     // are all still present, unchanged, for backward compatibility.
     (validationRecord as any).derived = deriveFindingsAndHealth(validationRecord);
 
+    // ── BRIQUE 3 — analyse de régression PR (ADDITIF STRICT) ───────────────
+    // Compare le candidat exact-SHA déjà prouvé (validation.checkoutSha,
+    // chaîne d'identité Brique 2) contre un instantané baseline immuable.
+    // Ne mélange JAMAIS ceci avec findingResults (verdict de remédiation
+    // ci-dessus) : les deux peuvent être simultanément VALIDATED/CLEAN,
+    // VALIDATED/CHANGES_REQUIRED, etc. Fail closed par construction
+    // (analyzeRegression) : tant qu'aucun producteur ne renseigne
+    // fixRequest.baselineSha ni validation.candidateFindingsSnapshot (aucun
+    // aujourd'hui — voir pr-regression-engine.ts), le résultat reste
+    // INCONCLUSIVE, exactement le comportement précédent codé en dur.
+    const baselineSonarIssues = (currentMeta as any)?.enrichedData?.sonar?.issues;
+    const regression = analyzeRegression({
+      expectedCandidateSha: validation.expectedPrHeadSha,
+      baseline: {
+        sha: isFullGitSha((fixRequest as any).baselineSha) ? String((fixRequest as any).baselineSha).toLowerCase() : null,
+        findings: normalizeSonarFindings(baselineSonarIssues),
+        complete: Array.isArray(baselineSonarIssues),
+      },
+      candidate: {
+        sha: isFullGitSha(validation.checkoutSha) ? String(validation.checkoutSha).toLowerCase() : null,
+        findings: normalizeSonarFindings((validation as any).candidateFindingsSnapshot),
+        complete: Array.isArray((validation as any).candidateFindingsSnapshot),
+      },
+      policy: conservativeRegressionPolicy,
+    });
+    (validationRecord as any).regression = regression;
+
     // ── ÉTAPE 2 — autorisation de merge (ADDITIF STRICT) ──────────────────
     // Projection PURE de signaux DÉJÀ calculés ci-dessus. NE MODIFIE NI
     // validation.passed NI validation.validationStatus NI la transition
@@ -841,8 +870,10 @@ export class IncidentsService {
     // Découple le verdict de remédiation (findingResults) du Quality Gate
     // Sonar global — ce dernier n'est ici qu'un advisory ; il reste bloquant
     // pour le DÉPLOIEMENT via DeployReadiness (intouché).
-    // regressionResult = 'INCONCLUSIVE' en dur : la détection de régression
-    // (baseline findings + diff candidat) n'existe pas encore — chantier Phase 3.
+    // regressionResult vient désormais de l'analyse Brique 3 ci-dessus (plus
+    // de valeur codée en dur) ; reste INCONCLUSIVE tant que baseline/candidat
+    // complets ne sont pas disponibles, donc aucun changement de comportement
+    // observable avant qu'un futur chantier ne renseigne ces deux champs.
     // Robuste aux records incomplets : deriveRemediationResult([]) => INCONCLUSIVE,
     // computeMergeAuthorization est pur et total (jamais d'exception).
     (validationRecord as any).mergeAuthorization = {
@@ -856,7 +887,7 @@ export class IncidentsService {
           expectedPrHeadSha: validation.expectedPrHeadSha,
         }),
         requiredStagesComplete: !missingRequiredStage && !badStage,
-        regressionResult: 'INCONCLUSIVE', // TODO Phase 3 : baseline findings + diff candidat
+        regressionResult: regression.result, // BRIQUE 3 — voir l'analyse ci-dessus
         pipelineHealth: (validationRecord as any).derived?.pipelineHealth ?? null,
         validationInProgress: false, // saveValidation est terminal
       }),
