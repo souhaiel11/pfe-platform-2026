@@ -7,8 +7,10 @@ import {
 } from './merge-authorization';
 
 // Pure unit tests — no DB, no IO. Exercise the decoupling contract:
-// remediation correctness vs global pipeline/QG health vs regression, and the
-// fact that regression detection does not exist yet (always INCONCLUSIVE).
+// remediation correctness vs global pipeline/QG health vs regression.
+// BRIQUE 4 — blockingReasons (PROVEN defects) and technicalReasons
+// (unresolved/uncertain evidence) are now distinct arrays; only
+// blockingReasons drives 'BLOCKED'.
 
 const base: MergeAuthorizationInput = {
   remediationResult: 'VALIDATED',
@@ -22,7 +24,8 @@ const base: MergeAuthorizationInput = {
 // 2/2 findings VALID, exact SHA + correlation verified, required stages
 // complete, global Sonar QG = ERROR (14 out-of-batch findings), regression
 // not yet verifiable. Expected: NOT MERGE_READY, NOT BLOCKED — INCONCLUSIVE
-// with REGRESSION_UNVERIFIED; QG is only an advisory, never a blocker here.
+// with REGRESSION_UNVERIFIED (technical, not blocking); QG is only an
+// advisory, never a blocker here.
 {
   const r = computeMergeAuthorization({
     ...base,
@@ -31,11 +34,13 @@ const base: MergeAuthorizationInput = {
     pipelineHealth: { sonarQualityGate: 'ERROR', build: 'SUCCESS', tests: 'SUCCESS', requiredStagesStatus: 'PASSED' },
   });
   assert.equal(r.authorization, 'INCONCLUSIVE', 'CASE A: fully remediated but regression unverified => INCONCLUSIVE');
-  assert.ok(r.blockingReasons.includes('REGRESSION_UNVERIFIED'), 'CASE A: reason is the missing regression proof');
-  assert.ok(!r.blockingReasons.includes('FINDING_INVALID'), 'CASE A: no finding is invalid');
+  assert.ok(r.technicalReasons.includes('REGRESSION_UNVERIFIED'), 'CASE A: reason is the missing regression proof');
+  assert.deepEqual(r.blockingReasons, [], 'CASE A: nothing is a PROVEN defect here');
+  assert.equal(r.remediationResult, 'VALIDATED', 'CASE A: remediationResult echoed unchanged');
+  assert.equal(r.regressionResult, 'INCONCLUSIVE', 'CASE A: regressionResult echoed unchanged');
   assert.ok(
-    !r.blockingReasons.some(x => String(x).startsWith('SONAR')),
-    'CASE A: the global Sonar QG is NOT a blocking reason for merge',
+    !r.blockingReasons.some(x => String(x).startsWith('SONAR')) && !r.technicalReasons.some(x => String(x).startsWith('SONAR')),
+    'CASE A: the global Sonar QG is NOT a blocking or technical reason for merge',
   );
   assert.ok(
     r.advisories.some(a => a.code === 'SONAR_QUALITY_GATE_ERROR'),
@@ -75,6 +80,7 @@ const base: MergeAuthorizationInput = {
   });
   assert.equal(r.authorization, 'MERGE_READY', 'all preconditions positively satisfied => MERGE_READY');
   assert.deepEqual(r.blockingReasons, [], 'MERGE_READY carries no blocking reasons');
+  assert.deepEqual(r.technicalReasons, [], 'MERGE_READY carries no technical reasons either');
 }
 {
   // MERGE_READY still holds with a red global Sonar QG (advisory only)
@@ -99,28 +105,31 @@ const base: MergeAuthorizationInput = {
   });
   assert.notEqual(r.authorization, 'MERGE_READY', 'SHA/correlation not verified => never MERGE_READY');
   assert.equal(r.authorization, 'INCONCLUSIVE');
-  assert.ok(r.blockingReasons.includes('SHA_MISMATCH'));
+  assert.deepEqual(r.blockingReasons, [], 'SHA mismatch is uncertain evidence, never a proven defect');
+  assert.ok(r.technicalReasons.includes('SHA_MISMATCH'));
 }
 
 // --- required stage incomplete => never MERGE_READY -------------------
 {
   const r = computeMergeAuthorization({ ...base, remediationResult: 'VALIDATED', requiredStagesComplete: false, regressionResult: 'CLEAN' });
   assert.notEqual(r.authorization, 'MERGE_READY');
-  assert.ok(r.blockingReasons.includes('STAGE_INCOMPLETE'));
+  assert.ok(r.technicalReasons.includes('STAGE_INCOMPLETE'));
 }
 
 // --- validation in progress => VALIDATING -----------------------------
 {
   const r = computeMergeAuthorization({ ...base, validationInProgress: true, regressionResult: 'CLEAN' });
   assert.equal(r.authorization, 'VALIDATING', 'validation still running => VALIDATING regardless of other signals');
-  assert.deepEqual(r.blockingReasons, ['VALIDATION_IN_PROGRESS']);
+  assert.deepEqual(r.blockingReasons, []);
+  assert.deepEqual(r.technicalReasons, ['VALIDATION_IN_PROGRESS']);
 }
 
 // --- remediation INCONCLUSIVE (not all VALID, none INVALID) => INCONCLUSIVE
 {
   const r = computeMergeAuthorization({ ...base, remediationResult: 'INCONCLUSIVE', regressionResult: 'CLEAN' });
   assert.equal(r.authorization, 'INCONCLUSIVE');
-  assert.ok(r.blockingReasons.includes('REMEDIATION_INCONCLUSIVE'));
+  assert.deepEqual(r.blockingReasons, []);
+  assert.ok(r.technicalReasons.includes('REMEDIATION_INCONCLUSIVE'));
 }
 
 // --- deriveRemediationResult: reuses FindingVerdict, no duplication ---

@@ -65,7 +65,7 @@ async function main() {
     const result: any = await service.saveValidation(incident.id, baseValidationContract(incident));
     assert.equal(result.validation.regression.result, 'INCONCLUSIVE', 'no candidate snapshot supplied -> INCONCLUSIVE');
     assert.equal(result.validation.validationStatus, 'VALIDATED', 'remediation verdict is unaffected by the absent regression evidence');
-    assert.ok(result.validation.mergeAuthorization.blockingReasons.includes('REGRESSION_UNVERIFIED'));
+    assert.ok(result.validation.mergeAuthorization.technicalReasons.includes('REGRESSION_UNVERIFIED'));
   }
 
   // (2) Full, correlated evidence supplied, no new finding -> regression
@@ -90,8 +90,11 @@ async function main() {
     assert.equal(result.validation.regression.candidateSnapshotComplete, true);
     assert.equal(result.validation.validationStatus, 'VALIDATED', 'remediationResult VALIDATED');
     assert.equal(result.validation.regression.result, 'CLEAN', 'regressionResult CLEAN -- both true simultaneously, from two independent fields');
-    assert.ok(!result.validation.mergeAuthorization.blockingReasons.includes('REGRESSION_UNVERIFIED'));
-    assert.ok(!result.validation.mergeAuthorization.blockingReasons.includes('REGRESSION_CHANGES_REQUIRED'));
+    assert.deepEqual(result.validation.mergeAuthorization.blockingReasons, []);
+    assert.deepEqual(result.validation.mergeAuthorization.technicalReasons, []);
+    // BRIQUE 4 — everything positively satisfied: MERGE_READY, with an exact authorizedSha.
+    assert.equal(result.validation.mergeAuthorization.authorization, 'MERGE_READY');
+    assert.equal(result.validation.mergeAuthorization.authorizedSha, SHA);
   }
 
   // (3) The exact scenario from the Brique 3 mandate: approved findings all
@@ -114,6 +117,7 @@ async function main() {
     assert.equal(result.validation.regression.blockingIntroducedFindings.length, 1, 'the conservative production policy treats every introduced finding as blocking (Phase 6 design gap, documented)');
     assert.ok(result.validation.mergeAuthorization.blockingReasons.includes('REGRESSION_CHANGES_REQUIRED'));
     assert.equal(result.validation.mergeAuthorization.authorization, 'BLOCKED', 'a real regression blocks merge authorization even though remediation itself is VALIDATED');
+    assert.equal(result.validation.mergeAuthorization.authorizedSha, null, 'BLOCKED never carries an authorizedSha');
   }
 
   // TEST C — baseline finding snapshot belongs to a different SHA than the

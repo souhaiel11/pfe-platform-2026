@@ -81,22 +81,30 @@ async function main() {
       ],
     ));
 
-    // -- comportement existant : INCHANGÉ --
-    assert.equal(res.validation.passed, false, 'passed inchangé (QG ERROR)');
-    assert.equal(res.validation.validationStatus, 'INCONCLUSIVE', 'validationStatus inchangé');
-    assert.deepEqual(res.validation.failureReasons, ['Sonar=ERROR'], 'failureReasons inchangé');
-    assert.equal(incident.status, 'failed', 'transition incident.status inchangée (failed)');
-    assert.equal(incident.metadata.fixRequest.status, 'PR_CREATED', 'fixRequest.status inchangé (revert PR_CREATED)');
+    // -- BRIQUE 4 : passed/incident.status/fixRequest.status ne dépendent plus
+    // du QG Sonar global (seul le remède au batch approuvé compte) — un QG
+    // ERROR causé par des findings historiques ne doit plus faire échouer une
+    // remédiation par ailleurs propre. La régression reste séparément non
+    // vérifiée ici (aucune preuve baseline/candidat fournie par ce fixture).
+    assert.equal(res.validation.passed, true, 'BRIQUE 4: passed ne dépend plus du QG Sonar global');
+    assert.equal(res.validation.validationStatus, 'VALIDATED', 'BRIQUE 4: validationStatus VALIDATED malgré QG ERROR');
+    assert.deepEqual(res.validation.failureReasons, [], 'BRIQUE 4: QG ERROR seul n’est plus une raison d’échec');
+    assert.equal(incident.status, 'completed', 'BRIQUE 4: transition completed malgré QG ERROR');
+    assert.equal(incident.metadata.fixRequest.status, 'VALIDATED', 'BRIQUE 4: fixRequest VALIDATED malgré QG ERROR');
 
     // -- nouveau bloc additif --
     const ma = res.validation.mergeAuthorization;
     assert.ok(ma, 'validation.mergeAuthorization est persisté');
     assert.equal(ma.authorization, 'INCONCLUSIVE', 'CASE 1: batch prouvé mais régression non vérifiée => INCONCLUSIVE');
-    assert.ok(ma.blockingReasons.includes('REGRESSION_UNVERIFIED'), 'CASE 1: raison = régression non vérifiée');
+    assert.equal(ma.remediationResult, 'VALIDATED', 'CASE 1: remediationResult échoué tel quel sur mergeAuthorization');
+    assert.equal(ma.regressionResult, 'INCONCLUSIVE', 'CASE 1: regressionResult échoué tel quel sur mergeAuthorization');
+    assert.ok(ma.technicalReasons.includes('REGRESSION_UNVERIFIED'), 'CASE 1: raison = régression non vérifiée (technique, non bloquante)');
+    assert.deepEqual(ma.blockingReasons, [], 'CASE 1: aucune raison bloquante — rien n’est un défaut prouvé');
     assert.ok(!ma.blockingReasons.includes('FINDING_INVALID'), 'CASE 1: aucun finding invalide');
     assert.ok(
-      !ma.blockingReasons.some((r: string) => String(r).startsWith('SONAR')),
-      'CASE 1: le QG Sonar global n’est PAS une raison bloquante pour le merge',
+      !ma.blockingReasons.some((r: string) => String(r).startsWith('SONAR'))
+      && !ma.technicalReasons.some((r: string) => String(r).startsWith('SONAR')),
+      'CASE 1: le QG Sonar global n’est PAS une raison bloquante ni technique pour le merge',
     );
     assert.ok(
       ma.advisories.some((a: any) => a.code === 'SONAR_QUALITY_GATE_ERROR'),
@@ -105,6 +113,7 @@ async function main() {
     assert.notEqual(ma.authorization, 'BLOCKED', 'CASE 1: un QG rouge seul ne bloque jamais le merge');
     assert.notEqual(ma.authorization, 'MERGE_READY', 'CASE 1: pas auto-certifiable tant que la régression est inconnue');
     assert.equal(ma.forSha, SHA, 'CASE 1: autorisation liée au SHA exact validé');
+    assert.equal(ma.authorizedSha, null, 'CASE 1: authorizedSha reste null tant que ce n’est pas MERGE_READY');
     assert.ok(typeof ma.computedAt === 'string' && ma.computedAt.length > 0, 'CASE 1: computedAt renseigné');
 
     // le bloc dérivé n’a pas contaminé les champs plats
@@ -129,10 +138,12 @@ async function main() {
     assert.equal(incident.metadata.fixRequest.status, 'VALIDATED', 'CASE 2: fixRequest VALIDATED inchangé');
 
     const ma = res.validation.mergeAuthorization;
-    assert.equal(ma.authorization, 'INCONCLUSIVE', 'CASE 2: merge PAS auto-ready — régression non vérifiée (Phase 3)');
-    assert.ok(ma.blockingReasons.includes('REGRESSION_UNVERIFIED'));
+    assert.equal(ma.authorization, 'INCONCLUSIVE', 'CASE 2: merge PAS auto-ready — régression non vérifiée (aucune preuve fournie)');
+    assert.ok(ma.technicalReasons.includes('REGRESSION_UNVERIFIED'));
+    assert.deepEqual(ma.blockingReasons, []);
     assert.deepEqual(ma.advisories, [], 'CASE 2: QG OK => aucun advisory');
     assert.notEqual(ma.authorization, 'MERGE_READY', 'CASE 2: passed=true n’entraîne PAS MERGE_READY (découplé)');
+    assert.equal(ma.authorizedSha, null, 'CASE 2: pas MERGE_READY => authorizedSha null');
   }
 
   // ── CASE 3 — robustesse : verdicts per-finding INCONCLUSIVE, jamais de crash
@@ -150,8 +161,9 @@ async function main() {
     assert.equal(incident.status, 'failed');
     const ma = res.validation.mergeAuthorization;
     assert.equal(ma.authorization, 'INCONCLUSIVE', 'CASE 3: pas de crash, verdict prudent');
-    assert.ok(ma.blockingReasons.includes('REMEDIATION_INCONCLUSIVE'), 'CASE 3: raison remédiation inconclusive');
-    assert.ok(ma.blockingReasons.includes('REGRESSION_UNVERIFIED'), 'CASE 3: + régression non vérifiée');
+    assert.ok(ma.technicalReasons.includes('REMEDIATION_INCONCLUSIVE'), 'CASE 3: raison remédiation inconclusive');
+    assert.ok(ma.technicalReasons.includes('REGRESSION_UNVERIFIED'), 'CASE 3: + régression non vérifiée');
+    assert.deepEqual(ma.blockingReasons, [], 'CASE 3: rien n’est un défaut prouvé, seulement de l’incertitude');
   }
 
   console.log('merge-authorization wiring (additive, lifecycle unchanged): PASS');

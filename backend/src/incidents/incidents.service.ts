@@ -631,8 +631,44 @@ export class IncidentsService {
       const updated = await this.findOne(id);
       this.gateway.emit('incident:updated', updated);
     }
+    // BRIQUE 4 — AUTOMATIC INITIAL PR VALIDATION: fired exactly once per real
+    // WF2 PR_CREATED callback (never on a duplicate/stale/FAILED outcome —
+    // `result.applied` is only true for a genuinely NEW, freshly-persisted
+    // transition, thanks to the eventIdentity dedup and terminal-attempt
+    // guards already enforced inside the transaction above). PR number, URL,
+    // branch and head SHA are already durably persisted on `nextFix`/
+    // `incident.prUrl` at this point (patch applied above). Fire-and-forget,
+    // exactly like the existing WF4/WF5 auto-routing pattern in
+    // webhooks.service.ts#routeToOptimizer: must never delay or fail this
+    // callback's response to WF2. requestPrValidation() itself is the ONLY
+    // place that decides REQUESTED/QUEUED/FAILED and is already idempotent
+    // (prValidationRequest.validationRequestId keyed on
+    // projectId+prNumber+prHeadSha+batchId) — a human clicking "Valider la
+    // Pull Request" concurrently, or a second callback slipping past the
+    // outer dedup, can never cause a second business validation run.
+    if (result.applied && result.status === 'PR_CREATED') {
+      this.dispatchAutomaticInitialPrValidation(id).catch(error => {
+        console.warn(`[incidents] automatic initial PR validation failed for incident ${id}: ${error?.message || error}`);
+      });
+    }
     return { success: true, applied: result.applied, duplicate: result.duplicate, stale: result.stale,
       incidentId: id, status: result.status, ...(result.code ? { code: result.code } : {}) };
+  }
+
+  // BRIQUE 4 — system-triggered PR validation request, reusing
+  // requestPrValidation() unchanged (same governance, same Jenkins/HEAD_ONLY
+  // gate, same idempotent claim). A synthetic admin actor is used only for
+  // audit attribution (`prValidationRequest.createdBy`) — never bypasses
+  // assertCanApprove. Any failure here (Jenkins unreachable, HEAD_ONLY
+  // unavailable, a conflicting concurrent request, ...) is already durably
+  // recorded on prValidationRequest by requestPrValidation() itself (status
+  // FAILED + failureCode + result) before it throws; this method only
+  // exists so that thrown error can never surface as an unhandled rejection.
+  // Never retried automatically — a human retry (or a later governed
+  // refresh) remains required, exactly like any other FAILED validation.
+  private async dispatchAutomaticInitialPrValidation(id: string): Promise<void> {
+    const systemActor = { id: 'system-auto-pr-validation', role: 'admin' };
+    await this.requestPrValidation(id, systemActor);
   }
 
   /**
@@ -814,14 +850,29 @@ export class IncidentsService {
     });
     const everyFindingValid = !fixRequest.batchId || (findingResults.length > 0 && findingResults.every(r => r.result === 'VALID' && !!r.evidence));
     const hasInvalidFinding = findingResults.some(r => r.result === 'INVALID');
-    const passed = jenkinsStatus === 'SUCCESS' && sonarStatus === 'OK' && correlationVerified && !missingRequiredStage && !badStage && everyFindingValid;
+    // BRIQUE 4 — GLOBAL QUALITY GATE SEPARATION: `passed` (and everything
+    // derived from it below: validationStatus, incident.status,
+    // fixRequest.status, prValidationRequest.status/result, cycles[].status)
+    // is the REMEDIATION-evidence verdict only. It must NEVER depend on the
+    // global Sonar Quality Gate (`sonarStatus`) — a QG ERROR caused solely by
+    // pre-existing/out-of-batch findings must not turn a clean remediation
+    // into a failed one. Sonar analysis EXECUTION is still required
+    // (`correlationVerified`, which already requires `sonarCorrelationVerified`
+    // — proof the analysis actually ran and produced a real answer); only its
+    // pass/fail VERDICT is excluded. `sonarStatus` remains fully persisted on
+    // this record unchanged (see `sonarStatus` field below) so deployment
+    // readiness (governance.ts/azure-deploy-readiness.service.ts, untouched)
+    // keeps reading the real QG verdict as its own, separate, still-strict gate.
+    const passed = jenkinsStatus === 'SUCCESS' && correlationVerified && !missingRequiredStage && !badStage && everyFindingValid;
     const validationStatus = passed ? 'VALIDATED' : (hasInvalidFinding ? 'INVALID' : 'INCONCLUSIVE');
     const validationRecord = {
       ...validation, findingResults, passed, validationStatus, projectId: incident.projectId,
       incidentId: incident.id, fixRequestId: fixRequest.requestId, repository, prNumber, buildNumber,
       jenkinsStatus, sonarStatus, correlationVerified, validatedAt: new Date().toISOString(),
+      // BRIQUE 4 — sonarStatus deliberately absent from failureReasons: a red
+      // global Quality Gate is never framed as a remediation "failure reason"
+      // here (it surfaces as a mergeAuthorization advisory instead, see below).
       failureReasons: [jenkinsStatus !== 'SUCCESS' ? `Jenkins=${jenkinsStatus || 'MISSING'}` : null,
-        sonarStatus !== 'OK' ? `Sonar=${sonarStatus || 'MISSING'}` : null,
         !correlationVerified ? 'Sonar/build correlation unverified' : null,
         !everyFindingValid ? 'One or more approved findings are invalid or inconclusive' : null,
         missingRequiredStage ? `Required stage missing=${missingRequiredStage}` : null,
@@ -879,35 +930,41 @@ export class IncidentsService {
     });
     (validationRecord as any).regression = regression;
 
-    // ── ÉTAPE 2 — autorisation de merge (ADDITIF STRICT) ──────────────────
-    // Projection PURE de signaux DÉJÀ calculés ci-dessus. NE MODIFIE NI
-    // validation.passed NI validation.validationStatus NI la transition
-    // incident.status plus bas : un consommateur futur lira uniquement
-    // validation.mergeAuthorization, le lifecycle actuel est inchangé.
-    // Découple le verdict de remédiation (findingResults) du Quality Gate
-    // Sonar global — ce dernier n'est ici qu'un advisory ; il reste bloquant
-    // pour le DÉPLOIEMENT via DeployReadiness (intouché).
-    // regressionResult vient désormais de l'analyse Brique 3 ci-dessus (plus
-    // de valeur codée en dur) ; reste INCONCLUSIVE tant que baseline/candidat
-    // complets ne sont pas disponibles, donc aucun changement de comportement
-    // observable avant qu'un futur chantier ne renseigne ces deux champs.
+    // ── BRIQUE 4 — autorisation de merge : LA décision centrale ────────────
+    // computeMergeAuthorization() est désormais l'unique décision métier
+    // faisant autorité (VALIDATING/MERGE_READY/BLOCKED/INCONCLUSIVE). Découple
+    // le verdict de remédiation (findingResults) et la régression (Brique 3)
+    // du Quality Gate Sonar global — ce dernier n'est ici qu'un advisory ; il
+    // reste bloquant pour le DÉPLOIEMENT via DeployReadiness (intouché).
+    // `requiredStagesComplete` inclut désormais explicitement jenkinsStatus
+    // (défense en profondeur : les stages requis seuls pourraient en théorie
+    // être incohérents avec le statut global du build).
     // Robuste aux records incomplets : deriveRemediationResult([]) => INCONCLUSIVE,
     // computeMergeAuthorization est pur et total (jamais d'exception).
-    (validationRecord as any).mergeAuthorization = {
-      ...computeMergeAuthorization({
-        remediationResult: deriveRemediationResult(
-          findingResults.map(r => r.result as 'VALID' | 'INVALID' | 'INCONCLUSIVE'),
-        ),
-        exactCorrelationVerified: deriveExactCorrelationVerified({
-          correlationVerified: validation.correlationVerified,
-          checkoutSha: validation.checkoutSha,
-          expectedPrHeadSha: validation.expectedPrHeadSha,
-        }),
-        requiredStagesComplete: !missingRequiredStage && !badStage,
-        regressionResult: regression.result, // BRIQUE 3 — voir l'analyse ci-dessus
-        pipelineHealth: (validationRecord as any).derived?.pipelineHealth ?? null,
-        validationInProgress: false, // saveValidation est terminal
+    const mergeAuth = computeMergeAuthorization({
+      remediationResult: deriveRemediationResult(
+        findingResults.map(r => r.result as 'VALID' | 'INVALID' | 'INCONCLUSIVE'),
+      ),
+      exactCorrelationVerified: deriveExactCorrelationVerified({
+        correlationVerified: validation.correlationVerified,
+        checkoutSha: validation.checkoutSha,
+        expectedPrHeadSha: validation.expectedPrHeadSha,
       }),
+      requiredStagesComplete: jenkinsStatus === 'SUCCESS' && !missingRequiredStage && !badStage,
+      regressionResult: regression.result, // BRIQUE 3 — voir l'analyse ci-dessus
+      pipelineHealth: (validationRecord as any).derived?.pipelineHealth ?? null,
+      validationInProgress: false, // saveValidation est terminal
+    });
+    // BRIQUE 4 — AUTHORIZED SHA: liée à un commit EXACT, jamais transférée
+    // silencieusement. Persistée UNIQUEMENT quand authorization===MERGE_READY ;
+    // si la PR change ensuite, cette valeur reste figée sur l'ancien SHA et ne
+    // peut jamais autoriser un nouveau HEAD (une toute nouvelle validation
+    // gouvernée doit recalculer sa propre mergeAuthorization pour le SHA cible).
+    const authorizedSha = mergeAuth.authorization === 'MERGE_READY' && isFullGitSha(validation.checkoutSha)
+      ? String(validation.checkoutSha).toLowerCase() : null;
+    (validationRecord as any).mergeAuthorization = {
+      ...mergeAuth,
+      authorizedSha,
       computedAt: validationRecord.validatedAt,
       forSha: validation.checkoutSha ?? null,
     };
@@ -1389,8 +1446,19 @@ export class IncidentsService {
       const now2 = new Date().toISOString();
       const current: any = await this.repo.findOne({ where: { id } });
       const currentMeta: any = current.metadata || {};
+      // BRIQUE 4 — BLOCKED vs INCONCLUSIVE contract, at the pre-Jenkins gate
+      // too: overall==='FAIL' is HEAD_ONLY PROVING the exact candidate commit
+      // itself does not compile / fails its own regression suite -- a proven
+      // defect (never an infrastructure problem). Every other ineligible
+      // shape here (SHA_UNAVAILABLE, transport failure, a dishonest PASS
+      // whose SHA/workspace evidence does not actually check out) is
+      // unresolved/uncertain evidence, never a proven defect -> INCONCLUSIVE,
+      // never fabricated as a code-defect BLOCKED reason.
+      const candidateProvenDefective = headVerification?.overall === 'FAIL';
       const failed = {
-        ...claim.request, status: 'FAILED', failureCode: 'HEAD_VERIFICATION_NOT_PASS',
+        ...claim.request, status: 'FAILED',
+        failureCode: candidateProvenDefective ? 'CANDIDATE_TEST_FAILURE' : 'HEAD_VERIFICATION_NOT_PASS',
+        result: candidateProvenDefective ? 'INVALID' : 'INCONCLUSIVE',
         failureSummary: failureSummary.slice(0, 300), headVerification: headVerification ?? null,
         failedAt: now2, updatedAt: now2,
       };
@@ -1478,7 +1546,10 @@ export class IncidentsService {
       const failureSummary = String(error?.message || 'Le build PR n’a pas pu être mis en file.').slice(0, 300);
       const current: any = await this.repo.findOne({ where: { id } });
       const currentMeta: any = current.metadata || {};
-      const failed = { ...claim.request, status: 'FAILED', headVerification, failureCode, failureSummary, failedAt: new Date().toISOString(), updatedAt: new Date().toISOString(), prValidationJob };
+      // BRIQUE 4 — a Jenkins trigger failure (timeout, auth, job not found,
+      // queue rejected, ...) is an infrastructure fact, never a proven
+      // candidate defect: always INCONCLUSIVE, never BLOCKED.
+      const failed = { ...claim.request, status: 'FAILED', result: 'INCONCLUSIVE', headVerification, failureCode, failureSummary, failedAt: new Date().toISOString(), updatedAt: new Date().toISOString(), prValidationJob };
       await this.repo.update(id, { metadata: { ...currentMeta, prValidationRequest: failed } } as any);
       throw new ServiceUnavailableException('La validation PR n’a pas pu être mise en file dans Jenkins.');
     }

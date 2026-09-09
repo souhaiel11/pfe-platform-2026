@@ -18,11 +18,13 @@
 // later phase will consume, plus small pure helpers so the eventual wiring
 // never has to re-implement the derivations Phase 0 pinned down.
 //
-// REGRESSION NOTE: the platform has no findings baseline / candidate-vs-baseline
-// diff yet (Phase 0 verdict). Real regression detection is a SEPARATE effort.
-// Until it exists, callers pass `regressionResult: 'INCONCLUSIVE'`, which by
-// design keeps a fully-remediated PR at MergeAuthorization 'INCONCLUSIVE'
-// (human diff review) rather than 'MERGE_READY' — never 'BLOCKED'.
+// BRIQUE 3/4 UPDATE: real regression detection now exists (pr-regression-
+// engine.ts) and its `result` is threaded into `regressionResult` below by
+// incidents.service.ts#saveValidation. Before real evidence is available
+// (no baselineSha/candidateFindingsSnapshot yet — see that engine's own
+// header), the caller still passes 'INCONCLUSIVE', which by design keeps a
+// fully-remediated PR at 'INCONCLUSIVE' (human diff review) rather than
+// 'MERGE_READY' — never 'BLOCKED'.
 
 import { FindingVerdict, PipelineHealth } from './finding-pipeline-separation';
 
@@ -90,7 +92,13 @@ export interface MergeAuthorizationInput {
 
 export interface MergeAuthorizationResult {
   authorization: MergeAuthorization;
+  /** Echoed straight from the input — BRIQUE 4: a single authoritative record carries all three facts, no recomputation needed downstream. */
+  remediationResult: RemediationResult;
+  regressionResult: RegressionResult;
+  /** PROVEN defects only (FINDING_INVALID, REGRESSION_CHANGES_REQUIRED) — exactly what makes `authorization` 'BLOCKED'. */
   blockingReasons: MergeBlockingReason[];
+  /** Unresolved/uncertain evidence (SHA_MISMATCH, STAGE_INCOMPLETE, REMEDIATION_INCONCLUSIVE, REGRESSION_UNVERIFIED, VALIDATION_IN_PROGRESS) — never a proven defect, exactly what makes `authorization` 'INCONCLUSIVE' or 'VALIDATING' when no blockingReason exists. */
+  technicalReasons: MergeBlockingReason[];
   advisories: MergeAdvisory[];
 }
 
@@ -131,11 +139,13 @@ export function deriveExactCorrelationVerified(input: {
  *
  *  MERGE_READY   only if remediation VALIDATED AND exact/correlation verified
  *                AND required stages complete AND regressionResult === 'CLEAN'.
- *  BLOCKED       if any finding INVALID, OR regressionResult === 'CHANGES_REQUIRED'.
+ *  BLOCKED       if any finding INVALID, OR regressionResult === 'CHANGES_REQUIRED'
+ *                — a PROVEN defect, never merely unresolved evidence.
  *  VALIDATING    if validation is still running.
  *  INCONCLUSIVE  otherwise — notably: remediation VALIDATED but regression
  *                INCONCLUSIVE (no baseline yet) => merge is not auto-certifiable,
- *                a human must review the diff.
+ *                a human must review the diff. Never treated as BLOCKED: an
+ *                unresolved/uncertain signal is not a proven defect.
  *
  *  The global Sonar Quality Gate (pipelineHealth.sonarQualityGate) is NEVER a
  *  merge blocker here — only an advisory. It remains blocking for DEPLOYMENT
@@ -145,34 +155,41 @@ export function computeMergeAuthorization(input: MergeAuthorizationInput): Merge
   const advisories = buildAdvisories(input.pipelineHealth);
 
   if (input.validationInProgress === true) {
-    return { authorization: 'VALIDATING', blockingReasons: ['VALIDATION_IN_PROGRESS'], advisories };
+    return {
+      authorization: 'VALIDATING', remediationResult: input.remediationResult, regressionResult: input.regressionResult,
+      blockingReasons: [], technicalReasons: ['VALIDATION_IN_PROGRESS'], advisories,
+    };
   }
 
+  // BRIQUE 4 — reason codes are bucketed by PROVEN-defect vs
+  // unresolved/uncertain-evidence as they are derived, not sorted
+  // afterward: a code can only ever land in the array matching why it
+  // exists. `blockingReasons` alone determines 'BLOCKED'; a non-empty
+  // `technicalReasons` (with no blockingReasons) determines 'INCONCLUSIVE'.
   const blockingReasons: MergeBlockingReason[] = [];
+  const technicalReasons: MergeBlockingReason[] = [];
 
   if (input.remediationResult === 'INVALID') blockingReasons.push('FINDING_INVALID');
-  else if (input.remediationResult === 'INCONCLUSIVE') blockingReasons.push('REMEDIATION_INCONCLUSIVE');
+  else if (input.remediationResult === 'INCONCLUSIVE') technicalReasons.push('REMEDIATION_INCONCLUSIVE');
 
-  if (!input.exactCorrelationVerified) blockingReasons.push('SHA_MISMATCH');
-  if (!input.requiredStagesComplete) blockingReasons.push('STAGE_INCOMPLETE');
+  if (!input.exactCorrelationVerified) technicalReasons.push('SHA_MISMATCH');
+  if (!input.requiredStagesComplete) technicalReasons.push('STAGE_INCOMPLETE');
 
   if (input.regressionResult === 'CHANGES_REQUIRED') blockingReasons.push('REGRESSION_CHANGES_REQUIRED');
-  else if (input.regressionResult === 'INCONCLUSIVE') blockingReasons.push('REGRESSION_UNVERIFIED');
+  else if (input.regressionResult === 'INCONCLUSIVE') technicalReasons.push('REGRESSION_UNVERIFIED');
 
-  const hardBlocked = blockingReasons.some(
-    r => r === 'FINDING_INVALID' || r === 'REGRESSION_CHANGES_REQUIRED',
-  );
+  const hardBlocked = blockingReasons.length > 0;
 
   let authorization: MergeAuthorization;
   if (hardBlocked) {
     authorization = 'BLOCKED';
-  } else if (blockingReasons.length === 0 && input.regressionResult === 'CLEAN') {
+  } else if (technicalReasons.length === 0 && input.regressionResult === 'CLEAN') {
     authorization = 'MERGE_READY';
   } else {
     authorization = 'INCONCLUSIVE';
   }
 
-  return { authorization, blockingReasons, advisories };
+  return { authorization, remediationResult: input.remediationResult, regressionResult: input.regressionResult, blockingReasons, technicalReasons, advisories };
 }
 
 function buildAdvisories(health?: Partial<PipelineHealth> | null): MergeAdvisory[] {

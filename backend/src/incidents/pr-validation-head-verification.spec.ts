@@ -175,6 +175,7 @@ async function main() {
     assert.equal(incident.metadata.prValidationRequest.headVerification.overall, 'INCONCLUSIVE');
     assert.equal(incident.metadata.prValidationRequest.headVerification.failureClass, 'SHA_UNAVAILABLE');
     assert.equal(incident.metadata.prValidationRequest.headVerification.workspace.checkoutSha, null);
+    assert.equal(incident.metadata.prValidationRequest.result, 'INCONCLUSIVE', 'BRIQUE 4: SHA_UNAVAILABLE -> INCONCLUSIVE, not BLOCKED');
   }
 
   // ------------------------------------------------------------------
@@ -198,6 +199,7 @@ async function main() {
     assert.equal(triggers, 0, 'CASE C: Jenkins never triggered');
     assert.equal(incident.metadata.prValidationRequest.status, 'FAILED');
     assert.notEqual(incident.metadata.prValidationRequest.headVerification.workspace.checkoutSha, PR25_SHA);
+    assert.equal(incident.metadata.prValidationRequest.result, 'INCONCLUSIVE', 'BRIQUE 4: checkout mismatch -> INCONCLUSIVE, not BLOCKED (uncertain correlation, not a proven candidate defect)');
 
     // Defense in depth: a dishonest sub-service claiming PASS with a
     // mismatched checkoutSha must still be rejected, never trusted blindly.
@@ -210,6 +212,33 @@ async function main() {
     }) as any;
     await assert.rejects(() => service2.requestPrValidation(incident2.id, user), /vérification HEAD/);
     assert.equal(incident2.metadata.prValidationRequest.status, 'FAILED', 'a claimed PASS with mismatched checkoutSha is never trusted as a bare boolean');
+  }
+
+  // ------------------------------------------------------------------
+  // BRIQUE 4 — HEAD_ONLY overall='FAIL' (the exact candidate commit itself
+  // does not compile / fails its own regression suite): a PROVEN defect,
+  // never an infrastructure problem. Distinct from Cases B/C/D, which are
+  // all uncertain evidence -> INCONCLUSIVE.
+  // ------------------------------------------------------------------
+  {
+    const candidateVerification = { verifyHead: async (req: any) => ({
+      ...passingHeadVerification(req), overall: 'FAIL', compile: { status: 'SUCCESS', exitCode: 0, durationMs: 1, evidenceRef: null },
+      tests: { targeted: { status: 'NOT_RUN', reason: 'NO_HIGH_CONFIDENCE_TARGET_SELECTION' },
+        regression: { status: 'FAILED', total: 5, failures: 2, errors: 0, skipped: 0, durationMs: 1, evidenceRef: null } },
+    }) };
+    const { incident, service } = makeFixture(candidateVerification);
+    let triggers = 0;
+    globalThis.fetch = (async (url: any) => {
+      const value = String(url);
+      if (value.includes('api.github.com')) return githubOpenPr(PR25_SHA, incident);
+      triggers++;
+      throw new Error('Jenkins must never be reached when the candidate itself proven fails its own tests');
+    }) as any;
+    await assert.rejects(() => service.requestPrValidation(incident.id, user), /vérification HEAD/);
+    assert.equal(triggers, 0, 'a proven candidate defect never reaches Jenkins either');
+    assert.equal(incident.metadata.prValidationRequest.status, 'FAILED');
+    assert.equal(incident.metadata.prValidationRequest.failureCode, 'CANDIDATE_TEST_FAILURE');
+    assert.equal(incident.metadata.prValidationRequest.result, 'INVALID', 'a proven compile/test failure is INVALID (BLOCKED-worthy), not INCONCLUSIVE');
   }
 
   // ------------------------------------------------------------------
@@ -233,6 +262,8 @@ async function main() {
     assert.equal(incident.metadata.prValidationRequest.status, 'FAILED');
     assert.equal(incident.metadata.prValidationRequest.failureCode, 'HEAD_VERIFICATION_NOT_PASS');
     assert.equal(incident.metadata.prValidationRequest.headVerification, null, 'no fake evidence is fabricated for a transport failure');
+    // BRIQUE 4 CASE E — a verifier-unavailable failure is INCONCLUSIVE, never BLOCKED.
+    assert.equal(incident.metadata.prValidationRequest.result, 'INCONCLUSIVE', 'BRIQUE 4: verifier unavailable -> INCONCLUSIVE, not BLOCKED');
 
     // No automatic retry: calling requestPrValidation a second time with the
     // SAME still-unavailable worker must fail again by an explicit human

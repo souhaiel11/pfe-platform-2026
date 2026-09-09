@@ -347,7 +347,7 @@ async function main() {
     assert.equal(buildPrValidationJobName('pfe-app-test', 24), 'pfe-app-test-multibranch/job/PR-24');
     const r49Accepted: any = await service.saveValidation(incident.id, r49Payload());
     assert.ok(r49Accepted, 'canonical .../job/PR-24 format is accepted, not 409-rejected');
-    assert.equal(incident.metadata.prValidationRequest.status, 'FAILED', 'reached the terminal write (job check did not block it) -- FAILED here only because sonarStatus!==OK, unrelated to job correlation');
+    assert.equal(incident.metadata.prValidationRequest.status, 'FAILED', 'reached the terminal write (job check did not block it) -- FAILED here because jenkinsStatus=UNSTABLE and correlationVerified=false, unrelated to job correlation (BRIQUE 4: sonarStatus alone no longer affects this)');
     assert.equal(incident.metadata.validation.validationStatus, 'INCONCLUSIVE');
 
     // R49-TEST B — the old, non-canonical format (missing /job/) is rejected.
