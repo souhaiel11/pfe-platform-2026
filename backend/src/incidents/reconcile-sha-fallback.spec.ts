@@ -99,7 +99,7 @@ function makeService() {
     findOne: incidentRepo.findOne,
     update: incidentRepo.update,
   };
-  const service = new IncidentsService(repository, { findOne: async () => project } as any, { emit: () => undefined } as any, { syncIncident: async () => undefined } as any);
+  const service = new IncidentsService(repository, { findOne: async () => project } as any, { emit: () => undefined } as any, { syncIncident: async () => undefined } as any, {} as any);
   return { service, incident, project };
 }
 

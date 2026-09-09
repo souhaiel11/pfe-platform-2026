@@ -36,7 +36,7 @@ const harness = (incident: any) => {
     update: txRepo.update,
   };
   const service = new IncidentsService(repository, {} as any, { emit: () => undefined } as any,
-    { syncIncident: async () => undefined } as any);
+    { syncIncident: async () => undefined } as any, {} as any);
   return { service, updates };
 };
 

@@ -1,6 +1,24 @@
 import * as assert from 'node:assert/strict';
 import { IncidentsService, classifyJenkinsTriggerStatus } from './incidents.service';
 
+// BRIQUE 2 — see pr-validation-contract.spec.ts for rationale: this suite is
+// about Jenkins-side failure taxonomy, so HEAD_ONLY is stubbed to always pass
+// for whatever exact SHA it is asked to verify.
+const passingCandidateVerification: any = {
+  verifyHead: async (request: any) => ({
+    mode: 'HEAD_ONLY',
+    identity: { repository: request.repository, targetSha: String(request.targetSha).toLowerCase(),
+      validationRequestId: request.validationRequestId, requestId: request.requestId,
+      batchId: request.batchId, candidateAttempt: request.candidateAttempt },
+    workspace: { workspaceId: 'stub', checkoutSha: String(request.targetSha).toLowerCase(), exactShaVerified: true, created: true, cleaned: true },
+    compile: { status: 'SUCCESS', exitCode: 0, durationMs: 1, evidenceRef: null },
+    tests: { targeted: { status: 'NOT_RUN', reason: 'NO_HIGH_CONFIDENCE_TARGET_SELECTION' },
+      regression: { status: 'SUCCESS', total: 1, failures: 0, errors: 0, skipped: 0, durationMs: 1, evidenceRef: null } },
+    staticAnalysis: { status: 'NOT_RUN', reason: 'SUPPORTED_STATIC_ADAPTER_NOT_CONFIGURED', newIssues: [], evidenceRef: null },
+    overall: 'PASS', verificationLevel: 'COMPILE_TEST_VERIFIED', failureClass: null,
+  }),
+};
+
 // R21-AR — proves requestPrValidation() classifies every distinct Jenkins
 // failure mode instead of collapsing all of them into JENKINS_TRIGGER_FAILED
 // (the exact gap that made PR-25's real JENKINS_JOB_NOT_FOUND/bootstrap
@@ -49,7 +67,7 @@ const makeIncident = () => {
     } },
     findOne: incidentRepo.findOne, update: incidentRepo.update,
   };
-  const service = new IncidentsService(repository, projectRepo, { emit: () => undefined } as any, { syncIncident: async () => undefined } as any);
+  const service = new IncidentsService(repository, projectRepo, { emit: () => undefined } as any, { syncIncident: async () => undefined } as any, passingCandidateVerification);
   return { incident, project, service };
 };
 

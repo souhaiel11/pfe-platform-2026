@@ -50,7 +50,7 @@ async function main() {
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async (_url: any, options: any) => { dispatches++; payloads.push(JSON.parse(options.body)); return new Response('{}', { status: 200 }); };
   try {
-  const service = new IncidentsService(repository, transactionalProjectRepo as any, { emit: () => undefined } as any, { syncIncident: async () => undefined } as any);
+  const service = new IncidentsService(repository, transactionalProjectRepo as any, { emit: () => undefined } as any, { syncIncident: async () => undefined } as any, {} as any);
   const user = { id: 'developer-1', role: 'developer' };
   const first: any = await service.approveFix(incident.id, user, { findingIds: ['b', 'a', 'a'] });
   assert.equal(first.duplicate, false);
@@ -109,7 +109,7 @@ async function main() {
     findOne: async () => retryIncident,
     update: retryIncidentRepo.update,
   };
-  const retryService = new IncidentsService(retryRepository, transactionalProjectRepo as any, { emit: () => undefined } as any, { syncIncident: async () => undefined } as any);
+  const retryService = new IncidentsService(retryRepository, transactionalProjectRepo as any, { emit: () => undefined } as any, { syncIncident: async () => undefined } as any, {} as any);
   globalThis.fetch = async () => { throw new Error('simulated dispatch failure'); };
   await assert.rejects(() => retryService.approveFix(retryIncident.id, user, { findingIds: ['a', 'b'] }), /correction n’a pas pu démarrer/);
   const failedRequestId = retryIncident.metadata.fixRequest.requestId;
@@ -166,7 +166,7 @@ async function main() {
     findOne: async () => concurrentIncident,
     update: concurrentIncidentRepo.update,
   };
-  const concurrentService = new IncidentsService(concurrentRepository, transactionalProjectRepo as any, { emit: () => undefined } as any, { syncIncident: async () => undefined } as any);
+  const concurrentService = new IncidentsService(concurrentRepository, transactionalProjectRepo as any, { emit: () => undefined } as any, { syncIncident: async () => undefined } as any, {} as any);
   let concurrentDispatches = 0;
   globalThis.fetch = async () => { concurrentDispatches++; return new Response('{}', { status: 200 }); };
   const concurrentResults = await Promise.allSettled([
@@ -193,7 +193,7 @@ async function main() {
     findOne: async () => callbackIncident,
     update: callbackRepo.update,
   };
-  const callbackService = new IncidentsService(callbackRepository, transactionalProjectRepo as any, { emit: () => undefined } as any, { syncIncident: async () => undefined } as any);
+  const callbackService = new IncidentsService(callbackRepository, transactionalProjectRepo as any, { emit: () => undefined } as any, { syncIncident: async () => undefined } as any, {} as any);
   const failure = {
     status: 'FAILED' as const, workflowId: '9adcV31eaIgJyMR0', executionId: '1887',
     incidentId: callbackIncident.id, requestId: 'request-callback', batchId: 'batch-callback', batchKey: 'batch-callback',

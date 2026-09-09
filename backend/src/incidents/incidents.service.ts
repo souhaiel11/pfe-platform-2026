@@ -13,6 +13,8 @@ import { resolveJenkinsInternalUrl } from '../common/jenkins-url';
 import { ManualRemediationService } from '../manual-remediation/manual-remediation.service';
 import { deriveFindingsAndHealth } from '../validation/finding-pipeline-separation';
 import { computeMergeAuthorization, deriveRemediationResult, deriveExactCorrelationVerified } from '../validation/merge-authorization';
+import { CandidateVerificationService } from '../candidate-verification/candidate-verification.service';
+import { HeadVerificationRequest, HeadVerification } from '../candidate-verification/candidate-verification.types';
 
 export function classifyJenkinsTriggerStatus(status: number): { accepted: boolean; code?: string } {
   if (status === 201) return { accepted: true };
@@ -341,6 +343,7 @@ export class IncidentsService {
     @InjectRepository(Project) private readonly projectRepo: Repository<Project>,
     private readonly gateway: IncidentsGateway,
     private readonly manualRemediation: ManualRemediationService,
+    private readonly candidateVerification: CandidateVerificationService,
   ) {}
 
   /**
@@ -760,6 +763,28 @@ export class IncidentsService {
       || validation.expectedPrHeadSha.toLowerCase() !== validation.checkoutSha.toLowerCase()
       || validation.expectedPrHeadSha.toLowerCase() !== String(validationRequest.expectedPrHeadSha).toLowerCase()) {
       throw new ConflictException('Le commit validé ne correspond pas au HEAD attendu de la Pull Request.');
+    }
+    // BRIQUE 2 — additive, backend-side recomputation of the HEAD_ONLY leg of
+    // the identity invariant on final callback: never trust a boolean alone
+    // (WF3/Jenkins are already re-proven above via checkoutSha/expectedPrHeadSha).
+    // Deterministic, no fuzzy matching -- a headVerification computed for
+    // another incident/request/batch/PR/attempt/SHA must never satisfy this
+    // validation. Additive/backward-compatible: a prValidationRequest that
+    // predates this check (no headVerification persisted) is left alone, so
+    // this never breaks a record produced before Brique 2.
+    const headVerification: any = validationRequest.headVerification;
+    if (headVerification) {
+      const expectedTarget = String(validationRequest.expectedPrHeadSha || '').toLowerCase();
+      const headOk = headVerification.mode === 'HEAD_ONLY' && headVerification.overall === 'PASS'
+        && headVerification.workspace?.exactShaVerified === true
+        && String(headVerification.workspace?.checkoutSha || '').toLowerCase() === expectedTarget
+        && String(headVerification.identity?.targetSha || '').toLowerCase() === expectedTarget
+        && String(headVerification.identity?.validationRequestId || '') === String(validationRequest.validationRequestId || '')
+        && String(headVerification.identity?.requestId || '') === String(fixRequest.requestId || '')
+        && String(headVerification.identity?.batchId || '') === String(fixRequest.batchId || '')
+        && Number(headVerification.identity?.candidateAttempt) === Number(fixRequest.attemptCount)
+        && canonicalRepo(headVerification.identity?.repository || '') === repository;
+      if (!headOk) throw new ConflictException('La preuve de vérification HEAD ne correspond pas à l’identité de validation attendue.');
     }
     if (!validation.analysisId || !validation.ceTaskId) throw new ConflictException('La corrélation Sonar exacte est absente.');
     const jenkinsStatus = String(validation.jenkinsStatus ?? validation.build?.status ?? '').toUpperCase();
@@ -1261,6 +1286,54 @@ export class IncidentsService {
     if (!project.sonarqubeKey) {
       throw new BadRequestException('Aucune clé SonarQube n’est configurée pour ce projet.');
     }
+
+    // BRIQUE 2 — the governed target (remoteHeadSha, already frozen above as
+    // claim.request.expectedPrHeadSha) must be independently proven by an
+    // exact-SHA HEAD_ONLY verification before Jenkins is ever triggered.
+    // HEAD_ONLY never authorizes a write (Brique 1 write-guard rejects it
+    // unconditionally) -- it only proves the exact PR-head commit compiles
+    // and its own regression suite passes, so a broken/unreachable candidate
+    // never consumes a Jenkins build. The input SHA is always the
+    // already-governed remoteHeadSha -- HEAD_ONLY never resolves its own
+    // "latest" branch tip.
+    const headVerificationRequest: HeadVerificationRequest = {
+      verifyHeadOnly: true, repository, targetSha: remoteHeadSha,
+      validationRequestId, requestId: claim.request.requestId, batchId: claim.request.batchId,
+      candidateAttempt: Number(claim.request.attemptCount),
+    };
+    let headVerification: HeadVerification | null;
+    try {
+      headVerification = await this.candidateVerification.verifyHead(headVerificationRequest);
+    } catch {
+      // A malformed request or an unexpected throw is an infrastructure
+      // fact, never a proven candidate defect -- fail closed exactly like a
+      // transport failure below, never a fabricated PASS.
+      headVerification = null;
+    }
+    // Never trust the sub-service's overall==='PASS' as a bare boolean: the
+    // exact-SHA equality that PASS is supposed to imply is re-proven here,
+    // independently, against the SAME governed remoteHeadSha this call was
+    // issued for. No fuzzy matching.
+    const headEligible = !!headVerification && headVerification.overall === 'PASS'
+      && headVerification.workspace?.exactShaVerified === true
+      && String(headVerification.workspace?.checkoutSha || '').toLowerCase() === remoteHeadSha
+      && String(headVerification.identity?.targetSha || '').toLowerCase() === remoteHeadSha;
+    if (!headEligible) {
+      const failureSummary = headVerification
+        ? `HEAD_ONLY overall=${headVerification.overall} failureClass=${headVerification.failureClass ?? 'null'} checkoutSha=${headVerification.workspace?.checkoutSha ?? 'null'}`
+        : 'La vérification HEAD n’a pas pu être exécutée (requête invalide ou verifier inaccessible).';
+      const now2 = new Date().toISOString();
+      const current: any = await this.repo.findOne({ where: { id } });
+      const currentMeta: any = current.metadata || {};
+      const failed = {
+        ...claim.request, status: 'FAILED', failureCode: 'HEAD_VERIFICATION_NOT_PASS',
+        failureSummary: failureSummary.slice(0, 300), headVerification: headVerification ?? null,
+        failedAt: now2, updatedAt: now2,
+      };
+      await this.repo.update(id, { metadata: { ...currentMeta, prValidationRequest: failed } } as any);
+      throw new ServiceUnavailableException('La vérification HEAD exacte n’a pas confirmé un candidat valide pour cette Pull Request — Jenkins n’a pas été déclenché.');
+    }
+
     const authHeader = 'Basic ' + Buffer.from(project.jenkinsToken).toString('base64');
     const prValidationJob = buildPrValidationJobName(project.jenkinsJobName, prNumber);
     const resolvedJobPath = resolveJenkinsJobPath(prValidationJob);
@@ -1330,7 +1403,7 @@ export class IncidentsService {
       }
       const current: any = await this.repo.findOne({ where: { id } });
       const currentMeta: any = current.metadata || {};
-      const queued = { ...claim.request, status: 'QUEUED', queueUrl, queuedAt: new Date().toISOString(), updatedAt: new Date().toISOString(), prValidationJob };
+      const queued = { ...claim.request, status: 'QUEUED', headVerification, queueUrl, queuedAt: new Date().toISOString(), updatedAt: new Date().toISOString(), prValidationJob };
       await this.repo.update(id, { metadata: { ...currentMeta, prValidationRequest: queued } } as any);
       return { success: true, duplicate: false, validationRequest: queued };
     } catch (error: any) {
@@ -1341,7 +1414,7 @@ export class IncidentsService {
       const failureSummary = String(error?.message || 'Le build PR n’a pas pu être mis en file.').slice(0, 300);
       const current: any = await this.repo.findOne({ where: { id } });
       const currentMeta: any = current.metadata || {};
-      const failed = { ...claim.request, status: 'FAILED', failureCode, failureSummary, failedAt: new Date().toISOString(), updatedAt: new Date().toISOString(), prValidationJob };
+      const failed = { ...claim.request, status: 'FAILED', headVerification, failureCode, failureSummary, failedAt: new Date().toISOString(), updatedAt: new Date().toISOString(), prValidationJob };
       await this.repo.update(id, { metadata: { ...currentMeta, prValidationRequest: failed } } as any);
       throw new ServiceUnavailableException('La validation PR n’a pas pu être mise en file dans Jenkins.');
     }

@@ -40,7 +40,7 @@ const makeHarness = () => {
   const incidentRepo: any = { findOne: async () => incident, update: async (_id: string, patch: any) => Object.assign(incident, patch) };
   const projectRepo: any = { findOne: async () => project };
   const repository: any = { findOne: incidentRepo.findOne, update: incidentRepo.update, manager: { transaction: async (fn: any) => fn({ getRepository: () => incidentRepo }) } };
-  const service = new IncidentsService(repository, projectRepo, { emit: () => undefined } as any, { syncIncident: async () => undefined } as any);
+  const service = new IncidentsService(repository, projectRepo, { emit: () => undefined } as any, { syncIncident: async () => undefined } as any, {} as any);
   return { incident, project, service };
 };
 

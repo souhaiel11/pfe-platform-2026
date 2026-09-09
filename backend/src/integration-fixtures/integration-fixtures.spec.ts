@@ -34,7 +34,7 @@ function harness(environment = 'test', enabled = 'true') {
   const config = new ConfigService({ NODE_ENV: environment, INTEGRATION_FIXTURES_ENABLED: enabled });
   const fixtures = new IntegrationFixturesService(incidentRepo, projectRepo, config);
   const lifecycle = new IncidentsService(incidentRepo, projectRepo, { emit: () => undefined } as any,
-    { syncIncident: async () => undefined } as any);
+    { syncIncident: async () => undefined } as any, {} as any);
   return { fixtures, lifecycle, incidents, projects };
 }
 

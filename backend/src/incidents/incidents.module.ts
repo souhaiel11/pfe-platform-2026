@@ -7,9 +7,10 @@ import { IncidentsService } from './incidents.service';
 import { IncidentsController } from './incidents.controller';
 import { IncidentsGateway } from './incidents.gateway';
 import { ManualRemediationModule } from '../manual-remediation/manual-remediation.module';
+import { CandidateVerificationModule } from '../candidate-verification/candidate-verification.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Incident, Project]), HttpModule, ManualRemediationModule],
+  imports: [TypeOrmModule.forFeature([Incident, Project]), HttpModule, ManualRemediationModule, CandidateVerificationModule],
   providers: [IncidentsService, IncidentsGateway],
   controllers: [IncidentsController],
   exports: [IncidentsService],

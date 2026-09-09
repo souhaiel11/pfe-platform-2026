@@ -48,6 +48,7 @@ function makeHarness() {
   const service = new IncidentsService(
     repo, { findOne: async () => incident.project } as any,
     { emit: () => undefined } as any, { syncIncident: async () => undefined } as any,
+    {} as any,
   );
   return { service, incident, requestId, batchId };
 }
