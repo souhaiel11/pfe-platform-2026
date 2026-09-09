@@ -96,6 +96,7 @@ export class ApiService {
   retryFixBatch(id: string) { return this.http.post<any>(`${this.base}/incidents/${id}/retry`, {}); }
   requestPrValidation(id: string) { return this.http.post<any>(`${this.base}/incidents/${id}/pr-validation`, {}); }
   refreshPrValidationTarget(id: string) { return this.http.post<any>(`${this.base}/incidents/${id}/pr-validation/refresh-target`, {}); }
+  correctAndRevalidate(id: string) { return this.http.post<any>(`${this.base}/incidents/${id}/correct-and-revalidate`, {}); }
   rejectFix(id: string) { return this.http.post(`${this.base}/incidents/${id}/reject`, {}); }
 
   triggerBuild(projectId: string) { return this.http.post(`${this.base}/incidents/${projectId}/trigger-build`, {}); }

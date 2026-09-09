@@ -584,6 +584,49 @@ export class IncidentDetailComponent implements OnInit, OnDestroy {
     return fix?.status === 'PR_CREATED' && !!this.incident?.prUrl && (!state || state === 'FAILED');
   }
 
+  // BRIQUE 5 — "Corriger et revalider" : backend reste seul décisionnaire.
+  // Le bouton n'apparaît que si mergeAuthorization === BLOCKED ET que le
+  // backend a lui-même déclaré la cause exploitable (correctiveActionAllowed) ;
+  // jamais recalculé ici. Une validation en cours (REQUESTED/QUEUED/RUNNING)
+  // désactive toute action concurrente, y compris la correction.
+  correctiveBusy = false;
+  // "Correction supplémentaire en cours" : distinct du libellé de la toute
+  // première tentative — seule la dernière entrée d'attempts[] marquée
+  // corrective:true (posée par correctAndRevalidate()) le déclenche.
+  isCorrectiveInFlight(): boolean {
+    const fix = this.incident?.metadata?.fixRequest;
+    if (!fix || !['FIX_STARTING', 'DISPATCHED'].includes(fix.status)) return false;
+    const attempts = Array.isArray(fix.attempts) ? fix.attempts : [];
+    const last = attempts[attempts.length - 1];
+    return !!last?.corrective;
+  }
+  canCorrectAndRevalidate(): boolean {
+    const ma = this.mergeAuthorization();
+    const state = this.prValidationRequest?.status;
+    if (state === 'REQUESTED' || state === 'QUEUED' || state === 'RUNNING') return false;
+    return ma?.authorization === 'BLOCKED' && ma?.correctiveActionAllowed === true;
+  }
+  correctAndRevalidate(): void {
+    if (this.correctiveBusy || !this.canCorrectAndRevalidate()) return;
+    if (!globalThis.confirm(
+      'Une nouvelle tentative de correction sera appliquée sur la même Pull Request.\n'
+      + 'La Pull Request existante ne sera pas fusionnée automatiquement.',
+    )) return;
+    this.correctiveBusy = true;
+    this.api.correctAndRevalidate(this.id).subscribe({
+      next: (result: any) => {
+        this.correctiveBusy = false;
+        this.toast.success(result?.duplicate ? 'Cette correction est déjà en cours.' : 'Correction supplémentaire en cours.');
+        this.load();
+      },
+      error: (err: any) => {
+        this.correctiveBusy = false;
+        this.toast.error('Correction refusée', userHttpError(err, 'La correction n’a pas pu être autorisée.'));
+        this.load();
+      },
+    });
+  }
+
   requestPrValidation(): void {
     if (this.prValidationBusy || !this.canRequestPrValidation()) return;
     this.prValidationBusy = true;

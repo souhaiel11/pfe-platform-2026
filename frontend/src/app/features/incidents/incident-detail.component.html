@@ -61,7 +61,7 @@
                 ✕ Refuser / corriger manuellement
               </button>
               <button *ngIf="hasRealPr() && canRequestPrValidation()"
-                      class="btn btn-success btn-sm" [disabled]="prValidationBusy" (click)="requestPrValidation()">
+                      class="btn btn-success btn-sm" [disabled]="prValidationBusy || correctiveBusy || isCorrectiveInFlight()" (click)="requestPrValidation()">
                 {{prValidationBusy ? 'Validation en attente…' : (prValidationRequest?.status === 'FAILED' ? 'Réessayer la validation' : 'Valider la Pull Request')}}
               </button>
               <span *ngIf="prValidationRequest?.status === 'REQUESTED' || prValidationRequest?.status === 'QUEUED'"
@@ -69,6 +69,9 @@
               <span *ngIf="prValidationRequest?.status === 'RUNNING'" class="badge info">Validation en cours</span>
               <span *ngIf="prValidationRequest?.status === 'COMPLETED'" class="badge info">Validée</span>
               <span *ngIf="prValidationRequest?.status === 'FAILED'" class="badge high">Validation échouée</span>
+              <!-- BRIQUE 5 — état "Correction supplémentaire en cours", distinct de la
+                   génération initiale. Aucune action concurrente possible pendant ce temps. -->
+              <span *ngIf="isCorrectiveInFlight()" class="badge medium">Correction supplémentaire en cours</span>
             </div>
             <div *ngIf="prValidationTargetStale" style="margin-top:10px;padding:10px;border-radius:6px;background:var(--accent-red-bg, rgba(220,53,69,0.08));color:var(--accent-red);font-size:13px;">
               La Pull Request a changé depuis la demande de correction initiale (un nouveau commit de remédiation approuvé a été détecté). Actualisez la cible de validation avant de réessayer.
@@ -485,6 +488,19 @@
                         style="margin:10px 0 0;padding-left:18px;font-size:12px;color:var(--text-secondary);line-height:1.6;">
                       <li *ngFor="let r of ma.blockingReasons">{{ mergeBlockingLabel(r) }}</li>
                     </ul>
+                    <!-- BRIQUE 5 — action humaine gouvernée. N'apparaît que si le backend a
+                         lui-même déclaré la cause exploitable ; jamais Brique 5 tant que la PR
+                         est encore VALIDATING, et jamais pour INCONCLUSIVE. -->
+                    <div *ngIf="ma.authorization === 'BLOCKED' && ma.correctiveActionAllowed && !isCorrectiveInFlight()" style="margin-top:10px;">
+                      <button class="btn btn-danger btn-sm" [disabled]="correctiveBusy || prValidationBusy" (click)="correctAndRevalidate()">
+                        {{ correctiveBusy ? 'Autorisation…' : 'Corriger et revalider' }}
+                      </button>
+                    </div>
+                    <div *ngIf="ma.authorization === 'BLOCKED' && isCorrectiveInFlight()"
+                         style="margin-top:10px;font-size:12px;color:var(--accent-blue);display:flex;align-items:center;gap:6px;">
+                      <span class="spinner" style="width:12px;height:12px;border-width:1.5px;"></span>
+                      Correction supplémentaire en cours
+                    </div>
                     <ul *ngIf="ma.authorization === 'INCONCLUSIVE' && ma.technicalReasons?.length"
                         style="margin:10px 0 0;padding-left:18px;font-size:12px;color:var(--text-secondary);line-height:1.6;">
                       <li *ngFor="let r of ma.technicalReasons">{{ mergeBlockingLabel(r) }}</li>
