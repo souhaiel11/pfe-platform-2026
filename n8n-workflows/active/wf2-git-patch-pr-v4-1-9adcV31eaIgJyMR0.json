@@ -840,7 +840,7 @@
         ],
         "parameters": {
           "mode": "runOnceForAllItems",
-          "jsCode": "const ctx=$('Prepare Batch Context').first().json;const raw=$input.all().map(item=>item.json);const candidates=raw.flatMap(value=>Array.isArray(value)?value:Array.isArray(value?.items)?value.items:value?.number?[value]:[]);const matching=candidates.filter(pr=>String(pr.state||'').toLowerCase()==='open'&&pr.head?.ref===ctx.targetBranchName&&pr.base?.ref===ctx.baseBranch&&pr.head?.repo?.full_name===ctx.githubRepo&&pr.base?.repo?.full_name===ctx.githubRepo&&String(pr.body||'').includes(ctx.batchId));if(matching.length>1)throw new Error('DUPLICATE_BATCH_PR');return [{json:{existingPr:matching[0]||null,createRequired:matching.length===0,candidateCount:candidates.length,matchingCount:matching.length}}];"
+          "jsCode": "const ctx=$('Prepare Batch Context').first().json;const raw=$input.all().map(item=>item.json);const candidates=raw.flatMap(value=>Array.isArray(value)?value:Array.isArray(value?.items)?value.items:value?.number?[value]:[]);const matching=candidates.filter(pr=>String(pr.state||'').toLowerCase()==='open'&&pr.head?.ref===ctx.targetBranchName&&pr.base?.ref===ctx.baseBranch&&pr.head?.repo?.full_name===ctx.githubRepo&&pr.base?.repo?.full_name===ctx.githubRepo&&String(pr.body||'').includes(ctx.batchId));if(matching.length>1)throw new Error('DUPLICATE_BATCH_PR');const createRequired=matching.length===0;if(createRequired&&ctx.correctiveAttempt===true)throw new Error('EXPECTED_PR_NOT_OPEN');return [{json:{existingPr:matching[0]||null,createRequired,candidateCount:candidates.length,matchingCount:matching.length}}];"
         },
         "onError": "continueErrorOutput"
       },
