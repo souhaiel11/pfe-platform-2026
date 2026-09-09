@@ -33,6 +33,14 @@ export interface RegressionFinding {
   path: string;
   message?: string | null;
   severity?: string | null;
+  /**
+   * BRIQUE 5 — pure supporting evidence for human/causal display (e.g.
+   * corrective-context.ts). Never part of the fingerprint and never used by
+   * this engine to match/classify findings (Phase 3/5: line numbers move
+   * when surrounding code changes; Case D/Test I require line-independent
+   * identity).
+   */
+  line?: number | null;
 }
 
 /** A finding whose confidently-computed identity, or the lack of one, drives comparison. */

@@ -17,6 +17,7 @@ import { CandidateVerificationService } from '../candidate-verification/candidat
 import { HeadVerificationRequest, HeadVerification } from '../candidate-verification/candidate-verification.types';
 import { analyzeRegression, conservativeRegressionPolicy } from '../validation/pr-regression-engine';
 import { normalizeSonarFindings } from '../validation/sonar-regression-adapter';
+import { buildCorrectiveContext } from '../validation/corrective-context';
 
 export function classifyJenkinsTriggerStatus(status: number): { accepted: boolean; code?: string } {
   if (status === 201) return { accepted: true };
@@ -613,7 +614,16 @@ export class IncidentsService {
             // supplied it, but never synthesize scanner-resolution semantics.
             effectiveRemediatedFindingIds: normalize(input.effectiveRemediatedFindingIds),
             verifiedFiles: normalize(input.verifiedFiles), fileResults: input.fileResults,
-            prHeadSha: String(input.prHeadSha), retryEligible: false };
+            prHeadSha: String(input.prHeadSha), retryEligible: false,
+            // BRIQUE 5 PHASE 6 — a NEW commit landing on the branch (initial
+            // or corrective) always makes any earlier human-governed
+            // validationTargetSha override (refreshPrValidationTarget) moot:
+            // it named an OLDER commit than the one that just replaced it.
+            // Clearing it here means requestPrValidation()'s `fix.
+            // validationTargetSha || fix.prHeadSha` always resolves to THIS
+            // exact new prHeadSha, never a stale override from a previous
+            // attempt/commit.
+            validationTargetSha: null };
       const patch: any = { metadata: { ...metadata, fixRequest: nextFix } };
       if (callbackStatus === 'PR_CREATED') {
         if (!/^https:\/\/github\.com\/[^/]+\/[^/]+\/pull\/\d+$/i.test(String(input.prUrl || ''))
@@ -962,9 +972,19 @@ export class IncidentsService {
     // gouvernée doit recalculer sa propre mergeAuthorization pour le SHA cible).
     const authorizedSha = mergeAuth.authorization === 'MERGE_READY' && isFullGitSha(validation.checkoutSha)
       ? String(validation.checkoutSha).toLowerCase() : null;
+    // BRIQUE 5 — explicit, named flag rather than asking every consumer
+    // (frontend included) to re-derive "is this BLOCKED for a remediable
+    // reason". Today this is exactly `authorization === 'BLOCKED'` (Brique 4
+    // guarantees blockingReasons only ever holds proven-defect codes,
+    // FINDING_INVALID/REGRESSION_CHANGES_REQUIRED, never an uncertain/
+    // infrastructure one) — but a future policy could in principle add a
+    // BLOCKED code this platform cannot act on causally, and this flag is
+    // the one place that distinction would be made, never the frontend.
+    const correctiveActionAllowed = mergeAuth.authorization === 'BLOCKED';
     (validationRecord as any).mergeAuthorization = {
       ...mergeAuth,
       authorizedSha,
+      correctiveActionAllowed,
       computedAt: validationRecord.validatedAt,
       forSha: validation.checkoutSha ?? null,
     };
@@ -1629,6 +1649,170 @@ export class IncidentsService {
       this.gateway.emit('incident:updated', updated);
     }
     return { success: true, changed: result.changed, validationTargetSha: result.validationTargetSha, originalPrHeadSha: fix.prHeadSha };
+  }
+
+  // BRIQUE 5 — POST /:id/correct-and-revalidate. Exactly ONE causal
+  // corrective attempt per explicit human authorization, on the SAME
+  // remediation lineage (incidentId/requestId/batchId/PR/branch) — never a
+  // second PR, never automatic. Permitted ONLY when the CURRENT persisted
+  // validation.mergeAuthorization.authorization === 'BLOCKED': a PROVEN
+  // defect (TARGET_FINDING_INVALID / NEW_BLOCKING_FINDING). Brique 4's own
+  // design already guarantees BLOCKED never arises from an uncertain/
+  // infrastructure signal (those are INCONCLUSIVE, a different value
+  // entirely) — so this single check IS "reject INCONCLUSIVE causes"
+  // (Phase 1 requirement #4), with no separate taxonomy needed. Never
+  // touches fixRequest.findingIds/findings (the original approved batch is
+  // immutable) — causal evidence travels in a SEPARATE correctiveContext.
+  async correctAndRevalidate(id: string, user: any) {
+    this.assertCanApprove(user);
+    const snapshot = await this.repo.findOne({ where: { id }, relations: ['project'] });
+    if (!snapshot) throw new NotFoundException('Incident introuvable.');
+    const metadata: any = snapshot.metadata || {};
+    const fix: any = metadata.fixRequest || {};
+    const validation: any = metadata.validation || {};
+    if (!snapshot.prUrl || !fix.prNumber || !fix.requestId || !fix.batchId) {
+      throw new ConflictException('Aucune Pull Request de correction n’est disponible pour cette convergence.');
+    }
+    if (validation?.mergeAuthorization?.authorization !== 'BLOCKED') {
+      throw new ConflictException('Une correction supplémentaire n’est autorisée que lorsque la Pull Request est bloquée par un défaut prouvé.');
+    }
+    const blockedSha = String(validation.checkoutSha || '').toLowerCase();
+    if (!isFullGitSha(blockedSha)) {
+      throw new ConflictException('Le commit exact bloqué est indisponible.');
+    }
+    // Phase 3 — structured, proven evidence only. Never invents a file/line/
+    // root cause from a generic message: if nothing extractable exists,
+    // refuse to dispatch rather than run blindly.
+    const correctiveContext = buildCorrectiveContext({ previousAttempt: Number(fix.attemptCount || 0), validation });
+    if (correctiveContext.blockingCauses.length === 0) {
+      throw new ConflictException('Aucune cause de blocage exploitable n’a pu être extraite — décision humaine requise.');
+    }
+    const prNumber = Number(fix.prNumber);
+    // Phase 1 items 5-7 — verify the PR is still open at EXACTLY the SHA
+    // that was proven BLOCKED, before authorizing anything. If it moved
+    // (Case I: someone pushed in the meantime), fail closed — a fresh
+    // governed validation is required first, never a correction on top of
+    // an unproven commit.
+    const pull = await this.githubPullRequest(snapshot.project, prNumber);
+    const remoteHeadSha = String(pull?.head?.sha || '').toLowerCase();
+    const expectedBranch = `fix/pfe-${snapshot.id}-${fix.requestId}`;
+    if (pull?.state !== 'open' || String(pull?.head?.ref || '') !== expectedBranch) {
+      throw new ConflictException('La Pull Request n’est plus ouverte ou ne correspond plus à cette demande de correction.');
+    }
+    if (remoteHeadSha !== blockedSha) {
+      throw new ConflictException('La Pull Request a changé depuis le blocage constaté — une nouvelle validation gouvernée est requise avant toute correction.');
+    }
+    const nextAttempt = Number(fix.attemptCount || 0) + 1;
+    // Phase 2 — deterministic corrective-attempt identity: a duplicate HTTP
+    // delivery (double-click) for the SAME lineage/blocked-SHA/next-attempt
+    // must never dispatch a second WF2 execution.
+    const correctiveAttemptIdentity = createHash('sha256')
+      .update(`${id}\n${fix.requestId}\n${fix.batchId}\n${prNumber}\n${blockedSha}\n${nextAttempt}`)
+      .digest('hex');
+
+    const claim: any = await this.repo.manager.transaction(async manager => {
+      const incidents = manager.getRepository(Incident);
+      const incident: any = await incidents.findOne({ where: { id }, lock: { mode: 'pessimistic_write' } });
+      if (!incident) throw new NotFoundException('Incident introuvable.');
+      const currentMeta: any = incident.metadata || {};
+      const currentFix: any = currentMeta.fixRequest || {};
+      const currentValidation: any = currentMeta.validation || {};
+      if (currentFix.requestId !== fix.requestId || currentFix.batchId !== fix.batchId
+        || Number(currentFix.prNumber) !== prNumber
+        || currentValidation?.mergeAuthorization?.authorization !== 'BLOCKED'
+        || String(currentValidation.checkoutSha || '').toLowerCase() !== blockedSha) {
+        throw new ConflictException('La demande de correction a changé avant l’autorisation.');
+      }
+      const existingDispatch = currentFix.correctiveDispatch;
+      if ((existingDispatch?.identity === correctiveAttemptIdentity && ['AUTHORIZED', 'DISPATCHED'].includes(String(existingDispatch.status)))
+        || ['FIX_STARTING', 'DISPATCHED'].includes(String(currentFix.status))) {
+        return { duplicate: true as const, correctiveDispatch: existingDispatch || currentFix.correctiveDispatch || null, status: currentFix.status };
+      }
+      const now = new Date().toISOString();
+      const attempts = [
+        ...(Array.isArray(currentFix.attempts) ? currentFix.attempts : []),
+        { attempt: nextAttempt, status: 'FIX_STARTING', authorizedBy: user.id, authorizedAt: now, corrective: true },
+      ];
+      const correctiveDispatchRecord = {
+        identity: correctiveAttemptIdentity, status: 'AUTHORIZED', attempt: nextAttempt,
+        authorizedBy: user.id, authorizedAt: now, blockedSha, correctiveContext,
+      };
+      const nextFix = {
+        ...currentFix, status: 'FIX_STARTING', attemptCount: nextAttempt, attempts,
+        lastError: null, failedAt: null, retryEligible: false, correctiveDispatch: correctiveDispatchRecord,
+      };
+      await incidents.update(id, { metadata: { ...currentMeta, fixRequest: nextFix } } as any);
+      return { duplicate: false as const, correctiveDispatch: correctiveDispatchRecord };
+    });
+
+    if (claim.duplicate) {
+      return { success: true, duplicate: true, incidentId: id, status: claim.status, correctiveDispatch: claim.correctiveDispatch };
+    }
+
+    const project: Project = snapshot.project;
+    const canonicalFindings = (Array.isArray(fix.findings) ? fix.findings : []).map(workflowFinding);
+    const payload: any = {
+      incidentId: id, projectId: project.id, findingId: fix.findingIds?.[0], findingIds: fix.findingIds,
+      buildNumber: snapshot.buildNumber ?? (metadata as any)?.enrichedData?.build?.number ?? null,
+      batchKey: fix.batchKey || fix.batchId, batchId: fix.batchId,
+      stage: canonicalFindings[0]?.stage, source: canonicalFindings[0]?.source,
+      remediationType: 'AUTO_FIX_ELIGIBLE', requestId: fix.requestId,
+      attemptCount: nextAttempt,
+      approvedBy: { id: user.id, role: user.role },
+      finding: canonicalFindings[0], findings: canonicalFindings,
+      repository: project.githubRepo,
+      defaultBranch: metadata.defaultBranch || null,
+      // BRIQUE 5 — causal corrective mode. WF2's "Policy Gate" already
+      // spreads every field of the incoming payload through unchanged (a
+      // generic `{...data, ...computed}`, no allowlist truncates unknown
+      // keys), so these two fields reach "Select Existing PR" without any
+      // other WF2 wiring change. correctiveAttempt=true is the one flag
+      // WF2 uses to refuse creating a replacement PR when the expected one
+      // is not open (see n8n-workflows/active/wf2-...json, "Select Existing
+      // PR" and n8n-workflows/scripts/wf2-corrective-same-pr.spec.mjs).
+      correctiveAttempt: true, correctiveContext,
+    };
+    try {
+      const response = await fetch(this.workflowUrl('WF2'), {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Internal-Secret': process.env.N8N_INTERNAL_SECRET || '' },
+        body: JSON.stringify(payload), signal: AbortSignal.timeout(15000),
+      });
+      if (!response.ok) throw new Error(`n8n returned HTTP ${response.status}`);
+    } catch (err: any) {
+      const failedAt = new Date().toISOString();
+      await this.repo.manager.transaction(async manager => {
+        const incidents = manager.getRepository(Incident);
+        const current: any = await incidents.findOne({ where: { id }, lock: { mode: 'pessimistic_write' } });
+        if (!current) return;
+        const currentMeta: any = current.metadata || {};
+        const currentFix: any = currentMeta.fixRequest || {};
+        if (Number(currentFix.attemptCount) !== nextAttempt || currentFix.status !== 'FIX_STARTING') return;
+        const attempts = (currentFix.attempts || []).map((a: any) => a.attempt === nextAttempt
+          ? { ...a, status: 'FIX_FAILED', failedAt, error: err?.message || 'Workflow unavailable' } : a);
+        const correctiveDispatch = currentFix.correctiveDispatch?.identity === correctiveAttemptIdentity
+          ? { ...currentFix.correctiveDispatch, status: 'FAILED' } : currentFix.correctiveDispatch;
+        await incidents.update(id, { metadata: { ...currentMeta, fixRequest: {
+          ...currentFix, status: 'FIX_FAILED', attempts, lastError: err?.message || 'Workflow unavailable', failedAt, retryEligible: true, correctiveDispatch,
+        } } } as any);
+      });
+      throw new ServiceUnavailableException({ code: 'CORRECTIVE_WORKFLOW_UNAVAILABLE', message: 'La correction n’a pas pu démarrer. Vous pouvez réessayer.' });
+    }
+    const dispatchedAt = new Date().toISOString();
+    await this.repo.manager.transaction(async manager => {
+      const incidents = manager.getRepository(Incident);
+      const current: any = await incidents.findOne({ where: { id }, lock: { mode: 'pessimistic_write' } });
+      if (!current) return;
+      const currentMeta: any = current.metadata || {};
+      const currentFix: any = currentMeta.fixRequest || {};
+      if (Number(currentFix.attemptCount) !== nextAttempt || currentFix.status !== 'FIX_STARTING') return;
+      const attempts = (currentFix.attempts || []).map((a: any) => a.attempt === nextAttempt ? { ...a, status: 'DISPATCHED', dispatchedAt } : a);
+      const correctiveDispatch = currentFix.correctiveDispatch?.identity === correctiveAttemptIdentity
+        ? { ...currentFix.correctiveDispatch, status: 'DISPATCHED' } : currentFix.correctiveDispatch;
+      await incidents.update(id, { metadata: { ...currentMeta, fixRequest: { ...currentFix, status: 'DISPATCHED', attempts, dispatchedAt, correctiveDispatch } } } as any);
+    });
+    const updated = await this.findOne(id);
+    this.gateway.emit('incident:updated', updated);
+    return { success: true, duplicate: false, status: 'DISPATCHED', incidentId: id, requestId: fix.requestId, batchId: fix.batchId, attemptCount: nextAttempt, correctiveContext };
   }
 
   // R42A — réconciliation gouvernée d'une validation PR restée QUEUED/RUNNING

@@ -78,6 +78,15 @@ export class IncidentsController {
   @Post(':id/pr-validation/refresh-target') refreshPrValidationTarget(@Param('id') id: string, @Req() req: any) {
     return this.service.refreshPrValidationTarget(id, req.user);
   }
+  // BRIQUE 5 — explicit human authorization for exactly ONE causal
+  // corrective attempt on the SAME PR/lineage. Same guard as
+  // requestPrValidation/refreshPrValidationTarget (admin/developer). Never
+  // exposes n8n directly: frontend -> backend -> WF2, this endpoint is the
+  // only path.
+  @UseGuards(JwtAuthGuard)
+  @Post(':id/correct-and-revalidate') correctAndRevalidate(@Param('id') id: string, @Req() req: any) {
+    return this.service.correctAndRevalidate(id, req.user);
+  }
   @UseGuards(JwtAuthGuard)
   @Post(':id/reject') rejectFix(@Param('id') id: string, @Body() body: any, @Req() req: any) {
     return this.service.rejectFix(id, req.user, body || {});

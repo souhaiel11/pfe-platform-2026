@@ -58,5 +58,6 @@ export function normalizeSonarFindings(issues: readonly RawSonarIssue[] | null |
     path: String(issue.component || ''),
     message: issue.message ?? null,
     severity: issue.severity ?? null,
+    line: typeof issue.line === 'number' ? issue.line : null,
   }));
 }
