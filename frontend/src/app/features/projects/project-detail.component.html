@@ -322,13 +322,27 @@
                     [disabled]="prValidationBusy" (click)="requestPrValidation()">
               {{prValidationBusy ? 'Validation en attente…' : (prValidationRequest()?.status === 'FAILED' ? 'Réessayer la validation' : 'Valider la Pull Request')}}
             </button>
-            <span *ngIf="prValidationRequest()?.status === 'REQUESTED' || prValidationRequest()?.status === 'QUEUED'"
-                  class="badge medium">Validation en attente</span>
-            <span *ngIf="prValidationRequest()?.status === 'RUNNING'" class="badge info">Validation en cours</span>
-            <span *ngIf="prValidationRequest()?.status === 'COMPLETED'" class="badge info">Validée</span>
-            <span *ngIf="prValidationRequest()?.status === 'FAILED'" class="badge high">
-              {{prValidationRequest()?.result === 'INCONCLUSIVE' ? 'Validation non concluante' : 'Validation échouée'}}
-            </span>
+            <!-- Résumé d'autorisation de merge — même vocabulaire/couleur que l'écran incident.
+                 Fallback sur prValidationRequest.status/result pour les incidents pré-bb32694. -->
+            <ng-container *ngIf="mergeAuthShort() as ma; else prValidationFallback">
+              <span class="badge" [style.color]="ma.color" [style.border-color]="ma.color"
+                    style="background:transparent;border:1px solid;">{{ ma.label }}</span>
+            </ng-container>
+            <ng-template #prValidationFallback>
+              <span *ngIf="prValidationRequest()?.status === 'REQUESTED' || prValidationRequest()?.status === 'QUEUED'"
+                    class="badge medium">Validation en attente</span>
+              <span *ngIf="prValidationRequest()?.status === 'RUNNING'" class="badge info">Validation en cours</span>
+              <span *ngIf="prValidationRequest()?.status === 'COMPLETED'" class="badge info">Validée</span>
+              <span *ngIf="prValidationRequest()?.status === 'FAILED'" class="badge high">
+                {{prValidationRequest()?.result === 'INCONCLUSIVE' ? 'Validation non concluante' : 'Validation échouée'}}
+              </span>
+            </ng-template>
+          </div>
+          <div *ngIf="mergeAuthShort() || prValidationRequest()" style="margin-top:8px;">
+            <a [routerLink]="['/incidents', latestReport?.id]" [queryParams]="{ tab: 'validation' }"
+               style="font-size:12px;color:var(--accent-blue);text-decoration:none;">
+              Voir le détail de la validation →
+            </a>
           </div>
           <div *ngIf="prValidationTargetStale" style="margin-top:10px;padding:10px;border-radius:6px;background:var(--accent-red-bg, rgba(220,53,69,0.08));color:var(--accent-red);font-size:13px;">
             La Pull Request a changé depuis la demande de correction initiale (un nouveau commit de remédiation approuvé a été détecté). Actualisez la cible de validation avant de réessayer.

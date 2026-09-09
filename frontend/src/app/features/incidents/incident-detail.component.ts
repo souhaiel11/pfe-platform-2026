@@ -796,30 +796,64 @@ export class IncidentDetailComponent implements OnInit, OnDestroy {
   mergeAuthorization(): any { return this.validation?.mergeAuthorization ?? null; }
   pipelineHealth(): any { return this.validation?.derived?.pipelineHealth ?? null; }
 
+  // BRIQUE 4 — titre/sous-titre exactement le texte gouverné requis.
   private readonly MERGE_AUTH_META: Record<string, { color: string; icon: string; title: string; subtitle: string }> = {
     VALIDATING:   { color: 'var(--accent-blue)',   icon: '⏳', title: 'Analyse de la Pull Request en cours',
                     subtitle: 'Les corrections, les tests et les éventuelles régressions sont en cours de vérification.' },
     MERGE_READY:  { color: 'var(--accent-green)',  icon: '✅', title: 'Pull Request autorisée pour fusion',
                     subtitle: "Les problèmes ciblés sont corrigés et aucune régression bloquante n'a été détectée." },
     BLOCKED:      { color: 'var(--accent-red)',    icon: '⛔', title: 'Pull Request bloquée',
-                    subtitle: 'La fusion est déconseillée tant que les points ci-dessous ne sont pas résolus.' },
+                    subtitle: 'Une correction supplémentaire est nécessaire avant la fusion.' },
     INCONCLUSIVE: { color: 'var(--accent-orange)', icon: '⚠️', title: 'Validation non concluante',
-                    subtitle: 'La fusion ne peut pas être certifiée automatiquement — une revue humaine est nécessaire.' },
+                    subtitle: 'La plateforme ne dispose pas encore de preuves suffisantes pour autoriser la fusion.' },
   };
   mergeAuthMeta(a: string): { color: string; icon: string; title: string; subtitle: string } {
     return this.MERGE_AUTH_META[a] || { color: 'var(--border)', icon: 'ℹ️', title: 'État de validation inconnu', subtitle: '' };
   }
 
+  // BRIQUE 4 — labels partagés par les deux vocabulaires distincts persistés
+  // par computeMergeAuthorization() : blockingReasons (défaut prouvé — état
+  // BLOCKED) et technicalReasons (preuve incertaine/non résolue — état
+  // INCONCLUSIVE ou VALIDATING). Un même code n'apparaît jamais dans les deux.
   private readonly MERGE_BLOCKING_LABELS: Record<string, string> = {
-    FINDING_INVALID: "Un finding approuvé n'est pas corrigé",
-    REMEDIATION_INCONCLUSIVE: 'Correction non concluante',
+    FINDING_INVALID: "Finding ciblé non corrigé",
     REGRESSION_CHANGES_REQUIRED: 'Nouvelle régression bloquante introduite',
+    CANDIDATE_TEST_FAILURE: 'Tests du candidat en échec',
+    REMEDIATION_INCONCLUSIVE: 'Correction non concluante',
     REGRESSION_UNVERIFIED: "Absence de régression non vérifiable (analyse de référence indisponible)",
     STAGE_INCOMPLETE: 'Étapes de validation incomplètes',
     SHA_MISMATCH: 'Le commit validé ne correspond pas à la PR',
     VALIDATION_IN_PROGRESS: 'Analyse en cours',
   };
   mergeBlockingLabel(code: string): string { return this.MERGE_BLOCKING_LABELS[code] || String(code); }
+
+  // BRIQUE 4 — checklist MERGE_READY : chaque item reflète un signal
+  // backend déjà persisté, jamais recalculé côté Angular.
+  mergeReadyChecklist(): string[] {
+    const ma = this.mergeAuthorization();
+    if (!ma || ma.authorization !== 'MERGE_READY') return [];
+    return [
+      'Problèmes ciblés corrigés',
+      'Commit exact vérifié',
+      'Preuves de build/tests réunies',
+      'Aucune régression bloquante',
+    ];
+  }
+
+  // BRIQUE 4 — avertissement séparé, jamais mélangé à la décision de merge :
+  // un QG rouge causé par des findings préexistants n'est jamais présenté
+  // comme une régression. Le compte de findings historiques n'est affiché
+  // que lorsqu'il est fiable (régression complète, jamais estimé).
+  showMergeReadyQualityWarning(): boolean {
+    const ma = this.mergeAuthorization();
+    return ma?.authorization === 'MERGE_READY'
+      && String(this.pipelineHealth()?.sonarQualityGate || '').toUpperCase() === 'ERROR';
+  }
+  preexistingFindingCountIfReliable(): number | null {
+    const regression = this.validation?.regression;
+    if (!regression || regression.baselineSnapshotComplete !== true || regression.candidateSnapshotComplete !== true) return null;
+    return typeof regression.preExistingCount === 'number' ? regression.preExistingCount : null;
+  }
 
   advisoryLabel(a: any): string {
     const code = String(a?.code || '');

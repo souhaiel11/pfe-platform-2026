@@ -457,18 +457,37 @@
                       {{ mergeAuthMeta(ma.authorization).subtitle }}
                     </div>
 
-                    <!-- MERGE_READY : lien PR (lecture seule, aucune fusion auto) -->
-                    <div *ngIf="ma.authorization === 'MERGE_READY' && batchPrUrl()" style="margin-top:8px;">
-                      <a [href]="batchPrUrl()" target="_blank" rel="noopener noreferrer"
-                         style="color:var(--accent-blue);text-decoration:none;font-family:var(--font-mono);font-size:12px;">
-                        {{ batchPrLabel() }} ↗
-                      </a>
-                    </div>
+                    <!-- MERGE_READY : checklist, lien PR (lecture seule, aucune fusion auto), avertissement QG séparé -->
+                    <ng-container *ngIf="ma.authorization === 'MERGE_READY'">
+                      <ul style="margin:10px 0 0;padding-left:18px;font-size:12px;color:var(--text-secondary);line-height:1.7;">
+                        <li *ngFor="let item of mergeReadyChecklist()">✓ {{ item }}</li>
+                      </ul>
+                      <div *ngIf="batchPrUrl()" style="margin-top:8px;">
+                        <a [href]="batchPrUrl()" target="_blank" rel="noopener noreferrer"
+                           style="color:var(--accent-blue);text-decoration:none;font-family:var(--font-mono);font-size:12px;">
+                          {{ batchPrLabel() }} ↗
+                        </a>
+                        <div style="margin-top:4px;font-size:11px;color:var(--text-muted);">
+                          Vous pouvez ouvrir la Pull Request et effectuer la fusion après revue.
+                        </div>
+                      </div>
+                      <div *ngIf="showMergeReadyQualityWarning()"
+                           style="margin-top:10px;padding:8px 10px;border-radius:6px;background:var(--accent-orange-bg, rgba(234,88,12,0.1));color:var(--accent-orange);font-size:11px;line-height:1.5;">
+                        <strong>Qualité globale du projet : attention</strong>
+                        <span *ngIf="preexistingFindingCountIfReliable() !== null">
+                          — {{ preexistingFindingCountIfReliable() }} finding(s) historique(s) restant(s), hors du lot corrigé.
+                        </span>
+                      </div>
+                    </ng-container>
 
-                    <!-- BLOCKED / INCONCLUSIVE : causes machine → libellés FR -->
-                    <ul *ngIf="(ma.authorization === 'BLOCKED' || ma.authorization === 'INCONCLUSIVE') && ma.blockingReasons?.length"
+                    <!-- BLOCKED : causes prouvées. INCONCLUSIVE : preuves incertaines/non résolues. Jamais le même vocabulaire mélangé. -->
+                    <ul *ngIf="ma.authorization === 'BLOCKED' && ma.blockingReasons?.length"
                         style="margin:10px 0 0;padding-left:18px;font-size:12px;color:var(--text-secondary);line-height:1.6;">
                       <li *ngFor="let r of ma.blockingReasons">{{ mergeBlockingLabel(r) }}</li>
+                    </ul>
+                    <ul *ngIf="ma.authorization === 'INCONCLUSIVE' && ma.technicalReasons?.length"
+                        style="margin:10px 0 0;padding-left:18px;font-size:12px;color:var(--text-secondary);line-height:1.6;">
+                      <li *ngFor="let r of ma.technicalReasons">{{ mergeBlockingLabel(r) }}</li>
                     </ul>
 
                     <!-- Traçabilité : commit + horodatage -->

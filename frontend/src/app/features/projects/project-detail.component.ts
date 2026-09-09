@@ -216,6 +216,28 @@ export class ProjectDetailComponent implements OnInit {
   isAutoFixEligible(finding: any): boolean { return finding?.remediationType === 'AUTO_FIX_ELIGIBLE'; }
   activeFixRequest(): any { return this.latestReport?.metadata?.fixRequest || null; }
   prValidationRequest(): any { return this.latestReport?.metadata?.prValidationRequest || null; }
+
+  // ── Résumé compact de l'autorisation de merge (Option C) ───────────────
+  // Même vocabulaire / couleur que l'écran incident (55418e3). Le détail
+  // (raisons FR, santé globale, note « problèmes préexistants ») vit sur
+  // /incidents/:id?tab=validation — on n'y duplique PAS le bloc riche.
+  // Retourne null si validation.mergeAuthorization est absent (incidents
+  // pré-bb32694) → le template retombe sur prValidationRequest.status/result.
+  mergeAuthShort(): { label: string; color: string } | null {
+    const st = this.prValidationRequest()?.status;
+    // Revalidation en cours : l'autorisation stockée reflète le run précédent.
+    if (st === 'REQUESTED' || st === 'QUEUED' || st === 'RUNNING') {
+      return { label: 'Analyse en cours', color: 'var(--accent-blue)' };
+    }
+    const auth = this.latestReport?.metadata?.validation?.mergeAuthorization?.authorization;
+    const map: Record<string, { label: string; color: string }> = {
+      MERGE_READY:  { label: 'Autorisée pour fusion', color: 'var(--accent-green)' },
+      BLOCKED:      { label: 'Bloquée',               color: 'var(--accent-red)' },
+      INCONCLUSIVE: { label: 'Non concluante',        color: 'var(--accent-orange)' },
+      VALIDATING:   { label: 'Analyse en cours',      color: 'var(--accent-blue)' },
+    };
+    return map[auth] || null;
+  }
   // Une vraie PR de correction existe déjà pour cet incident. Modèle backend :
   // un incident → une fixRequest → une PR (incidents.service.ts:929). Tant que
   // cette PR existe, aucune nouvelle demande de correction n'est acceptée ;
