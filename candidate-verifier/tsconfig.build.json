@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "src/**/*.ts",
+    "../backend/src/candidate-verification/candidate-verification.types.ts",
+    "../backend/src/candidate-verification/candidate-digest.ts",
+    "../backend/src/context/scope-lock.service.ts"
+  ],
+  "exclude": [
+    "src/**/*.spec.ts",
+    "src/**/*.test.ts"
+  ]
+}

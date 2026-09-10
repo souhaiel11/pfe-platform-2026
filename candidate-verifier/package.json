@@ -4,7 +4,7 @@
   "description": "R22-E2C2 execution-plane worker: exact-SHA workspace materialization + Maven compile/test, extracted from the backend's R22-C candidate-verification module. Owns no secrets, no database, no GitHub write capability, no business decision-making.",
   "private": true,
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.build.json",
     "start": "node dist/candidate-verifier/src/server.js"
   },
   "dependencies": {

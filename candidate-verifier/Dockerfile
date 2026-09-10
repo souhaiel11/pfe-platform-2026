@@ -66,6 +66,7 @@ WORKDIR /candidate-verifier
 COPY candidate-verifier/package*.json ./
 RUN npm install
 COPY candidate-verifier/tsconfig.json ./
+COPY candidate-verifier/tsconfig.build.json ./
 COPY candidate-verifier/src ./src
 
 # Shared-contract files, copied into the SAME relative position the local
