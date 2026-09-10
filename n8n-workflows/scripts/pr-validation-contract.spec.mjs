@@ -115,7 +115,7 @@ assert.ok(byName(wf3, 'Prepare Approved Finding Validation').parameters.jsCode.i
 
 const runNodeCode = (jsCode, dollarMap, inputJson) => {
   const $ = name => ({ first: () => ({ json: dollarMap[name] }) });
-  const $input = { first: () => ({ json: inputJson }) };
+  const $input = { first: () => ({ json: inputJson }), all: () => [{ json: inputJson }] };
   // eslint-disable-next-line no-new-func
   return new Function('$', '$input', jsCode)($, $input)[0].json;
 };
@@ -131,13 +131,20 @@ const ctxBase = {
   jenkinsStatus: 'SUCCESS', expectedPrHeadSha: sha, checkoutSha: sha, incidentId: 'incident-1',
 };
 const consolidateCodeUnderTest = byName(wf3, 'Consolidate Validation Result').parameters.jsCode;
-const runConsolidate = (findings, findingIds, issues, overrides = {}) => runNodeCode(consolidateCodeUnderTest, {
-  'Extract Validation Context': { ...ctxBase, ...overrides },
+const runConsolidate = (findings, findingIds, issues, overrides = {}) => {
+  const ctx = { ...ctxBase, ...overrides };
+  const prepared = { findings, findingIds: findings.map(f => f.findingId), candidateSha: ctx.checkoutSha, analysisId: ctx.analysisId };
+  const collected = runNodeCode(byName(wf3, 'Collect Target Finding Evidence').parameters.jsCode, {
+    'Extract Validation Context': ctx, 'Prepare Approved Finding Validation': prepared,
+  }, issues === undefined ? { error: 'unavailable' } : { issues, total: issues.length, p: 1, ps: 500 });
+  return runNodeCode(consolidateCodeUnderTest, {
+  'Extract Validation Context': ctx,
   'Get Incident From DB': { id: 'incident-1' },
   'Get SonarQube PR Quality Gate': { projectStatus: { status: 'OK' } },
-  'Get SonarQube Approved Findings': issues === undefined ? { error: { message: 'unavailable' } } : { issues },
-  'Prepare Approved Finding Validation': { findings, findingIds: findings.map(f => f.findingId) },
+  'Collect Target Finding Evidence': collected,
+  'Prepare Approved Finding Validation': prepared,
 }, null);
+};
 const resultFor = (findingId, findings, findingIds, issues, overrides) => runConsolidate(findings, findingIds, issues, overrides).findingResults.find(r => r.findingId === findingId);
 
 // A. matching issue OPEN => INVALID
