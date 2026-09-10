@@ -56,4 +56,51 @@ const baseMocks = {
   assert.equal(out.rawData.sourceCommitSha, null, 'absent commitSha is never fabricated -- stays null');
 }
 
-console.log('WF1 source commit SHA threading: PASS');
+// Execute the actual input boundary, config propagation, report and backend
+// body expression. No workflow engine, network or backend call is involved.
+const byName = name => workflow.nodes.find(n => n.name === name);
+const normalize = new Function('$input', byName('Normalize Incident Payload').parameters.jsCode);
+const extract = new Function('$', '$input', byName('Extract Project Config').parameters.jsCode);
+const expression = value => new Function('$json', '$', `return (${value.slice(3, -2)});`);
+const route = expression(byName('Is PR Validation').parameters.conditions.conditions[0].leftValue);
+const persist = expression(byName('Save Final Decision to Backend').parameters.jsonBody);
+const shaA = 'a'.repeat(40), shaB = 'b'.repeat(40);
+for (const [label, input, expected] of [
+  ['root explicit', { commitSha: shaA }, shaA],
+  ['body explicit', { body: { commitSha: shaA } }, shaA],
+  ['root explicit with body envelope', { commitSha: shaA, body: { commit: shaB } }, shaA],
+  ['body precedence over root and legacy', { commitSha: shaB, body: { commitSha: shaA, commit: shaB, after: shaB } }, shaA],
+  ['root precedence over legacy', { commitSha: shaA, commit: shaB, after: shaB }, shaA],
+  ['legacy commit', { commit: shaA }, shaA],
+  ['legacy after', { body: { after: shaA } }, shaA],
+  ['legacy head_commit', { head_commit: { id: shaA } }, shaA],
+  ['legacy revision', { body: { revision: { sha: shaA } } }, shaA],
+  ['empty explicit falls back', { body: { commitSha: '', commit: shaA } }, shaA],
+  ['null explicit falls back', { commitSha: null, after: shaA }, shaA],
+  ['missing', {}, null],
+  ['all empty', { commitSha: '', body: { commitSha: null, after: '' } }, null],
+  ['preserve non-empty malformed value for backend rejection', { commitSha: 'not-a-sha', commit: shaB }, 'not-a-sha'],
+]) {
+  const normalized = normalize({ all: () => [{ json: input }] })[0].json;
+  assert.equal(normalized.commitSha, expected, label);
+  const config = extract(name => ({
+    first: () => ({ json: normalized }),
+    all: () => [{ json: { id: 'proj-1' } }],
+  }), { first: () => ({ json: normalized }) })[0].json;
+  const report = run({ ...baseMocks, 'Extract Project Config': config });
+  assert.equal(report.rawData.sourceCommitSha, expected, label);
+  const body = JSON.parse(persist({}, () => ({ first: () => ({ json: report }) })));
+  assert.equal(body.metadata.sourceCommitSha, expected, `${label}: backend metadata`);
+}
+assert.equal(route({ body: { event: 'pr_validation' }, event: 'pipeline_failed' }), 'pr_validation');
+assert.equal(route({ body: {}, event: 'pipeline_failed' }), 'pipeline_failed');
+assert.equal(route({ body: { event: null }, event: 'pr_validation' }), 'pr_validation');
+assert.equal(route({ body: { event: '' }, event: 'pr_validation' }), '', 'nullish fallback preserves an explicit empty event');
+assert.equal(route({}), undefined, 'never invent an event');
+assert.equal(byName('Incident Webhook').parameters.path, 'jenkins-event');
+assert.equal(workflow.nodes.length, 49);
+assert.equal(workflow.connections['Is PR Validation'].main[0][0].node, 'Validate PR Validation Contract');
+assert.equal(workflow.connections['Is PR Validation'].main[1][0].node, 'Switch3');
+assert.ok(!workflow.nodes.some(n => /findingResults\s*[:=]/.test(n.parameters.jsCode || '')));
+
+console.log('WF1 explicit/root/body SHA, precedence, legacy aliases, event routing and end-to-end persistence: PASS');
