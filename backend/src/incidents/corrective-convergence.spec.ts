@@ -278,6 +278,90 @@ async function main() {
     assert.equal(incident.metadata.fixRequest.attemptCount, 1);
   }
 
+  // ══════════════════════════════════════════════════════════════════
+  // CASE K/L — observing a new governed target immediately invalidates
+  // the prior active authorization and the backend requires the explicit
+  // correctiveActionAllowed flag (fail-safe on false or absent).
+  // ══════════════════════════════════════════════════════════════════
+  {
+    const { incident, service } = makeFixture();
+    incident.metadata.fixRequest.status = 'VALIDATED';
+    incident.metadata.validation = {
+      checkoutSha: SHA1,
+      findingResults: [{ findingId: 'a', result: 'VALID' }],
+      candidateFindingsSnapshot: [{ key: 'old' }], candidateSnapshotComplete: true,
+      regression: { result: 'CLEAN', candidateSha: SHA1 },
+      headVerification: { overall: 'PASS', workspace: { checkoutSha: SHA1 } },
+      mergeAuthorization: { authorization: 'MERGE_READY', forSha: SHA1, authorizedSha: SHA1,
+        correctiveActionAllowed: false, blockingReasons: [], technicalReasons: [] },
+    };
+    globalThis.fetch = (async (url: any) => {
+      if (String(url).includes('api.github.com')) {
+        return new Response(JSON.stringify({ state: 'open', head: { sha: SHA2, ref: `fix/pfe-${incident.id}-req-conv` } }), { status: 200 });
+      }
+      throw new Error(`unexpected URL ${String(url)}`);
+    }) as any;
+    await service.refreshPrValidationTarget(incident.id, admin);
+    assert.equal(incident.metadata.fixRequest.validationTargetSha, SHA2);
+    assert.equal(incident.metadata.validation.mergeAuthorization.authorization, 'INCONCLUSIVE', 'CASE K: S1 authorization neutralized when S2 is observed');
+    assert.equal(incident.metadata.validation.mergeAuthorization.authorizedSha, null, 'CASE K: S1 authorizedSha neutralized');
+    assert.equal(incident.metadata.validation.candidateSnapshotComplete, false, 'CASE K: S1 candidate completeness removed from active view');
+    assert.ok(Array.isArray(incident.metadata.validationHistory), 'CASE K: old validation retained as history');
+    await assert.rejects(() => service.correctAndRevalidate(incident.id, admin), /défaut prouvé/);
+  }
+
+  {
+    const { incident, service } = makeFixture();
+    incident.metadata.validation = {
+      checkoutSha: SHA1,
+      findingResults: [{ findingId: 'a', result: 'INVALID', evidence: 'x' }],
+      mergeAuthorization: { authorization: 'BLOCKED', authorizedSha: null,
+        blockingReasons: ['FINDING_INVALID'], technicalReasons: [] },
+    };
+    await assert.rejects(() => service.correctAndRevalidate(incident.id, admin), /défaut prouvé/);
+    incident.metadata.validation.mergeAuthorization.correctiveActionAllowed = false;
+    await assert.rejects(() => service.correctAndRevalidate(incident.id, admin), /défaut prouvé/);
+    incident.metadata.validation.mergeAuthorization.correctiveActionAllowed = true;
+    globalThis.fetch = (async (url: any) => {
+      if (String(url).includes('api.github.com')) {
+        return new Response(JSON.stringify({ state: 'open', head: { sha: SHA1, ref: `fix/${incident.id}-req-conv` } }), { status: 200 });
+      }
+      return new Response('{}', { status: 200 });
+    }) as any;
+    // The branch check is exercised by the existing lifecycle cases; this
+    // assertion only verifies the explicit flag is the backend gate.
+    await assert.rejects(() => service.correctAndRevalidate(incident.id, admin), /Pull Request n’est plus ouverte|correction/);
+  }
+
+  // Callback path: a freshly-created corrective PR invalidates the previous
+  // candidate authorization before the automatic S2 validation can finish.
+  {
+    const { incident, service } = makeFixture();
+    incident.metadata.fixRequest.status = 'DISPATCHED';
+    incident.metadata.fixRequest.workflow = 'WF2';
+    incident.metadata.validation = {
+      checkoutSha: SHA1, candidateFindingsSnapshot: [{ key: 's1' }], candidateSnapshotComplete: true,
+      mergeAuthorization: { authorization: 'MERGE_READY', forSha: SHA1, authorizedSha: SHA1,
+        correctiveActionAllowed: false, blockingReasons: [], technicalReasons: [] },
+    };
+    globalThis.fetch = (async () => new Response('{}', { status: 200 })) as any;
+    await service.saveWorkflowBatchStatus(incident.id, {
+      incidentId: incident.id, requestId: 'req-conv', batchId: 'batch-conv', batchKey: 'batch-conv',
+      attemptCount: 1, status: 'PR_CREATED', workflowId: process.env.N8N_WF2_ID || '9adcV31eaIgJyMR0',
+      executionId: 'exec-s2', prUrl: incident.prUrl, prNumber: PR, prHeadSha: SHA2,
+      completenessPassed: true, candidateAcceptedFindingIds: ['a', 'b'],
+      candidateVerifiedFiles: ['src/A.java', 'src/B.java'], plannedFiles: ['src/A.java', 'src/B.java'],
+      fileResults: [
+        { targetFile: 'src/A.java', candidateStateVerified: true, outcome: 'CANDIDATE_ACCEPTABLE_FOR_SCANNER_VALIDATION' },
+        { targetFile: 'src/B.java', candidateStateVerified: true, outcome: 'CANDIDATE_ACCEPTABLE_FOR_SCANNER_VALIDATION' },
+      ],
+    } as any);
+    assert.equal(incident.metadata.fixRequest.prHeadSha, SHA2, 'callback stores S2');
+    assert.equal(incident.metadata.validation.mergeAuthorization.authorization, 'INCONCLUSIVE', 'callback neutralizes S1 authorization immediately');
+    assert.equal(incident.metadata.validation.mergeAuthorization.authorizedSha, null, 'callback clears active S1 authorization');
+    assert.equal(incident.metadata.validation.candidateSnapshotComplete, false, 'callback removes active S1 candidate proof');
+  }
+
   globalThis.fetch = originalFetch;
   console.log('Corrective convergence lifecycle (Brique 5, Cases A-D/F-J): PASS');
 }

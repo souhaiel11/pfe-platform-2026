@@ -839,7 +839,19 @@ export class IncidentDetailComponent implements OnInit, OnDestroy {
   // ── UI-1 : autorisation de merge + santé globale (LECTURE PURE) ─────────
   // validation.mergeAuthorization : null sur les incidents antérieurs à bb32694
   // → le template affiche un état historique neutre, jamais une autorisation.
-  mergeAuthorization(): any { return this.validation?.mergeAuthorization ?? null; }
+  mergeAuthorization(): any {
+    const ma = this.validation?.mergeAuthorization;
+    if (!ma) return null;
+    if (!this.mergeAuthForShaStale()) return ma;
+    return {
+      ...ma,
+      authorization: 'INCONCLUSIVE',
+      authorizedSha: null,
+      correctiveActionAllowed: false,
+      blockingReasons: [],
+      technicalReasons: ['VALIDATION_STALE'],
+    };
+  }
   pipelineHealth(): any { return this.validation?.derived?.pipelineHealth ?? null; }
 
   // BRIQUE 4 — titre/sous-titre exactement le texte gouverné requis.
@@ -854,6 +866,10 @@ export class IncidentDetailComponent implements OnInit, OnDestroy {
                     subtitle: 'La plateforme ne dispose pas encore de preuves suffisantes pour autoriser la fusion.' },
   };
   mergeAuthMeta(a: string): { color: string; icon: string; title: string; subtitle: string } {
+    if (a === 'INCONCLUSIVE' && this.mergeAuthForShaStale()) {
+      return { color: 'var(--accent-orange)', icon: '⚠️', title: 'Validation obsolète — nouvelle validation requise',
+        subtitle: 'La Pull Request a changé depuis cette validation. Une nouvelle validation complète est nécessaire.' };
+    }
     return this.MERGE_AUTH_META[a] || { color: 'var(--border)', icon: 'ℹ️', title: 'État de validation inconnu', subtitle: '' };
   }
 
@@ -915,7 +931,7 @@ export class IncidentDetailComponent implements OnInit, OnDestroy {
   // forSha lie l'autorisation à un commit précis : signaler si ce commit n'est
   // plus la cible de validation courante (nouveau commit de remédiation, etc.).
   mergeAuthForShaStale(): boolean {
-    const forSha = String(this.mergeAuthorization()?.forSha || '').toLowerCase();
+    const forSha = String(this.validation?.mergeAuthorization?.forSha || '').toLowerCase();
     const target = String(
       this.incident?.metadata?.fixRequest?.validationTargetSha
       || this.incident?.metadata?.fixRequest?.prHeadSha || '',

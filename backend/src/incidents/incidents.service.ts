@@ -624,7 +624,10 @@ export class IncidentsService {
             // exact new prHeadSha, never a stale override from a previous
             // attempt/commit.
             validationTargetSha: null };
-      const patch: any = { metadata: { ...metadata, fixRequest: nextFix } };
+      const nextMetadata = callbackStatus === 'PR_CREATED'
+        ? this.invalidateActiveValidationForNewSha({ ...metadata, fixRequest: nextFix }, String(input.prHeadSha || ''), 'CORRECTIVE_PR_CREATED')
+        : { ...metadata, fixRequest: nextFix };
+      const patch: any = { metadata: nextMetadata };
       if (callbackStatus === 'PR_CREATED') {
         if (!/^https:\/\/github\.com\/[^/]+\/[^/]+\/pull\/\d+$/i.test(String(input.prUrl || ''))
           || !Number.isInteger(Number(input.prNumber)) || Number(input.prNumber) <= 0) {
@@ -1032,6 +1035,62 @@ export class IncidentsService {
     if (!user || !['admin', 'developer'].includes(String(user.role || '').toLowerCase())) {
       throw new ForbiddenException('Vous n’avez pas l’autorisation de demander une correction pour ce projet.');
     }
+  }
+
+  /**
+   * A validation is candidate evidence for exactly one SHA. When an existing
+   * validation target moves, retain the old record only as history and replace
+   * the active view with an explicitly inconclusive, evidence-free state.
+   */
+  private invalidateActiveValidationForNewSha(metadata: any, newSha: string, reason: string): any {
+    const current: any = metadata?.validation;
+    const targetSha = String(newSha || '').toLowerCase();
+    const currentSha = String(current?.mergeAuthorization?.forSha || current?.checkoutSha || '').toLowerCase();
+    if (!current || !isFullGitSha(targetSha) || !currentSha || currentSha === targetSha) return metadata;
+    const now = new Date().toISOString();
+    const history = Array.isArray(metadata.validationHistory) ? [...metadata.validationHistory] : [];
+    history.push({ ...current, invalidatedAt: now, invalidatedForSha: targetSha, invalidationReason: reason });
+    const previousRegression = current.regression || {};
+    const activeValidation = {
+      ...current,
+      checkoutSha: null,
+      headVerification: null,
+      findingResults: [],
+      candidateFindingsSnapshot: null,
+      candidateSnapshotComplete: false,
+      regression: {
+        ...previousRegression,
+        result: 'INCONCLUSIVE',
+        candidateSha: targetSha,
+        blockingIntroducedFindings: [],
+      },
+      derived: current.derived ? {
+        ...current.derived,
+        findings: [],
+        pipelineHealth: current.derived.pipelineHealth ? {
+          build: 'UNKNOWN', tests: 'UNKNOWN', sonarQualityGate: 'UNKNOWN',
+          trivy: 'UNKNOWN', owasp: 'UNKNOWN', zap: 'UNKNOWN',
+          technicalFailure: 'VALIDATION_STALE', requiredStagesStatus: 'INCOMPLETE',
+        } : null,
+      } : current.derived,
+      validationStatus: 'INCONCLUSIVE',
+      result: 'INCONCLUSIVE',
+      staleForSha: targetSha,
+      staleAt: now,
+      mergeAuthorization: {
+        ...(current.mergeAuthorization || {}),
+        authorization: 'INCONCLUSIVE',
+        headVerificationResult: 'INCONCLUSIVE',
+        regressionResult: 'INCONCLUSIVE',
+        authorizedSha: null,
+        correctiveActionAllowed: false,
+        blockingReasons: [],
+        technicalReasons: ['VALIDATION_STALE'],
+        forSha: targetSha,
+        computedAt: now,
+      },
+    };
+    return { ...metadata, validation: activeValidation, validationHistory: history };
   }
 
   private collectFindings(incident: any): any[] {
@@ -1621,7 +1680,7 @@ export class IncidentsService {
     const snapshot = await this.repo.findOne({ where: { id }, relations: ['project'] });
     if (!snapshot) throw new NotFoundException('Incident introuvable.');
     const fix: any = (snapshot.metadata as any)?.fixRequest || {};
-    if (fix.status !== 'PR_CREATED' || !snapshot.prUrl || !fix.prNumber) {
+    if (!['PR_CREATED', 'VALIDATED'].includes(String(fix.status)) || !snapshot.prUrl || !fix.prNumber) {
       throw new ConflictException('Aucune Pull Request de correction n’est prête à être validée.');
     }
     if (!isFullGitSha(fix.prHeadSha)) {
@@ -1642,7 +1701,16 @@ export class IncidentsService {
     }
     const currentTarget = String(fix.validationTargetSha || fix.prHeadSha).toLowerCase();
     if (currentTarget === remoteHeadSha) {
-      // Idempotent: no DB write, no audit entry, nothing to refresh.
+      // Idempotent target refresh, except that an older active authorization
+      // may still be present on a partially migrated record; neutralize it
+      // even when the target value itself is already current.
+      const snapshotMetadata = snapshot.metadata || {};
+      const nextMetadata = this.invalidateActiveValidationForNewSha(
+        snapshotMetadata, remoteHeadSha, 'PR_VALIDATION_TARGET_REFRESHED',
+      );
+      if (nextMetadata !== snapshotMetadata) {
+        await this.repo.update(id, { metadata: nextMetadata } as any);
+      }
       return { success: true, changed: false, validationTargetSha: currentTarget, originalPrHeadSha: fix.prHeadSha };
     }
     const now = new Date().toISOString();
@@ -1656,7 +1724,7 @@ export class IncidentsService {
       if (!incident) throw new NotFoundException('Incident introuvable.');
       const metadata: any = incident.metadata || {};
       const currentFix: any = metadata.fixRequest || {};
-      if (currentFix.status !== 'PR_CREATED' || currentFix.requestId !== fix.requestId
+      if (!['PR_CREATED', 'VALIDATED'].includes(String(currentFix.status)) || currentFix.requestId !== fix.requestId
         || currentFix.batchId !== fix.batchId || Number(currentFix.prNumber) !== prNumber) {
         throw new ConflictException('La demande de correction a changé avant l’actualisation de la cible.');
       }
@@ -1666,13 +1734,17 @@ export class IncidentsService {
       }
       const nextFix = {
         ...currentFix,
+        status: 'PR_CREATED',
         validationTargetSha: remoteHeadSha,
         validationTargetHistory: [
           ...(Array.isArray(currentFix.validationTargetHistory) ? currentFix.validationTargetHistory : []),
           historyEntry,
         ],
       };
-      await incidents.update(id, { metadata: { ...metadata, fixRequest: nextFix } } as any);
+      const nextMetadata = this.invalidateActiveValidationForNewSha(
+        { ...metadata, fixRequest: nextFix }, remoteHeadSha, 'PR_VALIDATION_TARGET_REFRESHED',
+      );
+      await incidents.update(id, { metadata: nextMetadata } as any);
       return { changed: true, validationTargetSha: remoteHeadSha };
     });
     if (result.changed) {
@@ -1704,7 +1776,8 @@ export class IncidentsService {
     if (!snapshot.prUrl || !fix.prNumber || !fix.requestId || !fix.batchId) {
       throw new ConflictException('Aucune Pull Request de correction n’est disponible pour cette convergence.');
     }
-    if (validation?.mergeAuthorization?.authorization !== 'BLOCKED') {
+    if (validation?.mergeAuthorization?.authorization !== 'BLOCKED'
+      || validation?.mergeAuthorization?.correctiveActionAllowed !== true) {
       throw new ConflictException('Une correction supplémentaire n’est autorisée que lorsque la Pull Request est bloquée par un défaut prouvé.');
     }
     const blockedSha = String(validation.checkoutSha || '').toLowerCase();
@@ -1751,6 +1824,7 @@ export class IncidentsService {
       if (currentFix.requestId !== fix.requestId || currentFix.batchId !== fix.batchId
         || Number(currentFix.prNumber) !== prNumber
         || currentValidation?.mergeAuthorization?.authorization !== 'BLOCKED'
+        || currentValidation?.mergeAuthorization?.correctiveActionAllowed !== true
         || String(currentValidation.checkoutSha || '').toLowerCase() !== blockedSha) {
         throw new ConflictException('La demande de correction a changé avant l’autorisation.');
       }
