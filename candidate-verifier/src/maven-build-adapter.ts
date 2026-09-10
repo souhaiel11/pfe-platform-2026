@@ -7,6 +7,7 @@ import * as path from 'path';
 import { BuildAdapter, CompileResult } from './build-adapter';
 import { RegressionTestResult } from '../../backend/src/candidate-verification/candidate-verification.types';
 import { aggregateSurefireReports } from './surefire-aggregation';
+import { isProcessTimeout } from './process-timeout';
 
 const DEFAULT_TIMEOUT_MS = 5 * 60 * 1000;
 const EVIDENCE_TAIL_CHARS = 20_000;
@@ -37,11 +38,13 @@ function runMaven(args: string[], cwd: string, timeoutMs: number): { status: num
     });
     return { status: 0, stdout, stderr: '', timedOut: false, durationMs: Date.now() - start };
   } catch (err: any) {
-    const timedOut = err?.signal === 'SIGTERM' || err?.killed === true;
+    const durationMs = Date.now() - start;
+    const status = typeof err?.status === 'number' ? err.status : null;
+    const timedOut = isProcessTimeout(err, status, durationMs, timeoutMs);
     return {
-      status: typeof err?.status === 'number' ? err.status : null,
+      status,
       stdout: String(err?.stdout ?? ''), stderr: String(err?.stderr ?? ''),
-      timedOut, durationMs: Date.now() - start,
+      timedOut, durationMs,
     };
   }
 }

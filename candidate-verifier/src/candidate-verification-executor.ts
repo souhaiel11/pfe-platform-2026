@@ -172,12 +172,13 @@ export class CandidateVerificationExecutor {
       const timeoutMs = options.timeoutMs ?? 5 * 60 * 1000;
       const compileResult = adapter.compile(workspacePath, timeoutMs);
       if (compileResult.status !== 'SUCCESS') {
+        const timedOut = compileResult.evidenceTail.includes('WORKSPACE_TIMEOUT');
         result = base({
           manifestValidation: { status: 'PASS', errors: [] },
           workspace: { workspaceId, exactShaVerified, created: workspaceCreated, cleaned: false },
           compile: { status: 'FAILED', exitCode: compileResult.exitCode, durationMs: compileResult.durationMs, evidenceRef: compileResult.evidenceTail },
-          overall: 'FAIL',
-          failureClass: compileResult.evidenceTail.includes('WORKSPACE_TIMEOUT') ? 'WORKSPACE_TIMEOUT' : 'CANDIDATE_COMPILE_FAILURE',
+          overall: timedOut ? 'INCONCLUSIVE' : 'FAIL',
+          failureClass: timedOut ? 'WORKSPACE_TIMEOUT' : 'CANDIDATE_COMPILE_FAILURE',
         });
         return result;
       }

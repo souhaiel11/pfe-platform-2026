@@ -5,6 +5,7 @@ import * as path from 'path';
 import { BuildAdapter, CompileResult } from './build-adapter';
 import { RegressionTestResult } from '../../backend/src/candidate-verification/candidate-verification.types';
 import { aggregatePytestReport } from './pytest-report';
+import { isProcessTimeout } from './process-timeout';
 
 const DEFAULT_TIMEOUT_MS = 5 * 60 * 1000;
 function tail(text: string, limit = 20_000): string { return text.slice(-limit); }
@@ -20,6 +21,7 @@ function safePythonEnv(): NodeJS.ProcessEnv {
 
 function runPython(args: string[], cwd: string, timeoutMs: number, binary = 'python3') {
   if (timeoutMs <= 0) return { status: null as number | null, output: '', timedOut: true };
+  const start = Date.now();
   try {
     const stdout = execFileSync(binary, args, {
       cwd, timeout: timeoutMs, encoding: 'utf8', env: safePythonEnv(),
@@ -27,10 +29,12 @@ function runPython(args: string[], cwd: string, timeoutMs: number, binary = 'pyt
     });
     return { status: 0, output: stdout, timedOut: false };
   } catch (err: any) {
+    const durationMs = Date.now() - start;
+    const status = typeof err?.status === 'number' ? err.status : null;
     return {
-      status: typeof err?.status === 'number' ? err.status : null,
+      status,
       output: String(err?.stdout ?? '') + '\n' + String(err?.stderr ?? err?.message ?? ''),
-      timedOut: err?.signal === 'SIGTERM' || err?.killed === true,
+      timedOut: isProcessTimeout(err, status, durationMs, timeoutMs),
     };
   }
 }

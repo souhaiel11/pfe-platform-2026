@@ -5,6 +5,7 @@ import * as path from 'path';
 import { BuildAdapter, CompileResult } from './build-adapter';
 import { RegressionTestResult } from '../../backend/src/candidate-verification/candidate-verification.types';
 import { aggregateJestReport } from './jest-json-aggregation';
+import { isProcessTimeout } from './process-timeout';
 
 const DEFAULT_TIMEOUT_MS = 5 * 60 * 1000;
 
@@ -32,11 +33,13 @@ function runNpm(args: string[], cwd: string, timeoutMs: number): {
     });
     return { status: 0, stdout, stderr: '', timedOut: false, durationMs: Date.now() - start };
   } catch (err: any) {
+    const durationMs = Date.now() - start;
+    const status = typeof err?.status === 'number' ? err.status : null;
     return {
-      status: typeof err?.status === 'number' ? err.status : null,
+      status,
       stdout: String(err?.stdout ?? ''), stderr: String(err?.stderr ?? err?.message ?? ''),
-      timedOut: err?.signal === 'SIGTERM' || err?.killed === true,
-      durationMs: Date.now() - start,
+      timedOut: isProcessTimeout(err, status, durationMs, timeoutMs),
+      durationMs,
     };
   }
 }
