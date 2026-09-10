@@ -46,7 +46,7 @@ function run(pages, context = ctx, preparedOverride = {}) {
     'Get Incident From DB': { id: context.incidentId },
     'Get SonarQube PR Quality Gate': { projectStatus: { status: 'OK' } },
     // Deliberately unrelated full snapshot: target results MUST ignore it.
-    'Get Full Candidate Sonar Snapshot': { candidateFindingsSnapshot: [issue('full', { component: 'project-candidate:src/Target.ext' })], candidateSnapshotComplete: true },
+    'Consolidate Full Candidate Sonar Snapshot': { candidateFindingsSnapshot: [issue('full', { component: 'project-candidate:src/Target.ext' })], candidateSnapshotComplete: true },
   });
   return { collected, result, requested, verdict: result.findingResults[0].result };
 }

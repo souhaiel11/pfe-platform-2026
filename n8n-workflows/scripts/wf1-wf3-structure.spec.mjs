@@ -44,17 +44,20 @@ for (const wf of [wf1, wf3]) {
 }
 assert.equal(wf1.nodes.length, 49);
 assert.deepEqual(wf1.nodes.filter(n => n.type === 'n8n-nodes-base.webhook').map(n => n.parameters.path), ['jenkins-event']);
-assert.equal(wf3.nodes.length, 10);
+assert.equal(wf3.nodes.length, 11);
 assert.equal(wf3.nodes.filter(n => n.type === 'n8n-nodes-base.webhook').length, 0);
 const n = name => wf3.nodes.find(n => n.name === name);
 const next = name => wf3.connections[name].main.flat().map(e => e.node);
 assert.deepEqual(next('Get SonarQube Approved Findings'), ['Collect Target Finding Evidence', 'Collect Target Finding Evidence']);
 assert.deepEqual(next('Collect Target Finding Evidence'), ['Get Full Candidate Sonar Snapshot']);
-assert.deepEqual(next('Get Full Candidate Sonar Snapshot'), ['Consolidate Validation Result']);
+assert.deepEqual(next('Get Full Candidate Sonar Snapshot'), ['Consolidate Full Candidate Sonar Snapshot', 'Consolidate Full Candidate Sonar Snapshot']);
+assert.deepEqual(next('Consolidate Full Candidate Sonar Snapshot'), ['Consolidate Validation Result']);
 assert.deepEqual(n('Get SonarQube Approved Findings').credentials, n('Get SonarQube PR Quality Gate').credentials);
 assert.ok(!n('Collect Target Finding Evidence').credentials, 'collector needs no credential values');
 assert.ok(!n('Collect Target Finding Evidence').parameters.jsCode.includes('Get Full Candidate Sonar Snapshot'));
-assert.ok(!n('Get Full Candidate Sonar Snapshot').parameters.jsCode.includes('Collect Target Finding Evidence'));
+assert.equal(n('Get Full Candidate Sonar Snapshot').type, 'n8n-nodes-base.httpRequest');
+assert.ok(!JSON.stringify(n('Get Full Candidate Sonar Snapshot')).includes('httpRequestWithAuthentication'));
+assert.ok(!n('Consolidate Full Candidate Sonar Snapshot').parameters.jsCode.includes('httpRequestWithAuthentication'));
 for (const name of ['Collect Target Finding Evidence', 'Prepare Approved Finding Validation', 'Consolidate Validation Result']) {
   assert.doesNotMatch(n(name).parameters.jsCode, /java:S4684|pfe-app-test|PR25|WF2_TEST|testMode/);
 }

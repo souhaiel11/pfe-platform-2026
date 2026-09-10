@@ -86,7 +86,7 @@
       },
       {
         "parameters": {
-          "jsCode": "const ctx=$('Extract Validation Context').first().json;let incident={};try{incident=$('Get Incident From DB').first().json||{}}catch{};let sonar={};try{sonar=$('Get SonarQube PR Quality Gate').first().json||{}}catch{};let findingSearch={};try{findingSearch=$('Collect Target Finding Evidence').first().json||{}}catch{};let candidateSnapshot={};try{candidateSnapshot=$('Get Full Candidate Sonar Snapshot').first().json||{}}catch{};const prepared=$('Prepare Approved Finding Validation').first().json;\nconst analysisMode=ctx.sonarAnalysisMode;const analysisLabel=analysisMode==='COMMUNITY_EXACT_SHA'?'Sonar Community exact-SHA validation':'Sonar native PR analysis';\nconst sonarCorrelationVerified=!!ctx.ceTaskId&&!!ctx.analysisId&&!!sonar.projectStatus;const sonarStatus=sonarCorrelationVerified?String(sonar.projectStatus.status||'UNAVAILABLE').toUpperCase():'CORRELATION_PENDING';const requiredNames=['build','tests','sonar'];const missingStage=requiredNames.filter(name=>!ctx.requiredStages.some(s=>s.stage===name&&s.required===true));const requiredFailures=ctx.requiredStages.filter(s=>s.required!==false&&s.status!=='PASSED'&&!(s.status==='WARNING'&&!s.blocking));\nconst targetShaVerified=/^[a-f0-9]{40}$/i.test(String(ctx.checkoutSha||''))&&String(ctx.expectedPrHeadSha).toLowerCase()===String(ctx.checkoutSha).toLowerCase()&&String(findingSearch.candidateSha||'').toLowerCase()===String(ctx.checkoutSha).toLowerCase()&&findingSearch.analysisId===ctx.analysisId;const searchAvailable=Array.isArray(findingSearch.issues)&&findingSearch.targetEvidenceComplete===true&&targetShaVerified&&sonarCorrelationVerified;const normalizeFile=value=>String(value||'').replace(/^[^:]+:/,'').replace(/^\\/+/, '');const openIssues=searchAvailable?findingSearch.issues:[];\n// R67 -- a matching rule/file/line issue alone is NOT enough to prove a\n// finding still exists: Sonar keeps CLOSED/FIXED issues in a reused\n// validation project's history (proven live on PR-24 build #6, issue\n// 19a6499c... status=CLOSED resolution=FIXED was wrongly read as \"remains\n// open\"). Single source of truth for \"is this issue still a live problem\",\n// grounded in this Sonar instance's real payload (both the legacy\n// status/resolution pair and the newer simplified issueStatus field are\n// present and mutually consistent here). resolution set => never active,\n// regardless of status. No usable status field at all => fail closed\n// (treat as still active -- never silently grant VALID without positive\n// proof of resolution).\n// Unknown or conflicting lifecycle evidence cannot establish absence.\nconst issueState=issue=>{const status=String(issue.status||'').toUpperCase();const modern=String(issue.issueStatus||'').toUpperCase();const resolution=String(issue.resolution||'').toUpperCase();const live=['OPEN','CONFIRMED','REOPENED'];const closed=['CLOSED','RESOLVED'];const resolved=['FIXED','FALSE-POSITIVE','FALSE_POSITIVE','WONTFIX','WONT_FIX','REMOVED'];if(resolution&&!resolved.includes(resolution))return'UNKNOWN';if(resolution)return'INACTIVE';if(status&&![...live,...closed].includes(status))return'UNKNOWN';if(modern&&!['OPEN','CONFIRMED','FIXED','FALSE_POSITIVE','ACCEPTED'].includes(modern))return'UNKNOWN';const legacy=status?(live.includes(status)?'ACTIVE':'INACTIVE'):null;const current=modern?(['OPEN','CONFIRMED'].includes(modern)?'ACTIVE':'INACTIVE'):null;if(legacy&&current&&legacy!==current)return'UNKNOWN';return legacy||current||'UNKNOWN';};\nconst qgConditions=sonarCorrelationVerified&&Array.isArray(sonar.projectStatus.conditions)?sonar.projectStatus.conditions.map(c=>({metric:c.metricKey,status:c.status,actualValue:c.actualValue,threshold:c.errorThreshold,comparator:c.comparator})):[];const qgPeriod=sonarCorrelationVerified?(sonar.projectStatus.period||null):null;const findingResults=prepared.findings.map(f=>{if(!searchAvailable)return{findingId:String(f.findingId),rule:f.rule,result:'INCONCLUSIVE',evidence:'TARGET_EVIDENCE_INCOMPLETE',technicalReason:targetShaVerified?'TARGET_EVIDENCE_INCOMPLETE':'TARGET_SHA_CORRELATION_MISMATCH'};if(!f.rule||!normalizeFile(f.file))return{findingId:String(f.findingId),rule:f.rule,result:'INCONCLUSIVE',evidence:'TARGET_IDENTITY_INCOMPLETE'};const matches=openIssues.filter(issue=>String(issue.rule||'')===String(f.rule||'')&&normalizeFile(issue.component).endsWith(normalizeFile(f.file))&&(!f.line||!issue.line||Number(issue.line)===Number(f.line)));const match=matches.find(issue=>issueState(issue)==='ACTIVE');if(match)return{findingId:String(f.findingId),rule:f.rule,result:'INVALID',evidence:analysisLabel+' issue '+String(match.key||match.rule)+' remains open'};if(matches.some(issue=>issueState(issue)==='UNKNOWN'))return{findingId:String(f.findingId),rule:f.rule,result:'INCONCLUSIVE',evidence:'TARGET_ISSUE_STATE_UNKNOWN'};return{findingId:String(f.findingId),rule:f.rule,result:'VALID',evidence:analysisLabel+' '+ctx.analysisId+' at '+ctx.checkoutSha+': approved finding absent'};});\nconst everyFindingValid=findingResults.length===prepared.findingIds.length&&findingResults.every(r=>r.result==='VALID');const shaVerified=ctx.expectedPrHeadSha===ctx.checkoutSha;const correlationVerified=!!incident?.id&&incident.id===ctx.incidentId&&sonarCorrelationVerified&&shaVerified;const passed=ctx.jenkinsStatus==='SUCCESS'&&sonarStatus==='OK'&&correlationVerified&&!missingStage.length&&!requiredFailures.length&&Number(ctx.unresolvedBlockingCount||0)===0&&everyFindingValid;const anyInvalid=findingResults.some(r=>r.result==='INVALID');\nreturn [{json:{...ctx,findingResults,targetEvidenceComplete:searchAvailable,targetEvidenceError:searchAvailable?null:'TARGET_EVIDENCE_INCOMPLETE',targetEvidenceDetail:findingSearch.targetEvidenceDetail??null,sonarQualityGateConditions:qgConditions,sonarQualityGatePeriod:qgPeriod,validationStatus:passed?'VALIDATED':anyInvalid?'INVALID':'INCONCLUSIVE',passed,sonarStatus,sonarAnalysisMode:analysisMode,sonarCorrelationVerified,correlationVerified,finalStateVerified:shaVerified,requiredStagesStatus:(!missingStage.length&&!requiredFailures.length)?'PASSED':'FAILED',candidateFindingsSnapshot:Array.isArray(candidateSnapshot.candidateFindingsSnapshot)?candidateSnapshot.candidateFindingsSnapshot:[],candidateSnapshotComplete:candidateSnapshot.candidateSnapshotComplete===true,candidateSnapshotError:candidateSnapshot.candidateSnapshotError??null,failureReasons:[ctx.jenkinsStatus!=='SUCCESS'?'Jenkins='+ctx.jenkinsStatus:null,sonarStatus!=='OK'?'Sonar='+sonarStatus:null,!shaVerified?'PR HEAD mismatch':null,!correlationVerified?'Correlation unverified':null,!everyFindingValid?'Approved finding validation incomplete':null,...missingStage.map(s=>'Required stage missing='+s),...requiredFailures.map(s=>s.stage+'='+s.status)].filter(Boolean),timestamp:new Date().toISOString()}}];"
+          "jsCode": "const ctx=$('Extract Validation Context').first().json;let incident={};try{incident=$('Get Incident From DB').first().json||{}}catch{};let sonar={};try{sonar=$('Get SonarQube PR Quality Gate').first().json||{}}catch{};let findingSearch={};try{findingSearch=$('Collect Target Finding Evidence').first().json||{}}catch{};let candidateSnapshot={};try{candidateSnapshot=$('Consolidate Full Candidate Sonar Snapshot').first().json||{}}catch{};const prepared=$('Prepare Approved Finding Validation').first().json;\nconst analysisMode=ctx.sonarAnalysisMode;const analysisLabel=analysisMode==='COMMUNITY_EXACT_SHA'?'Sonar Community exact-SHA validation':'Sonar native PR analysis';\nconst sonarCorrelationVerified=!!ctx.ceTaskId&&!!ctx.analysisId&&!!sonar.projectStatus;const sonarStatus=sonarCorrelationVerified?String(sonar.projectStatus.status||'UNAVAILABLE').toUpperCase():'CORRELATION_PENDING';const requiredNames=['build','tests','sonar'];const missingStage=requiredNames.filter(name=>!ctx.requiredStages.some(s=>s.stage===name&&s.required===true));const requiredFailures=ctx.requiredStages.filter(s=>s.required!==false&&s.status!=='PASSED'&&!(s.status==='WARNING'&&!s.blocking));\nconst targetShaVerified=/^[a-f0-9]{40}$/i.test(String(ctx.checkoutSha||''))&&String(ctx.expectedPrHeadSha).toLowerCase()===String(ctx.checkoutSha).toLowerCase()&&String(findingSearch.candidateSha||'').toLowerCase()===String(ctx.checkoutSha).toLowerCase()&&findingSearch.analysisId===ctx.analysisId;const searchAvailable=Array.isArray(findingSearch.issues)&&findingSearch.targetEvidenceComplete===true&&targetShaVerified&&sonarCorrelationVerified;const normalizeFile=value=>String(value||'').replace(/^[^:]+:/,'').replace(/^\\/+/, '');const openIssues=searchAvailable?findingSearch.issues:[];\n// R67 -- a matching rule/file/line issue alone is NOT enough to prove a\n// finding still exists: Sonar keeps CLOSED/FIXED issues in a reused\n// validation project's history (proven live on PR-24 build #6, issue\n// 19a6499c... status=CLOSED resolution=FIXED was wrongly read as \"remains\n// open\"). Single source of truth for \"is this issue still a live problem\",\n// grounded in this Sonar instance's real payload (both the legacy\n// status/resolution pair and the newer simplified issueStatus field are\n// present and mutually consistent here). resolution set => never active,\n// regardless of status. No usable status field at all => fail closed\n// (treat as still active -- never silently grant VALID without positive\n// proof of resolution).\n// Unknown or conflicting lifecycle evidence cannot establish absence.\nconst issueState=issue=>{const status=String(issue.status||'').toUpperCase();const modern=String(issue.issueStatus||'').toUpperCase();const resolution=String(issue.resolution||'').toUpperCase();const live=['OPEN','CONFIRMED','REOPENED'];const closed=['CLOSED','RESOLVED'];const resolved=['FIXED','FALSE-POSITIVE','FALSE_POSITIVE','WONTFIX','WONT_FIX','REMOVED'];if(resolution&&!resolved.includes(resolution))return'UNKNOWN';if(resolution)return'INACTIVE';if(status&&![...live,...closed].includes(status))return'UNKNOWN';if(modern&&!['OPEN','CONFIRMED','FIXED','FALSE_POSITIVE','ACCEPTED'].includes(modern))return'UNKNOWN';const legacy=status?(live.includes(status)?'ACTIVE':'INACTIVE'):null;const current=modern?(['OPEN','CONFIRMED'].includes(modern)?'ACTIVE':'INACTIVE'):null;if(legacy&&current&&legacy!==current)return'UNKNOWN';return legacy||current||'UNKNOWN';};\nconst qgConditions=sonarCorrelationVerified&&Array.isArray(sonar.projectStatus.conditions)?sonar.projectStatus.conditions.map(c=>({metric:c.metricKey,status:c.status,actualValue:c.actualValue,threshold:c.errorThreshold,comparator:c.comparator})):[];const qgPeriod=sonarCorrelationVerified?(sonar.projectStatus.period||null):null;const findingResults=prepared.findings.map(f=>{if(!searchAvailable)return{findingId:String(f.findingId),rule:f.rule,result:'INCONCLUSIVE',evidence:'TARGET_EVIDENCE_INCOMPLETE',technicalReason:targetShaVerified?'TARGET_EVIDENCE_INCOMPLETE':'TARGET_SHA_CORRELATION_MISMATCH'};if(!f.rule||!normalizeFile(f.file))return{findingId:String(f.findingId),rule:f.rule,result:'INCONCLUSIVE',evidence:'TARGET_IDENTITY_INCOMPLETE'};const matches=openIssues.filter(issue=>String(issue.rule||'')===String(f.rule||'')&&normalizeFile(issue.component).endsWith(normalizeFile(f.file))&&(!f.line||!issue.line||Number(issue.line)===Number(f.line)));const match=matches.find(issue=>issueState(issue)==='ACTIVE');if(match)return{findingId:String(f.findingId),rule:f.rule,result:'INVALID',evidence:analysisLabel+' issue '+String(match.key||match.rule)+' remains open'};if(matches.some(issue=>issueState(issue)==='UNKNOWN'))return{findingId:String(f.findingId),rule:f.rule,result:'INCONCLUSIVE',evidence:'TARGET_ISSUE_STATE_UNKNOWN'};return{findingId:String(f.findingId),rule:f.rule,result:'VALID',evidence:analysisLabel+' '+ctx.analysisId+' at '+ctx.checkoutSha+': approved finding absent'};});\nconst everyFindingValid=findingResults.length===prepared.findingIds.length&&findingResults.every(r=>r.result==='VALID');const shaVerified=ctx.expectedPrHeadSha===ctx.checkoutSha;const correlationVerified=!!incident?.id&&incident.id===ctx.incidentId&&sonarCorrelationVerified&&shaVerified;const passed=ctx.jenkinsStatus==='SUCCESS'&&sonarStatus==='OK'&&correlationVerified&&!missingStage.length&&!requiredFailures.length&&Number(ctx.unresolvedBlockingCount||0)===0&&everyFindingValid;const anyInvalid=findingResults.some(r=>r.result==='INVALID');\nreturn [{json:{...ctx,findingResults,targetEvidenceComplete:searchAvailable,targetEvidenceError:searchAvailable?null:'TARGET_EVIDENCE_INCOMPLETE',targetEvidenceDetail:findingSearch.targetEvidenceDetail??null,sonarQualityGateConditions:qgConditions,sonarQualityGatePeriod:qgPeriod,validationStatus:passed?'VALIDATED':anyInvalid?'INVALID':'INCONCLUSIVE',passed,sonarStatus,sonarAnalysisMode:analysisMode,sonarCorrelationVerified,correlationVerified,finalStateVerified:shaVerified,requiredStagesStatus:(!missingStage.length&&!requiredFailures.length)?'PASSED':'FAILED',candidateFindingsSnapshot:Array.isArray(candidateSnapshot.candidateFindingsSnapshot)?candidateSnapshot.candidateFindingsSnapshot:[],candidateSnapshotComplete:candidateSnapshot.candidateSnapshotComplete===true,candidateSnapshotError:candidateSnapshot.candidateSnapshotError??null,failureReasons:[ctx.jenkinsStatus!=='SUCCESS'?'Jenkins='+ctx.jenkinsStatus:null,sonarStatus!=='OK'?'Sonar='+sonarStatus:null,!shaVerified?'PR HEAD mismatch':null,!correlationVerified?'Correlation unverified':null,!everyFindingValid?'Approved finding validation incomplete':null,...missingStage.map(s=>'Required stage missing='+s),...requiredFailures.map(s=>s.stage+'='+s.status)].filter(Boolean),timestamp:new Date().toISOString()}}];"
         },
         "type": "n8n-nodes-base.code",
         "typeVersion": 2,
@@ -203,10 +203,63 @@
         }
       },
       {
+        "parameters": {
+          "url": "http://sonarqube:9000/api/issues/search",
+          "authentication": "predefinedCredentialType",
+          "nodeCredentialType": "httpHeaderAuth",
+          "options": {
+            "timeout": 15000,
+            "response": {
+              "response": {
+                "responseFormat": "json"
+              }
+            },
+            "pagination": {
+              "pagination": {
+                "paginationMode": "updateAParameterInEachRequest",
+                "parameters": {
+                  "parameters": [
+                    {
+                      "type": "qs",
+                      "name": "p",
+                      "value": "={{ $pageCount + 1 }}"
+                    }
+                  ]
+                },
+                "paginationCompleteWhen": "other",
+                "completeExpression": "={{ !Array.isArray($response.body?.issues) || !Number.isSafeInteger($response.body?.total ?? $response.body?.paging?.total) || ($response.body.total ?? $response.body.paging.total) < 0 || $response.body.issues.length < 500 || ($pageCount + 1) * 500 >= ($response.body.total ?? $response.body.paging.total) }}",
+                "limitPagesFetched": true,
+                "maxRequests": 40,
+                "requestInterval": 0
+              }
+            }
+          },
+          "sendQuery": true,
+          "queryParameters": {
+            "parameters": [
+              {
+                "name": "componentKeys",
+                "value": "={{ $('Extract Validation Context').first().json.validationSonarProjectKey }}"
+              },
+              {
+                "name": "resolved",
+                "value": "false"
+              },
+              {
+                "name": "ps",
+                "value": "500"
+              },
+              {
+                "name": "p",
+                "value": "1"
+              }
+            ]
+          }
+        },
         "id": "wf3-get-full-candidate-snapshot",
         "name": "Get Full Candidate Sonar Snapshot",
-        "type": "n8n-nodes-base.code",
-        "typeVersion": 2,
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
         "position": [
           -416,
           160
@@ -217,9 +270,20 @@
             "name": "sonar-direct-token"
           }
         },
+        "onError": "continueErrorOutput"
+      },
+      {
         "parameters": {
-          "jsCode": "// BRIQUE 3 CLOSEOUT -- distinct, full-pagination Sonar fetch for PR\n// regression analysis. Deliberately separate from \"Get SonarQube Approved\n// Findings\" above: that path stays untouched (rules=<approved rules only>,\n// authoritative for per-finding VALID/INVALID verdicts). This path applies\n// NO rule filter -- it must retrieve every active finding in the exact\n// PR-scoped analysis, not merely the approved subset, so the backend\n// regression engine can detect genuinely NEW findings. Active-vs-inactive\n// filtering is deliberately NOT done here -- that stays the backend Sonar\n// adapter's job (isActiveSonarIssue), so this node's only responsibility is\n// a complete, unfiltered raw fetch with a deterministic, never-fabricated\n// completeness flag.\nconst ctx = $('Extract Validation Context').first().json;\nconst mode = ctx.sonarAnalysisMode;\nconst projectKey = mode === 'COMMUNITY_EXACT_SHA' ? String(ctx.validationSonarProjectKey || '') : '';\nif (!projectKey) {\n  return [{ json: { candidateFindingsSnapshot: [], candidateSnapshotComplete: false, candidateSnapshotError: 'PROJECT_KEY_UNAVAILABLE', candidateSha: ctx.checkoutSha ?? null } }];\n}\nconst PAGE_SIZE = 500;\nconst MAX_PAGES = 40; // safety bound (20000 issues) -- never silently claim complete beyond this\nconst accumulated = [];\nlet page = 1;\nlet total = NaN;\nlet error = null;\nwhile (true) {\n  let response;\n  try {\n    response = await this.helpers.httpRequestWithAuthentication.call(this, 'httpHeaderAuth', {\n      method: 'GET',\n      url: 'http://sonarqube:9000/api/issues/search',\n      qs: { componentKeys: projectKey, resolved: 'false', ps: PAGE_SIZE, p: page },\n      json: true,\n    });\n  } catch (e) {\n    error = 'FETCH_FAILED_PAGE_' + page;\n    break;\n  }\n  const pageIssues = Array.isArray(response && response.issues) ? response.issues : null;\n  if (pageIssues === null) { error = 'MALFORMED_RESPONSE_PAGE_' + page; break; }\n  accumulated.push(...pageIssues);\n  total = Number((response && response.total) ?? (response && response.paging && response.paging.total));\n  if (!Number.isFinite(total)) { error = 'TOTAL_UNAVAILABLE_PAGE_' + page; break; }\n  if (accumulated.length >= total || pageIssues.length < PAGE_SIZE) break;\n  page += 1;\n  if (page > MAX_PAGES) { error = 'PAGE_LIMIT_EXCEEDED'; break; }\n}\nconst candidateSnapshotComplete = !error && Number.isFinite(total) && accumulated.length === total;\nreturn [{ json: {\n  candidateFindingsSnapshot: accumulated,\n  candidateSnapshotComplete,\n  candidateSnapshotError: candidateSnapshotComplete ? null : (error || 'INCOMPLETE'),\n  candidateSha: ctx.checkoutSha ?? null,\n} }];"
-        }
+          "jsCode": "const ctx = $('Extract Validation Context').first().json;\nconst PAGE_SIZE = 500;\nconst MAX_PAGES = 40;\nconst pages = $input.all().map(item => item.json || {});\nconst safeError = (value) => {\n  if (!value || typeof value !== 'object') return null;\n  const statusCode = value.statusCode ?? value.httpCode ?? value.response?.statusCode;\n  const code = typeof value.code === 'string' ? value.code.replace(/[^A-Z0-9_.-]/gi, '').slice(0,80) : undefined;\n  const name = typeof value.name === 'string' ? value.name.replace(/[^A-Z0-9_.-]/gi, '').slice(0,80) : undefined;\n  const message = typeof value.message === 'string'\n    ? value.message.replace(/authorization|bearer\\s+\\S+|token[=:]\\s*\\S+/ig, '[redacted]').replace(/https?:\\/\\/[^\\s]+/g, '[url]').slice(0,200)\n    : undefined;\n  return Object.fromEntries(Object.entries({name,code,statusCode,message}).filter(([,v]) => v !== undefined && v !== null));\n};\nlet error = null;\nlet total = null;\nlet collectedCount = 0;\nconst issues = [];\nif (!pages.length) error = 'FETCH_FAILED_PAGE_1';\nif (pages.length > MAX_PAGES) error = 'PAGE_LIMIT_EXCEEDED';\nfor (let index = 0; !error && index < pages.length; index++) {\n  const page = pages[index] || {};\n  if (page.error) {\n    const detail = safeError(page.error);\n    error = 'FETCH_FAILED_PAGE_' + (index + 1) + (detail && Object.keys(detail).length ? ':' + JSON.stringify(detail) : '');\n    break;\n  }\n  if (!Array.isArray(page.issues)) { error = 'MALFORMED_RESPONSE_PAGE_' + (index + 1); break; }\n  const reportedTotal = page.total ?? page.paging?.total;\n  const pageIndex = page.paging?.pageIndex ?? page.p;\n  const pageSize = page.paging?.pageSize ?? page.ps;\n  if (!Number.isSafeInteger(reportedTotal) || reportedTotal < 0 || !Number.isSafeInteger(pageIndex) || pageIndex !== index + 1 || pageSize !== PAGE_SIZE) {\n    error = 'PAGING_METADATA_INVALID_PAGE_' + (index + 1); break;\n  }\n  if (total !== null && reportedTotal !== total) { error = 'PAGING_TOTAL_INCONSISTENT_PAGE_' + (index + 1); break; }\n  total = reportedTotal;\n  const expected = Math.min(PAGE_SIZE, Math.max(0, total - index * PAGE_SIZE));\n  if (page.issues.length !== expected || (index > 0 && expected === 0)) { error = 'PAGE_LENGTH_INVALID_PAGE_' + (index + 1); break; }\n  issues.push(...page.issues);\n  collectedCount += page.issues.length;\n}\nconst expectedPages = total === null ? null : Math.max(1, Math.ceil(total / PAGE_SIZE));\nif (!error && (total === null || collectedCount !== total || pages.length !== expectedPages)) error = pages.length >= MAX_PAGES ? 'PAGE_LIMIT_EXCEEDED' : 'PAGES_INCOMPLETE';\nconst complete = !error && total !== null && collectedCount === total && pages.length === expectedPages;\nreturn [{json:{candidateFindingsSnapshot:issues,candidateSnapshotComplete:complete,candidateSnapshotError:complete?null:error,candidateSha:ctx.checkoutSha??null,total,collectedCount,pageSize:PAGE_SIZE}}];"
+        },
+        "id": "wf3-consolidate-full-candidate-snapshot",
+        "name": "Consolidate Full Candidate Sonar Snapshot",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          -200,
+          160
+        ]
       },
       {
         "parameters": {
@@ -324,7 +388,14 @@
         "main": [
           [
             {
-              "node": "Consolidate Validation Result",
+              "node": "Consolidate Full Candidate Sonar Snapshot",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Consolidate Full Candidate Sonar Snapshot",
               "type": "main",
               "index": 0
             }
@@ -336,6 +407,17 @@
           [
             {
               "node": "Get Full Candidate Sonar Snapshot",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Consolidate Full Candidate Sonar Snapshot": {
+        "main": [
+          [
+            {
+              "node": "Consolidate Validation Result",
               "type": "main",
               "index": 0
             }

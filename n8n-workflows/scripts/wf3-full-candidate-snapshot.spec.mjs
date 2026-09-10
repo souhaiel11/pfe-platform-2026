@@ -1,107 +1,58 @@
-// BRIQUE 3 CLOSEOUT — proves the "Get Full Candidate Sonar Snapshot" node's
-// pagination/completeness LOGIC in the repo-tracked WF3 export
-// (n8n-workflows/active/wf3-post-pr-validation-v4-4JiOKpyHhx1znTYw.json).
-// REPO-ONLY / STATIC: this mocks n8n's Code-node `this.helpers` API and
-// never touches a live n8n instance, so it cannot prove the real HTTP
-// pagination works against a live SonarQube -- only that the node's own
-// accumulation/completeness/error-handling logic is deterministic and never
-// fabricates `candidateSnapshotComplete: true`.
+// Offline validation of the native HTTP full-snapshot path and its pure
+// consolidation node. No n8n execution or network access.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
-import path from 'node:path';
-
-const here = path.dirname(fileURLToPath(import.meta.url));
-const wfPath = path.join(here, '..', 'active', 'wf3-post-pr-validation-v4-4JiOKpyHhx1znTYw.json');
-const workflow = JSON.parse(readFileSync(wfPath, 'utf8'))[0];
-const node = workflow.nodes.find(n => n.name === 'Get Full Candidate Sonar Snapshot');
-assert.ok(node, 'Get Full Candidate Sonar Snapshot node must exist in the repo-tracked WF3 export');
-const code = node.parameters.jsCode;
+const workflow = JSON.parse(readFileSync(new URL('../active/wf3-post-pr-validation-v4-4JiOKpyHhx1znTYw.json', import.meta.url)))[0];
+const node = name => workflow.nodes.find(n => n.name === name);
+const http = node('Get Full Candidate Sonar Snapshot');
+const consolidate = node('Consolidate Full Candidate Sonar Snapshot');
+assert.equal(http.type, 'n8n-nodes-base.httpRequest');
+assert.equal(http.typeVersion, 4.2);
+assert.deepEqual(http.credentials.httpHeaderAuth, { id: 'r60SonarDirectCred1', name: 'sonar-direct-token' });
+assert.equal(http.parameters.url, 'http://sonarqube:9000/api/issues/search');
+assert.equal(http.parameters.nodeCredentialType, 'httpHeaderAuth');
+assert.equal(http.onError, 'continueErrorOutput');
+assert.equal(http.parameters.options.pagination.pagination.maxRequests, 40);
+assert.equal(http.parameters.options.pagination.pagination.parameters.parameters[0].name, 'p');
+assert.doesNotMatch(JSON.stringify(http), /httpRequestWithAuthentication|requestWithAuthenticationPaginated/);
+assert.doesNotMatch(JSON.stringify(consolidate), /httpRequestWithAuthentication|requestWithAuthenticationPaginated/);
+const code = consolidate.parameters.jsCode;
 const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
-
-function makeThis(pages) {
-  let calls = 0;
-  return {
-    helpers: {
-      httpRequestWithAuthentication: {
-        call: async (_thisArg, _credType, options) => {
-          const page = Number(options.qs.p);
-          calls++;
-          const response = pages[page - 1];
-          if (response === 'THROW') throw new Error('simulated network failure');
-          if (response === undefined) throw new Error(`unexpected page requested: ${page}`);
-          return response;
-        },
-      },
-    },
-    _calls: () => calls,
-  };
+const SHA = 'a'.repeat(40);
+const ctx = { sonarAnalysisMode: 'COMMUNITY_EXACT_SHA', validationSonarProjectKey: 'proj-pr-25', checkoutSha: SHA };
+const issue = i => ({ key: `k${i}`, rule: 'java:S1', component: 'proj-pr-25:A.java' });
+async function run(pages, context = ctx) {
+  const dollar = name => ({ first: () => ({ json: name === 'Extract Validation Context' ? context : undefined }) });
+  const input = { all: () => pages.map(json => ({ json })) };
+  return (await new AsyncFunction('$', '$input', code)(dollar, input))[0].json;
 }
-
-async function run(ctxJson, pages) {
-  const mockThis = makeThis(pages);
-  const mockDollar = name => ({ first: () => ({ json: name === 'Extract Validation Context' ? ctxJson : undefined }) });
-  const fn = new AsyncFunction('$', code);
-  const out = (await fn.call(mockThis, mockDollar))[0].json;
-  return { out, calls: mockThis._calls() };
+const page = (issues, total, p = 1) => ({ issues, total, paging: { total, pageIndex: p, pageSize: 500 } });
+{
+ const out = await run([page(Array.from({length:15},(_,i)=>issue(i)),15)]);
+ assert.equal(out.candidateSnapshotComplete,true); assert.equal(out.collectedCount,15); assert.equal(out.total,15);
 }
-
-const baseCtx = { sonarAnalysisMode: 'COMMUNITY_EXACT_SHA', validationSonarProjectKey: 'proj-pr-25', checkoutSha: 'a'.repeat(40) };
-
-async function main() {
-  // Case 1: single page, fewer issues than the page size -- complete.
-  {
-    const issues = Array.from({ length: 3 }, (_, i) => ({ key: `k${i}`, rule: 'java:S1', component: 'proj-pr-25:A.java' }));
-    const { out, calls } = await run(baseCtx, [{ issues, total: 3 }]);
-    assert.equal(calls, 1);
-    assert.equal(out.candidateSnapshotComplete, true);
-    assert.equal(out.candidateFindingsSnapshot.length, 3);
-    assert.equal(out.candidateSnapshotError, null);
-  }
-
-  // Case 2: multiple pages, full pagination actually walks every page.
-  {
-    const page1 = Array.from({ length: 500 }, (_, i) => ({ key: `p1-${i}`, rule: 'java:S1', component: 'A.java' }));
-    const page2 = Array.from({ length: 120 }, (_, i) => ({ key: `p2-${i}`, rule: 'java:S1', component: 'A.java' }));
-    const { out, calls } = await run(baseCtx, [{ issues: page1, total: 620 }, { issues: page2, total: 620 }]);
-    assert.equal(calls, 2, 'both pages were actually fetched');
-    assert.equal(out.candidateFindingsSnapshot.length, 620);
-    assert.equal(out.candidateSnapshotComplete, true);
-  }
-
-  // Case 3: a page request fails mid-pagination -- never fabricate complete.
-  {
-    const page1 = Array.from({ length: 500 }, (_, i) => ({ key: `p1-${i}` }));
-    const { out } = await run(baseCtx, [{ issues: page1, total: 620 }, 'THROW']);
-    assert.equal(out.candidateSnapshotComplete, false);
-    assert.ok(out.candidateSnapshotError && out.candidateSnapshotError.startsWith('FETCH_FAILED_PAGE_'));
-  }
-
-  // Case 4: malformed response (no issues array) -- never fabricate complete.
-  {
-    const { out } = await run(baseCtx, [{ notIssues: [] }]);
-    assert.equal(out.candidateSnapshotComplete, false);
-    assert.ok(out.candidateSnapshotError.startsWith('MALFORMED_RESPONSE_PAGE_'));
-  }
-
-  // Case 5: total is missing/non-numeric -- never fabricate complete.
-  {
-    const { out } = await run(baseCtx, [{ issues: [{ key: 'k1' }] }]);
-    assert.equal(out.candidateSnapshotComplete, false);
-    assert.ok(out.candidateSnapshotError.startsWith('TOTAL_UNAVAILABLE_PAGE_'));
-  }
-
-  // Case 6: no validationSonarProjectKey (or wrong analysis mode) -- fails
-  // closed immediately, zero HTTP calls.
-  {
-    const { out, calls } = await run({ ...baseCtx, validationSonarProjectKey: '' }, []);
-    assert.equal(calls, 0);
-    assert.equal(out.candidateSnapshotComplete, false);
-    assert.equal(out.candidateSnapshotError, 'PROJECT_KEY_UNAVAILABLE');
-    assert.deepEqual(out.candidateFindingsSnapshot, []);
-  }
-
-  console.log('WF3 full candidate Sonar snapshot pagination: PASS');
+{
+ const p1=Array.from({length:500},(_,i)=>issue(i)); const p2=Array.from({length:1},(_,i)=>issue(i+500));
+ const out=await run([page(p1,501,1),page(p2,501,2)]);
+ assert.equal(out.candidateSnapshotComplete,true); assert.equal(out.candidateFindingsSnapshot.length,501); assert.equal(out.candidateFindingsSnapshot[500].key,'k500');
 }
-
-main().catch(error => { console.error(error); process.exitCode = 1; });
+for (const pages of [
+ [{error:{name:'Error',code:'ECONNREFUSED',message:'connect failed'}}],
+ [page(Array.from({length:500},(_,i)=>issue(i)),501),{error:{name:'Error',statusCode:503,message:'upstream'}}],
+ [{issues:[],paging:{pageIndex:1,pageSize:500}}],
+ [page(Array.from({length:500},(_,i)=>issue(i)),501),page([issue(500)],502,2)],
+ [page(Array.from({length:10},(_,i)=>issue(i)),501)],
+]) {
+ const out=await run(pages); assert.equal(out.candidateSnapshotComplete,false); assert.match(String(out.candidateSnapshotError), /FETCH_FAILED|TOTAL|PAGING|PAGE_LENGTH|PAGES|LIMIT/);
+}
+{
+ const out=await run([page([],0)]); assert.equal(out.candidateSnapshotComplete,true); assert.equal(out.collectedCount,0); assert.deepEqual(out.candidateFindingsSnapshot,[]);
+}
+{
+ const out=await run([page([],0)]); assert.equal(out.candidateSha,SHA);
+}
+assert.equal(http.parameters.queryParameters.parameters.find(p=>p.name==='componentKeys').value.includes('validationSonarProjectKey'),true);
+assert.equal(http.parameters.queryParameters.parameters.find(p=>p.name==='resolved').value,'false');
+assert.equal(http.parameters.queryParameters.parameters.find(p=>p.name==='ps').value,'500');
+assert.equal(http.parameters.queryParameters.parameters.find(p=>p.name==='p').value,'1');
+console.log('WF3 full candidate snapshot native HTTP + pagination/consolidation safety: PASS');
