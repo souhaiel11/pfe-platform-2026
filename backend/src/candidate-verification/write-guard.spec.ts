@@ -1,6 +1,20 @@
 import * as assert from 'node:assert/strict';
 import { assertCandidateStillValidForWrite } from './write-guard';
-import { CandidateVerification, CandidateManifest } from './candidate-verification.types';
+import { CandidateVerification, CandidateManifest, HeadVerification } from './candidate-verification.types';
+
+function headOnlyVerification(): HeadVerification {
+  return {
+    mode: 'HEAD_ONLY',
+    identity: { repository: 'x/y', targetSha: 'a'.repeat(40), validationRequestId: 'v1', requestId: 'r1', batchId: 'b1', candidateAttempt: 0 },
+    workspace: { workspaceId: 'r1/b1/attempt-0', exactShaVerified: true, created: true, cleaned: true, checkoutSha: 'a'.repeat(40) },
+    compile: { status: 'SUCCESS', exitCode: 0, durationMs: 100, evidenceRef: null },
+    tests: { targeted: { status: 'NOT_RUN', reason: 'NO_HIGH_CONFIDENCE_TARGET_SELECTION' }, regression: { status: 'SUCCESS', total: 1, failures: 0, errors: 0, skipped: 0, durationMs: 100, evidenceRef: null } },
+    staticAnalysis: { status: 'NOT_RUN', reason: 'SUPPORTED_STATIC_ADAPTER_NOT_CONFIGURED', newIssues: [], evidenceRef: null },
+    overall: 'PASS',
+    verificationLevel: 'COMPILE_TEST_VERIFIED',
+    failureClass: 'SHA_UNAVAILABLE',
+  };
+}
 
 function passingVerification(overrides: Partial<CandidateVerification['identity']> = {}): CandidateVerification {
   return {
@@ -18,6 +32,12 @@ function passingVerification(overrides: Partial<CandidateVerification['identity'
 
 function manifest(overrides: Partial<CandidateManifest> = {}): CandidateManifest {
   return { candidateId: 'c1', requestId: 'r1', batchId: 'b1', candidateAttempt: 0, repository: 'x/y', candidateBaseSha: 'a'.repeat(40), files: [], candidateDigest: 'digest-1', ...overrides };
+}
+
+// --- HEAD_ONLY is never write-authorizing, regardless of overall/exactShaVerified ---
+{
+  const result = assertCandidateStillValidForWrite(headOnlyVerification(), manifest());
+  assert.deepEqual(result, { ok: false, reason: 'HEAD_ONLY_NOT_WRITABLE' }, 'a HEAD_ONLY-mode verification result must never be treated as write-authorizing');
 }
 
 // --- happy path: matching digest + base SHA + PASS + exactShaVerified ---
