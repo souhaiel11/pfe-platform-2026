@@ -45,7 +45,7 @@
                   },
                   "conditions": [
                     {
-                      "leftValue": "={{ $json.event ?? $json.body?.event }}",
+                      "leftValue": "={{ $json.body?.event ?? $json.event }}",
                       "rightValue": "pipeline_failed",
                       "operator": {
                         "type": "string",
@@ -68,7 +68,7 @@
                   "conditions": [
                     {
                       "id": "47e9da06-bc5a-4dd5-ab92-bd4041719ea7",
-                      "leftValue": "={{ $json.event ?? $json.body?.event }}",
+                      "leftValue": "={{ $json.body?.event ?? $json.event }}",
                       "rightValue": "pipeline_blocked",
                       "operator": {
                         "type": "string",
@@ -91,7 +91,7 @@
                   "conditions": [
                     {
                       "id": "af970071-25a6-4cc3-892b-e6b0256957cc",
-                      "leftValue": "={{ $json.event ?? $json.body?.event }}",
+                      "leftValue": "={{ $json.body?.event ?? $json.event }}",
                       "rightValue": "pipeline_success",
                       "operator": {
                         "type": "string",
@@ -114,7 +114,7 @@
                   "conditions": [
                     {
                       "id": "7d25a125-7fa9-4ab7-a5c3-dca00418b284",
-                      "leftValue": "={{ $json.event ?? $json.body?.event }}",
+                      "leftValue": "={{ $json.body?.event ?? $json.event }}",
                       "rightValue": "pipeline_unstable",
                       "operator": {
                         "type": "string",
