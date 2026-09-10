@@ -124,6 +124,39 @@ function main() {
     assert.equal(out.result, 'INCONCLUSIVE', 'CASE E: ambiguous evidence never resolves to CLEAN or CHANGES_REQUIRED');
   }
 
+  // Baseline evidence without an identity is equally unusable: never emit a
+  // definitive CLEAN/CHANGES_REQUIRED result from a partially incomparable baseline.
+  {
+    const out = analyzeRegression({
+      expectedCandidateSha: ABC,
+      baseline: { sha: ABC, findings: [{ source: 'TEST', rule: '', path: 'Unknown.java' }], complete: true },
+      candidate: { sha: ABC, findings: [], complete: true },
+      policy: alwaysBlocking,
+    });
+    assert.equal(out.result, 'INCONCLUSIVE', 'baseline finding without fingerprint -> INCONCLUSIVE');
+    assert.ok(out.warnings.includes('BASELINE_FINDING_UNFINGERPRINTABLE'));
+  }
+
+  // Population semantics are severity-agnostic: a pre-existing MINOR finding
+  // is pre-existing, while a genuinely new MINOR blocks under the production policy.
+  {
+    const minor = finding('minor-rule', 'src/Minor.java');
+    const clean = analyzeRegression({
+      expectedCandidateSha: ABC,
+      baseline: { sha: ABC, findings: [minor], complete: true },
+      candidate: { sha: ABC, findings: [minor], complete: true },
+      policy: conservativeRegressionPolicy,
+    });
+    assert.equal(clean.result, 'CLEAN');
+    const introduced = analyzeRegression({
+      expectedCandidateSha: ABC,
+      baseline: { sha: ABC, findings: [], complete: true },
+      candidate: { sha: ABC, findings: [minor], complete: true },
+      policy: conservativeRegressionPolicy,
+    });
+    assert.equal(introduced.result, 'CHANGES_REQUIRED');
+  }
+
   // ------------------------------------------------------------------
   // CLOSEOUT TEST J — same rule + same file + multiple occurrences
   // (a fingerprint collision), with insufficient secondary evidence to pair

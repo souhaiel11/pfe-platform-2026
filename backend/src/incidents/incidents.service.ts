@@ -914,10 +914,18 @@ export class IncidentsService {
     // deux dérive (ex: un futur appel écrase enrichedData sans sourceCommitSha),
     // la baseline devient non attribuable -> INCONCLUSIVE, jamais une
     // comparaison silencieuse entre deux builds différents.
-    const baselineSonarIssues = (currentMeta as any)?.enrichedData?.sonar?.issues;
+    const baselineSonar = (currentMeta as any)?.enrichedData?.sonar;
+    const baselineSonarIssues = baselineSonar?.issues;
     const frozenBaselineSha = isFullGitSha((fixRequest as any).baselineSha) ? String((fixRequest as any).baselineSha).toLowerCase() : null;
     const currentSourceCommitSha = isFullGitSha((currentMeta as any)?.sourceCommitSha) ? String((currentMeta as any).sourceCommitSha).toLowerCase() : null;
     const baselineCorrelated = !!frozenBaselineSha && frozenBaselineSha === currentSourceCommitSha;
+    const baselineTotal = Number(baselineSonar?.total);
+    const baselineCollectedCount = Number(baselineSonar?.collectedCount);
+    const baselineComplete = baselineCorrelated && baselineSonar?.complete === true && Array.isArray(baselineSonarIssues)
+      && Number.isInteger(baselineTotal) && baselineTotal >= 0
+      && Number.isInteger(baselineCollectedCount) && baselineCollectedCount >= 0
+      && baselineCollectedCount === baselineTotal
+      && baselineSonarIssues.length === baselineCollectedCount;
     // BRIQUE 3 CLOSEOUT — PART 3/4 : la complétude du candidat est un booléen
     // explicite fourni par WF3 ("Get Full Candidate Sonar Snapshot" ->
     // candidateSnapshotComplete), jamais inférée de "c'est un tableau" (un
@@ -929,7 +937,7 @@ export class IncidentsService {
       baseline: {
         sha: baselineCorrelated ? frozenBaselineSha : null,
         findings: normalizeSonarFindings(baselineSonarIssues),
-        complete: baselineCorrelated && Array.isArray(baselineSonarIssues),
+        complete: baselineComplete,
       },
       candidate: {
         sha: isFullGitSha(validation.checkoutSha) ? String(validation.checkoutSha).toLowerCase() : null,

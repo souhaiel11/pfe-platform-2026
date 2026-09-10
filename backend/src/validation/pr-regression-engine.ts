@@ -169,11 +169,15 @@ export function analyzeRegression(input: RegressionInput): RegressionOutput {
   };
   const baselineBuckets = bucket(baselineIdentified);
   const candidateBuckets = bucket(candidateIdentified);
-  if (baselineIdentified.some(f => f.fingerprint == null)) warnings.push('BASELINE_FINDING_UNFINGERPRINTABLE');
+  const baselineUnfingerprintable = baselineIdentified.filter(f => f.fingerprint == null);
+  if (baselineUnfingerprintable.length > 0) warnings.push('BASELINE_FINDING_UNFINGERPRINTABLE');
 
   const preExistingFindings: IdentifiedFinding[] = [];
   const introducedFindings: IdentifiedFinding[] = [];
-  const ambiguousFindings: IdentifiedFinding[] = candidateIdentified.filter(f => f.fingerprint == null);
+  const ambiguousFindings: IdentifiedFinding[] = [
+    ...baselineUnfingerprintable,
+    ...candidateIdentified.filter(f => f.fingerprint == null),
+  ];
   const blockingIntroducedFindings: IdentifiedFinding[] = [];
   const resolvedFindings: IdentifiedFinding[] = [];
 

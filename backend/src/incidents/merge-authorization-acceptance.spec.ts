@@ -31,7 +31,14 @@ function makeHarness(overrides: { baselineIssues?: any[] } = {}) {
     project: { id: 'project-1', githubRepo: REPO },
     metadata: {
       sourceCommitSha: SHA,
-      enrichedData: { sonar: { issues: overrides.baselineIssues ?? [...historicalIssues, ...s4684] } },
+      enrichedData: { sonar: {
+        issues: overrides.baselineIssues ?? [...historicalIssues, ...s4684],
+        total: (overrides.baselineIssues ?? [...historicalIssues, ...s4684]).length,
+        collectedCount: (overrides.baselineIssues ?? [...historicalIssues, ...s4684]).length,
+        pageSize: 500,
+        complete: true,
+        snapshotError: null,
+      } },
       fixRequest: {
         status: 'PR_CREATED', requestId, batchId, batchKey: batchId, attemptCount: 1,
         findingId: 'a', findingIds: ['a', 'b'], prNumber: PR, prHeadSha: SHA, validationTargetSha: SHA,

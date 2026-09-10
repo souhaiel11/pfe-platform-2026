@@ -21,7 +21,7 @@ function makeFixture() {
       enrichedData: { sonar: { issues: [
         { key: 'a-i', rule: 'java:S4684', component: `${JOB}:src/A.java`, line: 1, status: 'OPEN' },
         { key: 'b-i', rule: 'java:S4684', component: `${JOB}:src/B.java`, line: 1, status: 'OPEN' },
-      ] } },
+      ], total: 2, collectedCount: 2, pageSize: 500, complete: true, snapshotError: null } },
       fixRequest: {
         status: 'PR_CREATED', requestId: 'req-conv', batchId: 'batch-conv', batchKey: 'batch-conv',
         attemptCount: 1, findingId: 'a', findingIds: ['a', 'b'],

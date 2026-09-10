@@ -32,6 +32,11 @@ function makeFixture() {
             { key: 'k1', rule: 'java:S4684', component: 'proj:src/Dto.java', line: 12, status: 'OPEN' },
             { key: 'k2', rule: 'java:S1234', component: 'proj:src/Other.java', line: 3, status: 'OPEN' },
           ],
+          total: 2,
+          collectedCount: 2,
+          pageSize: 500,
+          complete: true,
+          snapshotError: null,
         },
       },
     },
@@ -153,6 +158,37 @@ async function main() {
     const result: any = await service.saveValidation(incident.id, contract);
     assert.equal(result.validation.regression.result, 'INCONCLUSIVE', 'TEST E: candidateSnapshotComplete=false -> INCONCLUSIVE despite a non-empty array');
     assert.notEqual(result.validation.regression.result, 'CLEAN');
+  }
+
+  // Baseline completeness is explicit and length/total consistent; a partial
+  // or legacy snapshot must fail closed even when its issues field is an array.
+  for (const mutate of [
+    (sonar: any) => { sonar.complete = false; },
+    (sonar: any) => { sonar.collectedCount = 50; },
+    (sonar: any) => { sonar.issues = sonar.issues.slice(0, 1); },
+    (sonar: any) => { delete sonar.total; },
+  ]) {
+    const { incident, service } = makeFixture();
+    mutate(incident.metadata.enrichedData.sonar);
+    const result: any = await service.saveValidation(incident.id, {
+      ...baseValidationContract(incident),
+      candidateSnapshotComplete: true,
+      candidateFindingsSnapshot: [],
+    });
+    assert.equal(result.validation.regression.result, 'INCONCLUSIVE', 'partial/missing baseline completeness metadata -> INCONCLUSIVE');
+  }
+
+  // An old incident with no explicit completeness contract is never upgraded
+  // implicitly from Array.isArray(issues).
+  {
+    const { incident, service } = makeFixture();
+    delete incident.metadata.enrichedData.sonar.total;
+    delete incident.metadata.enrichedData.sonar.collectedCount;
+    delete incident.metadata.enrichedData.sonar.complete;
+    const result: any = await service.saveValidation(incident.id, {
+      ...baseValidationContract(incident), candidateSnapshotComplete: true, candidateFindingsSnapshot: [],
+    });
+    assert.equal(result.validation.regression.result, 'INCONCLUSIVE', 'legacy baseline without completeness metadata -> INCONCLUSIVE');
   }
 
   console.log('PR regression wiring (Brique 3 saveValidation integration): PASS');

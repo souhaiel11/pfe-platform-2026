@@ -169,7 +169,7 @@ async function main() {
     // stickiness, not regression evidence.
     incident.metadata.sourceCommitSha = SHA;
     incident.metadata.fixRequest.baselineSha = SHA;
-    incident.metadata.enrichedData = { sonar: { issues: [] } };
+    incident.metadata.enrichedData = { sonar: { issues: [], total: 0, collectedCount: 0, pageSize: 500, complete: true, snapshotError: null } };
     const validationContract = {
       validationRequestId: frozenValidationRequest.validationRequestId, projectId: incident.projectId,
       fixRequestId: incident.metadata.fixRequest.requestId, batchId: incident.metadata.fixRequest.batchId,
