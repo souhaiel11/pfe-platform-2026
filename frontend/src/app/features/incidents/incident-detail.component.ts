@@ -81,7 +81,10 @@ export class IncidentDetailComponent implements OnInit, OnDestroy {
       { id: 'analysis',   label: 'Analyse IA', dot: null },
       { id: 'guide', label: 'Guide correction', dot: this.developerGuide?.issues?.length ? '#3b82f6' : null },
       { id: 'validation', label: 'Validation PR',
-        dot: this.validation ? (this.validation.passed ? '#22c55e' : '#e24b4a') : null },
+        dot: this.validation?.mergeAuthorization?.authorization === 'MERGE_READY' ? '#22c55e'
+          : this.validation?.mergeAuthorization?.authorization === 'BLOCKED' ? '#e24b4a'
+            : this.validation?.mergeAuthorization?.authorization === 'INCONCLUSIVE' ? '#f59e0b'
+              : this.validation?.mergeAuthorization?.authorization === 'VALIDATING' ? '#3b82f6' : null },
       { id: 'raw',        label: 'Données brutes', dot: null },
     ];
   }
@@ -835,7 +838,7 @@ export class IncidentDetailComponent implements OnInit, OnDestroy {
 
   // ── UI-1 : autorisation de merge + santé globale (LECTURE PURE) ─────────
   // validation.mergeAuthorization : null sur les incidents antérieurs à bb32694
-  // → l'onglet retombe sur validation.passed (fallback template).
+  // → le template affiche un état historique neutre, jamais une autorisation.
   mergeAuthorization(): any { return this.validation?.mergeAuthorization ?? null; }
   pipelineHealth(): any { return this.validation?.derived?.pipelineHealth ?? null; }
 

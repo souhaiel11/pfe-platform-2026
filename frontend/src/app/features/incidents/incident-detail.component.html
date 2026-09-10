@@ -67,7 +67,7 @@
               <span *ngIf="prValidationRequest?.status === 'REQUESTED' || prValidationRequest?.status === 'QUEUED'"
                     class="badge medium">Validation en attente</span>
               <span *ngIf="prValidationRequest?.status === 'RUNNING'" class="badge info">Validation en cours</span>
-              <span *ngIf="prValidationRequest?.status === 'COMPLETED'" class="badge info">Validée</span>
+              <span *ngIf="prValidationRequest?.status === 'COMPLETED'" class="badge info">Validation terminée</span>
               <span *ngIf="prValidationRequest?.status === 'FAILED'" class="badge high">Validation échouée</span>
               <!-- BRIQUE 5 — état "Correction supplémentaire en cours", distinct de la
                    génération initiale. Aucune action concurrente possible pendant ce temps. -->
@@ -523,15 +523,15 @@
             <!-- Fallback : incidents antérieurs sans mergeAuthorization persisté -->
             <ng-template #mergeAuthFallback>
               <div class="card" style="margin-bottom:16px;"
-                   [style.border-left]="'3px solid ' + (validation.passed ? 'var(--accent-green)' : 'var(--accent-red)')">
+                   style="border-left:3px solid var(--border);">
                 <div style="display:flex;align-items:center;gap:16px;">
-                  <div style="font-size:32px;">{{ validation.passed ? '✅' : '❌' }}</div>
+                  <div style="font-size:32px;">ℹ️</div>
                   <div style="flex:1;min-width:0;">
                     <div style="font-size:15px;font-weight:600;color:var(--text-primary);margin-bottom:4px;">
-                      Validation automatique {{ validation.passed ? 'RÉUSSIE' : 'ÉCHOUÉE' }}
+                      Autorisation de fusion non disponible
                     </div>
                     <div style="font-size:12px;color:var(--text-secondary);">
-                      {{ validation.validationStatus | presentationLabel }}
+                      Validation historique — état de fusion non déterminé.
                     </div>
                     <ul *ngIf="validation.failureReasons?.length"
                         style="margin:8px 0 0;padding-left:18px;font-size:12px;color:var(--text-secondary);line-height:1.6;">

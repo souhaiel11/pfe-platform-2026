@@ -332,7 +332,7 @@
               <span *ngIf="prValidationRequest()?.status === 'REQUESTED' || prValidationRequest()?.status === 'QUEUED'"
                     class="badge medium">Validation en attente</span>
               <span *ngIf="prValidationRequest()?.status === 'RUNNING'" class="badge info">Validation en cours</span>
-              <span *ngIf="prValidationRequest()?.status === 'COMPLETED'" class="badge info">Validée</span>
+              <span *ngIf="prValidationRequest()?.status === 'COMPLETED'" class="badge info">Validation terminée</span>
               <span *ngIf="prValidationRequest()?.status === 'FAILED'" class="badge high">
                 {{prValidationRequest()?.result === 'INCONCLUSIVE' ? 'Validation non concluante' : 'Validation échouée'}}
               </span>

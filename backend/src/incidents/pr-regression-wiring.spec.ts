@@ -25,7 +25,10 @@ function makeFixture() {
         status: 'PR_CREATED', requestId: 'req-1', batchId: 'batch-1', batchKey: 'batch-1',
         attemptCount: 1, prNumber: 7, prHeadSha: SHA, findingIds: ['a'], baselineSha: SHA,
       },
-      prValidationRequest: { validationRequestId: 'validation-1', status: 'QUEUED', expectedPrHeadSha: SHA },
+      prValidationRequest: { validationRequestId: 'validation-1', status: 'QUEUED', expectedPrHeadSha: SHA,
+        headVerification: { mode: 'HEAD_ONLY', overall: 'PASS', failureClass: null,
+          workspace: { exactShaVerified: true, checkoutSha: SHA },
+          identity: { targetSha: SHA, validationRequestId: 'validation-1', requestId: 'req-1', batchId: 'batch-1', candidateAttempt: 1, repository: 'owner/repo' } } },
       enrichedData: {
         sonar: {
           issues: [

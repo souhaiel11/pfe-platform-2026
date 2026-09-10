@@ -29,7 +29,10 @@ function makeFixture() {
         prNumber: PR, prHeadSha: SHA1, baselineSha: BASE,
         attempts: [{ attempt: 1, status: 'DISPATCHED' }],
       },
-      prValidationRequest: { validationRequestId: 'vr-1', status: 'QUEUED', expectedPrHeadSha: SHA1, prValidationJob: buildPrValidationJobName(JOB, PR) },
+      prValidationRequest: { validationRequestId: 'vr-1', status: 'QUEUED', expectedPrHeadSha: SHA1, prValidationJob: buildPrValidationJobName(JOB, PR),
+        headVerification: { mode: 'HEAD_ONLY', overall: 'PASS', failureClass: null,
+          workspace: { exactShaVerified: true, checkoutSha: SHA1 },
+          identity: { targetSha: SHA1, validationRequestId: 'vr-1', requestId: 'req-conv', batchId: 'batch-conv', candidateAttempt: 1, repository: REPO } } },
     },
   };
   const project: any = { id: 'project-1', githubRepo: REPO, githubToken: null, jenkinsUrl: 'http://jenkins', jenkinsToken: 'user:x', jenkinsJobName: JOB, sonarqubeKey: 'key' };
@@ -121,7 +124,10 @@ async function main() {
     assert.equal(incident.prUrl, `https://github.com/${REPO}/pull/${PR}`, 'CASE D: same PR URL, never a second PR');
 
     // Simulate WF2's corrective callback landing the SAME PR with a NEW head.
-    incident.metadata.prValidationRequest = { validationRequestId: 'vr-2', status: 'QUEUED', expectedPrHeadSha: SHA2, prValidationJob: buildPrValidationJobName(JOB, PR) };
+    incident.metadata.prValidationRequest = { validationRequestId: 'vr-2', status: 'QUEUED', expectedPrHeadSha: SHA2, prValidationJob: buildPrValidationJobName(JOB, PR),
+      headVerification: { mode: 'HEAD_ONLY', overall: 'PASS', failureClass: null,
+        workspace: { exactShaVerified: true, checkoutSha: SHA2 },
+        identity: { targetSha: SHA2, validationRequestId: 'vr-2', requestId: 'req-conv', batchId: 'batch-conv', candidateAttempt: 2, repository: REPO } } };
 
     // SHA2: X is gone, both targets re-verified VALID, no new regression -> MERGE_READY.
     const v2: any = await service.saveValidation(incident.id, {

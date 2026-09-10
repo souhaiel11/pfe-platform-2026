@@ -51,6 +51,7 @@ export type RemediationResult = 'VALIDATED' | 'INVALID' | 'INCONCLUSIVE';
  * honest default until the regression foundation lands.
  */
 export type RegressionResult = 'CLEAN' | 'CHANGES_REQUIRED' | 'INCONCLUSIVE';
+export type HeadVerificationResult = 'PASS' | 'CODE_FAILURE' | 'INCONCLUSIVE';
 
 /** Machine-readable reasons a merge is not authorized. Stable string codes. */
 export type MergeBlockingReason =
@@ -58,6 +59,8 @@ export type MergeBlockingReason =
   | 'REMEDIATION_INCONCLUSIVE'    // the batch is neither all-VALID nor any-INVALID
   | 'REGRESSION_CHANGES_REQUIRED' // the candidate-vs-baseline diff demands changes before merge
   | 'REGRESSION_UNVERIFIED'       // regression could not be established (no baseline/diff yet, or it was inconclusive)
+  | 'HEAD_VERIFICATION_UNVERIFIED'
+  | 'HEAD_VERIFICATION_CODE_FAILURE'
   | 'STAGE_INCOMPLETE'            // a required pipeline stage (build/tests/sonar) did not complete
   | 'SHA_MISMATCH'               // validated commit != expected PR HEAD, or correlation unverified
   | 'VALIDATION_IN_PROGRESS';     // validation still running
@@ -80,6 +83,8 @@ export interface MergeAuthorizationInput {
   requiredStagesComplete: boolean;
   /** For now always 'INCONCLUSIVE' from callers (no regression foundation yet). */
   regressionResult: RegressionResult;
+  /** Explicit outcome of the exact HEAD_ONLY verifier. Missing means unverified. */
+  headVerificationResult?: HeadVerificationResult;
   /**
    * INFORMATIVE ONLY. `validation.derived.pipelineHealth`. A red global Sonar
    * Quality Gate here becomes an advisory, never a merge blocker — it stays a
@@ -95,6 +100,7 @@ export interface MergeAuthorizationResult {
   /** Echoed straight from the input — BRIQUE 4: a single authoritative record carries all three facts, no recomputation needed downstream. */
   remediationResult: RemediationResult;
   regressionResult: RegressionResult;
+  headVerificationResult: HeadVerificationResult;
   /** PROVEN defects only (FINDING_INVALID, REGRESSION_CHANGES_REQUIRED) — exactly what makes `authorization` 'BLOCKED'. */
   blockingReasons: MergeBlockingReason[];
   /** Unresolved/uncertain evidence (SHA_MISMATCH, STAGE_INCOMPLETE, REMEDIATION_INCONCLUSIVE, REGRESSION_UNVERIFIED, VALIDATION_IN_PROGRESS) — never a proven defect, exactly what makes `authorization` 'INCONCLUSIVE' or 'VALIDATING' when no blockingReason exists. */
@@ -131,6 +137,19 @@ export function deriveExactCorrelationVerified(input: {
   return input.correlationVerified === true && shaOk;
 }
 
+const CODE_FAILURE_CLASSES = new Set(['CANDIDATE_COMPILE_FAILURE', 'CANDIDATE_TEST_REGRESSION']);
+
+/** Maps the worker's Brique 2 result without ever treating unknown FAIL as a code defect. */
+export function deriveHeadVerificationResult(input: {
+  overall?: unknown;
+  failureClass?: unknown;
+} | null | undefined): HeadVerificationResult {
+  if (!input || input.overall === 'INCONCLUSIVE') return 'INCONCLUSIVE';
+  if (input.overall === 'PASS') return 'PASS';
+  if (input.overall === 'FAIL' && CODE_FAILURE_CLASSES.has(String(input.failureClass || ''))) return 'CODE_FAILURE';
+  return 'INCONCLUSIVE';
+}
+
 // ── The contract ─────────────────────────────────────────────────────────
 
 /**
@@ -153,10 +172,12 @@ export function deriveExactCorrelationVerified(input: {
  */
 export function computeMergeAuthorization(input: MergeAuthorizationInput): MergeAuthorizationResult {
   const advisories = buildAdvisories(input.pipelineHealth);
+  const headVerificationResult = input.headVerificationResult ?? 'INCONCLUSIVE';
 
   if (input.validationInProgress === true) {
     return {
       authorization: 'VALIDATING', remediationResult: input.remediationResult, regressionResult: input.regressionResult,
+      headVerificationResult,
       blockingReasons: [], technicalReasons: ['VALIDATION_IN_PROGRESS'], advisories,
     };
   }
@@ -178,18 +199,27 @@ export function computeMergeAuthorization(input: MergeAuthorizationInput): Merge
   if (input.regressionResult === 'CHANGES_REQUIRED') blockingReasons.push('REGRESSION_CHANGES_REQUIRED');
   else if (input.regressionResult === 'INCONCLUSIVE') technicalReasons.push('REGRESSION_UNVERIFIED');
 
+  if (headVerificationResult === 'CODE_FAILURE') blockingReasons.push('HEAD_VERIFICATION_CODE_FAILURE');
+  else if (headVerificationResult !== 'PASS') technicalReasons.push('HEAD_VERIFICATION_UNVERIFIED');
+
   const hardBlocked = blockingReasons.length > 0;
 
   let authorization: MergeAuthorization;
   if (hardBlocked) {
     authorization = 'BLOCKED';
-  } else if (technicalReasons.length === 0 && input.regressionResult === 'CLEAN') {
+  } else if (technicalReasons.length === 0
+    && headVerificationResult === 'PASS'
+    && input.remediationResult === 'VALIDATED'
+    && input.exactCorrelationVerified
+    && input.requiredStagesComplete
+    && input.regressionResult === 'CLEAN') {
     authorization = 'MERGE_READY';
   } else {
     authorization = 'INCONCLUSIVE';
   }
 
-  return { authorization, remediationResult: input.remediationResult, regressionResult: input.regressionResult, blockingReasons, technicalReasons, advisories };
+  return { authorization, remediationResult: input.remediationResult, regressionResult: input.regressionResult,
+    headVerificationResult, blockingReasons, technicalReasons, advisories };
 }
 
 function buildAdvisories(health?: Partial<PipelineHealth> | null): MergeAdvisory[] {

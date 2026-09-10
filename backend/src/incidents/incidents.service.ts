@@ -12,7 +12,7 @@ import { buildConvergenceCycles } from '../common/governance';
 import { resolveJenkinsInternalUrl } from '../common/jenkins-url';
 import { ManualRemediationService } from '../manual-remediation/manual-remediation.service';
 import { deriveFindingsAndHealth } from '../validation/finding-pipeline-separation';
-import { computeMergeAuthorization, deriveRemediationResult, deriveExactCorrelationVerified } from '../validation/merge-authorization';
+import { computeMergeAuthorization, deriveRemediationResult, deriveExactCorrelationVerified, deriveHeadVerificationResult } from '../validation/merge-authorization';
 import { CandidateVerificationService } from '../candidate-verification/candidate-verification.service';
 import { HeadVerificationRequest, HeadVerification } from '../candidate-verification/candidate-verification.types';
 import { analyzeRegression, conservativeRegressionPolicy } from '../validation/pr-regression-engine';
@@ -970,6 +970,7 @@ export class IncidentsService {
       }),
       requiredStagesComplete: jenkinsStatus === 'SUCCESS' && !missingRequiredStage && !badStage,
       regressionResult: regression.result, // BRIQUE 3 — voir l'analyse ci-dessus
+      headVerificationResult: deriveHeadVerificationResult(headVerification),
       pipelineHealth: (validationRecord as any).derived?.pipelineHealth ?? null,
       validationInProgress: false, // saveValidation est terminal
     });

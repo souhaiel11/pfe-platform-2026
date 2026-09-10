@@ -38,7 +38,10 @@ function makeHarness() {
         status: 'PR_CREATED', requestId, batchId, batchKey: batchId, attemptCount: 1,
         findingId: 'a', findingIds: ['a', 'b'], prNumber: PR, prHeadSha: SHA, validationTargetSha: SHA,
       },
-      prValidationRequest: { validationRequestId: 'vr-1', status: 'QUEUED', expectedPrHeadSha: SHA },
+      prValidationRequest: { validationRequestId: 'vr-1', status: 'QUEUED', expectedPrHeadSha: SHA,
+        headVerification: { mode: 'HEAD_ONLY', overall: 'PASS', failureClass: null,
+          workspace: { exactShaVerified: true, checkoutSha: SHA },
+          identity: { targetSha: SHA, validationRequestId: 'vr-1', requestId, batchId, candidateAttempt: 1, repository: REPO } } },
     },
   };
   const repo: any = {

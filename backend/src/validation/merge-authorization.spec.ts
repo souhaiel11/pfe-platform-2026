@@ -3,6 +3,7 @@ import {
   computeMergeAuthorization,
   deriveRemediationResult,
   deriveExactCorrelationVerified,
+  deriveHeadVerificationResult,
   MergeAuthorizationInput,
 } from './merge-authorization';
 
@@ -17,6 +18,7 @@ const base: MergeAuthorizationInput = {
   exactCorrelationVerified: true,
   requiredStagesComplete: true,
   regressionResult: 'INCONCLUSIVE',
+  headVerificationResult: 'PASS',
   pipelineHealth: null,
 };
 
@@ -81,6 +83,19 @@ const base: MergeAuthorizationInput = {
   assert.equal(r.authorization, 'MERGE_READY', 'all preconditions positively satisfied => MERGE_READY');
   assert.deepEqual(r.blockingReasons, [], 'MERGE_READY carries no blocking reasons');
   assert.deepEqual(r.technicalReasons, [], 'MERGE_READY carries no technical reasons either');
+}
+
+// HEAD verification is an explicit positive precondition. Missing or
+// inconclusive evidence can never inherit MERGE_READY from other green fields.
+for (const headVerificationResult of [undefined, 'INCONCLUSIVE'] as const) {
+  const r = computeMergeAuthorization({ ...base, headVerificationResult, regressionResult: 'CLEAN' });
+  assert.equal(r.authorization, 'INCONCLUSIVE');
+  assert.ok(r.technicalReasons.includes('HEAD_VERIFICATION_UNVERIFIED'));
+}
+for (const failureClass of ['CANDIDATE_COMPILE_FAILURE', 'CANDIDATE_TEST_REGRESSION'] as const) {
+  const r = computeMergeAuthorization({ ...base, headVerificationResult: deriveHeadVerificationResult({ overall: 'FAIL', failureClass }), regressionResult: 'CLEAN' });
+  assert.equal(r.authorization, 'BLOCKED');
+  assert.ok(r.blockingReasons.includes('HEAD_VERIFICATION_CODE_FAILURE'));
 }
 {
   // MERGE_READY still holds with a red global Sonar QG (advisory only)
