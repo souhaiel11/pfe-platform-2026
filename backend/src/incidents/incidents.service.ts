@@ -1466,19 +1466,41 @@ export class IncidentsService {
       const now2 = new Date().toISOString();
       const current: any = await this.repo.findOne({ where: { id } });
       const currentMeta: any = current.metadata || {};
-      // BRIQUE 4 — BLOCKED vs INCONCLUSIVE contract, at the pre-Jenkins gate
-      // too: overall==='FAIL' is HEAD_ONLY PROVING the exact candidate commit
-      // itself does not compile / fails its own regression suite -- a proven
-      // defect (never an infrastructure problem). Every other ineligible
-      // shape here (SHA_UNAVAILABLE, transport failure, a dishonest PASS
-      // whose SHA/workspace evidence does not actually check out) is
-      // unresolved/uncertain evidence, never a proven defect -> INCONCLUSIVE,
-      // never fabricated as a code-defect BLOCKED reason.
-      const candidateProvenDefective = headVerification?.overall === 'FAIL';
+      // BRIQUE 4 — only an explicit worker code-failure class is proof that
+      // the candidate itself is defective. A bare overall='FAIL' is not
+      // sufficient: old workers and malformed responses can report FAIL for
+      // workspace/timeout failures. Fail closed in that case and keep the
+      // validation INCONCLUSIVE rather than accusing the candidate.
+      const codeFailureClasses = new Set([
+        'CANDIDATE_COMPILE_FAILURE',
+        'CANDIDATE_TEST_REGRESSION',
+      ]);
+      const technicalFailureClasses = new Set([
+        'WORKSPACE_TIMEOUT',
+        'WORKSPACE_CREATION_FAILED',
+        'WORKSPACE_SHA_MISMATCH',
+        'WORKSPACE_INFRA_FAILURE',
+        'VERIFIER_UNAVAILABLE',
+        'VERIFIER_TIMEOUT',
+        'VERIFIER_PROTOCOL_ERROR',
+        'SHA_UNAVAILABLE',
+        'UNKNOWN',
+      ]);
+      const failureClass = String(headVerification?.failureClass || '');
+      const candidateProvenDefective = headVerification?.overall === 'FAIL'
+        && codeFailureClasses.has(failureClass);
+      // Explicit technical classes, absent evidence, INCONCLUSIVE, and any
+      // unrecognized class all remain fail-safe INCONCLUSIVE. The boolean is
+      // deliberately not used to turn an unknown class into a code failure.
+      const technicalFailure = !headVerification
+        || headVerification.overall === 'INCONCLUSIVE'
+        || technicalFailureClasses.has(failureClass)
+        || !codeFailureClasses.has(failureClass);
+      const inconclusive = technicalFailure || !candidateProvenDefective;
       const failed = {
         ...claim.request, status: 'FAILED',
-        failureCode: candidateProvenDefective ? 'CANDIDATE_TEST_FAILURE' : 'HEAD_VERIFICATION_NOT_PASS',
-        result: candidateProvenDefective ? 'INVALID' : 'INCONCLUSIVE',
+        failureCode: inconclusive ? 'HEAD_VERIFICATION_INCONCLUSIVE' : 'CANDIDATE_TEST_FAILURE',
+        result: inconclusive ? 'INCONCLUSIVE' : 'INVALID',
         failureSummary: failureSummary.slice(0, 300), headVerification: headVerification ?? null,
         failedAt: now2, updatedAt: now2,
       };

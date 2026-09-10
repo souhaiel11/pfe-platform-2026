@@ -171,7 +171,7 @@ async function main() {
     await assert.rejects(() => service.requestPrValidation(incident.id, user), /vérification HEAD/);
     assert.equal(triggers, 0, 'CASE B: Jenkins never triggered');
     assert.equal(incident.metadata.prValidationRequest.status, 'FAILED');
-    assert.equal(incident.metadata.prValidationRequest.failureCode, 'HEAD_VERIFICATION_NOT_PASS');
+    assert.equal(incident.metadata.prValidationRequest.failureCode, 'HEAD_VERIFICATION_INCONCLUSIVE');
     assert.equal(incident.metadata.prValidationRequest.headVerification.overall, 'INCONCLUSIVE');
     assert.equal(incident.metadata.prValidationRequest.headVerification.failureClass, 'SHA_UNAVAILABLE');
     assert.equal(incident.metadata.prValidationRequest.headVerification.workspace.checkoutSha, null);
@@ -216,15 +216,16 @@ async function main() {
 
   // ------------------------------------------------------------------
   // BRIQUE 4 — HEAD_ONLY overall='FAIL' (the exact candidate commit itself
-  // does not compile / fails its own regression suite): a PROVEN defect,
-  // never an infrastructure problem. Distinct from Cases B/C/D, which are
-  // all uncertain evidence -> INCONCLUSIVE.
+  // does not compile / fails its own regression suite): only the explicit
+  // code failure classes are a PROVEN defect. A FAIL with an unknown class
+  // is fail-safe INCONCLUSIVE.
   // ------------------------------------------------------------------
   {
     const candidateVerification = { verifyHead: async (req: any) => ({
       ...passingHeadVerification(req), overall: 'FAIL', compile: { status: 'SUCCESS', exitCode: 0, durationMs: 1, evidenceRef: null },
       tests: { targeted: { status: 'NOT_RUN', reason: 'NO_HIGH_CONFIDENCE_TARGET_SELECTION' },
         regression: { status: 'FAILED', total: 5, failures: 2, errors: 0, skipped: 0, durationMs: 1, evidenceRef: null } },
+      failureClass: 'CANDIDATE_TEST_REGRESSION',
     }) };
     const { incident, service } = makeFixture(candidateVerification);
     let triggers = 0;
@@ -239,6 +240,37 @@ async function main() {
     assert.equal(incident.metadata.prValidationRequest.status, 'FAILED');
     assert.equal(incident.metadata.prValidationRequest.failureCode, 'CANDIDATE_TEST_FAILURE');
     assert.equal(incident.metadata.prValidationRequest.result, 'INVALID', 'a proven compile/test failure is INVALID (BLOCKED-worthy), not INCONCLUSIVE');
+  }
+
+  // ------------------------------------------------------------------
+  // BRIQUE 2 — compile code failure is INVALID; technical FAIL/known
+  // verifier failures are always INCONCLUSIVE.
+  // ------------------------------------------------------------------
+  for (const scenario of [
+    { failureClass: 'CANDIDATE_COMPILE_FAILURE', expected: 'INVALID' },
+    { failureClass: 'WORKSPACE_TIMEOUT', expected: 'INCONCLUSIVE' },
+    { failureClass: 'VERIFIER_TIMEOUT', expected: 'INCONCLUSIVE' },
+    { failureClass: 'VERIFIER_UNAVAILABLE', expected: 'INCONCLUSIVE' },
+    { failureClass: 'UNKNOWN', expected: 'INCONCLUSIVE' },
+    { failureClass: 'UNRECOGNIZED_FAILURE', expected: 'INCONCLUSIVE' },
+  ]) {
+    const candidateVerification = { verifyHead: async (req: any) => ({
+      ...passingHeadVerification(req), overall: 'FAIL', failureClass: scenario.failureClass,
+    }) };
+    const { incident, service } = makeFixture(candidateVerification);
+    let triggers = 0;
+    globalThis.fetch = (async (url: any) => {
+      const value = String(url);
+      if (value.includes('api.github.com')) return githubOpenPr(PR25_SHA, incident);
+      triggers++;
+      throw new Error('Jenkins must never be reached before a non-PASS HEAD_ONLY result is classified');
+    }) as any;
+    await assert.rejects(() => service.requestPrValidation(incident.id, user), /vérification HEAD/);
+    assert.equal(triggers, 0, `${scenario.failureClass}: Jenkins never triggered`);
+    assert.equal(incident.metadata.prValidationRequest.result, scenario.expected, `${scenario.failureClass} mapping`);
+    assert.equal(incident.metadata.prValidationRequest.failureCode,
+      scenario.expected === 'INVALID' ? 'CANDIDATE_TEST_FAILURE' : 'HEAD_VERIFICATION_INCONCLUSIVE',
+      `${scenario.failureClass} failureCode`);
   }
 
   // ------------------------------------------------------------------
@@ -260,7 +292,7 @@ async function main() {
     assert.equal(triggers, 0, 'CASE D: Jenkins never triggered');
     assert.equal(remediationDispatches, 0, 'CASE D: no automatic source-code correction request');
     assert.equal(incident.metadata.prValidationRequest.status, 'FAILED');
-    assert.equal(incident.metadata.prValidationRequest.failureCode, 'HEAD_VERIFICATION_NOT_PASS');
+    assert.equal(incident.metadata.prValidationRequest.failureCode, 'HEAD_VERIFICATION_INCONCLUSIVE');
     assert.equal(incident.metadata.prValidationRequest.headVerification, null, 'no fake evidence is fabricated for a transport failure');
     // BRIQUE 4 CASE E — a verifier-unavailable failure is INCONCLUSIVE, never BLOCKED.
     assert.equal(incident.metadata.prValidationRequest.result, 'INCONCLUSIVE', 'BRIQUE 4: verifier unavailable -> INCONCLUSIVE, not BLOCKED');
