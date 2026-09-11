@@ -42,8 +42,16 @@ for (const wf of [wf1, wf3]) {
     assert.ok(!['n8n-nodes-base.github', 'n8n-nodes-base.git', 'n8n-nodes-base.executeCommand'].includes(node.type));
   }
 }
-assert.equal(wf1.nodes.length, 49);
+assert.equal(wf1.nodes.length, 50);
 assert.deepEqual(wf1.nodes.filter(n => n.type === 'n8n-nodes-base.webhook').map(n => n.parameters.path), ['jenkins-event']);
+const wf1n = name => wf1.nodes.find(n => n.name === name);
+const wf1next = name => wf1.connections[name].main.flat().map(e => e.node);
+assert.equal(wf1n('Fetch SonarQube Issues').type, 'n8n-nodes-base.httpRequest');
+assert.equal(wf1n('Fetch SonarQube Issues').onError, 'continueErrorOutput');
+assert.deepEqual(wf1next('Fetch SonarQube Issues'), ['Consolidate Baseline Sonar Snapshot','Consolidate Baseline Sonar Snapshot']);
+assert.deepEqual(wf1next('Consolidate Baseline Sonar Snapshot'), ['Resolve Exact Sonar Correlation']);
+assert.ok(!JSON.stringify(wf1n('Fetch SonarQube Issues')).includes('httpRequestWithAuthentication'));
+assert.ok(!wf1n('Consolidate Baseline Sonar Snapshot').parameters.jsCode.includes('httpRequestWithAuthentication'));
 assert.equal(wf3.nodes.length, 11);
 assert.equal(wf3.nodes.filter(n => n.type === 'n8n-nodes-base.webhook').length, 0);
 const n = name => wf3.nodes.find(n => n.name === name);

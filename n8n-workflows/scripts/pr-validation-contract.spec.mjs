@@ -98,8 +98,12 @@ for (const nodeName of ['Get SonarQube PR Quality Gate', 'Get SonarQube Approved
   }
 }
 const wf1SonarNode = byName(wf1, 'Fetch SonarQube Issues');
-assert.equal(wf1SonarNode.parameters.genericAuthType, 'httpHeaderAuth');
+assert.equal(wf1SonarNode.type, 'n8n-nodes-base.httpRequest');
+assert.equal(wf1SonarNode.parameters.nodeCredentialType, 'httpHeaderAuth');
 assert.equal(wf1SonarNode.credentials?.httpHeaderAuth?.id, 'r60SonarDirectCred1', "WF1 Fetch SonarQube Issues must reference the 'sonar-direct-token' credential");
+assert.equal(wf1SonarNode.parameters.url, 'http://sonarqube:9000/api/issues/search');
+assert.equal(wf1SonarNode.parameters.options.pagination.pagination.maxRequests, 40);
+assert.doesNotMatch(JSON.stringify(wf1SonarNode), /httpRequestWithAuthentication|requestWithAuthenticationPaginated/);
 for (const oldId of OLD_SONAR_CREDENTIAL_IDS) {
   assert.ok(!JSON.stringify(wf1SonarNode.credentials).includes(oldId), 'WF1 Fetch SonarQube Issues must not still reference an old Sonar credential');
 }

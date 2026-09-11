@@ -108,7 +108,7 @@ assert.equal(resolveEvent({ body: { event: 'VALUE_BODY' }, event: 'VALUE_ROOT' }
 assert.equal(resolveEvent({ body: { event: 'SAME' }, event: 'SAME' }), 'SAME');
 assert.equal(resolveEvent({}), undefined, 'missing event remains undefined without inventing a value');
 assert.equal(byName('Incident Webhook').parameters.path, 'jenkins-event');
-assert.equal(workflow.nodes.length, 49);
+assert.equal(workflow.nodes.length, 50);
 assert.equal(workflow.connections['Is PR Validation'].main[0][0].node, 'Validate PR Validation Contract');
 assert.equal(workflow.connections['Is PR Validation'].main[1][0].node, 'Switch3');
 assert.ok(!workflow.nodes.some(n => /findingResults\s*[:=]/.test(n.parameters.jsCode || '')));

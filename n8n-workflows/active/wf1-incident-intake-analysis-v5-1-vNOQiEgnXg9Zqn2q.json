@@ -223,22 +223,62 @@
       },
       {
         "parameters": {
-          "jsCode": "const projectKey = String($json.projectConfig?.sonarqubeKey || '');\nconst PAGE_SIZE = 500;\nconst MAX_PAGES = 40;\nconst issues = [];\nlet total = null;\nlet page = 1;\nlet snapshotError = null;\nif (!projectKey) snapshotError = 'PROJECT_KEY_UNAVAILABLE';\nwhile (!snapshotError) {\n  let response;\n  try {\n    response = await this.helpers.httpRequestWithAuthentication.call(this, 'httpHeaderAuth', {\n      method: 'GET',\n      url: 'http://sonarqube:9000/api/issues/search',\n      qs: { componentKeys: projectKey, resolved: 'false', ps: PAGE_SIZE, p: page },\n      json: true,\n    });\n  } catch (error) {\n    snapshotError = 'FETCH_FAILED_PAGE_' + page;\n    break;\n  }\n  const pageIssues = Array.isArray(response?.issues) ? response.issues : null;\n  const pageTotal = Number(response?.total ?? response?.paging?.total);\n  if (!pageIssues) { snapshotError = 'MALFORMED_RESPONSE_PAGE_' + page; break; }\n  if (!Number.isInteger(pageTotal) || pageTotal < 0) { snapshotError = 'TOTAL_UNAVAILABLE_PAGE_' + page; break; }\n  if (total === null) total = pageTotal;\n  if (pageTotal !== total) { snapshotError = 'TOTAL_INCONSISTENT_PAGE_' + page; break; }\n  issues.push(...pageIssues);\n  if (issues.length >= total) break;\n  if (pageIssues.length === 0) { snapshotError = 'EMPTY_PAGE_BEFORE_TOTAL_PAGE_' + page; break; }\n  page += 1;\n  if (page > MAX_PAGES) { snapshotError = 'PAGE_LIMIT_EXCEEDED'; break; }\n}\nconst collectedCount = issues.length;\nconst complete = !snapshotError && Number.isInteger(total) && collectedCount === total;\nreturn [{ json: {\n  issues,\n  total: Number.isInteger(total) ? total : null,\n  collectedCount,\n  pageSize: PAGE_SIZE,\n  complete,\n  snapshotError: complete ? null : (snapshotError || 'INCOMPLETE'),\n} }];",
-          "authentication": "genericCredentialType",
-          "genericAuthType": "httpHeaderAuth",
-          "sendHeaders": true,
-          "headerParameters": {
+          "url": "http://sonarqube:9000/api/issues/search",
+          "authentication": "predefinedCredentialType",
+          "nodeCredentialType": "httpHeaderAuth",
+          "options": {
+            "timeout": 15000,
+            "response": {
+              "response": {
+                "responseFormat": "json"
+              }
+            },
+            "pagination": {
+              "pagination": {
+                "paginationMode": "updateAParameterInEachRequest",
+                "parameters": {
+                  "parameters": [
+                    {
+                      "type": "qs",
+                      "name": "p",
+                      "value": "={{ $pageCount + 1 }}"
+                    }
+                  ]
+                },
+                "paginationCompleteWhen": "other",
+                "completeExpression": "={{ !Array.isArray($response.body?.issues) || !Number.isSafeInteger($response.body?.total ?? $response.body?.paging?.total) || ($response.body.total ?? $response.body.paging.total) < 0 || $response.body.issues.length < 500 || ($pageCount + 1) * 500 >= ($response.body.total ?? $response.body.paging.total) }}",
+                "limitPagesFetched": true,
+                "maxRequests": 40,
+                "requestInterval": 0
+              }
+            }
+          },
+          "sendQuery": true,
+          "queryParameters": {
             "parameters": [
               {
-                "name": "Authorization"
+                "name": "componentKeys",
+                "value": "={{ $json.projectConfig.sonarqubeKey }}"
+              },
+              {
+                "name": "resolved",
+                "value": "false"
+              },
+              {
+                "name": "ps",
+                "value": "500"
+              },
+              {
+                "name": "p",
+                "value": "1"
               }
             ]
           }
         },
-        "id": "4af09279-60e7-47aa-a023-b90b2273bcf7",
+        "id": "wf1-fetch-sonar-issues",
         "name": "Fetch SonarQube Issues",
-        "type": "n8n-nodes-base.code",
-        "typeVersion": 2,
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
         "position": [
           32048,
           22816
@@ -249,7 +289,20 @@
             "name": "sonar-direct-token"
           }
         },
-        "onError": "continueRegularOutput"
+        "onError": "continueErrorOutput"
+      },
+      {
+        "parameters": {
+          "jsCode": "const PAGE_SIZE = 500;\nconst MAX_PAGES = 40;\nconst pages = $input.all().map(item => item.json || {});\nconst safeError = value => {\n  if (!value || typeof value !== 'object') return null;\n  const statusCode = value.statusCode ?? value.httpCode ?? value.response?.statusCode;\n  const code = typeof value.code === 'string' ? value.code.replace(/[^A-Z0-9_.-]/gi, '').slice(0,80) : undefined;\n  const name = typeof value.name === 'string' ? value.name.replace(/[^A-Z0-9_.-]/gi, '').slice(0,80) : undefined;\n  const message = typeof value.message === 'string' ? value.message.replace(/authorization|bearer\\s+\\S+|token[=:]\\s*\\S+/ig, '[redacted]').replace(/https?:\\/\\/[^\\s]+/g, '[url]').slice(0,200) : undefined;\n  return Object.fromEntries(Object.entries({name,code,statusCode,message}).filter(([,v]) => v !== undefined && v !== null));\n};\nlet error = pages.length ? null : 'FETCH_FAILED_PAGE_1';\nlet total = null;\nlet collectedCount = 0;\nconst issues = [];\nif (pages.length > MAX_PAGES) error = 'PAGE_LIMIT_EXCEEDED';\nfor (let index = 0; !error && index < pages.length; index++) {\n  const page = pages[index] || {};\n  if (page.error) { const detail=safeError(page.error); error='FETCH_FAILED_PAGE_'+(index+1)+(detail&&Object.keys(detail).length?':'+JSON.stringify(detail):''); break; }\n  if (!Array.isArray(page.issues)) { error='MALFORMED_RESPONSE_PAGE_'+(index+1); break; }\n  const reportedTotal = page.total ?? page.paging?.total;\n  const pageIndex = page.paging?.pageIndex ?? page.p;\n  const pageSize = page.paging?.pageSize ?? page.ps;\n  if (!Number.isSafeInteger(reportedTotal) || reportedTotal < 0 || !Number.isSafeInteger(pageIndex) || pageIndex !== index+1 || pageSize !== PAGE_SIZE) { error='PAGING_METADATA_INVALID_PAGE_'+(index+1); break; }\n  if (total !== null && reportedTotal !== total) { error='PAGING_TOTAL_INCONSISTENT_PAGE_'+(index+1); break; }\n  total = reportedTotal;\n  const expected = Math.min(PAGE_SIZE, Math.max(0, total-index*PAGE_SIZE));\n  if (page.issues.length !== expected || (index>0 && expected===0)) { error='PAGE_LENGTH_INVALID_PAGE_'+(index+1); break; }\n  issues.push(...page.issues); collectedCount += page.issues.length;\n}\nconst expectedPages = total === null ? null : Math.max(1, Math.ceil(total/PAGE_SIZE));\nif (!error && (total === null || collectedCount !== total || pages.length !== expectedPages)) error = pages.length >= MAX_PAGES ? 'PAGE_LIMIT_EXCEEDED' : 'PAGES_INCOMPLETE';\nconst complete = !error && total !== null && collectedCount === total && pages.length === expectedPages;\nreturn [{json:{issues,total,collectedCount,pageSize:PAGE_SIZE,complete,snapshotError:complete?null:error}}];"
+        },
+        "id": "wf1-consolidate-baseline-sonar",
+        "name": "Consolidate Baseline Sonar Snapshot",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          32268,
+          22816
+        ]
       },
       {
         "parameters": {
@@ -1237,7 +1290,14 @@
         "main": [
           [
             {
-              "node": "Resolve Exact Sonar Correlation",
+              "node": "Consolidate Baseline Sonar Snapshot",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Consolidate Baseline Sonar Snapshot",
               "type": "main",
               "index": 0
             }
@@ -1676,6 +1736,17 @@
           [
             {
               "node": "Call WF3 - Post-PR Validation",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Consolidate Baseline Sonar Snapshot": {
+        "main": [
+          [
+            {
+              "node": "Resolve Exact Sonar Correlation",
               "type": "main",
               "index": 0
             }
