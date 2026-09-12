@@ -48,6 +48,8 @@ async function main() {
   let dispatches = 0;
   const payloads: any[] = [];
   const originalFetch = globalThis.fetch;
+  const originalWorkflowId = process.env.N8N_WF2_ID;
+  process.env.N8N_WF2_ID = '9adcV31eaIgJyMR0';
   globalThis.fetch = async (_url: any, options: any) => { dispatches++; payloads.push(JSON.parse(options.body)); return new Response('{}', { status: 200 }); };
   try {
   const service = new IncidentsService(repository, transactionalProjectRepo as any, { emit: () => undefined } as any, { syncIncident: async () => undefined } as any, {} as any);
@@ -181,7 +183,7 @@ async function main() {
   const callbackIncident: any = {
     id: 'incident-callback', projectId: 'project-1', status: 'blocked', prUrl: null, metadata: { fixRequest: {
       requestId: 'request-callback', batchId: 'batch-callback', workflow: 'WF2', status: 'DISPATCHED',
-      findingIds: ['a', 'b'], attemptCount: 1, attempts: [{ attempt: 1, status: 'DISPATCHED' }],
+      findingIds: ['a', 'b'], attemptCount: 1, attempts: [{ attempt: 1, expectedWorkflowId: '9adcV31eaIgJyMR0', status: 'DISPATCHED' }],
     } },
   };
   const callbackRepo: any = {
@@ -219,7 +221,7 @@ async function main() {
   callbackIncident.metadata.fixRequest = {
     requestId: 'request-success', batchId: 'batch-success', workflow: 'WF2', status: 'DISPATCHED',
     findingIds: ['a', 'b'], findings: [{ findingId: 'a', file: 'TaskService.java' }, { findingId: 'b', file: 'SecurityConfig.java' }],
-    attemptCount: 2, attempts: [{ attempt: 2, status: 'DISPATCHED' }],
+    attemptCount: 2, attempts: [{ attempt: 2, expectedWorkflowId: '9adcV31eaIgJyMR0', status: 'DISPATCHED' }],
   };
   const attemptTwoFailure: any = { ...failure, executionId: '2000', requestId: 'request-success',
     batchId: 'batch-success', batchKey: 'batch-success' };
@@ -237,7 +239,7 @@ async function main() {
   callbackIncident.metadata.fixRequest = {
     requestId: 'request-success', batchId: 'batch-success', workflow: 'WF2', status: 'DISPATCHED',
     findingIds: ['a', 'b'], findings: [{ findingId: 'a', file: 'TaskService.java' }, { findingId: 'b', file: 'SecurityConfig.java' }],
-    attemptCount: 2, attempts: [{ attempt: 2, status: 'DISPATCHED' }],
+    attemptCount: 2, attempts: [{ attempt: 2, expectedWorkflowId: '9adcV31eaIgJyMR0', status: 'DISPATCHED' }],
   };
   const successBase: any = {
     status: 'PR_CREATED', workflowId: '9adcV31eaIgJyMR0', executionId: '2000', incidentId: callbackIncident.id,
@@ -289,7 +291,7 @@ async function main() {
   callbackIncident.metadata.fixRequest = {
     requestId: 'request-candidate', batchId: 'batch-candidate', workflow: 'WF2', status: 'DISPATCHED',
     findingIds: ['a'], findings: [{ findingId: 'a', file: 'ThingController.java' }],
-    attemptCount: 3, attempts: [{ attempt: 3, status: 'DISPATCHED' }],
+    attemptCount: 3, attempts: [{ attempt: 3, expectedWorkflowId: '9adcV31eaIgJyMR0', status: 'DISPATCHED' }],
   };
   const candidatePayload: any = {
     status: 'PR_CREATED', workflowId: '9adcV31eaIgJyMR0', executionId: '2001', incidentId: callbackIncident.id,
@@ -325,6 +327,7 @@ async function main() {
   assert.deepEqual(callbackIncident.metadata.fixRequest.effectiveRemediatedFindingIds, []);
   } finally {
     globalThis.fetch = originalFetch;
+    if (originalWorkflowId === undefined) delete process.env.N8N_WF2_ID; else process.env.N8N_WF2_ID = originalWorkflowId;
   }
 
   console.log('remediation batch contract: PASS');

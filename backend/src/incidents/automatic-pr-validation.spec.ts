@@ -34,7 +34,7 @@ function makeFixture(candidateVerification: any) {
       fixRequest: {
         requestId: 'req-auto', batchId: 'batch-auto', workflow: 'WF2', status: 'DISPATCHED',
         findingIds: ['a'], findings: [{ findingId: 'a', file: 'Service.java' }],
-        attemptCount: 1, attempts: [{ attempt: 1, status: 'DISPATCHED' }],
+        attemptCount: 1, attempts: [{ attempt: 1, expectedWorkflowId: '9adcV31eaIgJyMR0', status: 'DISPATCHED' }],
       },
     },
   };

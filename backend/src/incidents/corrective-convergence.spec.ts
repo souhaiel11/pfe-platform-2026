@@ -27,7 +27,7 @@ function makeFixture() {
         attemptCount: 1, findingId: 'a', findingIds: ['a', 'b'],
         findings: [{ findingId: 'a', file: 'src/A.java' }, { findingId: 'b', file: 'src/B.java' }],
         prNumber: PR, prHeadSha: SHA1, baselineSha: BASE,
-        attempts: [{ attempt: 1, status: 'DISPATCHED' }],
+        attempts: [{ attempt: 1, expectedWorkflowId: '9adcV31eaIgJyMR0', status: 'DISPATCHED' }],
       },
       prValidationRequest: { validationRequestId: 'vr-1', status: 'QUEUED', expectedPrHeadSha: SHA1, prValidationJob: buildPrValidationJobName(JOB, PR),
         headVerification: { mode: 'HEAD_ONLY', overall: 'PASS', failureClass: null,
@@ -82,23 +82,26 @@ const admin = { id: 'admin-1', role: 'admin' };
 
 async function main() {
   const originalFetch = globalThis.fetch;
+  const originalWorkflowId = process.env.N8N_WF2_ID;
+  process.env.N8N_WF2_ID = '9adcV31eaIgJyMR0';
+  try {
 
   // ══════════════════════════════════════════════════════════════════
-  // CASE A + E(ineligibility) + G — full lifecycle: SHA1 BLOCKED (new
-  // regression X) -> authorized correction -> SHA2 targets VALID, X gone,
+  // CASE A + E(ineligibility) + G — full lifecycle: SHA1 BLOCKED (target B
+  // still INVALID) -> authorized correction -> SHA2 targets VALID,
   // no new regression -> MERGE_READY.
   // ══════════════════════════════════════════════════════════════════
   {
     const { incident, service } = makeFixture();
 
-    // SHA1: both targets VALID, but a new finding X was introduced.
+    // SHA1: target B is still INVALID. Scanner X is advisory under UNPROVEN.
     globalThis.fetch = mockGithubAndWf2(incident, SHA1, { count: 0 });
     const v1: any = await service.saveValidation(incident.id, validationPayload(SHA1,
-      [{ findingId: 'a', result: 'VALID', evidence: 'a absent' }, { findingId: 'b', result: 'VALID', evidence: 'b absent' }],
+      [{ findingId: 'a', result: 'VALID', evidence: 'a absent' }, { findingId: 'b', result: 'INVALID', evidence: 'b still present' }],
       [{ key: 'x', rule: 'java:S9999', component: `${JOB}-pr-25:src/X.java`, line: 1, status: 'OPEN' }],
     ));
-    assert.equal(v1.validation.regression.result, 'CHANGES_REQUIRED');
-    assert.equal(v1.validation.mergeAuthorization.authorization, 'BLOCKED', 'CASE A: BLOCKED by new regression');
+    assert.equal(v1.validation.regression.result, 'CLEAN', 'UNPROVEN scanner differences are advisory');
+    assert.equal(v1.validation.mergeAuthorization.authorization, 'BLOCKED', 'CASE A: BLOCKED by approved target B still INVALID');
     assert.equal(v1.validation.mergeAuthorization.correctiveActionAllowed, true, 'CASE A: correctiveActionAllowed=true for a proven-defect BLOCKED');
 
     // CASE E (ineligibility check, positive control): the extracted causal
@@ -109,8 +112,8 @@ async function main() {
     assert.equal(authorized.duplicate, false);
     assert.equal(wf2Calls.count, 1, 'CASE A: exactly one WF2 corrective dispatch');
     assert.equal(authorized.correctiveContext.blockingCauses.length, 1);
-    assert.equal(authorized.correctiveContext.blockingCauses[0].type, 'NEW_BLOCKING_FINDING');
-    assert.equal(authorized.correctiveContext.blockingCauses[0].rule, 'java:S9999');
+    assert.equal(authorized.correctiveContext.blockingCauses[0].type, 'TARGET_FINDING_INVALID');
+    assert.equal(authorized.correctiveContext.blockingCauses[0].findingId, 'b');
     assert.equal(authorized.correctiveContext.previousValidatedSha, SHA1);
 
     // Lineage preserved: SAME incident/request/batch/PR, findingIds untouched.
@@ -183,7 +186,7 @@ async function main() {
   }
 
   // ══════════════════════════════════════════════════════════════════
-  // CASE F — original target revalidation: A/B VALID on SHA1; correction
+  // CASE F — original target revalidation: A VALID, B INVALID on SHA1; correction
   // produces SHA2 where A becomes INVALID (accidentally reintroduced) ->
   // BLOCKED, never reusing SHA1's A=VALID.
   // ══════════════════════════════════════════════════════════════════
@@ -191,7 +194,7 @@ async function main() {
     const { incident, service } = makeFixture();
     globalThis.fetch = mockGithubAndWf2(incident, SHA1, { count: 0 });
     await service.saveValidation(incident.id, validationPayload(SHA1,
-      [{ findingId: 'a', result: 'VALID', evidence: 'a absent' }, { findingId: 'b', result: 'VALID', evidence: 'b absent' }],
+      [{ findingId: 'a', result: 'VALID', evidence: 'a absent' }, { findingId: 'b', result: 'INVALID', evidence: 'b still present' }],
       [{ key: 'x', rule: 'java:S9999', component: `${JOB}-pr-25:src/X.java`, line: 1, status: 'OPEN' }],
     ));
     assert.equal(incident.metadata.validation.mergeAuthorization.authorization, 'BLOCKED');
@@ -211,14 +214,14 @@ async function main() {
   }
 
   // ══════════════════════════════════════════════════════════════════
-  // CASE H — second regression on the corrective attempt itself: BLOCKED
+  // CASE H — target remains INVALID on the corrective attempt itself: BLOCKED
   // again, and NO automatic attempt 3 (a human must explicitly re-authorize).
   // ══════════════════════════════════════════════════════════════════
   {
     const { incident, service } = makeFixture();
     globalThis.fetch = mockGithubAndWf2(incident, SHA1, { count: 0 });
     await service.saveValidation(incident.id, validationPayload(SHA1,
-      [{ findingId: 'a', result: 'VALID', evidence: 'a' }, { findingId: 'b', result: 'VALID', evidence: 'b' }],
+      [{ findingId: 'a', result: 'VALID', evidence: 'a' }, { findingId: 'b', result: 'INVALID', evidence: 'b still present' }],
       [{ key: 'x', rule: 'java:S9999', component: `${JOB}-pr-25:src/X.java`, line: 1, status: 'OPEN' }],
     ));
     globalThis.fetch = mockGithubAndWf2(incident, SHA1, { count: 0 });
@@ -226,12 +229,12 @@ async function main() {
     incident.metadata.prValidationRequest = { validationRequestId: 'vr-2', status: 'QUEUED', expectedPrHeadSha: SHA2, prValidationJob: buildPrValidationJobName(JOB, PR) };
     const v2: any = await service.saveValidation(incident.id, {
       ...validationPayload(SHA2,
-        [{ findingId: 'a', result: 'VALID', evidence: 'a' }, { findingId: 'b', result: 'VALID', evidence: 'b' }],
+        [{ findingId: 'a', result: 'VALID', evidence: 'a' }, { findingId: 'b', result: 'INVALID', evidence: 'b still present on S2' }],
         [{ key: 'y', rule: 'java:S8888', component: `${JOB}-pr-25:src/Y.java`, line: 1, status: 'OPEN' }],
       ),
       validationRequestId: 'vr-2', attemptCount: 2,
     });
-    assert.equal(v2.validation.regression.result, 'CHANGES_REQUIRED', 'CASE H: Y is a second regression');
+    assert.ok(v2.validation.mergeAuthorization.blockingReasons.includes('FINDING_INVALID'), 'CASE H: proven target defect still blocks');
     assert.equal(v2.validation.mergeAuthorization.authorization, 'BLOCKED');
     assert.equal(incident.metadata.fixRequest.attemptCount, 2, 'CASE H: no automatic attempt 3 was dispatched');
   }
@@ -362,7 +365,10 @@ async function main() {
     assert.equal(incident.metadata.validation.candidateSnapshotComplete, false, 'callback removes active S1 candidate proof');
   }
 
-  globalThis.fetch = originalFetch;
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (originalWorkflowId === undefined) delete process.env.N8N_WF2_ID; else process.env.N8N_WF2_ID = originalWorkflowId;
+  }
   console.log('Corrective convergence lifecycle (Brique 5, Cases A-D/F-J): PASS');
 }
 

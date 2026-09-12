@@ -19,6 +19,7 @@ import { analyzeRegression, conservativeRegressionPolicy } from '../validation/p
 import { combineRegressionVerdict } from '../validation/regression-verdict';
 import { normalizeSonarFindings } from '../validation/sonar-regression-adapter';
 import { buildCorrectiveContext } from '../validation/corrective-context';
+import { isWorkflowIdentity, resolveAttemptWorkflowIdentity } from './workflow-attempt-identity';
 
 export function classifyJenkinsTriggerStatus(status: number): { accepted: boolean; code?: string } {
   if (status === 201) return { accepted: true };
@@ -487,7 +488,7 @@ export class IncidentsService {
       if (input.incidentId !== id || fix.requestId !== input.requestId
         || fix.batchId !== input.batchId || input.batchKey !== input.batchId
         || fix.batchId !== input.batchKey || fix.workflow !== 'WF2'
-        || workflowId !== (process.env.N8N_WF2_ID || '9adcV31eaIgJyMR0')
+        || !isWorkflowIdentity(workflowId)
         || !Number.isInteger(attemptCount) || attemptCount < 1 || attemptCount > Number(fix.attemptCount)
         || !executionId) {
         throw new ConflictException('Le statut WF2 ne correspond pas à la demande de correction active.');
@@ -496,6 +497,15 @@ export class IncidentsService {
       const attempt = (Array.isArray(fix.attempts) ? fix.attempts : [])
         .find((entry: any) => Number(entry.attempt) === attemptCount);
       if (!attempt) throw new ConflictException('La tentative WF2 corrélée ne correspond pas à la demande active.');
+
+      const expectedWorkflowId = resolveAttemptWorkflowIdentity(fix, attempt);
+      if (!expectedWorkflowId) {
+        throw new ConflictException({ code: 'WF2_ATTEMPT_IDENTITY_UNRESOLVED',
+          message: 'L’identité du workflow de cette tentative ne peut pas être prouvée.' });
+      }
+      if (workflowId !== expectedWorkflowId) {
+        throw new ConflictException('Le statut WF2 ne correspond pas à l’identité de cette tentative.');
+      }
 
       const callbackStatus = String(input.status || '').toUpperCase() as WorkflowBatchStatus;
       if (!['FAILED', 'PR_CREATED'].includes(callbackStatus)) {
@@ -1169,6 +1179,15 @@ export class IncidentsService {
     return paths[workflow];
   }
 
+  private configuredWf2Identity(): string {
+    const identity = process.env.N8N_WF2_ID;
+    if (!isWorkflowIdentity(identity)) {
+      throw new ServiceUnavailableException({ code: 'WF2_DISPATCH_IDENTITY_UNCONFIGURED',
+        message: 'L’identité du workflow WF2 doit être configurée avant une nouvelle tentative.' });
+    }
+    return identity;
+  }
+
   private async githubContext(project: Project, filePath: string) {
     const repoPath = String(project.githubRepo || '').replace(/^https?:\/\/github\.com\//, '').replace(/\.git$/, '');
     const [owner, repo] = repoPath.split('/').filter(Boolean);
@@ -1247,7 +1266,8 @@ export class IncidentsService {
       const authorizedAt = new Date().toISOString();
       const attempts = [
         ...(explicitRetry && Array.isArray(current.attempts) ? current.attempts : []),
-        { attempt: attemptCount, status: 'FIX_STARTING', authorizedBy: user.id, authorizedAt },
+        { attempt: attemptCount, status: 'FIX_STARTING', authorizedBy: user.id, authorizedAt,
+          ...(batch.workflow === 'WF2' ? { expectedWorkflowId: this.configuredWf2Identity() } : {}) },
       ];
       // BRIQUE 3 CLOSEOUT — PART 1: incident.metadata.sourceCommitSha is the
       // exact source commit Jenkins/WF1 reported for the build that produced
@@ -1866,7 +1886,8 @@ export class IncidentsService {
       const now = new Date().toISOString();
       const attempts = [
         ...(Array.isArray(currentFix.attempts) ? currentFix.attempts : []),
-        { attempt: nextAttempt, status: 'FIX_STARTING', authorizedBy: user.id, authorizedAt: now, corrective: true },
+        { attempt: nextAttempt, status: 'FIX_STARTING', authorizedBy: user.id, authorizedAt: now, corrective: true,
+          expectedWorkflowId: this.configuredWf2Identity() },
       ];
       const correctiveDispatchRecord = {
         identity: correctiveAttemptIdentity, status: 'AUTHORIZED', attempt: nextAttempt,

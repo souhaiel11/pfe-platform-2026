@@ -76,7 +76,8 @@ export class IntegrationFixturesService {
         requestId, batchId, batchKey: batchId, workflow: 'WF2', status: 'DISPATCHED',
         findingId: findingIds[0], findingIds, findings: normalizedFindings,
         attemptCount: 1, retryEligible: false, approvedBy: String(user.id), approvedAt: createdAt,
-        dispatchedAt: createdAt, attempts: [{ attempt: 1, status: 'DISPATCHED', authorizedBy: String(user.id), authorizedAt: createdAt, dispatchedAt: createdAt }],
+        dispatchedAt: createdAt, attempts: [{ attempt: 1, status: 'DISPATCHED', authorizedBy: String(user.id), authorizedAt: createdAt,
+          dispatchedAt: createdAt, expectedWorkflowId: process.env.N8N_WF2_ID || '9adcV31eaIgJyMR0' }],
         fixture: marker,
       };
       const incident = incidentRepo.create({

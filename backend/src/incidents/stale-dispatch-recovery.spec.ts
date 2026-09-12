@@ -10,7 +10,7 @@ const makeIncident = (overrides: any = {}) => ({
   metadata: { fixRequest: {
     requestId: 'request-1', batchId: 'batch-1', workflow: 'WF2', status: 'DISPATCHED',
     findingIds: ['finding-1'], attemptCount: 14, retryEligible: false, dispatchedAt: old,
-    attempts: [{ attempt: 14, status: 'DISPATCHED', dispatchedAt: old }],
+    attempts: [{ attempt: 14, expectedWorkflowId: '9adcV31eaIgJyMR0', status: 'DISPATCHED', dispatchedAt: old }],
     workflowEvents: [],
     ...(overrides.fixRequest || {}),
   } },
@@ -80,16 +80,16 @@ async function main() {
     await assert.rejects(() => service.reconcileStaleDispatch('incident-1', 'request-1', recovery, developer), /administrateur/);
     await assert.rejects(() => service.reconcileStaleDispatch('wrong-incident', 'request-1', recovery, admin), /introuvable/);
     await expectRecoveryRejected({ fixRequest: { status: 'FIX_FAILED', retryEligible: true,
-      attempts: [{ attempt: 14, status: 'FIX_FAILED', dispatchedAt: old }] } }, recovery, /dispatch.*récupérable/i);
+      attempts: [{ attempt: 14, expectedWorkflowId: '9adcV31eaIgJyMR0', status: 'FIX_FAILED', dispatchedAt: old }] } }, recovery, /dispatch.*récupérable/i);
     await expectRecoveryRejected({}, { ...recovery, batchId: 'wrong' });
     await expectRecoveryRejected({}, { ...recovery, attemptCount: 13 });
     await expectRecoveryRejected({ incident: { prUrl: 'https://github.com/o/r/pull/1' } });
-    await expectRecoveryRejected({ fixRequest: { status: 'PR_CREATED', attempts: [{ attempt: 14, status: 'PR_CREATED', dispatchedAt: old }] } });
-    await expectRecoveryRejected({ fixRequest: { status: 'VALIDATED', attempts: [{ attempt: 14, status: 'VALIDATED', dispatchedAt: old }] } });
+    await expectRecoveryRejected({ fixRequest: { status: 'PR_CREATED', attempts: [{ attempt: 14, expectedWorkflowId: '9adcV31eaIgJyMR0', status: 'PR_CREATED', dispatchedAt: old }] } });
+    await expectRecoveryRejected({ fixRequest: { status: 'VALIDATED', attempts: [{ attempt: 14, expectedWorkflowId: '9adcV31eaIgJyMR0', status: 'VALIDATED', dispatchedAt: old }] } });
     await expectRecoveryRejected({ fixRequest: { workflowEvents: [{ attempt: 14, status: 'FAILED' }] } });
 
     const freshIncident = makeIncident({ fixRequest: { dispatchedAt: new Date().toISOString(),
-      attempts: [{ attempt: 14, status: 'DISPATCHED', dispatchedAt: new Date().toISOString() }] } });
+      attempts: [{ attempt: 14, expectedWorkflowId: '9adcV31eaIgJyMR0', status: 'DISPATCHED', dispatchedAt: new Date().toISOString() }] } });
     await assert.rejects(() => harness(freshIncident).service.reconcileStaleDispatch('incident-1', 'request-1', recovery, admin), /seuil/);
 
     // Both late success and late failure are fenced after recovery, with no write.
@@ -111,8 +111,8 @@ async function main() {
     const future = makeIncident({ fixRequest: {
       attemptCount: 15, dispatchedAt: old,
       attempts: [
-        { attempt: 14, status: 'FIX_FAILED', dispatchedAt: old, recovery: { recoveryType: 'STALE_DISPATCH' } },
-        { attempt: 15, status: 'DISPATCHED', dispatchedAt: old },
+        { attempt: 14, expectedWorkflowId: '9adcV31eaIgJyMR0', status: 'FIX_FAILED', dispatchedAt: old, recovery: { recoveryType: 'STALE_DISPATCH' } },
+        { attempt: 15, expectedWorkflowId: '9adcV31eaIgJyMR0', status: 'DISPATCHED', dispatchedAt: old },
       ],
     } });
     const futureHarness = harness(future);

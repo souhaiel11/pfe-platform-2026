@@ -43,6 +43,8 @@ async function main() {
   const user = { id: 'developer-1', role: 'developer' };
   const originalFetch = globalThis.fetch;
   globalThis.fetch = (async () => new Response('{}', { status: 200 })) as any;
+  const savedWf2Id = process.env.N8N_WF2_ID;
+  process.env.N8N_WF2_ID = 'u3eeMwTuhCsetfcS';
   try {
 
   // TEST A — a real, trustworthy source commit SHA is captured and frozen.
@@ -82,7 +84,10 @@ async function main() {
   }
 
   console.log('Baseline SHA freeze at startFix() (Brique 3 closeout Part 1): PASS');
-  } finally { globalThis.fetch = originalFetch; }
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (savedWf2Id === undefined) delete process.env.N8N_WF2_ID; else process.env.N8N_WF2_ID = savedWf2Id;
+  }
 }
 
 main().catch(error => { console.error(error); process.exitCode = 1; });
