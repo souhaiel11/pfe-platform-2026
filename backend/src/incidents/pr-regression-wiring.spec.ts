@@ -4,8 +4,9 @@ import { IncidentsService, buildPrValidationJobName } from './incidents.service'
 // BRIQUE 3 (+ CLOSEOUT) — proves the saveValidation() wiring (not just the
 // pure engine) end to end: (1) today's default behavior is unchanged when
 // no baseline/candidate evidence is supplied; (2) the wiring genuinely
-// activates and reaches CLEAN/CHANGES_REQUIRED once both are supplied and
-// correlated; (3) the mandatory semantic separation between
+// combines HEAD proof with scanner evidence once both snapshots are supplied
+// and correlated; UNPROVEN comparability makes introduced findings advisory;
+// (3) the mandatory semantic separation between
 // remediationResult and regressionResult; (4) CLOSEOUT PART 2/3/4: a
 // baseline whose sourceCommitSha has drifted from the frozen fixRequest.
 // baselineSha, or a candidate snapshot lacking an explicit completeness
@@ -105,14 +106,14 @@ async function main() {
     assert.equal(result.validation.mergeAuthorization.authorizedSha, SHA);
   }
 
-  // (3) The exact scenario from the Brique 3 mandate: approved findings all
-  // VALID (remediationResult VALIDATED) but the PR introduces a new finding
-  // -> regressionResult CHANGES_REQUIRED. Both are simultaneously true.
+  // (3) Raw scanner CHANGES_REQUIRED is retained, but cannot block the
+  // combined verdict without comparability. Callback claims cannot enable it.
   {
     const { incident, service } = makeFixture();
     const contract = {
       ...baseValidationContract(incident),
       candidateSnapshotComplete: true,
+      scannerComparability: 'PROVEN',
       candidateFindingsSnapshot: [
         { key: 'pr-k2', rule: 'java:S1234', component: 'proj-pr-7:src/Other.java', line: 3, status: 'OPEN' }, // pre-existing
         { key: 'pr-new', rule: 'java:S9999', component: 'proj-pr-7:src/NewBug.java', line: 5, status: 'OPEN' }, // genuinely new
@@ -120,12 +121,28 @@ async function main() {
     };
     const result: any = await service.saveValidation(incident.id, contract);
     assert.equal(result.validation.validationStatus, 'VALIDATED', 'remediationResult stays VALIDATED -- the approved findings are still all VALID');
-    assert.equal(result.validation.regression.result, 'CHANGES_REQUIRED', 'regressionResult independently reflects the newly introduced finding');
+    const combined = result.validation.regression;
+    assert.equal(combined.contractVersion, 1);
+    assert.equal(combined.headVerificationResult, 'PASS');
+    assert.equal(combined.scannerComparability, 'UNPROVEN');
+    assert.deepEqual(combined.evidenceIntegrity, { ok: true, reasons: [] });
+    assert.equal(combined.result, 'CLEAN', 'HEAD PASS plus complete evidence; unproven scanner comparison is advisory');
+    assert.equal(combined.scannerDiff.result, 'CHANGES_REQUIRED');
+    assert.equal(combined.scannerDiff.blockingIntroducedFindings.length, 1);
+    assert.deepEqual(combined.blockingCauses, []);
+    assert.deepEqual(combined.blockingIntroducedFindings, []);
+    assert.equal(combined.advisories.length, 1);
+    assert.deepEqual(combined.advisories[0].findingRef, combined.scannerDiff.introducedFindings[0]);
+    assert.deepEqual(combined.decisionReasons,
+      ['HEAD_VERIFICATION_PASS', 'SCANNER_ADVISORY_ONLY_UNPROVEN_COMPARABILITY']);
     assert.equal(result.validation.regression.introducedCount, 1);
-    assert.equal(result.validation.regression.blockingIntroducedFindings.length, 1, 'the conservative production policy treats every introduced finding as blocking (Phase 6 design gap, documented)');
-    assert.ok(result.validation.mergeAuthorization.blockingReasons.includes('REGRESSION_CHANGES_REQUIRED'));
-    assert.equal(result.validation.mergeAuthorization.authorization, 'BLOCKED', 'a real regression blocks merge authorization even though remediation itself is VALIDATED');
-    assert.equal(result.validation.mergeAuthorization.authorizedSha, null, 'BLOCKED never carries an authorizedSha');
+    assert.equal(result.validation.mergeAuthorization.regressionResult, combined.result);
+    assert.deepEqual(result.validation.mergeAuthorization.blockingReasons, []);
+    assert.deepEqual(result.validation.mergeAuthorization.advisories,
+      combined.advisories.map(({ code, message }: any) => ({ code, message })));
+    assert.equal(result.validation.mergeAuthorization.authorization, 'MERGE_READY');
+    assert.equal(result.validation.mergeAuthorization.authorizedSha, SHA);
+    assert.deepEqual(incident.metadata.validation.regression, combined, 'combined evidence actually persisted');
   }
 
   // TEST C — baseline finding snapshot belongs to a different SHA than the
@@ -145,6 +162,8 @@ async function main() {
     assert.equal(result.validation.regression.result, 'INCONCLUSIVE', 'TEST C: baseline SHA correlation drift -> INCONCLUSIVE');
     assert.notEqual(result.validation.regression.result, 'CLEAN');
     assert.equal(result.validation.regression.baselineSha, null, 'an uncorrelated baseline is never exposed as attributable');
+    assert.equal(result.validation.regression.evidenceIntegrity.ok, false);
+    assert.ok(result.validation.regression.evidenceIntegrity.reasons.includes('BASELINE_SHA_MISMATCH'));
   }
 
   // TEST E — candidate pagination incomplete: candidateFindingsSnapshot is
@@ -161,6 +180,8 @@ async function main() {
     const result: any = await service.saveValidation(incident.id, contract);
     assert.equal(result.validation.regression.result, 'INCONCLUSIVE', 'TEST E: candidateSnapshotComplete=false -> INCONCLUSIVE despite a non-empty array');
     assert.notEqual(result.validation.regression.result, 'CLEAN');
+    assert.deepEqual(result.validation.regression.evidenceIntegrity,
+      { ok: false, reasons: ['CANDIDATE_SNAPSHOT_INCOMPLETE'] });
   }
 
   // Baseline completeness is explicit and length/total consistent; a partial
@@ -179,6 +200,8 @@ async function main() {
       candidateFindingsSnapshot: [],
     });
     assert.equal(result.validation.regression.result, 'INCONCLUSIVE', 'partial/missing baseline completeness metadata -> INCONCLUSIVE');
+    assert.ok(result.validation.regression.decisionReasons.includes('EVIDENCE_INCOMPLETE'));
+    assert.ok(result.validation.regression.evidenceIntegrity.reasons.includes('BASELINE_SNAPSHOT_INCOMPLETE'));
   }
 
   // An old incident with no explicit completeness contract is never upgraded
@@ -192,6 +215,33 @@ async function main() {
       ...baseValidationContract(incident), candidateSnapshotComplete: true, candidateFindingsSnapshot: [],
     });
     assert.equal(result.validation.regression.result, 'INCONCLUSIVE', 'legacy baseline without completeness metadata -> INCONCLUSIVE');
+  }
+
+  // No persisted HEAD proof: complete scanner evidence alone cannot become CLEAN.
+  {
+    const { incident, service } = makeFixture();
+    delete incident.metadata.prValidationRequest.headVerification;
+    const result: any = await service.saveValidation(incident.id, {
+      ...baseValidationContract(incident), candidateSnapshotComplete: true, candidateFindingsSnapshot: [],
+    });
+    assert.equal(result.validation.regression.scannerDiff.result, 'CLEAN');
+    assert.equal(result.validation.regression.result, 'INCONCLUSIVE');
+    assert.deepEqual(result.validation.regression.decisionReasons, ['HEAD_VERIFICATION_INCONCLUSIVE']);
+    assert.equal(result.validation.mergeAuthorization.authorization, 'INCONCLUSIVE');
+  }
+
+  // Identity/non-PASS callback guards reject before persistence, unchanged.
+  for (const mutate of [
+    (incident: any, payload: any) => { payload.checkoutSha = OTHER_SHA; },
+    (incident: any) => { incident.metadata.prValidationRequest.headVerification.overall = 'FAIL'; },
+    (incident: any) => { incident.metadata.prValidationRequest.headVerification.identity.targetSha = OTHER_SHA; },
+  ]) {
+    const { incident, service } = makeFixture();
+    const payload = { ...baseValidationContract(incident), candidateSnapshotComplete: true, candidateFindingsSnapshot: [] };
+    mutate(incident, payload);
+    const before = JSON.stringify(incident);
+    await assert.rejects(() => service.saveValidation(incident.id, payload), /commit validé|preuve de vérification HEAD/);
+    assert.equal(JSON.stringify(incident), before);
   }
 
   console.log('PR regression wiring (Brique 3 saveValidation integration): PASS');

@@ -155,8 +155,8 @@ async function main() {
   }
 
   // ------------------------------------------------------------------
-  // CASE C — new regression (regressionResult=CHANGES_REQUIRED) =>
-  // mergeAuthorization BLOCKED, even though remediation is VALIDATED.
+  // CASE C — raw scanner introduction is advisory without comparability;
+  // HEAD PASS and complete evidence drive the combined CLEAN verdict.
   // ------------------------------------------------------------------
   {
     const { service, requestId, batchId } = makeHarness();
@@ -169,15 +169,19 @@ async function main() {
       [{ key: 'pr-new', rule: 'java:S9999', component: `${JOB}-pr-25:src/main/java/com/pfe/devsecops/NewBug.java`, line: 5, status: 'OPEN' }],
     ));
     assert.equal(res.validation.validationStatus, 'VALIDATED', 'CASE C: remediationResult VALIDATED (target findings are fine)');
-    assert.equal(res.validation.regression.result, 'CHANGES_REQUIRED', 'CASE C: a genuinely new finding was introduced');
-    assert.equal(res.validation.mergeAuthorization.authorization, 'BLOCKED', 'CASE C: mergeAuthorization BLOCKED by the new regression');
-    assert.ok(res.validation.mergeAuthorization.blockingReasons.includes('REGRESSION_CHANGES_REQUIRED'));
-    assert.equal(res.validation.mergeAuthorization.authorizedSha, null);
+    assert.equal(res.validation.regression.scannerDiff.result, 'CHANGES_REQUIRED');
+    assert.equal(res.validation.regression.result, 'CLEAN');
+    assert.deepEqual(res.validation.regression.blockingIntroducedFindings, []);
+    assert.equal(res.validation.mergeAuthorization.authorization, 'MERGE_READY');
+    assert.deepEqual(res.validation.mergeAuthorization.blockingReasons, []);
+    assert.ok(res.validation.mergeAuthorization.advisories.some((a: any) => a.code === 'SCANNER_FINDING_REVIEW_UNPROVEN_COMPARABILITY'));
+    assert.ok(res.validation.mergeAuthorization.advisories.some((a: any) => a.code === 'SONAR_QUALITY_GATE_ERROR'), 'existing QG advisory preserved alongside scanner advisory');
+    assert.equal(res.validation.mergeAuthorization.authorizedSha, SHA);
   }
 
   // ------------------------------------------------------------------
-  // CASE D — candidate evidence ambiguous (regressionResult=INCONCLUSIVE)
-  // => mergeAuthorization INCONCLUSIVE, never BLOCKED, never MERGE_READY.
+  // CASE D — complete but ambiguous scanner matching stays in the raw diff.
+  // UNPROVEN comparability does not override an otherwise valid HEAD PASS.
   // ------------------------------------------------------------------
   {
     // Baseline collision: two occurrences of the same (rule, path) with
@@ -196,12 +200,14 @@ async function main() {
       ],
       [{ key: 'dup-c', rule: 'java:S1', component: `${JOB}-pr-25:src/Dup.java`, line: 50, message: 'third', status: 'OPEN' }],
     ));
-    assert.equal(res.validation.regression.result, 'INCONCLUSIVE', 'CASE D: ambiguous collision evidence');
+    assert.equal(res.validation.regression.scannerDiff.result, 'INCONCLUSIVE', 'CASE D: raw ambiguity retained');
+    assert.equal(res.validation.regression.result, 'CLEAN');
+    assert.deepEqual(res.validation.regression.evidenceIntegrity, { ok: true, reasons: [] }, 'integrity is independent of the raw verdict');
     assert.ok(res.validation.regression.ambiguousCount > 0);
-    assert.equal(res.validation.mergeAuthorization.authorization, 'INCONCLUSIVE', 'CASE D: mergeAuthorization INCONCLUSIVE');
+    assert.equal(res.validation.mergeAuthorization.authorization, 'MERGE_READY');
     assert.deepEqual(res.validation.mergeAuthorization.blockingReasons, [], 'CASE D: never fabricated as a proven defect');
-    assert.ok(res.validation.mergeAuthorization.technicalReasons.includes('REGRESSION_UNVERIFIED'));
-    assert.equal(res.validation.mergeAuthorization.authorizedSha, null);
+    assert.deepEqual(res.validation.mergeAuthorization.technicalReasons, []);
+    assert.equal(res.validation.mergeAuthorization.authorizedSha, SHA);
   }
 
   // ------------------------------------------------------------------

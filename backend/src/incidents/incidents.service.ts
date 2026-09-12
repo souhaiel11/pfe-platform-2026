@@ -16,6 +16,7 @@ import { computeMergeAuthorization, deriveRemediationResult, deriveExactCorrelat
 import { CandidateVerificationService } from '../candidate-verification/candidate-verification.service';
 import { HeadVerificationRequest, HeadVerification } from '../candidate-verification/candidate-verification.types';
 import { analyzeRegression, conservativeRegressionPolicy } from '../validation/pr-regression-engine';
+import { combineRegressionVerdict } from '../validation/regression-verdict';
 import { normalizeSonarFindings } from '../validation/sonar-regression-adapter';
 import { buildCorrectiveContext } from '../validation/corrective-context';
 
@@ -935,6 +936,10 @@ export class IncidentsService {
     // tableau tronqué par une pagination incomplète serait sinon traité comme
     // complet). L'égalité exacte candidateSha == expectedCandidateSha reste
     // revérifiée à l'intérieur même d'analyzeRegression.
+    const candidateComplete = (validation as any).candidateSnapshotComplete === true
+      && Array.isArray((validation as any).candidateFindingsSnapshot);
+    const candidateShaMatches = isFullGitSha(validation.checkoutSha) && isFullGitSha(validation.expectedPrHeadSha)
+      && validation.checkoutSha.toLowerCase() === validation.expectedPrHeadSha.toLowerCase();
     const regression = analyzeRegression({
       expectedCandidateSha: validation.expectedPrHeadSha,
       baseline: {
@@ -945,11 +950,35 @@ export class IncidentsService {
       candidate: {
         sha: isFullGitSha(validation.checkoutSha) ? String(validation.checkoutSha).toLowerCase() : null,
         findings: normalizeSonarFindings((validation as any).candidateFindingsSnapshot),
-        complete: (validation as any).candidateSnapshotComplete === true && Array.isArray((validation as any).candidateFindingsSnapshot),
+        complete: candidateComplete,
       },
       policy: conservativeRegressionPolicy,
     });
-    (validationRecord as any).regression = regression;
+    const evidenceReasons: string[] = [];
+    if (!frozenBaselineSha || !currentSourceCommitSha) evidenceReasons.push('BASELINE_SHA_UNAVAILABLE');
+    else if (!baselineCorrelated) evidenceReasons.push('BASELINE_SHA_MISMATCH');
+    if (!baselineComplete) evidenceReasons.push('BASELINE_SNAPSHOT_INCOMPLETE');
+    if (!candidateShaMatches) evidenceReasons.push('CANDIDATE_SHA_MISMATCH');
+    if (!candidateComplete) evidenceReasons.push('CANDIDATE_SNAPSHOT_INCOMPLETE');
+    const evidenceIntegrity = { ok: evidenceReasons.length === 0, reasons: evidenceReasons };
+    const headVerificationResult = deriveHeadVerificationResult(headVerification);
+    // TODO: PROVEN requires persisted evidence of equivalent Sonar profiles/configuration
+    // tied to BOTH exact analyses. No callback boolean may enable comparability.
+    const scannerComparability = 'UNPROVEN' as const;
+    const combinedVerdict = combineRegressionVerdict({
+      headVerificationResult, scannerDiff: regression, evidenceIntegrity, scannerComparability,
+    });
+    (validationRecord as any).regression = {
+      ...regression,
+      contractVersion: 1,
+      ...combinedVerdict,
+      scannerDiff: regression,
+      headVerificationResult,
+      evidenceIntegrity,
+      scannerComparability,
+      blockingIntroducedFindings: combinedVerdict.blockingCauses.flatMap(cause =>
+        cause.type === 'SCANNER_FINDING' ? [cause.finding] : []),
+    };
 
     // ── BRIQUE 4 — autorisation de merge : LA décision centrale ────────────
     // computeMergeAuthorization() est désormais l'unique décision métier
@@ -972,8 +1001,8 @@ export class IncidentsService {
         expectedPrHeadSha: validation.expectedPrHeadSha,
       }),
       requiredStagesComplete: jenkinsStatus === 'SUCCESS' && !missingRequiredStage && !badStage,
-      regressionResult: regression.result, // BRIQUE 3 — voir l'analyse ci-dessus
-      headVerificationResult: deriveHeadVerificationResult(headVerification),
+      regressionResult: combinedVerdict.result,
+      headVerificationResult,
       pipelineHealth: (validationRecord as any).derived?.pipelineHealth ?? null,
       validationInProgress: false, // saveValidation est terminal
     });
@@ -995,6 +1024,7 @@ export class IncidentsService {
     const correctiveActionAllowed = mergeAuth.authorization === 'BLOCKED';
     (validationRecord as any).mergeAuthorization = {
       ...mergeAuth,
+      advisories: [...mergeAuth.advisories, ...combinedVerdict.advisories.map(({ code, message }) => ({ code, message }))],
       authorizedSha,
       correctiveActionAllowed,
       computedAt: validationRecord.validatedAt,
