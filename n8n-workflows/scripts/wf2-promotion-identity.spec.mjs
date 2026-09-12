@@ -14,10 +14,20 @@ assert.equal(target.nodes.length, 147);
 assert.equal(new Set(target.nodes.map(n => n.id)).size, 147);
 assert.equal(new Set(target.nodes.map(n => n.name)).size, 147);
 assert.deepEqual(target.connections, base.connections, 'all corrective and failure routing preserved');
+// R74 -- bounded transient-network retry (wf2-resilience.spec.mjs) legitimately
+// adds retryOnFail/maxTries/waitBetweenTries to exactly these two non-mutating
+// nodes, after the identity promotion. Excluded from the strict byte-parity
+// check below on that basis alone -- every other property must still match
+// the base exactly, same as any other node.
+const RETRY_HARDENED = ['Get Main Branch SHA1', 'Independent Semantic Review'];
 for (const n of target.nodes) {
   const previous = base.nodes.find(b => b.name === n.name);
   assert.deepEqual(n.credentials, previous.credentials, 'credential references unchanged');
-  if (!['Webhook', 'Capture Correlation Envelope'].includes(n.name)) assert.deepEqual(n, previous);
+  if (!['Webhook', 'Capture Correlation Envelope', ...RETRY_HARDENED].includes(n.name)) assert.deepEqual(n, previous);
+  else if (RETRY_HARDENED.includes(n.name)) {
+    const { retryOnFail, maxTries, waitBetweenTries, ...rest } = n;
+    assert.deepEqual(rest, previous, `${n.name}: only retry properties may differ from base`);
+  }
   assert.doesNotMatch(JSON.stringify(n.parameters), /httpRequestWithAuthentication|requestWithAuthenticationPaginated|(?:this\.)?helpers\./);
   assert.doesNotMatch(JSON.stringify(n.parameters), /9adcV31eaIgJyMR0/);
 }

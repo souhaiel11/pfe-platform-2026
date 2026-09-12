@@ -567,7 +567,10 @@
             "name": "git-n8n"
           }
         },
-        "onError": "continueErrorOutput"
+        "onError": "continueErrorOutput",
+        "retryOnFail": true,
+        "maxTries": 3,
+        "waitBetweenTries": 1000
       },
       {
         "parameters": {
@@ -1239,7 +1242,10 @@
           "options": {
             "timeout": 180000
           }
-        }
+        },
+        "retryOnFail": true,
+        "maxTries": 3,
+        "waitBetweenTries": 1000
       },
       {
         "id": "821a1fef-f926-4671-a86c-442bb579958c",
