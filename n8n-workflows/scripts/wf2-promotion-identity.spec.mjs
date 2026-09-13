@@ -14,12 +14,12 @@ assert.equal(target.nodes.length, 147);
 assert.equal(new Set(target.nodes.map(n => n.id)).size, 147);
 assert.equal(new Set(target.nodes.map(n => n.name)).size, 147);
 assert.deepEqual(target.connections, base.connections, 'all corrective and failure routing preserved');
-// R74 -- bounded transient-network retry (wf2-resilience.spec.mjs) legitimately
-// adds retryOnFail/maxTries/waitBetweenTries to exactly these two non-mutating
-// nodes, after the identity promotion. Excluded from the strict byte-parity
-// check below on that basis alone -- every other property must still match
-// the base exactly, same as any other node.
-const RETRY_HARDENED = ['Get Main Branch SHA1', 'Independent Semantic Review'];
+// R74/R76 -- bounded transient-network retry (wf2-resilience.spec.mjs)
+// legitimately adds retryOnFail/maxTries/waitBetweenTries to these
+// non-mutating nodes, after the identity promotion. Excluded from the
+// strict byte-parity check below on that basis alone -- every other
+// property must still match the base exactly, same as any other node.
+const RETRY_HARDENED = ['Get Main Branch SHA1', 'Independent Semantic Review', 'de Patch - HTTP Request'];
 // R75 -- proven false-positive fix (wf2-preflight-rawcast.spec.mjs) legitimately
 // rewrites only this node's jsCode (guard-aware raw-cast detection replacing the
 // old bare structural regex). Excluded from the strict byte-parity check below on
