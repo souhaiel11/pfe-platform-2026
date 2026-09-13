@@ -20,13 +20,27 @@ assert.deepEqual(target.connections, base.connections, 'all corrective and failu
 // check below on that basis alone -- every other property must still match
 // the base exactly, same as any other node.
 const RETRY_HARDENED = ['Get Main Branch SHA1', 'Independent Semantic Review'];
+// R75 -- proven false-positive fix (wf2-preflight-rawcast.spec.mjs) legitimately
+// rewrites only this node's jsCode (guard-aware raw-cast detection replacing the
+// old bare structural regex). Excluded from the strict byte-parity check below on
+// that basis alone -- every other property, and every other node, must still
+// match the base exactly.
+const PREFLIGHT_HARDENED = ['Generic Candidate Preflight'];
 for (const n of target.nodes) {
   const previous = base.nodes.find(b => b.name === n.name);
   assert.deepEqual(n.credentials, previous.credentials, 'credential references unchanged');
-  if (!['Webhook', 'Capture Correlation Envelope', ...RETRY_HARDENED].includes(n.name)) assert.deepEqual(n, previous);
+  if (!['Webhook', 'Capture Correlation Envelope', ...RETRY_HARDENED, ...PREFLIGHT_HARDENED].includes(n.name)) assert.deepEqual(n, previous);
   else if (RETRY_HARDENED.includes(n.name)) {
     const { retryOnFail, maxTries, waitBetweenTries, ...rest } = n;
     assert.deepEqual(rest, previous, `${n.name}: only retry properties may differ from base`);
+  } else if (PREFLIGHT_HARDENED.includes(n.name)) {
+    const { parameters, ...restNode } = n;
+    const { jsCode, ...restParams } = parameters;
+    const { parameters: prevParameters, ...prevRestNode } = previous;
+    const { jsCode: prevJsCode, ...prevRestParams } = prevParameters;
+    assert.deepEqual(restNode, prevRestNode, `${n.name}: only parameters.jsCode may differ from base`);
+    assert.deepEqual(restParams, prevRestParams, `${n.name}: only jsCode may differ from base`);
+    assert.notEqual(jsCode, prevJsCode, `${n.name}: jsCode was expected to change (R75 fix)`);
   }
   assert.doesNotMatch(JSON.stringify(n.parameters), /httpRequestWithAuthentication|requestWithAuthenticationPaginated|(?:this\.)?helpers\./);
   assert.doesNotMatch(JSON.stringify(n.parameters), /9adcV31eaIgJyMR0/);
