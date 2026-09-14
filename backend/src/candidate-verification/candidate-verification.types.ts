@@ -147,6 +147,21 @@ export interface HeadVerification extends Omit<CandidateVerification, 'identity'
   failureClass: FailureClass | 'SHA_UNAVAILABLE';
 }
 
+/**
+ * R76 -- bounded, redaction-safe diagnostic summary of a non-PASS
+ * CandidateVerification, small enough to persist on a fixRequest attempt.
+ * Deliberately excludes: full compiler/test logs, environment variables,
+ * credentials, request headers, workspace content. See
+ * verification-evidence.ts for the only place this is constructed.
+ */
+export interface VerificationEvidence {
+  overall: OverallVerdict | null;
+  failureClass: FailureClass | null;
+  compile: { status: CompileStatus | null; exitCode: number | null; evidenceTail: string | null };
+  tests: { regressionStatus: TestStatus | null; evidenceTail: string | null };
+  staticAnalysis: { status: StaticAnalysisStatus | null };
+}
+
 export type VerificationResult = CandidateVerification | HeadVerification;
 export type VerificationRequest = HeadVerificationRequest | {
   verifyHeadOnly?: false;

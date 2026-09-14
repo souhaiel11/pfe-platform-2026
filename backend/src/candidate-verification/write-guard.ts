@@ -3,7 +3,8 @@
 // GitHub, and MUST consume the exact same CandidateManifest object that was
 // verified. This function is the only place that decision is made, so a
 // later phase cannot accidentally skip it by inlining an ad hoc check.
-import { CandidateManifest, CandidateVerification, VerificationResult } from './candidate-verification.types';
+import { CandidateManifest, CandidateVerification, VerificationEvidence, VerificationResult } from './candidate-verification.types';
+import { buildVerificationEvidence } from './verification-evidence';
 
 export type WriteGuardRejectionReason =
   | 'HEAD_ONLY_NOT_WRITABLE'
@@ -12,7 +13,7 @@ export type WriteGuardRejectionReason =
   | 'CANDIDATE_BASE_SHA_MISMATCH'
   | 'WORKSPACE_SHA_NOT_VERIFIED';
 
-export type WriteGuardResult = { ok: true } | { ok: false; reason: WriteGuardRejectionReason };
+export type WriteGuardResult = { ok: true } | { ok: false; reason: WriteGuardRejectionReason; verificationEvidence?: VerificationEvidence };
 
 export function assertCandidateStillValidForWrite(
   verification: VerificationResult,
@@ -20,8 +21,13 @@ export function assertCandidateStillValidForWrite(
 ): WriteGuardResult {
   if ('mode' in verification && verification.mode === 'HEAD_ONLY') return { ok: false, reason: 'HEAD_ONLY_NOT_WRITABLE' };
   const candidate = verification as CandidateVerification;
+  // R76 -- observability only: a bounded diagnostic summary travels
+  // alongside the same, unchanged rejection reason. It never influences
+  // this decision (computed only after overall!=='PASS' is already
+  // established) and both FAIL and INCONCLUSIVE keep being rejected
+  // identically, exactly as before.
   if (verification.overall !== 'PASS') {
-    return { ok: false, reason: 'VERIFICATION_NOT_PASS' };
+    return { ok: false, reason: 'VERIFICATION_NOT_PASS', verificationEvidence: buildVerificationEvidence(candidate) };
   }
   const manifestDigest = candidateManifest.candidateDigest;
   if (!manifestDigest || candidate.identity.candidateDigest !== manifestDigest) {

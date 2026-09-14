@@ -47,11 +47,66 @@ function manifest(overrides: Partial<CandidateManifest> = {}): CandidateManifest
 }
 
 // --- overall != PASS blocks the write, regardless of digest match ---
+// R76 -- now also carries a bounded verificationEvidence summary alongside
+// the unchanged rejection reason (Case C: INCONCLUSIVE still blocked).
 {
   const verification = passingVerification();
   verification.overall = 'INCONCLUSIVE';
-  const result = assertCandidateStillValidForWrite(verification, manifest());
-  assert.deepEqual(result, { ok: false, reason: 'VERIFICATION_NOT_PASS' });
+  const result: any = assertCandidateStillValidForWrite(verification, manifest());
+  assert.equal(result.ok, false);
+  assert.equal(result.reason, 'VERIFICATION_NOT_PASS');
+  assert.deepEqual(result.verificationEvidence, {
+    overall: 'INCONCLUSIVE', failureClass: null,
+    compile: { status: 'SUCCESS', exitCode: 0, evidenceTail: null },
+    tests: { regressionStatus: 'SUCCESS', evidenceTail: null },
+    staticAnalysis: { status: 'NOT_RUN' },
+  });
+}
+
+// R76 -- Case B: FAIL remains blocked, exactly the same as INCONCLUSIVE.
+{
+  const verification = passingVerification();
+  verification.overall = 'FAIL';
+  verification.failureClass = 'CANDIDATE_COMPILE_FAILURE';
+  verification.compile = { status: 'FAILED', exitCode: 1, durationMs: 50, evidenceRef: 'error: incompatible types' };
+  const result: any = assertCandidateStillValidForWrite(verification, manifest());
+  assert.equal(result.ok, false);
+  assert.equal(result.reason, 'VERIFICATION_NOT_PASS', 'FAIL must be rejected with the exact same reason as INCONCLUSIVE -- write-guard never distinguishes them for authorization');
+  assert.equal(result.verificationEvidence.overall, 'FAIL');
+  assert.equal(result.verificationEvidence.failureClass, 'CANDIDATE_COMPILE_FAILURE');
+  assert.equal(result.verificationEvidence.compile.status, 'FAILED');
+  assert.equal(result.verificationEvidence.compile.exitCode, 1);
+  assert.equal(result.verificationEvidence.compile.evidenceTail, 'error: incompatible types');
+}
+
+// R76 -- Case D/F/G/H: bounded, truncated, redacted, tolerant of missing fields.
+{
+  const verification = passingVerification();
+  verification.overall = 'FAIL';
+  verification.compile = { status: 'FAILED', exitCode: 1, durationMs: 50, evidenceRef: 'x'.repeat(2000) };
+  const result: any = assertCandidateStillValidForWrite(verification, manifest());
+  assert.equal(result.verificationEvidence.compile.evidenceTail.length, 500, 'evidence tail must be hard-capped at 500 chars');
+}
+{
+  const verification = passingVerification();
+  verification.overall = 'FAIL';
+  verification.tests.regression = { status: 'FAILED', total: 5, failures: 1, errors: 0, skipped: 0, durationMs: 10,
+    evidenceRef: 'test failed because password=hunter2 was leaked in config' };
+  const result: any = assertCandidateStillValidForWrite(verification, manifest());
+  assert.doesNotMatch(result.verificationEvidence.tests.evidenceTail, /hunter2/, 'secret-like values must be redacted');
+  assert.match(result.verificationEvidence.tests.evidenceTail, /password=\[REDACTED\]/);
+}
+{
+  // Missing/null compile+test detail must never throw -- evidence degrades to null fields.
+  const verification = passingVerification();
+  verification.overall = 'INCONCLUSIVE';
+  verification.failureClass = 'BUILD_TYPE_UNSUPPORTED';
+  (verification.compile as any) = { status: 'NOT_RUN', exitCode: null, durationMs: null, evidenceRef: null };
+  (verification.tests.regression as any) = { status: 'NOT_RUN', total: null, failures: null, errors: null, skipped: null, durationMs: null, evidenceRef: null };
+  const result: any = assertCandidateStillValidForWrite(verification, manifest());
+  assert.equal(result.verificationEvidence.compile.evidenceTail, null);
+  assert.equal(result.verificationEvidence.tests.evidenceTail, null);
+  assert.equal(result.verificationEvidence.compile.exitCode, null);
 }
 
 // --- Test 23: candidateDigest mismatch blocks the write guard ---

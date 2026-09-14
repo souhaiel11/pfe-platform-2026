@@ -14,7 +14,8 @@ import { ManualRemediationService } from '../manual-remediation/manual-remediati
 import { deriveFindingsAndHealth } from '../validation/finding-pipeline-separation';
 import { computeMergeAuthorization, deriveRemediationResult, deriveExactCorrelationVerified, deriveHeadVerificationResult } from '../validation/merge-authorization';
 import { CandidateVerificationService } from '../candidate-verification/candidate-verification.service';
-import { HeadVerificationRequest, HeadVerification } from '../candidate-verification/candidate-verification.types';
+import { HeadVerificationRequest, HeadVerification, VerificationEvidence } from '../candidate-verification/candidate-verification.types';
+import { redactAndCapEvidence } from '../candidate-verification/verification-evidence';
 import { analyzeRegression, conservativeRegressionPolicy } from '../validation/pr-regression-engine';
 import { combineRegressionVerdict } from '../validation/regression-verdict';
 import { normalizeSonarFindings } from '../validation/sonar-regression-adapter';
@@ -273,7 +274,35 @@ export type WorkflowBatchStatusInput = {
   prHeadSha?: string;
   completionEvidence?: Record<string, unknown>;
   reconciliation?: boolean;
+  // R76 -- optional, bounded candidate-verification diagnostic summary (see
+  // verification-evidence.ts). Never trusted blindly even though WF2 already
+  // bounds it -- sanitizeVerificationEvidence() re-validates/re-caps/re-redacts
+  // server-side before persistence, same defense-in-depth posture as every
+  // other WF2-supplied field on this input.
+  verificationEvidence?: unknown;
 };
+
+// R76 -- observability only. Whitelists exact fields, re-caps evidence tails,
+// re-applies redaction server-side (never trusts the WF2 payload blindly),
+// and degrades to null on anything malformed rather than throwing -- a
+// missing/invalid evidence summary must never block persisting the
+// failureCode/failureNode/failureSummary fields that already exist today.
+export function sanitizeVerificationEvidence(input: unknown): VerificationEvidence | null {
+  if (!input || typeof input !== 'object') return null;
+  const raw: any = input;
+  const overall = ['PASS', 'FAIL', 'INCONCLUSIVE'].includes(raw.overall) ? raw.overall : null;
+  const failureClass = typeof raw.failureClass === 'string' ? raw.failureClass.slice(0, 80) : null;
+  const compileStatus = ['SUCCESS', 'FAILED', 'NOT_RUN'].includes(raw.compile?.status) ? raw.compile.status : null;
+  const compileExitCode = Number.isInteger(raw.compile?.exitCode) ? raw.compile.exitCode : null;
+  const regressionStatus = ['SUCCESS', 'FAILED', 'NOT_RUN', 'UNKNOWN'].includes(raw.tests?.regressionStatus) ? raw.tests.regressionStatus : null;
+  const staticStatus = raw.staticAnalysis?.status === 'NOT_RUN' ? 'NOT_RUN' : null;
+  return {
+    overall, failureClass,
+    compile: { status: compileStatus, exitCode: compileExitCode, evidenceTail: redactAndCapEvidence(raw.compile?.evidenceTail) },
+    tests: { regressionStatus, evidenceTail: redactAndCapEvidence(raw.tests?.evidenceTail) },
+    staticAnalysis: { status: staticStatus },
+  };
+}
 
 export type StaleDispatchRecoveryInput = {
   batchId: string;
@@ -594,12 +623,14 @@ export class IncidentsService {
         }
       }
 
+      const verificationEvidence = callbackStatus === 'FAILED' ? sanitizeVerificationEvidence(input.verificationEvidence) : null;
       const attempts = fix.attempts.map((entry: any) => Number(entry.attempt) === attemptCount
         ? callbackStatus === 'FAILED'
           ? { ...entry, status: 'FIX_FAILED', workflowId, workflowExecutionId: executionId, failedAt: now,
               failureCode: String(input.failureCode || 'WF2_EXECUTION_ERROR').slice(0, 80),
               failureSummary: String(input.failureSummary || 'Erreur d’exécution WF2').slice(0, 500),
-              failureNode: String(input.failureNode || '').slice(0, 120) || null }
+              failureNode: String(input.failureNode || '').slice(0, 120) || null,
+              verificationEvidence }
           : { ...entry, status: 'PR_CREATED', workflowId, workflowExecutionId: executionId, prCreatedAt: now }
         : entry);
       events.push({
@@ -612,6 +643,7 @@ export class IncidentsService {
             lastErrorCode: String(input.failureCode || 'WF2_EXECUTION_ERROR').slice(0, 80),
             lastError: String(input.failureSummary || 'Erreur d’exécution WF2').slice(0, 500),
             failedNode: String(input.failureNode || '').slice(0, 120) || null,
+            verificationEvidence,
             workflowId, workflowExecutionId: executionId,
             completionEvidence: input.completionEvidence || fix.completionEvidence || null,
             retryEligible: true }

@@ -1,0 +1,113 @@
+// Offline contract tests for WF2's "Persist Verification Failure" node:
+// proves it now includes a bounded, redacted verificationEvidence summary
+// built from the REAL "Call Candidate Verification" node output already
+// available in the same execution (R76), without changing failedNode/
+// failureCode/failureSummary/candidateDigest/candidateBaseSha at all, and
+// without introducing any new route toward a Git-mutating node.
+//
+// No n8n execution, network or business action.
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+
+const wf = JSON.parse(readFileSync(new URL('../pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.PROMOTION-TARGET.json', import.meta.url)))[0];
+const node = name => wf.nodes.find(n => n.name === name);
+const code = node('Persist Verification Failure').parameters.jsCode;
+
+// ── Static contract: still builds the exact same coarse fields ─────────────
+assert.match(code, /failedNode:'Call Write Guard'/);
+assert.match(code, /failureCode:'CANDIDATE_VERIFICATION_'\+String\(guard\.reason/);
+assert.match(code, /failureSummary:'Candidate verification did not pass: '\+String\(guard\.reason/);
+assert.match(code, /candidateDigest:manifest\.candidateDigest/);
+assert.match(code, /candidateBaseSha:manifest\.candidateBaseSha/);
+assert.match(code, /verificationEvidence/);
+assert.match(code, /\$\('Call Candidate Verification'\)\.first\(\)\.json/, 'must read the real, already-available Call Candidate Verification output');
+
+// ── Execute the real node code with a mocked n8n item-linking API ──────────
+function run({ guardJson, verificationJson, manifestJson = {}, envelopeJson = {} }) {
+  const $ = (nodeName) => ({
+    first: () => {
+      if (nodeName === 'Assemble Candidate Manifest') return { json: manifestJson };
+      if (nodeName === 'Call Candidate Verification') return { json: verificationJson };
+      throw new Error('unmocked node reference: ' + nodeName);
+    },
+  });
+  const $items = (nodeName) => {
+    if (nodeName === 'Capture Correlation Envelope') return [{ json: { correlationEnvelope: envelopeJson } }];
+    throw new Error('unmocked $items reference: ' + nodeName);
+  };
+  const $json = guardJson;
+  const $execution = { id: 1992 };
+  const wrapped = new Function('$', '$items', '$json', '$execution', code);
+  return wrapped($, $items, $json, $execution)[0].json;
+}
+
+// ── E. real verification output produces a full, correctly-shaped evidence summary ──
+{
+  const result = run({
+    guardJson: { reason: 'VERIFICATION_NOT_PASS' },
+    manifestJson: { candidateDigest: 'digest-1', candidateBaseSha: 'a'.repeat(40) },
+    verificationJson: {
+      overall: 'FAIL', failureClass: 'CANDIDATE_COMPILE_FAILURE',
+      compile: { status: 'FAILED', exitCode: 1, evidenceRef: 'error: incompatible types: TaskDTO cannot be converted to Task' },
+      tests: { regression: { status: 'NOT_RUN', evidenceRef: null } },
+      staticAnalysis: { status: 'NOT_RUN' },
+    },
+  });
+  assert.equal(result.failedNode, 'Call Write Guard');
+  assert.equal(result.failureCode, 'CANDIDATE_VERIFICATION_VERIFICATION_NOT_PASS');
+  assert.equal(result.candidateDigest, 'digest-1');
+  assert.equal(result.candidateBaseSha, 'a'.repeat(40));
+  assert.deepEqual(result.verificationEvidence, {
+    overall: 'FAIL', failureClass: 'CANDIDATE_COMPILE_FAILURE',
+    compile: { status: 'FAILED', exitCode: 1, evidenceTail: 'error: incompatible types: TaskDTO cannot be converted to Task' },
+    tests: { regressionStatus: 'NOT_RUN', evidenceTail: null },
+    staticAnalysis: { status: 'NOT_RUN' },
+  });
+  console.log('wf2-verification-evidence E (Call Candidate Verification output correctly summarized): PASS');
+}
+
+// ── F. compile evidence truncated to 500 chars ──────────────────────────────
+{
+  const result = run({
+    guardJson: { reason: 'VERIFICATION_NOT_PASS' },
+    verificationJson: { overall: 'FAIL', compile: { status: 'FAILED', exitCode: 1, evidenceRef: 'x'.repeat(3000) }, tests: { regression: {} } },
+  });
+  assert.equal(result.verificationEvidence.compile.evidenceTail.length, 500);
+  console.log('wf2-verification-evidence F (500-char cap): PASS');
+}
+
+// ── G. secret-like values redacted ──────────────────────────────────────────
+{
+  const result = run({
+    guardJson: { reason: 'VERIFICATION_NOT_PASS' },
+    verificationJson: { overall: 'FAIL', compile: {}, tests: { regression: { status: 'FAILED', evidenceRef: 'test failed: token=abc123 leaked' } } },
+  });
+  assert.doesNotMatch(result.verificationEvidence.tests.evidenceTail, /abc123/);
+  assert.match(result.verificationEvidence.tests.evidenceTail, /token=\[REDACTED\]/);
+  console.log('wf2-verification-evidence G (secret redaction): PASS');
+}
+
+// ── H. missing Call Candidate Verification output / sparse fields never throws ──
+{
+  const result = run({ guardJson: { reason: 'VERIFICATION_NOT_PASS' }, verificationJson: {} });
+  assert.deepEqual(result.verificationEvidence, {
+    overall: null, failureClass: null,
+    compile: { status: null, exitCode: null, evidenceTail: null },
+    tests: { regressionStatus: null, evidenceTail: null },
+    staticAnalysis: { status: null },
+  });
+  console.log('wf2-verification-evidence H (sparse verification output tolerated): PASS');
+}
+
+// ── I. this is the exact node whose failure callback WF2 sends -- proven by
+// static contract above referencing Call Candidate Verification's real
+// output, not a re-derivation from guard.reason strings. ───────────────────
+
+// ── L. no Git-mutating node becomes reachable because of this change -------
+// (topology/connections completely unchanged -- only this node's jsCode differs).
+{
+  const base = JSON.parse(readFileSync(new URL('../pending-live-update/wf2-git-patch-pr-v4-1-9adcV31eaIgJyMR0.CANONICAL-FINAL.json', import.meta.url)))[0];
+  assert.deepEqual(wf.connections, base.connections, 'connections must be byte-identical -- no new routing introduced anywhere');
+}
+
+console.log('WF2 verification-evidence persistence (Persist Verification Failure), cases E-L: PASS');
