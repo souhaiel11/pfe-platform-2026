@@ -27,7 +27,9 @@ const RETRY_HARDENED = ['Get Main Branch SHA1', 'Independent Semantic Review', '
 // Excluded from the strict byte-parity check below on that basis alone --
 // every other property, and every other node, must still match the base
 // exactly.
-const JSCODE_HARDENED = ['Generic Candidate Preflight', 'Persist Verification Failure'];
+// Patch-output hardening changes only request construction and parsing; dedicated tests
+// verify truncation, complete JSON, schema, target identity and bounded output budget.
+const JSCODE_HARDENED = ['Generic Candidate Preflight', 'Persist Verification Failure', 'Prepare - Code Patch Body', 'Parse - Code Patch Output'];
 for (const n of target.nodes) {
   const previous = base.nodes.find(b => b.name === n.name);
   assert.deepEqual(n.credentials, previous.credentials, 'credential references unchanged');

@@ -1,0 +1,8 @@
+{
+  "model": "claude-sonnet-5",
+  "stop_reason": "max_tokens",
+  "usage": { "output_tokens": 8192, "output_tokens_details": { "thinking_tokens": 3033 } },
+  "content": [
+    { "type": "text", "text": "{\"targetFile\":\"src/TaskService.java\",\"processedFindingIds\":[\"finding-a\",\"finding-b\"],\"patchedCode\":\"class TaskService { void map() {} }" }
+  ]
+}
