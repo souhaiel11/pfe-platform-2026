@@ -1265,6 +1265,7 @@ export class IncidentsService {
       const current = (incident.metadata as any)?.fixRequest;
       const legacy = body.findingId ? [body.findingId] : [];
       if (!explicitRetry && body.findingIds !== undefined && !Array.isArray(body.findingIds)) throw new BadRequestException('Le champ technique findingIds doit être une liste.');
+      if (!explicitRetry && Array.isArray(body.findingIds) && !body.findingIds.length) throw new BadRequestException('Sélectionnez au moins une erreur à corriger.');
       const requestedIds = explicitRetry
         ? (Array.isArray(current?.findingIds) ? current.findingIds.map(String) : (current?.findingId ? [String(current.findingId)] : []))
         : (body.findingIds?.length ? body.findingIds : legacy);
@@ -1275,12 +1276,30 @@ export class IncidentsService {
       // sans identifiant continue de choisir l’unique première action éligible.
       const fallback = !requestedIds.length ? this.resolveApprovalContext(incident).finding : null;
       const batch = resolveRemediationBatch(this.collectFindings(incident), requestedIds.length ? requestedIds : [fallback.id || fallback.key]);
+      const meta: any = incident.metadata || {};
+      const results = meta.validation?.derived?.findings || meta.validation?.findingResults || meta.prValidationRequest?.findingResults || [];
+      for (const finding of batch.findings) {
+        const findingId = String(finding.id || finding.key);
+        const validated = results.some((r: any) => String(r.findingId) === findingId && String(r.verdict ?? r.result).toUpperCase() === 'VALID');
+        const baseline = finding.baselineSha || finding.sourceCommitSha;
+        if (validated || finding.stale === true || ['RESOLVED', 'CLOSED', 'FIXED'].includes(String(finding.status || '').toUpperCase())
+          || (baseline && String(baseline).toLowerCase() !== String(meta.sourceCommitSha || '').toLowerCase())) {
+          throw new BadRequestException('Un problème sélectionné est résolu, obsolète ou associé à une autre baseline.');
+        }
+      }
       const batchId = remediationBatchIdentity(id, batch.findingIds);
-      const sameBatch = current?.batchId === batchId || (!current?.batchId && batch.findingIds.length === 1 && current?.findingId === batch.findingIds[0]);
       const currentFindingIds = Array.isArray(current?.findingIds)
         ? current.findingIds.map(String) : (current?.findingId ? [String(current.findingId)] : []);
+      const sameSelection = JSON.stringify([...new Set(currentFindingIds.map(v => v.trim()))].sort()) === JSON.stringify(batch.findingIds);
+      const sameBatch = sameSelection && (!current?.batchId || current.batchId === batchId);
       const ownsRequestedFinding = batch.findingIds.some(findingId => currentFindingIds.includes(findingId));
-      if (!explicitRetry && ownsRequestedFinding) {
+      // Une sélection MODIFIÉE (sous-ensemble/ensemble différent) après un
+      // échec définitif n'est pas une collision : c'est exactement le
+      // scénario « Modifier la sélection » -- une toute nouvelle demande de
+      // correction, jamais un doublon. Seule une resoumission du batch
+      // IDENTIQUE (sameBatch) doit continuer à rediriger vers « Réessayer ».
+      const isModifiedSelectionAfterFailure = !explicitRetry && current?.status === 'FIX_FAILED' && !sameSelection;
+      if (!explicitRetry && ownsRequestedFinding && !isModifiedSelectionAfterFailure) {
         throw new ConflictException('Une demande de correction existe déjà pour ce problème. Utilisez « Réessayer la correction ».');
       }
       if (explicitRetry && !sameBatch) {
@@ -1317,12 +1336,20 @@ export class IncidentsService {
         : (isFullGitSha((incident.metadata as any)?.sourceCommitSha)
           ? String((incident.metadata as any).sourceCommitSha).toLowerCase()
           : null);
+      // « Modifier la sélection » crée un TOUT NOUVEAU fixRequest (nouveau
+      // requestId + nouveau batchId, ci-dessus) -- l'ancien fixRequest
+      // FIX_FAILED n'est jamais muté ni perdu : il est archivé tel quel
+      // (aucune copie/modification de champ) dans previousFixRequests avant
+      // d'être remplacé, preuve d'audit immuable pour l'ancienne tentative.
+      const previousFixRequests = Array.isArray((incident.metadata as any)?.previousFixRequests)
+        ? (incident.metadata as any).previousFixRequests : [];
       const metadata = { ...(incident.metadata || {}), fixRequest: {
         requestId, batchId, status: 'FIX_STARTING', workflow: batch.workflow,
         findingId: batch.findingIds[0], findingIds: batch.findingIds, findings: canonicalFindings,
-        approvedBy: user.id, approvedAt: current?.approvedAt || authorizedAt, baselineSha,
+        approvedBy: user.id, approvedAt: explicitRetry ? (current?.approvedAt || authorizedAt) : authorizedAt, baselineSha,
         attemptCount, attempts, lastError: null, failedAt: null, retryEligible: false,
-      }, cycles: Array.isArray((incident.metadata as any)?.cycles) ? (incident.metadata as any).cycles : [] };
+      }, cycles: Array.isArray((incident.metadata as any)?.cycles) ? (incident.metadata as any).cycles : [],
+      previousFixRequests: isModifiedSelectionAfterFailure ? [...previousFixRequests, current] : previousFixRequests };
       await repo.update(id, { metadata } as any);
       return { duplicate: false as const, retry: explicitRetry, attemptCount, incident, requestId, batchId, metadata, ...batch };
     });

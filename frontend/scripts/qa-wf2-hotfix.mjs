@@ -16,9 +16,9 @@ assert.ok(template.includes('<summary>Preuve technique Sonar</summary>') && temp
 assert.ok(component.includes("'FIX_STARTING','DISPATCHED','PR_CREATED'"), 'DISPATCHED must remain active and non-selectable');
 assert.ok(component.includes("DISPATCHED:'Correction en cours'"), 'DISPATCHED French label missing');
 assert.ok(component.includes("request?.status === 'FIX_FAILED' && request?.retryEligible === true"), 'retry must be backend-authorized');
-assert.ok(template.includes('Réessayer la correction'), 'explicit human retry affordance missing');
+assert.ok(template.includes('Réessayer les mêmes erreurs'), 'explicit human retry affordance missing');
 assert.ok(component.includes('this.api.retryFixBatch(this.latestReport.id)'), 'retry must use the existing-batch endpoint');
-assert.ok(!component.slice(component.indexOf('retryFailedFix(): void'), component.indexOf('findingRequestState', component.indexOf('retryFailedFix(): void'))).includes('selectedSonarIds'), 'retry must not construct a new checkbox selection');
+assert.ok(!component.slice(component.indexOf('retryFailedFix(): void'), component.indexOf('// ── « Modifier la sélection »', component.indexOf('retryFailedFix(): void'))).includes('selectedSonarIds'), 'retry must not construct a new checkbox selection');
 assert.ok(api.includes('/incidents/${id}/retry'), 'explicit retry API route missing');
 
 console.log('wf2 frontend hotfix contract: PASS');

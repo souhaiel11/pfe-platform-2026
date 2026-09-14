@@ -385,6 +385,16 @@
               <div *ngIf="activeFixRequest()?.failedNode">Nœud en échec : {{activeFixRequest()?.failedNode}}</div>
             </details>
           </div>
+          <!-- Historique en lecture seule des corrections précédentes -- jamais
+               retouché : chaque entrée est l'ancien fixRequest FIX_FAILED
+               archivé tel quel avant qu'une sélection modifiée en crée un nouveau. -->
+          <div *ngIf="previousFixRequests().length" class="alert" style="opacity:.85;">
+            <strong>Corrections précédentes</strong>
+            <div *ngFor="let pfr of previousFixRequests()" style="font-size:11.5px;margin-top:4px;">
+              {{(pfr.findingIds || []).length}} problème{{(pfr.findingIds||[]).length > 1 ? 's' : ''}} ·
+              Échec après {{pfr.attemptCount || (pfr.attempts||[]).length || 1}} tentative{{(pfr.attemptCount || 1) > 1 ? 's' : ''}}
+            </div>
+          </div>
           <div class="sonar-toolbar" aria-label="Filtres des problèmes SonarQube">
             <label class="sonar-search">Rechercher
               <input [(ngModel)]="sonarSearch" placeholder="Règle, message ou fichier" aria-label="Rechercher un problème SonarQube">
@@ -401,8 +411,14 @@
           </div>
           <div class="sonar-list-meta">
             <div class="sonar-result-count" aria-live="polite">{{ed.sonar.issues.length}} {{ed.sonar.issues.length === 1 ? 'problème au total' : 'problèmes au total'}} · {{sonarFindings().length}} {{sonarFindings().length === 1 ? 'affiché' : 'affichés'}}</div>
-            <button *ngIf="canRetryFixRequest()" type="button" class="btn btn-warning btn-sm" [disabled]="approving" (click)="retryFailedFix()">
-              Réessayer la correction
+            <button *ngIf="canRetryFixRequest() && !modifyingFailedSelection" type="button" class="btn btn-warning btn-sm" [disabled]="approving" (click)="retryFailedFix()">
+              Réessayer les mêmes erreurs
+            </button>
+            <button *ngIf="canModifySelection() && !modifyingFailedSelection" type="button" class="btn btn-secondary btn-sm" [disabled]="approving" (click)="startModifySelection()">
+              Modifier la sélection
+            </button>
+            <button *ngIf="modifyingFailedSelection" type="button" class="btn btn-secondary btn-sm" [disabled]="approving" (click)="cancelModifySelection()">
+              Annuler la modification
             </button>
             <button *ngIf="!newCorrectionBlocked()" type="button" class="btn btn-secondary btn-sm" [disabled]="!eligibleFilteredFindings().length" (click)="toggleFilteredSelection()">
               {{allEligibleFilteredSelected() ? 'Désélectionner la vue' : 'Sélectionner les problèmes éligibles de cette vue'}}
@@ -480,17 +496,19 @@
           </footer>
         </aside>
 
-        <div class="selection-bar" *ngIf="selectedSonarIds.size && !newCorrectionBlocked()" role="region" aria-label="Sélection de remédiation">
-          <strong>{{selectedSonarIds.size}} problème{{selectedSonarIds.size > 1 ? 's' : ''}} sélectionné{{selectedSonarIds.size > 1 ? 's' : ''}}</strong>
-          <div><button type="button" class="btn btn-secondary" (click)="clearSonarSelection()">Effacer la sélection</button><button type="button" class="btn btn-primary" (click)="openBatchConfirmation()">Proposer une correction</button></div>
+        <div class="selection-bar" *ngIf="(selectedSonarIds.size || modifyingFailedSelection) && !newCorrectionBlocked()" role="region" aria-label="Sélection de remédiation">
+          <strong *ngIf="selectedSonarIds.size">{{selectedSonarIds.size}} problème{{selectedSonarIds.size > 1 ? 's' : ''}} sélectionné{{selectedSonarIds.size > 1 ? 's' : ''}}</strong>
+          <span *ngIf="failedSelectionUnchanged()">Modifiez la sélection ou annulez pour réessayer les mêmes erreurs.</span>
+          <span *ngIf="!selectedSonarIds.size && modifyingFailedSelection">Sélectionnez au moins une erreur à corriger.</span>
+          <div><button type="button" class="btn btn-secondary" (click)="modifyingFailedSelection ? cancelModifySelection() : clearSonarSelection()">{{modifyingFailedSelection ? 'Annuler' : 'Effacer la sélection'}}</button><button type="button" class="btn btn-primary" [disabled]="!selectedSonarIds.size || failedSelectionUnchanged()" (click)="openBatchConfirmation()">{{modifyingFailedSelection ? 'Lancer une nouvelle correction' : 'Proposer une correction'}}</button></div>
         </div>
 
         <div class="batch-modal-scrim" *ngIf="batchConfirmationOpen" (click)="closeBatchConfirmation()"></div>
         <section *ngIf="batchConfirmationOpen" #batchDialog class="batch-modal" role="dialog" aria-modal="true" aria-labelledby="batch-modal-title" tabindex="-1" (keydown.escape)="closeBatchConfirmation()">
-          <header><div><span class="drawer-kicker">Autorisation explicite</span><h2 id="batch-modal-title">Proposer une correction</h2></div><button type="button" class="drawer-close" aria-label="Fermer la confirmation" (click)="closeBatchConfirmation()">×</button></header>
-          <p>La plateforme préparera une seule proposition de correction pour les problèmes sélectionnés.</p>
+          <header><div><span class="drawer-kicker">Autorisation explicite</span><h2 id="batch-modal-title">{{modifyingFailedSelection ? 'Lancer une nouvelle correction' : 'Proposer une correction'}}</h2></div><button type="button" class="drawer-close" aria-label="Fermer la confirmation" (click)="closeBatchConfirmation()">×</button></header>
+          <p>{{modifyingFailedSelection ? 'Une nouvelle demande de correction distincte de la tentative précédente sera créée pour les problèmes sélectionnés.' : 'La plateforme préparera une seule proposition de correction pour les problèmes sélectionnés.'}}</p>
           <ul class="batch-findings"><li *ngFor="let finding of selectedSonarFindings()"><span class="sev-badge" [style.background]="getSevColor(finding.severity)">{{finding.severity | presentationLabel}}</span><div><strong>{{finding.rule || finding.ruleKey || 'Règle non disponible'}}</strong> — {{findingFileName(finding)}}<ng-container *ngIf="finding.line">:{{finding.line}}</ng-container><small>{{sonarFindingSummary(finding)}}</small><details *ngIf="finding.message"><summary>Preuve technique Sonar</summary><small>{{finding.message}}</small></details></div></li></ul>
-          <footer><button type="button" class="btn btn-secondary" [disabled]="approving" (click)="closeBatchConfirmation()">Annuler</button><button type="button" class="btn btn-primary" [disabled]="approving" (click)="confirmSonarCorrection()">{{approving ? 'Demande en cours…' : 'Confirmer la demande'}}</button></footer>
+          <footer><button type="button" class="btn btn-secondary" [disabled]="approving" (click)="closeBatchConfirmation()">Annuler</button><button type="button" class="btn btn-primary" [disabled]="approving" (click)="confirmSonarCorrection()">{{approving ? 'Demande en cours…' : (modifyingFailedSelection ? 'Lancer la nouvelle correction' : 'Confirmer la demande')}}</button></footer>
         </section>
 
         <!-- Analyse IA SonarQube -->

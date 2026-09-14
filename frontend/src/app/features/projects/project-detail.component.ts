@@ -381,6 +381,7 @@ export class ProjectDetailComponent implements OnInit {
   }
   retryFailedFix(): void {
     if (!this.canRetryFixRequest() || this.approving || !this.latestReport?.id) return;
+    this.modifyingFailedSelection = false;
     this.approving = true;
     this.api.retryFixBatch(this.latestReport.id).subscribe({
       next: (result: any) => {
@@ -394,6 +395,33 @@ export class ProjectDetailComponent implements OnInit {
       error: (e: any) => { this.approving = false; this.toast.error('Nouvelle tentative refusée', userHttpError(e, 'Impossible de réessayer cette correction.')); },
     });
   }
+  // ── « Modifier la sélection » ────────────────────────────────────────────
+  // Distinct de retryFailedFix() : celui-ci réutilise le MÊME fixRequest
+  // (même requestId/batchId, tentative+1) ; ceci crée systématiquement un
+  // TOUT NOUVEAU fixRequest via le contrat existant approveFixBatch (voir
+  // startFix isModifiedSelectionAfterFailure côté backend) -- jamais de
+  // mutation de l'ancien fixRequest FIX_FAILED, jamais de retry implicite.
+  modifyingFailedSelection = false;
+  canModifySelection(): boolean {
+    return this.canOperate && this.activeFixRequest()?.status === 'FIX_FAILED';
+  }
+  startModifySelection(): void {
+    if (!this.canModifySelection()) return;
+    this.modifyingFailedSelection = true;
+    const failedIds = new Set(this.requestFindingIds());
+    this.selectedSonarIds = new Set(
+      (this.ed?.sonar?.issues || [])
+        .filter((f: any) => failedIds.has(this.findingId(f)) && this.canSelectFinding(f))
+        .map((f: any) => this.findingId(f)),
+    );
+  }
+  cancelModifySelection(): void {
+    this.modifyingFailedSelection = false;
+    this.clearSonarSelection();
+  }
+  previousFixRequests(): any[] {
+    return Array.isArray(this.latestReport?.metadata?.previousFixRequests) ? this.latestReport.metadata.previousFixRequests : [];
+  }
   findingRequestState(finding: any): string | null {
     if (!this.requestFindingIds().includes(this.findingId(finding))) return null;
     const labels: Record<string,string> = { APPROVAL_REQUESTED:'Correction demandée', FIX_STARTING:'Correction demandée', DISPATCHED:'Correction en cours', PR_CREATED:'PR créée', VALIDATING:'Validation en cours', VALIDATED:'Validée', REJECTED:'Rejetée', FIX_FAILED:'Échec de la correction' };
@@ -402,10 +430,26 @@ export class ProjectDetailComponent implements OnInit {
   isSelected(finding: any): boolean {
     return this.canSelectFinding(finding) && this.selectedSonarIds.has(this.findingId(finding));
   }
+  failedSelectionUnchanged(): boolean {
+    const selected = [...this.selectedSonarIds].sort();
+    return this.modifyingFailedSelection && JSON.stringify(selected) === JSON.stringify([...new Set(this.requestFindingIds())].sort());
+  }
   canSelectFinding(finding: any): boolean {
+    const baseline = finding?.baselineSha || finding?.sourceCommitSha;
+    if (finding?.stale === true || ['RESOLVED', 'CLOSED', 'FIXED'].includes(String(finding?.status || '').toUpperCase())
+      || (baseline && String(baseline).toLowerCase() !== String(this.latestReport?.metadata?.sourceCommitSha || '').toLowerCase())) return false;
+
+    // En mode « Modifier la sélection », les findings de l'ANCIEN batch
+    // FIX_FAILED redeviennent sélectionnables (l'utilisateur peut les
+    // déselectionner) -- seul ce cas précis lève le verrou logicalBatch ;
+    // en dehors de ce mode, comportement strictement inchangé.
+    const editableFailedBatchMember = this.modifyingFailedSelection
+      && this.activeFixRequest()?.status === 'FIX_FAILED'
+      && this.requestFindingIds().includes(this.findingId(finding));
     return this.canOperate && this.isAutoFixEligible(finding) && !this.newCorrectionBlocked()
       && !this.isFindingValidated(finding)
-      && !this.isFindingLocked(finding) && !this.isFindingOwnedByLogicalBatch(finding);
+      && !this.isFindingLocked(finding)
+      && (editableFailedBatchMember || !this.isFindingOwnedByLogicalBatch(finding));
   }
   toggleFindingSelection(finding: any, selected = !this.isSelected(finding)): void {
     if (!this.canSelectFinding(finding)) return;
@@ -438,7 +482,7 @@ export class ProjectDetailComponent implements OnInit {
     return message || 'Description non disponible';
   }
   openBatchConfirmation(): void {
-    if (this.newCorrectionBlocked() || !this.selectedSonarFindings().length) return;
+    if (this.newCorrectionBlocked() || this.failedSelectionUnchanged() || !this.selectedSonarFindings().length) return;
     this.batchConfirmationOpen = true;
     setTimeout(() => this.batchDialog?.nativeElement.focus());
   }
@@ -446,16 +490,25 @@ export class ProjectDetailComponent implements OnInit {
   confirmSonarCorrection(): void {
     if (this.approving) return;
     const findingIds = this.selectedSonarFindings().map(f => this.findingId(f));
-    if (this.newCorrectionBlocked() || !this.canOperate || !this.latestReport?.id || !findingIds.length) return;
+    if (this.newCorrectionBlocked() || this.failedSelectionUnchanged() || !this.canOperate || !this.latestReport?.id || !findingIds.length) return;
     this.approving = true;
+    const wasModifyingFailedSelection = this.modifyingFailedSelection;
     this.api.approveFixBatch(this.latestReport.id, findingIds).subscribe({
       next: (result: any) => {
         this.approving = false;
         this.batchConfirmationOpen = false;
-        this.latestReport.metadata = { ...(this.latestReport.metadata || {}), fixRequest: {
-          ...this.latestReport.metadata?.fixRequest, requestId: result.requestId, batchId: result.batchId,
-          findingIds, findingId: findingIds[0], status: result.status,
-        }};
+        this.modifyingFailedSelection = false;
+        const old = this.latestReport.metadata?.fixRequest;
+        this.latestReport.metadata = { ...(this.latestReport.metadata || {}),
+          previousFixRequests: wasModifyingFailedSelection
+            ? [...this.previousFixRequests(), old] : this.previousFixRequests(),
+          fixRequest: {
+            requestId: result.requestId, batchId: result.batchId,
+            findingIds, findingId: findingIds[0], status: result.status,
+            attemptCount: result.attemptCount || 1, retryEligible: false,
+            attempts: [{ attempt: result.attemptCount || 1, status: result.status }],
+          },
+        };
         this.clearSonarSelection();
         this.toast.success('Correction demandée', result.duplicate ? 'Cette demande existe déjà.' : 'La demande gouvernée a été enregistrée.');
       },

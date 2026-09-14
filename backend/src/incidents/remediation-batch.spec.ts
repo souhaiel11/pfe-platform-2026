@@ -120,8 +120,12 @@ async function main() {
   assert.equal(retryIncident.metadata.fixRequest.attemptCount, 1);
   let retryDispatches = 0;
   globalThis.fetch = async () => { retryDispatches++; return new Response('{}', { status: 200 }); };
+  // Resoumission du batch IDENTIQUE (même ensemble de findings) via approveFix
+  // (pas retryFix) après échec : toujours refusée, l'utilisateur doit passer
+  // par « Réessayer la correction ». Une sélection RÉDUITE/DIFFÉRENTE après
+  // échec est un scénario distinct -- voir modify-failed-selection.spec.ts.
   await assert.rejects(
-    () => retryService.approveFix(retryIncident.id, user, { findingIds: ['a'] }),
+    () => retryService.approveFix(retryIncident.id, user, { findingIds: ['a', 'b'] }),
     /Une demande de correction existe déjà.*Réessayer la correction/,
   );
   assert.equal(retryDispatches, 0);
