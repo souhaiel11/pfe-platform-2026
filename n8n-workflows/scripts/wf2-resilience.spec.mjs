@@ -148,9 +148,8 @@ assert.ok(!/pulls\/[^"]*merge/.test(blob));
 assert.ok(!/refs\/heads\/main[^-]/.test(blob));
 assert.doesNotMatch(blob, /httpRequestWithAuthentication|requestWithAuthenticationPaginated|(?:this\.)?helpers\./);
 
-// ── Structural parity: only the two target nodes differ, node/edge count
-// unchanged, no new/duplicate identity introduced ──────────────────────────
-assert.equal(wf.nodes.length, 147);
-assert.equal(new Set(wf.nodes.map(n => n.id)).size, 147);
+// Structural identity includes the bounded API reader and its failure envelopes.
+assert.equal(wf.nodes.length, 151);
+assert.equal(new Set(wf.nodes.map(n => n.id)).size, 151);
 
 console.log('WF2 resilience hardening (bounded retry on Get Main Branch SHA1 / Independent Semantic Review / de Patch - HTTP Request), cases A-H: PASS');

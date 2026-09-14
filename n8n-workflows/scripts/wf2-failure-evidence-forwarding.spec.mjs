@@ -1,0 +1,21 @@
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+const w=JSON.parse(readFileSync(new URL('../pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.PROMOTION-TARGET.json',import.meta.url)))[0];
+const node=name=>w.nodes.find(n=>n.name===name);
+const envelope={incidentId:'i',requestId:'r',batchId:'b',batchKey:'b',attemptCount:5,workflowId:'u3eeMwTuhCsetfcS'};
+const verification={overall:'FAIL',failureClass:'CANDIDATE_COMPILE_FAILURE',compile:{status:'FAILED',exitCode:1,evidenceRef:'cannot find symbol: method isCompleted()'},tests:{regression:{status:'NOT_RUN'}},staticAnalysis:{status:'NOT_RUN'}};
+const persisted=new Function('$','$items','$json','$execution',node('Persist Verification Failure').parameters.jsCode)(
+ name=>({first:()=>({json:name==='Call Candidate Verification'?verification:{candidateDigest:'digest',candidateBaseSha:'a'.repeat(40)}})}),()=>[{json:{correlationEnvelope:envelope}}],{reason:'VERIFICATION_NOT_PASS'},{id:1994})[0].json;
+const prepare=input=>new Function('$input','$execution',node('Prepare WF2 Failure Status').parameters.jsCode)({first:()=>({json:input})},{id:1994})[0].json;
+const prepared=prepare(persisted);
+assert.strictEqual(prepared.verificationEvidence,persisted.verificationEvidence,'forward existing bounded evidence without rebuilding it');
+const body=node('Persist WF2 Failure Status').parameters.jsonBody;
+const payload=JSON.parse(new Function('$json','return '+body.slice(3,-2))(prepared));
+assert.deepEqual(payload.verificationEvidence,persisted.verificationEvidence);
+assert.equal(payload.verificationEvidence.overall,'FAIL');assert.equal(payload.verificationEvidence.failureClass,'CANDIDATE_COMPILE_FAILURE');assert.equal(payload.verificationEvidence.compile.status,'FAILED');assert.equal(payload.verificationEvidence.compile.exitCode,1);
+const {verificationEvidence,...historical}=persisted;
+const old=prepare(historical);assert.equal(Object.hasOwn(old,'verificationEvidence'),false);
+const {verificationEvidence:forwarded,...unchanged}=prepared;assert.deepEqual(unchanged,old,'all failure/correlation fields unchanged');
+assert.equal(payload.workflowId,envelope.workflowId);assert.equal(payload.executionId,'1994');
+assert.equal(w.connections['Persist Verification Failure'].main[0][0].node,'Prepare WF2 Failure Status');assert.equal(w.connections['Prepare WF2 Failure Status'].main[0][0].node,'Persist WF2 Failure Status');
+console.log('Failure evidence forwarding: verifier -> bounded summary -> failure envelope -> serialized backend callback PASS; historical failures unchanged');

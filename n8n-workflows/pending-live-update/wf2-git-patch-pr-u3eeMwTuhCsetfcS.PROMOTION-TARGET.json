@@ -326,7 +326,7 @@
       {
         "parameters": {
           "mode": "runOnceForEachItem",
-          "jsCode": "\nconst input=$json;const gate=$('Prepare Batch Context').first().json;const fileName=String(input.path||input.target_file_path||'');const plannedInput=$('Validate Generic Remediation Plan').all().map(item=>item.json).find(item=>item.target_file_path===fileName);if(!plannedInput)throw new Error('FILE_WITHOUT_AUTHORIZED_OPERATION:'+fileName);\nconst operation=String(plannedInput.fileOperation||'');let sourceContent='';try{sourceContent=Buffer.from(String(input.content||'').replace(/\\n/g,''),'base64').toString('utf8')}catch{throw new Error('SOURCE_DECODE_FAILED')}\nif(operation==='MODIFY'&&!sourceContent)throw new Error('PLANNED_MODIFY_FILE_MISSING:'+fileName);if(operation==='CREATE'&&sourceContent)throw new Error('PLANNED_CREATE_FILE_ALREADY_EXISTS:'+fileName);\nconst plans=(plannedInput.remediationPlans||[]).filter(p=>[...(p.filesToModify||[]),...(p.filesToCreate||[])].includes(fileName));if(!plans.length)throw new Error('FILE_WITHOUT_REMEDIATION_PLAN:'+fileName);\nconst approvedFindingIds=[...new Set(plans.map(p=>p.findingId))].sort();const completePlan={batchId:gate.batchId,file:{path:fileName,operation,originalContent:sourceContent},plans,allPlannedFiles:plannedInput.plannedFiles,globalForbidden:['TODO','FIXME','placeholder implementation','scanner suppression','disabled security rule','unrelated changes','secrets','dependency downgrade','configuration weakening']};\n// Sonnet 5 supports 128k output tokens. Bound full-file generation to 16k,\n// including adaptive thinking (attempt 4 exhausted 8192, with 3033 thinking tokens).\nconst llmRequestBody={model:'claude-sonnet-5',max_tokens:16384,output_config:{format:{\"type\":\"json_schema\",\"schema\":{\"type\":\"object\",\"additionalProperties\":false,\"required\":[\"targetFile\",\"processedFindingIds\",\"patchedCode\",\"patchDescription\",\"conformanceEvidence\"],\"properties\":{\"targetFile\":{\"type\":\"string\"},\"processedFindingIds\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"patchedCode\":{\"type\":\"string\"},\"patchDescription\":{\"type\":\"string\"},\"conformanceEvidence\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}}}}}},system:'You generate a candidate patch from a complete remediation plan. Return exactly one complete top-level JSON object, without Markdown fences or surrounding prose. Return the COMPLETE patched file in patchedCode; never abbreviate unchanged code. Keep patchDescription to one concise sentence and conformanceEvidence to brief references to actual changes, without repeating source code or the plan. Touch only the current independently authorized file. Implement every applicable requiredChange, preserve stated behavior, obey forbiddenChanges, and never claim scanner resolution. Do not add TODO/FIXME, suppression, incomplete code, raw Object/Map cast workarounds, dependency downgrades, or unrelated edits.',messages:[{role:'user',content:'Produce {targetFile,processedFindingIds,patchedCode,patchDescription,conformanceEvidence}. Complete plan: '+JSON.stringify(completePlan)}]};\nif(!llmRequestBody||typeof llmRequestBody!=='object')throw new Error('LLM_REQUEST_BODY_INVALID');\nif(!String(llmRequestBody.model||'').trim())throw new Error('LLM_REQUEST_MODEL_MISSING');\nif(!Array.isArray(llmRequestBody.messages)||!llmRequestBody.messages.length)throw new Error('LLM_REQUEST_MESSAGES_MISSING');\nif(!String(llmRequestBody.messages[0]?.content||'').trim())throw new Error('LLM_REQUEST_MESSAGE_CONTENT_MISSING');\nif(!llmRequestBody.output_config)throw new Error('LLM_REQUEST_OUTPUT_CONFIG_MISSING');\nconst serializedRequestBody=JSON.stringify(llmRequestBody);\nif(!serializedRequestBody||serializedRequestBody==='{}')throw new Error('LLM_REQUEST_BODY_EMPTY');\nreturn {json:{...input,requiresPatch:true,llmRequestBody,claudeBodyString:serializedRequestBody,requestBodyPresent:true,serializedBodyLength:serializedRequestBody.length,messagesCount:llmRequestBody.messages.length,hasOutputConfig:Boolean(llmRequestBody.output_config),sourceContent,file_sha:String(input.sha||''),file_path:fileName,targetFile:fileName,fileOperation:operation,repositoryPolicy:plannedInput.repositoryPolicy,approvedFindingIdsForFile:approvedFindingIds,approvedFindingsForFile:plans.map(p=>({findingId:p.findingId,source:p.source,rule:p.rule,file:p.target.file,line:p.target.line,message:p.remediationIntent,scannerEvidence:p.scannerEvidence})),applicablePlans:plans,completePlan,branchName:gate.targetBranchName,commitMessage:'fix(security): candidate remediation for batch '+gate.batchId,repository_owner:gate.repository_owner,repository_name:gate.repository_name,default_branch:gate.default_branch,incidentId:gate.incidentId}};"
+          "jsCode": "\nconst input=$json;const gate=$('Prepare Batch Context').first().json;const fileName=String(input.path||input.target_file_path||'');const plannedInput=$('Validate Generic Remediation Plan').all().map(item=>item.json).find(item=>item.target_file_path===fileName);if(!plannedInput)throw new Error('FILE_WITHOUT_AUTHORIZED_OPERATION:'+fileName);\nconst operation=String(plannedInput.fileOperation||'');let sourceContent='';try{sourceContent=Buffer.from(String(input.content||'').replace(/\\n/g,''),'base64').toString('utf8')}catch{throw new Error('SOURCE_DECODE_FAILED')}\nif(operation==='MODIFY'&&!sourceContent)throw new Error('PLANNED_MODIFY_FILE_MISSING:'+fileName);if(operation==='CREATE'&&sourceContent)throw new Error('PLANNED_CREATE_FILE_ALREADY_EXISTS:'+fileName);\nconst plans=(plannedInput.remediationPlans||[]).filter(p=>[...(p.filesToModify||[]),...(p.filesToCreate||[])].includes(fileName));if(!plans.length)throw new Error('FILE_WITHOUT_REMEDIATION_PLAN:'+fileName);\nlet sourceApiContext=[];try{sourceApiContext=$('Prepare Generic Remediation Plan').first().json.remediationContract.sourceSnapshots||[]}catch{}\nif(sourceApiContext.length>12||sourceApiContext.reduce((size,s)=>size+String(s.content||'').length,0)>65536)throw new Error('SOURCE_API_CONTEXT_LIMIT_EXCEEDED');\nconst mappingRequired=/\\b(dto|entity|mapping|accessor|getter|setter)\\b/i.test(JSON.stringify(plans));\nif(mappingRequired&&!sourceApiContext.some(s=>s.file!==fileName&&String(s.content||'').trim()))throw new Error('SOURCE_API_CONTEXT_REQUIRED');\nconst approvedFindingIds=[...new Set(plans.map(p=>p.findingId))].sort();const completePlan={sourceApiContext,batchId:gate.batchId,file:{path:fileName,operation,originalContent:sourceContent},plans,allPlannedFiles:plannedInput.plannedFiles,globalForbidden:['TODO','FIXME','placeholder implementation','scanner suppression','disabled security rule','unrelated changes','secrets','dependency downgrade','configuration weakening']};\n// Sonnet 5 supports 128k output tokens. Bound full-file generation to 16k,\n// including adaptive thinking (attempt 4 exhausted 8192, with 3033 thinking tokens).\nconst llmRequestBody={model:'claude-sonnet-5',max_tokens:16384,output_config:{format:{\"type\":\"json_schema\",\"schema\":{\"type\":\"object\",\"additionalProperties\":false,\"required\":[\"targetFile\",\"processedFindingIds\",\"patchedCode\",\"patchDescription\",\"conformanceEvidence\"],\"properties\":{\"targetFile\":{\"type\":\"string\"},\"processedFindingIds\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"patchedCode\":{\"type\":\"string\"},\"patchDescription\":{\"type\":\"string\"},\"conformanceEvidence\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}}}}}},system:'You generate a candidate patch from a complete remediation plan. Return exactly one complete top-level JSON object, without Markdown fences or surrounding prose. Return the COMPLETE patched file in patchedCode; never abbreviate unchanged code. Keep patchDescription to one concise sentence and conformanceEvidence to brief references to actual changes, without repeating source code or the plan. For DTO/entity mapping use only fields, methods and constructors proven by sourceApiContext or originalContent. Inspect actual field types and accessor/mutator names; never infer boolean getter names from JavaBean conventions. Preserve enum types and nullable/reference types exactly. Require explicit type-safe mapping; no reflective BeanUtils fallback. Do not invent fields, getters, setters or constructors. If the required API is unavailable or ambiguous, stop generation instead of guessing; never emit a speculative patch. Touch only the current independently authorized file. Implement every applicable requiredChange, preserve stated behavior, obey forbiddenChanges, and never claim scanner resolution. Do not add TODO/FIXME, suppression, incomplete code, raw Object/Map cast workarounds, dependency downgrades, or unrelated edits.',messages:[{role:'user',content:'Produce {targetFile,processedFindingIds,patchedCode,patchDescription,conformanceEvidence}. Complete plan: '+JSON.stringify(completePlan)}]};\nif(!llmRequestBody||typeof llmRequestBody!=='object')throw new Error('LLM_REQUEST_BODY_INVALID');\nif(!String(llmRequestBody.model||'').trim())throw new Error('LLM_REQUEST_MODEL_MISSING');\nif(!Array.isArray(llmRequestBody.messages)||!llmRequestBody.messages.length)throw new Error('LLM_REQUEST_MESSAGES_MISSING');\nif(!String(llmRequestBody.messages[0]?.content||'').trim())throw new Error('LLM_REQUEST_MESSAGE_CONTENT_MISSING');\nif(!llmRequestBody.output_config)throw new Error('LLM_REQUEST_OUTPUT_CONFIG_MISSING');\nconst serializedRequestBody=JSON.stringify(llmRequestBody);\nif(!serializedRequestBody||serializedRequestBody==='{}')throw new Error('LLM_REQUEST_BODY_EMPTY');\nreturn {json:{...input,requiresPatch:true,llmRequestBody,claudeBodyString:serializedRequestBody,requestBodyPresent:true,serializedBodyLength:serializedRequestBody.length,messagesCount:llmRequestBody.messages.length,hasOutputConfig:Boolean(llmRequestBody.output_config),sourceContent,file_sha:String(input.sha||''),file_path:fileName,targetFile:fileName,fileOperation:operation,repositoryPolicy:plannedInput.repositoryPolicy,approvedFindingIdsForFile:approvedFindingIds,approvedFindingsForFile:plans.map(p=>({findingId:p.findingId,source:p.source,rule:p.rule,file:p.target.file,line:p.target.line,message:p.remediationIntent,scannerEvidence:p.scannerEvidence})),applicablePlans:plans,completePlan,branchName:gate.targetBranchName,commitMessage:'fix(security): candidate remediation for batch '+gate.batchId,repository_owner:gate.repository_owner,repository_name:gate.repository_name,default_branch:gate.default_branch,incidentId:gate.incidentId}};"
         },
         "type": "n8n-nodes-base.code",
         "typeVersion": 2,
@@ -727,7 +727,7 @@
       },
       {
         "parameters": {
-          "jsCode": "\nconst input=$input.first().json||{};const ctx=input.correlationEnvelope||{};const required=['incidentId','requestId','batchId','batchKey','attemptCount'];const missing=required.filter(k=>ctx[k]===undefined||ctx[k]===null||ctx[k]==='');if(missing.length)throw new Error('FAILURE_CORRELATION_MISSING:'+missing.join(','));return [{json:{status:'FAILED',manualReviewRequired:input.failureCode==='WF2_MANUAL_REVIEW_REQUIRED',workflowId:ctx.workflowId,executionId:String(input.executionId||$execution.id),incidentId:ctx.incidentId,requestId:ctx.requestId,batchId:ctx.batchId,batchKey:ctx.batchKey,attemptCount:ctx.attemptCount,errorCode:input.failureCode,failureCode:input.failureCode,failedNode:input.failedNode,failureNode:input.failedNode,failureSummary:input.failureSummary}}];"
+          "jsCode": "\nconst input=$input.first().json||{};const ctx=input.correlationEnvelope||{};const required=['incidentId','requestId','batchId','batchKey','attemptCount'];const missing=required.filter(k=>ctx[k]===undefined||ctx[k]===null||ctx[k]==='');if(missing.length)throw new Error('FAILURE_CORRELATION_MISSING:'+missing.join(','));return [{json:{status:'FAILED',manualReviewRequired:input.failureCode==='WF2_MANUAL_REVIEW_REQUIRED',workflowId:ctx.workflowId,executionId:String(input.executionId||$execution.id),incidentId:ctx.incidentId,requestId:ctx.requestId,batchId:ctx.batchId,batchKey:ctx.batchKey,attemptCount:ctx.attemptCount,errorCode:input.failureCode,failureCode:input.failureCode,failedNode:input.failedNode,failureNode:input.failedNode,failureSummary:input.failureSummary,...(input.verificationEvidence!=null?{verificationEvidence:input.verificationEvidence}:{})}}];"
         },
         "id": "wf2-prepare-failure-status",
         "name": "Prepare WF2 Failure Status",
@@ -1173,7 +1173,7 @@
         ],
         "onError": "continueErrorOutput",
         "parameters": {
-          "jsCode": "\nconst ctx=$('Build Independent Repository Policy').first().json;\nconst findings=Array.isArray(ctx.findings)?ctx.findings:[];\nconst supported=findings.filter(f=>['SONARQUBE','CODE','SAST'].includes(String(f.source||'').toUpperCase()));\nif(supported.length!==findings.length)throw new Error('WF2_SPECIALIST_ROUTE_REQUIRED:'+JSON.stringify(findings.filter(f=>!supported.includes(f)).map(f=>({findingId:f.findingId,source:f.source}))));\nconst forbidden=['TODO/FIXME or placeholder implementation','scanner suppression or disabling security rules','deleting functionality merely to silence a scanner','unrelated source modifications','secrets','malformed or incomplete source','arbitrary dependency downgrade','configuration weakening'];\nconst sourceSnapshots=$input.all().map(item=>{const raw=item.json.content;const content=Buffer.from((Array.isArray(raw)?raw.join(''):String(raw||'')).replace(/\\n/g,''),'base64').toString('utf8');return {file:String(item.json.path||item.json.target_file_path||''),sha:String(item.json.sha||''),content}});\nconst correctiveContext=ctx.correctiveAttempt===true&&ctx.correctiveContext?ctx.correctiveContext:null;\nconst contract={schemaVersion:'1.0',batchId:ctx.batchId,repository:{owner:ctx.repository_owner,name:ctx.repository_name,defaultBranch:ctx.default_branch,technology:ctx.projectTechnology||ctx.technology||ctx.repositoryMetadata||{}},findings:findings.map(f=>({findingId:String(f.findingId||f.id||f.key),source:String(f.source||'SONARQUBE'),rule:String(f.rule||f.ruleKey||''),severity:String(f.severity||''),type:String(f.type||''),message:String(f.message||''),target:{file:String(f.file||f.component||''),line:Number(f.line)||null},scannerEvidence:f.evidence||f.scannerEvidence||f})),sourceSnapshots,forbiddenChanges:forbidden,...(correctiveContext?{correctiveContext:{previousAttempt:correctiveContext.previousAttempt,previousValidatedSha:correctiveContext.previousValidatedSha,candidateBaseSha:String(ctx.candidateBaseSha||''),originalBaselineSha:String(ctx.baselineSha||''),reasonCodes:correctiveContext.reasonCodes,blockingCauses:correctiveContext.blockingCauses,originalFindingResults:correctiveContext.originalFindingResults}}:{})};\nconst correctiveInstruction=correctiveContext?' CORRECTIVE MODE: this is a corrective continuation of an ALREADY-OPEN Pull Request, not a fresh remediation. (1) Preserve every previously valid change in the existing branch exactly as-is. (2) Fix ONLY the proven blocker(s) described in contract.correctiveContext.blockingCauses -- nothing else. (3) Do NOT restart remediation from contract.correctiveContext.originalBaselineSha; that commit is historical context only. (4) Do NOT revert or modify any unrelated existing change already on the branch. (5) Do NOT invent a root cause, file, or line that is not already present in contract.correctiveContext.blockingCauses or contract.findings[].scannerEvidence. (6) If the available evidence is insufficient to fix a blocker with confidence, set that plan\\'s rootCause to \"CONTEXT_REQUIRED\" and its disposition to MANUAL_OR_SPECIALIST rather than guessing. (7) Every proposed change must be expressed against the CURRENT candidate base, contract.correctiveContext.candidateBaseSha -- never against originalBaselineSha.':'';\n\nconst llmRequestBody={model:'claude-sonnet-5',max_tokens:8192,output_config:{format:{\"type\":\"json_schema\",\"schema\":{\"type\":\"object\",\"additionalProperties\":false,\"required\":[\"plans\"],\"properties\":{\"plans\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"additionalProperties\":false,\"required\":[\"findingId\",\"source\",\"rule\",\"target\",\"rootCause\",\"remediationIntent\",\"filesToModify\",\"filesToCreate\",\"proposedPaths\",\"requiredChanges\",\"forbiddenChanges\",\"expectedBehaviorPreserved\",\"validationStrategy\",\"confidence\",\"disposition\"],\"properties\":{\"findingId\":{\"type\":\"string\"},\"source\":{\"type\":\"string\"},\"rule\":{\"type\":\"string\"},\"target\":{\"type\":\"object\",\"additionalProperties\":false,\"required\":[\"file\",\"line\"],\"properties\":{\"file\":{\"type\":\"string\"},\"line\":{\"type\":[\"integer\",\"null\"]}}},\"rootCause\":{\"type\":\"string\"},\"remediationIntent\":{\"type\":\"string\"},\"filesToModify\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"filesToCreate\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"proposedPaths\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"requiredChanges\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"forbiddenChanges\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"expectedBehaviorPreserved\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"validationStrategy\":{\"type\":\"object\",\"additionalProperties\":false,\"required\":[\"compile\",\"tests\",\"scanner\"],\"properties\":{\"compile\":{\"type\":\"boolean\"},\"tests\":{\"type\":\"boolean\"},\"scanner\":{\"type\":\"string\"}}},\"confidence\":{\"type\":\"number\"},\"disposition\":{\"type\":\"string\",\"enum\":[\"AUTO_CANDIDATE\",\"MANUAL_OR_SPECIALIST\"]}}}}}}}},system:'You are a remediation planner, separate from patch generation. Return strict JSON only. Infer a minimal, generic plan from findings, scanner evidence, repository metadata and supplied surrounding source. Never decide that a finding is resolved. Never key behavior on a rule ID. You may only PROPOSE files; deterministic repository policy independently authorizes or rejects them.',messages:[{role:'user',content:'Create one plan per finding using this generic schema: {findingId,source,rule,target:{file,line},rootCause,remediationIntent,filesToModify,filesToCreate,proposedPaths,requiredChanges,forbiddenChanges,expectedBehaviorPreserved,validationStrategy:{compile,tests,scanner},confidence}. Paths must be repository-relative and minimal. Route high-risk/infra/admin/Jenkins/Docker work with disposition MANUAL_OR_SPECIALIST; otherwise disposition AUTO_CANDIDATE.'+correctiveInstruction+' Input: '+JSON.stringify(contract)}]};\nif(!llmRequestBody||typeof llmRequestBody!=='object')throw new Error('LLM_REQUEST_BODY_INVALID');\nif(!String(llmRequestBody.model||'').trim())throw new Error('LLM_REQUEST_MODEL_MISSING');\nif(!Array.isArray(llmRequestBody.messages)||!llmRequestBody.messages.length)throw new Error('LLM_REQUEST_MESSAGES_MISSING');\nif(!String(llmRequestBody.messages[0]?.content||'').trim())throw new Error('LLM_REQUEST_MESSAGE_CONTENT_MISSING');\nif(!llmRequestBody.output_config)throw new Error('LLM_REQUEST_OUTPUT_CONFIG_MISSING');\nconst serializedRequestBody=JSON.stringify(llmRequestBody);\nif(!serializedRequestBody||serializedRequestBody==='{}')throw new Error('LLM_REQUEST_BODY_EMPTY');\nreturn [{json:{...ctx,remediationContract:contract,llmRequestBody,planBodyString:serializedRequestBody,requestBodyPresent:true,serializedBodyLength:serializedRequestBody.length,messagesCount:llmRequestBody.messages.length,hasOutputConfig:Boolean(llmRequestBody.output_config)}}];"
+          "jsCode": "\nconst ctx=$('Build Independent Repository Policy').first().json;\nconst findings=Array.isArray(ctx.findings)?ctx.findings:[];\nconst supported=findings.filter(f=>['SONARQUBE','CODE','SAST'].includes(String(f.source||'').toUpperCase()));\nif(supported.length!==findings.length)throw new Error('WF2_SPECIALIST_ROUTE_REQUIRED:'+JSON.stringify(findings.filter(f=>!supported.includes(f)).map(f=>({findingId:f.findingId,source:f.source}))));\nconst forbidden=['TODO/FIXME or placeholder implementation','scanner suppression or disabling security rules','deleting functionality merely to silence a scanner','unrelated source modifications','secrets','malformed or incomplete source','arbitrary dependency downgrade','configuration weakening'];\nconst sourceSnapshots=$input.all().map(item=>{const raw=item.json.content;const content=Buffer.from((Array.isArray(raw)?raw.join(''):String(raw||'')).replace(/\\n/g,''),'base64').toString('utf8');return {file:String(item.json.path||item.json.target_file_path||''),sha:String(item.json.sha||''),content}});\nif(sourceSnapshots.reduce((size,s)=>size+s.content.length,0)>65536)throw new Error('SOURCE_API_CONTEXT_LIMIT_EXCEEDED');\nconst correctiveContext=ctx.correctiveAttempt===true&&ctx.correctiveContext?ctx.correctiveContext:null;\nconst contract={schemaVersion:'1.0',batchId:ctx.batchId,repository:{owner:ctx.repository_owner,name:ctx.repository_name,defaultBranch:ctx.default_branch,technology:ctx.projectTechnology||ctx.technology||ctx.repositoryMetadata||{}},findings:findings.map(f=>({findingId:String(f.findingId||f.id||f.key),source:String(f.source||'SONARQUBE'),rule:String(f.rule||f.ruleKey||''),severity:String(f.severity||''),type:String(f.type||''),message:String(f.message||''),target:{file:String(f.file||f.component||''),line:Number(f.line)||null},scannerEvidence:f.evidence||f.scannerEvidence||f})),sourceSnapshots,forbiddenChanges:forbidden,...(correctiveContext?{correctiveContext:{previousAttempt:correctiveContext.previousAttempt,previousValidatedSha:correctiveContext.previousValidatedSha,candidateBaseSha:String(ctx.candidateBaseSha||''),originalBaselineSha:String(ctx.baselineSha||''),reasonCodes:correctiveContext.reasonCodes,blockingCauses:correctiveContext.blockingCauses,originalFindingResults:correctiveContext.originalFindingResults}}:{})};\nconst correctiveInstruction=correctiveContext?' CORRECTIVE MODE: this is a corrective continuation of an ALREADY-OPEN Pull Request, not a fresh remediation. (1) Preserve every previously valid change in the existing branch exactly as-is. (2) Fix ONLY the proven blocker(s) described in contract.correctiveContext.blockingCauses -- nothing else. (3) Do NOT restart remediation from contract.correctiveContext.originalBaselineSha; that commit is historical context only. (4) Do NOT revert or modify any unrelated existing change already on the branch. (5) Do NOT invent a root cause, file, or line that is not already present in contract.correctiveContext.blockingCauses or contract.findings[].scannerEvidence. (6) If the available evidence is insufficient to fix a blocker with confidence, set that plan\\'s rootCause to \"CONTEXT_REQUIRED\" and its disposition to MANUAL_OR_SPECIALIST rather than guessing. (7) Every proposed change must be expressed against the CURRENT candidate base, contract.correctiveContext.candidateBaseSha -- never against originalBaselineSha.':'';\n\nconst llmRequestBody={model:'claude-sonnet-5',max_tokens:8192,output_config:{format:{\"type\":\"json_schema\",\"schema\":{\"type\":\"object\",\"additionalProperties\":false,\"required\":[\"plans\"],\"properties\":{\"plans\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"additionalProperties\":false,\"required\":[\"findingId\",\"source\",\"rule\",\"target\",\"rootCause\",\"remediationIntent\",\"filesToModify\",\"filesToCreate\",\"proposedPaths\",\"requiredChanges\",\"forbiddenChanges\",\"expectedBehaviorPreserved\",\"validationStrategy\",\"confidence\",\"disposition\"],\"properties\":{\"findingId\":{\"type\":\"string\"},\"source\":{\"type\":\"string\"},\"rule\":{\"type\":\"string\"},\"target\":{\"type\":\"object\",\"additionalProperties\":false,\"required\":[\"file\",\"line\"],\"properties\":{\"file\":{\"type\":\"string\"},\"line\":{\"type\":[\"integer\",\"null\"]}}},\"rootCause\":{\"type\":\"string\"},\"remediationIntent\":{\"type\":\"string\"},\"filesToModify\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"filesToCreate\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"proposedPaths\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"requiredChanges\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"forbiddenChanges\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"expectedBehaviorPreserved\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"validationStrategy\":{\"type\":\"object\",\"additionalProperties\":false,\"required\":[\"compile\",\"tests\",\"scanner\"],\"properties\":{\"compile\":{\"type\":\"boolean\"},\"tests\":{\"type\":\"boolean\"},\"scanner\":{\"type\":\"string\"}}},\"confidence\":{\"type\":\"number\"},\"disposition\":{\"type\":\"string\",\"enum\":[\"AUTO_CANDIDATE\",\"MANUAL_OR_SPECIALIST\"]}}}}}}}},system:'You are a remediation planner, separate from patch generation. Return strict JSON only. Infer a minimal, generic plan from findings, scanner evidence, repository metadata and supplied surrounding source. Never decide that a finding is resolved. Never key behavior on a rule ID. You may only PROPOSE files; deterministic repository policy independently authorizes or rejects them.',messages:[{role:'user',content:'Create one plan per finding using this generic schema: {findingId,source,rule,target:{file,line},rootCause,remediationIntent,filesToModify,filesToCreate,proposedPaths,requiredChanges,forbiddenChanges,expectedBehaviorPreserved,validationStrategy:{compile,tests,scanner},confidence}. Paths must be repository-relative and minimal. Route high-risk/infra/admin/Jenkins/Docker work with disposition MANUAL_OR_SPECIALIST; otherwise disposition AUTO_CANDIDATE.'+correctiveInstruction+' Input: '+JSON.stringify(contract)}]};\nif(!llmRequestBody||typeof llmRequestBody!=='object')throw new Error('LLM_REQUEST_BODY_INVALID');\nif(!String(llmRequestBody.model||'').trim())throw new Error('LLM_REQUEST_MODEL_MISSING');\nif(!Array.isArray(llmRequestBody.messages)||!llmRequestBody.messages.length)throw new Error('LLM_REQUEST_MESSAGES_MISSING');\nif(!String(llmRequestBody.messages[0]?.content||'').trim())throw new Error('LLM_REQUEST_MESSAGE_CONTENT_MISSING');\nif(!llmRequestBody.output_config)throw new Error('LLM_REQUEST_OUTPUT_CONFIG_MISSING');\nconst serializedRequestBody=JSON.stringify(llmRequestBody);\nif(!serializedRequestBody||serializedRequestBody==='{}')throw new Error('LLM_REQUEST_BODY_EMPTY');\nreturn [{json:{...ctx,remediationContract:contract,llmRequestBody,planBodyString:serializedRequestBody,requestBodyPresent:true,serializedBodyLength:serializedRequestBody.length,messagesCount:llmRequestBody.messages.length,hasOutputConfig:Boolean(llmRequestBody.output_config)}}];"
         }
       },
       {
@@ -3016,6 +3016,85 @@
           "dataPropertyName": "_reconciledRemoteSha256",
           "encoding": "hex"
         }
+      },
+      {
+        "id": "0879f734-4f5b-4a3d-8033-f456ce3743da",
+        "name": "Expand Referenced API Sources",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          6400,
+          1000
+        ],
+        "onError": "continueErrorOutput",
+        "parameters": {
+          "jsCode": "const ctx=$('Build Independent Repository Policy').first().json;\nconst existing=new Set(ctx.repositoryPolicy.existingFiles);\nconst items=$input.all();const paths=new Set();\nfor(const item of items){\n const path=String(item.json.path||item.json.target_file_path||'');paths.add(path);\n if(!path.endsWith('.java'))continue;\n const source=Buffer.from(String(item.json.content||'').replace(/\\n/g,''),'base64').toString('utf8');\n const root=path.match(/^(.*?src\\/main\\/java\\/)/)?.[1];if(!root)continue;\n for(const match of source.matchAll(/^\\s*import\\s+(?!static\\s)([\\w.]+)\\s*;/gm)){\n  const parts=match[1].split('.');\n  while(parts.length>1){const candidate=root+parts.join('/')+'.java';if(existing.has(candidate)){paths.add(candidate);break;}parts.pop();}\n }\n}\nif(paths.size>12)throw new Error('SOURCE_API_CONTEXT_LIMIT_EXCEEDED');\nreturn [...paths].map(target_file_path=>({json:{...ctx,target_file_path}}));"
+        }
+      },
+      {
+        "id": "70f1615c-475d-4080-b12c-2d142c505db4",
+        "name": "Failure Envelope - Expand Referenced API Sources",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          6200,
+          1440
+        ],
+        "onError": "continueErrorOutput",
+        "parameters": {
+          "jsCode": "const input=$input.first().json||{};const raw=input.error??input;const err=typeof raw==='string'?{message:raw}:raw||{};const rawSummary=String(input.failureSummary||err.message||input.message||input.reason||raw||'workflow execution error');const failureSummary=rawSummary.replace(/[\\r\\n]+/g,' ').replace(/(?:token|password|secret|authorization)\\s*[=:]\\s*[^ ,;]+/ig,'$1=[REDACTED]').slice(0,500);const embedded=rawSummary.match(/^([A-Z][A-Z0-9_]+)(?::|$)/)?.[1];const failureCode=String(input.failureCode||embedded||'WF2_EXECUTION_ERROR').slice(0,120);const captured=$items('Capture Correlation Envelope',0,0);const correlationEnvelope=captured?.[0]?.json?.correlationEnvelope||{};return [{json:{correlationEnvelope,executionId:String($execution.id),failedNode:\"Expand Referenced API Sources\",failureCode,failureSummary}}];"
+        }
+      },
+      {
+        "parameters": {
+          "resource": "file",
+          "operation": "get",
+          "owner": {
+            "__rl": true,
+            "mode": "name",
+            "value": "={{ $json.repository_owner }}"
+          },
+          "repository": {
+            "__rl": true,
+            "mode": "name",
+            "value": "={{ $json.repository_name }}"
+          },
+          "filePath": "={{ $json.target_file_path }}",
+          "asBinaryProperty": false,
+          "additionalParameters": {
+            "reference": "={{ Number($('Lookup Remediation Branch').first().json.statusCode) === 200 ? $('Lookup Remediation Branch').first().json.body?.object?.sha : $('Prepare Batch Context').first().json.baseSha }}"
+          }
+        },
+        "id": "f6e432c7-bcb4-4b49-a9d5-f5dc177885ee",
+        "name": "Fetch Referenced API Sources",
+        "type": "n8n-nodes-base.github",
+        "typeVersion": 1.1,
+        "position": [
+          6620,
+          1000
+        ],
+        "webhookId": "62f7404d-2d09-4530-868e-66df4a3abf02",
+        "credentials": {
+          "githubApi": {
+            "id": "fBueZWwflXWM3RoX",
+            "name": "GitHub account"
+          }
+        },
+        "onError": "continueErrorOutput"
+      },
+      {
+        "id": "7485aca1-3043-42c4-a79f-990998bc90c9",
+        "name": "Failure Envelope - Fetch Referenced API Sources",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          6200,
+          1440
+        ],
+        "onError": "continueErrorOutput",
+        "parameters": {
+          "jsCode": "const input=$input.first().json||{};const raw=input.error??input;const err=typeof raw==='string'?{message:raw}:raw||{};const rawSummary=String(input.failureSummary||err.message||input.message||input.reason||raw||'workflow execution error');const failureSummary=rawSummary.replace(/[\\r\\n]+/g,' ').replace(/(?:token|password|secret|authorization)\\s*[=:]\\s*[^ ,;]+/ig,'$1=[REDACTED]').slice(0,500);const embedded=rawSummary.match(/^([A-Z][A-Z0-9_]+)(?::|$)/)?.[1];const failureCode=String(input.failureCode||embedded||'WF2_EXECUTION_ERROR').slice(0,120);const captured=$items('Capture Correlation Envelope',0,0);const correlationEnvelope=captured?.[0]?.json?.correlationEnvelope||{};return [{json:{correlationEnvelope,executionId:String($execution.id),failedNode:\"Fetch Referenced API Sources\",failureCode,failureSummary}}];"
+        }
       }
     ],
     "connections": {
@@ -3726,7 +3805,7 @@
         "main": [
           [
             {
-              "node": "Prepare Generic Remediation Plan",
+              "node": "Expand Referenced API Sources",
               "type": "main",
               "index": 0
             }
@@ -5040,6 +5119,64 @@
           [
             {
               "node": "Prepare WF2 Failure Status",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Failure Envelope - Expand Referenced API Sources": {
+        "main": [
+          [
+            {
+              "node": "Prepare WF2 Failure Status",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Expand Referenced API Sources": {
+        "main": [
+          [
+            {
+              "node": "Fetch Referenced API Sources",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Failure Envelope - Expand Referenced API Sources",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Failure Envelope - Fetch Referenced API Sources": {
+        "main": [
+          [
+            {
+              "node": "Prepare WF2 Failure Status",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Fetch Referenced API Sources": {
+        "main": [
+          [
+            {
+              "node": "Prepare Generic Remediation Plan",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Failure Envelope - Fetch Referenced API Sources",
               "type": "main",
               "index": 0
             }

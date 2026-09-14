@@ -10,10 +10,23 @@ assert.equal(target.id, id);
 assert.equal(target.active, false, 'artifact is not an activation request');
 assert.equal(node('Webhook').parameters.path, 'wf2-r22e-test');
 assert.equal(node('Webhook').parameters.httpMethod, 'POST');
-assert.equal(target.nodes.length, 147);
-assert.equal(new Set(target.nodes.map(n => n.id)).size, 147);
-assert.equal(new Set(target.nodes.map(n => n.name)).size, 147);
-assert.deepEqual(target.connections, base.connections, 'all corrective and failure routing preserved');
+assert.equal(target.nodes.length, 151);
+assert.equal(new Set(target.nodes.map(n => n.id)).size, 151);
+assert.equal(new Set(target.nodes.map(n => n.name)).size, 151);
+const apiNodes = ['Expand Referenced API Sources','Fetch Referenced API Sources'];
+const added = [...apiNodes, ...apiNodes.map(n => 'Failure Envelope - ' + n)];
+const originalConnections = structuredClone(target.connections);
+for (const name of added) delete originalConnections[name];
+originalConnections['Fetch Finding Source Context'].main[0][0].node = 'Prepare Generic Remediation Plan';
+assert.deepEqual(originalConnections, base.connections, 'only bounded read-only API context inserted before planning');
+for (const name of apiNodes) {
+  assert.equal(node(name).onError,'continueErrorOutput');
+  assert.equal(target.connections[name].main[1][0].node,'Failure Envelope - '+name);
+  assert.equal(target.connections['Failure Envelope - '+name].main[0][0].node,'Prepare WF2 Failure Status');
+}
+const {id: fetchId,name: fetchName,position: fetchPosition,...fetchRest}=node('Fetch Referenced API Sources');
+const {id: oldId,name: oldName,position: oldPosition,...oldFetchRest}=node('Fetch Finding Source Context');
+assert.deepEqual(fetchRest,oldFetchRest,'same native read-only GitHub node, credentials and exact-SHA reference');
 // R74/R76 -- bounded transient-network retry (wf2-resilience.spec.mjs)
 // legitimately adds retryOnFail/maxTries/waitBetweenTries to these
 // non-mutating nodes, after the identity promotion. Excluded from the
@@ -29,8 +42,12 @@ const RETRY_HARDENED = ['Get Main Branch SHA1', 'Independent Semantic Review', '
 // exactly.
 // Patch-output hardening changes only request construction and parsing; dedicated tests
 // verify truncation, complete JSON, schema, target identity and bounded output budget.
-const JSCODE_HARDENED = ['Generic Candidate Preflight', 'Persist Verification Failure', 'Prepare - Code Patch Body', 'Parse - Code Patch Output'];
+const JSCODE_HARDENED = ['Generic Candidate Preflight', 'Persist Verification Failure', 'Prepare - Code Patch Body', 'Parse - Code Patch Output', 'Prepare Generic Remediation Plan', 'Prepare WF2 Failure Status'];
 for (const n of target.nodes) {
+  if (added.includes(n.name)) {
+    assert.doesNotMatch(JSON.stringify(n.parameters), /httpRequestWithAuthentication|requestWithAuthenticationPaginated|(?:this\.)?helpers\./);
+    continue;
+  }
   const previous = base.nodes.find(b => b.name === n.name);
   assert.deepEqual(n.credentials, previous.credentials, 'credential references unchanged');
   if (!['Webhook', 'Capture Correlation Envelope', ...RETRY_HARDENED, ...JSCODE_HARDENED].includes(n.name)) assert.deepEqual(n, previous);

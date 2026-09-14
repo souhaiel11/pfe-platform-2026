@@ -104,10 +104,17 @@ function run({ guardJson, verificationJson, manifestJson = {}, envelopeJson = {}
 // output, not a re-derivation from guard.reason strings. ───────────────────
 
 // ── L. no Git-mutating node becomes reachable because of this change -------
-// (topology/connections completely unchanged -- only this node's jsCode differs).
+// The bounded API-context read occurs before planning; all failure/Git routes remain unchanged.
 {
   const base = JSON.parse(readFileSync(new URL('../pending-live-update/wf2-git-patch-pr-v4-1-9adcV31eaIgJyMR0.CANONICAL-FINAL.json', import.meta.url)))[0];
-  assert.deepEqual(wf.connections, base.connections, 'connections must be byte-identical -- no new routing introduced anywhere');
+  const connections = structuredClone(wf.connections);
+  for (const name of ['Expand Referenced API Sources','Fetch Referenced API Sources']) {
+    assert.equal(connections[name].main[1][0].node,'Failure Envelope - '+name);
+    assert.equal(connections['Failure Envelope - '+name].main[0][0].node,'Prepare WF2 Failure Status');
+    delete connections[name]; delete connections['Failure Envelope - '+name];
+  }
+  connections['Fetch Finding Source Context'].main[0][0].node='Prepare Generic Remediation Plan';
+  assert.deepEqual(connections, base.connections, 'existing failure and Git routing unchanged');
 }
 
 console.log('WF2 verification-evidence persistence (Persist Verification Failure), cases E-L: PASS');
