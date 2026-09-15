@@ -8,13 +8,13 @@ const projectTemplate = fs.readFileSync('src/app/features/projects/project-detai
 const api = fs.readFileSync('src/app/core/services/api.service.ts', 'utf8');
 
 assert.match(template, /Valider la Pull Request/);
-assert.match(template, /\[disabled\]="prValidationBusy"/);
+assert.match(template, /\[disabled\]="prValidationBusy \|\| correctiveBusy \|\| isCorrectiveInFlight\(\)"/);
 assert.match(component, /if \(this\.prValidationBusy \|\| !this\.canRequestPrValidation\(\)\) return;/);
 assert.match(component, /this\.prValidationBusy = true;[\s\S]*requestPrValidation\(this\.id\)/);
 assert.match(api, /\/incidents\/\$\{id\}\/pr-validation/);
 assert.doesNotMatch(component, /requestPrValidation[\s\S]{0,500}triggerBuild/);
 assert.doesNotMatch(component, /localStorage[\s\S]{0,500}prValidation/);
-assert.match(projectTemplate, /PR #\{\{activeFixRequest\(\)\?\.prNumber\}\} créée/);
+assert.match(projectTemplate, /PR #\{\{activeFixRequest\(\)\?\.prNumber\}\}\{\{activeFixRequest\(\)\?\.status === 'VALIDATED' \? ' validée' : ' créée'\}\}/);
 assert.match(projectTemplate, /Valider la Pull Request/);
 assert.match(projectComponent, /this\.canOperate && request\?\.status === 'PR_CREATED'/);
 assert.match(projectComponent, /if \(this\.prValidationBusy \|\| !this\.canRequestPrValidation\(\) \|\| !this\.latestReport\?\.id\) return;/);

@@ -65,7 +65,8 @@ export interface RemediationIssue {
             <div style="font-size:12px;margin-bottom:4px;">
               <span *ngIf="i.severity" class="sev" [attr.data-sev]="sevKey(i.severity)">{{ i.severity | presentationLabel }}</span>
               <strong>{{ i.title }}</strong>
-              <span *ngIf="isValidated(i.id)" class="rc-badge-validated">✓ Validée</span>
+              <span *ngIf="isValidated(i.id)" class="rc-badge-validated">{{ mergeReady ? '✓ Correction validée' : '✓ Validée' }}</span>
+              <span *ngIf="isValidated(i.id) && mergeReady" class="rc-badge-pending">En attente de fusion</span>
               <a *ngIf="isValidated(i.id) && prUrl" class="rc-pr-link" [href]="prUrl" target="_blank" rel="noopener noreferrer">{{ prLabel || 'Voir la Pull Request' }}</a>
             </div>
             <div *ngIf="i.detail" class="rc-detail">{{ i.detail }}</div>
@@ -144,6 +145,11 @@ export interface RemediationIssue {
       letter-spacing: .04em; padding: 2px 7px; border-radius: 999px;
       background: var(--accent-green-bg); color: var(--accent-green);
     }
+    .rc-badge-pending {
+      display: inline-block; margin-left: 6px; font-size: 9.5px; font-weight: 700;
+      padding: 2px 7px; border-radius: 999px; color: var(--text-secondary);
+      border: 1px solid var(--border);
+    }
     .rc-pr-link {
       display: inline-block; margin-left: 6px; font-size: 10px; font-weight: 700;
       padding: 2px 7px; border-radius: 999px; text-decoration: none;
@@ -179,6 +185,7 @@ export class RemediationCardComponent implements OnChanges {
   @Input() validatedIds: readonly string[] | Set<string> = [];
   @Input() prUrl: string | null = null;
   @Input() prLabel = '';
+  @Input() mergeReady = false;
   @Output() correct = new EventEmitter<Set<string>>();
 
   selected = new Set<string>();

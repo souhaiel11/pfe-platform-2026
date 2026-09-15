@@ -823,8 +823,14 @@ export class IncidentDetailComponent implements OnInit, OnDestroy {
     return [];
   }
   validatedSonarIds(): Set<string> {
+    const fix = this.incident?.metadata?.fixRequest;
+    const batchIds = new Set(
+      (Array.isArray(fix?.findingIds) ? fix.findingIds : (fix?.findingId ? [fix.findingId] : []))
+        .map(String),
+    );
     return new Set(this.findingResultEntries()
-      .filter(e => String(e?.verdict ?? e?.result ?? '').toUpperCase() === 'VALID')
+      .filter(e => String(e?.verdict ?? e?.result ?? '').toUpperCase() === 'VALID'
+        && batchIds.has(String(e?.findingId)))
       .map(e => String(e.findingId)));
   }
   batchPrUrl(): string | null {
@@ -834,6 +840,15 @@ export class IncidentDetailComponent implements OnInit, OnDestroy {
   batchPrLabel(): string {
     const n = Number(this.incident?.metadata?.fixRequest?.prNumber);
     return Number.isInteger(n) && n > 0 ? `PR #${n}` : 'Voir la Pull Request';
+  }
+
+  // Utilise l'autorisation normalisée afin de conserver le déclassement
+  // stale-SHA de mergeAuthorization() vers INCONCLUSIVE.
+  isMergeReadySuccess(): boolean {
+    return this.prValidationRequest?.status === 'COMPLETED'
+      && this.prValidationRequest?.result === 'VALIDATED'
+      && this.mergeAuthorization()?.authorization === 'MERGE_READY'
+      && !!this.batchPrUrl();
   }
 
   // ── UI-1 : autorisation de merge + santé globale (LECTURE PURE) ─────────

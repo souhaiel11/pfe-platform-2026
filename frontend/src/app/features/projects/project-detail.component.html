@@ -313,6 +313,24 @@
 
         <!-- Action unique du batch de remédiation : jamais une action par finding. -->
         <div class="card mt-10" *ngIf="hasRealPr() && activeFixRequest()?.prNumber">
+          <div *ngIf="isMergeReadySuccess(); else regularPrState" role="status"
+               style="border-left:3px solid var(--accent-green);padding-left:16px;">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+              <div style="flex:1;min-width:240px;">
+                <div class="card-title" style="color:var(--accent-green);font-size:16px;">✓ Correction réussie</div>
+                <p style="margin:8px 0 4px;color:var(--text-primary);font-size:13px;font-weight:600;">
+                  La Pull Request #{{batchPrNumber()}} a été générée et validée avec succès.
+                </p>
+                <p style="margin:0;color:var(--text-secondary);font-size:12px;line-height:1.55;">
+                  La correction a passé les vérifications techniques et est maintenant prête à être fusionnée.
+                </p>
+              </div>
+              <span class="badge" style="color:var(--accent-green);border:1px solid var(--accent-green);background:transparent;">En attente de fusion</span>
+            </div>
+            <a *ngIf="batchPrUrl() as prUrl" class="btn btn-success btn-sm" [href]="prUrl"
+               target="_blank" rel="noopener noreferrer" style="margin-top:12px;">Voir la Pull Request</a>
+          </div>
+          <ng-template #regularPrState>
           <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
             <div>
               <div class="card-title">Pull Request de correction</div>
@@ -352,6 +370,7 @@
               </button>
             </div>
           </div>
+          </ng-template>
         </div>
 
         <!-- Verrou de cycle de vie : une PR de correction existe déjà pour cet
@@ -360,8 +379,15 @@
         <div class="card mt-10" *ngIf="hasRealPr()" role="note"
              style="border-left:3px solid var(--accent-blue);">
           <p style="margin:0;font-size:12.5px;color:var(--text-secondary);line-height:1.55;">
-            Une Pull Request de correction existe déjà pour cet incident.
-            Les autres problèmes seront traités lors d’un nouveau cycle après le prochain scan.
+            <ng-container *ngIf="isMergeReadySuccess(); else genericPrLock">
+              La correction sélectionnée a été validée avec succès.<br>
+              La Pull Request #{{batchPrNumber()}} est prête à être fusionnée.<br>
+              Les autres problèmes seront traités lors d’un nouveau cycle après le prochain scan.
+            </ng-container>
+            <ng-template #genericPrLock>
+              Une Pull Request de correction existe déjà pour cet incident.
+              Les autres problèmes seront traités lors d’un nouveau cycle après le prochain scan.
+            </ng-template>
           </p>
         </div>
 
@@ -455,7 +481,13 @@
                 <td style="font-size:10px;text-align:center">{{issue.line || '-'}}</td>
                 <td>
                   <div class="remediation-cell">
-                    <span *ngIf="isFindingValidated(issue)" class="remediation-badge badge-validated">✓ Validée</span>
+                    <ng-container *ngIf="isFindingMergeReady(issue); else ordinaryValidatedFinding">
+                      <span class="remediation-badge badge-validated">✓ Validé dans PR #{{batchPrNumber()}}</span>
+                      <span class="remediation-badge">En attente de fusion</span>
+                    </ng-container>
+                    <ng-template #ordinaryValidatedFinding>
+                      <span *ngIf="isFindingValidated(issue)" class="remediation-badge badge-validated">✓ Validée</span>
+                    </ng-template>
                     <span *ngIf="!isFindingValidated(issue) && findingCellStatus(issue)" class="remediation-badge">{{findingCellStatus(issue)}}</span>
                     <a *ngIf="showFindingPrLink(issue)" class="pr-link" [href]="batchPrUrl()" target="_blank" rel="noopener noreferrer"
                        (click)="$event.stopPropagation()" (keydown.enter)="$event.stopPropagation()"

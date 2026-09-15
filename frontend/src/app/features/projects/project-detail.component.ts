@@ -217,6 +217,28 @@ export class ProjectDetailComponent implements OnInit {
   activeFixRequest(): any { return this.latestReport?.metadata?.fixRequest || null; }
   prValidationRequest(): any { return this.latestReport?.metadata?.prValidationRequest || null; }
 
+  // Etat UX terminal de l'automatisation, distinct d'une fusion GitHub :
+  // toutes les preuves persistées doivent concorder et une vraie PR doit exister.
+  isMergeReadySuccess(): boolean {
+    const request = this.prValidationRequest();
+    const authorization = this.normalizedMergeAuthorization();
+    return request?.status === 'COMPLETED'
+      && request?.result === 'VALIDATED'
+      && authorization?.authorization === 'MERGE_READY'
+      && (!!this.batchPrUrl() || this.batchPrNumber() !== null);
+  }
+
+  private normalizedMergeAuthorization(): any {
+    const authorization = this.latestReport?.metadata?.validation?.mergeAuthorization;
+    if (!authorization) return null;
+    const forSha = String(authorization.forSha || '').toLowerCase();
+    const fix = this.activeFixRequest();
+    const targetSha = String(fix?.validationTargetSha || fix?.prHeadSha || '').toLowerCase();
+    return forSha && targetSha && forSha !== targetSha
+      ? { ...authorization, authorization: 'INCONCLUSIVE', authorizedSha: null }
+      : authorization;
+  }
+
   // ── Résumé compact de l'autorisation de merge (Option C) ───────────────
   // Même vocabulaire / couleur que l'écran incident (55418e3). Le détail
   // (raisons FR, santé globale, note « problèmes préexistants ») vit sur
@@ -229,7 +251,7 @@ export class ProjectDetailComponent implements OnInit {
     if (st === 'REQUESTED' || st === 'QUEUED' || st === 'RUNNING') {
       return { label: 'Analyse en cours', color: 'var(--accent-blue)' };
     }
-    const auth = this.latestReport?.metadata?.validation?.mergeAuthorization?.authorization;
+    const auth = this.normalizedMergeAuthorization()?.authorization;
     const map: Record<string, { label: string; color: string }> = {
       MERGE_READY:  { label: 'Autorisée pour fusion', color: 'var(--accent-green)' },
       BLOCKED:      { label: 'Bloquée',               color: 'var(--accent-red)' },
@@ -347,6 +369,9 @@ export class ProjectDetailComponent implements OnInit {
     return String(entry.verdict ?? entry.result ?? '').toUpperCase() || null;
   }
   isFindingValidated(finding: any): boolean { return this.findingVerdict(finding) === 'VALID'; }
+  isFindingMergeReady(finding: any): boolean {
+    return this.isMergeReadySuccess() && this.findingInActiveBatch(finding) && this.isFindingValidated(finding);
+  }
 
   // ── Provenance PR du batch de remédiation ──────────────────────────────
   // prUrl RÉEL stocké (fixRequest.prUrl, repli latestReport.prUrl) — jamais
