@@ -10,21 +10,38 @@ assert.equal(target.id, id);
 assert.equal(target.active, false, 'artifact is not an activation request');
 assert.equal(node('Webhook').parameters.path, 'wf2-r22e-test');
 assert.equal(node('Webhook').parameters.httpMethod, 'POST');
-assert.equal(target.nodes.length, 151);
-assert.equal(new Set(target.nodes.map(n => n.id)).size, 151);
-assert.equal(new Set(target.nodes.map(n => n.name)).size, 151);
+assert.equal(target.nodes.length, 152);
+assert.equal(new Set(target.nodes.map(n => n.id)).size, 152);
+assert.equal(new Set(target.nodes.map(n => n.name)).size, 152);
 const apiNodes = ['Expand Referenced API Sources','Fetch Referenced API Sources'];
-const added = [...apiNodes, ...apiNodes.map(n => 'Failure Envelope - ' + n)];
+const gateNodes = ['Validate Source Context Completeness'];
+const added = [...apiNodes, ...apiNodes.map(n => 'Failure Envelope - ' + n), ...gateNodes];
 const originalConnections = structuredClone(target.connections);
 for (const name of added) delete originalConnections[name];
 originalConnections['Fetch Finding Source Context'].main[0][0].node = 'Prepare Generic Remediation Plan';
 assert.deepEqual(originalConnections, base.connections, 'only bounded read-only API context inserted before planning');
-for (const name of apiNodes) {
-  assert.equal(node(name).onError,'continueErrorOutput');
-  assert.equal(target.connections[name].main[1][0].node,'Failure Envelope - '+name);
-  assert.equal(target.connections['Failure Envelope - '+name].main[0][0].node,'Prepare WF2 Failure Status');
-}
-const {id: fetchId,name: fetchName,position: fetchPosition,...fetchRest}=node('Fetch Referenced API Sources');
+
+// "Expand Referenced API Sources" keeps the original single-node envelope
+// pattern (own error output -> its own dedicated failure envelope).
+assert.equal(node('Expand Referenced API Sources').onError,'continueErrorOutput');
+assert.equal(target.connections['Expand Referenced API Sources'].main[1][0].node,'Failure Envelope - Expand Referenced API Sources');
+assert.equal(target.connections['Failure Envelope - Expand Referenced API Sources'].main[0][0].node,'Prepare WF2 Failure Status');
+
+// R23 -- "Fetch Referenced API Sources": BOTH outputs (success items and
+// per-item error items) now fan into one completeness gate first, so a
+// partial/0-of-N fetch can never reach the planner and can never race a
+// second, independent failure callback past the gate. Exactly one failure
+// envelope (the existing one, reused) and one continuation edge exist past
+// this node.
+assert.equal(node('Fetch Referenced API Sources').onError,'continueErrorOutput');
+assert.equal(target.connections['Fetch Referenced API Sources'].main[0][0].node,'Validate Source Context Completeness');
+assert.equal(target.connections['Fetch Referenced API Sources'].main[1][0].node,'Validate Source Context Completeness');
+assert.equal(node('Validate Source Context Completeness').onError,'continueErrorOutput');
+assert.equal(target.connections['Validate Source Context Completeness'].main[0][0].node,'Prepare Generic Remediation Plan');
+assert.equal(target.connections['Validate Source Context Completeness'].main[1][0].node,'Failure Envelope - Fetch Referenced API Sources');
+assert.equal(target.connections['Failure Envelope - Fetch Referenced API Sources'].main[0][0].node,'Prepare WF2 Failure Status');
+
+const {id: fetchId,name: fetchName,position: fetchPosition,retryOnFail: _fetchRetry,maxTries: _fetchMaxTries,waitBetweenTries: _fetchWait,...fetchRest}=node('Fetch Referenced API Sources');
 const {id: oldId,name: oldName,position: oldPosition,...oldFetchRest}=node('Fetch Finding Source Context');
 assert.deepEqual(fetchRest,oldFetchRest,'same native read-only GitHub node, credentials and exact-SHA reference');
 // R74/R76 -- bounded transient-network retry (wf2-resilience.spec.mjs)
@@ -32,7 +49,10 @@ assert.deepEqual(fetchRest,oldFetchRest,'same native read-only GitHub node, cred
 // non-mutating nodes, after the identity promotion. Excluded from the
 // strict byte-parity check below on that basis alone -- every other
 // property must still match the base exactly, same as any other node.
-const RETRY_HARDENED = ['Get Main Branch SHA1', 'Independent Semantic Review', 'de Patch - HTTP Request'];
+// R23 -- "Generate Remediation Plan" (the planner's pure outbound Claude
+// call) receives the same bounded retry, following the proven EAI_AGAIN
+// failure in execution 1997.
+const RETRY_HARDENED = ['Get Main Branch SHA1', 'Independent Semantic Review', 'de Patch - HTTP Request', 'Generate Remediation Plan'];
 // R75/R76 -- proven, narrowly-scoped jsCode-only rewrites: R75's guard-aware
 // raw-cast detection (replacing the old bare structural regex) and R76's
 // bounded verificationEvidence summary (Persist Verification Failure, built

@@ -36,7 +36,13 @@ const MUTATING_NODES = [
   'Save Execution Result to Backend', 'Log Fetch Error', 'Persist File Update Failure',
   'Persist PR Creation Failure', 'Persist WF2 Failure Status',
 ];
-const RETRY_HARDENED_NODES = ['Get Main Branch SHA1', 'Independent Semantic Review', 'de Patch - HTTP Request'];
+// R23 -- execution 1997 (fixRequest 591853f3-9538-4df7-9b2d-7df1f8fca1f8)
+// proved the same transient-DNS profile on two more non-mutating nodes:
+// "Fetch Referenced API Sources" (read-only GitHub file GET; DNS error
+// fetching referenced source files) and "Generate Remediation Plan" (the
+// planner's pure outbound Claude call; getaddrinfo EAI_AGAIN
+// api.anthropic.com). Same bounded retry shape as the three above.
+const RETRY_HARDENED_NODES = ['Get Main Branch SHA1', 'Independent Semantic Review', 'de Patch - HTTP Request', 'Fetch Referenced API Sources', 'Generate Remediation Plan'];
 
 // ── A/B. Bounded retry enabled on exactly the two target nodes ─────────────
 for (const name of RETRY_HARDENED_NODES) {
@@ -90,11 +96,24 @@ for (const name of RETRY_HARDENED_NODES) {
 assert.ok(node('Failure Envelope - Get Main Branch SHA1'), 'failure envelope for Get Main Branch SHA1 must remain');
 assert.ok(node('Failure Envelope - Independent Semantic Review'), 'failure envelope for Independent Semantic Review must remain');
 assert.ok(node('Failure Envelope - de Patch - HTTP Request'), 'failure envelope for de Patch - HTTP Request must remain');
+assert.ok(node('Failure Envelope - Generate Remediation Plan'), 'failure envelope for Generate Remediation Plan must remain');
 const errorOutputTargets = (name) => (wf.connections[name]?.main?.[1] || []).map(e => e.node);
 assert.ok(errorOutputTargets('Get Main Branch SHA1').length > 0, 'Get Main Branch SHA1 error output must still be wired');
 assert.ok(errorOutputTargets('Independent Semantic Review').length > 0, 'Independent Semantic Review error output must still be wired');
 assert.deepEqual(errorOutputTargets('de Patch - HTTP Request'), ['Failure Envelope - de Patch - HTTP Request'],
   'de Patch - HTTP Request error output routing must be unchanged');
+assert.deepEqual(errorOutputTargets('Generate Remediation Plan'), ['Failure Envelope - Generate Remediation Plan'],
+  'Generate Remediation Plan error output routing must be unchanged');
+// R23 -- "Fetch Referenced API Sources" no longer routes error items
+// directly to its own failure envelope: both outputs now fan into the
+// "Validate Source Context Completeness" gate first (wf2-source-context-
+// completeness.spec.mjs covers the gate's own pass/fail behavior in depth).
+assert.deepEqual(errorOutputTargets('Fetch Referenced API Sources'), ['Validate Source Context Completeness'],
+  'Fetch Referenced API Sources error output must route through the completeness gate');
+assert.deepEqual((wf.connections['Fetch Referenced API Sources']?.main?.[0] || []).map(e => e.node), ['Validate Source Context Completeness'],
+  'Fetch Referenced API Sources success output must route through the completeness gate');
+assert.ok(node('Validate Source Context Completeness'), 'source-context completeness gate must exist');
+assert.equal(node('Validate Source Context Completeness').onError, 'continueErrorOutput');
 assert.deepEqual((wf.connections['de Patch - HTTP Request']?.main?.[0] || []).map(e => e.node), ['Parse - Code Patch Output'],
   'de Patch - HTTP Request success output routing must be unchanged');
 
@@ -148,8 +167,9 @@ assert.ok(!/pulls\/[^"]*merge/.test(blob));
 assert.ok(!/refs\/heads\/main[^-]/.test(blob));
 assert.doesNotMatch(blob, /httpRequestWithAuthentication|requestWithAuthenticationPaginated|(?:this\.)?helpers\./);
 
-// Structural identity includes the bounded API reader and its failure envelopes.
-assert.equal(wf.nodes.length, 151);
-assert.equal(new Set(wf.nodes.map(n => n.id)).size, 151);
+// Structural identity includes the bounded API reader, its failure
+// envelopes, and (R23) the source-context completeness gate.
+assert.equal(wf.nodes.length, 152);
+assert.equal(new Set(wf.nodes.map(n => n.id)).size, 152);
 
 console.log('WF2 resilience hardening (bounded retry on Get Main Branch SHA1 / Independent Semantic Review / de Patch - HTTP Request), cases A-H: PASS');

@@ -1,6 +1,6 @@
 [
   {
-    "updatedAt": "2026-09-05T18:53:32.671Z",
+    "updatedAt": "2026-09-15T10:15:14.083Z",
     "createdAt": "2026-07-23T17:59:09.457Z",
     "name": "WF2 - Git Patch & PR v5 CANONICAL (R22E + Brique 5)",
     "description": null,
@@ -1466,7 +1466,10 @@
           "options": {
             "timeout": 180000
           }
-        }
+        },
+        "retryOnFail": true,
+        "maxTries": 3,
+        "waitBetweenTries": 1000
       },
       {
         "id": "d1cfcfc3-1518-4019-9c43-1283f76cd276",
@@ -3080,7 +3083,10 @@
             "name": "GitHub account"
           }
         },
-        "onError": "continueErrorOutput"
+        "onError": "continueErrorOutput",
+        "retryOnFail": true,
+        "maxTries": 3,
+        "waitBetweenTries": 1000
       },
       {
         "id": "7485aca1-3043-42c4-a79f-990998bc90c9",
@@ -3094,6 +3100,21 @@
         "onError": "continueErrorOutput",
         "parameters": {
           "jsCode": "const input=$input.first().json||{};const raw=input.error??input;const err=typeof raw==='string'?{message:raw}:raw||{};const rawSummary=String(input.failureSummary||err.message||input.message||input.reason||raw||'workflow execution error');const failureSummary=rawSummary.replace(/[\\r\\n]+/g,' ').replace(/(?:token|password|secret|authorization)\\s*[=:]\\s*[^ ,;]+/ig,'$1=[REDACTED]').slice(0,500);const embedded=rawSummary.match(/^([A-Z][A-Z0-9_]+)(?::|$)/)?.[1];const failureCode=String(input.failureCode||embedded||'WF2_EXECUTION_ERROR').slice(0,120);const captured=$items('Capture Correlation Envelope',0,0);const correlationEnvelope=captured?.[0]?.json?.correlationEnvelope||{};return [{json:{correlationEnvelope,executionId:String($execution.id),failedNode:\"Fetch Referenced API Sources\",failureCode,failureSummary}}];"
+        }
+      },
+      {
+        "id": "6615f36d-195f-4666-ac28-c97fe66bf4a0",
+        "name": "Validate Source Context Completeness",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          6620,
+          1220
+        ],
+        "onError": "continueErrorOutput",
+        "parameters": {
+          "mode": "runOnceForAllItems",
+          "jsCode": "const requested=$('Expand Referenced API Sources').all().map(i=>String(i.json.target_file_path||''));\nconst items=$input.all();const fetchedPaths=new Set();const fetched=[];\nfor(const item of items){const j=item.json||{};if(!j.error&&j.path){const p=String(j.path);if(!fetchedPaths.has(p)){fetchedPaths.add(p);fetched.push(item)}}}\nconst missing=requested.filter(p=>!fetchedPaths.has(p));\nif(missing.length>0)throw new Error('SOURCE_API_CONTEXT_INCOMPLETE: '+JSON.stringify({requestedCount:requested.length,fetchedCount:fetchedPaths.size,missing}));\nreturn fetched;"
         }
       }
     ],
@@ -5166,6 +5187,24 @@
         ]
       },
       "Fetch Referenced API Sources": {
+        "main": [
+          [
+            {
+              "node": "Validate Source Context Completeness",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Validate Source Context Completeness",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Validate Source Context Completeness": {
         "main": [
           [
             {

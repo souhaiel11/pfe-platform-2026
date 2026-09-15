@@ -108,11 +108,21 @@ function run({ guardJson, verificationJson, manifestJson = {}, envelopeJson = {}
 {
   const base = JSON.parse(readFileSync(new URL('../pending-live-update/wf2-git-patch-pr-v4-1-9adcV31eaIgJyMR0.CANONICAL-FINAL.json', import.meta.url)))[0];
   const connections = structuredClone(wf.connections);
-  for (const name of ['Expand Referenced API Sources','Fetch Referenced API Sources']) {
-    assert.equal(connections[name].main[1][0].node,'Failure Envelope - '+name);
-    assert.equal(connections['Failure Envelope - '+name].main[0][0].node,'Prepare WF2 Failure Status');
-    delete connections[name]; delete connections['Failure Envelope - '+name];
-  }
+  assert.equal(connections['Expand Referenced API Sources'].main[1][0].node,'Failure Envelope - Expand Referenced API Sources');
+  assert.equal(connections['Failure Envelope - Expand Referenced API Sources'].main[0][0].node,'Prepare WF2 Failure Status');
+  delete connections['Expand Referenced API Sources']; delete connections['Failure Envelope - Expand Referenced API Sources'];
+  // R23 -- "Fetch Referenced API Sources" now fans both outputs into the
+  // "Validate Source Context Completeness" gate before either the planner
+  // or the shared failure envelope, so partial context can't reach
+  // "Prepare Generic Remediation Plan" and the gate/fetch failure paths
+  // can't double-fire. Same reused failure envelope -> Prepare WF2 Failure
+  // Status target as every other node in this region.
+  assert.equal(connections['Fetch Referenced API Sources'].main[0][0].node,'Validate Source Context Completeness');
+  assert.equal(connections['Fetch Referenced API Sources'].main[1][0].node,'Validate Source Context Completeness');
+  assert.equal(connections['Validate Source Context Completeness'].main[0][0].node,'Prepare Generic Remediation Plan');
+  assert.equal(connections['Validate Source Context Completeness'].main[1][0].node,'Failure Envelope - Fetch Referenced API Sources');
+  assert.equal(connections['Failure Envelope - Fetch Referenced API Sources'].main[0][0].node,'Prepare WF2 Failure Status');
+  delete connections['Fetch Referenced API Sources']; delete connections['Failure Envelope - Fetch Referenced API Sources']; delete connections['Validate Source Context Completeness'];
   connections['Fetch Finding Source Context'].main[0][0].node='Prepare Generic Remediation Plan';
   assert.deepEqual(connections, base.connections, 'existing failure and Git routing unchanged');
 }
