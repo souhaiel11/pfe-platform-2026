@@ -37,7 +37,7 @@ const node = name => wf.nodes.find(n => n.name === name);
 
 // ── 0. Node count unchanged: no new node was required for this hardening. ──
 {
-  assert.equal(wf.nodes.length, 152, 'no new node added -- logic embedded in existing Code nodes');
+  assert.equal(wf.nodes.length, 155, 'DTO checks retain their node; three bounded dependency-grounding nodes added');
 }
 
 // ── Real execution-1998 candidates (verbatim, not paraphrased) ─────────────

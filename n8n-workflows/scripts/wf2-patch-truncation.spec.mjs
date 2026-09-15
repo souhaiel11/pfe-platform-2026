@@ -59,7 +59,9 @@ const planned = { target_file_path: targetFile, fileOperation: 'MODIFY', remedia
 const makeRequest = new Function('$json', '$', 'Buffer', node('Prepare - Code Patch Body').parameters.jsCode);
 const input = { path: targetFile, content: Buffer.from('class TaskService {}').toString('base64') };
 const out = makeRequest(input, name => name === 'Prepare Batch Context'
-  ? { first: () => ({ json: gate }) } : { all: () => [{ json: planned }] }, Buffer).json;
+  ? { first: () => ({ json: gate }) } : name === 'Prepare Generic Remediation Plan'
+    ? {first:()=>({json:{remediationContract:{sourceSnapshots:[],sourceGrounding:{initialPaths:[],groundedRelationshipApis:[]}}}})}
+    : { all: () => [{ json: planned }] }, Buffer).json;
 assert.equal(out.llmRequestBody.model, 'claude-sonnet-5');
 assert.equal(out.llmRequestBody.max_tokens, 16384);
 assert.ok(out.llmRequestBody.max_tokens < 128000, 'bounded below documented Sonnet 5 output maximum');

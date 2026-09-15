@@ -10,16 +10,25 @@ assert.equal(target.id, id);
 assert.equal(target.active, false, 'artifact is not an activation request');
 assert.equal(node('Webhook').parameters.path, 'wf2-r22e-test');
 assert.equal(node('Webhook').parameters.httpMethod, 'POST');
-assert.equal(target.nodes.length, 152);
-assert.equal(new Set(target.nodes.map(n => n.id)).size, 152);
-assert.equal(new Set(target.nodes.map(n => n.name)).size, 152);
+assert.equal(target.nodes.length, 155);
+assert.equal(new Set(target.nodes.map(n => n.id)).size, 155);
+assert.equal(new Set(target.nodes.map(n => n.name)).size, 155);
 const apiNodes = ['Expand Referenced API Sources','Fetch Referenced API Sources'];
 const gateNodes = ['Validate Source Context Completeness'];
-const added = [...apiNodes, ...apiNodes.map(n => 'Failure Envelope - ' + n), ...gateNodes];
+const dependencyNodes=['Expand Required Dependency Sources','Fetch Required Dependency Sources','Validate Required Dependency Sources'];
+const added = [...apiNodes, ...apiNodes.map(n => 'Failure Envelope - ' + n), ...gateNodes, ...dependencyNodes];
 const originalConnections = structuredClone(target.connections);
 for (const name of added) delete originalConnections[name];
 originalConnections['Fetch Finding Source Context'].main[0][0].node = 'Prepare Generic Remediation Plan';
-assert.deepEqual(originalConnections, base.connections, 'only bounded read-only API context inserted before planning');
+// Atomic review moves exactly three success edges and reuses the manifest failure envelope.
+assert.equal(target.connections['Generic Candidate Preflight'].main[0][0].node, 'Hash Candidate File Content');
+assert.equal(target.connections['Prepare Candidate Manifest'].main[0][0].node, 'Independent Semantic Review');
+assert.equal(target.connections['Enforce Independent Review'].main[0][0].node, 'Hash Candidate Manifest');
+assert.deepEqual(target.connections['Prepare Candidate Manifest'].main[1], [{node:'Failure Envelope - Assemble Candidate Manifest',type:'main',index:0}]);
+originalConnections['Generic Candidate Preflight'].main[0][0].node = 'Independent Semantic Review';
+originalConnections['Prepare Candidate Manifest'].main = [[{node:'Hash Candidate Manifest',type:'main',index:0}]];
+originalConnections['Enforce Independent Review'].main[0][0].node = 'Hash Candidate File Content';
+assert.deepEqual(originalConnections, base.connections, 'only source completeness and atomic candidate review topology changes');
 
 // "Expand Referenced API Sources" keeps the original single-node envelope
 // pattern (own error output -> its own dedicated failure envelope).
@@ -37,7 +46,13 @@ assert.equal(node('Fetch Referenced API Sources').onError,'continueErrorOutput')
 assert.equal(target.connections['Fetch Referenced API Sources'].main[0][0].node,'Validate Source Context Completeness');
 assert.equal(target.connections['Fetch Referenced API Sources'].main[1][0].node,'Validate Source Context Completeness');
 assert.equal(node('Validate Source Context Completeness').onError,'continueErrorOutput');
-assert.equal(target.connections['Validate Source Context Completeness'].main[0][0].node,'Prepare Generic Remediation Plan');
+assert.equal(target.connections['Validate Source Context Completeness'].main[0][0].node,'Expand Required Dependency Sources');
+assert.deepEqual(target.connections['Expand Required Dependency Sources'].main,[[{node:'Fetch Required Dependency Sources',type:'main',index:0}],[{node:'Failure Envelope - Fetch Referenced API Sources',type:'main',index:0}]]);
+assert.deepEqual(target.connections['Fetch Required Dependency Sources'].main,[[{node:'Validate Required Dependency Sources',type:'main',index:0}],[{node:'Validate Required Dependency Sources',type:'main',index:0}]]);
+assert.deepEqual(target.connections['Validate Required Dependency Sources'].main,[[{node:'Prepare Generic Remediation Plan',type:'main',index:0}],[{node:'Failure Envelope - Fetch Referenced API Sources',type:'main',index:0}]]);
+assert.deepEqual(node('Fetch Required Dependency Sources').parameters,node('Fetch Referenced API Sources').parameters);
+assert.deepEqual(node('Fetch Required Dependency Sources').credentials,node('Fetch Referenced API Sources').credentials);
+assert.equal(node('Fetch Required Dependency Sources').maxTries,3);
 assert.equal(target.connections['Validate Source Context Completeness'].main[1][0].node,'Failure Envelope - Fetch Referenced API Sources');
 assert.equal(target.connections['Failure Envelope - Fetch Referenced API Sources'].main[0][0].node,'Prepare WF2 Failure Status');
 
@@ -62,7 +77,7 @@ const RETRY_HARDENED = ['Get Main Branch SHA1', 'Independent Semantic Review', '
 // exactly.
 // Patch-output hardening changes only request construction and parsing; dedicated tests
 // verify truncation, complete JSON, schema, target identity and bounded output budget.
-const JSCODE_HARDENED = ['Generic Candidate Preflight', 'Persist Verification Failure', 'Prepare - Code Patch Body', 'Parse - Code Patch Output', 'Prepare Generic Remediation Plan', 'Prepare WF2 Failure Status'];
+const JSCODE_HARDENED = ['Generic Candidate Preflight', 'Persist Verification Failure', 'Prepare - Code Patch Body', 'Parse - Code Patch Output', 'Prepare Generic Remediation Plan', 'Validate Generic Remediation Plan', 'Prepare WF2 Failure Status', 'Accumulate Candidate File', 'Prepare Candidate Manifest', 'Enforce Independent Review', 'Failure Envelope - Assemble Candidate Manifest'];
 for (const n of target.nodes) {
   if (added.includes(n.name)) {
     assert.doesNotMatch(JSON.stringify(n.parameters), /httpRequestWithAuthentication|requestWithAuthenticationPaginated|(?:this\.)?helpers\./);
@@ -79,6 +94,10 @@ for (const n of target.nodes) {
     const { jsCode, ...restParams } = parameters;
     const { parameters: prevParameters, ...prevRestNode } = previous;
     const { jsCode: prevJsCode, ...prevRestParams } = prevParameters;
+    if (n.name === 'Prepare Candidate Manifest') {
+      assert.equal(restNode.onError, 'continueErrorOutput');
+      delete restNode.onError;
+    }
     assert.deepEqual(restNode, prevRestNode, `${n.name}: only parameters.jsCode may differ from base`);
     assert.deepEqual(restParams, prevRestParams, `${n.name}: only jsCode may differ from base`);
     assert.notEqual(jsCode, prevJsCode, `${n.name}: jsCode was expected to change (R75/R76 fix)`);

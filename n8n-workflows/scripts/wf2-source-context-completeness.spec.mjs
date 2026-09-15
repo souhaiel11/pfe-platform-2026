@@ -48,7 +48,7 @@ const errorItem = (path, message = 'DNS error') => ({ json: { target_file_path: 
   assert.equal(gate.onError, 'continueErrorOutput');
   const gateTargets0 = (wf.connections['Validate Source Context Completeness']?.main?.[0] || []).map(e => e.node);
   const gateTargets1 = (wf.connections['Validate Source Context Completeness']?.main?.[1] || []).map(e => e.node);
-  assert.deepEqual(gateTargets0, ['Prepare Generic Remediation Plan'], 'only the complete-context path reaches the planner');
+  assert.deepEqual(gateTargets0, ['Expand Required Dependency Sources'], 'initial completeness precedes the single bounded dependency hop');
   assert.deepEqual(gateTargets1, ['Failure Envelope - Fetch Referenced API Sources'], 'incomplete context routes to the single, reused failure envelope');
   // No other edge in the workflow targets the planner from this region --
   // "Prepare Generic Remediation Plan" has exactly one inbound edge.
@@ -56,7 +56,7 @@ const errorItem = (path, message = 'DNS error') => ({ json: { target_file_path: 
   for (const [source, outputs] of Object.entries(wf.connections)) {
     for (const port of outputs.main || []) for (const edge of port || []) if (edge.node === 'Prepare Generic Remediation Plan') plannerInbound.push(source);
   }
-  assert.deepEqual(plannerInbound, ['Validate Source Context Completeness'], 'planner is reachable only through the completeness gate');
+  assert.deepEqual(plannerInbound, ['Validate Required Dependency Sources'], 'planner is reachable only through final dependency completeness after the R23 gate');
 }
 
 // ── Test 12: complete source set (3/3) -- gate passes, planner receives

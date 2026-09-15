@@ -119,11 +119,23 @@ function run({ guardJson, verificationJson, manifestJson = {}, envelopeJson = {}
   // Status target as every other node in this region.
   assert.equal(connections['Fetch Referenced API Sources'].main[0][0].node,'Validate Source Context Completeness');
   assert.equal(connections['Fetch Referenced API Sources'].main[1][0].node,'Validate Source Context Completeness');
-  assert.equal(connections['Validate Source Context Completeness'].main[0][0].node,'Prepare Generic Remediation Plan');
+  assert.equal(connections['Validate Source Context Completeness'].main[0][0].node,'Expand Required Dependency Sources');
+  assert.deepEqual(connections['Expand Required Dependency Sources'].main,[[{node:'Fetch Required Dependency Sources',type:'main',index:0}],[{node:'Failure Envelope - Fetch Referenced API Sources',type:'main',index:0}]]);
+  assert.deepEqual(connections['Fetch Required Dependency Sources'].main,[[{node:'Validate Required Dependency Sources',type:'main',index:0}],[{node:'Validate Required Dependency Sources',type:'main',index:0}]]);
+  assert.deepEqual(connections['Validate Required Dependency Sources'].main,[[{node:'Prepare Generic Remediation Plan',type:'main',index:0}],[{node:'Failure Envelope - Fetch Referenced API Sources',type:'main',index:0}]]);
+  for(const name of ['Expand Required Dependency Sources','Fetch Required Dependency Sources','Validate Required Dependency Sources']) delete connections[name];
   assert.equal(connections['Validate Source Context Completeness'].main[1][0].node,'Failure Envelope - Fetch Referenced API Sources');
   assert.equal(connections['Failure Envelope - Fetch Referenced API Sources'].main[0][0].node,'Prepare WF2 Failure Status');
   delete connections['Fetch Referenced API Sources']; delete connections['Failure Envelope - Fetch Referenced API Sources']; delete connections['Validate Source Context Completeness'];
   connections['Fetch Finding Source Context'].main[0][0].node='Prepare Generic Remediation Plan';
+  // Atomic review intentionally moves these three success edges before verification.
+  assert.equal(connections['Generic Candidate Preflight'].main[0][0].node,'Hash Candidate File Content');
+  assert.equal(connections['Prepare Candidate Manifest'].main[0][0].node,'Independent Semantic Review');
+  assert.equal(connections['Enforce Independent Review'].main[0][0].node,'Hash Candidate Manifest');
+  assert.deepEqual(connections['Prepare Candidate Manifest'].main[1],[{node:'Failure Envelope - Assemble Candidate Manifest',type:'main',index:0}]);
+  connections['Generic Candidate Preflight'].main[0][0].node='Independent Semantic Review';
+  connections['Prepare Candidate Manifest'].main=[[{node:'Hash Candidate Manifest',type:'main',index:0}]];
+  connections['Enforce Independent Review'].main[0][0].node='Hash Candidate File Content';
   assert.deepEqual(connections, base.connections, 'existing failure and Git routing unchanged');
 }
 

@@ -42,7 +42,7 @@ const MUTATING_NODES = [
 // fetching referenced source files) and "Generate Remediation Plan" (the
 // planner's pure outbound Claude call; getaddrinfo EAI_AGAIN
 // api.anthropic.com). Same bounded retry shape as the three above.
-const RETRY_HARDENED_NODES = ['Get Main Branch SHA1', 'Independent Semantic Review', 'de Patch - HTTP Request', 'Fetch Referenced API Sources', 'Generate Remediation Plan'];
+const RETRY_HARDENED_NODES = ['Get Main Branch SHA1', 'Independent Semantic Review', 'de Patch - HTTP Request', 'Fetch Referenced API Sources', 'Fetch Required Dependency Sources', 'Generate Remediation Plan'];
 
 // ── A/B. Bounded retry enabled on exactly the two target nodes ─────────────
 for (const name of RETRY_HARDENED_NODES) {
@@ -113,6 +113,9 @@ assert.deepEqual(errorOutputTargets('Fetch Referenced API Sources'), ['Validate 
 assert.deepEqual((wf.connections['Fetch Referenced API Sources']?.main?.[0] || []).map(e => e.node), ['Validate Source Context Completeness'],
   'Fetch Referenced API Sources success output must route through the completeness gate');
 assert.ok(node('Validate Source Context Completeness'), 'source-context completeness gate must exist');
+assert.deepEqual(errorOutputTargets('Fetch Required Dependency Sources'),['Validate Required Dependency Sources']);
+assert.equal(node('Fetch Required Dependency Sources').parameters.operation,'get');
+assert.equal(node('Fetch Required Dependency Sources').maxTries,3);
 assert.equal(node('Validate Source Context Completeness').onError, 'continueErrorOutput');
 assert.deepEqual((wf.connections['de Patch - HTTP Request']?.main?.[0] || []).map(e => e.node), ['Parse - Code Patch Output'],
   'de Patch - HTTP Request success output routing must be unchanged');
@@ -169,7 +172,7 @@ assert.doesNotMatch(blob, /httpRequestWithAuthentication|requestWithAuthenticati
 
 // Structural identity includes the bounded API reader, its failure
 // envelopes, and (R23) the source-context completeness gate.
-assert.equal(wf.nodes.length, 152);
-assert.equal(new Set(wf.nodes.map(n => n.id)).size, 152);
+assert.equal(wf.nodes.length, 155);
+assert.equal(new Set(wf.nodes.map(n => n.id)).size, 155);
 
 console.log('WF2 resilience hardening (bounded retry on Get Main Branch SHA1 / Independent Semantic Review / de Patch - HTTP Request), cases A-H: PASS');

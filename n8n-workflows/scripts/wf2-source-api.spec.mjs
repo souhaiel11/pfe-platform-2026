@@ -18,12 +18,23 @@ assert.ok(!expanded.some(i=>i.json.target_file_path.includes('TaskRepository')),
 const refs=node('Fetch Referenced API Sources').parameters.additionalParameters.reference;
 assert.match(refs,/Lookup Remediation Branch/);assert.match(refs,/body\?\.object\?\.sha/);assert.match(refs,/\.baseSha/);
 const target=controller.file;
-const plan={findingId:'f',target:{file:target,line:34},filesToModify:[target],filesToCreate:[],requiredChanges:['Explicit DTO to entity mapping'],remediationIntent:'DTO mapping'};
+const dependencyFixture=JSON.parse(readFileSync(new URL('./fixtures/wf2-relationship-source-grounding.json',import.meta.url)));
+const depCtx={...ctx,baseSha:fixture.sourceCommitSha,repositoryPolicy:{existingFiles:dependencyFixture.repositoryTree}};
+const dependencyRequests=new Function('$input','$','Buffer',node('Expand Required Dependency Sources').parameters.jsCode)(
+ {all:()=>fixture.sources.map(s=>({json:{path:s.file,content:Buffer.from(s.content).toString('base64')}}))},
+ name=>({first:()=>({json:name==='Lookup Remediation Branch'?{statusCode:404}:depCtx})}),Buffer);
+const dependencyItems=dependencyFixture.sources.map(s=>({json:{path:s.path,sha:s.sha,content:Buffer.from(s.content).toString('base64')}}));
+const grounded=new Function('$input','$','Buffer',node('Validate Required Dependency Sources').parameters.jsCode)(
+ {all:()=>dependencyItems},()=>({all:()=>dependencyRequests}),Buffer);
+const sourceGrounding=grounded[0].json.sourceGrounding;
+const expandedSources=dependencyFixture.sources.map(s=>({file:s.path,content:s.content}));
+const plan={findingId:'f',target:{file:target,line:34},filesToModify:[target],filesToCreate:[],requiredChanges:['Explicit DTO to entity mapping'],remediationIntent:'DTO mapping',requiredRelationshipApis:sourceGrounding.groundedRelationshipApis};
 const planned={target_file_path:target,fileOperation:'MODIFY',remediationPlans:[plan],plannedFiles:[target]};
 function prepare(sources){return new Function('$json','$','Buffer',node('Prepare - Code Patch Body').parameters.jsCode)(
- {path:target,content:Buffer.from(controller.content).toString('base64')},name=>({first:()=>({json:name==='Prepare Generic Remediation Plan'?{remediationContract:{sourceSnapshots:sources}}:ctx}),all:()=>[{json:planned}]}),Buffer).json;}
-const result=prepare(fixture.sources);
-assert.deepEqual(result.completePlan.sourceApiContext,fixture.sources);
+ {path:target,content:Buffer.from(controller.content).toString('base64')},name=>({first:()=>({json:name==='Prepare Generic Remediation Plan'?{remediationContract:{sourceSnapshots:sources,sourceGrounding}}:ctx}),all:()=>[{json:planned}]}),Buffer).json;}
+assert.throws(()=>prepare(fixture.sources),/SOURCE_API_CONTEXT_INCOMPLETE/,'old three-file source context no longer permits relationship generation');
+const result=prepare(expandedSources);
+assert.deepEqual(result.completePlan.sourceApiContext,expandedSources);
 assert.match(result.llmRequestBody.messages[0].content,/getStatus/);
 assert.match(result.llmRequestBody.messages[0].content,/setStatus/);
 const system=result.llmRequestBody.system;
