@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import {readFileSync,writeFileSync} from 'node:fs';
 import {randomUUID} from 'node:crypto';
+import {hardenFixH} from './harden-wf2-fix-h-semantic-policy.mjs';
 const read = name => readFileSync(new URL('./lib/'+name,import.meta.url),'utf8');
 export const groundingInstruction = ' Relationship source grounding is mandatory. relationshipOperations describes ONLY relationships touched by this plan; do not list unrelated relationships merely because they exist in source context. For every operation, copy the exact grounded relationship identity tuple verbatim from sourceGrounding.groundedRelationshipApis: ownerPath is the exact owner source path, field is the exact relationship field, and relatedEntityType is the exact fully-qualified TARGET entity type from evidence (the proof entityType), NOT the owner entity. Do not invent or shorten fully-qualified types. For the supplied Task.user evidence this means ownerPath=src/main/java/com/pfe/devsecops/model/Task.java, field=user, relatedEntityType=com.pfe.devsecops.model.User; DO NOT output Task as relatedEntityType. Use RESOLVE_BY_ID only when the plan will perform a repository lookup, with a non-null requiredApi copied exactly from sourceGrounding.groundedRelationshipApis and whose entityType equals relatedEntityType. Use PRESERVE when the existing association remains unchanged without a lookup, with requiredApi null. For CREATE S4684 use RESOLVE_BY_ID with the exact UserRepository.findById(Long) proof; for UPDATE S4684 use PRESERVE with requiredApi null. requiredRelationshipApis must equal exactly the deduplicated non-null requiredApi values used by this plan\'s API-consuming relationshipOperations. Only fetched declarations plus the supplied audited inheritanceContext prove inherited APIs; repository filenames and framework naming conventions do not. Do not invent UserService or repository methods. No new User(userId), fake/stub entities or speculative API calls unless fetched project convention explicitly proves support. If a required relationship or API is absent or ambiguous, return MANUAL_OR_SPECIALIST/CONTEXT_REQUIRED rather than guess.';
 const apiProofSchema = `{type:'object',additionalProperties:false,required:['repositoryType','repositorySourcePath','entityType','method','idType'],properties:{repositoryType:{type:'string'},repositorySourcePath:{type:'string'},entityType:{type:'string'},method:{type:'string'},idType:{type:'string'}}}`;
@@ -93,12 +94,13 @@ export function hardenGrounding(w) {
     patch.jsCode=patch.jsCode.slice(0,patchStart)+relationshipPatchGuard.trim()+'\n\n'+patch.jsCode.slice(patchEnd);
     if(!patch.jsCode.includes('relationshipOperations:plans.flatMap'))
       patch.jsCode=patch.jsCode.replace('const completePlan={sourceApiContext,sourceGrounding,','const completePlan={sourceApiContext,sourceGrounding,relationshipOperations:plans.flatMap(plan=>plan.relationshipOperations||[]),');
+    const groundingStatement='llmRequestBody.system+='+JSON.stringify(groundingInstruction)+';\n';
+    patch.jsCode=patch.jsCode.replaceAll(groundingStatement,'');
     const requestGuard=patch.jsCode.indexOf("if(!llmRequestBody||typeof llmRequestBody!=='object')");
-    const instructionStart=patch.jsCode.lastIndexOf('llmRequestBody.system+=',requestGuard);
-    assert.ok(instructionStart>=0&&requestGuard>instructionStart,'patch grounding instruction missing');
-    patch.jsCode=patch.jsCode.slice(0,instructionStart)+'llmRequestBody.system+='+JSON.stringify(groundingInstruction)+';\n'+patch.jsCode.slice(requestGuard);
+    assert.ok(requestGuard>=0,'patch grounding instruction anchor missing');
+    patch.jsCode=patch.jsCode.slice(0,requestGuard)+groundingStatement+patch.jsCode.slice(requestGuard);
     assert.equal(w.nodes.length,155);
-    return w;
+    return hardenFixH(w);
   }
   assert.equal(w.nodes.length,152);
   const edge=name=>({node:name,type:'main',index:0});
@@ -129,7 +131,7 @@ export function hardenGrounding(w) {
   patch.jsCode=patch.jsCode.replace("if(!llmRequestBody||typeof llmRequestBody!=='object')",'llmRequestBody.system+='+JSON.stringify(groundingInstruction)+";\nif(!llmRequestBody||typeof llmRequestBody!=='object')");
   node('Prepare Candidate Manifest').parameters.jsCode=node('Prepare Candidate Manifest').parameters.jsCode.replace('  sourceSnapshots,','  sourceSnapshots,\n  sourceGrounding: prepared.remediationContract?.sourceGrounding,');
   assert.equal(w.nodes.length,155);
-  return w;
+  return hardenFixH(w);
 }
 if(process.argv[1]&&new URL(import.meta.url).pathname===process.argv[1]) {
   const path=new URL('../pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.PROMOTION-TARGET.json',import.meta.url);

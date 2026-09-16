@@ -93,7 +93,15 @@ canonical[0].targetFile = canonical[0].file_path = canonical[0].file_path.replac
 assert.deepEqual(assemble(canonical).files.map(f=>f.path), manifest.files.map(f=>f.path));
 
 function enforce(verdict, evidence = []) {
-  return run('Enforce Independent Review', [{content:[{type:'text',text:JSON.stringify({verdict,evidence})}], stop_reason:'end_turn'}],
+  const findings=evidence.map((entry,index)=>({
+    finding:typeof entry==='string'?entry:String(entry.category||'review finding'),
+    classification:verdict==='REJECTED'?'PROVEN_DEFECT':'NO_DEFECT',
+    file:fixture.plannedFiles[Math.min(index,fixture.plannedFiles.length-1)].path,
+    symbol:'candidate batch contract',conflictingSignatures:['supplied candidate signature'],
+    affectedCallSite:'supplied candidate call site',violatedPlanRule:'supplied remediation plan',
+    evidence:[typeof entry==='string'?entry:JSON.stringify(entry)],
+  }));
+  return run('Enforce Independent Review', [{content:[{type:'text',text:JSON.stringify({verdict,findings})}], stop_reason:'end_turn'}],
     {'Prepare Candidate Manifest':[manifest]}).json;
 }
 assert.throws(() => enforce('REJECTED', [{category:'RELATIONSHIP_DROPPED'}]), /WF2_CANDIDATE_REJECTED/);
