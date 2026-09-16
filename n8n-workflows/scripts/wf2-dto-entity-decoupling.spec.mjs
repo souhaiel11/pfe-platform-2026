@@ -332,8 +332,10 @@ public class TaskDTO {
   assert.equal(patchHttp.waitBetweenTries, 1000);
 
   const patchBodyCode = node('Prepare - Code Patch Body').parameters.jsCode;
-  assert.match(patchBodyCode, /claude-sonnet-5/);
-  assert.match(patchBodyCode, /max_tokens:16384/);
+  assert.match(patchBodyCode, /claude-opus-5/);
+  assert.match(patchBodyCode, /max_tokens:32768/);
+  assert.match(patchBodyCode, /thinking:\{type:'adaptive'\}/);
+  assert.match(patchBodyCode, /effort:'medium'/);
   assert.match(patchBodyCode, /SOURCE_API_CONTEXT_LIMIT_EXCEEDED/);
 
   const parseCode = node('Parse - Code Patch Output').parameters.jsCode;

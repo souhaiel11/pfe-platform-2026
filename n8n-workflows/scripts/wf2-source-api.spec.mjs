@@ -46,5 +46,7 @@ const system=result.llmRequestBody.system;
 for(const required of [/only fields, methods and constructors proven/,/never infer boolean getter names/,/Preserve enum types and nullable\/reference types exactly/,/explicit type-safe mapping/,/no reflective BeanUtils fallback/,/Do not invent fields, getters, setters or constructors/,/stop generation instead of guessing/]) assert.match(system,required);
 assert.throws(()=>prepare([]),/SOURCE_API_CONTEXT_REQUIRED/);
 assert.throws(()=>prepare([{file:'other.java',content:'x'.repeat(65537)}]),/SOURCE_API_CONTEXT_LIMIT_EXCEEDED/);
-assert.equal(result.llmRequestBody.max_tokens,16384);
+assert.equal(result.llmRequestBody.max_tokens,32768);
+assert.deepEqual(result.llmRequestBody.thinking,{type:'adaptive'});
+assert.equal(result.llmRequestBody.output_config.effort,'medium');
 console.log('Source API context and mapping constraints PASS: real Task has no completed accessor; status enum API exposed; missing/bounded context fail closed. This tests guidance, not LLM compliance.');

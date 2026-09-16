@@ -152,7 +152,8 @@ const patchRequest=run('Prepare - Code Patch Body',[fetched[0]],{'Prepare Generi
 assert.deepEqual(patchRequest.completePlan.sourceGrounding,grounding);
 const ungrounded=structuredClone(plannedRequest);delete ungrounded.remediationContract.sourceGrounding;
 assert.throws(()=>run('Prepare - Code Patch Body',[fetched[0]],{'Prepare Generic Remediation Plan':[ungrounded],'Validate Generic Remediation Plan':[planned]}),/SOURCE_API_CONTEXT_INCOMPLETE/);
-assert.equal(patchRequest.llmRequestBody.model,'claude-sonnet-5');assert.equal(patchRequest.llmRequestBody.max_tokens,16384);
+assert.equal(patchRequest.llmRequestBody.model,'claude-opus-5');assert.equal(patchRequest.llmRequestBody.max_tokens,32768);
+assert.deepEqual(patchRequest.llmRequestBody.thinking,{type:'adaptive'});assert.equal(patchRequest.llmRequestBody.output_config.effort,'medium');
 assert.ok(patchRequest.llmRequestBody.system.includes('No new User(userId)'));
 
 const targets=(name,port=0)=>(wf.connections[name]?.main[port]||[]).map(e=>e.node);

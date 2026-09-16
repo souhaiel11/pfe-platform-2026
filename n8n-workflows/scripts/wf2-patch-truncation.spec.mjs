@@ -62,10 +62,12 @@ const out = makeRequest(input, name => name === 'Prepare Batch Context'
   ? { first: () => ({ json: gate }) } : name === 'Prepare Generic Remediation Plan'
     ? {first:()=>({json:{remediationContract:{sourceSnapshots:[],sourceGrounding:{initialPaths:[],groundedRelationshipApis:[]}}}})}
     : { all: () => [{ json: planned }] }, Buffer).json;
-assert.equal(out.llmRequestBody.model, 'claude-sonnet-5');
-assert.equal(out.llmRequestBody.max_tokens, 16384);
+assert.equal(out.llmRequestBody.model, 'claude-opus-5');
+assert.equal(out.llmRequestBody.max_tokens, 32768);
+assert.deepEqual(out.llmRequestBody.thinking, { type: 'adaptive' });
+assert.equal(out.llmRequestBody.output_config.effort, 'medium');
 assert.ok(out.llmRequestBody.max_tokens < 128000, 'bounded below documented Sonnet 5 output maximum');
-assert.equal(JSON.parse(out.claudeBodyString).max_tokens, 16384);
+assert.equal(JSON.parse(out.claudeBodyString).max_tokens, 32768);
 assert.equal(out.completePlan.file.path, targetFile);
 assert.deepEqual(out.completePlan.plans, [plan]);
 assert.match(out.llmRequestBody.system, /COMPLETE patched file/);
