@@ -15,10 +15,19 @@ for(const item of items) {
   // Commit provenance is typed. GitHub Contents `sha` and `git_url` identify the
   // file BLOB, not the commit/ref used to read it. Likewise, arbitrary SHA-looking
   // path segments in download_url/html_url are not accepted as provenance.
+  // The Contents ref is read with a literal query match rather than the WHATWG URL
+  // parser: `URL` is not a global in the n8n Code node sandbox, so constructing one
+  // threw there and a swallowing empty catch turned every source into "no
+  // provenance" (execution 2008). Only the `ref` query parameter is read, and only
+  // when it is a full commit SHA -- a branch name or tag never satisfies this.
   const normalizeCommitRef=value=>{const ref=String(value||'').trim().toLowerCase();return /^[a-f0-9]{40}$/.test(ref)?ref:''};
   const explicitRef=normalizeCommitRef(source.requestedCommitSha||source.sourceCommitSha);
-  let contentsUrlRef='';
-  try { contentsUrlRef=normalizeCommitRef(new URL(String(source.url||'')).searchParams.get('ref')); } catch {}
+  const contentsUrl=String(source.url||'');
+  const contentsUrlRef=normalizeCommitRef(contentsUrl.match(/[?&]ref=([^&#]+)/)?.[1]);
+  // An unparseable/absent ref is a legitimate "no provenance from this field" and is
+  // handled by the fail-closed check below. It is never silently equated with success.
+  if(contentsUrl && !contentsUrlRef && /[?&]ref=/.test(contentsUrl))
+    incomplete([source.path+':contents url ref is not a commit sha'],fetched.size);
   const trustedRefs=[explicitRef,contentsUrlRef].filter(Boolean);
   if(!trustedRefs.length || trustedRefs.some(ref=>ref!==request.frozenSourceSha))
     incomplete([source.path+':source provenance '+(trustedRefs.join(',')||'UNRESOLVED')+' is not the frozen source '+request.frozenSourceSha],fetched.size);

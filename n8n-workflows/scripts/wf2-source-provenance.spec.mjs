@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
+import {SANDBOX_SHADOWED} from './wf2-code-node-sandbox.spec.mjs';
 
 // Source-evidence provenance contract.
 //
@@ -43,17 +44,25 @@ const item=(source,ref)=>({json:{path:source.path,sha:source.sha,
   content:Buffer.from(source.content).toString('base64'),...atRef(source.path,ref)}});
 const ctx={repository_owner:'souhaiel11',repository_name:'pfe-app-test',baseSha:A,
   repositoryPolicy:{existingFiles:fixture.repositoryTree},findings:[]};
+// Node bodies run with the sandbox-unavailable globals REMOVED, so this suite
+// reproduces the n8n Code-node contract instead of full Node. Running under plain
+// Node is what let execution 2008 through: `new URL(...)` resolved here and threw
+// there. See wf2-code-node-sandbox.spec.mjs for the deny-list and the static scan.
+const runNode=(name,$input,$json,$)=>{
+  const args=['$input','$json','$','Buffer',...SANDBOX_SHADOWED];
+  return new Function(...args,node(name).parameters.jsCode)(
+    $input,$json,$,Buffer,...SANDBOX_SHADOWED.map(()=>undefined));
+};
 // branchStatus 404 = first pass (no remediation branch); 200 = corrective second pass at B.
 function expand(branchStatus) {
   const lookup=branchStatus===200?{statusCode:200,body:{object:{sha:B}}}:{statusCode:404};
   const values={'Build Independent Repository Policy':[ctx],'Prepare Batch Context':[ctx],'Lookup Remediation Branch':[lookup]};
   const $=k=>({first:()=>({json:values[k][0]}),all:()=>values[k].map(json=>({json}))});
   const initial=fixture.sources.filter(s=>fixture.initialPaths.includes(s.path)).map(s=>item(s,A));
-  return new Function('$input','$json','$','Buffer',node('Expand Required Dependency Sources').parameters.jsCode)(
-    {all:()=>initial,first:()=>initial[0]},initial[0].json,$,Buffer);
+  return runNode('Expand Required Dependency Sources',{all:()=>initial,first:()=>initial[0]},initial[0].json,$);
 }
-const gate=(requests,items)=>new Function('$input','$json','$','Buffer',node('Validate Required Dependency Sources').parameters.jsCode)(
-  {all:()=>items,first:()=>items[0]},items[0]?.json,()=>({all:()=>requests}),Buffer);
+const gate=(requests,items)=>runNode('Validate Required Dependency Sources',
+  {all:()=>items,first:()=>items[0]},items[0]?.json,()=>({all:()=>requests}));
 
 // ── 5. First pass: no remediation branch ──────────────────────────────────────
 const firstPass=expand(404);
@@ -138,7 +147,10 @@ assert.doesNotMatch(writeRefs,/baseSha/,'writes are never redirected at the evid
 
 assert.doesNotMatch(validateCode,/download_url,source\.html_url,source\.git_url/,'arbitrary URL SHA scan removed');
 assert.doesNotMatch(validateCode,/source\.git_url/,'git_url blob identity excluded from commit provenance');
-assert.match(validateCode,/new URL\(String\(source\.url/,'Contents URL ref is parsed explicitly');
+// The Contents ref must be parsed explicitly from the url query -- but NOT via the
+// WHATWG URL parser, which is unavailable in the Code-node sandbox (execution 2008).
+assert.match(validateCode,/source\.url\|\|''\)[\s\S]{0,80}match\(\/\[\?&\]ref=/,'Contents URL ref is parsed explicitly from the query');
+assert.doesNotMatch(validateCode,/new URL\(/,'WHATWG URL is not usable in the Code-node sandbox');
 
 console.log('PASS source provenance: fetch/frozen SHA aligned on baseSha for first and corrective passes, '
   +'provenance taken from the requested-ref echo, blob sha never compared to a commit sha, '
