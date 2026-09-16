@@ -2,14 +2,17 @@ import assert from 'node:assert/strict';
 import {readFileSync,writeFileSync} from 'node:fs';
 import {randomUUID} from 'node:crypto';
 const read = name => readFileSync(new URL('./lib/'+name,import.meta.url),'utf8');
-export const groundingInstruction = ' Relationship source grounding is mandatory. relationshipOperations describes ONLY relationships touched by this plan; do not list unrelated relationships merely because they exist in source context. Use RESOLVE_BY_ID only when the plan will perform a repository lookup, with a non-null requiredApi copied exactly from sourceGrounding.groundedRelationshipApis. Use PRESERVE when the existing association remains unchanged without a lookup, with requiredApi null. requiredRelationshipApis must equal exactly the deduplicated non-null requiredApi values used by this plan\'s API-consuming relationshipOperations. Only fetched declarations plus the supplied audited inheritanceContext prove inherited APIs; repository filenames and framework naming conventions do not. Do not invent UserService or repository methods. No new User(userId), fake/stub entities or speculative API calls unless fetched project convention explicitly proves support. If a required relationship or API is absent or ambiguous, return MANUAL_OR_SPECIALIST/CONTEXT_REQUIRED rather than guess.';
+export const groundingInstruction = ' Relationship source grounding is mandatory. relationshipOperations describes ONLY relationships touched by this plan; do not list unrelated relationships merely because they exist in source context. For every operation, copy the exact grounded relationship identity tuple verbatim from sourceGrounding.groundedRelationshipApis: ownerPath is the exact owner source path, field is the exact relationship field, and relatedEntityType is the exact fully-qualified TARGET entity type from evidence (the proof entityType), NOT the owner entity. Do not invent or shorten fully-qualified types. For the supplied Task.user evidence this means ownerPath=src/main/java/com/pfe/devsecops/model/Task.java, field=user, relatedEntityType=com.pfe.devsecops.model.User; DO NOT output Task as relatedEntityType. Use RESOLVE_BY_ID only when the plan will perform a repository lookup, with a non-null requiredApi copied exactly from sourceGrounding.groundedRelationshipApis and whose entityType equals relatedEntityType. Use PRESERVE when the existing association remains unchanged without a lookup, with requiredApi null. For CREATE S4684 use RESOLVE_BY_ID with the exact UserRepository.findById(Long) proof; for UPDATE S4684 use PRESERVE with requiredApi null. requiredRelationshipApis must equal exactly the deduplicated non-null requiredApi values used by this plan\'s API-consuming relationshipOperations. Only fetched declarations plus the supplied audited inheritanceContext prove inherited APIs; repository filenames and framework naming conventions do not. Do not invent UserService or repository methods. No new User(userId), fake/stub entities or speculative API calls unless fetched project convention explicitly proves support. If a required relationship or API is absent or ambiguous, return MANUAL_OR_SPECIALIST/CONTEXT_REQUIRED rather than guess.';
 const apiProofSchema = `{type:'object',additionalProperties:false,required:['repositoryType','repositorySourcePath','entityType','method','idType'],properties:{repositoryType:{type:'string'},repositorySourcePath:{type:'string'},entityType:{type:'string'},method:{type:'string'},idType:{type:'string'}}}`;
 export const relationshipPlanSchema = String.raw`
 const planSchema=llmRequestBody.output_config.format.schema.properties.plans.items;
 planSchema.required.push('requiredRelationshipApis','relationshipOperations');
 planSchema.properties.requiredRelationshipApis={type:'array',items:${apiProofSchema}};
 planSchema.properties.relationshipOperations={type:'array',items:{type:'object',additionalProperties:false,
-  required:['entityType','field','operation','requiredApi'],properties:{entityType:{type:'string'},field:{type:'string'},
+  required:['ownerPath','field','relatedEntityType','operation','requiredApi'],properties:{
+    ownerPath:{type:'string',description:'Exact owner source path copied from supplied grounded relationship evidence.'},
+    field:{type:'string',description:'Exact relationship field copied from supplied grounded relationship evidence.'},
+    relatedEntityType:{type:'string',description:'Exact fully-qualified TARGET entity type copied from supplied grounded relationship evidence; never the owner entity or a simple type name.'},
     operation:{type:'string',enum:['RESOLVE_BY_ID','PRESERVE']},requiredApi:{anyOf:[${apiProofSchema},{type:'null'}]}}}};
 llmRequestBody.system+=${JSON.stringify(groundingInstruction)};
 `;
@@ -25,11 +28,12 @@ for(const plan of normalized) {
     throw new Error('SOURCE_API_CONTEXT_INCOMPLETE: planned relationship API is not grounded');
   const used=[];
   for(const operation of operations) {
-    const relationship=operation&&groundedApis.find(proof=>proof.entityType===operation.entityType&&proof.field===operation.field);
+    const relationship=operation&&groundedApis.find(proof=>proof.ownerPath===operation.ownerPath&&proof.field===operation.field&&proof.entityType===operation.relatedEntityType);
     if(!relationship||!['RESOLVE_BY_ID','PRESERVE'].includes(operation.operation))
       throw new Error('SOURCE_API_CONTEXT_INCOMPLETE: planned relationship operation is not grounded');
     if(operation.operation==='RESOLVE_BY_ID') {
-      if(!operation.requiredApi||!proven(operation.requiredApi))
+      if(!operation.requiredApi||!proven(operation.requiredApi)||operation.requiredApi.entityType!==operation.relatedEntityType||
+        !proofKeys.every(key=>operation.requiredApi[key]===relationship[key]))
         throw new Error('SOURCE_API_CONTEXT_INCOMPLETE: planned relationship API is not grounded');
       used.push(operation.requiredApi);
     } else if(operation.requiredApi!==null) {
@@ -52,11 +56,12 @@ if(plans.some(plan=>!Array.isArray(plan.relationshipOperations)||!Array.isArray(
   throw new Error('SOURCE_API_CONTEXT_INCOMPLETE: patch relationship operations missing');
 const relationshipOperations=plans.flatMap(plan=>plan.relationshipOperations||[]);
 for(const operation of relationshipOperations) {
-  const relationship=relationships.find(relation=>sourceGrounding?.initialPaths?.includes(relation.ownerPath)&&relation.entityType===operation.entityType&&relation.field===operation.field);
+  const relationship=relationships.find(relation=>relation.ownerPath===operation.ownerPath&&relation.field===operation.field&&relation.entityType===operation.relatedEntityType);
   if(!relationship)throw new Error('SOURCE_API_CONTEXT_INCOMPLETE: patch relationship operation is not grounded');
   if(operation.operation==='RESOLVE_BY_ID') {
-    const proof=proofs.find(proof=>proof.entityType===operation.entityType&&proof.field===operation.field);
+    const proof=proofs.find(proof=>proof.ownerPath===operation.ownerPath&&proof.field===operation.field&&proof.entityType===operation.relatedEntityType);
     if(!operation.requiredApi||!proof||!proven(operation.requiredApi)||
+      operation.requiredApi.entityType!==operation.relatedEntityType||
       !proofKeys.every(key=>operation.requiredApi[key]===proof[key])||
       !sourceApiContext.some(source=>source.file===proof.repositorySourcePath))
       throw new Error('SOURCE_API_CONTEXT_INCOMPLETE: patch relationship API is not grounded');

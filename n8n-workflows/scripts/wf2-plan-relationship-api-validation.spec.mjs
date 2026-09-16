@@ -29,14 +29,17 @@ assert.ok(plannerCode.includes(groundingInstruction));
 const userProof = { ownerPath: 'src/main/java/com/pfe/devsecops/model/Task.java', field: 'user', repositoryType: 'com.pfe.devsecops.repository.UserRepository', repositorySourcePath: 'src/main/java/com/pfe/devsecops/repository/UserRepository.java', entityType: 'com.pfe.devsecops.model.User', method: 'findById', idType: 'Long' };
 const projectProof = { ownerPath: userProof.ownerPath, field: 'project', repositoryType: 'com.pfe.devsecops.repository.ProjectRepository', repositorySourcePath: 'src/main/java/com/pfe/devsecops/repository/ProjectRepository.java', entityType: 'com.pfe.devsecops.model.Project', method: 'findById', idType: 'Long' };
 const api = proof => Object.fromEntries(['repositoryType', 'repositorySourcePath', 'entityType', 'method', 'idType'].map(key => [key, proof[key]]));
-const resolve = proof => ({ entityType: proof.entityType, field: proof.field, operation: 'RESOLVE_BY_ID', requiredApi: api(proof) });
-const preserve = proof => ({ entityType: proof.entityType, field: proof.field, operation: 'PRESERVE', requiredApi: null });
+const resolve = proof => ({ ownerPath: proof.ownerPath, field: proof.field, relatedEntityType: proof.entityType, operation: 'RESOLVE_BY_ID', requiredApi: api(proof) });
+const preserve = proof => ({ ownerPath: proof.ownerPath, field: proof.field, relatedEntityType: proof.entityType, operation: 'PRESERVE', requiredApi: null });
 const plan = (findingId, operations, requiredRelationshipApis = operations.filter(op => op.requiredApi).map(op => op.requiredApi), dto = 'TaskDTO.java') => ({ findingId, remediationIntent: 'DTO entity mapping with explicit relationship semantics', filesToCreate: [`src/main/java/com/pfe/devsecops/dto/${dto}`], relationshipOperations: operations, requiredRelationshipApis });
 const prepared = proofs => ({ remediationContract: { sourceGrounding: { groundedRelationshipApis: proofs } } });
 const validate = (plans, proofs = [userProof]) => new Function('prepared', 'normalized', realValidation)(prepared(proofs), plans);
 const blocks = (plans, proofs) => assert.throws(() => validate(plans, proofs), /SOURCE_API_CONTEXT_INCOMPLETE/);
 
-// Execution 2012 and execution 2010 equivalent shapes.
+// Execution 2013's actual malformed shape remains blocked: owner type was put in the old ambiguous field.
+blocks([plan('execution-2013-malformed-create', [{ entityType: 'Task', field: 'user', operation: 'RESOLVE_BY_ID', requiredApi: api(userProof) }])]);
+blocks([plan('execution-2013-malformed-update', [{ entityType: 'Task', field: 'user', operation: 'PRESERVE', requiredApi: null }], [])]);
+// Corrected execution 2013, execution 2012 and execution 2010 equivalent shapes.
 assert.doesNotThrow(() => validate([plan('b8db9c11-ddf9-4a23-9bf3-1d2ff15a59ef', [resolve(userProof)]), plan('f11d4686-a7ba-4c0c-abbb-a12998c57220', [preserve(userProof)], [])]));
 assert.doesNotThrow(() => validate([plan('b8db9c11-ddf9-4a23-9bf3-1d2ff15a59ef', [resolve(userProof)], undefined, 'TaskRequestDTO.java'), plan('f11d4686-a7ba-4c0c-abbb-a12998c57220', [preserve(userProof)], [], 'TaskResponseDTO.java')]));
 // Two grounded relationships, only User touched: Project remains available but not required.
@@ -48,8 +51,11 @@ blocks([plan('missing-declaration', [resolve(userProof)], [])]);
 blocks([plan('preserve-with-api', [{ ...preserve(userProof), requiredApi: api(userProof) }], [api(userProof)])]);
 blocks([plan('orphan', [preserve(userProof)], [api(userProof)])]);
 blocks([plan('fabricated-declaration', [resolve(userProof)], [fabricated])]);
+blocks([plan('wrong-owner', [{ ...resolve(userProof), ownerPath: 'src/main/java/com/pfe/devsecops/model/Other.java' }])]);
 blocks([plan('wrong-field', [{ ...resolve(userProof), field: 'project' }])]);
-blocks([plan('wrong-entity', [{ ...resolve(userProof), entityType: projectProof.entityType }])]);
+blocks([plan('owner-as-related-entity', [{ ...resolve(userProof), relatedEntityType: 'Task' }])]);
+blocks([plan('simple-related-entity', [{ ...resolve(userProof), relatedEntityType: 'User' }])]);
+blocks([plan('wrong-related-entity', [{ ...resolve(userProof), relatedEntityType: projectProof.entityType }])]);
 for (const [key, value] of [['repositoryType', 'com.pfe.devsecops.repository.AccountRepository'], ['repositorySourcePath', 'src/main/java/com/pfe/devsecops/repository/AccountRepository.java'], ['entityType', 'com.pfe.devsecops.model.Account'], ['method', 'findUserById'], ['idType', 'String']]) {
   const wrong = { ...api(userProof), [key]: value };
   blocks([plan(`wrong-${key}`, [{ ...resolve(userProof), requiredApi: wrong }], [wrong])]);
@@ -72,4 +78,4 @@ assert.throws(() => runPatchGuard([plan('patch-fabricated', [{ ...resolve(userPr
 assert.equal(workflow.id, 'u3eeMwTuhCsetfcS');
 assert.equal(workflow.nodes.length, 155);
 assert.equal(new Set(workflow.nodes.map(candidate => candidate.id)).size, 155);
-console.log('PASS structured relationship operations: executions 2010/2012, two-relation relevance, ten fail-closed cases, exact API equivalence and real patch guard');
+console.log('PASS unambiguous relationship operations: execution 2013 malformed BLOCK/corrected PASS, executions 2010/2012 corrected, two-relation relevance, fail-closed identity/API matrix and real patch guard');

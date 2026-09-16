@@ -141,7 +141,7 @@ assert.ok(plannedRequest.llmRequestBody.system.includes(groundingInstruction));
 assert.ok(plannedRequest.llmRequestBody.output_config.format.schema.properties.plans.items.required.includes('requiredRelationshipApis'));
 const plan={findingId:'f',target:{file:fixture.initialPaths[0]},filesToModify:[fixture.initialPaths[0]],filesToCreate:[],
   requiredChanges:['DTO mapping'],requiredRelationshipApis:[proof],relationshipOperations:[{
-    entityType:proof.entityType,field:proof.field,operation:'RESOLVE_BY_ID',requiredApi:proof,
+    ownerPath:proof.ownerPath,relatedEntityType:proof.entityType,field:proof.field,operation:'RESOLVE_BY_ID',requiredApi:proof,
   }]};
 const validationCode=node('Validate Generic Remediation Plan').parameters.jsCode;
 const validation=validationCode.slice(validationCode.indexOf('const groundedApis='),validationCode.indexOf('const fileMap=new Map();'));
