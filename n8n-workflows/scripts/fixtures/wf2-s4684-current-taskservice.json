@@ -1,0 +1,8 @@
+{
+  "executionId": 2006,
+  "sourceCommitSha": "6ed56ff791acbf3e111431285bef7b30c8076084",
+  "file": "src/main/java/com/pfe/devsecops/service/TaskService.java",
+  "contentSha256": "0787e19152522a1964cd7c7733cdfd1d1393f5c382102147e79eca4dfc8f2daa",
+  "contentFixture": "wf2-attempt-1999-atomic-review.json",
+  "provenance": "Frozen sourceApiContext captured by WF2 execution 2006; byte-identical to the referenced fixture source."
+}

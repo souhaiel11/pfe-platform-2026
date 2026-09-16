@@ -78,6 +78,7 @@ const RETRY_HARDENED = ['Get Main Branch SHA1', 'Independent Semantic Review', '
 // Patch-output hardening changes only request construction and parsing; dedicated tests
 // verify truncation, complete JSON, schema, target identity and bounded output budget.
 const JSCODE_HARDENED = ['Generic Candidate Preflight', 'Persist Verification Failure', 'Prepare - Code Patch Body', 'Parse - Code Patch Output', 'Prepare Generic Remediation Plan', 'Validate Generic Remediation Plan', 'Prepare WF2 Failure Status', 'Accumulate Candidate File', 'Prepare Candidate Manifest', 'Enforce Independent Review', 'Failure Envelope - Assemble Candidate Manifest'];
+const SOURCE_BASELINE_PINNED = ['Fetch Finding Source Context'];
 for (const n of target.nodes) {
   if (added.includes(n.name)) {
     assert.doesNotMatch(JSON.stringify(n.parameters), /httpRequestWithAuthentication|requestWithAuthenticationPaginated|(?:this\.)?helpers\./);
@@ -85,7 +86,7 @@ for (const n of target.nodes) {
   }
   const previous = base.nodes.find(b => b.name === n.name);
   assert.deepEqual(n.credentials, previous.credentials, 'credential references unchanged');
-  if (!['Webhook', 'Capture Correlation Envelope', ...RETRY_HARDENED, ...JSCODE_HARDENED].includes(n.name)) assert.deepEqual(n, previous);
+  if (!['Webhook', 'Capture Correlation Envelope', ...RETRY_HARDENED, ...JSCODE_HARDENED, ...SOURCE_BASELINE_PINNED].includes(n.name)) assert.deepEqual(n, previous);
   else if (RETRY_HARDENED.includes(n.name)) {
     const { retryOnFail, maxTries, waitBetweenTries, ...rest } = n;
     assert.deepEqual(rest, previous, `${n.name}: only retry properties may differ from base`);
@@ -101,6 +102,11 @@ for (const n of target.nodes) {
     assert.deepEqual(restNode, prevRestNode, `${n.name}: only parameters.jsCode may differ from base`);
     assert.deepEqual(restParams, prevRestParams, `${n.name}: only jsCode may differ from base`);
     assert.notEqual(jsCode, prevJsCode, `${n.name}: jsCode was expected to change (R75/R76 fix)`);
+  } else if (SOURCE_BASELINE_PINNED.includes(n.name)) {
+    const current = structuredClone(n); const prior = structuredClone(previous);
+    assert.equal(current.parameters.additionalParameters.reference, "={{ $('Prepare Batch Context').first().json.baseSha }}");
+    current.parameters.additionalParameters.reference = prior.parameters.additionalParameters.reference;
+    assert.deepEqual(current, prior, `${n.name}: only the frozen baseline reference may differ from base`);
   }
   assert.doesNotMatch(JSON.stringify(n.parameters), /httpRequestWithAuthentication|requestWithAuthenticationPaginated|(?:this\.)?helpers\./);
   assert.doesNotMatch(JSON.stringify(n.parameters), /9adcV31eaIgJyMR0/);

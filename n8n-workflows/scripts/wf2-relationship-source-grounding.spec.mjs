@@ -4,7 +4,15 @@ import {hardenGrounding,groundingInstruction} from './harden-wf2-relationship-so
 const wf=JSON.parse(readFileSync(new URL('../pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.PROMOTION-TARGET.json',import.meta.url)))[0];
 const fixture=JSON.parse(readFileSync(new URL('./fixtures/wf2-relationship-source-grounding.json',import.meta.url)));
 const node=name=>wf.nodes.find(n=>n.name===name);
-const toItem=source=>({json:{path:source.path,sha:source.sha,content:Buffer.from(source.content).toString('base64')}});
+// Mirrors the real n8n-nodes-base.github contents response: a BLOB sha plus urls
+// echoing the ref actually requested. Provenance must come from that echo, never
+// from the blob sha (a different identity), so items carry it exactly as produced.
+const atRef=(path,ref)=>({url:'https://api.github.com/repos/souhaiel11/pfe-app-test/contents/'+path+'?ref='+ref,
+  download_url:'https://raw.githubusercontent.com/souhaiel11/pfe-app-test/'+ref+'/'+path,
+  html_url:'https://github.com/souhaiel11/pfe-app-test/blob/'+ref+'/'+path});
+const toItemAt=(source,ref)=>({json:{path:source.path,sha:source.sha,
+  content:Buffer.from(source.content).toString('base64'),...atRef(source.path,ref)}});
+const toItem=source=>toItemAt(source,fixture.sourceCommitSha);
 const ctx={repository_owner:'souhaiel11',repository_name:'pfe-app-test',baseSha:fixture.sourceCommitSha,
   repositoryPolicy:{existingFiles:fixture.repositoryTree},findings:[]};
 function run(name,items,refs={}) {
@@ -32,7 +40,8 @@ assert.equal(fetch.maxTries,3);assert.equal(fetch.retryOnFail,true);
 const refExpression=fetch.parameters.additionalParameters.reference;
 const evalRef=branch=>new Function('$','return ('+refExpression.slice(3,-2)+')')(name=>({first:()=>({json:name==='Lookup Remediation Branch'?branch:ctx})}));
 assert.equal(evalRef({statusCode:404}),fixture.sourceCommitSha);
-assert.equal(evalRef({statusCode:200,body:{object:{sha:'a'.repeat(40)}}}),'a'.repeat(40));
+assert.equal(evalRef({statusCode:200,body:{object:{sha:'a'.repeat(40)}}}),fixture.sourceCommitSha,
+  'dependency grounding remains pinned to frozen baseline even when a remediation branch exists');
 const gate=(items,requests=expanded)=>run('Validate Required Dependency Sources',items,{'Expand Required Dependency Sources':requests.map(i=>i.json)});
 const fetched=fixture.sources.map(toItem);
 const grounded=gate(fetched);
@@ -93,9 +102,37 @@ assert.equal(gate(boundarySources.map(toItem)).length,6,'exactly 65536 decoded s
 const overflowRequests=structuredClone(expanded);
 overflowRequests[0].json.sourceGroundingRequest.requiredPaths=Array.from({length:13},(_,i)=>'src/main/java/app/X'+i+'.java');
 assert.throws(()=>gate(fetched,overflowRequests),/SOURCE_API_CONTEXT_LIMIT_EXCEEDED/);
-const unsupported=structuredClone(initial);
-unsupported[1].json.content=Buffer.from(fixture.sources[1].content.replace('@ManyToOne','@ManyToMany')).toString('base64');
-assert.throws(()=>run('Expand Required Dependency Sources',unsupported),/SOURCE_API_CONTEXT_INCOMPLETE/,'unsupported relationship syntax cannot silently lose evidence');
+// Association completeness counts ONLY single-valued owning relationships, the
+// same categories relationFields extracts and the grounding contract can prove.
+// Fail-closed is retained where it matters: a real @ManyToOne/@OneToOne whose
+// declaration the conservative parser cannot represent must still stop planning.
+const withTask=body=>{const c=structuredClone(initial);
+  c[1].json.content=Buffer.from(body).toString('base64');return c;};
+const taskSource=fixture.sources[1].content;
+assert.match(taskSource,/@ManyToOne\b/,'fixture still declares the owning association it grounds');
+// Access modifier absent (package-private JPA field): annotation seen, field unparseable.
+const packagePrivate=withTask(taskSource.replace('private User user;','User user;'));
+assert.throws(()=>run('Expand Required Dependency Sources',packagePrivate),/SOURCE_API_CONTEXT_INCOMPLETE/,
+  'unparseable @ManyToOne declaration cannot silently lose evidence');
+// Parameterized field type the conservative adapter deliberately does not resolve.
+const genericField=withTask(taskSource.replace('private User user;','private Optional<User> user;'));
+assert.throws(()=>run('Expand Required Dependency Sources',genericField),/SOURCE_API_CONTEXT_INCOMPLETE/,
+  'unparseable parameterized owning relationship cannot silently lose evidence');
+// Collection-valued associations are outside the single-valued evidence contract
+// and must not manufacture a mismatch. They are not "ignored" elsewhere -- only
+// excluded from THIS invariant, which has no findById proof to demand for them.
+for (const collection of ['@OneToMany(mappedBy = "task")','@ManyToMany']) {
+  const items=withTask(taskSource.replace('@ManyToOne',collection));
+  const expandedCollection=run('Expand Required Dependency Sources',items);
+  assert.ok(expandedCollection.length>0,collection+' must not false-block source expansion');
+  assert.ok(expandedCollection.every(item=>item.json.sourceGroundingRequest.requiredRelationships.length===0),
+    collection+' declares no single-valued relationship to ground');
+}
+// A parseable @OneToOne owning side is grounded exactly like @ManyToOne.
+const oneToOne=withTask(taskSource.replace('@ManyToOne','@OneToOne'));
+const expandedOneToOne=run('Expand Required Dependency Sources',oneToOne);
+assert.equal(expandedOneToOne[0].json.sourceGroundingRequest.requiredRelationships.length,1,
+  '@OneToOne owning relationship is still required evidence');
 
 // Actual planner request includes fetched proofs and structured API requirements.
 const plannedRequest=run('Prepare Generic Remediation Plan',grounded)[0].json;

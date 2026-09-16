@@ -12,8 +12,21 @@ for(const item of items) {
   if(fetched.has(source.path)) incomplete([source.path],fetched.size);
   const content=Buffer.from(String(source.content||'').replace(/\n/g,''),'base64').toString('utf8');
   if(!content.trim() || !/^[a-f0-9]{40}$/.test(String(source.sha||''))) continue;
-  // Native fetch uses the exact frozen ref; reject a contradictory ref if supplied.
-  if(source.sourceCommitSha && source.sourceCommitSha!==request.frozenSourceSha) incomplete([source.path],fetched.size);
+  // Provenance must be the commit ref the fetch actually READ, never source.sha:
+  // the GitHub contents response returns a BLOB sha, which is a different identity
+  // from a commit sha and must never be compared against frozenSourceSha. The
+  // response echoes the requested ref (contents url ?ref=, raw/blob url path), so
+  // that echo is the provenance of the request that produced this content. Explicit
+  // requestedCommitSha wins when a caller supplies it. Unattributable content fails
+  // closed -- accepting it would let evidence claim a commit it never came from.
+  const echoedRefs=[String(source.url||'').match(/[?&]ref=([^&]+)/)?.[1],
+    ...[source.download_url,source.html_url,source.git_url].map(value=>String(value||'').match(/\b([a-f0-9]{40})\b/)?.[1])]
+    .filter(Boolean).map(value=>decodeURIComponent(value).toLowerCase());
+  const declaredProvenance=String(source.requestedCommitSha||source.sourceCommitSha||'').toLowerCase();
+  const provenance=declaredProvenance||echoedRefs.find(ref=>/^[a-f0-9]{40}$/.test(ref))||'';
+  if(!/^[a-f0-9]{40}$/.test(provenance) || provenance!==request.frozenSourceSha
+    || echoedRefs.some(ref=>/^[a-f0-9]{40}$/.test(ref)&&ref!==request.frozenSourceSha))
+    incomplete([source.path+':source provenance '+(provenance||'UNRESOLVED')+' is not the frozen source '+request.frozenSourceSha],fetched.size);
   totalChars+=content.length;
   if(totalChars>65536) throw new Error('SOURCE_API_CONTEXT_LIMIT_EXCEEDED');
   fetched.set(source.path,{item,info:javaInfo(source.path,content)});

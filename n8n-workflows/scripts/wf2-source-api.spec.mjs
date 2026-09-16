@@ -16,14 +16,19 @@ const expanded=new Function('$input','$','Buffer',node('Expand Referenced API So
 assert.deepEqual(expanded.map(i=>i.json.target_file_path).sort(),fixture.sources.map(s=>s.file).sort());
 assert.ok(!expanded.some(i=>i.json.target_file_path.includes('TaskRepository')),'no recursive repository-wide expansion');
 const refs=node('Fetch Referenced API Sources').parameters.additionalParameters.reference;
-assert.match(refs,/Lookup Remediation Branch/);assert.match(refs,/body\?\.object\?\.sha/);assert.match(refs,/\.baseSha/);
+assert.equal(refs,"={{ $('Prepare Batch Context').first().json.baseSha }}",'source API context is pinned to the frozen remediation baseline');
 const target=controller.file;
 const dependencyFixture=JSON.parse(readFileSync(new URL('./fixtures/wf2-relationship-source-grounding.json',import.meta.url)));
 const depCtx={...ctx,baseSha:fixture.sourceCommitSha,repositoryPolicy:{existingFiles:dependencyFixture.repositoryTree}};
 const dependencyRequests=new Function('$input','$','Buffer',node('Expand Required Dependency Sources').parameters.jsCode)(
  {all:()=>fixture.sources.map(s=>({json:{path:s.file,content:Buffer.from(s.content).toString('base64')}}))},
  name=>({first:()=>({json:name==='Lookup Remediation Branch'?{statusCode:404}:depCtx})}),Buffer);
-const dependencyItems=dependencyFixture.sources.map(s=>({json:{path:s.path,sha:s.sha,content:Buffer.from(s.content).toString('base64')}}));
+// Fetched items carry the real GitHub contents shape, including the url echo of the
+// requested ref -- the only provenance comparable to frozenSourceSha (blob sha is not).
+const dependencyItems=dependencyFixture.sources.map(s=>({json:{path:s.path,sha:s.sha,
+  content:Buffer.from(s.content).toString('base64'),
+  url:'https://api.github.com/repos/souhaiel11/pfe-app-test/contents/'+s.path+'?ref='+fixture.sourceCommitSha,
+  download_url:'https://raw.githubusercontent.com/souhaiel11/pfe-app-test/'+fixture.sourceCommitSha+'/'+s.path}}));
 const grounded=new Function('$input','$','Buffer',node('Validate Required Dependency Sources').parameters.jsCode)(
  {all:()=>dependencyItems},()=>({all:()=>dependencyRequests}),Buffer);
 const sourceGrounding=grounded[0].json.sourceGrounding;
