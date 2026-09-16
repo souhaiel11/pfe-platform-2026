@@ -5,10 +5,14 @@ const read = name => readFileSync(new URL('./lib/'+name,import.meta.url),'utf8')
 export const groundingInstruction = ' Relationship source grounding is mandatory. Declare requiredRelationshipApis for each DTO/entity remediation plan, with repositoryType, repositorySourcePath, entityType, method and idType copied exactly from sourceGrounding.groundedRelationshipApis. Only fetched declarations plus the supplied audited inheritanceContext prove inherited APIs; repository filenames and framework naming conventions do not. Do not invent UserService or repository methods. No new User(userId), fake/stub entities or speculative API calls unless fetched project convention explicitly proves support. Preserve create/update semantics and existing update associations. If a required API is absent or ambiguous, return MANUAL_OR_SPECIALIST/CONTEXT_REQUIRED rather than guess.';
 export function hardenGrounding(w) {
   const node=name=>{const n=w.nodes.find(n=>n.name===name);assert.ok(n,name);return n;};
-  if(w.nodes.some(n=>n.name==='Expand Required Dependency Sources')) return w;
+  const helper=read('wf2-java-source-grounding.js');
+  if(w.nodes.some(n=>n.name==='Expand Required Dependency Sources')) {
+    node('Validate Required Dependency Sources').parameters.jsCode=helper+read('wf2-validate-required-dependencies.js');
+    assert.equal(w.nodes.length,155);
+    return w;
+  }
   assert.equal(w.nodes.length,152);
   const edge=name=>({node:name,type:'main',index:0});
-  const helper=read('wf2-java-source-grounding.js');
   const expand={id:randomUUID(),name:'Expand Required Dependency Sources',type:'n8n-nodes-base.code',typeVersion:2,
     position:[6840,1220],onError:'continueErrorOutput',parameters:{mode:'runOnceForAllItems',jsCode:helper+read('wf2-expand-required-dependencies.js')}};
   const fetch=structuredClone(node('Fetch Referenced API Sources'));

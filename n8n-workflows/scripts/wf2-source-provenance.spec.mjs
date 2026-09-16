@@ -37,7 +37,8 @@ assert.match(expandCode,/SOURCE_SHA_FROZEN_REQUIRED/,'frozen SHA is still mandat
 // ── Harness ───────────────────────────────────────────────────────────────────
 const atRef=(path,ref)=>({url:'https://api.github.com/repos/souhaiel11/pfe-app-test/contents/'+path+'?ref='+ref,
   download_url:'https://raw.githubusercontent.com/souhaiel11/pfe-app-test/'+ref+'/'+path,
-  html_url:'https://github.com/souhaiel11/pfe-app-test/blob/'+ref+'/'+path});
+  html_url:'https://github.com/souhaiel11/pfe-app-test/blob/'+ref+'/'+path,
+  git_url:'https://api.github.com/repos/souhaiel11/pfe-app-test/git/blobs/'+'c'.repeat(40)});
 const item=(source,ref)=>({json:{path:source.path,sha:source.sha,
   content:Buffer.from(source.content).toString('base64'),...atRef(source.path,ref)}});
 const ctx={repository_owner:'souhaiel11',repository_name:'pfe-app-test',baseSha:A,
@@ -97,6 +98,32 @@ assert.equal(gate(firstPass,blobs).length,6,'blob sha is irrelevant to provenanc
 const blobRescue=fixture.sources.map(s=>{const it=item(s,B);it.json.sha=s.sha;return it;});
 assert.throws(()=>gate(firstPass,blobRescue),/SOURCE_API_CONTEXT_INCOMPLETE/,'matching blob sha cannot launder wrong-commit content');
 
+// ── Fix E matrix: typed commit provenance vs Git blob identity ───────────────
+const withAllUrls=(ref,blob='c'.repeat(40),download='d'.repeat(40),html='e'.repeat(40))=>fixture.sources.map(s=>{
+  const it=item(s,ref);it.json.sha=blob;it.json.git_url='https://api.github.com/repos/o/r/git/blobs/'+blob;
+  it.json.download_url='https://raw.githubusercontent.com/o/r/'+download+'/'+s.path;
+  it.json.html_url='https://github.com/o/r/blob/'+html+'/'+s.path;return it;
+});
+assert.equal(gate(firstPass,withAllUrls(A,B)).length,6,'case 1: correct Contents ref with different blob passes');
+const explicitMatch=withAllUrls(A,B);explicitMatch.forEach(it=>it.json.requestedCommitSha=A);
+assert.equal(gate(firstPass,explicitMatch).length,6,'case 2: matching explicit and Contents refs pass');
+assert.throws(()=>gate(firstPass,withAllUrls(B,'c'.repeat(40))),/SOURCE_API_CONTEXT_INCOMPLETE/,'case 3: wrong Contents ref blocks');
+const explicitWrong=withAllUrls(A,B);explicitWrong.forEach(it=>it.json.requestedCommitSha=B);
+assert.throws(()=>gate(firstPass,explicitWrong),/SOURCE_API_CONTEXT_INCOMPLETE/,'case 4: contradictory explicit ref blocks');
+const refsContradict=withAllUrls(B,'c'.repeat(40));refsContradict.forEach(it=>it.json.requestedCommitSha=A);
+assert.throws(()=>gate(firstPass,refsContradict),/SOURCE_API_CONTEXT_INCOMPLETE/,'case 5: explicit and URL contradiction blocks');
+const blobOnly=fixture.sources.map(s=>({json:{path:s.path,sha:A,git_url:'https://api.github.com/repos/o/r/git/blobs/'+A,content:Buffer.from(s.content).toString('base64')}}));
+assert.throws(()=>gate(firstPass,blobOnly),/SOURCE_API_CONTEXT_INCOMPLETE/,'case 6: blob identity cannot replace missing commit provenance');
+const wrongRefMatchingBlob=withAllUrls(B,A);
+assert.throws(()=>gate(firstPass,wrongRefMatchingBlob),/SOURCE_API_CONTEXT_INCOMPLETE/,'case 7: matching blob cannot launder wrong ref');
+assert.equal(gate(firstPass,withAllUrls(A,B,'c'.repeat(40),'d'.repeat(40))).length,6,
+  'case 8: arbitrary SHA-like values in non-Contents URLs are ignored');
+
+// Exact execution-2007 response semantics: source.url carries frozen ?ref=A;
+// source.sha and git_url carry a different Git blob identity.
+const execution2007=withAllUrls(A,'9309b455f7d09b50ec039d1cf18bd068d1b21ef7');
+assert.equal(gate(firstPass,execution2007).length,6,'execution 2007 provenance replay passes');
+
 // ── 7. Remediation-branch mechanics stay untouched ────────────────────────────
 // Provenance is about evidence; writes/lookups/PRs still follow the branch.
 assert.match(String(node('Lookup Remediation Branch').parameters.url),/git\/ref\/heads\/\{\{ encodeURIComponent\(\$json\.targetBranchName\) \}\}/,
@@ -108,6 +135,10 @@ for (const name of ['Re-lookup Baseline Ref Before Creation','Re-lookup Remediat
 const writeRefs=JSON.stringify(wf.nodes.find(n=>n.name==='Update File in Branch').parameters);
 assert.match(writeRefs,/\$json\.branchName/,'writes still target the remediation branch');
 assert.doesNotMatch(writeRefs,/baseSha/,'writes are never redirected at the evidence baseline');
+
+assert.doesNotMatch(validateCode,/download_url,source\.html_url,source\.git_url/,'arbitrary URL SHA scan removed');
+assert.doesNotMatch(validateCode,/source\.git_url/,'git_url blob identity excluded from commit provenance');
+assert.match(validateCode,/new URL\(String\(source\.url/,'Contents URL ref is parsed explicitly');
 
 console.log('PASS source provenance: fetch/frozen SHA aligned on baseSha for first and corrective passes, '
   +'provenance taken from the requested-ref echo, blob sha never compared to a commit sha, '

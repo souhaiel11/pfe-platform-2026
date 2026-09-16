@@ -12,21 +12,16 @@ for(const item of items) {
   if(fetched.has(source.path)) incomplete([source.path],fetched.size);
   const content=Buffer.from(String(source.content||'').replace(/\n/g,''),'base64').toString('utf8');
   if(!content.trim() || !/^[a-f0-9]{40}$/.test(String(source.sha||''))) continue;
-  // Provenance must be the commit ref the fetch actually READ, never source.sha:
-  // the GitHub contents response returns a BLOB sha, which is a different identity
-  // from a commit sha and must never be compared against frozenSourceSha. The
-  // response echoes the requested ref (contents url ?ref=, raw/blob url path), so
-  // that echo is the provenance of the request that produced this content. Explicit
-  // requestedCommitSha wins when a caller supplies it. Unattributable content fails
-  // closed -- accepting it would let evidence claim a commit it never came from.
-  const echoedRefs=[String(source.url||'').match(/[?&]ref=([^&]+)/)?.[1],
-    ...[source.download_url,source.html_url,source.git_url].map(value=>String(value||'').match(/\b([a-f0-9]{40})\b/)?.[1])]
-    .filter(Boolean).map(value=>decodeURIComponent(value).toLowerCase());
-  const declaredProvenance=String(source.requestedCommitSha||source.sourceCommitSha||'').toLowerCase();
-  const provenance=declaredProvenance||echoedRefs.find(ref=>/^[a-f0-9]{40}$/.test(ref))||'';
-  if(!/^[a-f0-9]{40}$/.test(provenance) || provenance!==request.frozenSourceSha
-    || echoedRefs.some(ref=>/^[a-f0-9]{40}$/.test(ref)&&ref!==request.frozenSourceSha))
-    incomplete([source.path+':source provenance '+(provenance||'UNRESOLVED')+' is not the frozen source '+request.frozenSourceSha],fetched.size);
+  // Commit provenance is typed. GitHub Contents `sha` and `git_url` identify the
+  // file BLOB, not the commit/ref used to read it. Likewise, arbitrary SHA-looking
+  // path segments in download_url/html_url are not accepted as provenance.
+  const normalizeCommitRef=value=>{const ref=String(value||'').trim().toLowerCase();return /^[a-f0-9]{40}$/.test(ref)?ref:''};
+  const explicitRef=normalizeCommitRef(source.requestedCommitSha||source.sourceCommitSha);
+  let contentsUrlRef='';
+  try { contentsUrlRef=normalizeCommitRef(new URL(String(source.url||'')).searchParams.get('ref')); } catch {}
+  const trustedRefs=[explicitRef,contentsUrlRef].filter(Boolean);
+  if(!trustedRefs.length || trustedRefs.some(ref=>ref!==request.frozenSourceSha))
+    incomplete([source.path+':source provenance '+(trustedRefs.join(',')||'UNRESOLVED')+' is not the frozen source '+request.frozenSourceSha],fetched.size);
   totalChars+=content.length;
   if(totalChars>65536) throw new Error('SOURCE_API_CONTEXT_LIMIT_EXCEEDED');
   fetched.set(source.path,{item,info:javaInfo(source.path,content)});
