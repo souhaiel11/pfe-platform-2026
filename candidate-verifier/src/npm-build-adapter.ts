@@ -46,6 +46,7 @@ function runNpm(args: string[], cwd: string, timeoutMs: number): {
 
 export class NpmBuildAdapter implements BuildAdapter {
   readonly buildType = 'npm';
+  supportsMode(mode: import('../../backend/src/candidate-verification/candidate-verification.types').VerificationMode): boolean { return mode !== 'COMPILE_TESTS'; }
 
   supports(workspacePath: string): boolean {
     return fs.existsSync(path.join(workspacePath, 'package.json'));

@@ -51,7 +51,7 @@ export class WorkspaceManager {
   // injector entirely, so this only matters for the real DI-wired instance.
   constructor(@Optional() private readonly workspaceRoot: string = DEFAULT_WORKSPACE_ROOT) {}
 
-  workspaceId(requestId: string, batchId: string, candidateAttempt: number): string {
+  workspaceId(requestId: string, batchId: string, candidateAttempt: number, verificationStep?: number): string {
     for (const [label, value] of [['requestId', requestId], ['batchId', batchId]] as const) {
       if (!IDENTITY_SEGMENT_PATTERN.test(value)) {
         throw new WorkspaceError(`Invalid ${label} for workspace identity: ${JSON.stringify(value)}`, 'WORKSPACE_CREATION_FAILED');
@@ -60,7 +60,9 @@ export class WorkspaceManager {
     if (!Number.isInteger(candidateAttempt) || candidateAttempt < 0) {
       throw new WorkspaceError(`Invalid candidateAttempt: ${JSON.stringify(candidateAttempt)}`, 'WORKSPACE_CREATION_FAILED');
     }
-    return `${requestId}/${batchId}/attempt-${candidateAttempt}`;
+    if (verificationStep !== undefined && (!Number.isInteger(verificationStep) || verificationStep < 0))
+      throw new WorkspaceError(`Invalid verificationStep: ${JSON.stringify(verificationStep)}`, 'WORKSPACE_CREATION_FAILED');
+    return `${requestId}/${batchId}/attempt-${candidateAttempt}${verificationStep === undefined ? '' : `/step-${verificationStep}`}`;
   }
 
   private resolveWorkspacePath(workspaceId: string): string {
@@ -74,8 +76,8 @@ export class WorkspaceManager {
     return resolved;
   }
 
-  createWorkspace(params: { repoPath: string; candidateBaseSha: string; requestId: string; batchId: string; candidateAttempt: number }): WorkspaceHandle {
-    const workspaceId = this.workspaceId(params.requestId, params.batchId, params.candidateAttempt);
+  createWorkspace(params: { repoPath: string; candidateBaseSha: string; requestId: string; batchId: string; candidateAttempt: number; verificationStep?: number }): WorkspaceHandle {
+    const workspaceId = this.workspaceId(params.requestId, params.batchId, params.candidateAttempt, params.verificationStep);
     const existing = this.registry.get(workspaceId);
     if (existing?.status === 'active') {
       throw new WorkspaceError(`Workspace ${workspaceId} already has an active attempt — refusing to create a second one for the same identity.`, 'WORKSPACE_CREATION_FAILED');

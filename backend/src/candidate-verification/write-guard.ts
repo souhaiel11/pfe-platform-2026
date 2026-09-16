@@ -11,7 +11,8 @@ export type WriteGuardRejectionReason =
   | 'VERIFICATION_NOT_PASS'
   | 'CANDIDATE_DIGEST_MISMATCH'
   | 'CANDIDATE_BASE_SHA_MISMATCH'
-  | 'WORKSPACE_SHA_NOT_VERIFIED';
+  | 'WORKSPACE_SHA_NOT_VERIFIED'
+  | 'FULL_TEST_REQUIRED';
 
 export type WriteGuardResult = { ok: true } | { ok: false; reason: WriteGuardRejectionReason; verificationEvidence?: VerificationEvidence };
 
@@ -21,6 +22,7 @@ export function assertCandidateStillValidForWrite(
 ): WriteGuardResult {
   if ('mode' in verification && verification.mode === 'HEAD_ONLY') return { ok: false, reason: 'HEAD_ONLY_NOT_WRITABLE' };
   const candidate = verification as CandidateVerification;
+  if (candidate.mode && candidate.mode !== 'FULL_TEST') return { ok: false, reason: 'FULL_TEST_REQUIRED' };
   // R76 -- observability only: a bounded diagnostic summary travels
   // alongside the same, unchanged rejection reason. It never influences
   // this decision (computed only after overall!=='PASS' is already

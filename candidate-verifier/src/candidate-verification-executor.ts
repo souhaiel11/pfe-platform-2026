@@ -11,7 +11,7 @@
 // decides a business retry -- identical invariants to the code this was
 // moved from.
 import { Injectable, Optional } from '@nestjs/common';
-import { CandidateManifest, CandidateVerification, FailureClass, HeadVerificationRequest, HeadVerification, VerificationResult, assertHeadVerificationRequest } from '../../backend/src/candidate-verification/candidate-verification.types';
+import { CandidateManifest, CandidateVerification, FailureClass, HeadVerificationRequest, HeadVerification, VerificationResult, VerificationMode, VerificationStep, assertHeadVerificationRequest } from '../../backend/src/candidate-verification/candidate-verification.types';
 import { computeCandidateDigest } from '../../backend/src/candidate-verification/candidate-digest';
 import { WorkspaceManager, WorkspaceError } from './workspace-manager.service';
 import { CandidateMaterializer, MaterializationError } from './candidate-materializer.service';
@@ -25,6 +25,25 @@ import { RepoCacheService } from './repo-cache.service';
 export interface ExecuteVerifyOptions {
   allowedPaths?: string[];
   timeoutMs?: number;
+  mode?: VerificationMode;
+  verificationStep?: VerificationStep;
+}
+
+const DIAGNOSTIC_LIMIT = 12_000;
+export function compilerDiagnostics(raw: string, workspacePath = '') {
+  let text = String(raw || '').replace(/\x1b\[[0-9;]*m/g, '');
+  if (workspacePath) text = text.split(workspacePath).join('');
+  text = text.replace(/(password|token|secret|authorization)=([^\s]+)/gi, '$1=[REDACTED]');
+  text = text.length > DIAGNOSTIC_LIMIT ? text.slice(-DIAGNOSTIC_LIMIT) : text;
+  const paths = [...new Set([...text.matchAll(/(?:src\/)?(?:main|test)\/[^:\]\s]+\.java|[^/\s:\]]+\.java/g)].map(m => m[0]))].slice(0, 20);
+  const declared=[...text.matchAll(/symbol:\s*(?:class|method|variable)\s+([^\r\n]+)/g)].map(m=>m[1].trim());
+  const typed=[...text.matchAll(/[\w.]*List<[\w.]+>/g)].map(m=>m[0]);
+  // Preserve the compiler's exact qualified types and add a compact rendering.
+  // The latter keeps a redacted diagnostic actionable in a bounded handoff
+  // (for example List<TaskDTO> versus List<Task>) without fabricating types.
+  const compactTyped=typed.map(value=>value.replace(/(?:[A-Za-z_$][\w$]*\.)+([A-Za-z_$][\w$]*)/g,'$1'));
+  const symbols = [...new Set([...declared,...typed,...compactTyped])].slice(0, 20);
+  return { boundedCompilerTail: text || null, implicatedPaths: paths, implicatedSymbols: symbols };
 }
 
 function validateManifest(manifest: CandidateManifest): string[] {
@@ -68,17 +87,21 @@ export class CandidateVerificationExecutor {
     const targetSha = head ? head.targetSha.toLowerCase() : manifest.candidateBaseSha;
     let checkoutSha: string | null = null;
     const candidateDigest = head ? undefined : (manifest.candidateDigest ?? computeCandidateDigest(manifest));
-    const workspaceId = this.workspaceManager.workspaceId(context.requestId, context.batchId, context.candidateAttempt);
+    const mode: VerificationMode = head ? 'FULL_TEST' : (options.mode ?? 'FULL_TEST');
+    const step = head ? undefined : options.verificationStep;
+    const workspaceId = this.workspaceManager.workspaceId(context.requestId, context.batchId, context.candidateAttempt, step?.sequence);
     const identity = head ? { repository: head.repository, targetSha, validationRequestId: head.validationRequestId,
       requestId: head.requestId, batchId: head.batchId, candidateAttempt: head.candidateAttempt } : {
       candidateId: manifest.candidateId, requestId: manifest.requestId, batchId: manifest.batchId,
       candidateAttempt: manifest.candidateAttempt, candidateBaseSha: manifest.candidateBaseSha, candidateDigest,
+      verificationStep: step?.sequence ?? null, phase: step?.phase ?? null, stateDigest: step?.stateDigest ?? null,
     };
     const targeted = { status: 'NOT_RUN' as const, reason: 'NO_HIGH_CONFIDENCE_TARGET_SELECTION' as const };
     const staticAnalysis = { status: 'NOT_RUN' as const, reason: 'SUPPORTED_STATIC_ADAPTER_NOT_CONFIGURED' as const, newIssues: [] as unknown[], evidenceRef: null };
 
     const base = (overrides: Partial<CandidateVerification>): VerificationResult => {
       const result: CandidateVerification = {
+        mode,
         identity: identity as CandidateVerification['identity'],
         workspace: { workspaceId, exactShaVerified: false, created: false, cleaned: false },
         manifestValidation: { status: 'FAIL', errors: [] },
@@ -88,6 +111,7 @@ export class CandidateVerificationExecutor {
         overall: 'FAIL',
         verificationLevel: 'COMPILE_TEST_VERIFIED',
         failureClass: null,
+        diagnostics: { boundedCompilerTail: null, implicatedPaths: [], implicatedSymbols: [] },
         ...overrides,
       };
       if (!head) return result;
@@ -117,7 +141,7 @@ export class CandidateVerificationExecutor {
     try {
       const handle = this.workspaceManager.createWorkspace({
         repoPath, candidateBaseSha: targetSha,
-        requestId: context.requestId, batchId: context.batchId, candidateAttempt: context.candidateAttempt,
+        requestId: context.requestId, batchId: context.batchId, candidateAttempt: context.candidateAttempt, verificationStep: step?.sequence,
       });
       workspacePath = handle.path;
       workspaceCreated = true;
@@ -169,17 +193,35 @@ export class CandidateVerificationExecutor {
         return result;
       }
 
+      if (adapter.supportsMode && !adapter.supportsMode(mode)) {
+        result = base({ manifestValidation: { status: 'PASS', errors: [] }, workspace: { workspaceId, exactShaVerified, created: workspaceCreated, cleaned: false },
+          overall: 'INCONCLUSIVE', failureClass: 'VERIFICATION_MODE_UNSUPPORTED' });
+        return result;
+      }
+
       const timeoutMs = options.timeoutMs ?? 5 * 60 * 1000;
-      const compileResult = adapter.compile(workspacePath, timeoutMs);
+      const compileResult = mode === 'COMPILE_TESTS' ? adapter.compileTests?.(workspacePath, timeoutMs) : adapter.compile(workspacePath, timeoutMs);
+      if (!compileResult) {
+        result = base({ manifestValidation: { status: 'PASS', errors: [] }, workspace: { workspaceId, exactShaVerified, created: workspaceCreated, cleaned: false },
+          overall: 'INCONCLUSIVE', failureClass: 'VERIFICATION_MODE_UNSUPPORTED' });
+        return result;
+      }
       if (compileResult.status !== 'SUCCESS') {
         const timedOut = compileResult.evidenceTail.includes('WORKSPACE_TIMEOUT');
+        const diagnostics = compilerDiagnostics(compileResult.evidenceTail, workspacePath);
         result = base({
           manifestValidation: { status: 'PASS', errors: [] },
           workspace: { workspaceId, exactShaVerified, created: workspaceCreated, cleaned: false },
           compile: { status: 'FAILED', exitCode: compileResult.exitCode, durationMs: compileResult.durationMs, evidenceRef: compileResult.evidenceTail },
           overall: timedOut ? 'INCONCLUSIVE' : 'FAIL',
-          failureClass: timedOut ? 'WORKSPACE_TIMEOUT' : 'CANDIDATE_COMPILE_FAILURE',
+          failureClass: timedOut ? 'WORKSPACE_TIMEOUT' : mode === 'COMPILE_TESTS' ? 'CANDIDATE_TEST_COMPILE_FAILURE' : 'CANDIDATE_COMPILE_FAILURE', diagnostics,
         });
+        return result;
+      }
+
+      if (mode !== 'FULL_TEST') {
+        result = base({ manifestValidation: { status: 'PASS', errors: [] }, workspace: { workspaceId, exactShaVerified, created: workspaceCreated, cleaned: false },
+          compile: { status: 'SUCCESS', exitCode: compileResult.exitCode, durationMs: compileResult.durationMs, evidenceRef: compileResult.evidenceTail }, overall: 'PASS', failureClass: null });
         return result;
       }
 

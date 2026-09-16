@@ -17,7 +17,7 @@ import { InternalSecretGuard } from '../auth/internal-secret.guard';
 import { CandidateVerificationService } from './candidate-verification.service';
 import { assertCandidateStillValidForWrite } from './write-guard';
 import { assertRemoteHeadMatchesCandidateBase } from './remote-head-drift';
-import { CandidateManifest, CandidateVerification, VerificationRequest, VerificationResult, assertHeadVerificationRequest } from './candidate-verification.types';
+import { CandidateManifest, CandidateVerification, VerificationRequest, VerificationResult, assertHeadVerificationRequest, assertVerificationStep } from './candidate-verification.types';
 
 @Controller('candidate-verification')
 export class CandidateVerificationController {
@@ -33,7 +33,10 @@ export class CandidateVerificationController {
     if (!body?.manifest || !Array.isArray(body.manifest.files)) {
       throw new BadRequestException('A CandidateManifest with a files[] array is required.');
     }
-    return this.service.verify(body.manifest, { allowedPaths: body.allowedPaths, timeoutMs: body.options?.timeoutMs });
+    try { assertVerificationStep(body.verificationStep, body.options?.mode); }
+    catch { throw new BadRequestException('INVALID_PROGRESSIVE_VERIFICATION_REQUEST'); }
+    return this.service.verify(body.manifest, { allowedPaths: body.allowedPaths, timeoutMs: body.options?.timeoutMs,
+      ...(body.options?.mode ? {mode: body.options.mode} : {}), ...(body.verificationStep ? {verificationStep: body.verificationStep} : {}) });
   }
 
   @UseGuards(InternalSecretGuard)

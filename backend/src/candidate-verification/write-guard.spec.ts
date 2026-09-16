@@ -18,6 +18,7 @@ function headOnlyVerification(): HeadVerification {
 
 function passingVerification(overrides: Partial<CandidateVerification['identity']> = {}): CandidateVerification {
   return {
+    mode: 'FULL_TEST',
     identity: { candidateId: 'c1', requestId: 'r1', batchId: 'b1', candidateAttempt: 0, candidateBaseSha: 'a'.repeat(40), candidateDigest: 'digest-1', ...overrides },
     workspace: { workspaceId: 'r1/b1/attempt-0', exactShaVerified: true, created: true, cleaned: true },
     manifestValidation: { status: 'PASS', errors: [] },
@@ -28,6 +29,15 @@ function passingVerification(overrides: Partial<CandidateVerification['identity'
     verificationLevel: 'COMPILE_TEST_VERIFIED',
     failureClass: null,
   };
+}
+
+// Progressive compile-only evidence is useful to the cross-file gate, but is
+// deliberately never sufficient to authorize a Git write.
+{
+  const verification = passingVerification();
+  verification.mode = 'COMPILE_MAIN';
+  const result = assertCandidateStillValidForWrite(verification, manifest());
+  assert.deepEqual(result, { ok: false, reason: 'FULL_TEST_REQUIRED' });
 }
 
 function manifest(overrides: Partial<CandidateManifest> = {}): CandidateManifest {

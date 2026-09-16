@@ -56,6 +56,8 @@ export class MavenBuildAdapter implements BuildAdapter {
     return fs.existsSync(path.join(workspacePath, 'pom.xml'));
   }
 
+  supportsMode(): boolean { return true; }
+
   compile(workspacePath: string, timeoutMs: number = DEFAULT_TIMEOUT_MS): CompileResult {
     const result = runMaven(['-q', 'compile'], workspacePath, timeoutMs);
     if (result.timedOut) {
@@ -67,6 +69,13 @@ export class MavenBuildAdapter implements BuildAdapter {
       durationMs: result.durationMs,
       evidenceTail: tail(result.stdout + '\n' + result.stderr),
     };
+  }
+
+  compileTests(workspacePath: string, timeoutMs: number = DEFAULT_TIMEOUT_MS): CompileResult {
+    const result = runMaven(['-q', 'test-compile'], workspacePath, timeoutMs);
+    if (result.timedOut) return { status: 'FAILED', exitCode: result.status, durationMs: result.durationMs, evidenceTail: 'WORKSPACE_TIMEOUT during mvn test-compile' };
+    return { status: result.status === 0 ? 'SUCCESS' : 'FAILED', exitCode: result.status,
+      durationMs: result.durationMs, evidenceTail: tail(result.stdout + '\n' + result.stderr) };
   }
 
   runRegressionTests(workspacePath: string, timeoutMs: number = DEFAULT_TIMEOUT_MS): RegressionTestResult {

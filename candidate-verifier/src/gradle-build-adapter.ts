@@ -74,6 +74,8 @@ export class GradleBuildAdapter implements BuildAdapter {
       || fs.existsSync(path.join(workspacePath, 'build.gradle.kts'));
   }
 
+  supportsMode(): boolean { return true; }
+
   compile(workspacePath: string, timeoutMs: number = DEFAULT_TIMEOUT_MS): CompileResult {
     const result = runGradle(['compileJava', '--console=plain'], workspacePath, timeoutMs);
     if (result.timedOut) {
@@ -85,6 +87,13 @@ export class GradleBuildAdapter implements BuildAdapter {
       durationMs: result.durationMs,
       evidenceTail: tail(result.stdout + '\n' + result.stderr),
     };
+  }
+
+  compileTests(workspacePath: string, timeoutMs: number = DEFAULT_TIMEOUT_MS): CompileResult {
+    const result = runGradle(['testClasses', '--console=plain'], workspacePath, timeoutMs);
+    if (result.timedOut) return { status: 'FAILED', exitCode: result.status, durationMs: result.durationMs, evidenceTail: 'WORKSPACE_TIMEOUT during gradle testClasses' };
+    return { status: result.status === 0 ? 'SUCCESS' : 'FAILED', exitCode: result.status,
+      durationMs: result.durationMs, evidenceTail: (result.stdout + '\n' + result.stderr).slice(-20_000) };
   }
 
   runRegressionTests(workspacePath: string, timeoutMs: number = DEFAULT_TIMEOUT_MS): RegressionTestResult {

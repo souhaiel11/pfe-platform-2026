@@ -3,7 +3,7 @@
 // phase, but the interface is shaped so Gradle/npm adapters (R22-B Phase 6:
 // NEEDS_ADAPTER) can be added later without touching
 // CandidateVerificationService.
-import { RegressionTestResult } from '../../backend/src/candidate-verification/candidate-verification.types';
+import { RegressionTestResult, VerificationMode } from '../../backend/src/candidate-verification/candidate-verification.types';
 
 export interface CompileResult {
   status: 'SUCCESS' | 'FAILED';
@@ -15,6 +15,8 @@ export interface CompileResult {
 export interface BuildAdapter {
   readonly buildType: string;
   supports(workspacePath: string): boolean;
+  supportsMode?(mode: VerificationMode): boolean;
   compile(workspacePath: string, timeoutMs: number): CompileResult;
+  compileTests?(workspacePath: string, timeoutMs: number): CompileResult;
   runRegressionTests(workspacePath: string, timeoutMs: number): RegressionTestResult;
 }

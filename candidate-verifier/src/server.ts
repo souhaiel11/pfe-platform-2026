@@ -13,7 +13,7 @@ import { CandidateVerificationExecutor } from './candidate-verification-executor
 import { WorkspaceManager } from './workspace-manager.service';
 import { CandidateMaterializer } from './candidate-materializer.service';
 import { RepoCacheService } from './repo-cache.service';
-import { VerificationRequest, assertHeadVerificationRequest } from '../../backend/src/candidate-verification/candidate-verification.types';
+import { VerificationRequest, assertHeadVerificationRequest, assertVerificationStep } from '../../backend/src/candidate-verification/candidate-verification.types';
 
 const PORT = Number(process.env.PORT) || 4100;
 const WORKSPACE_ROOT = process.env.WORKSPACE_ROOT || undefined;
@@ -70,7 +70,12 @@ const server = http.createServer(async (req, res) => {
       sendJson(res, 400, { error: 'MANIFEST_REQUIRED' });
       return;
     }
-    const result = executor.execute(body.manifest, { allowedPaths: body.allowedPaths, timeoutMs: body.options?.timeoutMs });
+    try { assertVerificationStep(body.verificationStep, body.options?.mode); } catch {
+      sendJson(res, 400, { error: 'INVALID_PROGRESSIVE_VERIFICATION_REQUEST' });
+      return;
+    }
+    const result = executor.execute(body.manifest, { allowedPaths: body.allowedPaths, timeoutMs: body.options?.timeoutMs,
+      mode: body.options?.mode, verificationStep: body.verificationStep });
     sendJson(res, 200, result);
   } catch (err: any) {
     // A truly unexpected internal error (bug, not a candidate defect) --

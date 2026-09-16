@@ -40,6 +40,12 @@ export type CompileStatus = 'SUCCESS' | 'FAILED' | 'NOT_RUN';
 export type TestStatus = 'SUCCESS' | 'FAILED' | 'NOT_RUN' | 'UNKNOWN';
 export type StaticAnalysisStatus = 'NOT_RUN';
 export type OverallVerdict = 'PASS' | 'FAIL' | 'INCONCLUSIVE';
+export type VerificationMode = 'COMPILE_MAIN' | 'COMPILE_TESTS' | 'FULL_TEST';
+export interface VerificationStep {
+  sequence: number;
+  phase: 'INITIAL_COMPILE' | 'TEST_COMPILE' | 'FULL_TEST' | 'FINAL_WRITE_GUARD';
+  stateDigest: string;
+}
 
 /**
  * Deliberately limited to what R22-C can actually prove. FULL_PREFLIGHT_VERIFIED
@@ -57,7 +63,9 @@ export type FailureClass =
   | 'CANDIDATE_CONTENT_MISMATCH'
   | 'BUILD_TYPE_UNSUPPORTED'
   | 'CANDIDATE_COMPILE_FAILURE'
+  | 'CANDIDATE_TEST_COMPILE_FAILURE'
   | 'CANDIDATE_TEST_REGRESSION'
+  | 'VERIFICATION_MODE_UNSUPPORTED'
   | 'WORKSPACE_TIMEOUT'
   | 'WORKSPACE_INFRA_FAILURE'
   // R22-E2C2 — transport-layer failures talking to the candidate-verifier
@@ -81,6 +89,7 @@ export interface RegressionTestResult {
 }
 
 export interface CandidateVerification {
+  mode?: VerificationMode;
   identity: {
     candidateId: string;
     requestId: string;
@@ -88,6 +97,9 @@ export interface CandidateVerification {
     candidateAttempt: number;
     candidateBaseSha: string;
     candidateDigest: string;
+    verificationStep?: number | null;
+    phase?: string | null;
+    stateDigest?: string | null;
   };
   workspace: {
     workspaceId: string;
@@ -118,6 +130,11 @@ export interface CandidateVerification {
   overall: OverallVerdict;
   verificationLevel: VerificationLevel;
   failureClass: FailureClass | null;
+  diagnostics?: {
+    boundedCompilerTail: string | null;
+    implicatedPaths: string[];
+    implicatedSymbols: string[];
+  };
 }
 
 /** Read-only verification of an existing commit, without candidate overlays. */
@@ -133,7 +150,7 @@ export interface HeadVerificationRequest {
   manifest?: never;
 }
 
-export interface HeadVerification extends Omit<CandidateVerification, 'identity' | 'workspace' | 'manifestValidation' | 'failureClass'> {
+export interface HeadVerification extends Omit<CandidateVerification, 'identity' | 'workspace' | 'manifestValidation' | 'failureClass' | 'mode'> {
   mode: 'HEAD_ONLY';
   identity: {
     repository: string;
@@ -167,7 +184,8 @@ export type VerificationRequest = HeadVerificationRequest | {
   verifyHeadOnly?: false;
   manifest: CandidateManifest;
   allowedPaths?: string[];
-  options?: { timeoutMs?: number };
+  options?: { timeoutMs?: number; mode?: VerificationMode };
+  verificationStep?: VerificationStep;
 };
 
 /** Shared by both HTTP boundaries; no Git or build side effects. */
@@ -183,5 +201,22 @@ export function assertHeadVerificationRequest(value: HeadVerificationRequest): v
     || !Number.isInteger(value.candidateAttempt) || value.candidateAttempt < 0
     || (value.options?.timeoutMs !== undefined && (!Number.isFinite(value.options.timeoutMs) || value.options.timeoutMs <= 0))) {
     throw new Error('INVALID_HEAD_VERIFICATION_REQUEST');
+  }
+}
+
+/** Runtime boundary for progressive verification metadata. */
+export function assertVerificationStep(value: VerificationStep | undefined, mode: VerificationMode | undefined): void {
+  const modes: VerificationMode[] = ['COMPILE_MAIN', 'COMPILE_TESTS', 'FULL_TEST'];
+  if (mode !== undefined && !modes.includes(mode)) throw new Error('INVALID_VERIFICATION_MODE');
+  if (value === undefined) return;
+  const phases: VerificationStep['phase'][] = ['INITIAL_COMPILE', 'TEST_COMPILE', 'FULL_TEST', 'FINAL_WRITE_GUARD'];
+  const phaseForMode: Partial<Record<VerificationMode, VerificationStep['phase']>> = {
+    COMPILE_MAIN: 'INITIAL_COMPILE', COMPILE_TESTS: 'TEST_COMPILE', FULL_TEST: 'FULL_TEST',
+  };
+  if (!Number.isInteger(value.sequence) || value.sequence < 1
+    || !phases.includes(value.phase)
+    || !/^[a-f0-9]{64}$/i.test(value.stateDigest)
+    || (mode !== undefined && phaseForMode[mode] !== value.phase)) {
+    throw new Error('INVALID_VERIFICATION_STEP');
   }
 }

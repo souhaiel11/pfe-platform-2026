@@ -3186,6 +3186,462 @@
           "mode": "runOnceForAllItems",
           "jsCode": "// Small, conservative Java source adapter. Unsupported syntax fails closed when\n// relationship evidence is required; this is not a general Java compiler.\nconst cleanJava = source => String(source).replace(/\\/\\*[\\s\\S]*?\\*\\/|\\/\\/[^\\n]*|\"\"\"[\\s\\S]*?\"\"\"|\"(?:\\\\.|[^\"\\\\])*\"|'(?:\\\\.|[^'\\\\])*'/g, value => value.replace(/[^\\n]/g, ' '));\nconst javaInfo = (path, content) => {\n  const code = cleanJava(content);\n  const packageName = code.match(/\\bpackage\\s+([\\w.]+)\\s*;/)?.[1] || '';\n  const imports = [...code.matchAll(/\\bimport\\s+(?!static\\s)([\\w.]+)\\s*;/g)].map(m=>m[1]);\n  const resolve = name => name.includes('.') ? name : imports.find(value=>value.endsWith('.'+name)) || packageName+'.'+name;\n  return {path, content, code, packageName, imports, resolve};\n};\nconst relationFields = source => [...source.code.matchAll(/@(?:[\\w.]+\\.)?(?:ManyToOne|OneToOne)\\b(?:\\s*\\([^)]*\\))?\\s*(?:@[\\w.]+(?:\\s*\\([^)]*\\))?\\s*)*(?:private|protected|public)\\s+([\\w.]+)\\s+(\\w+)\\s*[;=]/g)]\n  .map(match=>({ownerPath:source.path, field:match[2], entityType:source.resolve(match[1])}));\nconst safeJavaPath = path => /(?:^|\\/)src\\/main\\/java\\/[\\w/]+\\.java$/.test(path) &&\n  !/(?:^|\\/)(?:target|build|generated|generated-sources|resources|secrets|config|configuration)(?:\\/|$)/i.test(path) &&\n  !path.startsWith('/') && !path.split('/').some(part=>part==='.'||part==='..') && !/[\\0-\\x1f\\\\:]/.test(path);\nconst sourceRoot = path => path.match(/^(.*?src\\/main\\/java\\/)/)?.[1];\nconst excludedImport = name => /^(?:java|javax|jakarta|org\\.springframework|org\\.hibernate|org\\.slf4j|lombok)\\./.test(name);\nconst requests = $('Expand Required Dependency Sources').all().map(item=>item.json);\nconst request = requests[0]?.sourceGroundingRequest;\nconst requested = request?.requiredPaths || [];\nconst incomplete = (paths, count=0) => {throw new Error('SOURCE_API_CONTEXT_INCOMPLETE: '+JSON.stringify({\n  requestedCount:requested.length,fetchedCount:count,missing:[...new Set(paths)].slice(0,12).map(p=>String(p).slice(0,240))}));};\nif(!request || !requested.length || !/^[a-f0-9]{40}$/.test(request.frozenSourceSha)) incomplete([]);\nif(requested.length>12) throw new Error('SOURCE_API_CONTEXT_LIMIT_EXCEEDED');\nconst items=$input.all(); const fetched=new Map(); let totalChars=0;\nfor(const item of items) {\n  const source=item.json||{};\n  if(source.error || !requested.includes(source.path)) continue;\n  if(fetched.has(source.path)) incomplete([source.path],fetched.size);\n  const content=Buffer.from(String(source.content||'').replace(/\\n/g,''),'base64').toString('utf8');\n  if(!content.trim() || !/^[a-f0-9]{40}$/.test(String(source.sha||''))) continue;\n  // Commit provenance is typed. GitHub Contents `sha` and `git_url` identify the\n  // file BLOB, not the commit/ref used to read it. Likewise, arbitrary SHA-looking\n  // path segments in download_url/html_url are not accepted as provenance.\n  // The Contents ref is read with a literal query match rather than the WHATWG URL\n  // parser: `URL` is not a global in the n8n Code node sandbox, so constructing one\n  // threw there and a swallowing empty catch turned every source into \"no\n  // provenance\" (execution 2008). Only the `ref` query parameter is read, and only\n  // when it is a full commit SHA -- a branch name or tag never satisfies this.\n  const normalizeCommitRef=value=>{const ref=String(value||'').trim().toLowerCase();return /^[a-f0-9]{40}$/.test(ref)?ref:''};\n  const explicitRef=normalizeCommitRef(source.requestedCommitSha||source.sourceCommitSha);\n  const contentsUrl=String(source.url||'');\n  const contentsUrlRef=normalizeCommitRef(contentsUrl.match(/[?&]ref=([^&#]+)/)?.[1]);\n  // An unparseable/absent ref is a legitimate \"no provenance from this field\" and is\n  // handled by the fail-closed check below. It is never silently equated with success.\n  if(contentsUrl && !contentsUrlRef && /[?&]ref=/.test(contentsUrl))\n    incomplete([source.path+':contents url ref is not a commit sha'],fetched.size);\n  const trustedRefs=[explicitRef,contentsUrlRef].filter(Boolean);\n  if(!trustedRefs.length || trustedRefs.some(ref=>ref!==request.frozenSourceSha))\n    incomplete([source.path+':source provenance '+(trustedRefs.join(',')||'UNRESOLVED')+' is not the frozen source '+request.frozenSourceSha],fetched.size);\n  totalChars+=content.length;\n  if(totalChars>65536) throw new Error('SOURCE_API_CONTEXT_LIMIT_EXCEEDED');\n  fetched.set(source.path,{item,info:javaInfo(source.path,content)});\n}\nconst missing=requested.filter(path=>!fetched.has(path));\nif(missing.length) incomplete(missing,fetched.size);\nconst infos=[...fetched.values()].map(value=>value.info);\nconst groundedRelationshipApis=[];\nfor(const relationship of request.requiredRelationships) {\n  const entity=infos.find(info=>info.packageName+'.'+info.path.split('/').pop().replace(/\\.java$/,'')===relationship.entityType && /@(?:[\\w.]+\\.)?Entity\\b/.test(info.code));\n  if(!entity) incomplete([relationship.entityType],fetched.size);\n  const proofs=[];\n  for(const repository of infos) {\n    const declaration=repository.code.match(/\\bpublic\\s+interface\\s+(\\w+)\\s+extends\\s+([\\w.]+)\\s*<\\s*([\\w.]+)\\s*,\\s*([\\w.]+)\\s*>/);\n    if(!declaration || repository.resolve(declaration[2])!=='org.springframework.data.jpa.repository.JpaRepository' ||\n        repository.resolve(declaration[3])!==relationship.entityType) continue;\n    const idType=declaration[4];\n    // Narrow audited inheritance adapter, not a guessed service/repository method.\n    // Chain/signature verified from local Spring Data JPA + Commons 2.7.0 classfiles.\n    if(!['Long','Integer','String','java.lang.Long','java.lang.Integer','java.lang.String','java.util.UUID'].includes(idType)) continue;\n    const idField=entity.code.match(/@(?:[\\w.]+\\.)?Id\\b(?:\\s*\\([^)]*\\))?\\s*(?:@[\\w.]+(?:\\s*\\([^)]*\\))?\\s*)*(?:private|protected|public)\\s+([\\w.]+)\\s+\\w+\\s*[;=]/);\n    if(!idField || idField[1].replace(/^java\\.lang\\./,'')!==idType.replace(/^java\\.lang\\./,'')) continue;\n    proofs.push({ownerPath:relationship.ownerPath,field:relationship.field,entityType:relationship.entityType,\n      entitySourcePath:entity.path,repositoryType:repository.packageName+'.'+declaration[1],\n      repositorySourcePath:repository.path,repositoryDeclaration:declaration[0],method:'findById',idType,\n      returnType:'java.util.Optional<'+relationship.entityType+'>',\n      inheritanceContext:{adapter:'SPRING_DATA_JPA_FIND_BY_ID',auditedVersion:'2.7.0',\n        chain:['org.springframework.data.jpa.repository.JpaRepository<T, ID>',\n          'org.springframework.data.repository.PagingAndSortingRepository<T, ID>',\n          'org.springframework.data.repository.CrudRepository<T, ID>'],signature:'java.util.Optional<T> findById(ID)'},\n      sourceCommitSha:request.frozenSourceSha});\n  }\n  if(proofs.length!==1) incomplete([relationship.entityType+':repository API unproven or ambiguous'],fetched.size);\n  groundedRelationshipApis.push(proofs[0]);\n}\nconst sourceGrounding={initialPaths:request.initialPaths,requiredPaths:requested,\n  frozenSourceSha:request.frozenSourceSha,expansionDepth:2,groundedRelationshipApis};\nreturn requested.map(path=>({json:{...fetched.get(path).item.json,sourceGrounding}}));\n"
         }
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 3
+            },
+            "conditions": [
+              {
+                "id": "cross-file-count",
+                "leftValue": "={{ $json.files.length }}",
+                "rightValue": 2,
+                "operator": {
+                  "type": "number",
+                  "operation": "gte"
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        },
+        "id": "wf2-cross-file-route",
+        "name": "Classify Candidate Coordination Scope",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          7600,
+          1960
+        ]
+      },
+      {
+        "parameters": {
+          "mode": "runOnceForAllItems",
+          "jsCode": "\nconst source=$input.first().json;\nconst manifest=source.candidateManifest||source;\nif(!Array.isArray(manifest.files)||manifest.files.length<2)throw new Error('CROSS_FILE_ROUTE_INVALID');\nconst digest=String(manifest.candidateDigest||'');if(!/^[a-f0-9]{64}$/.test(digest))throw new Error('CANDIDATE_MANIFEST_INVALID');\nconst verificationStep={sequence:1,phase:'INITIAL_COMPILE',stateDigest:digest};\nconst verificationRequest={manifest,allowedPaths:manifest.files.map(f=>f.path),options:{mode:'COMPILE_MAIN',timeoutMs:300000},verificationStep};\nreturn [{json:{candidateManifest:manifest,candidateDigest:digest,coordinationScope:'CROSS_FILE_REPAIR',verificationEvidence:source.verificationEvidence||{},verificationStep,verificationRequest}}];"
+        },
+        "id": "wf2-cross-prepare-1",
+        "name": "Prepare Cross-File COMPILE_MAIN",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          8000,
+          1780
+        ],
+        "onError": "continueErrorOutput"
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "=http://backend:3001/api/candidate-verification/verify",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "X-Internal-Secret",
+                "value": "={{ $env.N8N_INTERNAL_SECRET }}"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify($json.verificationRequest) }}",
+          "options": {
+            "timeout": 300000
+          }
+        },
+        "id": "wf2-cross-call-1",
+        "name": "Call Cross-File COMPILE_MAIN",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          8200,
+          1780
+        ],
+        "onError": "continueErrorOutput"
+      },
+      {
+        "parameters": {
+          "mode": "runOnceForAllItems",
+          "jsCode": "\nconst prepared=$('Prepare Cross-File COMPILE_MAIN').first().json;const result=$input.first().json||{};\nconst infra=new Set(['VERIFIER_UNAVAILABLE','VERIFIER_TIMEOUT','VERIFIER_PROTOCOL_ERROR','WORKSPACE_CREATION_FAILED','WORKSPACE_SHA_MISMATCH','WORKSPACE_INFRA_FAILURE','WORKSPACE_TIMEOUT','BUILD_TYPE_UNSUPPORTED','VERIFICATION_MODE_UNSUPPORTED']);\nif(result.overall==='INCONCLUSIVE'||infra.has(result.failureClass))throw new Error('WF2_VERIFIER_INFRASTRUCTURE_FAILURE:'+JSON.stringify({failureClass:result.failureClass,diagnostics:result.diagnostics||null}));\nif(result.overall!=='PASS')throw new Error(String(result.failureClass||'CANDIDATE_VERIFICATION_FAILED')+':'+JSON.stringify(result.diagnostics||{}));\nif(result.mode!=='COMPILE_MAIN'||result.identity?.candidateDigest!==prepared.candidateDigest||result.identity?.stateDigest!==prepared.candidateDigest||result.identity?.verificationStep!==1)throw new Error('PROGRESSIVE_VERIFICATION_IDENTITY_MISMATCH');\nreturn [{json:{...prepared,verificationEvidence:{...prepared.verificationEvidence,['COMPILE_MAIN']:result}}}];"
+        },
+        "id": "wf2-cross-enforce-1",
+        "name": "Enforce Cross-File COMPILE_MAIN",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          8400,
+          1780
+        ],
+        "onError": "continueErrorOutput"
+      },
+      {
+        "parameters": {
+          "mode": "runOnceForAllItems",
+          "jsCode": "\nconst source=$('Enforce Cross-File COMPILE_MAIN').first().json;\nconst manifest=source.candidateManifest||source;\nif(!Array.isArray(manifest.files)||manifest.files.length<2)throw new Error('CROSS_FILE_ROUTE_INVALID');\nconst digest=String(manifest.candidateDigest||'');if(!/^[a-f0-9]{64}$/.test(digest))throw new Error('CANDIDATE_MANIFEST_INVALID');\nconst verificationStep={sequence:2,phase:'TEST_COMPILE',stateDigest:digest};\nconst verificationRequest={manifest,allowedPaths:manifest.files.map(f=>f.path),options:{mode:'COMPILE_TESTS',timeoutMs:300000},verificationStep};\nreturn [{json:{candidateManifest:manifest,candidateDigest:digest,coordinationScope:'CROSS_FILE_REPAIR',verificationEvidence:source.verificationEvidence||{},verificationStep,verificationRequest}}];"
+        },
+        "id": "wf2-cross-prepare-2",
+        "name": "Prepare Cross-File COMPILE_TESTS",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          8600,
+          1780
+        ],
+        "onError": "continueErrorOutput"
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "=http://backend:3001/api/candidate-verification/verify",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "X-Internal-Secret",
+                "value": "={{ $env.N8N_INTERNAL_SECRET }}"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify($json.verificationRequest) }}",
+          "options": {
+            "timeout": 300000
+          }
+        },
+        "id": "wf2-cross-call-2",
+        "name": "Call Cross-File COMPILE_TESTS",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          8800,
+          1780
+        ],
+        "onError": "continueErrorOutput"
+      },
+      {
+        "parameters": {
+          "mode": "runOnceForAllItems",
+          "jsCode": "\nconst prepared=$('Prepare Cross-File COMPILE_TESTS').first().json;const result=$input.first().json||{};\nconst infra=new Set(['VERIFIER_UNAVAILABLE','VERIFIER_TIMEOUT','VERIFIER_PROTOCOL_ERROR','WORKSPACE_CREATION_FAILED','WORKSPACE_SHA_MISMATCH','WORKSPACE_INFRA_FAILURE','WORKSPACE_TIMEOUT','BUILD_TYPE_UNSUPPORTED','VERIFICATION_MODE_UNSUPPORTED']);\nif(result.overall==='INCONCLUSIVE'||infra.has(result.failureClass))throw new Error('WF2_VERIFIER_INFRASTRUCTURE_FAILURE:'+JSON.stringify({failureClass:result.failureClass,diagnostics:result.diagnostics||null}));\nif(result.overall!=='PASS')throw new Error(String(result.failureClass||'CANDIDATE_VERIFICATION_FAILED')+':'+JSON.stringify(result.diagnostics||{}));\nif(result.mode!=='COMPILE_TESTS'||result.identity?.candidateDigest!==prepared.candidateDigest||result.identity?.stateDigest!==prepared.candidateDigest||result.identity?.verificationStep!==2)throw new Error('PROGRESSIVE_VERIFICATION_IDENTITY_MISMATCH');\nreturn [{json:{...prepared,verificationEvidence:{...prepared.verificationEvidence,['COMPILE_TESTS']:result}}}];"
+        },
+        "id": "wf2-cross-enforce-2",
+        "name": "Enforce Cross-File COMPILE_TESTS",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          9000,
+          1780
+        ],
+        "onError": "continueErrorOutput"
+      },
+      {
+        "parameters": {
+          "mode": "runOnceForAllItems",
+          "jsCode": "\nconst source=$('Enforce Cross-File COMPILE_TESTS').first().json;\nconst manifest=source.candidateManifest||source;\nif(!Array.isArray(manifest.files)||manifest.files.length<2)throw new Error('CROSS_FILE_ROUTE_INVALID');\nconst digest=String(manifest.candidateDigest||'');if(!/^[a-f0-9]{64}$/.test(digest))throw new Error('CANDIDATE_MANIFEST_INVALID');\nconst verificationStep={sequence:3,phase:'FULL_TEST',stateDigest:digest};\nconst verificationRequest={manifest,allowedPaths:manifest.files.map(f=>f.path),options:{mode:'FULL_TEST',timeoutMs:300000},verificationStep};\nreturn [{json:{candidateManifest:manifest,candidateDigest:digest,coordinationScope:'CROSS_FILE_REPAIR',verificationEvidence:source.verificationEvidence||{},verificationStep,verificationRequest}}];"
+        },
+        "id": "wf2-cross-prepare-3",
+        "name": "Prepare Cross-File FULL_TEST",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          9200,
+          1780
+        ],
+        "onError": "continueErrorOutput"
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "=http://backend:3001/api/candidate-verification/verify",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "X-Internal-Secret",
+                "value": "={{ $env.N8N_INTERNAL_SECRET }}"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify($json.verificationRequest) }}",
+          "options": {
+            "timeout": 300000
+          }
+        },
+        "id": "wf2-cross-call-3",
+        "name": "Call Cross-File FULL_TEST",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          9400,
+          1780
+        ],
+        "onError": "continueErrorOutput"
+      },
+      {
+        "parameters": {
+          "mode": "runOnceForAllItems",
+          "jsCode": "\nconst prepared=$('Prepare Cross-File FULL_TEST').first().json;const result=$input.first().json||{};\nconst infra=new Set(['VERIFIER_UNAVAILABLE','VERIFIER_TIMEOUT','VERIFIER_PROTOCOL_ERROR','WORKSPACE_CREATION_FAILED','WORKSPACE_SHA_MISMATCH','WORKSPACE_INFRA_FAILURE','WORKSPACE_TIMEOUT','BUILD_TYPE_UNSUPPORTED','VERIFICATION_MODE_UNSUPPORTED']);\nif(result.overall==='INCONCLUSIVE'||infra.has(result.failureClass))throw new Error('WF2_VERIFIER_INFRASTRUCTURE_FAILURE:'+JSON.stringify({failureClass:result.failureClass,diagnostics:result.diagnostics||null}));\nif(result.overall!=='PASS')throw new Error(String(result.failureClass||'CANDIDATE_VERIFICATION_FAILED')+':'+JSON.stringify(result.diagnostics||{}));\nif(result.mode!=='FULL_TEST'||result.identity?.candidateDigest!==prepared.candidateDigest||result.identity?.stateDigest!==prepared.candidateDigest||result.identity?.verificationStep!==3)throw new Error('PROGRESSIVE_VERIFICATION_IDENTITY_MISMATCH');\nreturn [{json:{...prepared,verificationEvidence:{...prepared.verificationEvidence,['FULL_TEST']:result}}}];"
+        },
+        "id": "wf2-cross-enforce-3",
+        "name": "Enforce Cross-File FULL_TEST",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          9600,
+          1780
+        ],
+        "onError": "continueErrorOutput"
+      },
+      {
+        "parameters": {
+          "mode": "runOnceForAllItems",
+          "jsCode": "\nconst state=$input.first().json;const manifest=state.candidateManifest;const proofs=state.verificationEvidence;\nfor(const mode of ['COMPILE_MAIN','COMPILE_TESTS','FULL_TEST'])if(proofs?.[mode]?.overall!=='PASS'||proofs[mode].identity?.candidateDigest!==state.candidateDigest)throw new Error('CROSS_FILE_DETERMINISTIC_PROOF_INCOMPLETE');\nconst template=manifest.llmRequestBody;if(!template?.system||!Array.isArray(template.messages))throw new Error('LLM_REQUEST_BODY_INVALID');\nconst evidence={candidateDigest:state.candidateDigest,compileMain:proofs.COMPILE_MAIN,compileTests:proofs.COMPILE_TESTS,fullTest:proofs.FULL_TEST};\nconst llmRequestBody={...template,system:template.system+' Deterministic verification for this exact candidate digest is supplied. Do not speculate that compilation or tests fail when the matching evidence says PASS; continue to assess semantic contracts not proven by compilation.',messages:[{role:'user',content:JSON.stringify({candidateManifest:manifest,deterministicVerification:evidence})}]};\nreturn [{json:{candidateManifest:manifest,candidateDigest:state.candidateDigest,verificationEvidence:proofs,llmRequestBody}}];"
+        },
+        "id": "wf2-cross-review-prepare",
+        "name": "Prepare Cross-File Review",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          9800,
+          1780
+        ],
+        "onError": "continueErrorOutput"
+      },
+      {
+        "id": "wf2-cross-review-http",
+        "name": "Independent Cross-File Semantic Review",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          10000,
+          1780
+        ],
+        "onError": "continueErrorOutput",
+        "credentials": {
+          "httpHeaderAuth": {
+            "id": "Ee9vVedmz84oXg5W",
+            "name": "Claude API"
+          }
+        },
+        "parameters": {
+          "method": "POST",
+          "url": "https://api.anthropic.com/v1/messages",
+          "authentication": "genericCredentialType",
+          "genericAuthType": "httpHeaderAuth",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "anthropic-version",
+                "value": "2023-06-01"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ $json.llmRequestBody }}",
+          "options": {
+            "timeout": 180000
+          }
+        },
+        "retryOnFail": true,
+        "maxTries": 3,
+        "waitBetweenTries": 1000
+      },
+      {
+        "parameters": {
+          "mode": "runOnceForAllItems",
+          "jsCode": "\nconst envelope=$('Prepare Cross-File Review').first().json;const candidate=envelope.candidateManifest;if(candidate.candidateSetComplete!==true)throw new Error('CANDIDATE_SET_INCOMPLETE');const response=$json;const extractClaudeText=response=>{const stopReason=String(response?.stop_reason||'');const blocks=Array.isArray(response?.content)?response.content:[];const types=blocks.map(block=>String(block?.type||'unknown'));const texts=typeof response?.content==='string'?[response.content]:blocks.filter(block=>block&&block.type==='text'&&typeof block.text==='string').map(block=>block.text).filter(text=>text.trim().length>0);if(!texts.length&&typeof response?.content?.text==='string'&&response.content.text.trim())texts.push(response.content.text);const diagnostic=JSON.stringify({parserStage:'reviewer',model:String(response?.model||'claude-haiku-4-5-20251001'),stop_reason:stopReason||null,contentBlockTypes:types,contentBlockCount:blocks.length,textBlockCount:texts.length});if(stopReason==='refusal')throw new Error('WF2_MANUAL_REVIEW_REQUIRED:'+diagnostic);if(!texts.length)throw new Error('INDEPENDENT_REVIEW_INCONCLUSIVE:'+diagnostic);return texts.join('\\n')};const parseFirstBalancedJson=(raw,parserStage)=>{const text=String(raw??'').replace(/^\\uFEFF/,'');for(let start=0;start<text.length;start++){const opening=text[start];if(opening!=='{'&&opening!=='[')continue;const stack=[opening==='{'?'}':']'];let inString=false;let escaped=false;for(let i=start+1;i<text.length;i++){const ch=text[i];if(inString){if(escaped){escaped=false;continue}if(ch==='\\\\'){escaped=true;continue}if(ch==='\"')inString=false;continue}if(ch==='\"'){inString=true;continue}if(ch==='{'){stack.push('}');continue}if(ch==='['){stack.push(']');continue}if(ch==='}'||ch===']'){if(stack[stack.length-1]!==ch)break;stack.pop();if(stack.length===0){const candidate=text.slice(start,i+1);try{return JSON.parse(candidate)}catch{break}}}}}throw new Error('CLAUDE_JSON_EXTRACTION_FAILED:'+JSON.stringify({parserStage,category:'NO_VALID_BALANCED_JSON'}))};const text=extractClaudeText(response);let review;try{review=parseFirstBalancedJson(text,'reviewer')}catch{throw new Error('INDEPENDENT_REVIEW_INCONCLUSIVE:'+JSON.stringify({parserStage:'reviewer',category:'NO_VALID_BALANCED_JSON'}))};const findings=Array.isArray(review.findings)?review.findings:[];const classes=new Set(['PROVEN_DEFECT','VERIFICATION_REQUIRED','NO_DEFECT']);if(findings.some(f=>!f||!classes.has(String(f.classification||'').toUpperCase())))throw new Error('INDEPENDENT_REVIEW_INCONCLUSIVE:'+JSON.stringify({category:'REVIEW_CLASSIFICATION_POLICY_VIOLATION'}));const proven=findings.filter(f=>String(f.classification).toUpperCase()==='PROVEN_DEFECT');const verification=findings.filter(f=>String(f.classification).toUpperCase()==='VERIFICATION_REQUIRED');const rejectionProofComplete=f=>String(f.file||'').trim()&&String(f.symbol||'').trim()&&Array.isArray(f.conflictingSignatures)&&f.conflictingSignatures.length>0&&String(f.affectedCallSite||'').trim()&&String(f.violatedPlanRule||'').trim()&&Array.isArray(f.evidence)&&f.evidence.length>0;if(proven.some(f=>!rejectionProofComplete(f)))throw new Error('INDEPENDENT_REVIEW_INCONCLUSIVE:'+JSON.stringify({category:'REVIEW_REJECTION_EVIDENCE_INCOMPLETE'}));const verdict=String(review.verdict||'INCONCLUSIVE').toUpperCase();if(!['ACCEPTABLE_FOR_SCANNER_VALIDATION','REJECTED','INCONCLUSIVE'].includes(verdict))throw new Error('INDEPENDENT_REVIEW_INCONCLUSIVE');if(verdict==='REJECTED'&&!proven.length)throw new Error('INDEPENDENT_REVIEW_INCONCLUSIVE:'+JSON.stringify({category:'REVIEW_CLASSIFICATION_POLICY_VIOLATION'}));if(verdict!=='REJECTED'&&proven.length)throw new Error('INDEPENDENT_REVIEW_INCONCLUSIVE:'+JSON.stringify({category:'REVIEW_CLASSIFICATION_POLICY_VIOLATION'}));if(verdict==='ACCEPTABLE_FOR_SCANNER_VALIDATION'&&verification.length)throw new Error('INDEPENDENT_REVIEW_INCONCLUSIVE:'+JSON.stringify({category:'REVIEW_CLASSIFICATION_POLICY_VIOLATION'}));if(verdict==='REJECTED')throw new Error('WF2_CANDIDATE_REJECTED:'+JSON.stringify(proven));if(verdict==='INCONCLUSIVE')throw new Error('WF2_MANUAL_REVIEW_REQUIRED:'+JSON.stringify(findings));\nconst {llmRequestBody,reviewBodyString,candidateSetComplete,...manifest}=candidate;\nreturn {json:{...manifest,progressiveVerificationEvidence:envelope.verificationEvidence,files:manifest.files.map(file=>({...file,\n  candidateAcceptedFindingIds:file.approvedFindingIds,\n  validationEvidence:{...file.validationEvidence,independentReview:review.findings||[],\n    reviewGranularity:'BATCH',reviewedCandidatePaths:manifest.files.map(sibling=>sibling.path)}}))}};"
+        },
+        "id": "wf2-cross-review-enforce",
+        "name": "Enforce Cross-File Review",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          10200,
+          1780
+        ],
+        "onError": "continueErrorOutput"
+      },
+      {
+        "id": "wf2-cross-failure-131503fd57a0",
+        "name": "Failure Envelope - Prepare Cross-File COMPILE_MAIN",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          10600,
+          2200
+        ],
+        "onError": "continueErrorOutput",
+        "parameters": {
+          "jsCode": "const input=$input.first().json||{};const raw=input.error??input;const err=typeof raw==='string'?{message:raw}:raw||{};const rawSummary=String(input.failureSummary||err.message||input.message||input.reason||raw||'workflow execution error');const failureSummary=rawSummary.replace(/[\\r\\n]+/g,' ').replace(/(?:token|password|secret|authorization)\\s*[=:]\\s*[^ ,;]+/ig,'$1=[REDACTED]').slice(0,500);const embedded=rawSummary.match(/^([A-Z][A-Z0-9_]+)(?::|$)/)?.[1];const failureCode=String(input.failureCode||embedded||'WF2_EXECUTION_ERROR').slice(0,120);const captured=$items('Capture Correlation Envelope',0,0);const correlationEnvelope=captured?.[0]?.json?.correlationEnvelope||{};return [{json:{correlationEnvelope,executionId:String($execution.id),failedNode:\"Prepare Cross-File COMPILE_MAIN\",failureCode,failureSummary}}];"
+        }
+      },
+      {
+        "id": "wf2-cross-failure-e9ab7d1b0e04",
+        "name": "Failure Envelope - Call Cross-File COMPILE_MAIN",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          10600,
+          2280
+        ],
+        "onError": "continueErrorOutput",
+        "parameters": {
+          "jsCode": "const input=$input.first().json||{};const raw=input.error??input;const err=typeof raw==='string'?{message:raw}:raw||{};const rawSummary=String(input.failureSummary||err.message||input.message||input.reason||raw||'workflow execution error');const failureSummary=rawSummary.replace(/[\\r\\n]+/g,' ').replace(/(?:token|password|secret|authorization)\\s*[=:]\\s*[^ ,;]+/ig,'$1=[REDACTED]').slice(0,500);const embedded=rawSummary.match(/^([A-Z][A-Z0-9_]+)(?::|$)/)?.[1];const failureCode=String(input.failureCode||embedded||'WF2_EXECUTION_ERROR').slice(0,120);const captured=$items('Capture Correlation Envelope',0,0);const correlationEnvelope=captured?.[0]?.json?.correlationEnvelope||{};return [{json:{correlationEnvelope,executionId:String($execution.id),failedNode:\"Call Cross-File COMPILE_MAIN\",failureCode,failureSummary}}];"
+        }
+      },
+      {
+        "id": "wf2-cross-failure-69cfae5ff0e4",
+        "name": "Failure Envelope - Enforce Cross-File COMPILE_MAIN",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          10600,
+          2360
+        ],
+        "onError": "continueErrorOutput",
+        "parameters": {
+          "jsCode": "const input=$input.first().json||{};const raw=input.error??input;const err=typeof raw==='string'?{message:raw}:raw||{};const rawSummary=String(input.failureSummary||err.message||input.message||input.reason||raw||'workflow execution error');const failureSummary=rawSummary.replace(/[\\r\\n]+/g,' ').replace(/(?:token|password|secret|authorization)\\s*[=:]\\s*[^ ,;]+/ig,'$1=[REDACTED]').slice(0,500);const embedded=rawSummary.match(/^([A-Z][A-Z0-9_]+)(?::|$)/)?.[1];const failureCode=String(input.failureCode||embedded||'WF2_EXECUTION_ERROR').slice(0,120);const captured=$items('Capture Correlation Envelope',0,0);const correlationEnvelope=captured?.[0]?.json?.correlationEnvelope||{};return [{json:{correlationEnvelope,executionId:String($execution.id),failedNode:\"Enforce Cross-File COMPILE_MAIN\",failureCode,failureSummary}}];"
+        }
+      },
+      {
+        "id": "wf2-cross-failure-0b7d81c0a88c",
+        "name": "Failure Envelope - Prepare Cross-File COMPILE_TESTS",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          10600,
+          2440
+        ],
+        "onError": "continueErrorOutput",
+        "parameters": {
+          "jsCode": "const input=$input.first().json||{};const raw=input.error??input;const err=typeof raw==='string'?{message:raw}:raw||{};const rawSummary=String(input.failureSummary||err.message||input.message||input.reason||raw||'workflow execution error');const failureSummary=rawSummary.replace(/[\\r\\n]+/g,' ').replace(/(?:token|password|secret|authorization)\\s*[=:]\\s*[^ ,;]+/ig,'$1=[REDACTED]').slice(0,500);const embedded=rawSummary.match(/^([A-Z][A-Z0-9_]+)(?::|$)/)?.[1];const failureCode=String(input.failureCode||embedded||'WF2_EXECUTION_ERROR').slice(0,120);const captured=$items('Capture Correlation Envelope',0,0);const correlationEnvelope=captured?.[0]?.json?.correlationEnvelope||{};return [{json:{correlationEnvelope,executionId:String($execution.id),failedNode:\"Prepare Cross-File COMPILE_TESTS\",failureCode,failureSummary}}];"
+        }
+      },
+      {
+        "id": "wf2-cross-failure-90b75dc4f42b",
+        "name": "Failure Envelope - Call Cross-File COMPILE_TESTS",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          10600,
+          2520
+        ],
+        "onError": "continueErrorOutput",
+        "parameters": {
+          "jsCode": "const input=$input.first().json||{};const raw=input.error??input;const err=typeof raw==='string'?{message:raw}:raw||{};const rawSummary=String(input.failureSummary||err.message||input.message||input.reason||raw||'workflow execution error');const failureSummary=rawSummary.replace(/[\\r\\n]+/g,' ').replace(/(?:token|password|secret|authorization)\\s*[=:]\\s*[^ ,;]+/ig,'$1=[REDACTED]').slice(0,500);const embedded=rawSummary.match(/^([A-Z][A-Z0-9_]+)(?::|$)/)?.[1];const failureCode=String(input.failureCode||embedded||'WF2_EXECUTION_ERROR').slice(0,120);const captured=$items('Capture Correlation Envelope',0,0);const correlationEnvelope=captured?.[0]?.json?.correlationEnvelope||{};return [{json:{correlationEnvelope,executionId:String($execution.id),failedNode:\"Call Cross-File COMPILE_TESTS\",failureCode,failureSummary}}];"
+        }
+      },
+      {
+        "id": "wf2-cross-failure-c3f3c7d89162",
+        "name": "Failure Envelope - Enforce Cross-File COMPILE_TESTS",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          10600,
+          2600
+        ],
+        "onError": "continueErrorOutput",
+        "parameters": {
+          "jsCode": "const input=$input.first().json||{};const raw=input.error??input;const err=typeof raw==='string'?{message:raw}:raw||{};const rawSummary=String(input.failureSummary||err.message||input.message||input.reason||raw||'workflow execution error');const failureSummary=rawSummary.replace(/[\\r\\n]+/g,' ').replace(/(?:token|password|secret|authorization)\\s*[=:]\\s*[^ ,;]+/ig,'$1=[REDACTED]').slice(0,500);const embedded=rawSummary.match(/^([A-Z][A-Z0-9_]+)(?::|$)/)?.[1];const failureCode=String(input.failureCode||embedded||'WF2_EXECUTION_ERROR').slice(0,120);const captured=$items('Capture Correlation Envelope',0,0);const correlationEnvelope=captured?.[0]?.json?.correlationEnvelope||{};return [{json:{correlationEnvelope,executionId:String($execution.id),failedNode:\"Enforce Cross-File COMPILE_TESTS\",failureCode,failureSummary}}];"
+        }
+      },
+      {
+        "id": "wf2-cross-failure-524c25d8821b",
+        "name": "Failure Envelope - Prepare Cross-File FULL_TEST",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          10600,
+          2680
+        ],
+        "onError": "continueErrorOutput",
+        "parameters": {
+          "jsCode": "const input=$input.first().json||{};const raw=input.error??input;const err=typeof raw==='string'?{message:raw}:raw||{};const rawSummary=String(input.failureSummary||err.message||input.message||input.reason||raw||'workflow execution error');const failureSummary=rawSummary.replace(/[\\r\\n]+/g,' ').replace(/(?:token|password|secret|authorization)\\s*[=:]\\s*[^ ,;]+/ig,'$1=[REDACTED]').slice(0,500);const embedded=rawSummary.match(/^([A-Z][A-Z0-9_]+)(?::|$)/)?.[1];const failureCode=String(input.failureCode||embedded||'WF2_EXECUTION_ERROR').slice(0,120);const captured=$items('Capture Correlation Envelope',0,0);const correlationEnvelope=captured?.[0]?.json?.correlationEnvelope||{};return [{json:{correlationEnvelope,executionId:String($execution.id),failedNode:\"Prepare Cross-File FULL_TEST\",failureCode,failureSummary}}];"
+        }
+      },
+      {
+        "id": "wf2-cross-failure-f622b3b5154d",
+        "name": "Failure Envelope - Call Cross-File FULL_TEST",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          10600,
+          2760
+        ],
+        "onError": "continueErrorOutput",
+        "parameters": {
+          "jsCode": "const input=$input.first().json||{};const raw=input.error??input;const err=typeof raw==='string'?{message:raw}:raw||{};const rawSummary=String(input.failureSummary||err.message||input.message||input.reason||raw||'workflow execution error');const failureSummary=rawSummary.replace(/[\\r\\n]+/g,' ').replace(/(?:token|password|secret|authorization)\\s*[=:]\\s*[^ ,;]+/ig,'$1=[REDACTED]').slice(0,500);const embedded=rawSummary.match(/^([A-Z][A-Z0-9_]+)(?::|$)/)?.[1];const failureCode=String(input.failureCode||embedded||'WF2_EXECUTION_ERROR').slice(0,120);const captured=$items('Capture Correlation Envelope',0,0);const correlationEnvelope=captured?.[0]?.json?.correlationEnvelope||{};return [{json:{correlationEnvelope,executionId:String($execution.id),failedNode:\"Call Cross-File FULL_TEST\",failureCode,failureSummary}}];"
+        }
+      },
+      {
+        "id": "wf2-cross-failure-26bb7021d921",
+        "name": "Failure Envelope - Enforce Cross-File FULL_TEST",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          10600,
+          2840
+        ],
+        "onError": "continueErrorOutput",
+        "parameters": {
+          "jsCode": "const input=$input.first().json||{};const raw=input.error??input;const err=typeof raw==='string'?{message:raw}:raw||{};const rawSummary=String(input.failureSummary||err.message||input.message||input.reason||raw||'workflow execution error');const failureSummary=rawSummary.replace(/[\\r\\n]+/g,' ').replace(/(?:token|password|secret|authorization)\\s*[=:]\\s*[^ ,;]+/ig,'$1=[REDACTED]').slice(0,500);const embedded=rawSummary.match(/^([A-Z][A-Z0-9_]+)(?::|$)/)?.[1];const failureCode=String(input.failureCode||embedded||'WF2_EXECUTION_ERROR').slice(0,120);const captured=$items('Capture Correlation Envelope',0,0);const correlationEnvelope=captured?.[0]?.json?.correlationEnvelope||{};return [{json:{correlationEnvelope,executionId:String($execution.id),failedNode:\"Enforce Cross-File FULL_TEST\",failureCode,failureSummary}}];"
+        }
+      },
+      {
+        "id": "wf2-cross-failure-1ed7af3bc8bb",
+        "name": "Failure Envelope - Prepare Cross-File Review",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          10600,
+          2920
+        ],
+        "onError": "continueErrorOutput",
+        "parameters": {
+          "jsCode": "const input=$input.first().json||{};const raw=input.error??input;const err=typeof raw==='string'?{message:raw}:raw||{};const rawSummary=String(input.failureSummary||err.message||input.message||input.reason||raw||'workflow execution error');const failureSummary=rawSummary.replace(/[\\r\\n]+/g,' ').replace(/(?:token|password|secret|authorization)\\s*[=:]\\s*[^ ,;]+/ig,'$1=[REDACTED]').slice(0,500);const embedded=rawSummary.match(/^([A-Z][A-Z0-9_]+)(?::|$)/)?.[1];const failureCode=String(input.failureCode||embedded||'WF2_EXECUTION_ERROR').slice(0,120);const captured=$items('Capture Correlation Envelope',0,0);const correlationEnvelope=captured?.[0]?.json?.correlationEnvelope||{};return [{json:{correlationEnvelope,executionId:String($execution.id),failedNode:\"Prepare Cross-File Review\",failureCode,failureSummary}}];"
+        }
+      },
+      {
+        "id": "wf2-cross-failure-68b2d6262678",
+        "name": "Failure Envelope - Independent Cross-File Semantic Review",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          10600,
+          3000
+        ],
+        "onError": "continueErrorOutput",
+        "parameters": {
+          "jsCode": "const input=$input.first().json||{};const raw=input.error??input;const err=typeof raw==='string'?{message:raw}:raw||{};const rawSummary=String(input.failureSummary||err.message||input.message||input.reason||raw||'workflow execution error');const failureSummary=rawSummary.replace(/[\\r\\n]+/g,' ').replace(/(?:token|password|secret|authorization)\\s*[=:]\\s*[^ ,;]+/ig,'$1=[REDACTED]').slice(0,500);const embedded=rawSummary.match(/^([A-Z][A-Z0-9_]+)(?::|$)/)?.[1];const failureCode=String(input.failureCode||embedded||'WF2_EXECUTION_ERROR').slice(0,120);const captured=$items('Capture Correlation Envelope',0,0);const correlationEnvelope=captured?.[0]?.json?.correlationEnvelope||{};return [{json:{correlationEnvelope,executionId:String($execution.id),failedNode:\"Independent Cross-File Semantic Review\",failureCode,failureSummary}}];"
+        }
+      },
+      {
+        "id": "wf2-cross-failure-f7b278ec6493",
+        "name": "Failure Envelope - Enforce Cross-File Review",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          10600,
+          3080
+        ],
+        "onError": "continueErrorOutput",
+        "parameters": {
+          "jsCode": "const input=$input.first().json||{};const raw=input.error??input;const err=typeof raw==='string'?{message:raw}:raw||{};const rawSummary=String(input.failureSummary||err.message||input.message||input.reason||raw||'workflow execution error');const failureSummary=rawSummary.replace(/[\\r\\n]+/g,' ').replace(/(?:token|password|secret|authorization)\\s*[=:]\\s*[^ ,;]+/ig,'$1=[REDACTED]').slice(0,500);const embedded=rawSummary.match(/^([A-Z][A-Z0-9_]+)(?::|$)/)?.[1];const failureCode=String(input.failureCode||embedded||'WF2_EXECUTION_ERROR').slice(0,120);const captured=$items('Capture Correlation Envelope',0,0);const correlationEnvelope=captured?.[0]?.json?.correlationEnvelope||{};return [{json:{correlationEnvelope,executionId:String($execution.id),failedNode:\"Enforce Cross-File Review\",failureCode,failureSummary}}];"
+        }
       }
     ],
     "connections": {
@@ -4592,7 +5048,7 @@
         "main": [
           [
             {
-              "node": "Independent Semantic Review",
+              "node": "Classify Candidate Coordination Scope",
               "type": "main",
               "index": 0
             }
@@ -5347,6 +5803,372 @@
           [
             {
               "node": "Failure Envelope - Fetch Referenced API Sources",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Classify Candidate Coordination Scope": {
+        "main": [
+          [
+            {
+              "node": "Prepare Cross-File COMPILE_MAIN",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Independent Semantic Review",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Prepare Cross-File COMPILE_MAIN": {
+        "main": [
+          [
+            {
+              "node": "Call Cross-File COMPILE_MAIN",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Failure Envelope - Prepare Cross-File COMPILE_MAIN",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Call Cross-File COMPILE_MAIN": {
+        "main": [
+          [
+            {
+              "node": "Enforce Cross-File COMPILE_MAIN",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Failure Envelope - Call Cross-File COMPILE_MAIN",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Enforce Cross-File COMPILE_MAIN": {
+        "main": [
+          [
+            {
+              "node": "Prepare Cross-File COMPILE_TESTS",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Failure Envelope - Enforce Cross-File COMPILE_MAIN",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Prepare Cross-File COMPILE_TESTS": {
+        "main": [
+          [
+            {
+              "node": "Call Cross-File COMPILE_TESTS",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Failure Envelope - Prepare Cross-File COMPILE_TESTS",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Call Cross-File COMPILE_TESTS": {
+        "main": [
+          [
+            {
+              "node": "Enforce Cross-File COMPILE_TESTS",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Failure Envelope - Call Cross-File COMPILE_TESTS",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Enforce Cross-File COMPILE_TESTS": {
+        "main": [
+          [
+            {
+              "node": "Prepare Cross-File FULL_TEST",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Failure Envelope - Enforce Cross-File COMPILE_TESTS",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Prepare Cross-File FULL_TEST": {
+        "main": [
+          [
+            {
+              "node": "Call Cross-File FULL_TEST",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Failure Envelope - Prepare Cross-File FULL_TEST",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Call Cross-File FULL_TEST": {
+        "main": [
+          [
+            {
+              "node": "Enforce Cross-File FULL_TEST",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Failure Envelope - Call Cross-File FULL_TEST",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Enforce Cross-File FULL_TEST": {
+        "main": [
+          [
+            {
+              "node": "Prepare Cross-File Review",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Failure Envelope - Enforce Cross-File FULL_TEST",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Prepare Cross-File Review": {
+        "main": [
+          [
+            {
+              "node": "Independent Cross-File Semantic Review",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Failure Envelope - Prepare Cross-File Review",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Independent Cross-File Semantic Review": {
+        "main": [
+          [
+            {
+              "node": "Enforce Cross-File Review",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Failure Envelope - Independent Cross-File Semantic Review",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Enforce Cross-File Review": {
+        "main": [
+          [
+            {
+              "node": "Hash Candidate Manifest",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Failure Envelope - Enforce Cross-File Review",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Failure Envelope - Prepare Cross-File COMPILE_MAIN": {
+        "main": [
+          [
+            {
+              "node": "Prepare WF2 Failure Status",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Failure Envelope - Call Cross-File COMPILE_MAIN": {
+        "main": [
+          [
+            {
+              "node": "Prepare WF2 Failure Status",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Failure Envelope - Enforce Cross-File COMPILE_MAIN": {
+        "main": [
+          [
+            {
+              "node": "Prepare WF2 Failure Status",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Failure Envelope - Prepare Cross-File COMPILE_TESTS": {
+        "main": [
+          [
+            {
+              "node": "Prepare WF2 Failure Status",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Failure Envelope - Call Cross-File COMPILE_TESTS": {
+        "main": [
+          [
+            {
+              "node": "Prepare WF2 Failure Status",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Failure Envelope - Enforce Cross-File COMPILE_TESTS": {
+        "main": [
+          [
+            {
+              "node": "Prepare WF2 Failure Status",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Failure Envelope - Prepare Cross-File FULL_TEST": {
+        "main": [
+          [
+            {
+              "node": "Prepare WF2 Failure Status",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Failure Envelope - Call Cross-File FULL_TEST": {
+        "main": [
+          [
+            {
+              "node": "Prepare WF2 Failure Status",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Failure Envelope - Enforce Cross-File FULL_TEST": {
+        "main": [
+          [
+            {
+              "node": "Prepare WF2 Failure Status",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Failure Envelope - Prepare Cross-File Review": {
+        "main": [
+          [
+            {
+              "node": "Prepare WF2 Failure Status",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Failure Envelope - Independent Cross-File Semantic Review": {
+        "main": [
+          [
+            {
+              "node": "Prepare WF2 Failure Status",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Failure Envelope - Enforce Cross-File Review": {
+        "main": [
+          [
+            {
+              "node": "Prepare WF2 Failure Status",
               "type": "main",
               "index": 0
             }

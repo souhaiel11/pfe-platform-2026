@@ -8,12 +8,14 @@
 // failures -- it makes no verification decision of its own, and passes the
 // worker's real result through unchanged.
 import { Injectable } from '@nestjs/common';
-import { CandidateManifest, CandidateVerification, FailureClass, HeadVerificationRequest, HeadVerification, assertHeadVerificationRequest } from './candidate-verification.types';
+import { CandidateManifest, CandidateVerification, FailureClass, HeadVerificationRequest, HeadVerification, VerificationMode, VerificationStep, assertHeadVerificationRequest } from './candidate-verification.types';
 import { computeCandidateDigest } from './candidate-digest';
 
 export interface VerifyOptions {
   allowedPaths?: string[];
   timeoutMs?: number;
+  mode?: VerificationMode;
+  verificationStep?: VerificationStep;
 }
 
 const DEFAULT_WORKER_URL = 'http://candidate-verifier:4100/verify';
@@ -36,11 +38,13 @@ export class CandidateVerificationService {
     const identity = {
       candidateId: manifest.candidateId, requestId: manifest.requestId, batchId: manifest.batchId,
       candidateAttempt: manifest.candidateAttempt, candidateBaseSha: manifest.candidateBaseSha, candidateDigest,
+      verificationStep: options.verificationStep?.sequence ?? null, phase: options.verificationStep?.phase ?? null,
+      stateDigest: options.verificationStep?.stateDigest ?? null,
     };
-    const workspaceId = `${manifest.requestId}/${manifest.batchId}/attempt-${manifest.candidateAttempt}`;
+    const workspaceId = `${manifest.requestId}/${manifest.batchId}/attempt-${manifest.candidateAttempt}${options.verificationStep ? `/step-${options.verificationStep.sequence}` : ''}`;
 
     const transportFailure = (failureClass: FailureClass): CandidateVerification => ({
-      identity,
+      mode: options.mode ?? 'FULL_TEST', identity,
       workspace: { workspaceId, exactShaVerified: false, created: false, cleaned: false },
       manifestValidation: { status: 'PASS', errors: [] },
       compile: { status: 'NOT_RUN', exitCode: null, durationMs: null, evidenceRef: null },
@@ -51,6 +55,7 @@ export class CandidateVerificationService {
       overall: 'INCONCLUSIVE',
       verificationLevel: 'COMPILE_TEST_VERIFIED',
       failureClass,
+      diagnostics: { boundedCompilerTail: null, implicatedPaths: [], implicatedSymbols: [] },
     });
 
     const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
@@ -59,7 +64,7 @@ export class CandidateVerificationService {
       response = await fetch(this.workerUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ manifest, allowedPaths: options.allowedPaths, options: { timeoutMs } }),
+        body: JSON.stringify({ manifest, allowedPaths: options.allowedPaths, options: { timeoutMs, mode: options.mode }, verificationStep: options.verificationStep }),
         signal: AbortSignal.timeout(timeoutMs + 10_000), // a little slack over the worker's own internal timeout
       });
     } catch (err: any) {

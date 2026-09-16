@@ -2,6 +2,8 @@
 
 Fix H deliberately does not reorder WF2. The current delivery hardens generation and reviewer policy only.
 
+Phase 1 of the bounded cross-file path deliberately runs `FULL_TEST` twice: once before the dedicated cross-file semantic review, then again through the historical byte-identical `Call Candidate Verification` immediately before the historical Write Guard. The repetition is intentional, not an oversight: it preserves a single proven Git authorization path and rebinds authorization to the exact final candidate digest.
+
 The target architecture is:
 
 ```text

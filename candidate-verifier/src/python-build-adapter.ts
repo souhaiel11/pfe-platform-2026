@@ -61,6 +61,7 @@ function applicationSources(root: string): string[] {
 
 export class PythonBuildAdapter implements BuildAdapter {
   readonly buildType = 'python';
+  supportsMode(mode: import('../../backend/src/candidate-verification/candidate-verification.types').VerificationMode): boolean { return mode !== 'COMPILE_TESTS'; }
   // Same instance must run compile then tests. No global or repo-local venv
   // fallback. Successful preparations remain owned here until tests/recompile.
   private readonly venvs = new Map<string, string>();
