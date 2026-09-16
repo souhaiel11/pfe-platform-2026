@@ -53,7 +53,7 @@ assert.throws(() => parse(response('{"internal":["TEST_SECRET_SENTINEL"],')),
   error => !error.message.includes('TEST_SECRET_SENTINEL') && error.message.startsWith('PATCH_RESPONSE_INVALID_JSON'));
 
 // Real request constructor: one authorized full file, unchanged plan and JSON schema.
-const plan = { findingId: 'finding-a', target: { file: targetFile, line: 1 }, filesToModify: [targetFile], filesToCreate: [] };
+const plan = { findingId: 'finding-a', target: { file: targetFile, line: 1 }, filesToModify: [targetFile], filesToCreate: [], requiredRelationshipApis: [], relationshipOperations: [] };
 const gate = { batchId: 'b', targetBranchName: 'fix/example' };
 const planned = { target_file_path: targetFile, fileOperation: 'MODIFY', remediationPlans: [plan], plannedFiles: [targetFile] };
 const makeRequest = new Function('$json', '$', 'Buffer', node('Prepare - Code Patch Body').parameters.jsCode);

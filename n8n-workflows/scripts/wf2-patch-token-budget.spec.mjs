@@ -12,7 +12,7 @@ const findingId = 'b8db9c11-ddf9-4a23-9bf3-1d2ff15a59ef';
 const sourceFixture = JSON.parse(fs.readFileSync(new URL('./fixtures/wf2-attempt-1999-atomic-review.json', import.meta.url)));
 const baseline = sourceFixture.sources.find(source => source.file === targetFile)?.content;
 assert.ok(baseline?.length >= 9000);
-const plan = { findingId, target: { file: targetFile, line: 34 }, filesToModify: [targetFile], filesToCreate: [], requiredChanges: ['Use a DTO at the controller boundary.'] };
+const plan = { findingId, target: { file: targetFile, line: 34 }, filesToModify: [targetFile], filesToCreate: [], requiredChanges: ['Use a DTO at the controller boundary.'], requiredRelationshipApis: [], relationshipOperations: [] };
 const planned = { target_file_path: targetFile, fileOperation: 'MODIFY', remediationPlans: [plan], plannedFiles: [targetFile], repositoryPolicy: {} };
 const gate = { batchId: 'token-budget', targetBranchName: 'fix/token-budget' };
 const sourceSnapshots = sourceFixture.sources.map(source => ({ file: source.file, content: source.content }));

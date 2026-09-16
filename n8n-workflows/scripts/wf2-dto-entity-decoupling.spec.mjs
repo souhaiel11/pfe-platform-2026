@@ -23,10 +23,9 @@
 // (c) proves a legitimate non-DTO file that imports the entity is
 // unaffected; (d) proves the planner and patch-generation prompts were
 // strengthened; (e) proves no existing R23/patch hardening regressed;
-// (f) proves the PLACEHOLDER_MARKER false positive on the real "TODO" enum
-// value is fixed -- the check now scans only Java comment text (// and
-// /* */), never enum declarations, enum references, identifiers, or string
-// literals.
+// (f) proves the PLACEHOLDER_MARKER guard scans Java comments contextually,
+// compares work markers with the frozen baseline, and never treats enum
+// declarations, enum references, identifiers, or strings as unfinished work.
 //
 // No n8n execution, network, or business action. No fixRequest retried.
 import assert from 'node:assert/strict';
@@ -205,7 +204,8 @@ const basePatch = (overrides) => ({
   assert.match(jsCode, /operation===['"]CREATE['"]/);
   assert.match(jsCode, /\\\/dto\\\//);
   assert.match(jsCode, /model\|entity\|entities\|domain\|persistence/);
-  assert.match(jsCode, /extractComments/, 'PLACEHOLDER_MARKER must be scoped through the comment-extraction helper');
+  assert.match(jsCode, /workMarkerOccurrences/, 'PLACEHOLDER_MARKER must use contextual comment occurrences');
+  assert.match(jsCode, /inheritedWorkMarkers/, 'PLACEHOLDER_MARKER must compare against the frozen baseline');
   assert.match(jsCode, /PLACEHOLDER_MARKER/);
 }
 

@@ -33,7 +33,8 @@ const grounded=new Function('$input','$','Buffer',node('Validate Required Depend
  {all:()=>dependencyItems},()=>({all:()=>dependencyRequests}),Buffer);
 const sourceGrounding=grounded[0].json.sourceGrounding;
 const expandedSources=dependencyFixture.sources.map(s=>({file:s.path,content:s.content}));
-const plan={findingId:'f',target:{file:target,line:34},filesToModify:[target],filesToCreate:[],requiredChanges:['Explicit DTO to entity mapping'],remediationIntent:'DTO mapping',requiredRelationshipApis:sourceGrounding.groundedRelationshipApis};
+const relationshipProof=sourceGrounding.groundedRelationshipApis[0];
+const plan={findingId:'f',target:{file:target,line:34},filesToModify:[target],filesToCreate:[],requiredChanges:['Explicit DTO to entity mapping'],remediationIntent:'DTO mapping',requiredRelationshipApis:[relationshipProof],relationshipOperations:[{entityType:relationshipProof.entityType,field:relationshipProof.field,operation:'RESOLVE_BY_ID',requiredApi:relationshipProof}]};
 const planned={target_file_path:target,fileOperation:'MODIFY',remediationPlans:[plan],plannedFiles:[target]};
 function prepare(sources){return new Function('$json','$','Buffer',node('Prepare - Code Patch Body').parameters.jsCode)(
  {path:target,content:Buffer.from(controller.content).toString('base64')},name=>({first:()=>({json:name==='Prepare Generic Remediation Plan'?{remediationContract:{sourceSnapshots:sources,sourceGrounding}}:ctx}),all:()=>[{json:planned}]}),Buffer).json;}
