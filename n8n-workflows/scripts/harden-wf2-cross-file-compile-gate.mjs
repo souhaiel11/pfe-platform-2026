@@ -13,6 +13,21 @@ const code=(name,id,jsCode,position)=>({parameters:{mode:'runOnceForAllItems',js
 const http=(name,id,position,body)=>({parameters:{method:'POST',url:'=http://backend:3001/api/candidate-verification/verify',sendHeaders:true,headerParameters:{parameters:[{name:'X-Internal-Secret',value:'={{ $env.N8N_INTERNAL_SECRET }}'}]},sendBody:true,specifyBody:'json',jsonBody:body,options:{timeout:300000}},id,name,type:'n8n-nodes-base.httpRequest',typeVersion:4.2,position,onError:'continueErrorOutput'});
 const classifier={parameters:{conditions:{options:{caseSensitive:true,leftValue:'',typeValidation:'strict',version:3},conditions:[{id:'cross-file-count',leftValue:'={{ $json.files.length }}',rightValue:2,operator:{type:'number',operation:'gte'}}],combinator:'and'},options:{}},id:'wf2-cross-file-route',name:'Classify Candidate Coordination Scope',type:'n8n-nodes-base.if',typeVersion:2.2,position:pos(7600,1960)};
 add(classifier);
+// Prepare Candidate Manifest deliberately owns the one canonical serialization
+// (_canonicalJson); hashing remains a native Crypto-node responsibility because
+// Code nodes do not have crypto in the n8n sandbox.  The cross-file route needs
+// the digest before its progressive verifier calls, while the historical route
+// hashes after semantic review.  Reuse the exact same native SHA-256 contract
+// without reimplementing or weakening the canonicalization.
+const crossHash={...structuredClone(byName('Hash Candidate Manifest')),id:'wf2-cross-hash-candidate-manifest',name:'Hash Cross-File Candidate Manifest',position:pos(7800,1780),onError:'continueErrorOutput'};
+add(crossHash);
+add(code('Validate Cross-File Candidate Manifest','wf2-cross-validate-candidate-manifest',`
+const m={...$json};
+if(!Array.isArray(m.files)||m.files.length<2)throw new Error('CROSS_FILE_ROUTE_INVALID');
+if(!/^[a-f0-9]{40}$/.test(String(m.candidateBaseSha||'')))throw new Error('CANDIDATE_MANIFEST_INVALID:candidateBaseSha missing/invalid');
+if(!/^[a-f0-9]{64}$/.test(String(m.candidateDigest||'')))throw new Error('CANDIDATE_MANIFEST_INVALID:candidateDigest missing/invalid');
+if(typeof m._canonicalJson!=='string'||!m._canonicalJson)throw new Error('CANDIDATE_MANIFEST_INVALID:canonical serialization missing');
+return [{json:m}];`,pos(7900,1780)));
 const prepare=(mode,seq,phase,previous,position)=>code(`Prepare Cross-File ${mode}`,`wf2-cross-prepare-${seq}`,`
 const source=${previous?`$('${previous}').first().json`:'$input.first().json'};
 const manifest=source.candidateManifest||source;
@@ -50,14 +65,16 @@ add(code('Enforce Cross-File Review','wf2-cross-review-enforce',reviewCode,pos(1
 
 const failureTemplate=byName('Failure Envelope - Enforce Independent Review');
 const failureNodes=[];
-for(const name of stages.flatMap(([m])=>[`Prepare Cross-File ${m}`,`Call Cross-File ${m}`,`Enforce Cross-File ${m}`]).concat(['Prepare Cross-File Review','Independent Cross-File Semantic Review','Enforce Cross-File Review'])){
+for(const name of ['Hash Cross-File Candidate Manifest','Validate Cross-File Candidate Manifest'].concat(stages.flatMap(([m])=>[`Prepare Cross-File ${m}`,`Call Cross-File ${m}`,`Enforce Cross-File ${m}`]),['Prepare Cross-File Review','Independent Cross-File Semantic Review','Enforce Cross-File Review'])){
   const id='wf2-cross-failure-'+crypto.createHash('sha1').update(name).digest('hex').slice(0,12);const failureName='Failure Envelope - '+name;
   let js=failureTemplate.parameters.jsCode.replace('failedNode:"Enforce Independent Review"',`failedNode:${JSON.stringify(name)}`);
   add({...structuredClone(failureTemplate),id,name:failureName,position:pos(10600,2200+failureNodes.length*80),parameters:{...structuredClone(failureTemplate.parameters),jsCode:js}});failureNodes.push(failureName);
 }
 const set=(from,outputs)=>{wf.connections[from]={main:outputs}};
 set('Prepare Candidate Manifest',[[{node:'Classify Candidate Coordination Scope',type:'main',index:0}],[{node:'Failure Envelope - Assemble Candidate Manifest',type:'main',index:0}]]);
-set('Classify Candidate Coordination Scope',[[{node:'Prepare Cross-File COMPILE_MAIN',type:'main',index:0}],[{node:'Independent Semantic Review',type:'main',index:0}]]);
+set('Classify Candidate Coordination Scope',[[{node:'Hash Cross-File Candidate Manifest',type:'main',index:0}],[{node:'Independent Semantic Review',type:'main',index:0}]]);
+set('Hash Cross-File Candidate Manifest',[[{node:'Validate Cross-File Candidate Manifest',type:'main',index:0}],[{node:'Failure Envelope - Hash Cross-File Candidate Manifest',type:'main',index:0}]]);
+set('Validate Cross-File Candidate Manifest',[[{node:'Prepare Cross-File COMPILE_MAIN',type:'main',index:0}],[{node:'Failure Envelope - Validate Cross-File Candidate Manifest',type:'main',index:0}]]);
 for(let i=0;i<stages.length;i++){const [mode]=stages[i];const prep=`Prepare Cross-File ${mode}`,call=`Call Cross-File ${mode}`,enf=`Enforce Cross-File ${mode}`;const next=i+1<stages.length?`Prepare Cross-File ${stages[i+1][0]}`:'Prepare Cross-File Review';set(prep,[[{node:call,type:'main',index:0}],[{node:'Failure Envelope - '+prep,type:'main',index:0}]]);set(call,[[{node:enf,type:'main',index:0}],[{node:'Failure Envelope - '+call,type:'main',index:0}]]);set(enf,[[{node:next,type:'main',index:0}],[{node:'Failure Envelope - '+enf,type:'main',index:0}]]);}
 set('Prepare Cross-File Review',[[{node:'Independent Cross-File Semantic Review',type:'main',index:0}],[{node:'Failure Envelope - Prepare Cross-File Review',type:'main',index:0}]]);
 set('Independent Cross-File Semantic Review',[[{node:'Enforce Cross-File Review',type:'main',index:0}],[{node:'Failure Envelope - Independent Cross-File Semantic Review',type:'main',index:0}]]);

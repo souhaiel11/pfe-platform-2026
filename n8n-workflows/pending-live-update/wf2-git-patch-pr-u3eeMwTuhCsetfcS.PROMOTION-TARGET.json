@@ -3642,6 +3642,68 @@
         "parameters": {
           "jsCode": "const input=$input.first().json||{};const raw=input.error??input;const err=typeof raw==='string'?{message:raw}:raw||{};const rawSummary=String(input.failureSummary||err.message||input.message||input.reason||raw||'workflow execution error');const failureSummary=rawSummary.replace(/[\\r\\n]+/g,' ').replace(/(?:token|password|secret|authorization)\\s*[=:]\\s*[^ ,;]+/ig,'$1=[REDACTED]').slice(0,500);const embedded=rawSummary.match(/^([A-Z][A-Z0-9_]+)(?::|$)/)?.[1];const failureCode=String(input.failureCode||embedded||'WF2_EXECUTION_ERROR').slice(0,120);const captured=$items('Capture Correlation Envelope',0,0);const correlationEnvelope=captured?.[0]?.json?.correlationEnvelope||{};return [{json:{correlationEnvelope,executionId:String($execution.id),failedNode:\"Enforce Cross-File Review\",failureCode,failureSummary}}];"
         }
+      },
+      {
+        "id": "wf2-cross-hash-candidate-manifest",
+        "name": "Hash Cross-File Candidate Manifest",
+        "type": "n8n-nodes-base.crypto",
+        "typeVersion": 2,
+        "position": [
+          7800,
+          1780
+        ],
+        "parameters": {
+          "action": "hash",
+          "type": "SHA256",
+          "binaryData": false,
+          "value": "={{ $json._canonicalJson }}",
+          "dataPropertyName": "candidateDigest",
+          "encoding": "hex"
+        },
+        "onError": "continueErrorOutput"
+      },
+      {
+        "parameters": {
+          "mode": "runOnceForAllItems",
+          "jsCode": "\nconst m={...$json};\nif(!Array.isArray(m.files)||m.files.length<2)throw new Error('CROSS_FILE_ROUTE_INVALID');\nif(!/^[a-f0-9]{40}$/.test(String(m.candidateBaseSha||'')))throw new Error('CANDIDATE_MANIFEST_INVALID:candidateBaseSha missing/invalid');\nif(!/^[a-f0-9]{64}$/.test(String(m.candidateDigest||'')))throw new Error('CANDIDATE_MANIFEST_INVALID:candidateDigest missing/invalid');\nif(typeof m._canonicalJson!=='string'||!m._canonicalJson)throw new Error('CANDIDATE_MANIFEST_INVALID:canonical serialization missing');\nreturn [{json:m}];"
+        },
+        "id": "wf2-cross-validate-candidate-manifest",
+        "name": "Validate Cross-File Candidate Manifest",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          7900,
+          1780
+        ],
+        "onError": "continueErrorOutput"
+      },
+      {
+        "id": "wf2-cross-failure-7b29bd7c0e28",
+        "name": "Failure Envelope - Hash Cross-File Candidate Manifest",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          10600,
+          2200
+        ],
+        "onError": "continueErrorOutput",
+        "parameters": {
+          "jsCode": "const input=$input.first().json||{};const raw=input.error??input;const err=typeof raw==='string'?{message:raw}:raw||{};const rawSummary=String(input.failureSummary||err.message||input.message||input.reason||raw||'workflow execution error');const failureSummary=rawSummary.replace(/[\\r\\n]+/g,' ').replace(/(?:token|password|secret|authorization)\\s*[=:]\\s*[^ ,;]+/ig,'$1=[REDACTED]').slice(0,500);const embedded=rawSummary.match(/^([A-Z][A-Z0-9_]+)(?::|$)/)?.[1];const failureCode=String(input.failureCode||embedded||'WF2_EXECUTION_ERROR').slice(0,120);const captured=$items('Capture Correlation Envelope',0,0);const correlationEnvelope=captured?.[0]?.json?.correlationEnvelope||{};return [{json:{correlationEnvelope,executionId:String($execution.id),failedNode:\"Hash Cross-File Candidate Manifest\",failureCode,failureSummary}}];"
+        }
+      },
+      {
+        "id": "wf2-cross-failure-2b6deb5b06d6",
+        "name": "Failure Envelope - Validate Cross-File Candidate Manifest",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          10600,
+          2280
+        ],
+        "onError": "continueErrorOutput",
+        "parameters": {
+          "jsCode": "const input=$input.first().json||{};const raw=input.error??input;const err=typeof raw==='string'?{message:raw}:raw||{};const rawSummary=String(input.failureSummary||err.message||input.message||input.reason||raw||'workflow execution error');const failureSummary=rawSummary.replace(/[\\r\\n]+/g,' ').replace(/(?:token|password|secret|authorization)\\s*[=:]\\s*[^ ,;]+/ig,'$1=[REDACTED]').slice(0,500);const embedded=rawSummary.match(/^([A-Z][A-Z0-9_]+)(?::|$)/)?.[1];const failureCode=String(input.failureCode||embedded||'WF2_EXECUTION_ERROR').slice(0,120);const captured=$items('Capture Correlation Envelope',0,0);const correlationEnvelope=captured?.[0]?.json?.correlationEnvelope||{};return [{json:{correlationEnvelope,executionId:String($execution.id),failedNode:\"Validate Cross-File Candidate Manifest\",failureCode,failureSummary}}];"
+        }
       }
     ],
     "connections": {
@@ -5813,7 +5875,7 @@
         "main": [
           [
             {
-              "node": "Prepare Cross-File COMPILE_MAIN",
+              "node": "Hash Cross-File Candidate Manifest",
               "type": "main",
               "index": 0
             }
@@ -6165,6 +6227,64 @@
         ]
       },
       "Failure Envelope - Enforce Cross-File Review": {
+        "main": [
+          [
+            {
+              "node": "Prepare WF2 Failure Status",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Hash Cross-File Candidate Manifest": {
+        "main": [
+          [
+            {
+              "node": "Validate Cross-File Candidate Manifest",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Failure Envelope - Hash Cross-File Candidate Manifest",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Validate Cross-File Candidate Manifest": {
+        "main": [
+          [
+            {
+              "node": "Prepare Cross-File COMPILE_MAIN",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Failure Envelope - Validate Cross-File Candidate Manifest",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Failure Envelope - Hash Cross-File Candidate Manifest": {
+        "main": [
+          [
+            {
+              "node": "Prepare WF2 Failure Status",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Failure Envelope - Validate Cross-File Candidate Manifest": {
         "main": [
           [
             {
