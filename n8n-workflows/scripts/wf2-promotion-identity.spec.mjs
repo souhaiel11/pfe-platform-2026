@@ -10,19 +10,21 @@ assert.equal(target.id, id);
 assert.equal(target.active, false, 'artifact is not an activation request');
 assert.equal(node('Webhook').parameters.path, 'wf2-r22e-test');
 assert.equal(node('Webhook').parameters.httpMethod, 'POST');
-assert.equal(target.nodes.length, 155);
-assert.equal(new Set(target.nodes.map(n => n.id)).size, 155);
-assert.equal(new Set(target.nodes.map(n => n.name)).size, 155);
+assert.equal(target.nodes.length, 184);
+assert.equal(new Set(target.nodes.map(n => n.id)).size, 184);
+assert.equal(new Set(target.nodes.map(n => n.name)).size, 184);
 const apiNodes = ['Expand Referenced API Sources','Fetch Referenced API Sources'];
 const gateNodes = ['Validate Source Context Completeness'];
 const dependencyNodes=['Expand Required Dependency Sources','Fetch Required Dependency Sources','Validate Required Dependency Sources'];
-const added = [...apiNodes, ...apiNodes.map(n => 'Failure Envelope - ' + n), ...gateNodes, ...dependencyNodes];
+const crossAdded=target.nodes.filter(n=>n.name==='Classify Candidate Coordination Scope'||n.name.includes('Cross-File')).map(n=>n.name);
+const added = [...apiNodes, ...apiNodes.map(n => 'Failure Envelope - ' + n), ...gateNodes, ...dependencyNodes, ...crossAdded];
 const originalConnections = structuredClone(target.connections);
 for (const name of added) delete originalConnections[name];
 originalConnections['Fetch Finding Source Context'].main[0][0].node = 'Prepare Generic Remediation Plan';
 // Atomic review moves exactly three success edges and reuses the manifest failure envelope.
 assert.equal(target.connections['Generic Candidate Preflight'].main[0][0].node, 'Hash Candidate File Content');
-assert.equal(target.connections['Prepare Candidate Manifest'].main[0][0].node, 'Independent Semantic Review');
+assert.equal(target.connections['Prepare Candidate Manifest'].main[0][0].node, 'Classify Candidate Coordination Scope');
+assert.equal(target.connections['Classify Candidate Coordination Scope'].main[1][0].node, 'Independent Semantic Review');
 assert.equal(target.connections['Enforce Independent Review'].main[0][0].node, 'Hash Candidate Manifest');
 assert.deepEqual(target.connections['Prepare Candidate Manifest'].main[1], [{node:'Failure Envelope - Assemble Candidate Manifest',type:'main',index:0}]);
 originalConnections['Generic Candidate Preflight'].main[0][0].node = 'Independent Semantic Review';
@@ -77,7 +79,7 @@ const RETRY_HARDENED = ['Get Main Branch SHA1', 'Independent Semantic Review', '
 // exactly.
 // Patch-output hardening changes only request construction and parsing; dedicated tests
 // verify truncation, complete JSON, schema, target identity and bounded output budget.
-const JSCODE_HARDENED = ['Generic Candidate Preflight', 'Persist Verification Failure', 'Prepare - Code Patch Body', 'Parse - Code Patch Output', 'Prepare Generic Remediation Plan', 'Validate Generic Remediation Plan', 'Prepare WF2 Failure Status', 'Accumulate Candidate File', 'Prepare Candidate Manifest', 'Enforce Independent Review', 'Failure Envelope - Assemble Candidate Manifest'];
+const JSCODE_HARDENED = ['Generic Candidate Preflight', 'Persist Verification Failure', 'Prepare - Code Patch Body', 'Parse - Code Patch Output', 'Prepare Generic Remediation Plan', 'Validate Generic Remediation Plan', 'Prepare WF2 Failure Status', 'Accumulate Candidate File', 'Prepare Candidate Manifest', 'Enforce Independent Review', 'Failure Envelope - Assemble Candidate Manifest', 'Validate Batch Completeness', 'Expand Manifest Files', 'Build File Result (Pass 2)', 'Build Reconciled File Result'];
 const SOURCE_BASELINE_PINNED = ['Fetch Finding Source Context'];
 for (const n of target.nodes) {
   if (added.includes(n.name)) {
