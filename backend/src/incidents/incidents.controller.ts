@@ -4,6 +4,7 @@ import { IncidentsService } from './incidents.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { JwtOrInternalSecretGuard } from '../auth/jwt-or-internal-secret.guard';
 import { InternalSecretGuard } from '../auth/internal-secret.guard';
+import { PostWriteRecoveryDto } from './post-write-recovery';
 
 @ApiTags('Incidents')
 @ApiBearerAuth()
@@ -41,6 +42,10 @@ export class IncidentsController {
   @UseGuards(JwtAuthGuard)
   @Post(':id/retry') retryFix(@Param('id') id: string, @Req() req: any) {
     return this.service.retryFix(id, req.user);
+  }
+  @UseGuards(JwtAuthGuard)
+  @Post(':id/recover-post-write') recoverPostWrite(@Param('id') id: string, @Body() body: PostWriteRecoveryDto, @Req() req: any) {
+    return this.service.recoverPostWrite(id, body, req.user);
   }
   // R21-AE — explicit admin action only. The stale threshold is a
   // precondition; no scheduler invokes this endpoint automatically.

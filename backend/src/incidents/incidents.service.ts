@@ -21,6 +21,8 @@ import { combineRegressionVerdict } from '../validation/regression-verdict';
 import { normalizeSonarFindings } from '../validation/sonar-regression-adapter';
 import { buildCorrectiveContext } from '../validation/corrective-context';
 import { isWorkflowIdentity, resolveAttemptWorkflowIdentity } from './workflow-attempt-identity';
+import { commonPrCreatedFields, isPostWriteFailureNode, PostWriteRecoveryInput,
+  postWriteRecoveryIdentity, validatePostWriteRecoveryEvidence } from './post-write-recovery';
 
 export function classifyJenkinsTriggerStatus(status: number): { accepted: boolean; code?: string } {
   if (status === 201) return { accepted: true };
@@ -417,6 +419,69 @@ export class IncidentsService {
     return response.json();
   }
 
+  private async githubFileAtSha(project: Project, path: string, sha: string): Promise<{ sha: string; content: string }> {
+    const repository = this.canonicalRepository(project.githubRepo);
+    const headers: Record<string, string> = { Accept: 'application/vnd.github+json', 'User-Agent': 'pfe-post-write-recovery' };
+    if (project.githubToken) headers.Authorization = `Bearer ${project.githubToken}`;
+    const encodedPath = path.split('/').map(encodeURIComponent).join('/');
+    const response = await fetch(`https://api.github.com/repos/${repository}/contents/${encodedPath}?ref=${encodeURIComponent(sha)}`, {
+      headers, signal: AbortSignal.timeout(10_000),
+    });
+    if (!response.ok) throw new BadGatewayException({ code: 'POST_WRITE_RECOVERY_REMOTE_FILE_UNAVAILABLE', path });
+    const body: any = await response.json();
+    if (!isFullGitSha(body?.sha) || body?.encoding !== 'base64' || typeof body?.content !== 'string') {
+      throw new BadGatewayException({ code: 'POST_WRITE_RECOVERY_REMOTE_FILE_INVALID', path });
+    }
+    return { sha: String(body.sha).toLowerCase(), content: Buffer.from(body.content.replace(/\n/g, ''), 'base64').toString('utf8') };
+  }
+
+  private async githubBranchHead(project: Project, branch: string): Promise<string> {
+    const repository = this.canonicalRepository(project.githubRepo);
+    const headers: Record<string, string> = { Accept: 'application/vnd.github+json', 'User-Agent': 'pfe-post-write-recovery' };
+    if (project.githubToken) headers.Authorization = `Bearer ${project.githubToken}`;
+    const response = await fetch(`https://api.github.com/repos/${repository}/git/ref/heads/${encodeURIComponent(branch)}`, {
+      headers, signal: AbortSignal.timeout(10_000),
+    });
+    if (!response.ok) throw new ConflictException({ code: 'POST_WRITE_RECOVERY_BRANCH_NOT_FOUND' });
+    const body: any = await response.json();
+    const head = String(body?.object?.sha || '').toLowerCase();
+    if (!isFullGitSha(head)) throw new BadGatewayException({ code: 'POST_WRITE_RECOVERY_BRANCH_RESPONSE_INVALID' });
+    return head;
+  }
+
+  private async hasActiveWf2Execution(): Promise<boolean> {
+    const apiKey = String(process.env.N8N_API_KEY || '').trim();
+    if (!apiKey) throw new ServiceUnavailableException({ code: 'POST_WRITE_RECOVERY_ACTIVE_EXECUTION_UNVERIFIED' });
+    const base = String(process.env.N8N_URL || 'http://n8n:5678').replace(/\/$/, '');
+    const workflowId = this.configuredWf2Identity();
+    let response: Response;
+    try {
+      response = await fetch(`${base}/api/v1/executions?workflowId=${encodeURIComponent(workflowId)}&status=running&limit=1`, {
+        headers: { 'X-N8N-API-KEY': apiKey }, signal: AbortSignal.timeout(10_000),
+      });
+    } catch {
+      throw new ServiceUnavailableException({ code: 'POST_WRITE_RECOVERY_ACTIVE_EXECUTION_UNVERIFIED' });
+    }
+    if (!response.ok) throw new ServiceUnavailableException({ code: 'POST_WRITE_RECOVERY_ACTIVE_EXECUTION_UNVERIFIED' });
+    const body: any = await response.json();
+    const executions = Array.isArray(body?.data) ? body.data : Array.isArray(body?.results) ? body.results : [];
+    return executions.length > 0;
+  }
+
+  private async verifyRecoveryRemoteFiles(project: Project, input: PostWriteRecoveryInput): Promise<void> {
+    for (const file of input.evidence.files) {
+      const remote = await this.githubFileAtSha(project, file.path, input.expectedHeadSha);
+      const receipt = input.evidence.receipts.find(item => item.targetFile === file.path)!;
+      if (remote.sha !== receipt.newSha.toLowerCase()) {
+        throw new ConflictException({ code: 'POST_WRITE_RECOVERY_BLOB_SHA_MISMATCH', path: file.path });
+      }
+      const contentSha256 = createHash('sha256').update(remote.content, 'utf8').digest('hex');
+      if (contentSha256 !== file.contentSha256.toLowerCase()) {
+        throw new ConflictException({ code: 'POST_WRITE_RECOVERY_CONTENT_SHA_MISMATCH', path: file.path });
+      }
+    }
+  }
+
   async findAll(projectId?: string, status?: string, size?: number) {
     const where: any = {};
     if (projectId) where.projectId = projectId;
@@ -647,26 +712,16 @@ export class IncidentsService {
             workflowId, workflowExecutionId: executionId,
             completionEvidence: input.completionEvidence || fix.completionEvidence || null,
             retryEligible: true }
-        : { ...fix, status: 'PR_CREATED', attempts, workflowEvents: events, prUrl: input.prUrl,
-            prNumber: Number(input.prNumber), prCreatedAt: now, workflowId, workflowExecutionId: executionId,
-            completenessPassed: true, processedFindingIds, updatedFiles, commitShas,
-            candidateAcceptedFindingIds: acceptedFindingIds,
-            candidateVerifiedFiles: verifiedFiles,
-            plannedFiles,
+        : { ...fix, ...commonPrCreatedFields({
+              prUrl: String(input.prUrl), prNumber: Number(input.prNumber), prHeadSha: String(input.prHeadSha), now,
+              evidence: { processedFindingIds, candidateAcceptedFindingIds: acceptedFindingIds,
+                candidateVerifiedFiles: verifiedFiles, plannedFiles, updatedFiles, commitShas,
+                fileResults: input.fileResults as any[] },
+            }), attempts, workflowEvents: events, workflowId, workflowExecutionId: executionId,
             // Compatibility only: preserve legacy evidence if an old workflow
             // supplied it, but never synthesize scanner-resolution semantics.
             effectiveRemediatedFindingIds: normalize(input.effectiveRemediatedFindingIds),
-            verifiedFiles: normalize(input.verifiedFiles), fileResults: input.fileResults,
-            prHeadSha: String(input.prHeadSha), retryEligible: false,
-            // BRIQUE 5 PHASE 6 — a NEW commit landing on the branch (initial
-            // or corrective) always makes any earlier human-governed
-            // validationTargetSha override (refreshPrValidationTarget) moot:
-            // it named an OLDER commit than the one that just replaced it.
-            // Clearing it here means requestPrValidation()'s `fix.
-            // validationTargetSha || fix.prHeadSha` always resolves to THIS
-            // exact new prHeadSha, never a stale override from a previous
-            // attempt/commit.
-            validationTargetSha: null };
+            verifiedFiles: normalize(input.verifiedFiles) };
       const nextMetadata = callbackStatus === 'PR_CREATED'
         ? this.invalidateActiveValidationForNewSha({ ...metadata, fixRequest: nextFix }, String(input.prHeadSha || ''), 'CORRECTIVE_PR_CREATED')
         : { ...metadata, fixRequest: nextFix };
@@ -2028,6 +2083,128 @@ export class IncidentsService {
     const updated = await this.findOne(id);
     this.gateway.emit('incident:updated', updated);
     return { success: true, duplicate: false, status: 'DISPATCHED', incidentId: id, requestId: fix.requestId, batchId: fix.batchId, attemptCount: nextAttempt, correctiveContext };
+  }
+
+  /**
+   * Governed recovery for a historical WF2 attempt whose candidate was fully
+   * written before a post-write integration failure. This never dispatches
+   * WF2, creates a PR, rewrites an attempt, or increments attemptCount.
+   */
+  async recoverPostWrite(id: string, input: PostWriteRecoveryInput, user: any) {
+    this.assertCanApprove(user);
+    const recoveryIdentity = postWriteRecoveryIdentity(input);
+    const snapshot: any = await this.repo.findOne({ where: { id }, relations: ['project'] });
+    if (!snapshot) throw new NotFoundException('Incident introuvable.');
+    const metadata: any = snapshot.metadata || {};
+    const fix: any = metadata.fixRequest;
+    if (!fix || fix.requestId !== input.fixRequestId || fix.batchId !== input.batchId) {
+      throw new ConflictException({ code: 'POST_WRITE_RECOVERY_REQUEST_MISMATCH' });
+    }
+    const priorRecovery = fix.postWriteRecovery;
+    if (priorRecovery?.status === 'COMPLETED') {
+      if (priorRecovery.identity !== recoveryIdentity) {
+        throw new ConflictException({ code: 'POST_WRITE_RECOVERY_CONFLICT' });
+      }
+      return { success: true, duplicate: true, recoveredExistingPr: true, status: 'PR_CREATED',
+        incidentId: id, requestId: fix.requestId, batchId: fix.batchId, postWriteRecovery: priorRecovery };
+    }
+    if (fix.status !== 'FIX_FAILED') throw new ConflictException({ code: 'POST_WRITE_RECOVERY_FIX_NOT_FAILED' });
+    const attempts: any[] = Array.isArray(fix.attempts) ? fix.attempts : [];
+    const sourceAttempt = attempts.find(attempt => Number(attempt.attempt) === Number(input.sourceAttempt));
+    const currentAttempt = attempts.find(attempt => Number(attempt.attempt) === Number(fix.attemptCount));
+    if (!sourceAttempt) throw new ConflictException({ code: 'POST_WRITE_RECOVERY_SOURCE_ATTEMPT_MISSING' });
+    if (sourceAttempt.status !== 'FIX_FAILED' || String(sourceAttempt.workflowExecutionId || '') !== String(input.sourceExecutionId)) {
+      throw new ConflictException({ code: 'POST_WRITE_RECOVERY_SOURCE_EXECUTION_MISMATCH' });
+    }
+    if (!isPostWriteFailureNode(sourceAttempt.failureNode)) {
+      throw new ConflictException({ code: 'POST_WRITE_RECOVERY_NOT_POST_WRITE_FAILURE' });
+    }
+    if (!Number.isInteger(Number(fix.attemptCount)) || input.sourceAttempt >= Number(fix.attemptCount)) {
+      throw new ConflictException({ code: 'POST_WRITE_RECOVERY_ATTEMPT_ORDER_INVALID' });
+    }
+    if (!currentAttempt || currentAttempt.status !== 'FIX_FAILED'
+      || attempts.some(attempt => ['FIX_STARTING', 'DISPATCHED', 'VALIDATING'].includes(String(attempt.status)))) {
+      throw new ConflictException({ code: 'POST_WRITE_RECOVERY_ACTIVE_ATTEMPT' });
+    }
+    if (await this.hasActiveWf2Execution()) {
+      throw new ConflictException({ code: 'POST_WRITE_RECOVERY_ACTIVE_WF2_EXECUTION' });
+    }
+    const expectedBranchIdentity = `fix/pfe-${id}-${fix.requestId}`;
+    if (input.expectedBranch !== expectedBranchIdentity) {
+      throw new ConflictException({ code: 'POST_WRITE_RECOVERY_BRANCH_IDENTITY_MISMATCH' });
+    }
+    const expectedFindingIds = Array.isArray(fix.findingIds) ? fix.findingIds.map(String) : [];
+    const evidence = validatePostWriteRecoveryEvidence(input, expectedFindingIds);
+    const project: Project = snapshot.project;
+    if (!project) throw new BadRequestException({ code: 'POST_WRITE_RECOVERY_PROJECT_MISSING' });
+    const repository = this.canonicalRepository(project.githubRepo);
+    const remoteBranchHead = await this.githubBranchHead(project, input.expectedBranch);
+    if (remoteBranchHead !== input.expectedHeadSha.toLowerCase()) {
+      throw new ConflictException({ code: 'POST_WRITE_RECOVERY_BRANCH_HEAD_MISMATCH' });
+    }
+    const pull = await this.githubPullRequest(project, input.prNumber);
+    const baseBranch = String(metadata.defaultBranch || pull?.base?.ref || 'main');
+    if (String(pull?.state).toLowerCase() !== 'open'
+      || this.canonicalRepository(pull?.head?.repo?.full_name) !== repository
+      || this.canonicalRepository(pull?.base?.repo?.full_name) !== repository
+      || String(pull?.head?.ref || '') !== input.expectedBranch
+      || String(pull?.base?.ref || '') !== baseBranch
+      || String(pull?.head?.sha || '').toLowerCase() !== input.expectedHeadSha.toLowerCase()) {
+      throw new ConflictException({ code: 'POST_WRITE_RECOVERY_PR_MISMATCH' });
+    }
+    const prUrl = String(pull?.html_url || '');
+    if (!/^https:\/\/github\.com\/[^/]+\/[^/]+\/pull\/\d+$/i.test(prUrl)) {
+      throw new ConflictException({ code: 'POST_WRITE_RECOVERY_PR_URL_INVALID' });
+    }
+    await this.verifyRecoveryRemoteFiles(project, input);
+
+    const result: any = await this.repo.manager.transaction(async manager => {
+      const repo = manager.getRepository(Incident);
+      const incident: any = await repo.findOne({ where: { id }, lock: { mode: 'pessimistic_write' } });
+      if (!incident) throw new NotFoundException('Incident introuvable.');
+      const currentMetadata: any = incident.metadata || {};
+      const currentFix: any = currentMetadata.fixRequest || {};
+      if (currentFix.postWriteRecovery?.status === 'COMPLETED') {
+        if (currentFix.postWriteRecovery.identity !== recoveryIdentity) {
+          throw new ConflictException({ code: 'POST_WRITE_RECOVERY_CONFLICT' });
+        }
+        return { applied: false, duplicate: true, incident, recovery: currentFix.postWriteRecovery };
+      }
+      if (currentFix.requestId !== input.fixRequestId || currentFix.batchId !== input.batchId
+        || currentFix.status !== 'FIX_FAILED' || Number(currentFix.attemptCount) !== Number(fix.attemptCount)
+        || JSON.stringify(currentFix.attempts || []) !== JSON.stringify(fix.attempts || [])) {
+        throw new ConflictException({ code: 'POST_WRITE_RECOVERY_STATE_CHANGED' });
+      }
+      const now = new Date().toISOString();
+      const recovery = { identity: recoveryIdentity, status: 'COMPLETED', sourceAttempt: input.sourceAttempt,
+        sourceExecutionId: String(input.sourceExecutionId), candidateDigest: input.candidateDigest.toLowerCase(),
+        branchName: input.expectedBranch, recoveredHeadSha: input.expectedHeadSha.toLowerCase(),
+        prNumber: input.prNumber, prUrl, recoveredExistingPr: true, recoveredAt: now, recoveredBy: user.id };
+      const workflowEvents = [...(Array.isArray(currentFix.workflowEvents) ? currentFix.workflowEvents : []), {
+        identity: `${recoveryIdentity}:POST_WRITE_RECOVERY_COMPLETED`, workflowId: this.configuredWf2Identity(),
+        executionId: String(input.sourceExecutionId), attempt: input.sourceAttempt,
+        status: 'POST_WRITE_RECOVERY_COMPLETED', recordedAt: now, source: 'GOVERNED_POST_WRITE_RECOVERY',
+      }];
+      const nextFix = { ...currentFix, ...commonPrCreatedFields({ prUrl, prNumber: input.prNumber,
+          prHeadSha: input.expectedHeadSha.toLowerCase(), now, evidence }),
+        attempts: currentFix.attempts, attemptCount: currentFix.attemptCount, workflowEvents,
+        postWriteRecovery: recovery };
+      const nextMetadata = this.invalidateActiveValidationForNewSha(
+        { ...currentMetadata, fixRequest: nextFix }, input.expectedHeadSha.toLowerCase(), 'POST_WRITE_RECOVERY_COMPLETED');
+      const patch: any = { metadata: nextMetadata, prUrl, status: IncidentStatus.FIX_GENERATED };
+      await repo.update(id, patch);
+      Object.assign(incident, patch);
+      return { applied: true, duplicate: false, incident, recovery };
+    });
+    if (result.applied) {
+      const updated = await this.findOne(id);
+      this.gateway.emit('incident:updated', updated);
+      this.dispatchAutomaticInitialPrValidation(id).catch(error => {
+        console.warn(`[incidents] automatic initial PR validation failed after post-write recovery for incident ${id}: ${error?.message || error}`);
+      });
+    }
+    return { success: true, duplicate: result.duplicate, recoveredExistingPr: true, status: 'PR_CREATED',
+      incidentId: id, requestId: fix.requestId, batchId: fix.batchId, postWriteRecovery: result.recovery };
   }
 
   // R42A — réconciliation gouvernée d'une validation PR restée QUEUED/RUNNING
