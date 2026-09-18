@@ -96,10 +96,11 @@ export function hardenGrounding(w) {
       patch.jsCode=patch.jsCode.replace('const completePlan={sourceApiContext,sourceGrounding,','const completePlan={sourceApiContext,sourceGrounding,relationshipOperations:plans.flatMap(plan=>plan.relationshipOperations||[]),');
     const groundingStatement='llmRequestBody.system+='+JSON.stringify(groundingInstruction)+';\n';
     patch.jsCode=patch.jsCode.replaceAll(groundingStatement,'');
-    const requestGuard=patch.jsCode.indexOf("if(!llmRequestBody||typeof llmRequestBody!=='object')");
+    const stableAnchor='llmRequestBody.system+=" Input-boundary behavior';
+    const requestGuard=patch.jsCode.indexOf(patch.jsCode.includes(stableAnchor)?stableAnchor:"if(!llmRequestBody||typeof llmRequestBody!=='object')");
     assert.ok(requestGuard>=0,'patch grounding instruction anchor missing');
     patch.jsCode=patch.jsCode.slice(0,requestGuard)+groundingStatement+patch.jsCode.slice(requestGuard);
-    assert.equal(w.nodes.length,155);
+    assert.equal(w.nodes.length,186);
     return hardenFixH(w);
   }
   assert.equal(w.nodes.length,152);
@@ -130,11 +131,11 @@ export function hardenGrounding(w) {
     .replace('const completePlan={sourceApiContext,','const completePlan={sourceApiContext,sourceGrounding,relationshipOperations:plans.flatMap(plan=>plan.relationshipOperations||[]),');
   patch.jsCode=patch.jsCode.replace("if(!llmRequestBody||typeof llmRequestBody!=='object')",'llmRequestBody.system+='+JSON.stringify(groundingInstruction)+";\nif(!llmRequestBody||typeof llmRequestBody!=='object')");
   node('Prepare Candidate Manifest').parameters.jsCode=node('Prepare Candidate Manifest').parameters.jsCode.replace('  sourceSnapshots,','  sourceSnapshots,\n  sourceGrounding: prepared.remediationContract?.sourceGrounding,');
-  assert.equal(w.nodes.length,155);
+  assert.equal(w.nodes.length,186);
   return hardenFixH(w);
 }
 if(process.argv[1]&&new URL(import.meta.url).pathname===process.argv[1]) {
   const path=new URL('../pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.PROMOTION-TARGET.json',import.meta.url);
   const data=JSON.parse(readFileSync(path,'utf8'));hardenGrounding(data[0]);writeFileSync(path,JSON.stringify(data,null,2)+'\n');
-  console.log('Local bounded relationship source grounding: 155 nodes; no live actions.');
+  console.log('Local bounded relationship source grounding: 186 nodes; no live actions.');
 }

@@ -126,7 +126,12 @@ assert.deepEqual(targets('Merge Effective File Results',1), ['Route Planned File
 assert.deepEqual(targets('Generic Candidate Preflight'), ['Hash Candidate File Content']);
 assert.deepEqual(targets('Hash Candidate File Content'), ['Accumulate Candidate File']);
 assert.deepEqual(targets('Accumulate Candidate File'), ['Merge Effective File Results']);
-assert.deepEqual(targets('Prepare Candidate Manifest'), ['Independent Semantic Review']);
+assert.deepEqual(targets('Prepare Candidate Manifest'), ['Classify Candidate Coordination Scope']);
+assert.deepEqual(targets('Classify Candidate Coordination Scope'), ['Hash Cross-File Candidate Manifest']);
+assert.deepEqual(targets('Hash Cross-File Candidate Manifest'), ['Validate Cross-File Candidate Manifest']);
+assert.deepEqual(targets('Validate Cross-File Candidate Manifest'), ['Validate Cross-File Type Coherence']);
+assert.deepEqual(targets('Validate Cross-File Type Coherence'), ['Prepare Cross-File COMPILE_MAIN']);
+assert.deepEqual(targets('Classify Candidate Coordination Scope',1), ['Independent Semantic Review']);
 assert.deepEqual(targets('Independent Semantic Review'), ['Enforce Independent Review']);
 assert.deepEqual(targets('Enforce Independent Review'), ['Hash Candidate Manifest']);
 assert.deepEqual(targets('Assemble Candidate Manifest'), ['Call Candidate Verification']);
@@ -140,7 +145,7 @@ function reachable(start, stops = []) {
 const writes = ['Create Missing Branch','Create File in Branch','Update File in Branch'];
 for (const retired of wf.nodes.filter(n=>JSON.stringify(n.parameters).includes("$('Enforce Independent Review').item.json")))
   assert.ok(!reachable('Validate Generic Remediation Plan').has(retired.name),'retired per-file review consumers stay disconnected: '+retired.name);
-for (const stop of ['Prepare Candidate Manifest','Independent Semantic Review','Enforce Independent Review','Call Candidate Verification','Call Write Guard']) {
+for (const stop of ['Prepare Candidate Manifest','Classify Candidate Coordination Scope','Call Candidate Verification','Call Write Guard']) {
   const reachableNodes = reachable('Validate Generic Remediation Plan', [stop]);
   for (const write of writes) assert.ok(!reachableNodes.has(write), stop + ' must dominate ' + write);
 }
@@ -150,7 +155,7 @@ for (const name of ['Generic Candidate Preflight','Prepare Candidate Manifest','
   assert.ok(failureReachable.has('Prepare WF2 Failure Status'));
   for (const blocked of ['Independent Semantic Review','Call Candidate Verification',...writes]) assert.ok(!failureReachable.has(blocked));
 }
-assert.equal(wf.nodes.length,155);
+assert.equal(wf.nodes.length,186);
 assert.deepEqual(harden(structuredClone(wf)),wf,'transformation is idempotent');
 for (const name of ['Prepare Generic Remediation Plan','Prepare - Code Patch Body'])
   assert.ok(node(name).parameters.jsCode.includes(JSON.stringify(relationshipContract)));

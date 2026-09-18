@@ -23,6 +23,6 @@ assert.match(parser.parameters.jsCode, /PATCH_LLM_RESPONSE_TRUNCATED/);
 
 assert.match(node('Prepare Generic Remediation Plan').parameters.jsCode, /model:'claude-sonnet-5'/);
 assert.match(node('Generic Candidate Preflight').parameters.jsCode, /model:'claude-haiku-4-5-20251001'/);
-assert.equal(workflow.nodes.length, 155);
+assert.equal(workflow.nodes.length, 186);
 fs.writeFileSync(workflowPath, `${JSON.stringify(document, null, 2)}\n`);
 console.log('WF2 patch generation model migrated to claude-opus-5; other LLM calls unchanged');

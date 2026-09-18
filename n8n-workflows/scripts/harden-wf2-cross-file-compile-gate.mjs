@@ -5,7 +5,7 @@ const input=process.argv[2], output=process.argv[3]||input;
 if(!input) throw new Error('usage: node harden-wf2-cross-file-compile-gate.mjs <input.json> [output.json]');
 const root=JSON.parse(fs.readFileSync(input,'utf8'));const wf=Array.isArray(root)?root[0]:root;
 const byName=name=>{const n=wf.nodes.find(x=>x.name===name);if(!n)throw new Error('missing node '+name);return n};
-const protectedNames=['Independent Semantic Review','Enforce Independent Review','Call Candidate Verification','Call Write Guard','Write Guard Passed?','Create Missing Branch','Update File in Branch'];
+const protectedNames=['Parse - Code Patch Output','Generic Candidate Preflight','Independent Semantic Review','Enforce Independent Review','Build File Result','Build Reconciled File Result','Call Candidate Verification','Call Write Guard','Write Guard Passed?','Create Missing Branch','Create File in Branch','Update File in Branch'];
 const protectedBefore=Object.fromEntries(protectedNames.map(n=>[n,crypto.createHash('sha256').update(JSON.stringify(byName(n))).digest('hex')]));
 const add=node=>{if(!wf.nodes.some(n=>n.name===node.name))wf.nodes.push(node)};
 const pos=(x,y)=>[x,y];
@@ -62,6 +62,60 @@ let reviewCode=byName('Enforce Independent Review').parameters.jsCode;
 reviewCode=reviewCode.replace("const candidate=$('Prepare Candidate Manifest').first().json;", "const envelope=$('Prepare Cross-File Review').first().json;const candidate=envelope.candidateManifest;")
   .replace("return {json:{...manifest,files:manifest.files.map", "return {json:{...manifest,progressiveVerificationEvidence:envelope.verificationEvidence,files:manifest.files.map");
 add(code('Enforce Cross-File Review','wf2-cross-review-enforce',reviewCode,pos(10200,1780)));
+
+// Validate the pre-write blob identity according to the operation.  A MODIFY
+// must carry the exact 40-hex blob SHA frozen in CandidateManifest.  A CREATE
+// has no pre-existing blob by definition, so its explicit proof is oldSha:null.
+// Presence and value are checked separately: null is valid only for CREATE and
+// can no longer be confused with a dropped field.
+byName('Validate Batch Completeness').parameters.jsCode=`
+const ctx=$('Prepare Batch Context').first().json;
+const manifest=$('Assemble Candidate Manifest').first().json;
+const planned=manifest.files;
+const incoming=$input.all().map(i=>i.json);
+const norm=v=>[...new Set((v||[]).map(String))].sort();
+const expectedFindingIds=norm(ctx.findingIds);
+const expectedFiles=norm(planned.map(f=>f.path));
+const expectedByFile=new Map(planned.map(f=>[f.path,f]));
+const expectedSet=new Set(expectedFiles);
+const required=['targetFile','approvedFindingIds','processedFindingIds','candidateAcceptedFindingIds','validationEvidence','outcome','candidateStateVerified','updateApplied','fileOperation','newSha','commitSha','contentSha256'];
+const own=(value,key)=>Object.prototype.hasOwnProperty.call(value,key);
+const sha=value=>/^[a-f0-9]{40}$/.test(String(value||''));
+const digest=value=>/^[a-f0-9]{64}$/.test(String(value||''));
+const byFile=new Map();
+for(const result of incoming){
+  const path=String(result.targetFile||'');
+  if(!path||!expectedSet.has(path))throw new Error('WF2_BATCH_INCOMPLETE:'+JSON.stringify({unexpectedFiles:path?[path]:[],category:'UNEXPECTED_OR_EMPTY_FILE'}));
+  const expected=expectedByFile.get(path);
+  const missingContract=required.filter(key=>result[key]===undefined||result[key]===null);
+  if(!own(result,'oldSha'))missingContract.push('oldSha');
+  if(missingContract.length)throw new Error('WF2_EFFECTIVE_RESULT_INVALID:'+JSON.stringify({path,missingFields:missingContract}));
+  if(result.fileOperation!==expected.operation)throw new Error('WF2_PREWRITE_STATE_INVALID:'+JSON.stringify({path,category:'OPERATION_MISMATCH',expected:expected.operation,actual:result.fileOperation}));
+  if(expected.operation==='MODIFY'){
+    if(!sha(expected.originalBlobSha)||!sha(result.oldSha)||result.oldSha!==expected.originalBlobSha)throw new Error('WF2_PREWRITE_STATE_INVALID:'+JSON.stringify({path,category:'MODIFY_OLD_SHA_MISMATCH',expected:expected.originalBlobSha||null,actual:result.oldSha??null}));
+  }else if(expected.operation==='CREATE'){
+    if(expected.originalBlobSha!==null||result.oldSha!==null)throw new Error('WF2_PREWRITE_STATE_INVALID:'+JSON.stringify({path,category:'CREATE_PREEXISTING_BLOB',expected:null,actual:result.oldSha??null}));
+  }else throw new Error('WF2_PREWRITE_STATE_INVALID:'+JSON.stringify({path,category:'UNSUPPORTED_OPERATION',actual:expected.operation}));
+  if(!digest(expected.contentSha256)||result.contentSha256!==expected.contentSha256)throw new Error('CANDIDATE_CONTENT_MISMATCH:'+JSON.stringify({path,expected:expected.contentSha256||null,actual:result.contentSha256||null}));
+  if(!sha(result.newSha)||!sha(result.commitSha))throw new Error('WF2_REMOTE_WRITE_EVIDENCE_INVALID:'+JSON.stringify({path,invalidFields:[!sha(result.newSha)?'newSha':null,!sha(result.commitSha)?'commitSha':null].filter(Boolean)}));
+  const previous=byFile.get(path);
+  if(previous){
+    const same=String(previous.newSha)===String(result.newSha)&&String(previous.commitSha)===String(result.commitSha)&&String(previous.oldSha)===String(result.oldSha)&&String(previous.contentSha256)===String(result.contentSha256)&&String(previous.fileOperation)===String(result.fileOperation)&&String(previous.outcome)===String(result.outcome)&&Boolean(previous.candidateStateVerified)===Boolean(result.candidateStateVerified);
+    if(!same)throw new Error('WF2_EFFECTIVE_RESULT_CONFLICT:'+JSON.stringify({path,category:'CONTRADICTORY_WRITE_EVIDENCE'}));
+    continue;
+  }
+  byFile.set(path,result);
+}
+const results=[...byFile.values()].sort((a,b)=>String(a.targetFile).localeCompare(String(b.targetFile)));
+const resultFiles=norm(results.map(r=>r.targetFile));
+const acceptedFindingIds=norm(results.flatMap(r=>r.candidateAcceptedFindingIds||[]));
+const missingFindingIds=expectedFindingIds.filter(id=>!acceptedFindingIds.includes(id));
+const unexpectedFindingIds=acceptedFindingIds.filter(id=>!expectedFindingIds.includes(id));
+const missingFiles=expectedFiles.filter(file=>!byFile.has(file));
+const failed=results.filter(r=>!r.candidateStateVerified||r.outcome!=='CANDIDATE_ACCEPTABLE_FOR_SCANNER_VALIDATION'||r.updateApplied!==true).map(r=>r.targetFile);
+if(missingFiles.length&&!failed.length&&!missingFindingIds.length&&!unexpectedFindingIds.length)throw new Error('PARTIAL_REMOTE_WRITE:'+JSON.stringify({missingFiles,expectedCount:expectedFiles.length,actualCount:results.length,note:'PR creation forbidden -- not every CandidateManifest file is confirmed remotely with its expected contentSha256'}));
+if(missingFindingIds.length||unexpectedFindingIds.length||missingFiles.length||failed.length||results.length!==expectedFiles.length)throw new Error('WF2_BATCH_INCOMPLETE:'+JSON.stringify({missingFindingIds,unexpectedFindingIds,missingFiles,failed,expectedCount:expectedFiles.length,actualCount:results.length}));
+return [{json:{completenessPassed:true,candidateDecision:'CANDIDATE_ACCEPTABLE_FOR_SCANNER_VALIDATION',scannerResolution:'UNKNOWN_UNTIL_WF3',expectedFindingIds,expectedTargetFiles:expectedFiles,processedFindingIds:acceptedFindingIds,candidateAcceptedFindingIds:acceptedFindingIds,candidateVerifiedFiles:resultFiles,updatedFiles:resultFiles,commitShas:norm(results.map(r=>r.commitSha).filter(Boolean)),fileResults:results,candidateDigest:manifest.candidateDigest}}];`;
 
 const failureTemplate=byName('Failure Envelope - Enforce Independent Review');
 const failureNodes=[];

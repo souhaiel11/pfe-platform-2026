@@ -34,7 +34,8 @@ export function hardenFixH(workflow) {
   const patch = node('Prepare - Code Patch Body').parameters;
   const inputBoundaryStatement=`llmRequestBody.system+=${JSON.stringify(inputBoundaryContract)};\n`;
   patch.jsCode=patch.jsCode.replaceAll(inputBoundaryStatement,'');
-  const patchAnchor="if(!llmRequestBody||typeof llmRequestBody!=='object')";
+  const authorityAnchor='llmRequestBody.system+=" PLAN CONTRACT IS AUTHORITATIVE.';
+  const patchAnchor=patch.jsCode.includes(authorityAnchor)?authorityAnchor:"if(!llmRequestBody||typeof llmRequestBody!=='object')";
   assert.ok(patch.jsCode.includes(patchAnchor),'patch prompt validation anchor missing');
   patch.jsCode=patch.jsCode.replace(patchAnchor,inputBoundaryStatement+patchAnchor);
 
@@ -58,7 +59,7 @@ export function hardenFixH(workflow) {
   }
   enforce.jsCode=enforce.jsCode.replace('Array.isArray(f.conflictingSignatures)&&String',
     'Array.isArray(f.conflictingSignatures)&&f.conflictingSignatures.length>0&&String');
-  assert.equal(workflow.nodes.length,155);
+  assert.equal(workflow.nodes.length,186);
   return workflow;
 }
 
@@ -67,5 +68,5 @@ if (process.argv[1] && new URL(import.meta.url).pathname === process.argv[1]) {
   const data=JSON.parse(readFileSync(artifact,'utf8'));
   hardenFixH(data[0]);
   writeFileSync(artifact,JSON.stringify(data,null,2)+'\n');
-  console.log('Fix H local artifact updated: generation boundary + evidence-based reviewer policy; 155 nodes.');
+  console.log('Fix H local artifact updated: generation boundary + evidence-based reviewer policy; 186 nodes.');
 }

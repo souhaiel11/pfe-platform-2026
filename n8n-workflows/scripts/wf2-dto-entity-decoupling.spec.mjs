@@ -36,7 +36,7 @@ const node = name => wf.nodes.find(n => n.name === name);
 
 // ── 0. Node count unchanged: no new node was required for this hardening. ──
 {
-  assert.equal(wf.nodes.length, 155, 'DTO checks retain their node; three bounded dependency-grounding nodes added');
+  assert.equal(wf.nodes.length, 186, 'DTO checks, digest bridge and bounded cross-file verification nodes are retained');
 }
 
 // ── Real execution-1998 candidates (verbatim, not paraphrased) ─────────────

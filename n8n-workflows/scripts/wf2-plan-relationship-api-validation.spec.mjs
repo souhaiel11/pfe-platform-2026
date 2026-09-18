@@ -76,6 +76,6 @@ assert.doesNotThrow(() => runPatchGuard([plan('patch-preserve', [preserve(userPr
 assert.throws(() => runPatchGuard([plan('patch-fabricated', [{ ...resolve(userProof), requiredApi: fabricated }], [fabricated])]), /SOURCE_API_CONTEXT_INCOMPLETE/);
 
 assert.equal(workflow.id, 'u3eeMwTuhCsetfcS');
-assert.equal(workflow.nodes.length, 155);
-assert.equal(new Set(workflow.nodes.map(candidate => candidate.id)).size, 155);
+assert.equal(workflow.nodes.length, 186);
+assert.equal(new Set(workflow.nodes.map(candidate => candidate.id)).size, 186);
 console.log('PASS unambiguous relationship operations: execution 2013 malformed BLOCK/corrected PASS, executions 2010/2012 corrected, two-relation relevance, fail-closed identity/API matrix and real patch guard');

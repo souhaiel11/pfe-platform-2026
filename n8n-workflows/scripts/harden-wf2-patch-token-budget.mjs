@@ -22,6 +22,6 @@ assert.match(code, /output_config:\{effort:'medium',format:/);
 assert.doesNotMatch(code, /max_tokens:16384/);
 prepare.parameters.jsCode = code;
 
-assert.equal(workflow.nodes.length, 155);
+assert.equal(workflow.nodes.length, 186);
 fs.writeFileSync(workflowPath, `${JSON.stringify(document, null, 2)}\n`);
 console.log('WF2 patch generation budget: 32768 total, adaptive thinking, medium effort; node count 155');

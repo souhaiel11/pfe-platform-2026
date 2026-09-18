@@ -10,8 +10,8 @@ import {
 
 const artifact=JSON.parse(readFileSync(new URL('../pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.PROMOTION-TARGET.json',import.meta.url)))[0];
 const node=name=>{const found=artifact.nodes.find(item=>item.name===name);assert.ok(found,name);return found;};
-assert.equal(artifact.nodes.length,155);
-assert.equal(new Set(artifact.nodes.map(item=>item.id)).size,155);
+assert.equal(artifact.nodes.length,186);
+assert.equal(new Set(artifact.nodes.map(item=>item.id)).size,186);
 assert.deepEqual(hardenFixH(structuredClone(artifact)),artifact,'Fix H hardener must be idempotent');
 
 const patchCode=node('Prepare - Code Patch Body').parameters.jsCode;

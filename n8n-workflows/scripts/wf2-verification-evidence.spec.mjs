@@ -130,12 +130,16 @@ function run({ guardJson, verificationJson, manifestJson = {}, envelopeJson = {}
   connections['Fetch Finding Source Context'].main[0][0].node='Prepare Generic Remediation Plan';
   // Atomic review intentionally moves these three success edges before verification.
   assert.equal(connections['Generic Candidate Preflight'].main[0][0].node,'Hash Candidate File Content');
-  assert.equal(connections['Prepare Candidate Manifest'].main[0][0].node,'Independent Semantic Review');
+  assert.equal(connections['Prepare Candidate Manifest'].main[0][0].node,'Classify Candidate Coordination Scope');
+  assert.equal(connections['Classify Candidate Coordination Scope'].main[1][0].node,'Independent Semantic Review');
   assert.equal(connections['Enforce Independent Review'].main[0][0].node,'Hash Candidate Manifest');
   assert.deepEqual(connections['Prepare Candidate Manifest'].main[1],[{node:'Failure Envelope - Assemble Candidate Manifest',type:'main',index:0}]);
   connections['Generic Candidate Preflight'].main[0][0].node='Independent Semantic Review';
   connections['Prepare Candidate Manifest'].main=[[{node:'Hash Candidate Manifest',type:'main',index:0}]];
   connections['Enforce Independent Review'].main[0][0].node='Hash Candidate File Content';
+  // Phase 1 adds an isolated cross-file subgraph. Remove that additive graph
+  // before comparing the pre-existing routing byte-for-byte with its base.
+  for (const name of Object.keys(connections)) if (name === 'Classify Candidate Coordination Scope' || name.includes('Cross-File')) delete connections[name];
   assert.deepEqual(connections, base.connections, 'existing failure and Git routing unchanged');
 }
 

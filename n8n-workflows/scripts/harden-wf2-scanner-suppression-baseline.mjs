@@ -48,6 +48,6 @@ updated = updated.replace(oldChecks, newChecks);
 preflight.parameters.jsCode = updated;
 }
 
-if (workflow.nodes.length !== 155) throw new Error(`NODE_COUNT_CHANGED:${workflow.nodes.length}`);
+if (workflow.nodes.length !== 184) throw new Error(`NODE_COUNT_CHANGED:${workflow.nodes.length}`);
 fs.writeFileSync(workflowPath, JSON.stringify([workflow], null, 2) + '\n');
 console.log(JSON.stringify({ workflow: workflow.id, nodes: workflow.nodes.length, baselineAwareScannerSuppression: true }));

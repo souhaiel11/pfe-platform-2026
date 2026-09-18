@@ -171,8 +171,9 @@ for(const stop of ['Validate Source Context Completeness','Validate Required Dep
 for(const blocked of ['Prepare Generic Remediation Plan','Independent Semantic Review','Call Candidate Verification','Update File in Branch'])
   assert.ok(!reach('Failure Envelope - Fetch Referenced API Sources').has(blocked));
 assert.deepEqual(targets('Generic Candidate Preflight'),['Hash Candidate File Content']);
-assert.deepEqual(targets('Prepare Candidate Manifest'),['Independent Semantic Review']);
+assert.deepEqual(targets('Prepare Candidate Manifest'),['Classify Candidate Coordination Scope']);
+assert.deepEqual(targets('Classify Candidate Coordination Scope',1),['Independent Semantic Review']);
 assert.match(node('Prepare Candidate Manifest').parameters.jsCode,/failCandidateSet/);
-assert.equal(wf.nodes.length,155);
+assert.equal(wf.nodes.length,186);
 assert.deepEqual(hardenGrounding(structuredClone(wf)),wf);
 console.log('PASS relationship source grounding: real 3→6 source chain, audited findById proof, exact SHA, required failures, bounds, no third-party crawl, planner/patch grounding, atomic review and Git barriers');

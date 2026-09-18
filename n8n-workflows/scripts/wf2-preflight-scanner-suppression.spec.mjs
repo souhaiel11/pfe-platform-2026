@@ -54,5 +54,5 @@ for (const name of ['Fetch Finding Source Context', 'Fetch Referenced API Source
   assert.equal(reference, "={{ $('Prepare Batch Context').first().json.baseSha }}", `${name} must use frozen baseSha`);
 }
 
-assert.equal(workflow.nodes.length, 155);
+assert.equal(workflow.nodes.length, 186);
 console.log('wf2-preflight-scanner-suppression: PASS (8 baseline-aware cases; real TaskService fixture)');

@@ -64,5 +64,5 @@ assert.ok(serialized.length > candidate.length, 'JSON wrapper and escaping overh
 assert.equal(node('de Patch - HTTP Request').retryOnFail, true);
 assert.equal(node('de Patch - HTTP Request').maxTries, 3);
 assert.throws(() => parse({ stop_reason: 'max_tokens', content: [{ type: 'text', text: serialized.slice(0, -200) }] }), /PATCH_LLM_RESPONSE_TRUNCATED/);
-assert.equal(workflow.nodes.length, 155);
+assert.equal(workflow.nodes.length, 186);
 console.log(`wf2-patch-token-budget: PASS (${candidate.split(/\r?\n/).length} lines, ${candidate.length} chars, ${serialized.length - candidate.length} JSON/wrapper chars)`);
