@@ -682,7 +682,36 @@ export class IncidentsService {
 
       const normalize = (values: unknown): string[] => [...new Set(Array.isArray(values)
         ? values.map(String).map(value => value.trim()).filter(Boolean) : [])].sort();
-      const expectedFindingIds = normalize(fix.findingIds);
+      // R75 — corrective cardinality invariant. A corrective attempt's active
+      // defect identity is correctiveIssues[] (one per proven blocking cause),
+      // never the historical finding count/location — WF2 (R74/R75) already
+      // plans and writes against exactly that identity. Per cause, prefer its
+      // OWN `findingId` when present (e.g. the older TARGET_FINDING_INVALID
+      // shape, which already names a specific still-invalid historical
+      // finding 1:1 — synthesizing an id for that cause would be a
+      // regression, not a fix); only synthesize `batchId:issue-<index>` for a
+      // cause that carries no such field (e.g. DEFAULT_VALUE_SEMANTICS_DEFECT).
+      // This mirrors, field-for-field, the SAME rule WF2 itself applies when
+      // constructing correctiveIssues[].candidateId, from the SAME evidence
+      // (fix.correctiveDispatch.correctiveContext.blockingCauses). It also
+      // avoids requiring the corrective candidate's grounded target file to
+      // equal the historical finding's file — which R73 can deliberately
+      // make untrue.
+      const isCorrectiveAttempt = attempt.corrective === true;
+      const correctiveBlockingCauses = isCorrectiveAttempt && Array.isArray(fix.correctiveDispatch?.correctiveContext?.blockingCauses)
+        ? fix.correctiveDispatch.correctiveContext.blockingCauses : [];
+      const isCanonicalCorrectiveBatch = isCorrectiveAttempt && correctiveBlockingCauses.length > 0;
+      const expectedFindingIds = isCanonicalCorrectiveBatch
+        ? normalize(correctiveBlockingCauses.map((cause: any, index: number) =>
+            cause?.findingId ? String(cause.findingId) : `${fix.batchId}:issue-${index}`))
+        : normalize(fix.findingIds);
+      // A cause with no findingId of its own has no proven 1:1 tie to a
+      // historical finding's file either — only THAT case may legitimately
+      // target a different, deterministically-grounded file (R73). A cause
+      // that already names its own finding (e.g. TARGET_FINDING_INVALID)
+      // keeps the strict historical-file-coverage requirement below.
+      const hasUngroundedHistoricalIdentity = isCorrectiveAttempt
+        && correctiveBlockingCauses.some((cause: any) => !cause?.findingId);
       const expectedFiles = normalize((Array.isArray(fix.findings) ? fix.findings : [])
         .map((finding: any) => finding.file || finding.component));
       const processedFindingIds = normalize(input.processedFindingIds);
@@ -705,7 +734,7 @@ export class IncidentsService {
         const exactFindings = JSON.stringify(acceptedFindingIds) === JSON.stringify(expectedFindingIds);
         const resultFiles = normalize(fileResults.map((result: any) => result?.targetFile));
         const exactFiles = plannedFiles.length > 0
-          && expectedFiles.every(file => plannedFiles.includes(file))
+          && (hasUngroundedHistoricalIdentity || expectedFiles.every(file => plannedFiles.includes(file)))
           && JSON.stringify(plannedFiles) === JSON.stringify(verifiedFiles)
           && JSON.stringify(resultFiles) === JSON.stringify(verifiedFiles);
         const validOutcomes = fileResults.length === verifiedFiles.length && fileResults.every((result: any) => {
