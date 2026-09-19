@@ -13,6 +13,7 @@ import { resolveJenkinsInternalUrl } from '../common/jenkins-url';
 import { ManualRemediationService } from '../manual-remediation/manual-remediation.service';
 import { deriveFindingsAndHealth } from '../validation/finding-pipeline-separation';
 import { computeMergeAuthorization, deriveRemediationResult, deriveExactCorrelationVerified, deriveHeadVerificationResult } from '../validation/merge-authorization';
+import { buildDefaultValueSemanticsEvidence, CandidateFileRecord } from '../validation/default-value-semantics-assembler';
 import { CandidateVerificationService } from '../candidate-verification/candidate-verification.service';
 import { HeadVerificationRequest, HeadVerification, VerificationEvidence } from '../candidate-verification/candidate-verification.types';
 import { redactAndCapEvidence } from '../candidate-verification/verification-evidence';
@@ -1077,6 +1078,47 @@ export class IncidentsService {
         cause.type === 'SCANNER_FINDING' ? [cause.finding] : []),
     };
 
+    // ── R66 — default-value/deserialization-semantics review ───────────────
+    // Runs AFTER the exact-SHA correlation gate above (validation.checkoutSha
+    // is already proven === expectedPrHeadSha === validationRequest's frozen
+    // target) and BEFORE computeMergeAuthorization(), which stays pure — all
+    // IO happens here, in this one bounded call. Sourced entirely from data
+    // the platform already persists: fixRequest.fileResults' immutable blob
+    // SHAs (oldSha/newSha) plus the frozen candidateBaseSha/checkoutSha — no
+    // new WF2 payload field. See default-value-semantics-assembler.ts for
+    // the provenance verification (every fetch's returned blob SHA is
+    // checked against the persisted one before its content is trusted) and
+    // default-value-semantics.ts for the generic invariant itself. Never
+    // throws by contract; the extra try/catch is defense in depth only —
+    // any failure here degrades to VERIFICATION_REQUIRED, which is a no-op
+    // for authorization, never a blocker and never a fabricated pass.
+    const candidateFileRecords: CandidateFileRecord[] = (Array.isArray(fixRequest.fileResults) ? fixRequest.fileResults : [])
+      .map((fr: any) => ({ targetFile: String(fr.targetFile || ''), fileOperation: String(fr.fileOperation || ''), oldSha: fr.oldSha ?? null, newSha: String(fr.newSha || '') }))
+      .filter((fr: CandidateFileRecord) => fr.targetFile && fr.newSha);
+    let defaultValueSemanticsAudit: Awaited<ReturnType<typeof buildDefaultValueSemanticsEvidence>>;
+    try {
+      defaultValueSemanticsAudit = await buildDefaultValueSemanticsEvidence(
+        candidateFileRecords,
+        {
+          fixRequestId: String(fixRequest.requestId || ''), batchId: String(fixRequest.batchId || ''),
+          attemptCount: Number(fixRequest.attemptCount) || 0,
+          candidateId: `${fixRequest.batchId}-attempt-${fixRequest.attemptCount}`,
+          candidateDigest: (fixRequest as any).candidateDigest ?? null,
+          candidateBaseSha: String((fixRequest as any).baselineSha || '').toLowerCase(),
+          prHeadSha: String(validation.checkoutSha || '').toLowerCase(),
+        },
+        (path, sha) => this.githubFileAtSha(incident.project, path, sha),
+      );
+    } catch {
+      defaultValueSemanticsAudit = {
+        verdict: 'VERIFICATION_REQUIRED', evaluatedSha: String(validation.checkoutSha || '').toLowerCase(),
+        candidateId: `${fixRequest.batchId}-attempt-${fixRequest.attemptCount}`, candidateDigest: null,
+        fixRequestId: String(fixRequest.requestId || ''), batchId: String(fixRequest.batchId || ''),
+        attemptCount: Number(fixRequest.attemptCount) || 0, evidence: [], checkedPairs: 0, computedAt: new Date().toISOString(),
+      };
+    }
+    (validationRecord as any).defaultValueSemantics = defaultValueSemanticsAudit;
+
     // ── BRIQUE 4 — autorisation de merge : LA décision centrale ────────────
     // computeMergeAuthorization() est désormais l'unique décision métier
     // faisant autorité (VALIDATING/MERGE_READY/BLOCKED/INCONCLUSIVE). Découple
@@ -1102,6 +1144,7 @@ export class IncidentsService {
       headVerificationResult,
       pipelineHealth: (validationRecord as any).derived?.pipelineHealth ?? null,
       validationInProgress: false, // saveValidation est terminal
+      defaultValueSemanticsResult: defaultValueSemanticsAudit.verdict,
     });
     // BRIQUE 4 — AUTHORIZED SHA: liée à un commit EXACT, jamais transférée
     // silencieusement. Persistée UNIQUEMENT quand authorization===MERGE_READY ;

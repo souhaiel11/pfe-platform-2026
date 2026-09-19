@@ -63,7 +63,8 @@ export type MergeBlockingReason =
   | 'HEAD_VERIFICATION_CODE_FAILURE'
   | 'STAGE_INCOMPLETE'            // a required pipeline stage (build/tests/sonar) did not complete
   | 'SHA_MISMATCH'               // validated commit != expected PR HEAD, or correlation unverified
-  | 'VALIDATION_IN_PROGRESS';     // validation still running
+  | 'VALIDATION_IN_PROGRESS'      // validation still running
+  | 'DEFAULT_VALUE_SEMANTICS_REGRESSION'; // R66 — a proven entity/DTO migration default-value divergence (see default-value-semantics.ts)
 
 /** Non-blocking context. Never affects `authorization`. */
 export interface MergeAdvisory {
@@ -93,6 +94,21 @@ export interface MergeAuthorizationInput {
   pipelineHealth?: Partial<PipelineHealth> | null;
   /** True while post-fix validation is still running. */
   validationInProgress?: boolean;
+  /**
+   * R66 — verdict of the generic default-value/deserialization-semantics
+   * invariant (default-value-semantics.ts), when it was run for this
+   * candidate. Absent/undefined means "not evaluated" and has NO effect —
+   * this keeps every existing caller (and every PR that never migrates an
+   * entity/request-object field to a DTO) fully backward compatible.
+   * 'VERIFICATION_REQUIRED' is deliberately also a no-op here: unresolved
+   * evidence must never be misreported as a proven defect, and must not by
+   * itself force INCONCLUSIVE either (that would regress every unrelated
+   * validation lacking the source snapshots this check needs). Only
+   * 'PROVEN_DEFECT' has an effect: it is a proven defect exactly like
+   * FINDING_INVALID or REGRESSION_CHANGES_REQUIRED, and BLOCKED must be
+   * causally correctable via correct-and-revalidate.
+   */
+  defaultValueSemanticsResult?: 'PROVEN_DEFECT' | 'VERIFICATION_REQUIRED' | 'NO_DEFECT' | null;
 }
 
 export interface MergeAuthorizationResult {
@@ -201,6 +217,10 @@ export function computeMergeAuthorization(input: MergeAuthorizationInput): Merge
 
   if (headVerificationResult === 'CODE_FAILURE') blockingReasons.push('HEAD_VERIFICATION_CODE_FAILURE');
   else if (headVerificationResult !== 'PASS') technicalReasons.push('HEAD_VERIFICATION_UNVERIFIED');
+
+  // R66 — see defaultValueSemanticsResult doc above: only PROVEN_DEFECT has
+  // any effect; undefined/NO_DEFECT/VERIFICATION_REQUIRED are all no-ops.
+  if (input.defaultValueSemanticsResult === 'PROVEN_DEFECT') blockingReasons.push('DEFAULT_VALUE_SEMANTICS_REGRESSION');
 
   const hardBlocked = blockingReasons.length > 0;
 

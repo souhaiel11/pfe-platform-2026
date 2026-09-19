@@ -85,6 +85,32 @@ const base: MergeAuthorizationInput = {
   assert.deepEqual(r.technicalReasons, [], 'MERGE_READY carries no technical reasons either');
 }
 
+// --- R66 — defaultValueSemanticsResult wiring ---------------------------
+// Undefined/absent must be a complete no-op: every PR that never migrates an
+// entity/request-object field to a DTO must see IDENTICAL authorization to
+// before this field existed. Proven by literally reusing the MERGE_READY
+// fixture above with the field simply omitted (already true, `base` has no
+// such key) and re-asserting the same outcome for both NO_DEFECT and
+// VERIFICATION_REQUIRED, then proving PROVEN_DEFECT — and only
+// PROVEN_DEFECT — flips a would-be MERGE_READY candidate to BLOCKED with a
+// causally-correctable reason.
+{
+  const readyInput = { ...base, remediationResult: 'VALIDATED' as const, regressionResult: 'CLEAN' as const };
+  for (const defaultValueSemanticsResult of [undefined, 'NO_DEFECT', 'VERIFICATION_REQUIRED'] as const) {
+    const r = computeMergeAuthorization({ ...readyInput, defaultValueSemanticsResult });
+    assert.equal(r.authorization, 'MERGE_READY', `defaultValueSemanticsResult=${defaultValueSemanticsResult} must not affect an otherwise-ready candidate`);
+    assert.deepEqual(r.blockingReasons, []);
+  }
+  const blocked = computeMergeAuthorization({ ...readyInput, defaultValueSemanticsResult: 'PROVEN_DEFECT' });
+  assert.equal(blocked.authorization, 'BLOCKED', 'a proven default-value semantics regression hard-blocks the merge exactly like FINDING_INVALID/REGRESSION_CHANGES_REQUIRED');
+  assert.ok(blocked.blockingReasons.includes('DEFAULT_VALUE_SEMANTICS_REGRESSION'));
+  // BRIQUE 5 parity: correctiveActionAllowed is computed by the caller as
+  // `authorization === 'BLOCKED'` (incidents.service.ts) — this proves the
+  // new reason lands in the SAME authorization value that flag already keys
+  // off, so correct-and-revalidate becomes available without any change to
+  // that derivation.
+}
+
 // HEAD verification is an explicit positive precondition. Missing or
 // inconclusive evidence can never inherit MERGE_READY from other green fields.
 for (const headVerificationResult of [undefined, 'INCONCLUSIVE'] as const) {
