@@ -24,6 +24,44 @@ function run(name, jsonInput, refs = {}) {
   )({ first: () => ({ json: jsonInput }), all: () => [{ json: jsonInput }] }, jsonInput, $, Buffer, env);
 }
 
+// R70.1 — permanent syntax coverage is derived from the actual workflow
+// delta, so a future sixth modified Code node cannot be silently omitted.
+// Every R70-modified node must remain a Code node with parseable jsCode.
+{
+  const modifiedNodes = wf.nodes.filter(candidate => {
+    const prior = baselineNode(candidate.name);
+    return prior && JSON.stringify(candidate) !== JSON.stringify(prior);
+  });
+  const expectedNames = [
+    'Adapt Webhook Payload',
+    'Build Independent Repository Policy',
+    'Expand Finding Source Files',
+    'Prepare Generic Remediation Plan',
+    'Validate Generic Remediation Plan',
+  ];
+  assert.equal(modifiedNodes.length, 5, 'R70_MODIFIED_NODE_COUNT must remain exactly 5');
+  assert.deepEqual(modifiedNodes.map(candidate => candidate.name).sort(), expectedNames.sort(),
+    'syntax coverage must include every and only R70-modified node');
+  assert.ok(modifiedNodes.some(candidate => candidate.name === 'Prepare Generic Remediation Plan'),
+    'Prepare Generic Remediation Plan must be syntax-covered');
+  for (const candidate of modifiedNodes) {
+    assert.equal(typeof candidate.parameters?.jsCode, 'string', candidate.name + ' must expose jsCode');
+    assert.doesNotThrow(() => new Function(candidate.parameters.jsCode), candidate.name + ' jsCode must parse');
+  }
+
+  const preparePlanCode = node('Prepare Generic Remediation Plan').parameters.jsCode;
+  assert.doesNotThrow(() => new Function(preparePlanCode), 'Prepare Generic Remediation Plan syntax regression');
+  assert.match(preparePlanCode, /CORRECTIVE MODE:/, 'corrective planner instruction must remain present');
+  assert.match(preparePlanCode, /correctiveContext/, 'correctiveContext must remain referenced');
+  assert.ok(!preparePlanCode.includes("plan'\\''s"), 'malformed shell-style apostrophe sequence must be absent');
+  assert.ok(preparePlanCode.replaceAll("\\'", "'").includes("plan's rootCause"),
+    "rendered corrective instruction must retain plan's rootCause");
+  console.log('R70_MODIFIED_NODE_COUNT = 5');
+  console.log('R70_SYNTAX_PASS = 5');
+  console.log('R70_SYNTAX_FAIL = 0');
+  console.log('PREPARE_PLAN_REGRESSION_TEST = PASS');
+}
+
 // ── Section 12 — node count and every OTHER node's jsCode is byte-identical
 // to the pre-R70 promotion target (no unrelated regression, no behavior
 // change anywhere R70 did not intend to touch).
