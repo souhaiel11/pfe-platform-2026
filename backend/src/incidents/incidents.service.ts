@@ -1961,6 +1961,208 @@ export class IncidentsService {
     return { success: true, changed: result.changed, validationTargetSha: result.validationTargetSha, originalPrHeadSha: fix.prHeadSha };
   }
 
+  // R67 — POST /:id/pr-validation/recompute-policy. The platform gap this
+  // closes: a candidate can already be COMPLETED/VALIDATED against evidence
+  // that was true and complete under the OLD policy, and then a NEW
+  // deterministic check (R66's default-value-semantics invariant, or any
+  // future one wired the same way) lands without the PR's SHA ever moving.
+  // Every existing revalidation path (requestPrValidation,
+  // refreshPrValidationTarget's non-idempotent branch, reconcilePrValidation)
+  // is keyed on "the SHA moved" and is a correct no-op here — none of them
+  // exist to re-run POLICY against unchanged, already-proven evidence. This
+  // action does exactly that and nothing else: it never talks to Jenkins,
+  // Sonar, or WF3, never creates a new prValidationRequest/validationRequestId,
+  // never touches the PR/branch, and never increments fixRequest.attemptCount.
+  // It reuses computeMergeAuthorization() (unchanged, still pure) fed with the
+  // SAME persisted facts that already fed it once (remediationResult/
+  // regressionResult/headVerificationResult are read back verbatim from the
+  // existing mergeAuthorization record; exactCorrelationVerified/
+  // requiredStagesComplete are re-derived from the same persisted
+  // correlationVerified/checkoutSha/jenkinsStatus/requiredStages facts,
+  // mirroring saveValidation()'s own derivation exactly) plus exactly one new
+  // input: defaultValueSemanticsResult, computed via the existing R66
+  // evidence assembler (buildDefaultValueSemanticsEvidence) against the same
+  // immutable candidateBaseSha/prHeadSha/fileResults blob SHAs — no new
+  // semantic detector. fixRequest.status is deliberately left at VALIDATED
+  // (never forced back to PR_CREATED): doing so would make
+  // requestPrValidation/refresh-target's SHA-moved branch believe a NEW
+  // remediation cycle is needed, which is false — the candidate is unchanged,
+  // only the verdict about it changed.
+  async recomputePrValidationPolicy(id: string, user: any) {
+    this.assertCanApprove(user);
+    const snapshot = await this.repo.findOne({ where: { id }, relations: ['project'] });
+    if (!snapshot) throw new NotFoundException('Incident introuvable.');
+    const metadata: any = snapshot.metadata || {};
+    const fix: any = metadata.fixRequest || {};
+    const prValidationRequest: any = metadata.prValidationRequest || {};
+    const validation: any = metadata.validation || {};
+
+    // ── Strict eligibility (R67 §2) ───────────────────────────────────────
+    if (!snapshot.prUrl || !fix.prNumber) {
+      throw new ConflictException('Aucune Pull Request de correction n’est disponible pour cette convergence.');
+    }
+    if (fix.status !== 'VALIDATED') {
+      throw new ConflictException('Cette action nécessite une correction déjà validée avec succès.');
+    }
+    if (prValidationRequest.status !== 'COMPLETED') {
+      throw new ConflictException('Aucune validation PR terminée à réévaluer — une validation active ou absente ne peut pas être réévaluée.');
+    }
+    if (!validation || Object.keys(validation).length === 0) {
+      throw new ConflictException('Aucune preuve de validation persistée pour ce candidat.');
+    }
+    if (!validation.mergeAuthorization) {
+      throw new ConflictException('Aucune autorisation de merge existante à réévaluer.');
+    }
+    const expectedPrHeadSha = String(validation.expectedPrHeadSha || '').toLowerCase();
+    if (!isFullGitSha(expectedPrHeadSha)) {
+      throw new ConflictException('Le HEAD exact validé est indisponible.');
+    }
+
+    // ── Exact-SHA correlation across EVERY persisted record (R67 §4) — a
+    // recompute must never run against evidence that is even slightly stale
+    // or ambiguous. Any mismatch here is a silent-refresh risk; reject, never
+    // guess which record is authoritative.
+    const checkoutSha = String(validation.checkoutSha || '').toLowerCase();
+    const prValidationRequestSha = String(prValidationRequest.expectedPrHeadSha || '').toLowerCase();
+    const fixRequestSha = String(fix.validationTargetSha || fix.prHeadSha || '').toLowerCase();
+    if (checkoutSha !== expectedPrHeadSha || prValidationRequestSha !== expectedPrHeadSha || fixRequestSha !== expectedPrHeadSha) {
+      throw new ConflictException('Les preuves de validation persistées ne correspondent pas exactement au même commit — réévaluation refusée.');
+    }
+
+    // ── Live GitHub head must STILL be exactly this SHA (R67 §2/§4) — a
+    // recompute is never authorized to silently accept a moved PR; that is
+    // refresh-target's job, and it starts a genuinely new remediation cycle.
+    const prNumber = Number(fix.prNumber);
+    const pull = await this.githubPullRequest(snapshot.project, prNumber);
+    const remoteHeadSha = String(pull?.head?.sha || '').toLowerCase();
+    if (pull?.state !== 'open' || remoteHeadSha !== expectedPrHeadSha) {
+      throw new ConflictException('La Pull Request a changé depuis la validation — réévaluation refusée. Une nouvelle validation gouvernée est requise.');
+    }
+
+    // ── Required-stage completeness, re-derived from the SAME persisted
+    // facts saveValidation() used to compute it the first time (jenkinsStatus
+    // + requiredStages are both verbatim-persisted on validationRecord) —
+    // never new evidence, never a fresh Jenkins call.
+    const requiredStages: any[] = Array.isArray(validation.requiredStages) ? validation.requiredStages : [];
+    const requiredNames = ['build', 'tests', 'sonar'];
+    const missingRequiredStage = requiredNames.find(name => !requiredStages.some((stage: any) => stage.stage === name && stage.required === true));
+    const badStage = requiredStages.find((s: any) => s.required !== false && s.status !== 'PASSED' && !(s.status === 'WARNING' && !s.blocking));
+    const jenkinsStatus = String(validation.jenkinsStatus || '').toUpperCase();
+    const requiredStagesComplete = jenkinsStatus === 'SUCCESS' && !missingRequiredStage && !badStage;
+    if (!requiredStagesComplete) {
+      throw new ConflictException('Les preuves de complétude du pipeline sont insuffisantes pour réévaluer cette autorisation.');
+    }
+    const exactCorrelationVerified = deriveExactCorrelationVerified({
+      correlationVerified: validation.correlationVerified, checkoutSha: validation.checkoutSha, expectedPrHeadSha: validation.expectedPrHeadSha,
+    });
+    if (!exactCorrelationVerified) {
+      throw new ConflictException('La corrélation exacte SHA/Sonar n’est plus vérifiée pour ce candidat.');
+    }
+
+    // ── R67 §3/§5 — the ONLY IO in this action: the existing R66 evidence
+    // assembler, GitHub content fetches bound to already-persisted immutable
+    // blob SHAs. Never Jenkins, never Sonar, never WF3, never the PR/branch.
+    const candidateFileRecords: CandidateFileRecord[] = (Array.isArray(fix.fileResults) ? fix.fileResults : [])
+      .map((fr: any) => ({ targetFile: String(fr.targetFile || ''), fileOperation: String(fr.fileOperation || ''), oldSha: fr.oldSha ?? null, newSha: String(fr.newSha || '') }))
+      .filter((fr: CandidateFileRecord) => fr.targetFile && fr.newSha);
+    let defaultValueSemanticsAudit: Awaited<ReturnType<typeof buildDefaultValueSemanticsEvidence>>;
+    try {
+      defaultValueSemanticsAudit = await buildDefaultValueSemanticsEvidence(
+        candidateFileRecords,
+        {
+          fixRequestId: String(fix.requestId || ''), batchId: String(fix.batchId || ''),
+          attemptCount: Number(fix.attemptCount) || 0,
+          candidateId: `${fix.batchId}-attempt-${fix.attemptCount}`,
+          candidateDigest: (fix as any).candidateDigest ?? null,
+          candidateBaseSha: String((fix as any).baselineSha || '').toLowerCase(),
+          prHeadSha: expectedPrHeadSha,
+        },
+        (path, sha) => this.githubFileAtSha(snapshot.project, path, sha),
+      );
+    } catch {
+      defaultValueSemanticsAudit = {
+        verdict: 'VERIFICATION_REQUIRED', evaluatedSha: expectedPrHeadSha,
+        candidateId: `${fix.batchId}-attempt-${fix.attemptCount}`, candidateDigest: null,
+        fixRequestId: String(fix.requestId || ''), batchId: String(fix.batchId || ''),
+        attemptCount: Number(fix.attemptCount) || 0, evidence: [], checkedPairs: 0, computedAt: new Date().toISOString(),
+      };
+    }
+
+    // ── R67 §6 — REUSE computeMergeAuthorization() verbatim, never
+    // duplicated. remediationResult/regressionResult/headVerificationResult
+    // are read back from the existing mergeAuthorization record (they were
+    // echoed onto it the first time, unchanged facts); only
+    // defaultValueSemanticsResult is newly computed.
+    const mergeAuth = computeMergeAuthorization({
+      remediationResult: validation.mergeAuthorization.remediationResult,
+      exactCorrelationVerified,
+      requiredStagesComplete,
+      regressionResult: validation.mergeAuthorization.regressionResult,
+      headVerificationResult: validation.mergeAuthorization.headVerificationResult,
+      pipelineHealth: validation.derived?.pipelineHealth ?? null,
+      validationInProgress: false,
+      defaultValueSemanticsResult: defaultValueSemanticsAudit.verdict,
+    });
+    const previousAuthorization = String(validation.mergeAuthorization.authorization || '');
+    const authorizedSha = mergeAuth.authorization === 'MERGE_READY' ? expectedPrHeadSha : null;
+    const correctiveActionAllowed = mergeAuth.authorization === 'BLOCKED';
+    const now = new Date().toISOString();
+    // Merge fresh pipelineHealth-derived advisories with the previously
+    // persisted ones (e.g. scanner-comparability advisories from the
+    // original regression analysis, which this action never recomputes),
+    // de-duplicated by code — never silently dropped, never duplicated.
+    const previousAdvisories = Array.isArray(validation.mergeAuthorization.advisories) ? validation.mergeAuthorization.advisories : [];
+    const seenAdvisoryCodes = new Set<string>();
+    const advisories = [...mergeAuth.advisories, ...previousAdvisories].filter((a: any) => {
+      if (seenAdvisoryCodes.has(a.code)) return false;
+      seenAdvisoryCodes.add(a.code);
+      return true;
+    });
+    const policyReevaluation = {
+      reason: 'R67_SAME_SHA_POLICY_REEVALUATION',
+      evaluatedSha: expectedPrHeadSha,
+      previousAuthorization,
+      newAuthorization: mergeAuth.authorization,
+      defaultValueSemanticsVerdict: defaultValueSemanticsAudit.verdict,
+      computedAt: now,
+      reevaluatedBy: user.id,
+    };
+
+    // ── R67 §7/§9 — persist under a lock, re-verifying identity is still
+    // exactly what we evaluated (idempotency/race safety): a second call
+    // with nothing changed reaches the exact same conclusion and appends
+    // another (harmless, bounded) audit entry rather than corrupting state.
+    const result: any = await this.repo.manager.transaction(async manager => {
+      const incidents = manager.getRepository(Incident);
+      const incident: any = await incidents.findOne({ where: { id }, lock: { mode: 'pessimistic_write' } });
+      if (!incident) throw new NotFoundException('Incident introuvable.');
+      const currentMeta: any = incident.metadata || {};
+      const currentFix: any = currentMeta.fixRequest || {};
+      const currentPrValidationRequest: any = currentMeta.prValidationRequest || {};
+      const currentValidation: any = currentMeta.validation || {};
+      if (currentFix.status !== 'VALIDATED' || currentPrValidationRequest.status !== 'COMPLETED'
+        || String(currentValidation.checkoutSha || '').toLowerCase() !== expectedPrHeadSha
+        || String(currentValidation.expectedPrHeadSha || '').toLowerCase() !== expectedPrHeadSha) {
+        throw new ConflictException('L’état a changé avant la réévaluation.');
+      }
+      const previousReevaluations = Array.isArray(currentValidation.policyReevaluations) ? currentValidation.policyReevaluations : [];
+      const nextValidation = {
+        ...currentValidation,
+        defaultValueSemantics: defaultValueSemanticsAudit,
+        mergeAuthorization: { ...mergeAuth, advisories, authorizedSha, correctiveActionAllowed, computedAt: now, forSha: expectedPrHeadSha },
+        // Bounded: keep the most recent 20 reevaluation records, never
+        // unbounded growth from repeated idempotent calls.
+        policyReevaluations: [...previousReevaluations, policyReevaluation].slice(-20),
+      };
+      await incidents.update(id, { metadata: { ...currentMeta, validation: nextValidation } } as any);
+      return { mergeAuth: nextValidation.mergeAuthorization, defaultValueSemanticsAudit, policyReevaluation };
+    });
+
+    const updated = await this.findOne(id);
+    this.gateway.emit('incident:updated', updated);
+    return { success: true, mergeAuthorization: result.mergeAuth, defaultValueSemantics: result.defaultValueSemanticsAudit, policyReevaluation: result.policyReevaluation };
+  }
+
   // BRIQUE 5 — POST /:id/correct-and-revalidate. Exactly ONE causal
   // corrective attempt per explicit human authorization, on the SAME
   // remediation lineage (incidentId/requestId/batchId/PR/branch) — never a

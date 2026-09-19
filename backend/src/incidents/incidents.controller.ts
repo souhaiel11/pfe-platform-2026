@@ -83,6 +83,16 @@ export class IncidentsController {
   @Post(':id/pr-validation/refresh-target') refreshPrValidationTarget(@Param('id') id: string, @Req() req: any) {
     return this.service.refreshPrValidationTarget(id, req.user);
   }
+  // R67 — recomputes mergeAuthorization for the exact same already-validated
+  // SHA against current backend policy (e.g. R66's default-value-semantics
+  // invariant), reusing already-completed Jenkins/Sonar/head-verification
+  // evidence. Never triggers Jenkins/Sonar/WF3, never creates a new
+  // prValidationRequest, never touches the PR. Same guard as
+  // requestPrValidation/refreshPrValidationTarget (admin/developer).
+  @UseGuards(JwtAuthGuard)
+  @Post(':id/pr-validation/recompute-policy') recomputePrValidationPolicy(@Param('id') id: string, @Req() req: any) {
+    return this.service.recomputePrValidationPolicy(id, req.user);
+  }
   // BRIQUE 5 — explicit human authorization for exactly ONE causal
   // corrective attempt on the SAME PR/lineage. Same guard as
   // requestPrValidation/refreshPrValidationTarget (admin/developer). Never
