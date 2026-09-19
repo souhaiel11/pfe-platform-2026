@@ -66,6 +66,13 @@ async function main() {
   assert.ok(statusEvidence, 'must discover the status field migration without being told which field to check');
   assert.equal(statusEvidence!.sourceType, 'Task');
   assert.equal(statusEvidence!.candidateType, 'TaskDTO');
+  // R70 — on the REAL PR34 data, TaskService.java is ALSO among the fetched
+  // candidate files (it was written in an earlier attempt) and TaskController
+  // declares an updateTask(..., TaskDTO ...) pass-through with the same
+  // shape; mappingFile must ground to the SERVICE file specifically, not
+  // stay ambiguous between the two.
+  assert.equal(statusEvidence!.candidateFile, 'TaskDTO.java');
+  assert.equal(statusEvidence!.mappingFile, 'TaskService.java');
   console.log('PR34_FULL_SAVEVALIDATION_REPLAY: PASS');
 }
 

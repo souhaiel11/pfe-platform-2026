@@ -43,6 +43,15 @@ export interface BlockingCause {
   candidateAbsentBehavior?: string;
   mappingPath?: string;
   behavioralInvariant?: string;
+  // R70 — present only when the R66 assembler could resolve the file
+  // unambiguously among the files it fetched (default-value-semantics-
+  // assembler.ts#resolveUniqueFile). Never fabricated: a cause with none of
+  // these three is still valid (mappingPath alone is still exploitable by a
+  // deterministic, bounded in-workflow resolution), it just carries less
+  // grounding than one that does.
+  sourceFile?: string;
+  candidateFile?: string;
+  mappingFile?: string;
 }
 
 export interface CorrectiveContext {
@@ -156,6 +165,9 @@ function extractDefaultValueSemanticsCauses(validation: any, candidateSha: strin
       baselineAbsentBehavior: String(baselineAbsentBehavior), candidateAbsentBehavior: String(candidateAbsentBehavior),
       mappingPath: String(mappingPath),
       behavioralInvariant: DEFAULT_VALUE_SEMANTICS_INVARIANT,
+      ...(evidence.sourceFile ? { sourceFile: String(evidence.sourceFile) } : {}),
+      ...(evidence.candidateFile ? { candidateFile: String(evidence.candidateFile) } : {}),
+      ...(evidence.mappingFile ? { mappingFile: String(evidence.mappingFile) } : {}),
     });
   }
   return causes;

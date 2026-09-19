@@ -141,6 +141,18 @@ function extractMethodBodies(source: string, methodName: string, paramType: stri
   return bodies;
 }
 
+/**
+ * R70 — the repository-relative path of the SINGLE fetched file whose
+ * content satisfies `predicate`, or undefined when zero or more than one
+ * file matches. Ambiguity is never resolved by picking the first match: an
+ * unproven path is strictly better than a wrong one, since a wrong grounded
+ * path would let WF2 authorize editing the wrong file with false confidence.
+ */
+function resolveUniqueFile(files: readonly FetchedFile[], predicate: (content: string) => boolean): string | undefined {
+  const matches = files.filter(f => predicate(f.content));
+  return matches.length === 1 ? matches[0].path : undefined;
+}
+
 /** Field names declared directly in a class body (shallow — one nesting level, matching default-value-semantics.ts's own field-declaration scanner). */
 function listFieldNames(classBody: string): string[] {
   const pattern = /(?:private|protected|public)\s+[\w.<>[\],\s]+?\s+(\w+)\s*(?:=[^;]+)?;/g;
@@ -228,6 +240,22 @@ export function evaluateDefaultValueSemantics(
     if (methodBodies.length === 0) { anyVerificationRequired = true; continue; }
     const mappingSource = methodBodies.join('\n');
 
+    // R70 — resolve exactly which fetched file each piece of evidence came
+    // from, so a proven defect can carry a grounded edit target through to
+    // WF2 (corrective-context.ts / WF2's Validate Generic Remediation Plan).
+    // Resolved per-file (not against the concatenated batch text) and only
+    // when exactly one file matches — see resolveUniqueFile. sourceFile and
+    // candidateFile are resolved here (class declaration is unambiguous per
+    // compilation unit); mappingFile is NOT — a controller pass-through
+    // method commonly shares the same (methodName, paramType) shape as the
+    // real service-layer mapping method (both literally match
+    // `updateTask(..., TaskDTO ...)`), so it is instead resolved per-FIELD
+    // below, against the exact unconditional-propagation snippet each
+    // PROVEN_DEFECT's own evidence already pinpoints — which the
+    // pass-through method never contains.
+    const sourceFile = resolveUniqueFile(baselineFiles, content => extractClassBody(content, migration.baselineType) !== null);
+    const candidateFile = resolveUniqueFile(candidateFiles, content => extractClassBody(content, migration.candidateType) !== null);
+
     const fieldNames = listFieldNames(candidateClassBody);
     for (const fieldName of fieldNames) {
       checkedPairs++;
@@ -237,9 +265,14 @@ export function evaluateDefaultValueSemantics(
         mappingSource,
         mappingLabel: `${migration.method}(${migration.candidateType})`,
         externalBindingEvidence: migration.binding,
+        sourceFile, candidateFile,
       });
-      if (result.verdict === 'PROVEN_DEFECT' && result.evidence) evidence.push(result.evidence);
-      else if (result.verdict === 'VERIFICATION_REQUIRED') anyVerificationRequired = true;
+      if (result.verdict === 'PROVEN_DEFECT' && result.evidence) {
+        const separatorIndex = result.evidence.mappingPath.indexOf(': ');
+        const snippet = separatorIndex === -1 ? '' : result.evidence.mappingPath.slice(separatorIndex + 2).trim();
+        const mappingFile = snippet ? resolveUniqueFile(candidateFiles, content => content.includes(snippet)) : undefined;
+        evidence.push(mappingFile ? { ...result.evidence, mappingFile } : result.evidence);
+      } else if (result.verdict === 'VERIFICATION_REQUIRED') anyVerificationRequired = true;
     }
   }
 

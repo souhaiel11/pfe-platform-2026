@@ -46,6 +46,12 @@ export interface DefaultValueSemanticsEvidence {
   candidateAbsentBehavior: string;
   /** Where the divergent default is propagated into the persisted/target object. */
   mappingPath: string;
+  /** R70 — repository-relative file path declaring sourceType, when the caller could resolve it unambiguously. Never fabricated; absent (not guessed) when the caller could not prove a single file. */
+  sourceFile?: string;
+  /** R70 — repository-relative file path declaring candidateType, under the same unambiguity rule as sourceFile. */
+  candidateFile?: string;
+  /** R70 — repository-relative file path containing the specific mapping method body evidence.mappingPath was derived from, under the same unambiguity rule. */
+  mappingFile?: string;
 }
 
 export interface DefaultValueSemanticsResult {
@@ -76,6 +82,20 @@ export interface DefaultValueSemanticsInput {
    * this evidence the invariant cannot be asserted at all.
    */
   externalBindingEvidence?: string | null;
+  /**
+   * R70 — optional repository-relative file paths the ASSEMBLER (the only
+   * layer with per-file provenance) has already proven, when it could
+   * resolve them unambiguously among the files it fetched. This function
+   * never derives or validates these itself (it only sees concatenated
+   * source text, not file boundaries) — it only carries them through
+   * verbatim into the returned evidence when a PROVEN_DEFECT is found, so
+   * WF2's corrective target grounding does not have to re-derive them from
+   * a weaker, in-workflow text search when the assembler already knows them
+   * for free.
+   */
+  sourceFile?: string | null;
+  candidateFile?: string | null;
+  mappingFile?: string | null;
 }
 
 // ── Field-declaration scanning ──────────────────────────────────────────
@@ -306,6 +326,9 @@ function buildProvenDefect(
     baselineAbsentBehavior: `Field kept at its declared initializer: ${sourceDefault}`,
     candidateAbsentBehavior: `Field kept at ${candidateAbsentDescription}${candidateDefault ? `: ${candidateDefault}` : ''}, unconditionally propagated`,
     mappingPath,
+    ...(input.sourceFile ? { sourceFile: input.sourceFile } : {}),
+    ...(input.candidateFile ? { candidateFile: input.candidateFile } : {}),
+    ...(input.mappingFile ? { mappingFile: input.mappingFile } : {}),
   };
   return {
     verdict: 'PROVEN_DEFECT',
