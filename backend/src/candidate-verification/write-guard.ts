@@ -5,6 +5,7 @@
 // later phase cannot accidentally skip it by inlining an ad hoc check.
 import { CandidateManifest, CandidateVerification, VerificationEvidence, VerificationResult } from './candidate-verification.types';
 import { buildVerificationEvidence } from './verification-evidence';
+import { isFullGitSha } from '../incidents/incidents.service';
 
 export type WriteGuardRejectionReason =
   | 'HEAD_ONLY_NOT_WRITABLE'
@@ -35,10 +36,18 @@ export function assertCandidateStillValidForWrite(
   if (!manifestDigest || candidate.identity.candidateDigest !== manifestDigest) {
     return { ok: false, reason: 'CANDIDATE_DIGEST_MISMATCH' };
   }
-  if (candidate.identity.candidateBaseSha.toLowerCase() !== candidateManifest.candidateBaseSha.toLowerCase()) {
+  // Equality alone is not proof: two equally-malformed values (e.g. both
+  // "abc") would pass a bare `===` check. Every SHA in this decision must
+  // independently be a full 40-hex git SHA before any comparison between
+  // them means anything.
+  if (!isFullGitSha(candidateManifest.candidateBaseSha) || !isFullGitSha(candidate.identity.candidateBaseSha)
+    || candidate.identity.candidateBaseSha.toLowerCase() !== candidateManifest.candidateBaseSha.toLowerCase()) {
     return { ok: false, reason: 'CANDIDATE_BASE_SHA_MISMATCH' };
   }
-  if (verification.workspace.exactShaVerified !== true) {
+  if (verification.workspace.exactShaVerified !== true
+    || !isFullGitSha(verification.workspace.requestedSha) || !isFullGitSha(verification.workspace.checkoutSha)
+    || verification.workspace.requestedSha.toLowerCase() !== candidateManifest.candidateBaseSha.toLowerCase()
+    || verification.workspace.checkoutSha.toLowerCase() !== verification.workspace.requestedSha.toLowerCase()) {
     return { ok: false, reason: 'WORKSPACE_SHA_NOT_VERIFIED' };
   }
   return { ok: true };

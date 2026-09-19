@@ -25,6 +25,10 @@ function isCandidateVerificationShape(value: any): value is CandidateVerificatio
   return !!value && typeof value === 'object'
     && value.identity && typeof value.identity.candidateDigest === 'string'
     && value.workspace && typeof value.workspace.exactShaVerified === 'boolean'
+    && typeof value.workspace.requestedSha === 'string'
+    && (value.workspace.checkoutSha === null || typeof value.workspace.checkoutSha === 'string')
+    && (!value.workspace.exactShaVerified
+      || value.workspace.checkoutSha?.toLowerCase() === value.workspace.requestedSha.toLowerCase())
     && value.compile && value.tests && value.staticAnalysis
     && typeof value.overall === 'string' && typeof value.verificationLevel === 'string';
 }
@@ -45,7 +49,7 @@ export class CandidateVerificationService {
 
     const transportFailure = (failureClass: FailureClass): CandidateVerification => ({
       mode: options.mode ?? 'FULL_TEST', identity,
-      workspace: { workspaceId, exactShaVerified: false, created: false, cleaned: false },
+      workspace: { workspaceId, requestedSha: manifest.candidateBaseSha.toLowerCase(), checkoutSha: null, exactShaVerified: false, created: false, cleaned: false },
       manifestValidation: { status: 'PASS', errors: [] },
       compile: { status: 'NOT_RUN', exitCode: null, durationMs: null, evidenceRef: null },
       tests: { targeted: { status: 'NOT_RUN', reason: 'NO_HIGH_CONFIDENCE_TARGET_SELECTION' }, regression: { status: 'NOT_RUN', total: null, failures: null, errors: null, skipped: null, durationMs: null, evidenceRef: null } },
@@ -101,7 +105,7 @@ export class CandidateVerificationService {
     const failure = (failureClass: FailureClass): HeadVerification => ({
       mode: 'HEAD_ONLY', identity,
       workspace: { workspaceId: `${request.requestId}/${request.batchId}/attempt-${request.candidateAttempt}`,
-        checkoutSha: null, exactShaVerified: false, created: false, cleaned: false },
+        requestedSha: request.targetSha.toLowerCase(), checkoutSha: null, exactShaVerified: false, created: false, cleaned: false },
       compile: { status: 'NOT_RUN', exitCode: null, durationMs: null, evidenceRef: null },
       tests: { targeted: { status: 'NOT_RUN', reason: 'NO_HIGH_CONFIDENCE_TARGET_SELECTION' },
         regression: { status: 'NOT_RUN', total: null, failures: null, errors: null, skipped: null, durationMs: null, evidenceRef: null } },

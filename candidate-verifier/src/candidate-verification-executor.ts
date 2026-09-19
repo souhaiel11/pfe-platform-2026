@@ -98,12 +98,15 @@ export class CandidateVerificationExecutor {
     };
     const targeted = { status: 'NOT_RUN' as const, reason: 'NO_HIGH_CONFIDENCE_TARGET_SELECTION' as const };
     const staticAnalysis = { status: 'NOT_RUN' as const, reason: 'SUPPORTED_STATIC_ADAPTER_NOT_CONFIGURED' as const, newIssues: [] as unknown[], evidenceRef: null };
+    const workspaceEvidence = (exactShaVerified: boolean, created: boolean, cleaned: boolean) => ({
+      workspaceId, requestedSha: targetSha, checkoutSha, exactShaVerified, created, cleaned,
+    });
 
     const base = (overrides: Partial<CandidateVerification>): VerificationResult => {
       const result: CandidateVerification = {
         mode,
         identity: identity as CandidateVerification['identity'],
-        workspace: { workspaceId, exactShaVerified: false, created: false, cleaned: false },
+        workspace: workspaceEvidence(false, false, false),
         manifestValidation: { status: 'FAIL', errors: [] },
         compile: { status: 'NOT_RUN', exitCode: null, durationMs: null, evidenceRef: null },
         tests: { targeted, regression: { status: 'NOT_RUN', total: null, failures: null, errors: null, skipped: null, durationMs: null, evidenceRef: null } },
@@ -117,7 +120,7 @@ export class CandidateVerificationExecutor {
       if (!head) return result;
       const { manifestValidation, ...common } = result;
       return { ...common, mode: 'HEAD_ONLY', identity: identity as HeadVerification['identity'],
-        workspace: { ...result.workspace, checkoutSha } };
+        workspace: result.workspace };
     };
 
     const manifestErrors = head ? [] : validateManifest(manifest);
@@ -146,11 +149,11 @@ export class CandidateVerificationExecutor {
       workspacePath = handle.path;
       workspaceCreated = true;
       exactShaVerified = handle.exactShaVerified;
+      checkoutSha = handle.checkoutSha || null;
       if (head) {
-        checkoutSha = handle.checkoutSha || null;
         if (!exactShaVerified || checkoutSha?.toLowerCase() !== targetSha) {
           this.workspaceManager.cleanupWorkspace(workspaceId, repoPath);
-          const failure = base({ overall: 'INCONCLUSIVE', workspace: { workspaceId, exactShaVerified: false, created: true, cleaned: true } }) as HeadVerification;
+          const failure = base({ overall: 'INCONCLUSIVE', workspace: workspaceEvidence(false, true, true) }) as HeadVerification;
           return { ...failure, failureClass: 'SHA_UNAVAILABLE' };
         }
       }
@@ -160,7 +163,7 @@ export class CandidateVerificationExecutor {
       // SHA-mismatched worktree itself) — no cleanup step needed here.
       const failure = base({
         manifestValidation: { status: 'PASS', errors: [] },
-        workspace: { workspaceId, exactShaVerified: false, created: false, cleaned: false },
+        workspace: workspaceEvidence(false, false, false),
         overall: head ? 'INCONCLUSIVE' : 'FAIL', failureClass,
       });
       return head ? { ...failure, failureClass: 'SHA_UNAVAILABLE' } as HeadVerification : failure;
@@ -177,7 +180,7 @@ export class CandidateVerificationExecutor {
         const failureClass: FailureClass = err instanceof MaterializationError ? err.failureClass : 'CANDIDATE_MATERIALIZATION_FAILED';
         result = base({
           manifestValidation: failureClass === 'CANDIDATE_MANIFEST_INVALID' ? { status: 'FAIL', errors: [err.message] } : { status: 'PASS', errors: [] },
-          workspace: { workspaceId, exactShaVerified, created: workspaceCreated, cleaned: false },
+          workspace: workspaceEvidence(exactShaVerified, workspaceCreated, false),
           overall: 'FAIL', failureClass,
         });
         return result;
@@ -187,14 +190,14 @@ export class CandidateVerificationExecutor {
       if (!adapter) {
         result = base({
           manifestValidation: { status: 'PASS', errors: [] },
-          workspace: { workspaceId, exactShaVerified, created: workspaceCreated, cleaned: false },
+          workspace: workspaceEvidence(exactShaVerified, workspaceCreated, false),
           overall: 'INCONCLUSIVE', failureClass: 'BUILD_TYPE_UNSUPPORTED',
         });
         return result;
       }
 
       if (adapter.supportsMode && !adapter.supportsMode(mode)) {
-        result = base({ manifestValidation: { status: 'PASS', errors: [] }, workspace: { workspaceId, exactShaVerified, created: workspaceCreated, cleaned: false },
+        result = base({ manifestValidation: { status: 'PASS', errors: [] }, workspace: workspaceEvidence(exactShaVerified, workspaceCreated, false),
           overall: 'INCONCLUSIVE', failureClass: 'VERIFICATION_MODE_UNSUPPORTED' });
         return result;
       }
@@ -202,7 +205,7 @@ export class CandidateVerificationExecutor {
       const timeoutMs = options.timeoutMs ?? 5 * 60 * 1000;
       const compileResult = mode === 'COMPILE_TESTS' ? adapter.compileTests?.(workspacePath, timeoutMs) : adapter.compile(workspacePath, timeoutMs);
       if (!compileResult) {
-        result = base({ manifestValidation: { status: 'PASS', errors: [] }, workspace: { workspaceId, exactShaVerified, created: workspaceCreated, cleaned: false },
+        result = base({ manifestValidation: { status: 'PASS', errors: [] }, workspace: workspaceEvidence(exactShaVerified, workspaceCreated, false),
           overall: 'INCONCLUSIVE', failureClass: 'VERIFICATION_MODE_UNSUPPORTED' });
         return result;
       }
@@ -211,7 +214,7 @@ export class CandidateVerificationExecutor {
         const diagnostics = compilerDiagnostics(compileResult.evidenceTail, workspacePath);
         result = base({
           manifestValidation: { status: 'PASS', errors: [] },
-          workspace: { workspaceId, exactShaVerified, created: workspaceCreated, cleaned: false },
+          workspace: workspaceEvidence(exactShaVerified, workspaceCreated, false),
           compile: { status: 'FAILED', exitCode: compileResult.exitCode, durationMs: compileResult.durationMs, evidenceRef: compileResult.evidenceTail },
           overall: timedOut ? 'INCONCLUSIVE' : 'FAIL',
           failureClass: timedOut ? 'WORKSPACE_TIMEOUT' : mode === 'COMPILE_TESTS' ? 'CANDIDATE_TEST_COMPILE_FAILURE' : 'CANDIDATE_COMPILE_FAILURE', diagnostics,
@@ -220,7 +223,7 @@ export class CandidateVerificationExecutor {
       }
 
       if (mode !== 'FULL_TEST') {
-        result = base({ manifestValidation: { status: 'PASS', errors: [] }, workspace: { workspaceId, exactShaVerified, created: workspaceCreated, cleaned: false },
+        result = base({ manifestValidation: { status: 'PASS', errors: [] }, workspace: workspaceEvidence(exactShaVerified, workspaceCreated, false),
           compile: { status: 'SUCCESS', exitCode: compileResult.exitCode, durationMs: compileResult.durationMs, evidenceRef: compileResult.evidenceTail }, overall: 'PASS', failureClass: null });
         return result;
       }
@@ -233,7 +236,7 @@ export class CandidateVerificationExecutor {
 
       result = base({
         manifestValidation: { status: 'PASS', errors: [] },
-        workspace: { workspaceId, exactShaVerified, created: workspaceCreated, cleaned: false },
+        workspace: workspaceEvidence(exactShaVerified, workspaceCreated, false),
         compile: { status: 'SUCCESS', exitCode: compileResult.exitCode, durationMs: compileResult.durationMs, evidenceRef: compileResult.evidenceTail },
         tests: { targeted, regression },
         overall,

@@ -103,6 +103,8 @@ export interface CandidateVerification {
   };
   workspace: {
     workspaceId: string;
+    requestedSha: string;
+    checkoutSha: string | null;
     exactShaVerified: boolean;
     created: boolean;
     cleaned: boolean;
@@ -160,7 +162,7 @@ export interface HeadVerification extends Omit<CandidateVerification, 'identity'
     batchId: string;
     candidateAttempt: number;
   };
-  workspace: CandidateVerification['workspace'] & { checkoutSha: string | null };
+  workspace: CandidateVerification['workspace'];
   failureClass: FailureClass | 'SHA_UNAVAILABLE';
 }
 

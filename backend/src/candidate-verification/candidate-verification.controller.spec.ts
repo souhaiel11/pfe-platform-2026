@@ -2,7 +2,7 @@ import * as assert from 'node:assert/strict';
 import { CandidateVerificationController } from './candidate-verification.controller';
 import { CandidateManifest } from './candidate-verification.types';
 
-const fakeVerification: any = { overall: 'PASS', identity: { candidateDigest: 'd1', candidateBaseSha: 'a'.repeat(40) }, workspace: { exactShaVerified: true } };
+const fakeVerification: any = { overall: 'PASS', identity: { candidateDigest: 'd1', candidateBaseSha: 'a'.repeat(40) }, workspace: { requestedSha: 'a'.repeat(40), checkoutSha: 'a'.repeat(40), exactShaVerified: true } };
 
 function manifest(overrides: Partial<CandidateManifest> = {}): CandidateManifest {
   return { candidateId: 'c1', requestId: 'r1', batchId: 'b1', candidateAttempt: 0, repository: 'x/y', candidateBaseSha: 'a'.repeat(40), files: [], candidateDigest: 'd1', ...overrides };

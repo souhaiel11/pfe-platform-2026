@@ -6,7 +6,7 @@ function headOnlyVerification(): HeadVerification {
   return {
     mode: 'HEAD_ONLY',
     identity: { repository: 'x/y', targetSha: 'a'.repeat(40), validationRequestId: 'v1', requestId: 'r1', batchId: 'b1', candidateAttempt: 0 },
-    workspace: { workspaceId: 'r1/b1/attempt-0', exactShaVerified: true, created: true, cleaned: true, checkoutSha: 'a'.repeat(40) },
+    workspace: { workspaceId: 'r1/b1/attempt-0', requestedSha: 'a'.repeat(40), exactShaVerified: true, created: true, cleaned: true, checkoutSha: 'a'.repeat(40) },
     compile: { status: 'SUCCESS', exitCode: 0, durationMs: 100, evidenceRef: null },
     tests: { targeted: { status: 'NOT_RUN', reason: 'NO_HIGH_CONFIDENCE_TARGET_SELECTION' }, regression: { status: 'SUCCESS', total: 1, failures: 0, errors: 0, skipped: 0, durationMs: 100, evidenceRef: null } },
     staticAnalysis: { status: 'NOT_RUN', reason: 'SUPPORTED_STATIC_ADAPTER_NOT_CONFIGURED', newIssues: [], evidenceRef: null },
@@ -20,7 +20,7 @@ function passingVerification(overrides: Partial<CandidateVerification['identity'
   return {
     mode: 'FULL_TEST',
     identity: { candidateId: 'c1', requestId: 'r1', batchId: 'b1', candidateAttempt: 0, candidateBaseSha: 'a'.repeat(40), candidateDigest: 'digest-1', ...overrides },
-    workspace: { workspaceId: 'r1/b1/attempt-0', exactShaVerified: true, created: true, cleaned: true },
+    workspace: { workspaceId: 'r1/b1/attempt-0', requestedSha: 'a'.repeat(40), checkoutSha: 'a'.repeat(40), exactShaVerified: true, created: true, cleaned: true },
     manifestValidation: { status: 'PASS', errors: [] },
     compile: { status: 'SUCCESS', exitCode: 0, durationMs: 100, evidenceRef: null },
     tests: { targeted: { status: 'NOT_RUN', reason: 'NO_HIGH_CONFIDENCE_TARGET_SELECTION' }, regression: { status: 'SUCCESS', total: 22, failures: 0, errors: 0, skipped: 0, durationMs: 100, evidenceRef: null } },
@@ -139,11 +139,73 @@ function manifest(overrides: Partial<CandidateManifest> = {}): CandidateManifest
   assert.deepEqual(result, { ok: false, reason: 'WORKSPACE_SHA_NOT_VERIFIED' });
 }
 
+// Exact-SHA evidence must remain internally anchored through the write guard.
+{
+  const verification = passingVerification();
+  verification.workspace.checkoutSha = 'b'.repeat(40);
+  assert.deepEqual(assertCandidateStillValidForWrite(verification, manifest()), { ok: false, reason: 'WORKSPACE_SHA_NOT_VERIFIED' });
+}
+{
+  const verification = passingVerification();
+  verification.workspace.requestedSha = 'b'.repeat(40);
+  verification.workspace.checkoutSha = 'b'.repeat(40);
+  assert.deepEqual(assertCandidateStillValidForWrite(verification, manifest()), { ok: false, reason: 'WORKSPACE_SHA_NOT_VERIFIED' });
+}
+
 // --- case-insensitive SHA comparison, still matches ---
 {
   const verification = passingVerification({ candidateBaseSha: 'A'.repeat(40) });
   const result = assertCandidateStillValidForWrite(verification, manifest({ candidateBaseSha: 'a'.repeat(40) }));
   assert.equal(result.ok, true, 'SHA comparison is case-insensitive');
+}
+
+// --- R76 closure: format alone, independent of equality. Two equally
+// malformed values must never be accepted merely because they match each
+// other -- every SHA in the decision must itself be a full 40-hex git SHA. ---
+{
+  // requestedSha malformed, but equal to a manifest candidateBaseSha of the
+  // SAME malformed shape -- equality alone would wrongly pass this.
+  const verification = passingVerification();
+  verification.identity.candidateBaseSha = 'abc';
+  verification.workspace.requestedSha = 'abc';
+  verification.workspace.checkoutSha = 'abc';
+  const result = assertCandidateStillValidForWrite(verification, manifest({ candidateBaseSha: 'abc' }));
+  assert.deepEqual(result, { ok: false, reason: 'CANDIDATE_BASE_SHA_MISMATCH' }, 'malformed requestedSha="abc" must reject even when self-consistent');
+}
+{
+  // checkoutSha malformed ("not-a-sha"), requestedSha otherwise valid and matching.
+  const verification = passingVerification();
+  verification.workspace.checkoutSha = 'not-a-sha';
+  const result = assertCandidateStillValidForWrite(verification, manifest());
+  assert.deepEqual(result, { ok: false, reason: 'WORKSPACE_SHA_NOT_VERIFIED' }, 'malformed checkoutSha must reject');
+}
+{
+  // candidateManifest.candidateBaseSha malformed.
+  const verification = passingVerification();
+  const result = assertCandidateStillValidForWrite(verification, manifest({ candidateBaseSha: 'not-a-sha' }));
+  assert.deepEqual(result, { ok: false, reason: 'CANDIDATE_BASE_SHA_MISMATCH' }, 'malformed candidateManifest.candidateBaseSha must reject');
+}
+{
+  // 40 characters, but non-hex (contains 'g'/'z') -- length alone is not format.
+  const verification = passingVerification({ candidateBaseSha: 'g'.repeat(40) });
+  verification.workspace.requestedSha = 'g'.repeat(40);
+  verification.workspace.checkoutSha = 'g'.repeat(40);
+  const result = assertCandidateStillValidForWrite(verification, manifest({ candidateBaseSha: 'g'.repeat(40) }));
+  assert.deepEqual(result, { ok: false, reason: 'CANDIDATE_BASE_SHA_MISMATCH' }, '40-char non-hex must reject even when internally consistent');
+}
+{
+  // Valid lowercase 40-hex on every field -- must accept.
+  const result = assertCandidateStillValidForWrite(passingVerification(), manifest());
+  assert.equal(result.ok, true, 'valid lowercase 40-hex must accept');
+}
+{
+  // Valid uppercase 40-hex on every field -- project normalizes via
+  // toLowerCase() throughout, so uppercase input must still accept.
+  const verification = passingVerification({ candidateBaseSha: 'B'.repeat(40) });
+  verification.workspace.requestedSha = 'B'.repeat(40);
+  verification.workspace.checkoutSha = 'B'.repeat(40);
+  const result = assertCandidateStillValidForWrite(verification, manifest({ candidateBaseSha: 'b'.repeat(40) }));
+  assert.equal(result.ok, true, 'valid uppercase 40-hex must accept (case-insensitive, project-normalized)');
 }
 
 console.log('write-guard: PASS');

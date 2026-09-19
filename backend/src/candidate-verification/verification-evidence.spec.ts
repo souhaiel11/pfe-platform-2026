@@ -26,7 +26,7 @@ assert.doesNotMatch(redactAndCapEvidence('secret=sk-real-secret-value')!, /sk-re
 function baseVerification(): CandidateVerification {
   return {
     identity: { candidateId: 'c1', requestId: 'r1', batchId: 'b1', candidateAttempt: 1, candidateBaseSha: 'a'.repeat(40), candidateDigest: 'd1' },
-    workspace: { workspaceId: 'r1/b1/attempt-1', exactShaVerified: true, created: true, cleaned: true },
+    workspace: { workspaceId: 'r1/b1/attempt-1', requestedSha: 'a'.repeat(40), checkoutSha: 'a'.repeat(40), exactShaVerified: true, created: true, cleaned: true },
     manifestValidation: { status: 'PASS', errors: [] },
     compile: { status: 'FAILED', exitCode: 1, durationMs: 1200, evidenceRef: 'error: incompatible types: TaskDTO cannot be converted to Task' },
     tests: { targeted: { status: 'NOT_RUN', reason: 'NO_HIGH_CONFIDENCE_TARGET_SELECTION' },

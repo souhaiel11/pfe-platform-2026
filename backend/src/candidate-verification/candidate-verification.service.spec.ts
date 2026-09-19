@@ -23,7 +23,7 @@ function manifest(overrides: Partial<CandidateManifest> = {}): CandidateManifest
 function fakeVerification(m: CandidateManifest, overrides: Partial<CandidateVerification> = {}): CandidateVerification {
   return {
     identity: { candidateId: m.candidateId, requestId: m.requestId, batchId: m.batchId, candidateAttempt: m.candidateAttempt, candidateBaseSha: m.candidateBaseSha, candidateDigest: m.candidateDigest! },
-    workspace: { workspaceId: `${m.requestId}/${m.batchId}/attempt-${m.candidateAttempt}`, exactShaVerified: true, created: true, cleaned: true },
+    workspace: { workspaceId: `${m.requestId}/${m.batchId}/attempt-${m.candidateAttempt}`, requestedSha: m.candidateBaseSha, checkoutSha: m.candidateBaseSha, exactShaVerified: true, created: true, cleaned: true },
     manifestValidation: { status: 'PASS', errors: [] },
     compile: { status: 'SUCCESS', exitCode: 0, durationMs: 100, evidenceRef: null },
     tests: { targeted: { status: 'NOT_RUN', reason: 'NO_HIGH_CONFIDENCE_TARGET_SELECTION' }, regression: { status: 'SUCCESS', total: 22, failures: 0, errors: 0, skipped: 0, durationMs: 5000, evidenceRef: null } },
