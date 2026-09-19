@@ -356,9 +356,41 @@ export function resolveRemediationBatch(allFindings: any[], requestedIds: string
   return { findingIds, findings, workflow: routes[0] as RemediationWorkflow };
 }
 
+// R69 — workflowFinding() is called on TWO genuinely different shapes: raw
+// scanner/incident findings (Sonar/Trivy/OWASP/ZAP, always carrying `.id`
+// and/or `.key`, never `.findingId` — see collectFindings()/startFix()
+// above) when building a fresh batch, AND on the function's OWN already-
+// canonicalized persisted output (fixRequest.findings[], which only ever
+// carries `.findingId`) when a corrective attempt rebuilds a WF2 payload
+// from persisted state (correctAndRevalidate). The previous `finding?.id ||
+// finding?.key` resolution only understood the first shape; fed the second,
+// it silently produced the STRING "undefined" (proven: execution 2023027's
+// FINDING_CORRELATION_MISMATCH). resolveCanonicalFindingId() makes the
+// function idempotent — safe on either input shape — and never lets a
+// missing/sentinel value through.
+const MISSING_FINDING_ID_SENTINELS = new Set(['undefined', 'null', '']);
+
+function resolveCanonicalFindingId(finding: any): string | null {
+  for (const candidate of [finding?.findingId, finding?.id, finding?.key]) {
+    if (candidate === undefined || candidate === null) continue;
+    const value = String(candidate).trim();
+    if (!value || MISSING_FINDING_ID_SENTINELS.has(value)) continue;
+    return value;
+  }
+  return null;
+}
+
 export function workflowFinding(finding: any) {
+  const findingId = resolveCanonicalFindingId(finding);
+  if (!findingId) {
+    // Fail closed BEFORE any WF2 dispatch — never serialize "undefined" or
+    // silently drop the finding. Thrown synchronously inside .map(), so
+    // every caller (approveFix/retryFix/correctAndRevalidate) aborts before
+    // its fetch() call.
+    throw new BadRequestException({ code: 'FINDING_ID_MISSING', message: 'Un problème sélectionné n’a pas d’identifiant exploitable (findingId/id/key absents ou invalides).' });
+  }
   return {
-    findingId: String(finding?.id || finding?.key),
+    findingId,
     rule: finding?.rule || finding?.ruleKey || null,
     severity: finding?.severity || null,
     type: finding?.type || finding?.category || null,
@@ -2265,29 +2297,54 @@ export class IncidentsService {
     }
 
     const project: Project = snapshot.project;
-    const canonicalFindings = (Array.isArray(fix.findings) ? fix.findings : []).map(workflowFinding);
-    const payload: any = {
-      incidentId: id, projectId: project.id, findingId: fix.findingIds?.[0], findingIds: fix.findingIds,
-      buildNumber: snapshot.buildNumber ?? (metadata as any)?.enrichedData?.build?.number ?? null,
-      batchKey: fix.batchKey || fix.batchId, batchId: fix.batchId,
-      stage: canonicalFindings[0]?.stage, source: canonicalFindings[0]?.source,
-      remediationType: 'AUTO_FIX_ELIGIBLE', requestId: fix.requestId,
-      attemptCount: nextAttempt,
-      approvedBy: { id: user.id, role: user.role },
-      finding: canonicalFindings[0], findings: canonicalFindings,
-      repository: project.githubRepo,
-      defaultBranch: metadata.defaultBranch || null,
-      // BRIQUE 5 — causal corrective mode. WF2's "Policy Gate" already
-      // spreads every field of the incoming payload through unchanged (a
-      // generic `{...data, ...computed}`, no allowlist truncates unknown
-      // keys), so these two fields reach "Select Existing PR" without any
-      // other WF2 wiring change. correctiveAttempt=true is the one flag
-      // WF2 uses to refuse creating a replacement PR when the expected one
-      // is not open (see n8n-workflows/active/wf2-...json, "Select Existing
-      // PR" and n8n-workflows/scripts/wf2-corrective-same-pr.spec.mjs).
-      correctiveAttempt: true, correctiveContext,
-    };
     try {
+      // R69 — canonicalFindings construction AND the pre-dispatch
+      // correlation guard now live INSIDE this try block (they did not
+      // before — a real gap this fix also closes): either one throwing
+      // must be recorded as a governed FIX_FAILED/retryEligible attempt
+      // exactly like a network/Jenkins failure below, never leave
+      // fixRequest.status dangling at FIX_STARTING.
+      const canonicalFindings = (Array.isArray(fix.findings) ? fix.findings : []).map(workflowFinding);
+      // Narrow pre-dispatch correlation guard, specific to THIS dispatch
+      // call (never a reimplementation of WF2's own "Adapt Webhook Payload"
+      // graph logic): the two independently-persisted arrays this payload
+      // is built from — fix.findingIds (flat list) and fix.findings
+      // (objects workflowFinding() just canonicalized) — must describe the
+      // exact same set of findings before anything is sent. Every finding
+      // already has a proven-non-sentinel findingId at this point
+      // (workflowFinding() would already have thrown otherwise); this only
+      // proves the two arrays agree with each other and with the payload's
+      // own singular `finding`.
+      const expectedFindingIdSet = new Set((Array.isArray(fix.findingIds) ? fix.findingIds : []).map((value: any) => String(value)));
+      const actualFindingIdSet = new Set(canonicalFindings.map(f => f.findingId));
+      const correlationOk = expectedFindingIdSet.size > 0
+        && expectedFindingIdSet.size === actualFindingIdSet.size
+        && [...expectedFindingIdSet].every(idValue => actualFindingIdSet.has(idValue))
+        && (!canonicalFindings[0] || expectedFindingIdSet.has(canonicalFindings[0].findingId));
+      if (!correlationOk) {
+        throw new ConflictException({ code: 'FINDING_CORRELATION_MISMATCH', message: 'La corrélation des identifiants de problèmes est rompue avant l’envoi à WF2 — envoi refusé.' });
+      }
+      const payload: any = {
+        incidentId: id, projectId: project.id, findingId: fix.findingIds?.[0], findingIds: fix.findingIds,
+        buildNumber: snapshot.buildNumber ?? (metadata as any)?.enrichedData?.build?.number ?? null,
+        batchKey: fix.batchKey || fix.batchId, batchId: fix.batchId,
+        stage: canonicalFindings[0]?.stage, source: canonicalFindings[0]?.source,
+        remediationType: 'AUTO_FIX_ELIGIBLE', requestId: fix.requestId,
+        attemptCount: nextAttempt,
+        approvedBy: { id: user.id, role: user.role },
+        finding: canonicalFindings[0], findings: canonicalFindings,
+        repository: project.githubRepo,
+        defaultBranch: metadata.defaultBranch || null,
+        // BRIQUE 5 — causal corrective mode. WF2's "Policy Gate" already
+        // spreads every field of the incoming payload through unchanged (a
+        // generic `{...data, ...computed}`, no allowlist truncates unknown
+        // keys), so these two fields reach "Select Existing PR" without any
+        // other WF2 wiring change. correctiveAttempt=true is the one flag
+        // WF2 uses to refuse creating a replacement PR when the expected one
+        // is not open (see n8n-workflows/active/wf2-...json, "Select Existing
+        // PR" and n8n-workflows/scripts/wf2-corrective-same-pr.spec.mjs).
+        correctiveAttempt: true, correctiveContext,
+      };
       const response = await fetch(this.workflowUrl('WF2'), {
         method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Internal-Secret': process.env.N8N_INTERNAL_SECRET || '' },
         body: JSON.stringify(payload), signal: AbortSignal.timeout(15000),
