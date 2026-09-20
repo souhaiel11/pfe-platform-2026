@@ -68,6 +68,12 @@ export interface DefaultValueSemanticsCheckedPair {
   candidateType: string;
   candidateField: string;
   verdict: DefaultValueSemanticsVerdict;
+  /** R80 — absent means static analysis (the original, pre-R80 producer). 'EXECUTED_TEST' marks a pair proven by a real, exact-SHA/build-bound Jenkins test run instead. */
+  source?: 'STATIC_ANALYSIS' | 'EXECUTED_TEST';
+  /** R80 — the registered rule type this pair belongs to (see semantic-evidence-core.ts's RULE_REGISTRY). Absent on pairs from before R80 — treated as "this platform's one legacy rule", never a hard requirement. */
+  ruleType?: string;
+  /** R80 — allows the generic identity/merge machinery in semantic-evidence-core.ts to read/spread arbitrary identity keys without this type needing to enumerate every possible rule's identity shape. */
+  [key: string]: unknown;
 }
 
 export interface DefaultValueSemanticsAudit {

@@ -14,6 +14,8 @@ import { ManualRemediationService } from '../manual-remediation/manual-remediati
 import { deriveFindingsAndHealth } from '../validation/finding-pipeline-separation';
 import { computeMergeAuthorization, deriveRemediationResult, deriveExactCorrelationVerified, deriveHeadVerificationResult } from '../validation/merge-authorization';
 import { buildDefaultValueSemanticsEvidence, CandidateFileRecord } from '../validation/default-value-semantics-assembler';
+import { validateCanonicalEvidenceBinding, mergeCanonicalEvidenceWithStatic, identityMatches, RULE_REGISTRY } from '../validation/semantic-evidence-core';
+import { resolveSemanticEvidenceAdapter } from '../validation/adapters/registry';
 import { CandidateVerificationService } from '../candidate-verification/candidate-verification.service';
 import { HeadVerificationRequest, HeadVerification, VerificationEvidence } from '../candidate-verification/candidate-verification.types';
 import { redactAndCapEvidence } from '../candidate-verification/verification-evidence';
@@ -208,18 +210,26 @@ export function correctiveBlockingCausesDeclareDefaultValueSemanticsDefect(fixRe
 // "no relevant pair was ever checked"). Never references a project-specific
 // type/field name — only the generic identity fields blockingCauses and
 // checkedFieldPairs already both carry.
+// R80 — generic over ANY registered rule type (RULE_REGISTRY), never
+// assuming a fixed 4-field identity shape: identityMatches() compares
+// exactly the identity keys the matched rule itself declares. Still keyed
+// off `cause.type` because that is (and remains) the platform's own
+// corrective-dispatch contract field naming which rule a blocking cause
+// is — not a framework/project literal.
 export function defaultValueSemanticsRelevantPairWasChecked(
   fixRequest: any,
-  checkedFieldPairs: ReadonlyArray<{ sourceType: string; sourceField: string; candidateType: string; candidateField: string; verdict: string }>,
+  checkedFieldPairs: ReadonlyArray<{ verdict: string; ruleType?: string; [key: string]: unknown }>,
 ): boolean {
   const causes = fixRequest?.correctiveDispatch?.correctiveContext?.blockingCauses;
   if (!Array.isArray(causes)) return false;
-  const relevantCauses = causes.filter((cause: any) => cause?.type === 'DEFAULT_VALUE_SEMANTICS_DEFECT');
+  const relevantCauses = causes.filter((cause: any) => cause?.type && RULE_REGISTRY[cause.type]);
   if (!relevantCauses.length) return false;
-  return relevantCauses.some((cause: any) => checkedFieldPairs.some(pair =>
-    pair.sourceType === cause.sourceType && pair.sourceField === cause.sourceField
-    && pair.candidateType === cause.candidateType && pair.candidateField === cause.candidateField
-    && pair.verdict !== 'PROVEN_DEFECT'));
+  return relevantCauses.some((cause: any) => {
+    const rule = RULE_REGISTRY[cause.type];
+    return checkedFieldPairs.some(pair => pair.verdict !== 'PROVEN_DEFECT'
+      && (pair.ruleType === undefined || pair.ruleType === cause.type) // legacy static pairs (pre-R80) carry no ruleType — still matched by identity alone
+      && identityMatches(rule, pair as Record<string, string>, cause));
+  });
 }
 
 // Canonical `owner/repo` form of any GitHub remote (URL or already-canonical
@@ -1240,6 +1250,35 @@ export class IncidentsService {
         attemptCount: Number(fixRequest.attemptCount) || 0, evidence: [], checkedPairs: 0, checkedFieldPairs: [], computedAt: new Date().toISOString(),
       };
     }
+    // R80 — bridges AUTHORITATIVE EXECUTED test evidence into the same
+    // audit the static analyzer produced, when the SAME already-verified
+    // webhook body (checkoutSha/buildNumber already proven exact-match
+    // above, before this line is ever reached) also carries a
+    // semanticEvidence envelope. The adapter is selected purely by the
+    // envelope's own declared `reportFormat` (JUnit today; any future
+    // framework registers its own adapter in adapters/registry.ts without
+    // this call site — or the core model — ever changing). Evidence bound
+    // to any other sha/build/provider is rejected at
+    // validateCanonicalEvidenceBinding and never reaches the merger — there
+    // is no path for application code to assert this evidence outside this
+    // already-authenticated, already-correlated call.
+    const semanticEvidenceEnvelope = (validation as any).semanticEvidence;
+    const semanticEvidenceAdapter = resolveSemanticEvidenceAdapter(semanticEvidenceEnvelope?.reportFormat);
+    if (semanticEvidenceAdapter) {
+      const executionIdentity = { provider: 'JENKINS', buildId: buildNumber };
+      const canonicalEvidence = semanticEvidenceAdapter
+        .parse(semanticEvidenceEnvelope.payload, { evaluatedSha: String(validation.checkoutSha || ''), executionIdentity })
+        .map(e => validateCanonicalEvidenceBinding(e, validation.checkoutSha, executionIdentity))
+        .filter((e): e is NonNullable<typeof e> => e !== null);
+      if (canonicalEvidence.length) {
+        defaultValueSemanticsAudit = mergeCanonicalEvidenceWithStatic(
+          defaultValueSemanticsAudit,
+          canonicalEvidence,
+          (identity, ruleType) => (defaultValueSemanticsAudit.checkedFieldPairs || []).find((p: any) =>
+            (p.ruleType === undefined || p.ruleType === ruleType) && identityMatches(RULE_REGISTRY[ruleType], identity, p)),
+        ) as typeof defaultValueSemanticsAudit;
+      }
+    }
     (validationRecord as any).defaultValueSemantics = defaultValueSemanticsAudit;
     // R79 — this batch's own corrective reason (not any project-specific
     // literal) determines whether an unresolved/stale re-check may be
@@ -2224,6 +2263,34 @@ export class IncidentsService {
         fixRequestId: String(fix.requestId || ''), batchId: String(fix.batchId || ''),
         attemptCount: Number(fix.attemptCount) || 0, evidence: [], checkedPairs: 0, checkedFieldPairs: [], computedAt: new Date().toISOString(),
       };
+    }
+    // R80 — recompute-policy receives no fresh Jenkins webhook body, so it
+    // can only reuse EXECUTED evidence already durably persisted from a
+    // prior saveValidation() call — never accept a fresh claim here. Safe
+    // because this action's own eligibility checks above already require
+    // validation.checkoutSha === expectedPrHeadSha for the CURRENT record,
+    // so any 'EXECUTED_TEST' pair already sitting on that same persisted
+    // audit is, by construction, bound to this exact sha.
+    const previouslyExecutedEvidence = (Array.isArray(validation.defaultValueSemantics?.checkedFieldPairs)
+      ? validation.defaultValueSemantics.checkedFieldPairs.filter((p: any) => p?.source === 'EXECUTED_TEST' && p?.ruleType && RULE_REGISTRY[p.ruleType]) : [])
+      .map((p: any) => {
+        const rule = RULE_REGISTRY[p.ruleType];
+        const subjectIdentity: Record<string, string> = {};
+        rule.identityKeys.forEach(key => { subjectIdentity[key] = p[key]; });
+        return {
+          evidenceType: 'EXECUTED_TEST' as const, ruleType: p.ruleType, subjectIdentity, cases: [],
+          result: p.verdict, evaluatedSha: expectedPrHeadSha,
+          executionIdentity: { provider: 'JENKINS', buildId: fix.workflowExecutionId ?? '' },
+          provenance: { adapter: 'PERSISTED_REUSE', reportFormat: 'PERSISTED_REUSE' },
+        };
+      });
+    if (previouslyExecutedEvidence.length) {
+      defaultValueSemanticsAudit = mergeCanonicalEvidenceWithStatic(
+        defaultValueSemanticsAudit,
+        previouslyExecutedEvidence,
+        (identity, ruleType) => (defaultValueSemanticsAudit.checkedFieldPairs || []).find((p: any) =>
+          (p.ruleType === undefined || p.ruleType === ruleType) && identityMatches(RULE_REGISTRY[ruleType], identity, p)),
+      ) as typeof defaultValueSemanticsAudit;
     }
     const defaultValueSemanticsRequired = correctiveBlockingCausesDeclareDefaultValueSemanticsDefect(fix);
     const defaultValueSemanticsEvaluatedShaMatches = String(defaultValueSemanticsAudit.evaluatedSha || '').toLowerCase() === expectedPrHeadSha;
