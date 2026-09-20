@@ -211,6 +211,19 @@ export class ProjectDetailComponent implements OnInit {
   remediationLabel(raw: string): string {
     return remediationTypeLabel(raw);
   }
+  // Presentational only: DEVELOPER_ACTION_REQUIRED is the platform's generic
+  // "no automatic remediation batch exists for this finding" fallback (see
+  // manual-remediation.service.ts), never a claim that the finding is a
+  // proven blocking defect. For an INFO-severity finding that reads as
+  // confusing/alarming during a demo. Generic on (severity, remediationType)
+  // only -- no rule/file/project literal -- so it applies identically to
+  // every scanner-sourced finding this view ever renders, for any project.
+  findingActionLabel(finding: any): string {
+    const remediationType = finding?.remediationType;
+    const isInformational = String(finding?.severity || '').toUpperCase() === 'INFO';
+    if (isInformational && remediationType === 'DEVELOPER_ACTION_REQUIRED') return 'Information — à examiner';
+    return this.remediationLabel(remediationType);
+  }
 
   findingId(finding: any): string { return String(finding?.id || finding?.key || ''); }
   isAutoFixEligible(finding: any): boolean { return finding?.remediationType === 'AUTO_FIX_ELIGIBLE'; }
@@ -395,7 +408,7 @@ export class ProjectDetailComponent implements OnInit {
   // / « Validée » qui seraient redondants ou non autoritaires (le lien PR et le
   // badge vert per-finding portent déjà ces deux faits).
   findingCellStatus(finding: any): string | null {
-    if (!this.findingInActiveBatch(finding)) return this.remediationLabel(finding.remediationType);
+    if (!this.findingInActiveBatch(finding)) return this.findingActionLabel(finding);
     const state = this.findingRequestState(finding);
     return state === 'PR créée' || state === 'Validée' ? null : state;
   }
