@@ -52,6 +52,24 @@ export interface AssemblyProvenance {
   prHeadSha: string;
 }
 
+/**
+ * R79 — a lightweight, bounded record of ONE (sourceType, sourceField,
+ * candidateType, candidateField) pair this run actually analyzed, and what
+ * analyzeDefaultValueSemantics() concluded for it, regardless of verdict.
+ * Exists so a caller can answer "was the SPECIFIC pair a blocking cause
+ * names actually checked (and found safe), or did NO_DEFECT come from
+ * checking zero pairs / only unrelated ones?" — a distinction the bare
+ * batch-level `verdict` cannot make on its own. Never carries the full
+ * evidence object (that stays bounded to PROVEN_DEFECT only, in `evidence`).
+ */
+export interface DefaultValueSemanticsCheckedPair {
+  sourceType: string;
+  sourceField: string;
+  candidateType: string;
+  candidateField: string;
+  verdict: DefaultValueSemanticsVerdict;
+}
+
 export interface DefaultValueSemanticsAudit {
   verdict: DefaultValueSemanticsVerdict;
   evaluatedSha: string;
@@ -63,6 +81,8 @@ export interface DefaultValueSemanticsAudit {
   /** Full evidence only for PROVEN_DEFECT pairs — bounded, never a source dump. */
   evidence: DefaultValueSemanticsEvidence[];
   checkedPairs: number;
+  /** R79 — one entry per field actually analyzed, every verdict, not just PROVEN_DEFECT. */
+  checkedFieldPairs: DefaultValueSemanticsCheckedPair[];
   computedAt: string;
 }
 
@@ -222,6 +242,7 @@ export function evaluateDefaultValueSemantics(
   const migrations = discoverMigrations(baselineText, candidateText);
 
   const evidence: DefaultValueSemanticsEvidence[] = [];
+  const checkedFieldPairs: DefaultValueSemanticsCheckedPair[] = [];
   let checkedPairs = 0;
   let anyVerificationRequired = false;
 
@@ -267,6 +288,16 @@ export function evaluateDefaultValueSemantics(
         externalBindingEvidence: migration.binding,
         sourceFile, candidateFile,
       });
+      // R79 — record EVERY analyzed pair's verdict, not only PROVEN_DEFECT,
+      // so a caller can tell "this exact (type,field) pair was checked and
+      // cleared" apart from "zero pairs were checked, or only unrelated
+      // ones were" — the batch-level `verdict` string alone cannot make
+      // that distinction.
+      checkedFieldPairs.push({
+        sourceType: migration.baselineType, sourceField: fieldName,
+        candidateType: migration.candidateType, candidateField: fieldName,
+        verdict: result.verdict,
+      });
       if (result.verdict === 'PROVEN_DEFECT' && result.evidence) {
         const separatorIndex = result.evidence.mappingPath.indexOf(': ');
         const snippet = separatorIndex === -1 ? '' : result.evidence.mappingPath.slice(separatorIndex + 2).trim();
@@ -282,7 +313,7 @@ export function evaluateDefaultValueSemantics(
   return {
     verdict, evaluatedSha: provenance.prHeadSha, candidateId: provenance.candidateId, candidateDigest: provenance.candidateDigest,
     fixRequestId: provenance.fixRequestId, batchId: provenance.batchId, attemptCount: provenance.attemptCount,
-    evidence, checkedPairs, computedAt: new Date().toISOString(),
+    evidence, checkedPairs, checkedFieldPairs, computedAt: new Date().toISOString(),
   };
 }
 
@@ -308,7 +339,7 @@ export async function buildDefaultValueSemanticsEvidence(
     return {
       verdict: 'VERIFICATION_REQUIRED', evaluatedSha: provenance.prHeadSha, candidateId: provenance.candidateId,
       candidateDigest: provenance.candidateDigest, fixRequestId: provenance.fixRequestId, batchId: provenance.batchId,
-      attemptCount: provenance.attemptCount, evidence: [], checkedPairs: 0, computedAt: new Date().toISOString(),
+      attemptCount: provenance.attemptCount, evidence: [], checkedPairs: 0, checkedFieldPairs: [], computedAt: new Date().toISOString(),
     };
   }
   const baselineFiles: FetchedFile[] = [];
@@ -335,7 +366,7 @@ export async function buildDefaultValueSemanticsEvidence(
     return {
       verdict: 'VERIFICATION_REQUIRED', evaluatedSha: provenance.prHeadSha, candidateId: provenance.candidateId,
       candidateDigest: provenance.candidateDigest, fixRequestId: provenance.fixRequestId, batchId: provenance.batchId,
-      attemptCount: provenance.attemptCount, evidence: [], checkedPairs: 0, computedAt: new Date().toISOString(),
+      attemptCount: provenance.attemptCount, evidence: [], checkedPairs: 0, checkedFieldPairs: [], computedAt: new Date().toISOString(),
     };
   }
 

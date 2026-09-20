@@ -64,7 +64,8 @@ export type MergeBlockingReason =
   | 'STAGE_INCOMPLETE'            // a required pipeline stage (build/tests/sonar) did not complete
   | 'SHA_MISMATCH'               // validated commit != expected PR HEAD, or correlation unverified
   | 'VALIDATION_IN_PROGRESS'      // validation still running
-  | 'DEFAULT_VALUE_SEMANTICS_REGRESSION'; // R66 — a proven entity/DTO migration default-value divergence (see default-value-semantics.ts)
+  | 'DEFAULT_VALUE_SEMANTICS_REGRESSION'  // R66 — a proven entity/DTO migration default-value divergence (see default-value-semantics.ts)
+  | 'DEFAULT_VALUE_SEMANTICS_UNVERIFIED'; // R79 — this batch's OWN corrective reason is a default-value-semantics defect, but the re-check for the authorized SHA is unresolved or stale — never a proven defect, but never silently ignored either
 
 /** Non-blocking context. Never affects `authorization`. */
 export interface MergeAdvisory {
@@ -100,15 +101,59 @@ export interface MergeAuthorizationInput {
    * candidate. Absent/undefined means "not evaluated" and has NO effect —
    * this keeps every existing caller (and every PR that never migrates an
    * entity/request-object field to a DTO) fully backward compatible.
-   * 'VERIFICATION_REQUIRED' is deliberately also a no-op here: unresolved
-   * evidence must never be misreported as a proven defect, and must not by
-   * itself force INCONCLUSIVE either (that would regress every unrelated
-   * validation lacking the source snapshots this check needs). Only
-   * 'PROVEN_DEFECT' has an effect: it is a proven defect exactly like
-   * FINDING_INVALID or REGRESSION_CHANGES_REQUIRED, and BLOCKED must be
-   * causally correctable via correct-and-revalidate.
+   * 'VERIFICATION_REQUIRED' is a no-op UNLESS `defaultValueSemanticsRequired`
+   * is also true (see below) — unresolved evidence must never be
+   * misreported as a proven defect, and for an ORDINARY validation must not
+   * by itself force INCONCLUSIVE either (that would regress every unrelated
+   * validation lacking the source snapshots this check needs). 'PROVEN_DEFECT'
+   * always has an effect, regardless of `defaultValueSemanticsRequired`: it
+   * is a proven defect exactly like FINDING_INVALID or
+   * REGRESSION_CHANGES_REQUIRED, and BLOCKED must be causally correctable
+   * via correct-and-revalidate.
    */
   defaultValueSemanticsResult?: 'PROVEN_DEFECT' | 'VERIFICATION_REQUIRED' | 'NO_DEFECT' | null;
+  /**
+   * R79 — true iff this batch's OWN corrective blockingCauses declare a
+   * DEFAULT_VALUE_SEMANTICS_DEFECT (i.e. the remediation's entire stated
+   * purpose is fixing exactly the invariant this check verifies). Absent/
+   * false means "this check is incidental/informative for this PR" and
+   * preserves the existing no-op behavior for VERIFICATION_REQUIRED
+   * (including every ordinary PR, and every corrective PR for an unrelated
+   * cause). Only when true does an unresolved or stale re-check stop being
+   * silently ignorable — because the platform is specifically claiming, via
+   * this very remediation, to have resolved that exact defect.
+   */
+  defaultValueSemanticsRequired?: boolean;
+  /**
+   * R79 — true iff defaultValueSemanticsResult was computed for the SAME
+   * SHA this authorization is FOR. Only meaningful (and only checked) when
+   * defaultValueSemanticsRequired is true. Omit/undefined when the caller
+   * has no evidence sha to compare (treated as a mismatch, i.e. unverified —
+   * fail closed, never assume freshness).
+   */
+  defaultValueSemanticsEvaluatedShaMatches?: boolean;
+  /**
+   * R79 — total (type,field) pairs analyzeDefaultValueSemantics() actually
+   * ran for this candidate (default-value-semantics-assembler.ts's
+   * `checkedPairs`). A NO_DEFECT verdict reached via zero checked pairs
+   * (no entity->DTO migration discoverable in THIS attempt's diff — the
+   * common shape for a narrower follow-up fix after the migration itself
+   * already happened in an earlier attempt) carries no information about
+   * the specific defect this batch exists to fix, and must not be treated
+   * as proof. Only meaningful when defaultValueSemanticsRequired is true.
+   */
+  defaultValueSemanticsCheckedPairs?: number;
+  /**
+   * R79 — true iff at least one of the pairs actually checked matches the
+   * blocking cause's own (sourceType, sourceField, candidateType,
+   * candidateField) identity AND was itself found safe (not
+   * PROVEN_DEFECT — that case already short-circuits to BLOCKED above).
+   * This is what distinguishes "the SPECIFIC field this remediation exists
+   * to fix was re-checked and cleared" from "some OTHER, unrelated field in
+   * the same migration was checked, or nothing relevant was checked at
+   * all." Only meaningful when defaultValueSemanticsRequired is true.
+   */
+  defaultValueSemanticsRelevantPairChecked?: boolean;
 }
 
 export interface MergeAuthorizationResult {
@@ -218,9 +263,30 @@ export function computeMergeAuthorization(input: MergeAuthorizationInput): Merge
   if (headVerificationResult === 'CODE_FAILURE') blockingReasons.push('HEAD_VERIFICATION_CODE_FAILURE');
   else if (headVerificationResult !== 'PASS') technicalReasons.push('HEAD_VERIFICATION_UNVERIFIED');
 
-  // R66 — see defaultValueSemanticsResult doc above: only PROVEN_DEFECT has
-  // any effect; undefined/NO_DEFECT/VERIFICATION_REQUIRED are all no-ops.
-  if (input.defaultValueSemanticsResult === 'PROVEN_DEFECT') blockingReasons.push('DEFAULT_VALUE_SEMANTICS_REGRESSION');
+  // R66/R79 — see defaultValueSemanticsResult/defaultValueSemanticsRequired
+  // doc above. PROVEN_DEFECT always blocks. Otherwise, only when this
+  // batch's own corrective cause IS a default-value-semantics defect does an
+  // unresolved verdict or a stale/mismatched evaluation SHA stop being a
+  // no-op — for every other caller (undefined/false `defaultValueSemanticsRequired`)
+  // behavior is byte-identical to before R79.
+  if (input.defaultValueSemanticsResult === 'PROVEN_DEFECT') {
+    blockingReasons.push('DEFAULT_VALUE_SEMANTICS_REGRESSION');
+  } else if (input.defaultValueSemanticsRequired === true) {
+    const stale = input.defaultValueSemanticsEvaluatedShaMatches !== true;
+    // A NO_DEFECT verdict only counts as positive evidence for THIS gate
+    // when it came from actually checking >=1 pair AND at least one checked
+    // pair is the specific one the blocking cause names. "No migration
+    // discoverable in this diff" (checkedPairs===0) or "only unrelated
+    // fields were checked" must never be conflated with "the required pair
+    // was checked and found safe" — the bare verdict string cannot tell
+    // those apart, which is exactly why the two extra inputs exist.
+    const relevantProofPresent = input.defaultValueSemanticsResult === 'NO_DEFECT'
+      && (input.defaultValueSemanticsCheckedPairs ?? 0) > 0
+      && input.defaultValueSemanticsRelevantPairChecked === true;
+    if (stale || !relevantProofPresent) {
+      technicalReasons.push('DEFAULT_VALUE_SEMANTICS_UNVERIFIED');
+    }
+  }
 
   const hardBlocked = blockingReasons.length > 0;
 

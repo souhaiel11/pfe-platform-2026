@@ -175,6 +175,53 @@ export function isFullGitSha(value: unknown): value is string {
   return typeof value === 'string' && /^[a-f0-9]{40}$/i.test(value);
 }
 
+// R79 — the sha a candidate's OWN writes are based on, for fetching its
+// pre-edit file content. `fixRequest.baselineSha` is the ORIGINAL
+// source-scan commit (used for the unrelated Sonar scanner-regression
+// diff) and only coincides with a candidate's real git parent on a batch's
+// very first attempt; a corrective (2nd+) attempt's real parent is whatever
+// PR head it was dispatched on top of, already recorded verbatim as
+// correctiveDispatch.blockedSha. Generic: reads only structural
+// dispatch/attempt bookkeeping, never a project-specific field/class name.
+export function resolveDefaultValueSemanticsBaseSha(fixRequest: any): string {
+  const correctiveBase = fixRequest?.correctiveDispatch?.blockedSha;
+  if (isFullGitSha(correctiveBase)) return String(correctiveBase).toLowerCase();
+  return String(fixRequest?.baselineSha || '').toLowerCase();
+}
+
+// R79 — true iff this batch's OWN corrective dispatch declares a
+// DEFAULT_VALUE_SEMANTICS_DEFECT blocking cause, i.e. the remediation's
+// stated purpose IS the invariant default-value-semantics.ts checks. Never
+// references a project-specific type/field/class name — only the
+// structural blockingCauses[].type tag WF2/backend already define.
+export function correctiveBlockingCausesDeclareDefaultValueSemanticsDefect(fixRequest: any): boolean {
+  const causes = fixRequest?.correctiveDispatch?.correctiveContext?.blockingCauses;
+  return Array.isArray(causes) && causes.some((cause: any) => cause?.type === 'DEFAULT_VALUE_SEMANTICS_DEFECT');
+}
+
+// R79 — true iff at least one of `checkedFieldPairs` matches (exactly, on
+// all four identity fields) a DEFAULT_VALUE_SEMANTICS_DEFECT blocking
+// cause's own (sourceType, sourceField, candidateType, candidateField), AND
+// that specific pair's own verdict is NOT PROVEN_DEFECT (a proven defect on
+// the relevant pair already blocks via the top-level verdict check — this
+// flag only needs to distinguish "the required pair came back safe" from
+// "no relevant pair was ever checked"). Never references a project-specific
+// type/field name — only the generic identity fields blockingCauses and
+// checkedFieldPairs already both carry.
+export function defaultValueSemanticsRelevantPairWasChecked(
+  fixRequest: any,
+  checkedFieldPairs: ReadonlyArray<{ sourceType: string; sourceField: string; candidateType: string; candidateField: string; verdict: string }>,
+): boolean {
+  const causes = fixRequest?.correctiveDispatch?.correctiveContext?.blockingCauses;
+  if (!Array.isArray(causes)) return false;
+  const relevantCauses = causes.filter((cause: any) => cause?.type === 'DEFAULT_VALUE_SEMANTICS_DEFECT');
+  if (!relevantCauses.length) return false;
+  return relevantCauses.some((cause: any) => checkedFieldPairs.some(pair =>
+    pair.sourceType === cause.sourceType && pair.sourceField === cause.sourceField
+    && pair.candidateType === cause.candidateType && pair.candidateField === cause.candidateField
+    && pair.verdict !== 'PROVEN_DEFECT'));
+}
+
 // Canonical `owner/repo` form of any GitHub remote (URL or already-canonical
 // string). Single source of truth so the reconciler's SHA correlation compares
 // Jenkins' git remoteUrls against the project repo exactly as requestPrValidation
@@ -1156,6 +1203,21 @@ export class IncidentsService {
     const candidateFileRecords: CandidateFileRecord[] = (Array.isArray(fixRequest.fileResults) ? fixRequest.fileResults : [])
       .map((fr: any) => ({ targetFile: String(fr.targetFile || ''), fileOperation: String(fr.fileOperation || ''), oldSha: fr.oldSha ?? null, newSha: String(fr.newSha || '') }))
       .filter((fr: CandidateFileRecord) => fr.targetFile && fr.newSha);
+    // R79 — the file content this candidate actually diffed against is the
+    // sha it branched writes from, NOT `fixRequest.baselineSha` (that field
+    // is the ORIGINAL source-scan commit, used for the unrelated Sonar
+    // scanner-regression diff — see validation.regression.baselineSha).
+    // Those two are only the same commit for a batch's very FIRST attempt;
+    // for a corrective (2nd+) attempt, prior attempts already moved the PR
+    // branch, so fetching file content at baselineSha either 404s or returns
+    // an unrelated blob, and every provenance check inside
+    // buildDefaultValueSemanticsEvidence() correctly fails closed — a real
+    // bug (data mixup), not a policy choice. correctiveDispatch.blockedSha is
+    // the exact, already-persisted "what this attempt's writes are based on"
+    // fact for a corrective attempt; only the first attempt (no
+    // correctiveDispatch yet) falls back to baselineSha, which is correct
+    // for that case since nothing has moved the branch yet.
+    const defaultValueSemanticsBaseSha = resolveDefaultValueSemanticsBaseSha(fixRequest);
     let defaultValueSemanticsAudit: Awaited<ReturnType<typeof buildDefaultValueSemanticsEvidence>>;
     try {
       defaultValueSemanticsAudit = await buildDefaultValueSemanticsEvidence(
@@ -1165,7 +1227,7 @@ export class IncidentsService {
           attemptCount: Number(fixRequest.attemptCount) || 0,
           candidateId: `${fixRequest.batchId}-attempt-${fixRequest.attemptCount}`,
           candidateDigest: (fixRequest as any).candidateDigest ?? null,
-          candidateBaseSha: String((fixRequest as any).baselineSha || '').toLowerCase(),
+          candidateBaseSha: defaultValueSemanticsBaseSha,
           prHeadSha: String(validation.checkoutSha || '').toLowerCase(),
         },
         (path, sha) => this.githubFileAtSha(incident.project, path, sha),
@@ -1175,10 +1237,19 @@ export class IncidentsService {
         verdict: 'VERIFICATION_REQUIRED', evaluatedSha: String(validation.checkoutSha || '').toLowerCase(),
         candidateId: `${fixRequest.batchId}-attempt-${fixRequest.attemptCount}`, candidateDigest: null,
         fixRequestId: String(fixRequest.requestId || ''), batchId: String(fixRequest.batchId || ''),
-        attemptCount: Number(fixRequest.attemptCount) || 0, evidence: [], checkedPairs: 0, computedAt: new Date().toISOString(),
+        attemptCount: Number(fixRequest.attemptCount) || 0, evidence: [], checkedPairs: 0, checkedFieldPairs: [], computedAt: new Date().toISOString(),
       };
     }
     (validationRecord as any).defaultValueSemantics = defaultValueSemanticsAudit;
+    // R79 — this batch's own corrective reason (not any project-specific
+    // literal) determines whether an unresolved/stale re-check may be
+    // silently ignored — see computeMergeAuthorization's doc.
+    const defaultValueSemanticsRequired = correctiveBlockingCausesDeclareDefaultValueSemanticsDefect(fixRequest);
+    const defaultValueSemanticsEvaluatedShaMatches = String(defaultValueSemanticsAudit.evaluatedSha || '').toLowerCase()
+      === String(validation.checkoutSha || '').toLowerCase();
+    const defaultValueSemanticsRelevantPairChecked = defaultValueSemanticsRelevantPairWasChecked(
+      fixRequest, defaultValueSemanticsAudit.checkedFieldPairs || [],
+    );
 
     // ── BRIQUE 4 — autorisation de merge : LA décision centrale ────────────
     // computeMergeAuthorization() est désormais l'unique décision métier
@@ -1206,6 +1277,10 @@ export class IncidentsService {
       pipelineHealth: (validationRecord as any).derived?.pipelineHealth ?? null,
       validationInProgress: false, // saveValidation est terminal
       defaultValueSemanticsResult: defaultValueSemanticsAudit.verdict,
+      defaultValueSemanticsRequired,
+      defaultValueSemanticsEvaluatedShaMatches,
+      defaultValueSemanticsCheckedPairs: defaultValueSemanticsAudit.checkedPairs,
+      defaultValueSemanticsRelevantPairChecked,
     });
     // BRIQUE 4 — AUTHORIZED SHA: liée à un commit EXACT, jamais transférée
     // silencieusement. Persistée UNIQUEMENT quand authorization===MERGE_READY ;
@@ -2126,6 +2201,8 @@ export class IncidentsService {
     const candidateFileRecords: CandidateFileRecord[] = (Array.isArray(fix.fileResults) ? fix.fileResults : [])
       .map((fr: any) => ({ targetFile: String(fr.targetFile || ''), fileOperation: String(fr.fileOperation || ''), oldSha: fr.oldSha ?? null, newSha: String(fr.newSha || '') }))
       .filter((fr: CandidateFileRecord) => fr.targetFile && fr.newSha);
+    // R79 — see the identical fix/rationale in saveValidation() above.
+    const defaultValueSemanticsBaseSha = resolveDefaultValueSemanticsBaseSha(fix);
     let defaultValueSemanticsAudit: Awaited<ReturnType<typeof buildDefaultValueSemanticsEvidence>>;
     try {
       defaultValueSemanticsAudit = await buildDefaultValueSemanticsEvidence(
@@ -2135,7 +2212,7 @@ export class IncidentsService {
           attemptCount: Number(fix.attemptCount) || 0,
           candidateId: `${fix.batchId}-attempt-${fix.attemptCount}`,
           candidateDigest: (fix as any).candidateDigest ?? null,
-          candidateBaseSha: String((fix as any).baselineSha || '').toLowerCase(),
+          candidateBaseSha: defaultValueSemanticsBaseSha,
           prHeadSha: expectedPrHeadSha,
         },
         (path, sha) => this.githubFileAtSha(snapshot.project, path, sha),
@@ -2145,9 +2222,14 @@ export class IncidentsService {
         verdict: 'VERIFICATION_REQUIRED', evaluatedSha: expectedPrHeadSha,
         candidateId: `${fix.batchId}-attempt-${fix.attemptCount}`, candidateDigest: null,
         fixRequestId: String(fix.requestId || ''), batchId: String(fix.batchId || ''),
-        attemptCount: Number(fix.attemptCount) || 0, evidence: [], checkedPairs: 0, computedAt: new Date().toISOString(),
+        attemptCount: Number(fix.attemptCount) || 0, evidence: [], checkedPairs: 0, checkedFieldPairs: [], computedAt: new Date().toISOString(),
       };
     }
+    const defaultValueSemanticsRequired = correctiveBlockingCausesDeclareDefaultValueSemanticsDefect(fix);
+    const defaultValueSemanticsEvaluatedShaMatches = String(defaultValueSemanticsAudit.evaluatedSha || '').toLowerCase() === expectedPrHeadSha;
+    const defaultValueSemanticsRelevantPairChecked = defaultValueSemanticsRelevantPairWasChecked(
+      fix, defaultValueSemanticsAudit.checkedFieldPairs || [],
+    );
 
     // ── R67 §6 — REUSE computeMergeAuthorization() verbatim, never
     // duplicated. remediationResult/regressionResult/headVerificationResult
@@ -2163,6 +2245,10 @@ export class IncidentsService {
       pipelineHealth: validation.derived?.pipelineHealth ?? null,
       validationInProgress: false,
       defaultValueSemanticsResult: defaultValueSemanticsAudit.verdict,
+      defaultValueSemanticsRequired,
+      defaultValueSemanticsEvaluatedShaMatches,
+      defaultValueSemanticsCheckedPairs: defaultValueSemanticsAudit.checkedPairs,
+      defaultValueSemanticsRelevantPairChecked,
     });
     const previousAuthorization = String(validation.mergeAuthorization.authorization || '');
     const authorizedSha = mergeAuth.authorization === 'MERGE_READY' ? expectedPrHeadSha : null;
