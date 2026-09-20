@@ -173,6 +173,25 @@ export function prValidationIdentity(projectId: string, prNumber: number, prHead
   return createHash('sha256').update(`${projectId}\n${prNumber}\n${prHeadSha.toLowerCase()}\n${batchId}`).digest('hex');
 }
 
+// R80.2 — identity for an EXPLICIT, human-authorized same-SHA revalidation
+// (see reRunPrValidation). Deliberately a DIFFERENT hash function from
+// prValidationIdentity above, not that function extended with an extra
+// epoch parameter: every historical persisted prValidationRequest.
+// validationRequestId was computed by the 4-field formula above, and
+// sameIdentity comparisons throughout requestPrValidation/saveValidation
+// compare freshly-computed values against those persisted ones. Changing
+// the base formula's shape (even by adding an epoch param defaulting to 0)
+// would silently break every existing persisted identity across every
+// project/incident that predates this change — never worth the risk for a
+// feature only the NEW rerun path needs. `epoch` (>=1) is never derived
+// from this identity string alone; the caller (reRunPrValidation) always
+// carries and compares the numeric `epoch` field explicitly, this hash is
+// only the value threaded through Jenkins/WF3 the same way the base
+// identity already is.
+export function prValidationRevalidationIdentity(projectId: string, prNumber: number, prHeadSha: string, batchId: string, epoch: number): string {
+  return createHash('sha256').update(`${projectId}\n${prNumber}\n${prHeadSha.toLowerCase()}\n${batchId}\nrevalidation\n${Number(epoch)}`).digest('hex');
+}
+
 export function isFullGitSha(value: unknown): value is string {
   return typeof value === 'string' && /^[a-f0-9]{40}$/i.test(value);
 }
@@ -1864,8 +1883,24 @@ export class IncidentsService {
     if (claim.duplicate) {
       return { success: true, duplicate: true, validationRequest: claim.request };
     }
+    return this.triggerGovernedPrValidationBuild(id, claim);
+  }
 
+  // R80.2 — extracted verbatim from requestPrValidation's tail (the one and
+  // only place this platform actually verifies a candidate HEAD and
+  // triggers Jenkins for PR validation), so reRunPrValidation's explicit
+  // same-SHA revalidation path can reuse it exactly rather than
+  // reimplementing Jenkins-triggering. Every caller must have ALREADY
+  // established `claim.request`/`claim.project` through its OWN governed
+  // eligibility checks and transaction (identity, PR-open/branch/SHA
+  // freshness, dedup) -- this method performs zero eligibility checks of
+  // its own; it only proves the HEAD and triggers/queues the build.
+  private async triggerGovernedPrValidationBuild(id: string, claim: { request: any; project: Project }) {
     const project: Project = claim.project;
+    const prNumber = Number(claim.request.prNumber);
+    const repository = String(claim.request.repository || '');
+    const remoteHeadSha = String(claim.request.expectedPrHeadSha || '').toLowerCase();
+    const validationRequestId = String(claim.request.validationRequestId || '');
     const jenkinsInternalUrl = resolveJenkinsInternalUrl(project);
     if (!jenkinsInternalUrl || !project.jenkinsToken || !project.jenkinsJobName) {
       throw new BadRequestException('Jenkins n’est pas configuré pour la validation de Pull Request.');
@@ -2045,6 +2080,138 @@ export class IncidentsService {
       await this.repo.update(id, { metadata: { ...currentMeta, prValidationRequest: failed } } as any);
       throw new ServiceUnavailableException('La validation PR n’a pas pu être mise en file dans Jenkins.');
     }
+  }
+
+  // R80.2 — explicit, human-gated, SAME-SHA governed revalidation. Exists
+  // for exactly one situation: validation INFRASTRUCTURE (Jenkins shared
+  // library, backend evidence-parsing code, adapters — never the
+  // application) changed after a validation already COMPLETED/FAILED for a
+  // still-open PR whose remote HEAD has not moved, and a human wants a
+  // fresh, governed Jenkins run against that SAME immutable candidate SHA
+  // so the corrected infrastructure gets a chance to observe it. This is
+  // NOT a new corrective attempt: fixRequest.attemptCount/batchId/requestId
+  // are never touched, no WF2 execution is ever implied, and no application
+  // commit is created. `validationEpoch` is the additive dimension that
+  // makes this safe: epoch 0 is the request requestPrValidation always
+  // creates (unchanged, byte-identical behavior, zero migration needed —
+  // any historical record with no `epoch` field is simply epoch 0); this
+  // method is the ONLY place epoch ever advances, and only past a terminal
+  // (COMPLETED/FAILED) predecessor for the exact same SHA, one explicit
+  // human call at a time.
+  async reRunPrValidation(id: string, user: any) {
+    this.assertCanApprove(user);
+    const snapshot = await this.repo.findOne({ where: { id }, relations: ['project'] });
+    if (!snapshot) throw new NotFoundException('Incident introuvable.');
+    const initialFix: any = (snapshot.metadata as any)?.fixRequest || {};
+    // Deliberately stricter than requestPrValidation's own PR_CREATED gate:
+    // a revalidation only ever makes sense once a full remediation has
+    // already reached VALIDATED — never for a PR still awaiting its first
+    // validation (that path is requestPrValidation itself, epoch 0).
+    if (initialFix.status !== 'VALIDATED' || !snapshot.prUrl || !initialFix.prNumber) {
+      throw new ConflictException('Cette action nécessite une correction déjà validée avec une Pull Request active.');
+    }
+    const validationTargetSha = String(initialFix.validationTargetSha || initialFix.prHeadSha || '').toLowerCase();
+    if (!isFullGitSha(validationTargetSha)) {
+      throw new ConflictException('Le HEAD exact de validation n’est pas disponible.');
+    }
+    const TERMINAL_STATUSES = new Set(['COMPLETED', 'FAILED']);
+    const initialPrValidationRequest: any = (snapshot.metadata as any)?.prValidationRequest || {};
+    if (String(initialPrValidationRequest.expectedPrHeadSha || '').toLowerCase() !== validationTargetSha) {
+      throw new ConflictException('Aucune validation terminée n’existe pour le SHA cible actuel.');
+    }
+    const prNumber = Number(initialFix.prNumber);
+    // Same live freshness proof requestPrValidation itself performs — never
+    // trust the persisted expectedPrHeadSha alone: PR state, branch, and
+    // remote HEAD are all re-proven against GitHub at call time, and any
+    // drift (PR closed, branch changed, a new commit pushed) fails closed,
+    // exactly like requestPrValidation. A genuine new commit must go through
+    // refresh-target (a NEW target, NEW epoch-0 validation), never through
+    // this same-SHA path.
+    const pull = await this.githubPullRequest(snapshot.project, prNumber);
+    const remoteHeadSha = String(pull?.head?.sha || '').toLowerCase();
+    const remoteHeadBranch = String(pull?.head?.ref || '');
+    const expectedBranch = `fix/pfe-${snapshot.id}-${initialFix.requestId}`;
+    if (pull?.state !== 'open' || remoteHeadBranch !== expectedBranch || remoteHeadSha !== validationTargetSha) {
+      throw new ConflictException('La Pull Request a changé depuis la dernière validation — une revalidation à SHA identique n’est plus possible ; utilisez l’actualisation de cible puis une nouvelle validation.');
+    }
+    const repository = this.canonicalRepository(snapshot.project.githubRepo);
+    const now = new Date().toISOString();
+
+    // ── Transaction: identical pessimistic-write pattern to
+    // requestPrValidation's own claim transaction, so two concurrent human
+    // clicks serialize on the SAME incident-row lock — no in-memory lock,
+    // no separate mutex, consistent with the existing architecture. ──
+    const claim: any = await this.repo.manager.transaction(async manager => {
+      const incidents = manager.getRepository(Incident);
+      const projects = manager.getRepository(Project);
+      const incident: any = await incidents.findOne({ where: { id }, lock: { mode: 'pessimistic_write' } });
+      if (!incident) throw new NotFoundException('Incident introuvable.');
+      const project = await projects.findOne({ where: { id: incident.projectId } });
+      if (!project) throw new NotFoundException('Projet introuvable.');
+      const metadata: any = incident.metadata || {};
+      const fix: any = metadata.fixRequest || {};
+      const fixTargetSha = String(fix.validationTargetSha || fix.prHeadSha || '').toLowerCase();
+      if (fix.status !== 'VALIDATED' || fix.requestId !== initialFix.requestId || fix.batchId !== initialFix.batchId
+        || fixTargetSha !== remoteHeadSha || Number(fix.prNumber) !== prNumber) {
+        throw new ConflictException('L’état de la correction a changé avant le lancement de la revalidation.');
+      }
+      const existing: any = metadata.prValidationRequest || {};
+      if (String(existing.expectedPrHeadSha || '').toLowerCase() !== remoteHeadSha) {
+        throw new ConflictException('Aucune validation terminée n’existe pour le SHA cible actuel.');
+      }
+      // Additive field, absent on every historical record — resolves to 0
+      // (epoch 0, requestPrValidation's own normal request) with no
+      // migration, exactly as required.
+      const currentEpoch = Number(existing.epoch) || 0;
+      const existingTerminal = TERMINAL_STATUSES.has(String(existing.status));
+      if (!existingTerminal) {
+        // Exactly-once / race safety (R80.2 §4): a concurrent call that
+        // loses the lock race lands here and sees the FIRST call's
+        // just-created epoch (currentEpoch>=1, still REQUESTED/QUEUED/
+        // RUNNING) — return it as a duplicate, never allocate epoch+2.
+        // currentEpoch===0 here means the ORIGINAL (non-rerun) validation
+        // is still active/in-flight, which is a genuine precondition
+        // failure (R80.2 §9-G/H), not a duplicate of anything this method
+        // ever created.
+        if (currentEpoch >= 1) {
+          return { duplicate: true, request: existing, project };
+        }
+        throw new ConflictException('La validation PR actuelle n’est pas terminée — une revalidation ne peut être demandée que sur une validation terminée (COMPLETED ou FAILED).');
+      }
+      const nextEpoch = currentEpoch + 1;
+      const revalidationRequestId = prValidationRevalidationIdentity(incident.projectId, prNumber, remoteHeadSha, fix.batchId, nextEpoch);
+      const previousAttempts = [...(Array.isArray(existing.previousAttempts) ? existing.previousAttempts : []), existing];
+      const request = {
+        validationRequestId: revalidationRequestId, validationType: 'PR_VALIDATION', status: 'REQUESTED',
+        projectId: incident.projectId, incidentId: incident.id, fixRequestId: fix.requestId,
+        requestId: fix.requestId, batchId: fix.batchId, batchKey: fix.batchKey || fix.batchId,
+        // Never touched: this is infrastructure revalidation, not a new
+        // corrective attempt.
+        attemptCount: Number(fix.attemptCount), repository, prNumber, prUrl: incident.prUrl,
+        prHeadBranch: remoteHeadBranch, expectedPrHeadSha: remoteHeadSha,
+        createdBy: user.id, createdAt: now, updatedAt: now,
+        epoch: nextEpoch, revalidation: true, revalidationReason: 'SAME_SHA_REVALIDATION',
+        retryAttempt: 0, previousAttempts,
+      };
+      const auditEvent = {
+        type: 'SAME_SHA_REVALIDATION', incidentId: incident.id, projectId: incident.projectId, prNumber,
+        sha: remoteHeadSha,
+        previousValidationRequestId: existing.validationRequestId ?? null,
+        newValidationRequestId: revalidationRequestId,
+        previousEpoch: currentEpoch, newEpoch: nextEpoch,
+        actorId: user.id ?? null, actorRole: user.role ?? null,
+        at: now,
+      };
+      const auditLog = Array.isArray(metadata.revalidationAuditLog) ? metadata.revalidationAuditLog : [];
+      await incidents.update(id, {
+        metadata: { ...metadata, prValidationRequest: request, revalidationAuditLog: [...auditLog, auditEvent] },
+      } as any);
+      return { duplicate: false, request, project };
+    });
+    if (claim.duplicate) {
+      return { success: true, duplicate: true, validationRequest: claim.request };
+    }
+    return this.triggerGovernedPrValidationBuild(id, claim);
   }
 
   // R65 — action gouvernée explicite pour accepter un commit de remédiation

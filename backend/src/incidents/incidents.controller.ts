@@ -93,6 +93,17 @@ export class IncidentsController {
   @Post(':id/pr-validation/recompute-policy') recomputePrValidationPolicy(@Param('id') id: string, @Req() req: any) {
     return this.service.recomputePrValidationPolicy(id, req.user);
   }
+  // R80.2 — explicit human authorization for a governed Jenkins re-run
+  // against the SAME already-validated PR head SHA (e.g. after a validation
+  // infrastructure fix), never a new corrective attempt. Requires an
+  // existing terminal (COMPLETED/FAILED) validation for the current
+  // validationTargetSha; re-proves PR-open/branch/head freshness against
+  // GitHub exactly like requestPrValidation. Same guard as
+  // requestPrValidation (admin/developer).
+  @UseGuards(JwtAuthGuard)
+  @Post(':id/pr-validation/re-run') reRunPrValidation(@Param('id') id: string, @Req() req: any) {
+    return this.service.reRunPrValidation(id, req.user);
+  }
   // BRIQUE 5 — explicit human authorization for exactly ONE causal
   // corrective attempt on the SAME PR/lineage. Same guard as
   // requestPrValidation/refreshPrValidationTarget (admin/developer). Never
