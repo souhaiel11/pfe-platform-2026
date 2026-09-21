@@ -16,6 +16,22 @@ export interface CandidateFile {
   content: string;
   /** sha256 hex of `content`, declared by the caller — re-verified, never trusted blindly. */
   contentSha256: string;
+  /**
+   * R81/R81.2 — the exact pre-edit file text the writer used as its editing
+   * context. Named `sourceContent`, not a new field, because that is what
+   * the real WF2 manifest ALREADY carries here today (verified directly
+   * against a real historical execution, id 2038: `Prepare Candidate
+   * Manifest` already includes `sourceContent:it.sourceContent` — sourced
+   * from the writer's own decoded pre-edit fetch, before the LLM ever runs
+   * — for every file, unconditionally). No n8n change was needed to make
+   * this field exist; R81.2's fail-closed gate (generated-comment-guard.ts)
+   * is what makes ITS ABSENCE on a MODIFY of a supported extension an
+   * outright rejection instead of a silent skip. Absent/null only for a
+   * caller that predates this field (never a false rejection — see
+   * generated-comment-guard.ts's own doc for exactly how absence is
+   * handled); CREATE's own seeded value is the empty string, not null.
+   */
+  sourceContent?: string | null;
 }
 
 export interface CandidateManifest {
