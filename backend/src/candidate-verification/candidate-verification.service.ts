@@ -10,6 +10,7 @@
 import { Injectable } from '@nestjs/common';
 import { CandidateManifest, CandidateVerification, FailureClass, HeadVerificationRequest, HeadVerification, VerificationMode, VerificationStep, assertHeadVerificationRequest } from './candidate-verification.types';
 import { computeCandidateDigest } from './candidate-digest';
+import { SecurityRemediationOrchestrationInput, SecurityRemediationEvaluationResult, SecurityRemediationTransportFailure } from '../security-remediation/security-remediation-orchestration.types';
 
 export interface VerifyOptions {
   allowedPaths?: string[];
@@ -137,4 +138,40 @@ export class CandidateVerificationService {
     return body;
   }
 
+  // R-SEC-V1.4 §5 — the smallest addition to the EXISTING thin HTTP client
+  // needed to reach the worker's new /security-remediation/evaluate route.
+  // Reuses this.workerUrl (no new env var: the worker's base URL is derived
+  // by stripping the already-configured '/verify' suffix), the same fetch/
+  // timeout/AbortSignal conventions, and the same three-way failure
+  // vocabulary (VERIFIER_TIMEOUT/VERIFIER_UNAVAILABLE/VERIFIER_PROTOCOL_ERROR)
+  // as verify()/verifyHead() above -- never a fourth, bespoke failure taxonomy.
+  // `input` must already be fully trusted (built by SecurityFindingResolverService,
+  // never from raw caller input) -- this method makes no trust decision of
+  // its own, it only classifies TRANSPORT outcomes.
+  async evaluateSecurityRemediation(input: SecurityRemediationOrchestrationInput, timeoutMs: number = DEFAULT_TIMEOUT_MS): Promise<SecurityRemediationEvaluationResult> {
+    const workerBaseUrl = this.workerUrl.replace(/\/verify$/, '');
+    const failure = (failureClass: SecurityRemediationTransportFailure['failureClass'], reason: string): SecurityRemediationTransportFailure => ({ status: 'TECHNICAL_FAILURE', failureClass, reason });
+
+    let response: Response;
+    try {
+      response = await fetch(`${workerBaseUrl}/security-remediation/evaluate`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(input),
+        signal: AbortSignal.timeout(timeoutMs + 10_000),
+      });
+    } catch (err: any) {
+      const timedOut = err?.name === 'AbortError' || err?.name === 'TimeoutError';
+      return failure(timedOut ? 'VERIFIER_TIMEOUT' : 'VERIFIER_UNAVAILABLE', String(err?.message || 'fetch failed'));
+    }
+    if (!response.ok) return failure('VERIFIER_PROTOCOL_ERROR', `Worker responded with HTTP ${response.status}.`);
+    let body: any;
+    try { body = await response.json(); } catch { return failure('VERIFIER_PROTOCOL_ERROR', 'Worker response was not valid JSON.'); }
+    const KNOWN_STATUSES = ['CANDIDATE_READY', 'NOT_ELIGIBLE', 'GROUNDING_FAILED', 'PATCH_GENERATION_FAILED', 'GUARD_REJECTED', 'WORKSPACE_FAILURE', 'MAVEN_RESOLUTION_FAILED', 'MAVEN_RESOLUTION_MISMATCH'];
+    if (!body || typeof body !== 'object' || !KNOWN_STATUSES.includes(body.status) || !body.decision || typeof body.decision.findingIdentity !== 'string') {
+      // Pass the worker's real result through unchanged when it IS shaped
+      // correctly -- same "never re-derive, never re-classify" discipline
+      // as verify() above -- but never trust an unrecognized shape.
+      return failure('VERIFIER_PROTOCOL_ERROR', 'Worker response did not match the expected SecurityRemediationCandidateResult shape.');
+    }
+    return body;
+  }
 }

@@ -118,6 +118,80 @@ async function main() {
     assert.equal(result.failureClass, 'CANDIDATE_COMPILE_FAILURE');
   }
 
+  // --- R-SEC-V1.4 §5 — evaluateSecurityRemediation(): the smallest new
+  // method added to this SAME thin client, reusing the SAME failure
+  // vocabulary. Mocks global fetch exactly like the tests above; the real,
+  // unmocked worker-side proof lives in candidate-verifier/src/security-
+  // remediation-http.spec.ts and security-remediation-orchestrator.spec.ts. ---
+  const secInput = { finding: { findingIdentity: 'fp-x', source: 'TRIVY', package: 'g:a', expectedInstalledVersion: '1.0.0', fixedVersion: '1.0.1' }, repository: 'souhaiel11/pfe-app-test', candidateBaseSha: 'a'.repeat(40), requestId: 'sec-eval-x', batchId: 'internal-security-evaluate', candidateAttempt: 0 };
+
+  // Happy path: correct derived URL (no new env var), exact input forwarded, real shape passed through unchanged.
+  {
+    let capturedUrl: string | undefined;
+    let capturedBody: any;
+    const workerResponse = { status: 'CANDIDATE_READY', reason: 'DETERMINISTIC_CANDIDATE_READY', decision: { findingIdentity: 'fp-x', evaluatedSha: secInput.candidateBaseSha, provenance: { ecosystem: 'MAVEN', kind: 'DIRECT_EXPLICIT', package: 'g:a', installedVersion: '1.0.0', controllingFile: 'pom.xml', controllingElement: null, controllingProperty: null, groundedSha: secInput.candidateBaseSha, evidence: 'x' }, fixedVersions: ['1.0.1'], selectedTargetVersion: '1.0.1', remediationType: 'AUTO_FIX_ELIGIBLE', reason: 'DIRECT_EXPLICIT:SELECTED' }, candidateIdentity: 'deadbeef', candidateManifest: null, patchEvidence: null, guardResult: { ok: true }, dependencyResolutionEvidence: null };
+    globalThis.fetch = (async (url: any, init: any) => { capturedUrl = String(url); capturedBody = JSON.parse(init.body); return new Response(JSON.stringify(workerResponse), { status: 200 }); }) as any;
+    const service = new CandidateVerificationService();
+    const result = await service.evaluateSecurityRemediation(secInput);
+    assert.equal(capturedUrl, 'http://candidate-verifier:4100/security-remediation/evaluate', 'the worker base URL is derived from the SAME workerUrl, no new env var');
+    assert.deepEqual(capturedBody, secInput, 'the exact trusted input is forwarded unchanged');
+    assert.deepEqual(result, workerResponse, 'the worker\'s real result passes through completely unchanged');
+  }
+
+  // I: candidate-verifier timeout -> TECHNICAL_FAILURE / VERIFIER_TIMEOUT
+  {
+    globalThis.fetch = (async (_url: any, init: any) => {
+      if (init?.signal?.aborted) throw Object.assign(new Error('The operation was aborted'), { name: 'TimeoutError' });
+      throw new Error('unreachable: signal was not pre-aborted');
+    }) as any;
+    (AbortSignal as any).timeout = () => { const c = new AbortController(); c.abort(); return c.signal; };
+    const service = new CandidateVerificationService();
+    const result: any = await service.evaluateSecurityRemediation(secInput);
+    assert.equal(result.status, 'TECHNICAL_FAILURE', 'I: a real timeout must never be reported as NOT_ELIGIBLE or any business status');
+    assert.equal(result.failureClass, 'VERIFIER_TIMEOUT');
+    (AbortSignal as any).timeout = originalTimeout;
+  }
+
+  // J: candidate-verifier unavailable -> TECHNICAL_FAILURE / VERIFIER_UNAVAILABLE
+  {
+    globalThis.fetch = (async () => { throw Object.assign(new Error('connect ECONNREFUSED'), { name: 'TypeError' }); }) as any;
+    const service = new CandidateVerificationService();
+    const result: any = await service.evaluateSecurityRemediation(secInput);
+    assert.equal(result.status, 'TECHNICAL_FAILURE');
+    assert.equal(result.failureClass, 'VERIFIER_UNAVAILABLE', 'J: connection failure is a technical failure, never a business decision');
+  }
+
+  // K: malformed verifier response -> TECHNICAL_FAILURE / VERIFIER_PROTOCOL_ERROR (three shapes)
+  {
+    globalThis.fetch = (async () => new Response('not json', { status: 200 })) as any;
+    const service = new CandidateVerificationService();
+    const result: any = await service.evaluateSecurityRemediation(secInput);
+    assert.equal(result.status, 'TECHNICAL_FAILURE');
+    assert.equal(result.failureClass, 'VERIFIER_PROTOCOL_ERROR', 'K: unparseable JSON');
+  }
+  {
+    globalThis.fetch = (async () => new Response(JSON.stringify({ status: 'CANDIDATE_READY' /* no decision */ }), { status: 200 })) as any;
+    const service = new CandidateVerificationService();
+    const result: any = await service.evaluateSecurityRemediation(secInput);
+    assert.equal(result.status, 'TECHNICAL_FAILURE');
+    assert.equal(result.failureClass, 'VERIFIER_PROTOCOL_ERROR', 'K: well-formed JSON but wrong shape (missing decision)');
+  }
+  {
+    globalThis.fetch = (async () => new Response(JSON.stringify({ status: 'SOMETHING_MADE_UP', decision: { findingIdentity: 'x' } }), { status: 200 })) as any;
+    const service = new CandidateVerificationService();
+    const result: any = await service.evaluateSecurityRemediation(secInput);
+    assert.equal(result.status, 'TECHNICAL_FAILURE');
+    assert.equal(result.failureClass, 'VERIFIER_PROTOCOL_ERROR', 'K: an unrecognized status value is never trusted');
+  }
+  {
+    globalThis.fetch = (async () => new Response('', { status: 500 })) as any;
+    const service = new CandidateVerificationService();
+    const result: any = await service.evaluateSecurityRemediation(secInput);
+    assert.equal(result.status, 'TECHNICAL_FAILURE');
+    assert.equal(result.failureClass, 'VERIFIER_PROTOCOL_ERROR', 'K: non-2xx HTTP status');
+  }
+  console.log('CandidateVerificationService.evaluateSecurityRemediation (thin HTTP client, R-SEC-V1.4): PASS');
+
   globalThis.fetch = originalFetch;
   (AbortSignal as any).timeout = originalTimeout;
   console.log('CandidateVerificationService (thin HTTP client): PASS');

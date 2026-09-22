@@ -84,3 +84,60 @@ export interface SecurityRemediationCandidateResult {
     evaluatedAtSha: string;
   } | null;
 }
+
+// R-SEC-V1.4 §4 — structural request validation for the candidate-verifier
+// worker's new /security-remediation/evaluate route. Same role as
+// assertHeadVerificationRequest/assertVerificationStep in
+// candidate-verification.types.ts: a pure guard the worker calls BEFORE
+// invoking the orchestrator, so a malformed body is rejected with a clean
+// 400 rather than reaching real git/Maven I/O. This is a SHAPE check only
+// (right fields, right types) -- it has no opinion on whether the values
+// are TRUSTED; that guarantee is the backend's job (the worker's only
+// caller is the backend's own SecurityRemediationController, over the same
+// isolated internal network as /verify -- see server.ts's own header
+// comment -- so the worker itself does not re-authenticate the caller).
+export class SecurityRemediationRequestValidationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'SecurityRemediationRequestValidationError';
+  }
+}
+
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === 'string' && value.trim().length > 0;
+}
+
+export function assertSecurityRemediationOrchestrationInput(body: any): asserts body is SecurityRemediationOrchestrationInput {
+  const fail = (msg: string): never => { throw new SecurityRemediationRequestValidationError(msg); };
+  if (!body || typeof body !== 'object') fail('Request body must be an object.');
+  const f = body.finding;
+  if (!f || typeof f !== 'object') fail('finding is required.');
+  if (!isNonEmptyString(f.findingIdentity)) fail('finding.findingIdentity is required.');
+  if (!isNonEmptyString(f.source)) fail('finding.source is required.');
+  if (!isNonEmptyString(f.package)) fail('finding.package is required.');
+  if (!isNonEmptyString(f.expectedInstalledVersion)) fail('finding.expectedInstalledVersion is required.');
+  if (f.fixedVersion !== null && !isNonEmptyString(f.fixedVersion)) fail('finding.fixedVersion must be a non-empty string or null.');
+  if (!isNonEmptyString(body.repository)) fail('repository is required.');
+  if (!isNonEmptyString(body.candidateBaseSha)) fail('candidateBaseSha is required.');
+  if (!isNonEmptyString(body.requestId)) fail('requestId is required.');
+  if (!isNonEmptyString(body.batchId)) fail('batchId is required.');
+  if (!Number.isInteger(body.candidateAttempt) || body.candidateAttempt < 0) fail('candidateAttempt must be a non-negative integer.');
+}
+
+/**
+ * §5/§7 — the backend HTTP client's own result contract. A UNION, never a
+ * mutation of SecurityRemediationCandidateResult: a transport failure means
+ * the orchestrator never ran at all (no decision was ever computed), so it
+ * would be dishonest to force it into that type's `decision`-always-present
+ * shape. Mirrors the EXISTING CandidateVerificationService failure
+ * vocabulary (VERIFIER_TIMEOUT/VERIFIER_UNAVAILABLE/VERIFIER_PROTOCOL_ERROR
+ * -- candidate-verification.service.ts's own FailureClass) instead of
+ * inventing a new one.
+ */
+export interface SecurityRemediationTransportFailure {
+  status: 'TECHNICAL_FAILURE';
+  failureClass: 'VERIFIER_TIMEOUT' | 'VERIFIER_UNAVAILABLE' | 'VERIFIER_PROTOCOL_ERROR';
+  reason: string;
+}
+
+export type SecurityRemediationEvaluationResult = SecurityRemediationCandidateResult | SecurityRemediationTransportFailure;
