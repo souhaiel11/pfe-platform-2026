@@ -30,6 +30,9 @@
     "../backend/src/security-remediation/security-finding-decision.types.ts",
     "../backend/src/security-remediation/security-patch-request.types.ts",
     "../backend/src/security-remediation/maven-security-patch-writer.ts",
-    "../backend/src/security-remediation/security-patch-guard.ts"
+    "../backend/src/security-remediation/security-patch-guard.ts",
+    "../backend/src/security-remediation/security-candidate-identity.ts",
+    "../backend/src/security-remediation/maven-dependency-resolution-check.ts",
+    "../backend/src/security-remediation/security-remediation-orchestration.types.ts"
   ]
 }
