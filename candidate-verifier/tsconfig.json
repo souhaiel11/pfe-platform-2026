@@ -20,6 +20,13 @@
     "src/**/*.ts",
     "../backend/src/candidate-verification/candidate-verification.types.ts",
     "../backend/src/candidate-verification/candidate-digest.ts",
-    "../backend/src/context/scope-lock.service.ts"
+    "../backend/src/context/scope-lock.service.ts",
+    "../backend/src/security-remediation/dependency-provenance.types.ts",
+    "../backend/src/security-remediation/fixed-version-normalizer.ts",
+    "../backend/src/security-remediation/version-selection-policy.ts",
+    "../backend/src/security-remediation/maven-provenance-resolver.ts",
+    "../backend/src/security-remediation/security-eligibility-classifier.ts",
+    "../backend/src/security-remediation/grounded-maven-provenance.types.ts",
+    "../backend/src/security-remediation/security-finding-decision.types.ts"
   ]
 }

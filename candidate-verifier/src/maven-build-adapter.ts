@@ -49,6 +49,13 @@ function runMaven(args: string[], cwd: string, timeoutMs: number): { status: num
   }
 }
 
+export interface DependencyTreeResult {
+  status: 'SUCCESS' | 'FAILED';
+  text: string | null;
+  evidenceTail: string;
+  timedOut: boolean;
+}
+
 export class MavenBuildAdapter implements BuildAdapter {
   readonly buildType = 'maven';
 
@@ -98,5 +105,35 @@ export class MavenBuildAdapter implements BuildAdapter {
       durationMs: result.durationMs,
       evidenceRef: tail(result.stdout + '\n' + result.stderr, 4000),
     };
+  }
+
+  // R-SEC-V1.1 §4 — the ONE extra Maven goal this phase needs, read-only,
+  // no candidate files involved (used by GroundedMavenProvenanceService
+  // against an exact-SHA worktree, never against a candidate patch).
+  // -DoutputFile writes clean, unprefixed tree text (no "[INFO] " noise to
+  // strip) -- the same approach used to capture this module's own real
+  // fixtures (backend/src/security-remediation/fixtures/pfe-app-test.
+  // dependency-tree.txt). Deliberately NOT `help:effective-pom`: the pure
+  // resolver (resolveMavenProvenance) already fails closed (UNRESOLVED) on
+  // a property inherited from a parent POM rather than needing the merged
+  // model to chase it down -- so that goal is not run here, honoring
+  // "do not run arbitrary Maven goals" by only running what is actually used.
+  dependencyTree(workspacePath: string, timeoutMs: number = DEFAULT_TIMEOUT_MS): DependencyTreeResult {
+    const outputFile = path.join(workspacePath, '.pfe-dependency-tree-output.txt');
+    const result = runMaven(['dependency:tree', '-B', `-DoutputFile=${outputFile}`, '-DoutputType=text'], workspacePath, timeoutMs);
+    if (result.timedOut) {
+      return { status: 'FAILED', text: null, evidenceTail: 'WORKSPACE_TIMEOUT during mvn dependency:tree', timedOut: true };
+    }
+    if (result.status !== 0) {
+      return { status: 'FAILED', text: null, evidenceTail: tail(result.stdout + '\n' + result.stderr), timedOut: false };
+    }
+    try {
+      const text = fs.readFileSync(outputFile, 'utf8');
+      return { status: 'SUCCESS', text, evidenceTail: tail(result.stdout + '\n' + result.stderr), timedOut: false };
+    } catch {
+      return { status: 'FAILED', text: null, evidenceTail: 'mvn dependency:tree exited 0 but the output file was not written', timedOut: false };
+    } finally {
+      try { fs.unlinkSync(outputFile); } catch { /* best-effort; the whole worktree is removed by WorkspaceManager regardless */ }
+    }
   }
 }

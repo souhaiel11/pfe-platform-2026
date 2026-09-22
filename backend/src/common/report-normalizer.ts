@@ -7,6 +7,7 @@
 // intervention manuelle.
 
 import { deriveScannerTruth } from './scanner-diagnostics';
+import { parseFixedVersions } from '../security-remediation/fixed-version-normalizer';
 
 export interface Cve {
   id: string;
@@ -18,6 +19,14 @@ export interface Cve {
   primaryUrl: string | null;
   fixedVersion: string | null;
   installedVersion: string | null;
+  // R-SEC-V1 — additive, derived from `fixedVersion` (see
+  // fixed-version-normalizer.ts). `fixedVersion` itself is UNCHANGED for
+  // backward compatibility (existing consumers keep reading it exactly as
+  // before) — this is purely an extra, pre-split view for the new
+  // eligibility classifier and any future UI. Never populated by WF1
+  // itself; computed here, once, so every consumer gets the same value
+  // instead of re-parsing `fixedVersion` independently.
+  fixedVersions: string[];
 }
 
 // Vérité scanner orthogonale au statut de stage — voir scanner-diagnostics.ts.
@@ -213,12 +222,21 @@ function fillStageTruth(stage: any): any {
   return { ...stage, findingCount };
 }
 
+// R-SEC-V1 — additive: populates Cve.fixedVersions from Cve.fixedVersion on
+// every CVE in a scanner block, once, here, so every consumer (dashboard,
+// project-detail, the new eligibility classifier) sees the same derived
+// value instead of re-parsing `fixedVersion` independently. Never touches
+// any other field on the Cve objects.
+function withFixedVersions(block: ScannerBlock): ScannerBlock {
+  return { ...block, cves: (block.cves || []).map(c => ({ ...c, fixedVersions: parseFixedVersions(c.fixedVersion) })) };
+}
+
 function normalizeV21(enrichedData: any): EnrichedData {
   const sonarRaw: SonarBlock = { ...emptySonarBlock(), ...enrichedData.sonar };
   sonarRaw.coverage = toNumber(sonarRaw.coverage, 0);
 
-  const trivyRaw: ScannerBlock = { ...emptyScannerBlock(), ...enrichedData.trivy };
-  const owaspRaw: ScannerBlock = { ...emptyScannerBlock(), ...enrichedData.owasp };
+  const trivyRaw: ScannerBlock = withFixedVersions({ ...emptyScannerBlock(), ...enrichedData.trivy });
+  const owaspRaw: ScannerBlock = withFixedVersions({ ...emptyScannerBlock(), ...enrichedData.owasp });
   const zapRaw: ZapBlock = { ...emptyZapBlock(), ...enrichedData.zap };
 
   let stages = enrichedData.stages;
@@ -271,6 +289,7 @@ function normalizeLegacy(security: any): EnrichedData {
       severity,
       primaryUrl: primaryUrlFor(ref),
       fixedVersion: null, // jamais présent dans le legacy — ne pas inventer
+      fixedVersions: [], // idem — additif, jamais inventé pour le legacy
       installedVersion: versionFromComponent(v.component),
     };
 
