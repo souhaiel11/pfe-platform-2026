@@ -27,6 +27,9 @@
     "../backend/src/security-remediation/maven-provenance-resolver.ts",
     "../backend/src/security-remediation/security-eligibility-classifier.ts",
     "../backend/src/security-remediation/grounded-maven-provenance.types.ts",
-    "../backend/src/security-remediation/security-finding-decision.types.ts"
+    "../backend/src/security-remediation/security-finding-decision.types.ts",
+    "../backend/src/security-remediation/security-patch-request.types.ts",
+    "../backend/src/security-remediation/maven-security-patch-writer.ts",
+    "../backend/src/security-remediation/security-patch-guard.ts"
   ]
 }
