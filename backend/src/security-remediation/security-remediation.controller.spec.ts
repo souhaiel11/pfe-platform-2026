@@ -10,6 +10,7 @@
 // needs is built EXCLUSIVELY from the resolver's trusted output.
 import * as assert from 'node:assert/strict';
 import { SecurityRemediationController } from './security-remediation.controller';
+import { computeSecurityBranchName } from './security-branch-name';
 
 function fakeResolver(resolution: any) {
   let capturedArgs: any[] | null = null;
@@ -94,6 +95,72 @@ async function main() {
     assert.equal(input1()!.batchId, input2()!.batchId);
   }
   console.log('security-remediation.controller O) identical findingTaskId -> deterministic requestId/batchId, no randomness: PASS');
+
+  // R-SEC-V1.5 §4 — revalidate(): matching fresh candidateIdentity -> WRITE_AUTHORIZED.
+  {
+    const { resolver } = fakeResolver(TRUSTED_RESOLUTION);
+    const client: any = { evaluateSecurityRemediation: async () => ({ status: 'CANDIDATE_READY', reason: 'x', decision: { findingIdentity: 'fp-trusted' }, candidateIdentity: 'abc123', candidateManifest: { files: [{ path: 'pom.xml' }] }, patchEvidence: null, guardResult: { ok: true }, dependencyResolutionEvidence: null }) };
+    const controller = new SecurityRemediationController(resolver, client);
+    const result: any = await controller.revalidate({ projectId: 'p', findingTaskId: 't', expectedCandidateIdentity: 'abc123' } as any);
+    assert.equal(result.status, 'WRITE_AUTHORIZED');
+    assert.equal(result.candidateIdentity, 'abc123');
+    assert.deepEqual(result.candidateManifest, { files: [{ path: 'pom.xml' }] }, 'the caller never supplies candidate bytes -- WRITE_AUTHORIZED always carries the backend\'s OWN freshly recomputed manifest');
+  }
+  console.log('security-remediation.controller) revalidate(): matching fresh identity -> WRITE_AUTHORIZED, backend-owned manifest: PASS');
+
+  // I: candidate identity drifted between evaluate and write -> CANDIDATE_DRIFTED, never WRITE_AUTHORIZED.
+  {
+    const { resolver } = fakeResolver(TRUSTED_RESOLUTION);
+    const client: any = { evaluateSecurityRemediation: async () => ({ status: 'CANDIDATE_READY', reason: 'x', decision: {}, candidateIdentity: 'DIFFERENT-FRESH-IDENTITY', candidateManifest: { files: [{ path: 'pom.xml', content: 'tampered' }] }, patchEvidence: null, guardResult: { ok: true }, dependencyResolutionEvidence: null }) };
+    const controller = new SecurityRemediationController(resolver, client);
+    const result: any = await controller.revalidate({ projectId: 'p', findingTaskId: 't', expectedCandidateIdentity: 'abc123' } as any);
+    assert.equal(result.status, 'CANDIDATE_DRIFTED', 'I: content/identity mutation between evaluation and write must be rejected, never authorized');
+    assert.equal(result.expectedCandidateIdentity, 'abc123');
+    assert.equal(result.freshCandidateIdentity, 'DIFFERENT-FRESH-IDENTITY');
+    assert.equal('candidateManifest' in result, false, 'a drifted result never carries ANY candidate bytes, tampered or otherwise');
+  }
+  console.log('security-remediation.controller I) candidateIdentity drift between evaluate and revalidate -> CANDIDATE_DRIFTED, no write: PASS');
+
+  // B/C/D/G: a fresh non-CANDIDATE_READY outcome (NOT_ELIGIBLE / TECHNICAL_FAILURE /
+  // TRANSITIVE-via-NOT_ELIGIBLE / GUARD_REJECTED) is passed straight through,
+  // unchanged -- revalidate() never overrides or upgrades a real rejection.
+  for (const freshStatus of ['NOT_ELIGIBLE', 'TECHNICAL_FAILURE', 'GUARD_REJECTED', 'MAVEN_RESOLUTION_MISMATCH']) {
+    const { resolver } = fakeResolver(TRUSTED_RESOLUTION);
+    const client: any = { evaluateSecurityRemediation: async () => ({ status: freshStatus, reason: 'real reason', decision: {} }) };
+    const controller = new SecurityRemediationController(resolver, client);
+    const result: any = await controller.revalidate({ projectId: 'p', findingTaskId: 't', expectedCandidateIdentity: 'abc123' } as any);
+    assert.equal(result.status, freshStatus, `a non-CANDIDATE_READY fresh outcome (${freshStatus}) must pass through unchanged, never become WRITE_AUTHORIZED`);
+  }
+  console.log('security-remediation.controller B/C/D/G) non-CANDIDATE_READY fresh outcomes pass through unchanged -> never WRITE_AUTHORIZED: PASS');
+
+  // R-SEC-V1.5 §6 — branchName is computed server-side (WF6 needs zero
+  // naming logic of its own) and is IDENTICAL whether it arrives via
+  // evaluate()'s CANDIDATE_READY or revalidate()'s WRITE_AUTHORIZED, for
+  // the same finding/candidate identity. Absent for every other status.
+  const REAL_FP = 'a37e178f7ce1805b0b1b0e8ac2d41d20333041c26b4e88490f8af4e9885b7cf2';
+  const REAL_CI = '1ebe4cecc872dea657218031000f817a0e6a7b68aa53dd71d84eacdd87c86e4'.slice(0, 63) + '8';
+  {
+    const { resolver } = fakeResolver(TRUSTED_RESOLUTION);
+    const decision = { findingIdentity: REAL_FP, evaluatedSha: 'a81be45709aba07da50d44206d073c2eb55892b5', selectedTargetVersion: '1.2.13', provenance: { ecosystem: 'MAVEN', kind: 'DIRECT_EXPLICIT', package: 'ch.qos.logback:logback-classic', installedVersion: '1.2.11', controllingFile: 'pom.xml', controllingElement: null, controllingProperty: null, groundedSha: 'a81be45709aba07da50d44206d073c2eb55892b5', evidence: 'x' } };
+    const client: any = { evaluateSecurityRemediation: async () => ({ status: 'CANDIDATE_READY', reason: 'x', decision, candidateIdentity: REAL_CI, candidateManifest: { files: [] }, patchEvidence: null, guardResult: null, dependencyResolutionEvidence: null }) };
+    const evalResult: any = await new SecurityRemediationController(resolver, client).evaluate({ projectId: 'p', findingTaskId: 't' } as any);
+    const revalResult: any = await new SecurityRemediationController(resolver, client).revalidate({ projectId: 'p', findingTaskId: 't', expectedCandidateIdentity: REAL_CI } as any);
+    const expected = computeSecurityBranchName(REAL_FP, REAL_CI);
+    assert.equal(evalResult.branchName, expected);
+    assert.equal(revalResult.branchName, expected, 'branchName is identical between evaluate (CANDIDATE_READY) and revalidate (WRITE_AUTHORIZED) for the same finding/candidate');
+    assert.equal(evalResult.commitMessage, 'fix(security): remediate security-advisory in logback-classic (1.2.11 -> 1.2.13)', 'commitMessage computed server-side too (TRUSTED_RESOLUTION carries no cveId -> safe fallback advisory label)');
+    assert.equal(evalResult.prTitle, evalResult.commitMessage);
+    assert.match(evalResult.prBody, /Security remediation candidate/);
+    assert.doesNotMatch(evalResult.prBody, /Vulnerability fixed/i);
+    assert.equal(evalResult.repository, TRUSTED_RESOLUTION.repository, 'repository is exposed as trusted OUTPUT so WF6 can address the GitHub API -- never accepted back as input (see the DTOs)');
+  }
+  {
+    const { resolver } = fakeResolver({ ok: false, reason: 'UNKNOWN_FINDING', detail: 'x' });
+    const client: any = { evaluateSecurityRemediation: async () => ({}) };
+    const result: any = await new SecurityRemediationController(resolver, client).evaluate({ projectId: 'p', findingTaskId: 't' } as any);
+    assert.equal(result.branchName, null, 'a REJECTED outcome never carries a branch name');
+  }
+  console.log('security-remediation.controller) branchName computed server-side, identical across evaluate/revalidate, absent for non-ready statuses: PASS');
 
   console.log('security-remediation.controller.spec.ts: ALL CHECKS PASS');
 }

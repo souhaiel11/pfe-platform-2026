@@ -30,7 +30,12 @@ export type TrustedFindingResolutionFailureReason =
   | 'INCOMPLETE_FINDING_EVIDENCE';
 
 export type TrustedFindingResolution =
-  | { ok: true; repository: string; candidateBaseSha: string; finding: SecurityFindingDecisionInput }
+  // R-SEC-V1.5 §9/§10 -- cveId/title are COSMETIC ONLY: read alongside the
+  // decision-relevant fields but never fed into `finding` (the orchestrator
+  // input). They exist purely so a caller (WF6) can render a human-readable
+  // commit message/PR body without a second read-path -- they have zero
+  // influence on eligibility, provenance, or patch content.
+  | { ok: true; repository: string; candidateBaseSha: string; finding: SecurityFindingDecisionInput; cveId: string | null; title: string | null }
   | { ok: false; reason: TrustedFindingResolutionFailureReason; detail: string };
 
 @Injectable()
@@ -103,6 +108,8 @@ export class SecurityFindingResolverService {
         expectedInstalledVersion: String(installedVersion),
         fixedVersion: snapshot.fixedVersion != null ? String(snapshot.fixedVersion) : null,
       },
+      cveId: task.ruleOrCve != null && String(task.ruleOrCve).trim() ? String(task.ruleOrCve) : null,
+      title: task.title != null && String(task.title).trim() ? String(task.title) : null,
     };
   }
 }

@@ -8,7 +8,7 @@ const REAL_SHA = 'a81be45709aba07da50d44206d073c2eb55892b5';
 
 function fakeRepos(overrides: { tasks?: any[]; incidents?: any[]; projects?: any[] } = {}) {
   const tasks = overrides.tasks ?? [
-    { id: TASK_ID, projectId: PROJECT_ID, incidentId: INCIDENT_ID, findingFingerprint: 'fp-logback-1', source: 'TRIVY',
+    { id: TASK_ID, projectId: PROJECT_ID, incidentId: INCIDENT_ID, findingFingerprint: 'fp-logback-1', source: 'TRIVY', ruleOrCve: 'CVE-2023-6378', title: 'logback: serialization vulnerability',
       findingSnapshot: { component: 'ch.qos.logback:logback-classic', currentVersion: '1.2.11', fixedVersion: '1.3.12, 1.4.12, 1.2.13' } },
   ];
   const incidents = overrides.incidents ?? [
@@ -37,6 +37,8 @@ async function main() {
     assert.equal(result.finding.package, 'ch.qos.logback:logback-classic');
     assert.equal(result.finding.expectedInstalledVersion, '1.2.11');
     assert.equal(result.finding.fixedVersion, '1.3.12, 1.4.12, 1.2.13');
+    assert.equal(result.cveId, 'CVE-2023-6378', 'V1.5: cveId is threaded through, cosmetic only, real persisted ruleOrCve');
+    assert.equal(result.title, 'logback: serialization vulnerability');
   }
   console.log('security-finding-resolver) happy path resolves trusted evidence from persisted rows: PASS');
 

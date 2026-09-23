@@ -1,0 +1,4439 @@
+[
+  {
+    "name": "WF6 — Security Remediation (Maven, V1.5.1 offline draft)",
+    "active": false,
+    "nodes": [
+      {
+        "id": "wf6-n001",
+        "name": "Respond - Not Eligible",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          0,
+          0
+        ],
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ ({state: \"NOT_ELIGIBLE\"}) }}",
+          "options": {}
+        }
+      },
+      {
+        "id": "wf6-n002",
+        "name": "Respond - Candidate Drifted",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          300,
+          0
+        ],
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ ({state: \"CANDIDATE_DRIFTED\"}) }}",
+          "options": {}
+        }
+      },
+      {
+        "id": "wf6-n003",
+        "name": "Respond - Base SHA Unresolvable",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          600,
+          0
+        ],
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ ({state: \"BASE_SHA_UNRESOLVABLE\"}) }}",
+          "options": {}
+        }
+      },
+      {
+        "id": "wf6-n004",
+        "name": "Respond - Branch Content Conflict",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          900,
+          0
+        ],
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ ({state: \"BRANCH_CONTENT_CONFLICT\"}) }}",
+          "options": {}
+        }
+      },
+      {
+        "id": "wf6-n005",
+        "name": "Respond - Write Conflict",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          1200,
+          0
+        ],
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ ({state: \"WRITE_CONFLICT\"}) }}",
+          "options": {}
+        }
+      },
+      {
+        "id": "wf6-n006",
+        "name": "Webhook - Security Remediation Request",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2,
+        "position": [
+          1500,
+          0
+        ],
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "wf6-security-remediation-evaluate",
+          "responseMode": "responseNode",
+          "options": {}
+        }
+      },
+      {
+        "id": "wf6-n007",
+        "name": "Evaluate Security Remediation",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1800,
+          0
+        ],
+        "parameters": {
+          "method": "POST",
+          "url": "={{ $env.BACKEND_INTERNAL_URL + \"/api/internal/security-remediation/evaluate\" }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "X-Internal-Secret",
+                "value": "={{$env.N8N_INTERNAL_SECRET}}"
+              }
+            ]
+          },
+          "sendBody": true,
+          "contentType": "json",
+          "specifyBody": "json",
+          "jsonBody": "={{ ({projectId: $(\"Webhook - Security Remediation Request\").first().json.body?.projectId, findingTaskId: $(\"Webhook - Security Remediation Request\").first().json.body?.findingTaskId}) }}",
+          "options": {
+            "response": {
+              "response": {
+                "fullResponse": true,
+                "neverError": true,
+                "responseFormat": "json"
+              }
+            },
+            "redirect": {
+              "redirect": {
+                "followRedirects": false
+              }
+            },
+            "timeout": 30000
+          }
+        },
+        "continueOnFail": true,
+        "retryOnFail": false,
+        "notes": "Full response keeps arrays in body (including empty PR lists). HTTP and transport errors are explicitly gated. No redirect or automatic retry."
+      },
+      {
+        "id": "wf6-n008",
+        "name": "Respond - EVALUATION_FAILED",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          2100,
+          0
+        ],
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ ({state: \"TECHNICAL_FAILURE\", failureClass: \"EVALUATION_FAILED\"}) }}",
+          "options": {}
+        }
+      },
+      {
+        "id": "wf6-n009",
+        "name": "Evaluation HTTP OK?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          0,
+          200
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "Evaluation HTTP OK?",
+                "leftValue": "={{ Boolean($json.statusCode === 200 || $json.statusCode === 201) }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "wf6-n010",
+        "name": "Evaluation Not Technical Failure?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          300,
+          200
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "Evaluation Not Technical Failure?",
+                "leftValue": "={{ Boolean($json.body?.status !== \"TECHNICAL_FAILURE\") }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "wf6-n011",
+        "name": "Candidate Ready?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          600,
+          200
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "Candidate Ready?",
+                "leftValue": "={{ Boolean($json.body?.status === \"CANDIDATE_READY\") }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "wf6-n012",
+        "name": "Trusted Candidate",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          900,
+          200
+        ],
+        "parameters": {
+          "mode": "runOnceForAllItems",
+          "jsCode": "try {\n\nconst c = $json.body;\nconst f = c.candidateManifest?.files?.[0];\nconst ok = /^[A-Za-z0-9_.-]+\\/[A-Za-z0-9_.-]+$/.test(c.repository || '')\n  && !c.repository.split('/').some(x => x === '.' || x === '..')\n  && /^security\\/fix\\/[a-f0-9]{12}-[a-f0-9]{12}$/.test(c.branchName || '')\n  && /^[a-f0-9]{64}$/.test(c.candidateIdentity || '')\n  && /^[0-9a-f]{40}$/.test(c.decision?.evaluatedSha || '')\n  && c.candidateManifest.files.length === 1 && f.operation === 'MODIFY'\n  && typeof f.path === 'string' && /(^|\\/)pom\\.xml$/.test(f.path)\n  && !f.path.startsWith('/') && !f.path.split('/').some(x => x === '..' || x === '.')\n  && typeof f.content === 'string' && /^[0-9a-f]{40}$/.test(f.originalBlobSha || '')\n  && ['commitMessage', 'prTitle', 'prBody'].every(k => typeof c[k] === 'string' && c[k].length > 0);\n// No raw GitHub metadata is ever spread into this candidate.\nreturn [{json: {...c, ok, writeContentBase64: ok ? Buffer.from(f.content, 'utf8').toString('base64') : null}}];\n} catch { return [{json: {ok: false}}]; }"
+        },
+        "continueOnFail": true
+      },
+      {
+        "id": "wf6-n013",
+        "name": "Respond - INVALID_CANDIDATE",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          1200,
+          200
+        ],
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ ({state: \"TECHNICAL_FAILURE\", failureClass: \"INVALID_CANDIDATE\"}) }}",
+          "options": {}
+        }
+      },
+      {
+        "id": "wf6-n014",
+        "name": "Trusted Candidate Valid?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          1500,
+          200
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "Trusted Candidate Valid?",
+                "leftValue": "={{ Boolean($json.ok === true) }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "wf6-n015",
+        "name": "Verify Base Commit Still Exists",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1800,
+          200
+        ],
+        "parameters": {
+          "method": "GET",
+          "url": "={{ \"https://api.github.com/repos/\" + $(\"Trusted Candidate\").first().json.repository + \"/commits/\" + $(\"Trusted Candidate\").first().json.decision.evaluatedSha }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "={{\"Bearer \" + $env.GITHUB_TOKEN}}"
+              },
+              {
+                "name": "Accept",
+                "value": "application/vnd.github+json"
+              }
+            ]
+          },
+          "options": {
+            "response": {
+              "response": {
+                "fullResponse": true,
+                "neverError": true,
+                "responseFormat": "json"
+              }
+            },
+            "redirect": {
+              "redirect": {
+                "followRedirects": false
+              }
+            },
+            "timeout": 30000
+          }
+        },
+        "continueOnFail": true,
+        "retryOnFail": false,
+        "notes": "Full response keeps arrays in body (including empty PR lists). HTTP and transport errors are explicitly gated. No redirect or automatic retry."
+      },
+      {
+        "id": "wf6-n016",
+        "name": "Verify Base Commit Still Exists OK?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          2100,
+          200
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "Verify Base Commit Still Exists OK?",
+                "leftValue": "={{ Boolean($json.statusCode === 200 && !$json.error) }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "wf6-n017",
+        "name": "Base SHA Resolvable?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          0,
+          400
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "Base SHA Resolvable?",
+                "leftValue": "={{ Boolean($json.body?.sha === $(\"Trusted Candidate\").first().json.decision.evaluatedSha && /^[0-9a-f]{40}$/.test($json.body?.commit?.tree?.sha || '')) }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "wf6-n018",
+        "name": "Respond - DEFAULT_BRANCH_UNRESOLVABLE",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          300,
+          400
+        ],
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ ({state: \"TECHNICAL_FAILURE\", failureClass: \"DEFAULT_BRANCH_UNRESOLVABLE\"}) }}",
+          "options": {}
+        }
+      },
+      {
+        "id": "wf6-n019",
+        "name": "Initial Repository Metadata",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          600,
+          400
+        ],
+        "parameters": {
+          "method": "GET",
+          "url": "={{ \"https://api.github.com/repos/\" + $(\"Trusted Candidate\").first().json.repository + \"\" }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "={{\"Bearer \" + $env.GITHUB_TOKEN}}"
+              },
+              {
+                "name": "Accept",
+                "value": "application/vnd.github+json"
+              }
+            ]
+          },
+          "options": {
+            "response": {
+              "response": {
+                "fullResponse": true,
+                "neverError": true,
+                "responseFormat": "json"
+              }
+            },
+            "redirect": {
+              "redirect": {
+                "followRedirects": false
+              }
+            },
+            "timeout": 30000
+          }
+        },
+        "continueOnFail": true,
+        "retryOnFail": false,
+        "notes": "Full response keeps arrays in body (including empty PR lists). HTTP and transport errors are explicitly gated. No redirect or automatic retry."
+      },
+      {
+        "id": "wf6-n020",
+        "name": "Initial Repository Metadata OK?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          900,
+          400
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "Initial Repository Metadata OK?",
+                "leftValue": "={{ Boolean($json.statusCode === 200 && !$json.error) }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "wf6-n021",
+        "name": "Initial Trusted Default Branch",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1200,
+          400
+        ],
+        "parameters": {
+          "mode": "runOnceForAllItems",
+          "jsCode": "try {\n\nconst name = $json.body?.default_branch;\nconst ok = typeof name === 'string' && name.length > 0 && name.length <= 255\n  && !/[\\s\\x00-\\x1f\\x7f~^:?*\\[\\\\]/.test(name) && !name.includes('..')\n  ;\nreturn [{json: {ok, repositoryDefaultBranch: ok ? name : null}}];\n} catch { return [{json: {ok: false}}]; }"
+        },
+        "continueOnFail": true
+      },
+      {
+        "id": "wf6-n022",
+        "name": "Initial Default Branch Valid?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          1500,
+          400
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "Initial Default Branch Valid?",
+                "leftValue": "={{ Boolean($json.ok === true) }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "wf6-n023",
+        "name": "Initial Default Branch Head",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1800,
+          400
+        ],
+        "parameters": {
+          "method": "GET",
+          "url": "={{ \"https://api.github.com/repos/\" + $(\"Trusted Candidate\").first().json.repository + \"/git/ref/heads/\" + encodeURIComponent($(\"Initial Trusted Default Branch\").first().json.repositoryDefaultBranch) }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "={{\"Bearer \" + $env.GITHUB_TOKEN}}"
+              },
+              {
+                "name": "Accept",
+                "value": "application/vnd.github+json"
+              }
+            ]
+          },
+          "options": {
+            "response": {
+              "response": {
+                "fullResponse": true,
+                "neverError": true,
+                "responseFormat": "json"
+              }
+            },
+            "redirect": {
+              "redirect": {
+                "followRedirects": false
+              }
+            },
+            "timeout": 30000
+          }
+        },
+        "continueOnFail": true,
+        "retryOnFail": false,
+        "notes": "Full response keeps arrays in body (including empty PR lists). HTTP and transport errors are explicitly gated. No redirect or automatic retry."
+      },
+      {
+        "id": "wf6-n024",
+        "name": "Initial Default Branch Head OK?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          2100,
+          400
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "Initial Default Branch Head OK?",
+                "leftValue": "={{ Boolean($json.statusCode === 200 && !$json.error) }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "wf6-n025",
+        "name": "Initial Head Valid?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          0,
+          600
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "Initial Head Valid?",
+                "leftValue": "={{ Boolean($json.body?.ref === \"refs/heads/\" + $(\"Initial Trusted Default Branch\").first().json.repositoryDefaultBranch && $json.body?.object?.type === \"commit\" && /^[0-9a-f]{40}$/.test($json.body?.object?.sha || '')) }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "wf6-n026",
+        "name": "Respond - ANCESTRY_UNRESOLVABLE",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          300,
+          600
+        ],
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ ({state: \"TECHNICAL_FAILURE\", failureClass: \"ANCESTRY_UNRESOLVABLE\"}) }}",
+          "options": {}
+        }
+      },
+      {
+        "id": "wf6-n027",
+        "name": "Initial Compare Ancestry",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          600,
+          600
+        ],
+        "parameters": {
+          "method": "GET",
+          "url": "={{ \"https://api.github.com/repos/\" + $(\"Trusted Candidate\").first().json.repository + \"/compare/\" + $(\"Trusted Candidate\").first().json.decision.evaluatedSha + \"...\" + $(\"Initial Default Branch Head\").first().json.body.object.sha }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "={{\"Bearer \" + $env.GITHUB_TOKEN}}"
+              },
+              {
+                "name": "Accept",
+                "value": "application/vnd.github+json"
+              }
+            ]
+          },
+          "options": {
+            "response": {
+              "response": {
+                "fullResponse": true,
+                "neverError": true,
+                "responseFormat": "json"
+              }
+            },
+            "redirect": {
+              "redirect": {
+                "followRedirects": false
+              }
+            },
+            "timeout": 30000
+          }
+        },
+        "continueOnFail": true,
+        "retryOnFail": false,
+        "notes": "Full response keeps arrays in body (including empty PR lists). HTTP and transport errors are explicitly gated. No redirect or automatic retry."
+      },
+      {
+        "id": "wf6-n028",
+        "name": "Initial Compare Ancestry OK?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          900,
+          600
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "Initial Compare Ancestry OK?",
+                "leftValue": "={{ Boolean($json.statusCode === 200 && !$json.error) }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "wf6-n029",
+        "name": "Initial Ancestry Evidence",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1200,
+          600
+        ],
+        "parameters": {
+          "mode": "runOnceForAllItems",
+          "jsCode": "try {\n\nconst b = $json.body;\nconst evaluatedSha = $(\"Trusted Candidate\").first().json.decision.evaluatedSha;\nconst repositoryDefaultBranchHeadSha = $(\"Initial Default Branch Head\").first().json.body.object.sha;\nconst valid = ['ahead', 'identical'].includes(b?.status)\n  && b.base_commit?.sha === evaluatedSha && b.merge_base_commit?.sha === evaluatedSha\n  && (b.status !== 'identical' || evaluatedSha === repositoryDefaultBranchHeadSha);\nreturn [{json: {ok: valid, repositoryDefaultBranch: $(\"Initial Trusted Default Branch\").first().json.repositoryDefaultBranch,\n repositoryDefaultBranchHeadSha, PR_BASE_BRANCH: $(\"Initial Trusted Default Branch\").first().json.repositoryDefaultBranch,\n PR_BASE_HEAD_SHA: repositoryDefaultBranchHeadSha, EVALUATED_SHA: evaluatedSha,\n ANCESTRY_COMPARE_DIRECTION: 'evaluatedSha...defaultBranchTipSha',\n ANCESTRY_STATUS: ['ahead', 'identical', 'behind', 'diverged'].includes(b?.status) ? b.status : 'unknown',\n ANCESTRY_VALID: valid ? 'YES' : 'NO'}}];\n} catch { return [{json: {ok: false}}]; }"
+        },
+        "continueOnFail": true
+      },
+      {
+        "id": "wf6-n030",
+        "name": "Respond - ANCESTRY_INVALID",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          1500,
+          600
+        ],
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ ({state: \"TECHNICAL_FAILURE\", failureClass: \"ANCESTRY_INVALID\"}) }}",
+          "options": {}
+        }
+      },
+      {
+        "id": "wf6-n031",
+        "name": "Initial Ancestry Valid?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          1800,
+          600
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "Initial Ancestry Valid?",
+                "leftValue": "={{ Boolean($json.ok === true) }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "wf6-n032",
+        "name": "Get Branch Ref",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          2100,
+          600
+        ],
+        "parameters": {
+          "method": "GET",
+          "url": "={{ \"https://api.github.com/repos/\" + $(\"Trusted Candidate\").first().json.repository + \"/git/ref/heads/\" + encodeURIComponent($(\"Trusted Candidate\").first().json.branchName) }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "={{\"Bearer \" + $env.GITHUB_TOKEN}}"
+              },
+              {
+                "name": "Accept",
+                "value": "application/vnd.github+json"
+              }
+            ]
+          },
+          "options": {
+            "response": {
+              "response": {
+                "fullResponse": true,
+                "neverError": true,
+                "responseFormat": "json"
+              }
+            },
+            "redirect": {
+              "redirect": {
+                "followRedirects": false
+              }
+            },
+            "timeout": 30000
+          }
+        },
+        "continueOnFail": true,
+        "retryOnFail": false,
+        "notes": "Full response keeps arrays in body (including empty PR lists). HTTP and transport errors are explicitly gated. No redirect or automatic retry."
+      },
+      {
+        "id": "wf6-n033",
+        "name": "Respond - BRANCH_LOOKUP_FAILED",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          0,
+          800
+        ],
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ ({state: \"TECHNICAL_FAILURE\", failureClass: \"BRANCH_LOOKUP_FAILED\"}) }}",
+          "options": {}
+        }
+      },
+      {
+        "id": "wf6-n034",
+        "name": "Branch Lookup Resolved?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          300,
+          800
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "Branch Lookup Resolved?",
+                "leftValue": "={{ Boolean(($json.statusCode === 200 || $json.statusCode === 404) && !$json.error) }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "wf6-n035",
+        "name": "Branch Exists?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          600,
+          800
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "Branch Exists?",
+                "leftValue": "={{ Boolean($json.statusCode === 200) }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "wf6-n036",
+        "name": "Existing Branch Ref Valid?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          900,
+          800
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "Existing Branch Ref Valid?",
+                "leftValue": "={{ Boolean($json.body?.ref === \"refs/heads/\" + $(\"Trusted Candidate\").first().json.branchName && $json.body?.object?.type === \"commit\" && /^[0-9a-f]{40}$/.test($json.body?.object?.sha || '')) }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "wf6-n037",
+        "name": "Revalidate Before Write (New Branch)",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1200,
+          800
+        ],
+        "parameters": {
+          "method": "POST",
+          "url": "={{ $env.BACKEND_INTERNAL_URL + \"/api/internal/security-remediation/revalidate\" }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "X-Internal-Secret",
+                "value": "={{$env.N8N_INTERNAL_SECRET}}"
+              }
+            ]
+          },
+          "sendBody": true,
+          "contentType": "json",
+          "specifyBody": "json",
+          "jsonBody": "={{ ({...({projectId: $(\"Webhook - Security Remediation Request\").first().json.body?.projectId, findingTaskId: $(\"Webhook - Security Remediation Request\").first().json.body?.findingTaskId}), expectedCandidateIdentity: $(\"Trusted Candidate\").first().json.candidateIdentity}) }}",
+          "options": {
+            "response": {
+              "response": {
+                "fullResponse": true,
+                "neverError": true,
+                "responseFormat": "json"
+              }
+            },
+            "redirect": {
+              "redirect": {
+                "followRedirects": false
+              }
+            },
+            "timeout": 30000
+          }
+        },
+        "continueOnFail": true,
+        "retryOnFail": false,
+        "notes": "Full response keeps arrays in body (including empty PR lists). HTTP and transport errors are explicitly gated. No redirect or automatic retry."
+      },
+      {
+        "id": "wf6-n038",
+        "name": "Respond - REVALIDATION_FAILED",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          1500,
+          800
+        ],
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ ({state: \"TECHNICAL_FAILURE\", failureClass: \"REVALIDATION_FAILED\"}) }}",
+          "options": {}
+        }
+      },
+      {
+        "id": "wf6-n039",
+        "name": "Revalidation HTTP OK? (New Branch)",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          1800,
+          800
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "Revalidation HTTP OK? (New Branch)",
+                "leftValue": "={{ Boolean(($json.statusCode === 200 || $json.statusCode === 201) && !$json.error) }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "wf6-n040",
+        "name": "Revalidation Not Technical? (New Branch)",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          2100,
+          800
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "Revalidation Not Technical? (New Branch)",
+                "leftValue": "={{ Boolean($json.body?.status !== \"TECHNICAL_FAILURE\") }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "wf6-n041",
+        "name": "Fresh Candidate Matches (New Branch)",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          0,
+          1000
+        ],
+        "parameters": {
+          "mode": "runOnceForAllItems",
+          "jsCode": "try {\n\nconst c = $(\"Trusted Candidate\").first().json, fresh = $json.body;\nconst a = c.candidateManifest.files[0], b = fresh?.candidateManifest?.files?.[0];\nconst ok = fresh?.status === 'WRITE_AUTHORIZED' && fresh.repository === c.repository\n && fresh.branchName === c.branchName && fresh.candidateIdentity === c.candidateIdentity\n && fresh.decision?.evaluatedSha === c.decision.evaluatedSha\n && fresh.candidateManifest?.files?.length === 1\n && ['path','operation','content','originalBlobSha'].every(k => b?.[k] === a[k]);\nreturn [{json: {ok}}];\n} catch { return [{json: {ok: false}}]; }"
+        },
+        "continueOnFail": true
+      },
+      {
+        "id": "wf6-n042",
+        "name": "Write Authorized? (New Branch)",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          300,
+          1000
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "Write Authorized? (New Branch)",
+                "leftValue": "={{ Boolean($json.ok === true) }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "wf6-n043",
+        "name": "Create Missing Branch",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          600,
+          1000
+        ],
+        "parameters": {
+          "method": "POST",
+          "url": "={{ \"https://api.github.com/repos/\" + $(\"Trusted Candidate\").first().json.repository + \"/git/refs\" }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "={{\"Bearer \" + $env.GITHUB_TOKEN}}"
+              },
+              {
+                "name": "Accept",
+                "value": "application/vnd.github+json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "contentType": "json",
+          "specifyBody": "json",
+          "jsonBody": "={{ ({ref: \"refs/heads/\" + $(\"Trusted Candidate\").first().json.branchName, sha: $(\"Trusted Candidate\").first().json.decision.evaluatedSha}) }}",
+          "options": {
+            "response": {
+              "response": {
+                "fullResponse": true,
+                "neverError": true,
+                "responseFormat": "json"
+              }
+            },
+            "redirect": {
+              "redirect": {
+                "followRedirects": false
+              }
+            },
+            "timeout": 30000
+          }
+        },
+        "continueOnFail": true,
+        "retryOnFail": false,
+        "notes": "Full response keeps arrays in body (including empty PR lists). HTTP and transport errors are explicitly gated. No redirect or automatic retry."
+      },
+      {
+        "id": "wf6-n044",
+        "name": "Respond - BRANCH_CREATE_FAILED",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          900,
+          1000
+        ],
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ ({state: \"TECHNICAL_FAILURE\", failureClass: \"BRANCH_CREATE_FAILED\"}) }}",
+          "options": {}
+        }
+      },
+      {
+        "id": "wf6-n045",
+        "name": "Branch Created Exactly?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          1200,
+          1000
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "Branch Created Exactly?",
+                "leftValue": "={{ Boolean($json.statusCode === 201 && $json.body?.ref === \"refs/heads/\" + $(\"Trusted Candidate\").first().json.branchName && $json.body?.object?.sha === $(\"Trusted Candidate\").first().json.decision.evaluatedSha) }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "wf6-n046",
+        "name": "Write File To Branch",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1500,
+          1000
+        ],
+        "parameters": {
+          "method": "PUT",
+          "url": "={{ \"https://api.github.com/repos/\" + $(\"Trusted Candidate\").first().json.repository + \"/contents/\" + $(\"Trusted Candidate\").first().json.candidateManifest.files[0].path.split('/').map(encodeURIComponent).join('/') }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "={{\"Bearer \" + $env.GITHUB_TOKEN}}"
+              },
+              {
+                "name": "Accept",
+                "value": "application/vnd.github+json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "contentType": "json",
+          "specifyBody": "json",
+          "jsonBody": "={{ ({message: $(\"Trusted Candidate\").first().json.commitMessage, content: $(\"Trusted Candidate\").first().json.writeContentBase64, sha: $(\"Trusted Candidate\").first().json.candidateManifest.files[0].originalBlobSha, branch: $(\"Trusted Candidate\").first().json.branchName}) }}",
+          "options": {
+            "response": {
+              "response": {
+                "fullResponse": true,
+                "neverError": true,
+                "responseFormat": "json"
+              }
+            },
+            "redirect": {
+              "redirect": {
+                "followRedirects": false
+              }
+            },
+            "timeout": 30000
+          }
+        },
+        "continueOnFail": true,
+        "retryOnFail": false,
+        "notes": "Full response keeps arrays in body (including empty PR lists). HTTP and transport errors are explicitly gated. No redirect or automatic retry."
+      },
+      {
+        "id": "wf6-n047",
+        "name": "Write Succeeded?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          1800,
+          1000
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "Write Succeeded?",
+                "leftValue": "={{ Boolean(($json.statusCode === 200 || $json.statusCode === 201) && /^[0-9a-f]{40}$/.test($json.body?.content?.sha || '') && /^[0-9a-f]{40}$/.test($json.body?.commit?.sha || '')) }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "wf6-n048",
+        "name": "Revalidate Before Write (Reuse)",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          2100,
+          1000
+        ],
+        "parameters": {
+          "method": "POST",
+          "url": "={{ $env.BACKEND_INTERNAL_URL + \"/api/internal/security-remediation/revalidate\" }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "X-Internal-Secret",
+                "value": "={{$env.N8N_INTERNAL_SECRET}}"
+              }
+            ]
+          },
+          "sendBody": true,
+          "contentType": "json",
+          "specifyBody": "json",
+          "jsonBody": "={{ ({...({projectId: $(\"Webhook - Security Remediation Request\").first().json.body?.projectId, findingTaskId: $(\"Webhook - Security Remediation Request\").first().json.body?.findingTaskId}), expectedCandidateIdentity: $(\"Trusted Candidate\").first().json.candidateIdentity}) }}",
+          "options": {
+            "response": {
+              "response": {
+                "fullResponse": true,
+                "neverError": true,
+                "responseFormat": "json"
+              }
+            },
+            "redirect": {
+              "redirect": {
+                "followRedirects": false
+              }
+            },
+            "timeout": 30000
+          }
+        },
+        "continueOnFail": true,
+        "retryOnFail": false,
+        "notes": "Full response keeps arrays in body (including empty PR lists). HTTP and transport errors are explicitly gated. No redirect or automatic retry."
+      },
+      {
+        "id": "wf6-n049",
+        "name": "Revalidation HTTP OK? (Reuse)",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          0,
+          1200
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "Revalidation HTTP OK? (Reuse)",
+                "leftValue": "={{ Boolean(($json.statusCode === 200 || $json.statusCode === 201) && !$json.error) }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "wf6-n050",
+        "name": "Revalidation Not Technical? (Reuse)",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          300,
+          1200
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "Revalidation Not Technical? (Reuse)",
+                "leftValue": "={{ Boolean($json.body?.status !== \"TECHNICAL_FAILURE\") }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "wf6-n051",
+        "name": "Fresh Candidate Matches (Reuse)",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          600,
+          1200
+        ],
+        "parameters": {
+          "mode": "runOnceForAllItems",
+          "jsCode": "try {\n\nconst c = $(\"Trusted Candidate\").first().json, fresh = $json.body;\nconst a = c.candidateManifest.files[0], b = fresh?.candidateManifest?.files?.[0];\nconst ok = fresh?.status === 'WRITE_AUTHORIZED' && fresh.repository === c.repository\n && fresh.branchName === c.branchName && fresh.candidateIdentity === c.candidateIdentity\n && fresh.decision?.evaluatedSha === c.decision.evaluatedSha\n && fresh.candidateManifest?.files?.length === 1\n && ['path','operation','content','originalBlobSha'].every(k => b?.[k] === a[k]);\nreturn [{json: {ok}}];\n} catch { return [{json: {ok: false}}]; }"
+        },
+        "continueOnFail": true
+      },
+      {
+        "id": "wf6-n052",
+        "name": "Write Authorized? (Reuse)",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          900,
+          1200
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "Write Authorized? (Reuse)",
+                "leftValue": "={{ Boolean($json.ok === true) }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "wf6-n053",
+        "name": "Revalidate Before Write (PR)",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1200,
+          1200
+        ],
+        "parameters": {
+          "method": "POST",
+          "url": "={{ $env.BACKEND_INTERNAL_URL + \"/api/internal/security-remediation/revalidate\" }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "X-Internal-Secret",
+                "value": "={{$env.N8N_INTERNAL_SECRET}}"
+              }
+            ]
+          },
+          "sendBody": true,
+          "contentType": "json",
+          "specifyBody": "json",
+          "jsonBody": "={{ ({...({projectId: $(\"Webhook - Security Remediation Request\").first().json.body?.projectId, findingTaskId: $(\"Webhook - Security Remediation Request\").first().json.body?.findingTaskId}), expectedCandidateIdentity: $(\"Trusted Candidate\").first().json.candidateIdentity}) }}",
+          "options": {
+            "response": {
+              "response": {
+                "fullResponse": true,
+                "neverError": true,
+                "responseFormat": "json"
+              }
+            },
+            "redirect": {
+              "redirect": {
+                "followRedirects": false
+              }
+            },
+            "timeout": 30000
+          }
+        },
+        "continueOnFail": true,
+        "retryOnFail": false,
+        "notes": "Full response keeps arrays in body (including empty PR lists). HTTP and transport errors are explicitly gated. No redirect or automatic retry."
+      },
+      {
+        "id": "wf6-n054",
+        "name": "Revalidation HTTP OK? (PR)",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          1500,
+          1200
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "Revalidation HTTP OK? (PR)",
+                "leftValue": "={{ Boolean(($json.statusCode === 200 || $json.statusCode === 201) && !$json.error) }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "wf6-n055",
+        "name": "Revalidation Not Technical? (PR)",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          1800,
+          1200
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "Revalidation Not Technical? (PR)",
+                "leftValue": "={{ Boolean($json.body?.status !== \"TECHNICAL_FAILURE\") }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "wf6-n056",
+        "name": "Fresh Candidate Matches (PR)",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          2100,
+          1200
+        ],
+        "parameters": {
+          "mode": "runOnceForAllItems",
+          "jsCode": "try {\n\nconst c = $(\"Trusted Candidate\").first().json, fresh = $json.body;\nconst a = c.candidateManifest.files[0], b = fresh?.candidateManifest?.files?.[0];\nconst ok = fresh?.status === 'WRITE_AUTHORIZED' && fresh.repository === c.repository\n && fresh.branchName === c.branchName && fresh.candidateIdentity === c.candidateIdentity\n && fresh.decision?.evaluatedSha === c.decision.evaluatedSha\n && fresh.candidateManifest?.files?.length === 1\n && ['path','operation','content','originalBlobSha'].every(k => b?.[k] === a[k]);\nreturn [{json: {ok}}];\n} catch { return [{json: {ok: false}}]; }"
+        },
+        "continueOnFail": true
+      },
+      {
+        "id": "wf6-n057",
+        "name": "Write Authorized? (PR)",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          0,
+          1400
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "Write Authorized? (PR)",
+                "leftValue": "={{ Boolean($json.ok === true) }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "wf6-n058",
+        "name": "Authorized Branch Snapshot",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          300,
+          1400
+        ],
+        "parameters": {
+          "method": "GET",
+          "url": "={{ \"https://api.github.com/repos/\" + $(\"Trusted Candidate\").first().json.repository + \"/git/ref/heads/\" + encodeURIComponent($(\"Trusted Candidate\").first().json.branchName) }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "={{\"Bearer \" + $env.GITHUB_TOKEN}}"
+              },
+              {
+                "name": "Accept",
+                "value": "application/vnd.github+json"
+              }
+            ]
+          },
+          "options": {
+            "response": {
+              "response": {
+                "fullResponse": true,
+                "neverError": true,
+                "responseFormat": "json"
+              }
+            },
+            "redirect": {
+              "redirect": {
+                "followRedirects": false
+              }
+            },
+            "timeout": 30000
+          }
+        },
+        "continueOnFail": true,
+        "retryOnFail": false,
+        "notes": "Full response keeps arrays in body (including empty PR lists). HTTP and transport errors are explicitly gated. No redirect or automatic retry."
+      },
+      {
+        "id": "wf6-n059",
+        "name": "Authorized Branch Snapshot OK?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          600,
+          1400
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "Authorized Branch Snapshot OK?",
+                "leftValue": "={{ Boolean($json.statusCode === 200 && !$json.error) }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "wf6-n060",
+        "name": "Authorized Branch Snapshot Valid?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          900,
+          1400
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "Authorized Branch Snapshot Valid?",
+                "leftValue": "={{ Boolean($json.body?.ref === \"refs/heads/\" + $(\"Trusted Candidate\").first().json.branchName && $json.body?.object?.type === \"commit\" && /^[0-9a-f]{40}$/.test($json.body?.object?.sha || '')) }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "wf6-n061",
+        "name": "Authorized Branch Commit",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1200,
+          1400
+        ],
+        "parameters": {
+          "method": "GET",
+          "url": "={{ \"https://api.github.com/repos/\" + $(\"Trusted Candidate\").first().json.repository + \"/git/commits/\" + $(\"Authorized Branch Snapshot\").first().json.body.object.sha }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "={{\"Bearer \" + $env.GITHUB_TOKEN}}"
+              },
+              {
+                "name": "Accept",
+                "value": "application/vnd.github+json"
+              }
+            ]
+          },
+          "options": {
+            "response": {
+              "response": {
+                "fullResponse": true,
+                "neverError": true,
+                "responseFormat": "json"
+              }
+            },
+            "redirect": {
+              "redirect": {
+                "followRedirects": false
+              }
+            },
+            "timeout": 30000
+          }
+        },
+        "continueOnFail": true,
+        "retryOnFail": false,
+        "notes": "Full response keeps arrays in body (including empty PR lists). HTTP and transport errors are explicitly gated. No redirect or automatic retry."
+      },
+      {
+        "id": "wf6-n062",
+        "name": "Authorized Branch Commit OK?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          1500,
+          1400
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "Authorized Branch Commit OK?",
+                "leftValue": "={{ Boolean($json.statusCode === 200 && !$json.error) }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "wf6-n063",
+        "name": "Authorized Branch Commit Valid?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          1800,
+          1400
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "Authorized Branch Commit Valid?",
+                "leftValue": "={{ Boolean($json.body?.sha === $(\"Authorized Branch Snapshot\").first().json.body.object.sha && /^[0-9a-f]{40}$/.test($json.body?.tree?.sha || '')) }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "wf6-n064",
+        "name": "Evaluated Base Tree",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          2100,
+          1400
+        ],
+        "parameters": {
+          "method": "GET",
+          "url": "={{ \"https://api.github.com/repos/\" + $(\"Trusted Candidate\").first().json.repository + \"/git/trees/\" + $(\"Verify Base Commit Still Exists\").first().json.body.commit.tree.sha + \"?recursive=1\" }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "={{\"Bearer \" + $env.GITHUB_TOKEN}}"
+              },
+              {
+                "name": "Accept",
+                "value": "application/vnd.github+json"
+              }
+            ]
+          },
+          "options": {
+            "response": {
+              "response": {
+                "fullResponse": true,
+                "neverError": true,
+                "responseFormat": "json"
+              }
+            },
+            "redirect": {
+              "redirect": {
+                "followRedirects": false
+              }
+            },
+            "timeout": 30000
+          }
+        },
+        "continueOnFail": true,
+        "retryOnFail": false,
+        "notes": "Full response keeps arrays in body (including empty PR lists). HTTP and transport errors are explicitly gated. No redirect or automatic retry."
+      },
+      {
+        "id": "wf6-n065",
+        "name": "Evaluated Base Tree OK?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          0,
+          1600
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "Evaluated Base Tree OK?",
+                "leftValue": "={{ Boolean($json.statusCode === 200 && !$json.error) }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "wf6-n066",
+        "name": "Authorized Branch Tree",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          300,
+          1600
+        ],
+        "parameters": {
+          "method": "GET",
+          "url": "={{ \"https://api.github.com/repos/\" + $(\"Trusted Candidate\").first().json.repository + \"/git/trees/\" + $(\"Authorized Branch Commit\").first().json.body.tree.sha + \"?recursive=1\" }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "={{\"Bearer \" + $env.GITHUB_TOKEN}}"
+              },
+              {
+                "name": "Accept",
+                "value": "application/vnd.github+json"
+              }
+            ]
+          },
+          "options": {
+            "response": {
+              "response": {
+                "fullResponse": true,
+                "neverError": true,
+                "responseFormat": "json"
+              }
+            },
+            "redirect": {
+              "redirect": {
+                "followRedirects": false
+              }
+            },
+            "timeout": 30000
+          }
+        },
+        "continueOnFail": true,
+        "retryOnFail": false,
+        "notes": "Full response keeps arrays in body (including empty PR lists). HTTP and transport errors are explicitly gated. No redirect or automatic retry."
+      },
+      {
+        "id": "wf6-n067",
+        "name": "Authorized Branch Tree OK?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          600,
+          1600
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "Authorized Branch Tree OK?",
+                "leftValue": "={{ Boolean($json.statusCode === 200 && !$json.error) }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "wf6-n068",
+        "name": "Exact Authorized Tree",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          900,
+          1600
+        ],
+        "parameters": {
+          "mode": "runOnceForAllItems",
+          "jsCode": "try {\n\nconst base = $(\"Evaluated Base Tree\").first().json.body, branch = $json.body, f = $(\"Trusted Candidate\").first().json.candidateManifest.files[0];\nfunction entries(t) {\n if (!t || t.truncated !== false || !Array.isArray(t.tree) || t.tree.length === 0) return null;\n const leaves = t.tree.filter(e => e.type !== 'tree');\n if (new Set(t.tree.map(e => e.path)).size !== t.tree.length) return null;\n if (leaves.some(e => typeof e.path !== 'string' || !/^[0-9a-f]{40}$/.test(e.sha || '') || !['blob','commit'].includes(e.type))) return null;\n return leaves.sort((a,b) => a.path.localeCompare(b.path));\n}\nconst a = entries(base), b = entries(branch);\nconst original = a?.find(e => e.path === f.path), target = b?.find(e => e.path === f.path);\nconst ok = base?.sha === $(\"Verify Base Commit Still Exists\").first().json.body.commit.tree.sha\n && branch?.sha === $(\"Authorized Branch Commit\").first().json.body.tree.sha\n && a && b && a.length === b.length && original?.sha === f.originalBlobSha\n && target?.type === 'blob' && ['100644','100755'].includes(target.mode)\n && a.every((e,i) => e.path === b[i].path && e.type === b[i].type && e.mode === b[i].mode\n   && (e.path === f.path || e.sha === b[i].sha));\nreturn [{json: {ok: Boolean(ok), candidateBlobSha: ok ? target.sha : null}}];\n} catch { return [{json: {ok: false}}]; }"
+        },
+        "continueOnFail": true
+      },
+      {
+        "id": "wf6-n069",
+        "name": "Exact Authorized Tree?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          1200,
+          1600
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "Exact Authorized Tree?",
+                "leftValue": "={{ Boolean($json.ok === true) }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "wf6-n070",
+        "name": "Authorized Candidate Blob",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1500,
+          1600
+        ],
+        "parameters": {
+          "method": "GET",
+          "url": "={{ \"https://api.github.com/repos/\" + $(\"Trusted Candidate\").first().json.repository + \"/git/blobs/\" + $(\"Exact Authorized Tree\").first().json.candidateBlobSha }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "={{\"Bearer \" + $env.GITHUB_TOKEN}}"
+              },
+              {
+                "name": "Accept",
+                "value": "application/vnd.github+json"
+              }
+            ]
+          },
+          "options": {
+            "response": {
+              "response": {
+                "fullResponse": true,
+                "neverError": true,
+                "responseFormat": "json"
+              }
+            },
+            "redirect": {
+              "redirect": {
+                "followRedirects": false
+              }
+            },
+            "timeout": 30000
+          }
+        },
+        "continueOnFail": true,
+        "retryOnFail": false,
+        "notes": "Full response keeps arrays in body (including empty PR lists). HTTP and transport errors are explicitly gated. No redirect or automatic retry."
+      },
+      {
+        "id": "wf6-n071",
+        "name": "Authorized Candidate Blob OK?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          1800,
+          1600
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "Authorized Candidate Blob OK?",
+                "leftValue": "={{ Boolean($json.statusCode === 200 && !$json.error) }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "wf6-n072",
+        "name": "Exact Authorized Bytes",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          2100,
+          1600
+        ],
+        "parameters": {
+          "mode": "runOnceForAllItems",
+          "jsCode": "try {\n\nconst b = $json.body, expected = Buffer.from($(\"Trusted Candidate\").first().json.candidateManifest.files[0].content, 'utf8');\nconst raw = typeof b?.content === 'string' ? b.content.replace(/[\\r\\n]/g, '') : '';\nconst decoded = Buffer.from(raw, 'base64');\nconst ok = b?.sha === $(\"Exact Authorized Tree\").first().json.candidateBlobSha && b.encoding === 'base64'\n && raw === decoded.toString('base64') && decoded.equals(expected) && b.size === expected.length;\nreturn [{json: {ok}}];\n} catch { return [{json: {ok: false}}]; }"
+        },
+        "continueOnFail": true
+      },
+      {
+        "id": "wf6-n073",
+        "name": "Exact Authorized Bytes?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          0,
+          1800
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "Exact Authorized Bytes?",
+                "leftValue": "={{ Boolean($json.ok === true) }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "wf6-n074",
+        "name": "Respond - PR_LOOKUP_FAILED",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          300,
+          1800
+        ],
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ ({state: \"TECHNICAL_FAILURE\", failureClass: \"PR_LOOKUP_FAILED\"}) }}",
+          "options": {}
+        }
+      },
+      {
+        "id": "wf6-n075",
+        "name": "Search Existing PR For Branch",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          600,
+          1800
+        ],
+        "parameters": {
+          "method": "GET",
+          "url": "={{ \"https://api.github.com/repos/\" + $(\"Trusted Candidate\").first().json.repository + \"/pulls?state=all&per_page=100&head=\" + encodeURIComponent($(\"Trusted Candidate\").first().json.repository.split('/')[0] + ':' + $(\"Trusted Candidate\").first().json.branchName) }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "={{\"Bearer \" + $env.GITHUB_TOKEN}}"
+              },
+              {
+                "name": "Accept",
+                "value": "application/vnd.github+json"
+              }
+            ]
+          },
+          "options": {
+            "response": {
+              "response": {
+                "fullResponse": true,
+                "neverError": true,
+                "responseFormat": "json"
+              }
+            },
+            "redirect": {
+              "redirect": {
+                "followRedirects": false
+              }
+            },
+            "timeout": 30000
+          }
+        },
+        "continueOnFail": true,
+        "retryOnFail": false,
+        "notes": "Full response keeps arrays in body (including empty PR lists). HTTP and transport errors are explicitly gated. No redirect or automatic retry."
+      },
+      {
+        "id": "wf6-n076",
+        "name": "Search Existing PR For Branch OK?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          900,
+          1800
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "Search Existing PR For Branch OK?",
+                "leftValue": "={{ Boolean($json.statusCode === 200 && !$json.error) }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "wf6-n077",
+        "name": "Trusted Existing PR State",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1200,
+          1800
+        ],
+        "parameters": {
+          "mode": "runOnceForAllItems",
+          "jsCode": "try {\n\nconst list = $json.body, c = $(\"Trusted Candidate\").first().json;\nconst base = $(\"Initial Trusted Default Branch\").first().json.repositoryDefaultBranch;\nconst valid = Array.isArray(list) && list.length <= 1 && list.every(p =>\n p.head?.ref === c.branchName && p.head?.repo?.full_name === c.repository\n && p.base?.ref === base && p.base?.repo?.full_name === c.repository\n && /^https:\\/\\/github\\.com\\/[A-Za-z0-9_.-]+\\/[A-Za-z0-9_.-]+\\/pull\\/[0-9]+$/.test(p.html_url || '')\n && p.html_url.startsWith('https://github.com/' + c.repository + '/pull/')\n && ['open','closed'].includes(p.state));\nconst p = valid ? list[0] : null;\nreturn [{json: {ok: valid, state: !valid ? 'INVALID' : !p ? 'NONE' : p.merged_at ? 'MERGED' : p.state === 'open' ? 'OPEN' : 'CLOSED', pullRequestUrl: p?.html_url}}];\n} catch { return [{json: {ok: false}}]; }"
+        },
+        "continueOnFail": true
+      },
+      {
+        "id": "wf6-n078",
+        "name": "Respond - PR_LOOKUP_INVALID",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          1500,
+          1800
+        ],
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ ({state: \"TECHNICAL_FAILURE\", failureClass: \"PR_LOOKUP_INVALID\"}) }}",
+          "options": {}
+        }
+      },
+      {
+        "id": "wf6-n079",
+        "name": "PR Lookup Valid?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          1800,
+          1800
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "PR Lookup Valid?",
+                "leftValue": "={{ Boolean($json.ok === true) }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "wf6-n080",
+        "name": "No Existing PR?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          2100,
+          1800
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "No Existing PR?",
+                "leftValue": "={{ Boolean($json.state === \"NONE\") }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "wf6-n081",
+        "name": "Existing PR Merged?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          0,
+          2000
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "Existing PR Merged?",
+                "leftValue": "={{ Boolean($json.state === \"MERGED\") }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "wf6-n082",
+        "name": "Respond - Already Merged",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          300,
+          2000
+        ],
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ ({state: \"ALREADY_MERGED\"}) }}",
+          "options": {}
+        }
+      },
+      {
+        "id": "wf6-n083",
+        "name": "Respond - Closed Not Merged",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          600,
+          2000
+        ],
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ ({state: \"CLOSED_NOT_MERGED\"}) }}",
+          "options": {}
+        }
+      },
+      {
+        "id": "wf6-n084",
+        "name": "Existing PR Open?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          900,
+          2000
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "Existing PR Open?",
+                "leftValue": "={{ Boolean($json.state === \"OPEN\") }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "wf6-n085",
+        "name": "Respond - PR Reused",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          1200,
+          2000
+        ],
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ ({state: \"PR_REUSED\", pullRequestUrl: $(\"Trusted Existing PR State\").first().json.pullRequestUrl, branchName: $(\"Trusted Candidate\").first().json.branchName}) }}",
+          "options": {}
+        }
+      },
+      {
+        "id": "wf6-n086",
+        "name": "Final Repository Metadata",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1500,
+          2000
+        ],
+        "parameters": {
+          "method": "GET",
+          "url": "={{ \"https://api.github.com/repos/\" + $(\"Trusted Candidate\").first().json.repository + \"\" }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "={{\"Bearer \" + $env.GITHUB_TOKEN}}"
+              },
+              {
+                "name": "Accept",
+                "value": "application/vnd.github+json"
+              }
+            ]
+          },
+          "options": {
+            "response": {
+              "response": {
+                "fullResponse": true,
+                "neverError": true,
+                "responseFormat": "json"
+              }
+            },
+            "redirect": {
+              "redirect": {
+                "followRedirects": false
+              }
+            },
+            "timeout": 30000
+          }
+        },
+        "continueOnFail": true,
+        "retryOnFail": false,
+        "notes": "Full response keeps arrays in body (including empty PR lists). HTTP and transport errors are explicitly gated. No redirect or automatic retry."
+      },
+      {
+        "id": "wf6-n087",
+        "name": "Final Repository Metadata OK?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          1800,
+          2000
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "Final Repository Metadata OK?",
+                "leftValue": "={{ Boolean($json.statusCode === 200 && !$json.error) }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "wf6-n088",
+        "name": "Final Trusted Default Branch",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          2100,
+          2000
+        ],
+        "parameters": {
+          "mode": "runOnceForAllItems",
+          "jsCode": "try {\n\nconst name = $json.body?.default_branch;\nconst ok = typeof name === 'string' && name.length > 0 && name.length <= 255\n  && !/[\\s\\x00-\\x1f\\x7f~^:?*\\[\\\\]/.test(name) && !name.includes('..')\n  && name === $(\"Initial Trusted Default Branch\").first().json.repositoryDefaultBranch;\nreturn [{json: {ok, repositoryDefaultBranch: ok ? name : null}}];\n} catch { return [{json: {ok: false}}]; }"
+        },
+        "continueOnFail": true
+      },
+      {
+        "id": "wf6-n089",
+        "name": "Respond - DEFAULT_BRANCH_DRIFTED",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          0,
+          2200
+        ],
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ ({state: \"TECHNICAL_FAILURE\", failureClass: \"DEFAULT_BRANCH_DRIFTED\"}) }}",
+          "options": {}
+        }
+      },
+      {
+        "id": "wf6-n090",
+        "name": "Final Default Branch Valid?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          300,
+          2200
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "Final Default Branch Valid?",
+                "leftValue": "={{ Boolean($json.ok === true) }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "wf6-n091",
+        "name": "Final Default Branch Head",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          600,
+          2200
+        ],
+        "parameters": {
+          "method": "GET",
+          "url": "={{ \"https://api.github.com/repos/\" + $(\"Trusted Candidate\").first().json.repository + \"/git/ref/heads/\" + encodeURIComponent($(\"Final Trusted Default Branch\").first().json.repositoryDefaultBranch) }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "={{\"Bearer \" + $env.GITHUB_TOKEN}}"
+              },
+              {
+                "name": "Accept",
+                "value": "application/vnd.github+json"
+              }
+            ]
+          },
+          "options": {
+            "response": {
+              "response": {
+                "fullResponse": true,
+                "neverError": true,
+                "responseFormat": "json"
+              }
+            },
+            "redirect": {
+              "redirect": {
+                "followRedirects": false
+              }
+            },
+            "timeout": 30000
+          }
+        },
+        "continueOnFail": true,
+        "retryOnFail": false,
+        "notes": "Full response keeps arrays in body (including empty PR lists). HTTP and transport errors are explicitly gated. No redirect or automatic retry."
+      },
+      {
+        "id": "wf6-n092",
+        "name": "Final Default Branch Head OK?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          900,
+          2200
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "Final Default Branch Head OK?",
+                "leftValue": "={{ Boolean($json.statusCode === 200 && !$json.error) }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "wf6-n093",
+        "name": "Final Head Valid?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          1200,
+          2200
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "Final Head Valid?",
+                "leftValue": "={{ Boolean($json.body?.ref === \"refs/heads/\" + $(\"Final Trusted Default Branch\").first().json.repositoryDefaultBranch && $json.body?.object?.type === \"commit\" && /^[0-9a-f]{40}$/.test($json.body?.object?.sha || '')) }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "wf6-n094",
+        "name": "Final Compare Ancestry",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1500,
+          2200
+        ],
+        "parameters": {
+          "method": "GET",
+          "url": "={{ \"https://api.github.com/repos/\" + $(\"Trusted Candidate\").first().json.repository + \"/compare/\" + $(\"Trusted Candidate\").first().json.decision.evaluatedSha + \"...\" + $(\"Final Default Branch Head\").first().json.body.object.sha }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "={{\"Bearer \" + $env.GITHUB_TOKEN}}"
+              },
+              {
+                "name": "Accept",
+                "value": "application/vnd.github+json"
+              }
+            ]
+          },
+          "options": {
+            "response": {
+              "response": {
+                "fullResponse": true,
+                "neverError": true,
+                "responseFormat": "json"
+              }
+            },
+            "redirect": {
+              "redirect": {
+                "followRedirects": false
+              }
+            },
+            "timeout": 30000
+          }
+        },
+        "continueOnFail": true,
+        "retryOnFail": false,
+        "notes": "Full response keeps arrays in body (including empty PR lists). HTTP and transport errors are explicitly gated. No redirect or automatic retry."
+      },
+      {
+        "id": "wf6-n095",
+        "name": "Final Compare Ancestry OK?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          1800,
+          2200
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "Final Compare Ancestry OK?",
+                "leftValue": "={{ Boolean($json.statusCode === 200 && !$json.error) }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "wf6-n096",
+        "name": "Final Ancestry Evidence",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          2100,
+          2200
+        ],
+        "parameters": {
+          "mode": "runOnceForAllItems",
+          "jsCode": "try {\n\nconst b = $json.body;\nconst evaluatedSha = $(\"Trusted Candidate\").first().json.decision.evaluatedSha;\nconst repositoryDefaultBranchHeadSha = $(\"Final Default Branch Head\").first().json.body.object.sha;\nconst valid = ['ahead', 'identical'].includes(b?.status)\n  && b.base_commit?.sha === evaluatedSha && b.merge_base_commit?.sha === evaluatedSha\n  && (b.status !== 'identical' || evaluatedSha === repositoryDefaultBranchHeadSha);\nreturn [{json: {ok: valid, repositoryDefaultBranch: $(\"Final Trusted Default Branch\").first().json.repositoryDefaultBranch,\n repositoryDefaultBranchHeadSha, PR_BASE_BRANCH: $(\"Final Trusted Default Branch\").first().json.repositoryDefaultBranch,\n PR_BASE_HEAD_SHA: repositoryDefaultBranchHeadSha, EVALUATED_SHA: evaluatedSha,\n ANCESTRY_COMPARE_DIRECTION: 'evaluatedSha...defaultBranchTipSha',\n ANCESTRY_STATUS: ['ahead', 'identical', 'behind', 'diverged'].includes(b?.status) ? b.status : 'unknown',\n ANCESTRY_VALID: valid ? 'YES' : 'NO'}}];\n} catch { return [{json: {ok: false}}]; }"
+        },
+        "continueOnFail": true
+      },
+      {
+        "id": "wf6-n097",
+        "name": "Final Ancestry Valid?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          0,
+          2400
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "Final Ancestry Valid?",
+                "leftValue": "={{ Boolean($json.ok === true) }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "wf6-n098",
+        "name": "Final Security Branch Ref",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          300,
+          2400
+        ],
+        "parameters": {
+          "method": "GET",
+          "url": "={{ \"https://api.github.com/repos/\" + $(\"Trusted Candidate\").first().json.repository + \"/git/ref/heads/\" + encodeURIComponent($(\"Trusted Candidate\").first().json.branchName) }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "={{\"Bearer \" + $env.GITHUB_TOKEN}}"
+              },
+              {
+                "name": "Accept",
+                "value": "application/vnd.github+json"
+              }
+            ]
+          },
+          "options": {
+            "response": {
+              "response": {
+                "fullResponse": true,
+                "neverError": true,
+                "responseFormat": "json"
+              }
+            },
+            "redirect": {
+              "redirect": {
+                "followRedirects": false
+              }
+            },
+            "timeout": 30000
+          }
+        },
+        "continueOnFail": true,
+        "retryOnFail": false,
+        "notes": "Full response keeps arrays in body (including empty PR lists). HTTP and transport errors are explicitly gated. No redirect or automatic retry."
+      },
+      {
+        "id": "wf6-n099",
+        "name": "Final Security Branch Ref OK?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          600,
+          2400
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "Final Security Branch Ref OK?",
+                "leftValue": "={{ Boolean($json.statusCode === 200 && !$json.error) }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "wf6-n100",
+        "name": "Authorized Branch Unchanged?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          900,
+          2400
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "Authorized Branch Unchanged?",
+                "leftValue": "={{ Boolean($json.body?.ref === \"refs/heads/\" + $(\"Trusted Candidate\").first().json.branchName && $json.body?.object?.sha === $(\"Authorized Branch Snapshot\").first().json.body.object.sha) }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "wf6-n101",
+        "name": "Create Pull Request",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1200,
+          2400
+        ],
+        "parameters": {
+          "method": "POST",
+          "url": "={{ \"https://api.github.com/repos/\" + $(\"Trusted Candidate\").first().json.repository + \"/pulls\" }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "={{\"Bearer \" + $env.GITHUB_TOKEN}}"
+              },
+              {
+                "name": "Accept",
+                "value": "application/vnd.github+json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "contentType": "json",
+          "specifyBody": "json",
+          "jsonBody": "={{ ({title: $(\"Trusted Candidate\").first().json.prTitle, body: $(\"Trusted Candidate\").first().json.prBody, head: $(\"Trusted Candidate\").first().json.branchName, base: $(\"Final Ancestry Evidence\").first().json.repositoryDefaultBranch}) }}",
+          "options": {
+            "response": {
+              "response": {
+                "fullResponse": true,
+                "neverError": true,
+                "responseFormat": "json"
+              }
+            },
+            "redirect": {
+              "redirect": {
+                "followRedirects": false
+              }
+            },
+            "timeout": 30000
+          }
+        },
+        "continueOnFail": true,
+        "retryOnFail": false,
+        "notes": "Full response keeps arrays in body (including empty PR lists). HTTP and transport errors are explicitly gated. No redirect or automatic retry."
+      },
+      {
+        "id": "wf6-n102",
+        "name": "Respond - PR_CREATE_FAILED",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          1500,
+          2400
+        ],
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ ({state: \"TECHNICAL_FAILURE\", failureClass: \"PR_CREATE_FAILED\"}) }}",
+          "options": {}
+        }
+      },
+      {
+        "id": "wf6-n103",
+        "name": "PR Created?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          1800,
+          2400
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "PR Created?",
+                "leftValue": "={{ Boolean($json.statusCode === 201 && $json.body?.head?.ref === $(\"Trusted Candidate\").first().json.branchName && $json.body?.base?.ref === $(\"Final Ancestry Evidence\").first().json.repositoryDefaultBranch && typeof $json.body?.html_url === 'string' && $json.body.html_url.startsWith('https://github.com/' + $(\"Trusted Candidate\").first().json.repository + '/pull/') && /^[0-9]+$/.test($json.body.html_url.split('/pull/')[1] || '')) }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "wf6-n104",
+        "name": "Respond - PR Created",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          2100,
+          2400
+        ],
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ ({state: \"PR_CREATED\", pullRequestUrl: $json.body.html_url, branchName: $(\"Trusted Candidate\").first().json.branchName}) }}",
+          "options": {}
+        }
+      }
+    ],
+    "connections": {
+      "Webhook - Security Remediation Request": {
+        "main": [
+          [
+            {
+              "node": "Evaluate Security Remediation",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Evaluation HTTP OK?": {
+        "main": [
+          [
+            {
+              "node": "Evaluation Not Technical Failure?",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Respond - EVALUATION_FAILED",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Evaluate Security Remediation": {
+        "main": [
+          [
+            {
+              "node": "Evaluation HTTP OK?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Evaluation Not Technical Failure?": {
+        "main": [
+          [
+            {
+              "node": "Candidate Ready?",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Respond - EVALUATION_FAILED",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Candidate Ready?": {
+        "main": [
+          [
+            {
+              "node": "Trusted Candidate",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Respond - Not Eligible",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Trusted Candidate Valid?": {
+        "main": [
+          [
+            {
+              "node": "Verify Base Commit Still Exists",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Respond - INVALID_CANDIDATE",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Trusted Candidate": {
+        "main": [
+          [
+            {
+              "node": "Trusted Candidate Valid?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Verify Base Commit Still Exists OK?": {
+        "main": [
+          [
+            {
+              "node": "Base SHA Resolvable?",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Respond - Base SHA Unresolvable",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Verify Base Commit Still Exists": {
+        "main": [
+          [
+            {
+              "node": "Verify Base Commit Still Exists OK?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Base SHA Resolvable?": {
+        "main": [
+          [
+            {
+              "node": "Initial Repository Metadata",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Respond - Base SHA Unresolvable",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Initial Repository Metadata OK?": {
+        "main": [
+          [
+            {
+              "node": "Initial Trusted Default Branch",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Respond - DEFAULT_BRANCH_UNRESOLVABLE",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Initial Repository Metadata": {
+        "main": [
+          [
+            {
+              "node": "Initial Repository Metadata OK?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Initial Default Branch Valid?": {
+        "main": [
+          [
+            {
+              "node": "Initial Default Branch Head",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Respond - DEFAULT_BRANCH_UNRESOLVABLE",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Initial Trusted Default Branch": {
+        "main": [
+          [
+            {
+              "node": "Initial Default Branch Valid?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Initial Default Branch Head OK?": {
+        "main": [
+          [
+            {
+              "node": "Initial Head Valid?",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Respond - DEFAULT_BRANCH_UNRESOLVABLE",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Initial Default Branch Head": {
+        "main": [
+          [
+            {
+              "node": "Initial Default Branch Head OK?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Initial Head Valid?": {
+        "main": [
+          [
+            {
+              "node": "Initial Compare Ancestry",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Respond - DEFAULT_BRANCH_UNRESOLVABLE",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Initial Compare Ancestry OK?": {
+        "main": [
+          [
+            {
+              "node": "Initial Ancestry Evidence",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Respond - ANCESTRY_UNRESOLVABLE",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Initial Compare Ancestry": {
+        "main": [
+          [
+            {
+              "node": "Initial Compare Ancestry OK?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Initial Ancestry Valid?": {
+        "main": [
+          [
+            {
+              "node": "Get Branch Ref",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Respond - ANCESTRY_INVALID",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Initial Ancestry Evidence": {
+        "main": [
+          [
+            {
+              "node": "Initial Ancestry Valid?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Branch Lookup Resolved?": {
+        "main": [
+          [
+            {
+              "node": "Branch Exists?",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Respond - BRANCH_LOOKUP_FAILED",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Get Branch Ref": {
+        "main": [
+          [
+            {
+              "node": "Branch Lookup Resolved?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Branch Exists?": {
+        "main": [
+          [
+            {
+              "node": "Existing Branch Ref Valid?",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Revalidate Before Write (New Branch)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Existing Branch Ref Valid?": {
+        "main": [
+          [
+            {
+              "node": "Revalidate Before Write (Reuse)",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Respond - Branch Content Conflict",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Revalidation HTTP OK? (New Branch)": {
+        "main": [
+          [
+            {
+              "node": "Revalidation Not Technical? (New Branch)",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Respond - REVALIDATION_FAILED",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Revalidate Before Write (New Branch)": {
+        "main": [
+          [
+            {
+              "node": "Revalidation HTTP OK? (New Branch)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Revalidation Not Technical? (New Branch)": {
+        "main": [
+          [
+            {
+              "node": "Fresh Candidate Matches (New Branch)",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Respond - REVALIDATION_FAILED",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Write Authorized? (New Branch)": {
+        "main": [
+          [
+            {
+              "node": "Create Missing Branch",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Respond - Candidate Drifted",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Fresh Candidate Matches (New Branch)": {
+        "main": [
+          [
+            {
+              "node": "Write Authorized? (New Branch)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Branch Created Exactly?": {
+        "main": [
+          [
+            {
+              "node": "Write File To Branch",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Respond - BRANCH_CREATE_FAILED",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Create Missing Branch": {
+        "main": [
+          [
+            {
+              "node": "Branch Created Exactly?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Write Succeeded?": {
+        "main": [
+          [
+            {
+              "node": "Revalidate Before Write (PR)",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Respond - Write Conflict",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Write File To Branch": {
+        "main": [
+          [
+            {
+              "node": "Write Succeeded?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Revalidation HTTP OK? (Reuse)": {
+        "main": [
+          [
+            {
+              "node": "Revalidation Not Technical? (Reuse)",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Respond - REVALIDATION_FAILED",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Revalidate Before Write (Reuse)": {
+        "main": [
+          [
+            {
+              "node": "Revalidation HTTP OK? (Reuse)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Revalidation Not Technical? (Reuse)": {
+        "main": [
+          [
+            {
+              "node": "Fresh Candidate Matches (Reuse)",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Respond - REVALIDATION_FAILED",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Write Authorized? (Reuse)": {
+        "main": [
+          [
+            {
+              "node": "Revalidate Before Write (PR)",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Respond - Candidate Drifted",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Fresh Candidate Matches (Reuse)": {
+        "main": [
+          [
+            {
+              "node": "Write Authorized? (Reuse)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Revalidation HTTP OK? (PR)": {
+        "main": [
+          [
+            {
+              "node": "Revalidation Not Technical? (PR)",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Respond - REVALIDATION_FAILED",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Revalidate Before Write (PR)": {
+        "main": [
+          [
+            {
+              "node": "Revalidation HTTP OK? (PR)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Revalidation Not Technical? (PR)": {
+        "main": [
+          [
+            {
+              "node": "Fresh Candidate Matches (PR)",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Respond - REVALIDATION_FAILED",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Write Authorized? (PR)": {
+        "main": [
+          [
+            {
+              "node": "Authorized Branch Snapshot",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Respond - Candidate Drifted",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Fresh Candidate Matches (PR)": {
+        "main": [
+          [
+            {
+              "node": "Write Authorized? (PR)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Authorized Branch Snapshot OK?": {
+        "main": [
+          [
+            {
+              "node": "Authorized Branch Snapshot Valid?",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Respond - Branch Content Conflict",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Authorized Branch Snapshot": {
+        "main": [
+          [
+            {
+              "node": "Authorized Branch Snapshot OK?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Authorized Branch Snapshot Valid?": {
+        "main": [
+          [
+            {
+              "node": "Authorized Branch Commit",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Respond - Branch Content Conflict",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Authorized Branch Commit OK?": {
+        "main": [
+          [
+            {
+              "node": "Authorized Branch Commit Valid?",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Respond - Branch Content Conflict",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Authorized Branch Commit": {
+        "main": [
+          [
+            {
+              "node": "Authorized Branch Commit OK?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Authorized Branch Commit Valid?": {
+        "main": [
+          [
+            {
+              "node": "Evaluated Base Tree",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Respond - Branch Content Conflict",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Evaluated Base Tree OK?": {
+        "main": [
+          [
+            {
+              "node": "Authorized Branch Tree",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Respond - Branch Content Conflict",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Evaluated Base Tree": {
+        "main": [
+          [
+            {
+              "node": "Evaluated Base Tree OK?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Authorized Branch Tree OK?": {
+        "main": [
+          [
+            {
+              "node": "Exact Authorized Tree",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Respond - Branch Content Conflict",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Authorized Branch Tree": {
+        "main": [
+          [
+            {
+              "node": "Authorized Branch Tree OK?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Exact Authorized Tree?": {
+        "main": [
+          [
+            {
+              "node": "Authorized Candidate Blob",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Respond - Branch Content Conflict",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Exact Authorized Tree": {
+        "main": [
+          [
+            {
+              "node": "Exact Authorized Tree?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Authorized Candidate Blob OK?": {
+        "main": [
+          [
+            {
+              "node": "Exact Authorized Bytes",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Respond - Branch Content Conflict",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Authorized Candidate Blob": {
+        "main": [
+          [
+            {
+              "node": "Authorized Candidate Blob OK?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Exact Authorized Bytes?": {
+        "main": [
+          [
+            {
+              "node": "Search Existing PR For Branch",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Respond - Branch Content Conflict",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Exact Authorized Bytes": {
+        "main": [
+          [
+            {
+              "node": "Exact Authorized Bytes?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Search Existing PR For Branch OK?": {
+        "main": [
+          [
+            {
+              "node": "Trusted Existing PR State",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Respond - PR_LOOKUP_FAILED",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Search Existing PR For Branch": {
+        "main": [
+          [
+            {
+              "node": "Search Existing PR For Branch OK?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "PR Lookup Valid?": {
+        "main": [
+          [
+            {
+              "node": "No Existing PR?",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Respond - PR_LOOKUP_INVALID",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Trusted Existing PR State": {
+        "main": [
+          [
+            {
+              "node": "PR Lookup Valid?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "No Existing PR?": {
+        "main": [
+          [
+            {
+              "node": "Final Repository Metadata",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Existing PR Merged?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Existing PR Merged?": {
+        "main": [
+          [
+            {
+              "node": "Respond - Already Merged",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Existing PR Open?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Existing PR Open?": {
+        "main": [
+          [
+            {
+              "node": "Respond - PR Reused",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Respond - Closed Not Merged",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Final Repository Metadata OK?": {
+        "main": [
+          [
+            {
+              "node": "Final Trusted Default Branch",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Respond - DEFAULT_BRANCH_UNRESOLVABLE",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Final Repository Metadata": {
+        "main": [
+          [
+            {
+              "node": "Final Repository Metadata OK?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Final Default Branch Valid?": {
+        "main": [
+          [
+            {
+              "node": "Final Default Branch Head",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Respond - DEFAULT_BRANCH_DRIFTED",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Final Trusted Default Branch": {
+        "main": [
+          [
+            {
+              "node": "Final Default Branch Valid?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Final Default Branch Head OK?": {
+        "main": [
+          [
+            {
+              "node": "Final Head Valid?",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Respond - DEFAULT_BRANCH_UNRESOLVABLE",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Final Default Branch Head": {
+        "main": [
+          [
+            {
+              "node": "Final Default Branch Head OK?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Final Head Valid?": {
+        "main": [
+          [
+            {
+              "node": "Final Compare Ancestry",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Respond - DEFAULT_BRANCH_UNRESOLVABLE",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Final Compare Ancestry OK?": {
+        "main": [
+          [
+            {
+              "node": "Final Ancestry Evidence",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Respond - ANCESTRY_UNRESOLVABLE",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Final Compare Ancestry": {
+        "main": [
+          [
+            {
+              "node": "Final Compare Ancestry OK?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Final Ancestry Valid?": {
+        "main": [
+          [
+            {
+              "node": "Final Security Branch Ref",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Respond - ANCESTRY_INVALID",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Final Ancestry Evidence": {
+        "main": [
+          [
+            {
+              "node": "Final Ancestry Valid?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Final Security Branch Ref OK?": {
+        "main": [
+          [
+            {
+              "node": "Authorized Branch Unchanged?",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Respond - Branch Content Conflict",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Final Security Branch Ref": {
+        "main": [
+          [
+            {
+              "node": "Final Security Branch Ref OK?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Authorized Branch Unchanged?": {
+        "main": [
+          [
+            {
+              "node": "Create Pull Request",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Respond - Branch Content Conflict",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "PR Created?": {
+        "main": [
+          [
+            {
+              "node": "Respond - PR Created",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Respond - PR_CREATE_FAILED",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Create Pull Request": {
+        "main": [
+          [
+            {
+              "node": "PR Created?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "settings": {
+      "executionOrder": "v1"
+    },
+    "meta": {
+      "instanceId": "wf6SecurityRemediationMavenV1"
+    },
+    "versionMetadata": {
+      "note": "Offline only. Concurrent create conflict fails cleanly. Transport write failure never assumes success. PR base evidence is refreshed in this execution; GitHub PR creation offers no atomic ref lock."
+    }
+  }
+]
