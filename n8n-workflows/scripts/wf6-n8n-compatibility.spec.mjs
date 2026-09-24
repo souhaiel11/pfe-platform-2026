@@ -6,8 +6,9 @@ import {readFileSync} from 'node:fs';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {test} from 'node:test';
+import vm from 'node:vm';
 const prefix=process.argv[2] || '/tmp/wf6-';
-const sources = Object.fromEntries(['n8n-package.json','HttpRequest.js','HttpRequestV3.js','HttpDescription.js','IfV2.js','Code.js','js-task-runner.js','RespondToWebhook.js','Webhook.js'].map(name=>[name,readFileSync(prefix+name,'utf8')]));
+const sources = Object.fromEntries(['n8n-package.json','HttpRequest.js','HttpRequestV3.js','HttpDescription.js','IfV2.js','Code.js','js-task-runner.js','RespondToWebhook.js','Webhook.js','WebhookUtils.js'].map(name=>[name,readFileSync(prefix+name,'utf8')]));
 const [w]=JSON.parse(readFileSync(new URL('../pending-live-update/wf6-security-remediation-maven.OFFLINE-DRAFT.json',import.meta.url)));
 test('audit uses n8n 2.14.2 source',()=>assert.equal(JSON.parse(sources['n8n-package.json']).version,'2.14.2'));
 test('all emitted node versions supported, workflow inactive',()=>{
@@ -50,3 +51,32 @@ test('respondToWebhook JSON mode is available and webhook waits for response nod
  for(const n of w.nodes.filter(n=>n.type.endsWith('.respondToWebhook')))assert.equal(n.parameters.respondWith,'json');
 });
 console.log('N8N_STATIC_SOURCE_SHA256 = '+JSON.stringify(Object.fromEntries(Object.entries(sources).map(([name,s])=>[name,createHash('sha256').update(s).digest('hex')]))));
+
+// Exercise the installed 2.14.2 authentication function with synthetic headers
+// and synthetic credentials. This never calls n8n or its Webhook endpoint.
+const authSource=sources['WebhookUtils.js'];
+const authFunction=authSource.slice(authSource.indexOf('async function validateWebhookAuthentication('),authSource.indexOf('async function handleFormData('));
+assert.ok(authFunction.startsWith('async function validateWebhookAuthentication('));
+class AuthError extends Error {constructor(code,message){super(message);this.responseCode=code;}}
+const validateInbound=vm.runInNewContext('('+authFunction+')',{error_1:{WebhookAuthorizationError:AuthError}});
+const hook=w.nodes.find(n=>n.type.endsWith('.webhook'));
+function authContext(headers,missing=false){return {
+ getNodeParameter:()=>hook.parameters.authentication,getRequestObject:()=>({headers}),getHeaderData:()=>headers,
+ getCredentials:async type=>{assert.equal(type,'httpHeaderAuth');if(missing)throw new Error('missing offline credential');return {name:'X-WF6-Offline-Test',value:'offline-only-fixture'};},
+};}
+for(const [label,headers] of [['anonymous',{}],['invalid',{'x-wf6-offline-test':'wrong'}]])test(`${label} header auth rejected before business flow`,async()=>{
+ let businessCalls=0;await assert.rejects(async()=>{await validateInbound(authContext(headers),'authentication');businessCalls++;},e=>e.responseCode===403);assert.equal(businessCalls,0);
+});
+test('valid synthetic managed header auth allows entry, no real workflow execution',async()=>{
+ let businessCalls=0;await validateInbound(authContext({'x-wf6-offline-test':'offline-only-fixture'}),'authentication');businessCalls++;assert.equal(businessCalls,1);
+});
+test('unavailable managed inbound credential fails closed',async()=>{
+ await assert.rejects(validateInbound(authContext({},true),'authentication'),e=>e.responseCode===500);
+});
+test('native Webhook auth rejects once before output is prepared; managed GitHub HTTP supported',()=>{
+ assert.equal(hook.parameters.authentication,'headerAuth');assert.ok(hook.credentials.httpHeaderAuth.id);
+ const s=sources['Webhook.js'];assert.ok(s.indexOf('await this.validateAuth(context)')<s.indexOf('const prepareOutput'));
+ assert.match(s,/resp.writeHead\(error.responseCode/);assert.match(s,/resp.end\(error.message\)/);assert.match(s,/return \{ noWebhookResponse: true \}/);
+ assert.match(sources['HttpRequestV3.js'],/authentication === 'predefinedCredentialType'/);
+ assert.match(sources['HttpRequestV3.js'],/this.helpers.requestWithAuthentication.call\(this, nodeCredentialType/);
+});

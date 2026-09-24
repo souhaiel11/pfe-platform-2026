@@ -22,15 +22,15 @@ const candidate = {
 };
 const envelope = (body, statusCode = 200) => ({ statusCode, body, headers: {} });
 const branch = (name, sha) => ({ ref: `refs/heads/${name}`, object: { type: 'commit', sha } });
-const pr = state => ({ state, html_url: 'https://github.com/trusted/repository/pull/12', merged_at: null,
- head: { ref: candidate.branchName, repo: { full_name: candidate.repository } },
+const pr = state => ({ number:12, state, html_url: 'https://github.com/trusted/repository/pull/12', merged_at: null,
+ head: { ref: candidate.branchName, sha:securityHead, repo: { full_name: candidate.repository } },
  base: { ref: 'release/stable', repo: { full_name: candidate.repository } } });
 const tree = (sha, fileSha) => ({sha, truncated: false, tree: [
  {path:'pom.xml',mode:'100644',type:'blob',sha:fileSha},
  {path:'README.md',mode:'100644',type:'blob',sha:'f'.repeat(40)},
 ]});
 function fixtures(existing = false) {
- return {
+ const f = {
   'Evaluate Security Remediation': envelope(structuredClone(candidate), 201),
   'Verify Base Commit Still Exists': envelope({sha:evaluated,commit:{tree:{sha:baseTreeSha}}}),
   'Initial Repository Metadata': envelope({default_branch:'release/stable', repository: 'evil/overwrite', candidateManifest: 'not authority'}),
@@ -50,16 +50,28 @@ function fixtures(existing = false) {
   'Evaluated Base Tree': envelope(tree(baseTreeSha,blobSha(oldContent))),
   'Authorized Branch Tree': envelope(tree(branchTreeSha,blobSha(content))),
   'Authorized Candidate Blob': envelope({sha:blobSha(content),encoding:'base64',size:Buffer.byteLength(content),content:Buffer.from(content).toString('base64')}),
-  'Search Existing PR For Branch': envelope([]),
+  'Early Historical PR Lookup': envelope([]),
+  'Final PR Lookup': envelope([]),
   'Final Security Branch Ref': envelope(branch(candidate.branchName,securityHead)),
   'Create Pull Request': envelope(pr('open'),201),
+  'Recheck Historical PR': envelope(pr('open')),
+  'Close Drifted Created PR': envelope(pr('closed')),
+  'Verify Drifted PR Closed': envelope(pr('closed')),
  };
+ for(const name of ['Authorized Branch Commit','Evaluated Base Tree','Authorized Branch Tree','Authorized Candidate Blob'])f['Historical '+name]=structuredClone(f[name]);
+ return f;
 }
+function historical(state='open', merged=false) {
+ const f=fixtures(false),p=pr(state);if(merged)p.merged_at='2026-01-01T00:00:00Z';
+ f['Early Historical PR Lookup']=envelope([structuredClone(p)]);f['Recheck Historical PR']=envelope(structuredClone(p));return f;
+}
+function cleanupFixture() {const f=fixtures();f['Create Pull Request'].body.head.sha='9'.repeat(40);return f;}
+
 const isWrite = n => n.type.endsWith('.httpRequest') && n.parameters.method !== 'GET' && n.parameters.url.includes('api.github.com');
 function run(responses = fixtures(), caller = {}) {
  let name = start, json = {body:{projectId:'project',findingTaskId:'finding', ...caller}};
  const history = new Map(), visited = [], writes = [], calls = [], output = [];
- const context = vm.createContext({Buffer, $env:{BACKEND_INTERNAL_URL:'http://offline-backend:3001',N8N_INTERNAL_SECRET:'TEST_INTERNAL_SECRET',GITHUB_TOKEN:'TEST_GITHUB_TOKEN'},
+ const context = vm.createContext({Buffer, $env:{BACKEND_INTERNAL_URL:'http://offline-backend:3001',N8N_INTERNAL_SECRET:'TEST_INTERNAL_SECRET'},
   $: key => ({first:() => ({json:history.get(key)})})});
  const ev = text => { context.$json = json; return vm.runInContext('(' + text.slice(3,-2) + ')', context, {timeout:1000}); };
  while(name) {
@@ -126,7 +138,7 @@ test('K: unrelated changed tree entry fails closed',()=>{const f=fixtures(true);
 test('K: truncated tree fails closed',()=>{const f=fixtures(true);f['Authorized Branch Tree'].body.truncated=true;expect(f,'BRANCH_CONTENT_CONFLICT',0);});
 test('L: write conflict responds, no PR or retry',()=>{const f=fixtures();f['Write File To Branch']=envelope({},409);zeroPr(expect(f,'WRITE_CONFLICT',2));});
 for(const [label,state,merged,response] of [['M','open',false,'PR_REUSED'],['N','closed',true,'ALREADY_MERGED'],['O','closed',false,'CLOSED_NOT_MERGED']]) test(`${label}: exact existing PR lifecycle`,()=>{
- const f=fixtures(true),p=pr(state);if(merged)p.merged_at='2026-01-01T00:00:00Z';f['Search Existing PR For Branch']=envelope([p]);expect(f,response,0);
+ expect(historical(state,merged),response,0);
 });
 test('Q: hostile caller has no repo, branch, path, version or patch authority',()=>{
  const r=run(fixtures(),{repository:'evil/repo',branchName:'main',path:'other',targetVersion:'evil',content:'evil',default_branch:'evil'});
@@ -161,16 +173,17 @@ test('all HTTP errors have explicit safe continuation; credentials confined; no 
   assert.equal(n.parameters.options.response.response.fullResponse,true);assert.equal(n.parameters.options.response.response.neverError,true);
   assert.equal(n.parameters.options.redirect.redirect.followRedirects,false);
   const h=n.parameters.headerParameters.parameters.map(h=>h.name.toLowerCase());
-  if(n.parameters.url.includes('api.github.com')){assert.ok(h.includes('authorization'));assert.ok(!h.includes('x-internal-secret'));}
+  if(n.parameters.url.includes('api.github.com')){assert.equal(n.parameters.authentication,'predefinedCredentialType');assert.equal(n.parameters.nodeCredentialType,'githubApi');assert.ok(n.credentials.githubApi.id);assert.ok(!h.includes('authorization'));assert.ok(!h.includes('x-internal-secret'));}
   else{assert.ok(h.includes('x-internal-secret'));assert.ok(!h.includes('authorization'));}
  }
 });
 for(const name of Object.keys(fixtures())) test(`transport failure at ${name}: one response, no later PR write`,()=>{
- const f=fixtures(name==='Revalidate Before Write (Reuse)');f[name]={error:'secret or raw arbitrary transport detail'};
+ const f=name.startsWith('Historical ')||name==='Recheck Historical PR'?historical():['Close Drifted Created PR','Verify Drifted PR Closed'].includes(name)?cleanupFixture():fixtures(name==='Revalidate Before Write (Reuse)');f[name]={error:'secret or raw arbitrary transport detail'};
+ if(name==='Close Drifted Created PR')f['Verify Drifted PR Closed']={error:'readback unavailable'};
  const r=run(f);assert.notEqual(r.response.state,'PR_CREATED');
  assert.doesNotMatch(JSON.stringify(r.response),/secret or raw/);
  assert.equal(r.calls.filter(c=>c.name===name).length,1);
- if(name!=='Create Pull Request')zeroPr(r);
+ if(!['Create Pull Request','Close Drifted Created PR','Verify Drifted PR Closed'].includes(name))zeroPr(r);
 });
 for(const field of ['repository','branchName','candidateIdentity','decision','candidateManifest']) test(`revalidation cannot change ${field}`,()=>{
  const f=fixtures();f['Revalidate Before Write (New Branch)'].body[field]=field==='candidateManifest'?{files:[{...candidate.candidateManifest.files[0],content:'different'}]}:'different';
@@ -183,8 +196,8 @@ test('default branch name drift never silently changes PR base',()=>{const f=fix
 test('default tip advances safely while evaluated SHA stays ancestor',()=>{const f=fixtures();f['Final Default Branch Head'].body.object.sha='9'.repeat(40);expect(f,'PR_CREATED');});
 test('default history rewritten after initial evidence fails closed',()=>{const f=fixtures();f['Final Compare Ancestry'].body.status='diverged';zeroPr(expect(f,'TECHNICAL_FAILURE'));});
 test('security branch changes after exact content proof: no PR',()=>{const f=fixtures();f['Final Security Branch Ref'].body.object.sha='9'.repeat(40);zeroPr(expect(f,'BRANCH_CONTENT_CONFLICT'));});
-test('wrong PR base or head repository never reused',()=>{const f=fixtures(true),p=pr('open');p.base.ref='other';f['Search Existing PR For Branch']=envelope([p]);expect(f,'TECHNICAL_FAILURE',0);});
-test('non-array PR lookup is not interpreted as absent',()=>{const f=fixtures();f['Search Existing PR For Branch']=envelope({message:'bad'});zeroPr(expect(f,'TECHNICAL_FAILURE'));});
+test('wrong PR base or head repository never reused',()=>{const f=fixtures(true),p=pr('open');p.base.ref='other';f['Final PR Lookup']=envelope([p]);expect(f,'TECHNICAL_FAILURE',0);});
+test('non-array PR lookup is not interpreted as absent',()=>{const f=fixtures();f['Final PR Lookup']=envelope({message:'bad'});zeroPr(expect(f,'TECHNICAL_FAILURE'));});
 test('missing evaluated SHA fails closed before any GitHub write',()=>{const f=fixtures();delete f['Evaluate Security Remediation'].body.decision.evaluatedSha;expect(f,'TECHNICAL_FAILURE',0);});
 test('missing/wrong merge base fails ancestry proof',()=>{const f=fixtures();delete f['Initial Compare Ancestry'].body.merge_base_commit;expect(f,'TECHNICAL_FAILURE',0);});
 
@@ -217,4 +230,100 @@ test('invalid UTF-8 bytes cannot pass via lossy string decoding',()=>{
 });
 test('pre-write original blob SHA conflict cannot lead to PR',()=>{
  const f=fixtures();f['Write File To Branch']=envelope({message:'sha mismatch'},422);zeroPr(expect(f,'WRITE_CONFLICT'));
+});
+
+// V1.6: managed auth and lifecycle/race containment, all HTTP stubbed.
+test('managed inbound header credential is the established WF1 pattern, no anonymous artifact',()=>{
+ const hook=nodes.get(start);assert.equal(hook.parameters.authentication,'headerAuth');
+ assert.deepEqual(hook.credentials,{httpHeaderAuth:{id:'c94e1a451dec86a4a7a351d4',name:'Jenkins WF1 Callback'}});
+ assert.deepEqual(Object.keys(hook.credentials.httpHeaderAuth).sort(),['id','name']);
+ const source=readFileSync(new URL('./build-wf6-security-remediation.mjs',import.meta.url),'utf8');
+ assert.doesNotMatch(source,/GITHUB_TOKEN/);assert.doesNotMatch(JSON.stringify(w),/GITHUB_TOKEN/);
+ for(const n of w.nodes.filter(n=>n.parameters.url?.includes('api.github.com'))){assert.deepEqual(n.credentials,{githubApi:{id:'YBO0vWrPlyoYx4Kr',name:'GitHub n8n'}});assert.equal(n.parameters.nodeCredentialType,'githubApi');}
+});
+test('early NONE is required before every write; PR revalidation dominates create and cleanup',()=>{
+ for(const f of [fixtures(),fixtures(true),cleanupFixture()]){
+  const r=run(f);for(const name of r.writes){
+   assert.ok(r.visited.indexOf('No Historical PR?')<r.visited.indexOf(name));
+   const guard=['Create Missing Branch','Write File To Branch'].includes(name)?'Write Authorized? (New Branch)':'Write Authorized? (PR)';
+   assert.ok(r.visited.indexOf(guard)>=0&&r.visited.indexOf(guard)<r.visited.indexOf(name));
+  }
+ }
+});
+test('two PR lookups remain on normal preparation path, in required order',()=>{
+ const r=run();const at=n=>r.visited.indexOf(n);
+ assert.ok(at('Early Historical PR Lookup')<at('Create Missing Branch'));
+ assert.ok(at('Write File To Branch')<at('Final PR Lookup'));
+ assert.ok(at('Final PR Lookup')<at('Create Pull Request'));
+ assert.equal(r.history.get('Authorized Head').AUTHORIZED_HEAD_SHA,securityHead);
+});
+for(const state of ['open','closed','merged'])test(`historical ${state}, branch absent, exact immutable candidate: zero mutations`,()=>{
+ const r=expect(historical(state==='open'?'open':'closed',state==='merged'),state==='open'?'PR_REUSED':state==='merged'?'ALREADY_MERGED':'CLOSED_NOT_MERGED',0);
+ assert.ok(!r.visited.includes('Get Branch Ref'));assert.ok(!r.visited.includes('Revalidate Before Write (New Branch)'));
+ assert.equal(r.history.get('Historical Authorized Head').AUTHORIZED_HEAD_SHA,securityHead);
+});
+for(const bad of [undefined,'bad','9'.repeat(39)])test(`historical invalid head SHA ${bad}: no write`,()=>{
+ const f=historical();f['Early Historical PR Lookup'].body[0].head.sha=bad;expect(f,'PR_HEAD_SHA_MISMATCH',0);
+});
+test('historical immutable commit must equal the PR head requested',()=>{
+ const f=historical();f['Historical Authorized Branch Commit'].body.sha='9'.repeat(40);expect(f,'BRANCH_CONTENT_CONFLICT',0);
+});
+for(const field of ['headRef','headRepo','baseRef','baseRepo','number','url','lifecycle'])test(`historical PR wrong ${field}: no write`,()=>{
+ const f=historical(),p=f['Early Historical PR Lookup'].body[0];
+ if(field==='headRef')p.head.ref='wrong';if(field==='headRepo')p.head.repo.full_name='other/repo';
+ if(field==='baseRef')p.base.ref='wrong';if(field==='baseRepo')p.base.repo.full_name='other/repo';
+ if(field==='number')p.number=0;if(field==='url')p.html_url='https://github.com/other/repo/pull/12';if(field==='lifecycle')p.merged_at='invalid';
+ expect(f,'TECHNICAL_FAILURE',0);
+});
+test('historical candidate bytes mismatch: zero mutation',()=>{
+ const f=historical();f['Historical Authorized Candidate Blob'].body.content=Buffer.from('unauthorized').toString('base64');expect(f,'BRANCH_CONTENT_CONFLICT',0);
+});
+test('historical unrelated tree change: zero mutation',()=>{
+ const f=historical();f['Historical Authorized Branch Tree'].body.tree[1].sha='9'.repeat(40);expect(f,'BRANCH_CONTENT_CONFLICT',0);
+});
+test('historical truncated tree: zero mutation',()=>{
+ const f=historical();f['Historical Authorized Branch Tree'].body.truncated=true;expect(f,'BRANCH_CONTENT_CONFLICT',0);
+});
+test('historical PR head changes while proving immutable content: no reuse/write',()=>{
+ const f=historical();f['Recheck Historical PR'].body.head.sha='9'.repeat(40);expect(f,'PR_HEAD_SHA_MISMATCH',0);
+});
+test('concurrent PR appears between early/final lookups: reused without a second create',()=>{
+ const f=fixtures();f['Final PR Lookup']=envelope([pr('open')]);const r=expect(f,'PR_REUSED',2);zeroPr(r);
+});
+test('final PR correct branch but wrong head SHA: no new PR',()=>{
+ const f=fixtures(true),p=pr('open');p.head.sha='9'.repeat(40);f['Final PR Lookup']=envelope([p]);expect(f,'PR_HEAD_SHA_MISMATCH',0);
+});
+test('post-read head race: close only just-created drifted PR, verify closure, never retry',()=>{
+ const r=expect(cleanupFixture(),'PR_HEAD_DRIFTED',4);
+ assert.equal(r.calls.filter(c=>c.name==='Create Pull Request').length,1);
+ const close=r.calls.find(c=>c.name==='Close Drifted Created PR');assert.equal(close.url,'https://api.github.com/repos/trusted/repository/pulls/12');assert.equal(close.body.state,'closed');
+ assert.equal(r.calls.filter(c=>c.name==='Close Drifted Created PR').length,1);assert.ok(r.visited.includes('Verify Drifted PR Closed'));
+});
+for(const field of ['headRef','headRepo','headSha','baseRef','baseRepo'])test(`created PR wrong ${field} is never accepted and is closed`,()=>{
+ const f=fixtures(),p=f['Create Pull Request'].body;
+ if(field==='headRef')p.head.ref='wrong';if(field==='headRepo')p.head.repo.full_name='other/repo';if(field==='headSha')delete p.head.sha;
+ if(field==='baseRef')p.base.ref='wrong';if(field==='baseRepo')p.base.repo.full_name='other/repo';expect(f,'PR_HEAD_DRIFTED',4);
+});
+test('unsafe create response identity cannot close an arbitrary PR',()=>{
+ const f=cleanupFixture();f['Create Pull Request'].body.html_url='https://github.com/other/repo/pull/12';const r=expect(f,'TECHNICAL_FAILURE',3);
+ assert.ok(!r.writes.includes('Close Drifted Created PR'));
+});
+for(const variant of ['patch500','get500','stillOpen','wrongNumber','wrongUrl','merged'])test(`drift cleanup ${variant}: bounded manual-intervention response`,()=>{
+ const f=cleanupFixture();
+ if(variant==='patch500'){f['Close Drifted Created PR']=envelope({},500);f['Verify Drifted PR Closed']=envelope(pr('open'));}
+ if(variant==='get500')f['Verify Drifted PR Closed']=envelope({},500);
+ if(variant==='stillOpen')f['Verify Drifted PR Closed']=envelope(pr('open'));
+ if(variant==='wrongNumber')f['Verify Drifted PR Closed'].body.number=77;
+ if(variant==='wrongUrl')f['Verify Drifted PR Closed'].body.html_url='https://github.com/other/repo/pull/12';
+ if(variant==='merged')f['Verify Drifted PR Closed'].body.merged_at='2026-01-01T00:00:00Z';
+ const r=expect(f,'PR_HEAD_DRIFT_CLEANUP_FAILED',4);assert.equal(r.response.pullRequestNumber,12);assert.equal(r.response.pullRequestUrl,'https://github.com/trusted/repository/pull/12');
+});
+test('ambiguous close transport is resolved ONLY by proven GET closure',()=>{
+ const f=cleanupFixture();f['Close Drifted Created PR']={error:'transport uncertain'};expect(f,'PR_HEAD_DRIFTED',4);
+});
+test('identical replay with exact historical PR performs zero mutations',()=>{
+ const first=expect(fixtures(),'PR_CREATED',3);assert.ok(first.response.pullRequestUrl);expect(historical(),'PR_REUSED',0);
+});
+for(const status of ['NOT_ELIGIBLE','TECHNICAL_FAILURE','CANDIDATE_DRIFTED','GUARD_REJECTED'])test(`fresh ${status} prevents first mutation`,()=>{
+ const f=fixtures();f['Revalidate Before Write (New Branch)']=envelope({status});const r=run(f);assert.equal(r.writes.length,0);assert.notEqual(r.response.state,'PR_CREATED');
 });

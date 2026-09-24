@@ -1,9 +1,13 @@
 #!/usr/bin/env node
-// V1.5.1. Offline only. Fixed IDs/order, no clock, no network, no import.
+// V1.6. Offline only. Fixed IDs/order, no clock, no network, no import.
 // Code nodes validate transport/trust boundaries; they never author a patch.
 import { writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 const output = fileURLToPath(new URL('../pending-live-update/wf6-security-remediation-maven.OFFLINE-DRAFT.json', import.meta.url));
+// Stable public references read from live WF6 and the established WF1 header-auth
+// webhook. Credential data stays in n8n storage; never export/decrypt it here.
+const githubCredential = { id: 'YBO0vWrPlyoYx4Kr', name: 'GitHub n8n' };
+const inboundCredential = { id: 'c94e1a451dec86a4a7a351d4', name: 'Jenkins WF1 Callback' };
 const nodes = [], connections = {};
 const expr = s => '={{ ' + s + ' }}';
 const ref = name => `$("${name}").first().json`;
@@ -51,22 +55,23 @@ function http(name, method, url, body, backend = false) {
     method, url: expr(url), sendHeaders: true,
     headerParameters: { parameters: backend
       ? [{ name: 'X-Internal-Secret', value: '={{$env.N8N_INTERNAL_SECRET}}' }]
-      : [{ name: 'Authorization', value: '={{"Bearer " + $env.GITHUB_TOKEN}}' }, { name: 'Accept', value: 'application/vnd.github+json' }] },
+      : [{ name: 'Accept', value: 'application/vnd.github+json' }] },
+    ...(!backend ? { authentication: 'predefinedCredentialType', nodeCredentialType: 'githubApi' } : {}),
     ...(body ? { sendBody: true, contentType: 'json', specifyBody: 'json', jsonBody: expr(body) } : {}),
     options: { response: { response: { fullResponse: true, neverError: true, responseFormat: 'json' } },
       redirect: { redirect: { followRedirects: false } }, timeout: 30000 },
-  }, 4.2, { continueOnFail: true, retryOnFail: false,
+  }, 4.2, { continueOnFail: true, retryOnFail: false, ...(!backend ? { credentials: { githubApi: githubCredential } } : {}),
     notes: 'Full response keeps arrays in body (including empty PR lists). HTTP and transport errors are explicitly gated. No redirect or automatic retry.' });
 }
 function get(name, tail, previous, failure = fail('GITHUB_READ_FAILED')) {
   const n = http(name, 'GET', `${github} + ${tail}`);
-  link(previous, n);
+  if (previous) link(previous, n);
   const ok = gate(`${name} OK?`, '$json.statusCode === 200 && !$json.error', failure);
   link(n, ok); return ok;
 }
 const webhook = add('Webhook - Security Remediation Request', 'webhook', {
-  httpMethod: 'POST', path: 'wf6-security-remediation-evaluate', responseMode: 'responseNode', options: {},
-}, 2);
+  httpMethod: 'POST', path: 'wf6-security-remediation-evaluate', authentication: 'headerAuth', responseMode: 'responseNode', options: {},
+}, 2, { credentials: { httpHeaderAuth: inboundCredential } });
 const request = `({projectId: ${ref(webhook)}.body?.projectId, findingTaskId: ${ref(webhook)}.body?.findingTaskId})`;
 const evaluate = http('Evaluate Security Remediation', 'POST', '$env.BACKEND_INTERNAL_URL + "/api/internal/security-remediation/evaluate"', request, true);
 link(webhook, evaluate);
@@ -135,15 +140,6 @@ return [{json: {ok: valid, repositoryDefaultBranch: ${branch}.repositoryDefaultB
   const ancestryOk = gate(`${prefix} Ancestry Valid?`, '$json.ok === true', fail('ANCESTRY_INVALID'));
   link(evidence, ancestryOk); return ancestryOk;
 }
-const initialBase = resolveBase('Initial', baseOk);
-const branchRead = http('Get Branch Ref', 'GET', `${github} + "/git/ref/heads/" + encodeURIComponent(${C}.branchName)`);
-link(initialBase, branchRead);
-const branchReadOk = gate('Branch Lookup Resolved?', '($json.statusCode === 200 || $json.statusCode === 404) && !$json.error', fail('BRANCH_LOOKUP_FAILED'));
-link(branchRead, branchReadOk);
-const branchExists = gate('Branch Exists?', '$json.statusCode === 200', 'Revalidate Before Write (New Branch)');
-link(branchReadOk, branchExists);
-const branchExact = gate('Existing Branch Ref Valid?', `$json.body?.ref === "refs/heads/" + ${C}.branchName && $json.body?.object?.type === "commit" && ${sha('$json.body?.object?.sha')}`, branchConflict);
-link(branchExists, branchExact);
 function revalidate(label, previous) {
   const n = http(`Revalidate Before Write (${label})`, 'POST', '$env.BACKEND_INTERNAL_URL + "/api/internal/security-remediation/revalidate"',
     `({...${request}, expectedCandidateIdentity: ${C}.candidateIdentity})`, true);
@@ -165,6 +161,110 @@ return [{json: {ok}}];`);
   const allowed = gate(`Write Authorized? (${label})`, '$json.ok === true', drifted);
   link(valid, allowed); return allowed;
 }
+
+// V1.6 lifecycle and immutable-proof builders follow.
+
+const headMismatch = response('Respond - PR Head SHA Mismatch', 'PR_HEAD_SHA_MISMATCH');
+// This function is used by historical and post-write proof paths; same exact
+// tree/blob policy, immutable head commit lookup, no version-only shortcuts.
+function immutableProof(prefix, snapshotOk, S) {
+ const name = n => prefix ? prefix + ' ' + n : n;
+const commit = get(name('Authorized Branch Commit'), `"/git/commits/" + ${S}`, snapshotOk, branchConflict);
+const commitOk = gate(name('Authorized Branch Commit Valid?'), `$json.body?.sha === ${S} && ${sha('$json.body?.tree?.sha')}`, branchConflict);
+link(commit, commitOk);
+const baseTree = get(name('Evaluated Base Tree'), `"/git/trees/" + ${ref('Verify Base Commit Still Exists')}.body.commit.tree.sha + "?recursive=1"`, commitOk, branchConflict);
+const branchTree = get(name('Authorized Branch Tree'), `"/git/trees/" + ${ref(name('Authorized Branch Commit'))}.body.tree.sha + "?recursive=1"`, baseTree, branchConflict);
+const treeCheck = code(name('Exact Authorized Tree'), `
+const base = ${ref(name('Evaluated Base Tree'))}.body, branch = $json.body, f = ${F};
+function entries(t) {
+ if (!t || t.truncated !== false || !Array.isArray(t.tree) || t.tree.length === 0) return null;
+ const leaves = t.tree.filter(e => e.type !== 'tree');
+ if (new Set(t.tree.map(e => e.path)).size !== t.tree.length) return null;
+ if (leaves.some(e => typeof e.path !== 'string' || !/^[0-9a-f]{40}$/.test(e.sha || '') || !['blob','commit'].includes(e.type))) return null;
+ return leaves.sort((a,b) => a.path.localeCompare(b.path));
+}
+const a = entries(base), b = entries(branch);
+const original = a?.find(e => e.path === f.path), target = b?.find(e => e.path === f.path);
+const ok = base?.sha === ${ref('Verify Base Commit Still Exists')}.body.commit.tree.sha
+ && branch?.sha === ${ref(name('Authorized Branch Commit'))}.body.tree.sha
+ && a && b && a.length === b.length && original?.sha === f.originalBlobSha
+ && target?.type === 'blob' && ['100644','100755'].includes(target.mode)
+ && a.every((e,i) => e.path === b[i].path && e.type === b[i].type && e.mode === b[i].mode
+   && (e.path === f.path || e.sha === b[i].sha));
+return [{json: {ok: Boolean(ok), candidateBlobSha: ok ? target.sha : null}}];`);
+link(branchTree, treeCheck);
+const treeOk = gate(name('Exact Authorized Tree?'), '$json.ok === true', branchConflict);
+link(treeCheck, treeOk);
+const blob = get(name('Authorized Candidate Blob'), `"/git/blobs/" + ${ref(name('Exact Authorized Tree'))}.candidateBlobSha`, treeOk, branchConflict);
+const bytes = code(name('Exact Authorized Bytes'), `
+const b = $json.body, expected = Buffer.from(${F}.content, 'utf8');
+const raw = typeof b?.content === 'string' ? b.content.replace(/[\\r\\n]/g, '') : '';
+const decoded = Buffer.from(raw, 'base64');
+const ok = b?.sha === ${ref(name('Exact Authorized Tree'))}.candidateBlobSha && b.encoding === 'base64'
+ && raw === decoded.toString('base64') && decoded.equals(expected) && b.size === expected.length;
+return [{json: {ok}}];`);
+link(blob, bytes);
+const bytesOk = gate(name('Exact Authorized Bytes?'), '$json.ok === true', branchConflict);
+link(bytes, bytesOk);
+
+ const sealed = code(name('Authorized Head'), `return [{json: {AUTHORIZED_HEAD_SHA: ${S}}}];`);
+ link(bytesOk, sealed);
+ return sealed;
+}
+
+// Parse only safe PR identity fields. Ref/repository/base/URL/number/lifecycle
+// and a full immutable head SHA are required even for closed historical PRs.
+function prParser(prefix, previous, listExpression, expectedHead = null, expectedNumber = null) {
+ const n = code(`${prefix} Trusted PR State`, `
+const list = ${listExpression}, c = ${C};
+const base = ${ref('Initial Trusted Default Branch')}.repositoryDefaultBranch;
+const ok = Array.isArray(list) && list.length <= 1 && list.every(p =>
+ p && p.head?.ref === c.branchName && p.head?.repo?.full_name === c.repository
+ && p.base?.ref === base && p.base?.repo?.full_name === c.repository
+ && Number.isSafeInteger(p.number) && p.number > 0
+ && p.html_url === 'https://github.com/' + c.repository + '/pull/' + p.number
+ && ['open','closed'].includes(p.state)
+ && (p.merged_at === null || (p.state === 'closed' && typeof p.merged_at === 'string' && Number.isFinite(Date.parse(p.merged_at))))
+ ${expectedNumber ? `&& p.number === ${expectedNumber}` : ''});
+const headMatches = ok && list.every(p => ${sha('p.head?.sha')}${expectedHead ? ` && p.head.sha === ${expectedHead}` : ''});
+const p = ok && headMatches ? list[0] : null;
+return [{json: {ok, headMatches, state: !ok || !headMatches ? 'INVALID' : !p ? 'NONE' : p.merged_at ? 'MERGED' : p.state === 'open' ? 'OPEN' : 'CLOSED',
+ pullRequestUrl: p?.html_url, pullRequestNumber: p?.number, headSha: p?.head.sha}}];`);
+ link(previous, n);
+ const valid = gate(`${prefix} PR Shape Valid?`, '$json.ok === true', fail('PR_LOOKUP_INVALID'));
+ link(n, valid);
+ const head = gate(`${prefix} PR Head Valid?`, '$json.headMatches === true', headMismatch);
+ link(valid, head);
+ return { state: n, valid: head };
+}
+function lifecycle(prefix, previous, state) {
+ const p = ref(state);
+ const merged = gate(`${prefix} PR Merged?`, `${p}.state === 'MERGED'`, `${prefix} PR Open?`);
+ if (previous) link(previous, merged);
+ link(merged, response(`Respond - ${prefix} Already Merged`, 'ALREADY_MERGED'));
+ const open = gate(`${prefix} PR Open?`, `${p}.state === 'OPEN'`, response(`Respond - ${prefix} Closed Not Merged`, 'CLOSED_NOT_MERGED'));
+ link(open, response(`Respond - ${prefix} PR Reused`, 'PR_REUSED', `, pullRequestUrl: ${p}.pullRequestUrl, branchName: ${C}.branchName`));
+}
+const prQuery = `"/pulls?state=all&per_page=100&head=" + encodeURIComponent(${C}.repository.split('/')[0] + ':' + ${C}.branchName)`;
+const initialBase = resolveBase('Initial', baseOk);
+const early = get('Early Historical PR Lookup', prQuery, initialBase, fail('PR_LOOKUP_FAILED'));
+const historical = prParser('Historical', early, '$json.body');
+const noHistory = gate('No Historical PR?', '$json.state === "NONE"', 'Historical Authorized Branch Commit');
+link(historical.valid, noHistory);
+// A deleted historical branch is irrelevant: prove the immutable PR head itself.
+const historicalProof = immutableProof('Historical', null, `${ref(historical.state)}.headSha`);
+// immutableProof's initial GET is attached to the false historical lookup edge.
+const historicalRecheck = get('Recheck Historical PR', `"/pulls/" + ${ref(historical.state)}.pullRequestNumber`, historicalProof, fail('PR_LOOKUP_FAILED'));
+const historicalFinal = prParser('Historical Recheck', historicalRecheck, '[$json.body]', `${ref(historicalProof)}.AUTHORIZED_HEAD_SHA`, `${ref(historical.state)}.pullRequestNumber`);
+lifecycle('Historical', historicalFinal.valid, historicalFinal.state);
+const branchRead = http('Get Branch Ref', 'GET', `${github} + "/git/ref/heads/" + encodeURIComponent(${C}.branchName)`);
+link(noHistory, branchRead);
+const branchReadOk = gate('Branch Lookup Resolved?', '($json.statusCode === 200 || $json.statusCode === 404) && !$json.error', fail('BRANCH_LOOKUP_FAILED'));
+link(branchRead, branchReadOk);
+const branchExists = gate('Branch Exists?', '$json.statusCode === 200', 'Revalidate Before Write (New Branch)');
+link(branchReadOk, branchExists);
+const branchExact = gate('Existing Branch Ref Valid?', `$json.body?.ref === "refs/heads/" + ${C}.branchName && $json.body?.object?.type === "commit" && ${sha('$json.body?.object?.sha')}`, branchConflict);
+link(branchExists, branchExact);
 const newAuth = revalidate('New Branch');
 const createBranch = http('Create Missing Branch', 'POST', `${github} + "/git/refs"`, `({ref: "refs/heads/" + ${C}.branchName, sha: ${C}.decision.evaluatedSha})`);
 link(newAuth, createBranch);
@@ -178,85 +278,59 @@ const written = gate('Write Succeeded?', `($json.statusCode === 200 || $json.sta
 link(writeFile, written);
 const reuseAuth = revalidate('Reuse', branchExact);
 
-// Re-read after authorization/write, inspect IMMUTABLE commit/tree/blob objects.
-// Exact whole-tree equality (except the one authorized path) prevents unrelated
-// branch changes being smuggled into a PR. Truncated trees fail closed.
 const freshAuth = revalidate('PR', written);
 link(reuseAuth, 'Revalidate Before Write (PR)');
 const snapshot = get('Authorized Branch Snapshot', `"/git/ref/heads/" + encodeURIComponent(${C}.branchName)`, freshAuth, branchConflict);
 const snapshotOk = gate('Authorized Branch Snapshot Valid?', `$json.body?.ref === "refs/heads/" + ${C}.branchName && $json.body?.object?.type === "commit" && ${sha('$json.body?.object?.sha')}`, branchConflict);
 link(snapshot, snapshotOk);
-const S = `${ref('Authorized Branch Snapshot')}.body.object.sha`;
-const commit = get('Authorized Branch Commit', `"/git/commits/" + ${S}`, snapshotOk, branchConflict);
-const commitOk = gate('Authorized Branch Commit Valid?', `$json.body?.sha === ${S} && ${sha('$json.body?.tree?.sha')}`, branchConflict);
-link(commit, commitOk);
-const baseTree = get('Evaluated Base Tree', `"/git/trees/" + ${ref('Verify Base Commit Still Exists')}.body.commit.tree.sha + "?recursive=1"`, commitOk, branchConflict);
-const branchTree = get('Authorized Branch Tree', `"/git/trees/" + ${ref('Authorized Branch Commit')}.body.tree.sha + "?recursive=1"`, baseTree, branchConflict);
-const treeCheck = code('Exact Authorized Tree', `
-const base = ${ref('Evaluated Base Tree')}.body, branch = $json.body, f = ${F};
-function entries(t) {
- if (!t || t.truncated !== false || !Array.isArray(t.tree) || t.tree.length === 0) return null;
- const leaves = t.tree.filter(e => e.type !== 'tree');
- if (new Set(t.tree.map(e => e.path)).size !== t.tree.length) return null;
- if (leaves.some(e => typeof e.path !== 'string' || !/^[0-9a-f]{40}$/.test(e.sha || '') || !['blob','commit'].includes(e.type))) return null;
- return leaves.sort((a,b) => a.path.localeCompare(b.path));
-}
-const a = entries(base), b = entries(branch);
-const original = a?.find(e => e.path === f.path), target = b?.find(e => e.path === f.path);
-const ok = base?.sha === ${ref('Verify Base Commit Still Exists')}.body.commit.tree.sha
- && branch?.sha === ${ref('Authorized Branch Commit')}.body.tree.sha
- && a && b && a.length === b.length && original?.sha === f.originalBlobSha
- && target?.type === 'blob' && ['100644','100755'].includes(target.mode)
- && a.every((e,i) => e.path === b[i].path && e.type === b[i].type && e.mode === b[i].mode
-   && (e.path === f.path || e.sha === b[i].sha));
-return [{json: {ok: Boolean(ok), candidateBlobSha: ok ? target.sha : null}}];`);
-link(branchTree, treeCheck);
-const treeOk = gate('Exact Authorized Tree?', '$json.ok === true', branchConflict);
-link(treeCheck, treeOk);
-const blob = get('Authorized Candidate Blob', `"/git/blobs/" + ${ref('Exact Authorized Tree')}.candidateBlobSha`, treeOk, branchConflict);
-const bytes = code('Exact Authorized Bytes', `
-const b = $json.body, expected = Buffer.from(${F}.content, 'utf8');
-const raw = typeof b?.content === 'string' ? b.content.replace(/[\\r\\n]/g, '') : '';
-const decoded = Buffer.from(raw, 'base64');
-const ok = b?.sha === ${ref('Exact Authorized Tree')}.candidateBlobSha && b.encoding === 'base64'
- && raw === decoded.toString('base64') && decoded.equals(expected) && b.size === expected.length;
-return [{json: {ok}}];`);
-link(blob, bytes);
-const bytesOk = gate('Exact Authorized Bytes?', '$json.ok === true', branchConflict);
-link(bytes, bytesOk);
-const search = get('Search Existing PR For Branch', `"/pulls?state=all&per_page=100&head=" + encodeURIComponent(${C}.repository.split('/')[0] + ':' + ${C}.branchName)`, bytesOk, fail('PR_LOOKUP_FAILED'));
-const prState = code('Trusted Existing PR State', `
-const list = $json.body, c = ${C};
-const base = ${ref('Initial Trusted Default Branch')}.repositoryDefaultBranch;
-const valid = Array.isArray(list) && list.length <= 1 && list.every(p =>
- p.head?.ref === c.branchName && p.head?.repo?.full_name === c.repository
- && p.base?.ref === base && p.base?.repo?.full_name === c.repository
- && /^https:\\/\\/github\\.com\\/[A-Za-z0-9_.-]+\\/[A-Za-z0-9_.-]+\\/pull\\/[0-9]+$/.test(p.html_url || '')
- && p.html_url.startsWith('https://github.com/' + c.repository + '/pull/')
- && ['open','closed'].includes(p.state));
-const p = valid ? list[0] : null;
-return [{json: {ok: valid, state: !valid ? 'INVALID' : !p ? 'NONE' : p.merged_at ? 'MERGED' : p.state === 'open' ? 'OPEN' : 'CLOSED', pullRequestUrl: p?.html_url}}];`);
-link(search, prState);
-const prValid = gate('PR Lookup Valid?', '$json.ok === true', fail('PR_LOOKUP_INVALID'));
-link(prState, prValid);
-const existing = gate('No Existing PR?', '$json.state === "NONE"', 'Existing PR Merged?');
-link(prValid, existing);
-const merged = gate('Existing PR Merged?', '$json.state === "MERGED"', 'Existing PR Open?');
-link(merged, response('Respond - Already Merged', 'ALREADY_MERGED'));
-const open = gate('Existing PR Open?', '$json.state === "OPEN"', response('Respond - Closed Not Merged', 'CLOSED_NOT_MERGED'));
-link(open, response('Respond - PR Reused', 'PR_REUSED', `, pullRequestUrl: ${ref(prState)}.pullRequestUrl, branchName: ${C}.branchName`));
-const finalBase = resolveBase('Final', existing, true);
+const sealed = immutableProof('', snapshotOk, `${ref('Authorized Branch Snapshot')}.body.object.sha`);
+const A = `${ref(sealed)}.AUTHORIZED_HEAD_SHA`;
+// Keep the second lookup: a concurrent request may have opened the PR while
+// this execution was preparing its branch. Never trust the name without SHA.
+const finalSearch = get('Final PR Lookup', prQuery, sealed, fail('PR_LOOKUP_FAILED'));
+const finalPR = prParser('Final', finalSearch, '$json.body', A);
+const noFinalPR = gate('No Final PR?', '$json.state === "NONE"', 'Final PR Merged?');
+link(finalPR.valid, noFinalPR);
+lifecycle('Final', null, finalPR.state);
+const finalBase = resolveBase('Final', noFinalPR, true);
 const finalRef = get('Final Security Branch Ref', `"/git/ref/heads/" + encodeURIComponent(${C}.branchName)`, finalBase, branchConflict);
-const unchanged = gate('Authorized Branch Unchanged?', `$json.body?.ref === "refs/heads/" + ${C}.branchName && $json.body?.object?.sha === ${S}`, branchConflict);
+const unchanged = gate('Authorized Branch Unchanged?', `$json.body?.ref === "refs/heads/" + ${C}.branchName && $json.body?.object?.type === 'commit' && $json.body?.object?.sha === ${A}`, branchConflict);
 link(finalRef, unchanged);
 const createPr = http('Create Pull Request', 'POST', `${github} + "/pulls"`,
-  `({title: ${C}.prTitle, body: ${C}.prBody, head: ${C}.branchName, base: ${ref('Final Ancestry Evidence')}.repositoryDefaultBranch})`);
+ `({title: ${C}.prTitle, body: ${C}.prBody, head: ${C}.branchName, base: ${ref('Final Ancestry Evidence')}.repositoryDefaultBranch})`);
 link(unchanged, createPr);
-const prCreated = gate('PR Created?', `$json.statusCode === 201 && $json.body?.head?.ref === ${C}.branchName && $json.body?.base?.ref === ${ref('Final Ancestry Evidence')}.repositoryDefaultBranch && typeof $json.body?.html_url === 'string' && $json.body.html_url.startsWith('https://github.com/' + ${C}.repository + '/pull/') && /^[0-9]+$/.test($json.body.html_url.split('/pull/')[1] || '')`, fail('PR_CREATE_FAILED'));
-link(createPr, prCreated);
-link(prCreated, response('Respond - PR Created', 'PR_CREATED', `, pullRequestUrl: $json.body.html_url, branchName: ${C}.branchName`));
-const workflow = { name: 'WF6 — Security Remediation (Maven, V1.5.1 offline draft)', active: false, nodes, connections,
- settings: { executionOrder: 'v1' }, meta: { instanceId: 'wf6SecurityRemediationMavenV1' },
- versionMetadata: { note: 'Offline only. Concurrent create conflict fails cleanly. Transport write failure never assumes success. PR base evidence is refreshed in this execution; GitHub PR creation offers no atomic ref lock.' } };
+const createdIdentity = code('Validate Created PR', `
+const p = $json.body, c = ${C};
+const safeTarget = $json.statusCode === 201 && Number.isSafeInteger(p?.number) && p.number > 0
+ && p.html_url === 'https://github.com/' + c.repository + '/pull/' + p.number;
+const exact = safeTarget && p.head?.ref === c.branchName && p.head?.repo?.full_name === c.repository
+ && p.head?.sha === ${A} && p.base?.ref === ${ref('Final Ancestry Evidence')}.repositoryDefaultBranch
+ && p.base?.repo?.full_name === c.repository && p.state === 'open' && p.merged_at === null;
+return [{json: {ok: exact, safeTarget, pullRequestNumber: safeTarget ? p.number : null, pullRequestUrl: safeTarget ? p.html_url : null}}];`);
+link(createPr, createdIdentity);
+const safeCreated = gate('Created PR Target Identified?', '$json.safeTarget === true', fail('PR_CREATE_FAILED'));
+link(createdIdentity, safeCreated);
+const createdExact = gate('Created PR Head Exact?', '$json.ok === true', 'Close Drifted Created PR');
+link(safeCreated, createdExact);
+link(createdExact, response('Respond - PR Created', 'PR_CREATED', `, pullRequestUrl: ${ref(createdIdentity)}.pullRequestUrl, branchName: ${C}.branchName`));
+// GitHub does not atomically bind PR creation to an expected head SHA. Close
+// only the safely identified PR returned by THIS create call on any identity/
+// SHA drift. This containment write remains downstream of PR revalidation;
+// no additional candidate evaluation may block urgent cleanup.
+const P = ref(createdIdentity);
+const cleanup = http('Close Drifted Created PR', 'PATCH', `${github} + "/pulls/" + ${P}.pullRequestNumber`, '({state: "closed"})');
+// Even an ambiguous PATCH may have succeeded: a read-only GET is the proof.
+// Never repeat PATCH. Never infer closure from status alone or raw error text.
+const cleanupRead = http('Verify Drifted PR Closed', 'GET', `${github} + "/pulls/" + ${P}.pullRequestNumber`);
+link(cleanup, cleanupRead);
+const cleanupFailed = response('Respond - PR Head Drift Cleanup Failed', 'PR_HEAD_DRIFT_CLEANUP_FAILED', `, pullRequestUrl: ${P}.pullRequestUrl, pullRequestNumber: ${P}.pullRequestNumber`);
+const closed = gate('Drifted PR Closure Confirmed?', `$json.statusCode === 200 && !$json.error && $json.body?.number === ${P}.pullRequestNumber
+ && $json.body?.html_url === ${P}.pullRequestUrl && $json.body?.state === 'closed' && $json.body?.merged_at === null`, cleanupFailed);
+link(cleanupRead, closed);
+link(closed, response('Respond - PR Head Drifted', 'PR_HEAD_DRIFTED'));
+const workflow = { name: 'WF6 — Security Remediation (Maven, V1.6 offline draft)', active: false, nodes, connections,
+ settings: { executionOrder: 'v1', callerPolicy: 'workflowsFromSameOwner', availableInMCP: false, binaryMode: 'separate' },
+ meta: { instanceId: 'wf6SecurityRemediationMavenV1' },
+ versionMetadata: { note: 'Offline only. Managed inbound/header and GitHub credentials. Early immutable historical PR proof, final PR lookup, explicit authorized head SHA. PR creation has no atomic head lock: validate response and close/read-back drifted creation. Never retry an ambiguous mutation.' } };
 writeFileSync(output, JSON.stringify([workflow], null, 2) + '\n');
 console.log(`WF6_ARTIFACT = ${output}\nWF6_NODE_COUNT = ${nodes.length}\nWF6_ACTIVE = NO`);
