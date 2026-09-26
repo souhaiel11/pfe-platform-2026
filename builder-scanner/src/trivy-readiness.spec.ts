@@ -72,4 +72,27 @@ const hoursFromNow = (h: number) => new Date(now.getTime() + h * 60 * 60 * 1000)
   assert.match(r.reason!, /trivy --version failed/);
 }
 
-console.log('trivy-readiness: PASS (fresh/missing/stale-vuln/stale-java/unavailable, all fail closed except the fully-fresh case)');
+// 6. Partial bootstrap -- the exact real-world shape the bootstrap-
+// timeout-split phase addresses: the vuln DB step succeeded (its own
+// section is present and fresh) but the Java DB step timed out before
+// trivy ever wrote a Java DB section at all -> still NOT ready. A slow/
+// incomplete Java DB must never look "good enough" next to a fully-present
+// vuln DB.
+{
+  const PARTIAL_OUTPUT = (vulnUpdatedAt: string, vulnNextUpdate: string) => `Version: 0.72.0
+Vulnerability DB:
+  Version: 2
+  UpdatedAt: ${vulnUpdatedAt}
+  NextUpdate: ${vulnNextUpdate}
+  DownloadedAt: 2026-09-25 23:43:13.37653788 +0000 UTC
+`;
+  const r = checkTrivyCacheReadiness(undefined, () => PARTIAL_OUTPUT(hoursAgo(1), hoursFromNow(23)));
+  assert.equal(r.ready, false);
+  assert.equal(r.vulnDb.present, true);
+  assert.equal(r.vulnDb.stale, false);
+  assert.equal(r.javaDb.present, false);
+  assert.match(r.reason!, /Java DB missing/);
+  assert.doesNotMatch(r.reason!, /vulnerability DB/);
+}
+
+console.log('trivy-readiness: PASS (fresh/missing/stale-vuln/stale-java/unavailable/partial-bootstrap, all fail closed except the fully-fresh case)');
