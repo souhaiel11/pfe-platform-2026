@@ -96,13 +96,13 @@ async function main() {
       const response = await postSecEval(body);
       assert.equal(response.status, 200);
       const result: any = await response.json();
-      assert.equal(result.status, 'CANDIDATE_READY', `real eligible flow over HTTP: ${JSON.stringify(result)}`);
+      assert.equal(result.status, 'REMEDIATION_SCOPE_UNPROVEN', `real eligible flow over HTTP: ${JSON.stringify(result)}`);
       assert.equal(result.decision.selectedTargetVersion, '1.2.13');
-      assert.equal(result.guardResult?.ok, true);
-      assert.equal(result.dependencyResolutionEvidence?.resolvedMatch, true);
-      assert.ok(result.candidateIdentity && /^[0-9a-f]{64}$/.test(result.candidateIdentity));
+      assert.equal(result.candidateManifest, null);
+      assert.equal(result.candidateIdentity, null);
+      assert.equal(result.reason, 'TRUSTED_TARGET_CVE_REQUIRED');
     }
-    console.log('security-remediation-http A) real eligible Trivy flow reaches SecurityRemediationOrchestratorService over real HTTP: PASS');
+    console.log('security-remediation-http A) legacy eligible Trivy request without CVE/closure proof fails closed over real HTTP: PASS');
 
     // C. real TRANSITIVE (tomcat-embed-core) over the wire -> NOT_ELIGIBLE, no candidate.
     {

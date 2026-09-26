@@ -10,7 +10,10 @@
 // of the canonical parts, exactly as the task specifies.
 import { createHash } from 'crypto';
 
+import { MavenRemediationScope } from './maven-remediation-scope';
+
 export interface SecurityCandidateIdentityInput {
+  remediationScope?: MavenRemediationScope;
   findingIdentity: string;
   evaluatedSha: string;
   package: string;
@@ -39,5 +42,6 @@ export function computeSecurityCandidateIdentity(input: SecurityCandidateIdentit
     norm(input.targetVersion),
     norm(input.controllingFile),
   ];
+  if (input.remediationScope) parts.push('security-remediation-v1.7', JSON.stringify(input.remediationScope));
   return createHash('sha256').update(parts.join('\n')).digest('hex');
 }

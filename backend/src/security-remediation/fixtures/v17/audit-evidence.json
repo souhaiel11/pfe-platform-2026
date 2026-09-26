@@ -1,0 +1,222 @@
+{
+  "evaluatedSha": "7ae0f954f99628b69ce9b42f42c1e2acc8568d99",
+  "retainedPr": {
+    "number": 36,
+    "head": "4402e8977e4984f5ab759e0af0010901abd10a45",
+    "modified": false,
+    "structurallyValid": true,
+    "securityClosureValidated": false
+  },
+  "scope": {
+    "kind": "COORDINATED_SAME_FILE",
+    "targetCve": "CVE-2023-6378",
+    "evaluatedSha": "7ae0f954f99628b69ce9b42f42c1e2acc8568d99",
+    "controllingFile": "pom.xml",
+    "originalBlobSha": "9d657db8e4ecb126a15ee2df6ce3a8a98f0cf660",
+    "affectedPackages": [
+      {
+        "package": "ch.qos.logback:logback-classic",
+        "installedVersion": "1.2.11",
+        "targetVersion": "1.2.13"
+      },
+      {
+        "package": "ch.qos.logback:logback-core",
+        "installedVersion": "1.2.11",
+        "targetVersion": "1.2.13"
+      }
+    ],
+    "controls": [
+      {
+        "kind": "LOCAL_PROPERTY",
+        "key": "logback.version",
+        "start": 967,
+        "end": 973,
+        "oldVersion": "1.2.11",
+        "targetVersion": "1.2.13"
+      },
+      {
+        "kind": "DEPENDENCY_VERSION",
+        "key": "ch.qos.logback:logback-classic",
+        "start": 2299,
+        "end": 2305,
+        "oldVersion": "1.2.11",
+        "targetVersion": "1.2.13"
+      }
+    ]
+  },
+  "dependencyExperiments": {
+    "base": {
+      "sourceSha256": "ca4d5bc28596ded5fc06cd0e47586678e26d4aca5a497bf5a2fe0f11aa6f6d43",
+      "tree": "com.pfe:pfe-app-test:jar:1.0.0\n+- org.springframework.boot:spring-boot-starter-web:jar:2.7.0:compile\n|  +- org.springframework.boot:spring-boot-starter:jar:2.7.0:compile\n|  |  +- org.springframework.boot:spring-boot:jar:2.7.0:compile\n|  |  +- org.springframework.boot:spring-boot-autoconfigure:jar:2.7.0:compile\n|  |  +- org.springframework.boot:spring-boot-starter-logging:jar:2.7.0:compile\n|  |  |  +- org.apache.logging.log4j:log4j-to-slf4j:jar:2.17.2:compile\n|  |  |  |  \\- org.apache.logging.log4j:log4j-api:jar:2.17.2:compile\n|  |  |  \\- org.slf4j:jul-to-slf4j:jar:1.7.36:compile\n|  |  \\- jakarta.annotation:jakarta.annotation-api:jar:1.3.5:compile\n|  +- org.springframework.boot:spring-boot-starter-json:jar:2.7.0:compile\n|  |  +- com.fasterxml.jackson.datatype:jackson-datatype-jdk8:jar:2.13.3:compile\n|  |  +- com.fasterxml.jackson.datatype:jackson-datatype-jsr310:jar:2.13.3:compile\n|  |  \\- com.fasterxml.jackson.module:jackson-module-parameter-names:jar:2.13.3:compile\n|  +- org.springframework.boot:spring-boot-starter-tomcat:jar:2.7.0:compile\n|  |  +- org.apache.tomcat.embed:tomcat-embed-core:jar:9.0.63:compile\n|  |  \\- org.apache.tomcat.embed:tomcat-embed-websocket:jar:9.0.63:compile\n|  +- org.springframework:spring-web:jar:5.3.20:compile\n|  \\- org.springframework:spring-webmvc:jar:5.3.20:compile\n+- org.springframework.security:spring-security-core:jar:5.6.4:compile\n|  +- org.springframework.security:spring-security-crypto:jar:5.7.1:compile\n|  +- org.springframework:spring-aop:jar:5.3.20:compile\n|  +- org.springframework:spring-beans:jar:5.3.20:compile\n|  +- org.springframework:spring-context:jar:5.3.20:compile\n|  +- org.springframework:spring-core:jar:5.3.20:compile\n|  |  \\- org.springframework:spring-jcl:jar:5.3.20:compile\n|  \\- org.springframework:spring-expression:jar:5.3.20:compile\n+- org.springframework.boot:spring-boot-starter-security:jar:2.7.0:compile\n|  +- org.springframework.security:spring-security-config:jar:5.7.1:compile\n|  \\- org.springframework.security:spring-security-web:jar:5.7.1:compile\n+- org.springframework.boot:spring-boot-starter-data-jpa:jar:2.7.0:compile\n|  +- org.springframework.boot:spring-boot-starter-aop:jar:2.7.0:compile\n|  |  \\- org.aspectj:aspectjweaver:jar:1.9.7:compile\n|  +- org.springframework.boot:spring-boot-starter-jdbc:jar:2.7.0:compile\n|  |  +- com.zaxxer:HikariCP:jar:4.0.3:compile\n|  |  \\- org.springframework:spring-jdbc:jar:5.3.20:compile\n|  +- jakarta.transaction:jakarta.transaction-api:jar:1.3.3:compile\n|  +- jakarta.persistence:jakarta.persistence-api:jar:2.2.3:compile\n|  +- org.hibernate:hibernate-core:jar:5.6.9.Final:compile\n|  |  +- org.jboss.logging:jboss-logging:jar:3.4.3.Final:compile\n|  |  +- net.bytebuddy:byte-buddy:jar:1.12.10:compile\n|  |  +- antlr:antlr:jar:2.7.7:compile\n|  |  +- org.jboss:jandex:jar:2.4.2.Final:compile\n|  |  +- com.fasterxml:classmate:jar:1.5.1:compile\n|  |  +- org.hibernate.common:hibernate-commons-annotations:jar:5.1.2.Final:compile\n|  |  \\- org.glassfish.jaxb:jaxb-runtime:jar:2.3.6:compile\n|  |     +- org.glassfish.jaxb:txw2:jar:2.3.6:compile\n|  |     +- com.sun.istack:istack-commons-runtime:jar:3.0.12:compile\n|  |     \\- com.sun.activation:jakarta.activation:jar:1.2.2:runtime\n|  +- org.springframework.data:spring-data-jpa:jar:2.7.0:compile\n|  |  +- org.springframework.data:spring-data-commons:jar:2.7.0:compile\n|  |  +- org.springframework:spring-orm:jar:5.3.20:compile\n|  |  \\- org.springframework:spring-tx:jar:5.3.20:compile\n|  \\- org.springframework:spring-aspects:jar:5.3.20:compile\n+- com.h2database:h2:jar:2.1.212:runtime\n+- ch.qos.logback:logback-classic:jar:1.2.11:compile\n|  +- ch.qos.logback:logback-core:jar:1.2.11:compile\n|  \\- org.slf4j:slf4j-api:jar:1.7.36:compile\n+- org.yaml:snakeyaml:jar:1.29:compile\n+- io.jsonwebtoken:jjwt:jar:0.9.1:compile\n|  \\- com.fasterxml.jackson.core:jackson-databind:jar:2.13.3:compile\n|     +- com.fasterxml.jackson.core:jackson-annotations:jar:2.13.3:compile\n|     \\- com.fasterxml.jackson.core:jackson-core:jar:2.13.3:compile\n+- org.projectlombok:lombok:jar:1.18.32:compile\n+- org.springframework.boot:spring-boot-starter-validation:jar:2.7.0:compile\n|  +- org.apache.tomcat.embed:tomcat-embed-el:jar:9.0.63:compile\n|  \\- org.hibernate.validator:hibernate-validator:jar:6.2.3.Final:compile\n|     \\- jakarta.validation:jakarta.validation-api:jar:2.0.2:compile\n+- org.springframework.boot:spring-boot-starter-test:jar:2.7.0:test\n|  +- org.springframework.boot:spring-boot-test:jar:2.7.0:test\n|  +- org.springframework.boot:spring-boot-test-autoconfigure:jar:2.7.0:test\n|  +- com.jayway.jsonpath:json-path:jar:2.7.0:test\n|  |  \\- net.minidev:json-smart:jar:2.4.8:test\n|  |     \\- net.minidev:accessors-smart:jar:2.4.8:test\n|  |        \\- org.ow2.asm:asm:jar:9.1:test\n|  +- jakarta.xml.bind:jakarta.xml.bind-api:jar:2.3.3:compile\n|  |  \\- jakarta.activation:jakarta.activation-api:jar:1.2.2:compile\n|  +- org.assertj:assertj-core:jar:3.22.0:test\n|  +- org.hamcrest:hamcrest:jar:2.2:test\n|  +- org.junit.jupiter:junit-jupiter:jar:5.8.2:test\n|  |  +- org.junit.jupiter:junit-jupiter-api:jar:5.8.2:test\n|  |  |  +- org.opentest4j:opentest4j:jar:1.2.0:test\n|  |  |  +- org.junit.platform:junit-platform-commons:jar:1.8.2:test\n|  |  |  \\- org.apiguardian:apiguardian-api:jar:1.1.2:test\n|  |  +- org.junit.jupiter:junit-jupiter-params:jar:5.8.2:test\n|  |  \\- org.junit.jupiter:junit-jupiter-engine:jar:5.8.2:test\n|  |     \\- org.junit.platform:junit-platform-engine:jar:1.8.2:test\n|  +- org.mockito:mockito-core:jar:4.5.1:test\n|  |  +- net.bytebuddy:byte-buddy-agent:jar:1.12.10:test\n|  |  \\- org.objenesis:objenesis:jar:3.2:test\n|  +- org.mockito:mockito-junit-jupiter:jar:4.5.1:test\n|  +- org.skyscreamer:jsonassert:jar:1.5.0:test\n|  |  \\- com.vaadin.external.google:android-json:jar:0.0.20131108.vaadin1:test\n|  +- org.springframework:spring-test:jar:5.3.20:test\n|  \\- org.xmlunit:xmlunit-core:jar:2.9.0:test\n\\- org.springframework.security:spring-security-test:jar:5.6.4:test\n",
+      "effectiveModelSha256": "2ad0ab4211b49b27de278905ae26c1d02e8fcb1259ef799546c8779fc819c443"
+    },
+    "v16": {
+      "sourceSha256": "08d438b3233988bb0abce7054a39d47b64abd0453c3e35da3db581c9c316379a",
+      "tree": "com.pfe:pfe-app-test:jar:1.0.0\n+- org.springframework.boot:spring-boot-starter-web:jar:2.7.0:compile\n|  +- org.springframework.boot:spring-boot-starter:jar:2.7.0:compile\n|  |  +- org.springframework.boot:spring-boot:jar:2.7.0:compile\n|  |  +- org.springframework.boot:spring-boot-autoconfigure:jar:2.7.0:compile\n|  |  +- org.springframework.boot:spring-boot-starter-logging:jar:2.7.0:compile\n|  |  |  +- org.apache.logging.log4j:log4j-to-slf4j:jar:2.17.2:compile\n|  |  |  |  \\- org.apache.logging.log4j:log4j-api:jar:2.17.2:compile\n|  |  |  \\- org.slf4j:jul-to-slf4j:jar:1.7.36:compile\n|  |  \\- jakarta.annotation:jakarta.annotation-api:jar:1.3.5:compile\n|  +- org.springframework.boot:spring-boot-starter-json:jar:2.7.0:compile\n|  |  +- com.fasterxml.jackson.datatype:jackson-datatype-jdk8:jar:2.13.3:compile\n|  |  +- com.fasterxml.jackson.datatype:jackson-datatype-jsr310:jar:2.13.3:compile\n|  |  \\- com.fasterxml.jackson.module:jackson-module-parameter-names:jar:2.13.3:compile\n|  +- org.springframework.boot:spring-boot-starter-tomcat:jar:2.7.0:compile\n|  |  +- org.apache.tomcat.embed:tomcat-embed-core:jar:9.0.63:compile\n|  |  \\- org.apache.tomcat.embed:tomcat-embed-websocket:jar:9.0.63:compile\n|  +- org.springframework:spring-web:jar:5.3.20:compile\n|  \\- org.springframework:spring-webmvc:jar:5.3.20:compile\n+- org.springframework.security:spring-security-core:jar:5.6.4:compile\n|  +- org.springframework.security:spring-security-crypto:jar:5.7.1:compile\n|  +- org.springframework:spring-aop:jar:5.3.20:compile\n|  +- org.springframework:spring-beans:jar:5.3.20:compile\n|  +- org.springframework:spring-context:jar:5.3.20:compile\n|  +- org.springframework:spring-core:jar:5.3.20:compile\n|  |  \\- org.springframework:spring-jcl:jar:5.3.20:compile\n|  \\- org.springframework:spring-expression:jar:5.3.20:compile\n+- org.springframework.boot:spring-boot-starter-security:jar:2.7.0:compile\n|  +- org.springframework.security:spring-security-config:jar:5.7.1:compile\n|  \\- org.springframework.security:spring-security-web:jar:5.7.1:compile\n+- org.springframework.boot:spring-boot-starter-data-jpa:jar:2.7.0:compile\n|  +- org.springframework.boot:spring-boot-starter-aop:jar:2.7.0:compile\n|  |  \\- org.aspectj:aspectjweaver:jar:1.9.7:compile\n|  +- org.springframework.boot:spring-boot-starter-jdbc:jar:2.7.0:compile\n|  |  +- com.zaxxer:HikariCP:jar:4.0.3:compile\n|  |  \\- org.springframework:spring-jdbc:jar:5.3.20:compile\n|  +- jakarta.transaction:jakarta.transaction-api:jar:1.3.3:compile\n|  +- jakarta.persistence:jakarta.persistence-api:jar:2.2.3:compile\n|  +- org.hibernate:hibernate-core:jar:5.6.9.Final:compile\n|  |  +- org.jboss.logging:jboss-logging:jar:3.4.3.Final:compile\n|  |  +- net.bytebuddy:byte-buddy:jar:1.12.10:compile\n|  |  +- antlr:antlr:jar:2.7.7:compile\n|  |  +- org.jboss:jandex:jar:2.4.2.Final:compile\n|  |  +- com.fasterxml:classmate:jar:1.5.1:compile\n|  |  +- org.hibernate.common:hibernate-commons-annotations:jar:5.1.2.Final:compile\n|  |  \\- org.glassfish.jaxb:jaxb-runtime:jar:2.3.6:compile\n|  |     +- org.glassfish.jaxb:txw2:jar:2.3.6:compile\n|  |     +- com.sun.istack:istack-commons-runtime:jar:3.0.12:compile\n|  |     \\- com.sun.activation:jakarta.activation:jar:1.2.2:runtime\n|  +- org.springframework.data:spring-data-jpa:jar:2.7.0:compile\n|  |  +- org.springframework.data:spring-data-commons:jar:2.7.0:compile\n|  |  +- org.springframework:spring-orm:jar:5.3.20:compile\n|  |  \\- org.springframework:spring-tx:jar:5.3.20:compile\n|  \\- org.springframework:spring-aspects:jar:5.3.20:compile\n+- com.h2database:h2:jar:2.1.212:runtime\n+- ch.qos.logback:logback-classic:jar:1.2.13:compile\n|  +- ch.qos.logback:logback-core:jar:1.2.11:compile\n|  \\- org.slf4j:slf4j-api:jar:1.7.36:compile\n+- org.yaml:snakeyaml:jar:1.29:compile\n+- io.jsonwebtoken:jjwt:jar:0.9.1:compile\n|  \\- com.fasterxml.jackson.core:jackson-databind:jar:2.13.3:compile\n|     +- com.fasterxml.jackson.core:jackson-annotations:jar:2.13.3:compile\n|     \\- com.fasterxml.jackson.core:jackson-core:jar:2.13.3:compile\n+- org.projectlombok:lombok:jar:1.18.32:compile\n+- org.springframework.boot:spring-boot-starter-validation:jar:2.7.0:compile\n|  +- org.apache.tomcat.embed:tomcat-embed-el:jar:9.0.63:compile\n|  \\- org.hibernate.validator:hibernate-validator:jar:6.2.3.Final:compile\n|     \\- jakarta.validation:jakarta.validation-api:jar:2.0.2:compile\n+- org.springframework.boot:spring-boot-starter-test:jar:2.7.0:test\n|  +- org.springframework.boot:spring-boot-test:jar:2.7.0:test\n|  +- org.springframework.boot:spring-boot-test-autoconfigure:jar:2.7.0:test\n|  +- com.jayway.jsonpath:json-path:jar:2.7.0:test\n|  |  \\- net.minidev:json-smart:jar:2.4.8:test\n|  |     \\- net.minidev:accessors-smart:jar:2.4.8:test\n|  |        \\- org.ow2.asm:asm:jar:9.1:test\n|  +- jakarta.xml.bind:jakarta.xml.bind-api:jar:2.3.3:compile\n|  |  \\- jakarta.activation:jakarta.activation-api:jar:1.2.2:compile\n|  +- org.assertj:assertj-core:jar:3.22.0:test\n|  +- org.hamcrest:hamcrest:jar:2.2:test\n|  +- org.junit.jupiter:junit-jupiter:jar:5.8.2:test\n|  |  +- org.junit.jupiter:junit-jupiter-api:jar:5.8.2:test\n|  |  |  +- org.opentest4j:opentest4j:jar:1.2.0:test\n|  |  |  +- org.junit.platform:junit-platform-commons:jar:1.8.2:test\n|  |  |  \\- org.apiguardian:apiguardian-api:jar:1.1.2:test\n|  |  +- org.junit.jupiter:junit-jupiter-params:jar:5.8.2:test\n|  |  \\- org.junit.jupiter:junit-jupiter-engine:jar:5.8.2:test\n|  |     \\- org.junit.platform:junit-platform-engine:jar:1.8.2:test\n|  +- org.mockito:mockito-core:jar:4.5.1:test\n|  |  +- net.bytebuddy:byte-buddy-agent:jar:1.12.10:test\n|  |  \\- org.objenesis:objenesis:jar:3.2:test\n|  +- org.mockito:mockito-junit-jupiter:jar:4.5.1:test\n|  +- org.skyscreamer:jsonassert:jar:1.5.0:test\n|  |  \\- com.vaadin.external.google:android-json:jar:0.0.20131108.vaadin1:test\n|  +- org.springframework:spring-test:jar:5.3.20:test\n|  \\- org.xmlunit:xmlunit-core:jar:2.9.0:test\n\\- org.springframework.security:spring-security-test:jar:5.6.4:test\n",
+      "effectiveModelSha256": "318c9d4b9c415508d72df074f863302b28a1c6268f9e65b879ac8cab403dd722"
+    },
+    "property-only": {
+      "sourceSha256": "3cfeac362cd7682d82e8e7faed577ebfe63731e984c71bd69fa31c5cf7bda9fa",
+      "tree": "com.pfe:pfe-app-test:jar:1.0.0\n+- org.springframework.boot:spring-boot-starter-web:jar:2.7.0:compile\n|  +- org.springframework.boot:spring-boot-starter:jar:2.7.0:compile\n|  |  +- org.springframework.boot:spring-boot:jar:2.7.0:compile\n|  |  +- org.springframework.boot:spring-boot-autoconfigure:jar:2.7.0:compile\n|  |  +- org.springframework.boot:spring-boot-starter-logging:jar:2.7.0:compile\n|  |  |  +- org.apache.logging.log4j:log4j-to-slf4j:jar:2.17.2:compile\n|  |  |  |  \\- org.apache.logging.log4j:log4j-api:jar:2.17.2:compile\n|  |  |  \\- org.slf4j:jul-to-slf4j:jar:1.7.36:compile\n|  |  \\- jakarta.annotation:jakarta.annotation-api:jar:1.3.5:compile\n|  +- org.springframework.boot:spring-boot-starter-json:jar:2.7.0:compile\n|  |  +- com.fasterxml.jackson.datatype:jackson-datatype-jdk8:jar:2.13.3:compile\n|  |  +- com.fasterxml.jackson.datatype:jackson-datatype-jsr310:jar:2.13.3:compile\n|  |  \\- com.fasterxml.jackson.module:jackson-module-parameter-names:jar:2.13.3:compile\n|  +- org.springframework.boot:spring-boot-starter-tomcat:jar:2.7.0:compile\n|  |  +- org.apache.tomcat.embed:tomcat-embed-core:jar:9.0.63:compile\n|  |  \\- org.apache.tomcat.embed:tomcat-embed-websocket:jar:9.0.63:compile\n|  +- org.springframework:spring-web:jar:5.3.20:compile\n|  \\- org.springframework:spring-webmvc:jar:5.3.20:compile\n+- org.springframework.security:spring-security-core:jar:5.6.4:compile\n|  +- org.springframework.security:spring-security-crypto:jar:5.7.1:compile\n|  +- org.springframework:spring-aop:jar:5.3.20:compile\n|  +- org.springframework:spring-beans:jar:5.3.20:compile\n|  +- org.springframework:spring-context:jar:5.3.20:compile\n|  +- org.springframework:spring-core:jar:5.3.20:compile\n|  |  \\- org.springframework:spring-jcl:jar:5.3.20:compile\n|  \\- org.springframework:spring-expression:jar:5.3.20:compile\n+- org.springframework.boot:spring-boot-starter-security:jar:2.7.0:compile\n|  +- org.springframework.security:spring-security-config:jar:5.7.1:compile\n|  \\- org.springframework.security:spring-security-web:jar:5.7.1:compile\n+- org.springframework.boot:spring-boot-starter-data-jpa:jar:2.7.0:compile\n|  +- org.springframework.boot:spring-boot-starter-aop:jar:2.7.0:compile\n|  |  \\- org.aspectj:aspectjweaver:jar:1.9.7:compile\n|  +- org.springframework.boot:spring-boot-starter-jdbc:jar:2.7.0:compile\n|  |  +- com.zaxxer:HikariCP:jar:4.0.3:compile\n|  |  \\- org.springframework:spring-jdbc:jar:5.3.20:compile\n|  +- jakarta.transaction:jakarta.transaction-api:jar:1.3.3:compile\n|  +- jakarta.persistence:jakarta.persistence-api:jar:2.2.3:compile\n|  +- org.hibernate:hibernate-core:jar:5.6.9.Final:compile\n|  |  +- org.jboss.logging:jboss-logging:jar:3.4.3.Final:compile\n|  |  +- net.bytebuddy:byte-buddy:jar:1.12.10:compile\n|  |  +- antlr:antlr:jar:2.7.7:compile\n|  |  +- org.jboss:jandex:jar:2.4.2.Final:compile\n|  |  +- com.fasterxml:classmate:jar:1.5.1:compile\n|  |  +- org.hibernate.common:hibernate-commons-annotations:jar:5.1.2.Final:compile\n|  |  \\- org.glassfish.jaxb:jaxb-runtime:jar:2.3.6:compile\n|  |     +- org.glassfish.jaxb:txw2:jar:2.3.6:compile\n|  |     +- com.sun.istack:istack-commons-runtime:jar:3.0.12:compile\n|  |     \\- com.sun.activation:jakarta.activation:jar:1.2.2:runtime\n|  +- org.springframework.data:spring-data-jpa:jar:2.7.0:compile\n|  |  +- org.springframework.data:spring-data-commons:jar:2.7.0:compile\n|  |  +- org.springframework:spring-orm:jar:5.3.20:compile\n|  |  \\- org.springframework:spring-tx:jar:5.3.20:compile\n|  \\- org.springframework:spring-aspects:jar:5.3.20:compile\n+- com.h2database:h2:jar:2.1.212:runtime\n+- ch.qos.logback:logback-classic:jar:1.2.11:compile\n|  +- ch.qos.logback:logback-core:jar:1.2.13:compile\n|  \\- org.slf4j:slf4j-api:jar:1.7.36:compile\n+- org.yaml:snakeyaml:jar:1.29:compile\n+- io.jsonwebtoken:jjwt:jar:0.9.1:compile\n|  \\- com.fasterxml.jackson.core:jackson-databind:jar:2.13.3:compile\n|     +- com.fasterxml.jackson.core:jackson-annotations:jar:2.13.3:compile\n|     \\- com.fasterxml.jackson.core:jackson-core:jar:2.13.3:compile\n+- org.projectlombok:lombok:jar:1.18.32:compile\n+- org.springframework.boot:spring-boot-starter-validation:jar:2.7.0:compile\n|  +- org.apache.tomcat.embed:tomcat-embed-el:jar:9.0.63:compile\n|  \\- org.hibernate.validator:hibernate-validator:jar:6.2.3.Final:compile\n|     \\- jakarta.validation:jakarta.validation-api:jar:2.0.2:compile\n+- org.springframework.boot:spring-boot-starter-test:jar:2.7.0:test\n|  +- org.springframework.boot:spring-boot-test:jar:2.7.0:test\n|  +- org.springframework.boot:spring-boot-test-autoconfigure:jar:2.7.0:test\n|  +- com.jayway.jsonpath:json-path:jar:2.7.0:test\n|  |  \\- net.minidev:json-smart:jar:2.4.8:test\n|  |     \\- net.minidev:accessors-smart:jar:2.4.8:test\n|  |        \\- org.ow2.asm:asm:jar:9.1:test\n|  +- jakarta.xml.bind:jakarta.xml.bind-api:jar:2.3.3:compile\n|  |  \\- jakarta.activation:jakarta.activation-api:jar:1.2.2:compile\n|  +- org.assertj:assertj-core:jar:3.22.0:test\n|  +- org.hamcrest:hamcrest:jar:2.2:test\n|  +- org.junit.jupiter:junit-jupiter:jar:5.8.2:test\n|  |  +- org.junit.jupiter:junit-jupiter-api:jar:5.8.2:test\n|  |  |  +- org.opentest4j:opentest4j:jar:1.2.0:test\n|  |  |  +- org.junit.platform:junit-platform-commons:jar:1.8.2:test\n|  |  |  \\- org.apiguardian:apiguardian-api:jar:1.1.2:test\n|  |  +- org.junit.jupiter:junit-jupiter-params:jar:5.8.2:test\n|  |  \\- org.junit.jupiter:junit-jupiter-engine:jar:5.8.2:test\n|  |     \\- org.junit.platform:junit-platform-engine:jar:1.8.2:test\n|  +- org.mockito:mockito-core:jar:4.5.1:test\n|  |  +- net.bytebuddy:byte-buddy-agent:jar:1.12.10:test\n|  |  \\- org.objenesis:objenesis:jar:3.2:test\n|  +- org.mockito:mockito-junit-jupiter:jar:4.5.1:test\n|  +- org.skyscreamer:jsonassert:jar:1.5.0:test\n|  |  \\- com.vaadin.external.google:android-json:jar:0.0.20131108.vaadin1:test\n|  +- org.springframework:spring-test:jar:5.3.20:test\n|  \\- org.xmlunit:xmlunit-core:jar:2.9.0:test\n\\- org.springframework.security:spring-security-test:jar:5.6.4:test\n",
+      "effectiveModelSha256": "c35a9cccc3a8b6fc6967ab45dd1d69075068cae5db6dd7fd6eeb1f4403a32e21"
+    },
+    "coordinated": {
+      "sourceSha256": "f36d6ecdc90ca0f1964da7064b097b3f8450fea622ec8934b62bb31a26b370c6",
+      "tree": "com.pfe:pfe-app-test:jar:1.0.0\n+- org.springframework.boot:spring-boot-starter-web:jar:2.7.0:compile\n|  +- org.springframework.boot:spring-boot-starter:jar:2.7.0:compile\n|  |  +- org.springframework.boot:spring-boot:jar:2.7.0:compile\n|  |  +- org.springframework.boot:spring-boot-autoconfigure:jar:2.7.0:compile\n|  |  +- org.springframework.boot:spring-boot-starter-logging:jar:2.7.0:compile\n|  |  |  +- org.apache.logging.log4j:log4j-to-slf4j:jar:2.17.2:compile\n|  |  |  |  \\- org.apache.logging.log4j:log4j-api:jar:2.17.2:compile\n|  |  |  \\- org.slf4j:jul-to-slf4j:jar:1.7.36:compile\n|  |  \\- jakarta.annotation:jakarta.annotation-api:jar:1.3.5:compile\n|  +- org.springframework.boot:spring-boot-starter-json:jar:2.7.0:compile\n|  |  +- com.fasterxml.jackson.datatype:jackson-datatype-jdk8:jar:2.13.3:compile\n|  |  +- com.fasterxml.jackson.datatype:jackson-datatype-jsr310:jar:2.13.3:compile\n|  |  \\- com.fasterxml.jackson.module:jackson-module-parameter-names:jar:2.13.3:compile\n|  +- org.springframework.boot:spring-boot-starter-tomcat:jar:2.7.0:compile\n|  |  +- org.apache.tomcat.embed:tomcat-embed-core:jar:9.0.63:compile\n|  |  \\- org.apache.tomcat.embed:tomcat-embed-websocket:jar:9.0.63:compile\n|  +- org.springframework:spring-web:jar:5.3.20:compile\n|  \\- org.springframework:spring-webmvc:jar:5.3.20:compile\n+- org.springframework.security:spring-security-core:jar:5.6.4:compile\n|  +- org.springframework.security:spring-security-crypto:jar:5.7.1:compile\n|  +- org.springframework:spring-aop:jar:5.3.20:compile\n|  +- org.springframework:spring-beans:jar:5.3.20:compile\n|  +- org.springframework:spring-context:jar:5.3.20:compile\n|  +- org.springframework:spring-core:jar:5.3.20:compile\n|  |  \\- org.springframework:spring-jcl:jar:5.3.20:compile\n|  \\- org.springframework:spring-expression:jar:5.3.20:compile\n+- org.springframework.boot:spring-boot-starter-security:jar:2.7.0:compile\n|  +- org.springframework.security:spring-security-config:jar:5.7.1:compile\n|  \\- org.springframework.security:spring-security-web:jar:5.7.1:compile\n+- org.springframework.boot:spring-boot-starter-data-jpa:jar:2.7.0:compile\n|  +- org.springframework.boot:spring-boot-starter-aop:jar:2.7.0:compile\n|  |  \\- org.aspectj:aspectjweaver:jar:1.9.7:compile\n|  +- org.springframework.boot:spring-boot-starter-jdbc:jar:2.7.0:compile\n|  |  +- com.zaxxer:HikariCP:jar:4.0.3:compile\n|  |  \\- org.springframework:spring-jdbc:jar:5.3.20:compile\n|  +- jakarta.transaction:jakarta.transaction-api:jar:1.3.3:compile\n|  +- jakarta.persistence:jakarta.persistence-api:jar:2.2.3:compile\n|  +- org.hibernate:hibernate-core:jar:5.6.9.Final:compile\n|  |  +- org.jboss.logging:jboss-logging:jar:3.4.3.Final:compile\n|  |  +- net.bytebuddy:byte-buddy:jar:1.12.10:compile\n|  |  +- antlr:antlr:jar:2.7.7:compile\n|  |  +- org.jboss:jandex:jar:2.4.2.Final:compile\n|  |  +- com.fasterxml:classmate:jar:1.5.1:compile\n|  |  +- org.hibernate.common:hibernate-commons-annotations:jar:5.1.2.Final:compile\n|  |  \\- org.glassfish.jaxb:jaxb-runtime:jar:2.3.6:compile\n|  |     +- org.glassfish.jaxb:txw2:jar:2.3.6:compile\n|  |     +- com.sun.istack:istack-commons-runtime:jar:3.0.12:compile\n|  |     \\- com.sun.activation:jakarta.activation:jar:1.2.2:runtime\n|  +- org.springframework.data:spring-data-jpa:jar:2.7.0:compile\n|  |  +- org.springframework.data:spring-data-commons:jar:2.7.0:compile\n|  |  +- org.springframework:spring-orm:jar:5.3.20:compile\n|  |  \\- org.springframework:spring-tx:jar:5.3.20:compile\n|  \\- org.springframework:spring-aspects:jar:5.3.20:compile\n+- com.h2database:h2:jar:2.1.212:runtime\n+- ch.qos.logback:logback-classic:jar:1.2.13:compile\n|  +- ch.qos.logback:logback-core:jar:1.2.13:compile\n|  \\- org.slf4j:slf4j-api:jar:1.7.36:compile\n+- org.yaml:snakeyaml:jar:1.29:compile\n+- io.jsonwebtoken:jjwt:jar:0.9.1:compile\n|  \\- com.fasterxml.jackson.core:jackson-databind:jar:2.13.3:compile\n|     +- com.fasterxml.jackson.core:jackson-annotations:jar:2.13.3:compile\n|     \\- com.fasterxml.jackson.core:jackson-core:jar:2.13.3:compile\n+- org.projectlombok:lombok:jar:1.18.32:compile\n+- org.springframework.boot:spring-boot-starter-validation:jar:2.7.0:compile\n|  +- org.apache.tomcat.embed:tomcat-embed-el:jar:9.0.63:compile\n|  \\- org.hibernate.validator:hibernate-validator:jar:6.2.3.Final:compile\n|     \\- jakarta.validation:jakarta.validation-api:jar:2.0.2:compile\n+- org.springframework.boot:spring-boot-starter-test:jar:2.7.0:test\n|  +- org.springframework.boot:spring-boot-test:jar:2.7.0:test\n|  +- org.springframework.boot:spring-boot-test-autoconfigure:jar:2.7.0:test\n|  +- com.jayway.jsonpath:json-path:jar:2.7.0:test\n|  |  \\- net.minidev:json-smart:jar:2.4.8:test\n|  |     \\- net.minidev:accessors-smart:jar:2.4.8:test\n|  |        \\- org.ow2.asm:asm:jar:9.1:test\n|  +- jakarta.xml.bind:jakarta.xml.bind-api:jar:2.3.3:compile\n|  |  \\- jakarta.activation:jakarta.activation-api:jar:1.2.2:compile\n|  +- org.assertj:assertj-core:jar:3.22.0:test\n|  +- org.hamcrest:hamcrest:jar:2.2:test\n|  +- org.junit.jupiter:junit-jupiter:jar:5.8.2:test\n|  |  +- org.junit.jupiter:junit-jupiter-api:jar:5.8.2:test\n|  |  |  +- org.opentest4j:opentest4j:jar:1.2.0:test\n|  |  |  +- org.junit.platform:junit-platform-commons:jar:1.8.2:test\n|  |  |  \\- org.apiguardian:apiguardian-api:jar:1.1.2:test\n|  |  +- org.junit.jupiter:junit-jupiter-params:jar:5.8.2:test\n|  |  \\- org.junit.jupiter:junit-jupiter-engine:jar:5.8.2:test\n|  |     \\- org.junit.platform:junit-platform-engine:jar:1.8.2:test\n|  +- org.mockito:mockito-core:jar:4.5.1:test\n|  |  +- net.bytebuddy:byte-buddy-agent:jar:1.12.10:test\n|  |  \\- org.objenesis:objenesis:jar:3.2:test\n|  +- org.mockito:mockito-junit-jupiter:jar:4.5.1:test\n|  +- org.skyscreamer:jsonassert:jar:1.5.0:test\n|  |  \\- com.vaadin.external.google:android-json:jar:0.0.20131108.vaadin1:test\n|  +- org.springframework:spring-test:jar:5.3.20:test\n|  \\- org.xmlunit:xmlunit-core:jar:2.9.0:test\n\\- org.springframework.security:spring-security-test:jar:5.6.4:test\n"
+    }
+  },
+  "scannerEvidence": {
+    "base": {
+      "fullReportSha256": "609697d70c46fe320f7769d9b4d5ab30384861f14ef4ada2e7f5bed9eca204fb",
+      "matches": [
+        {
+          "package": "ch.qos.logback:logback-classic",
+          "installedVersion": "1.2.11",
+          "fixedVersions": [
+            "1.3.12",
+            "1.4.12",
+            "1.2.13"
+          ],
+          "target": "Java",
+          "location": "app/app.jar/BOOT-INF/lib/logback-classic-1.2.11.jar"
+        },
+        {
+          "package": "ch.qos.logback:logback-core",
+          "installedVersion": "1.2.11",
+          "fixedVersions": [
+            "1.3.12",
+            "1.4.12",
+            "1.2.13"
+          ],
+          "target": "Java",
+          "location": "app/app.jar/BOOT-INF/lib/logback-core-1.2.11.jar"
+        }
+      ]
+    },
+    "v16": {
+      "fullReportSha256": "a01335399d00ffdae51e70da9f9e4223c4f6aadeb0811cdc6d53c2c0e75a94d8",
+      "matches": [
+        {
+          "package": "ch.qos.logback:logback-core",
+          "installedVersion": "1.2.11",
+          "fixedVersions": [
+            "1.3.12",
+            "1.4.12",
+            "1.2.13"
+          ],
+          "target": "Java",
+          "location": "app/app.jar/BOOT-INF/lib/logback-core-1.2.11.jar"
+        }
+      ]
+    },
+    "coordinated-1": {
+      "fullReportSha256": "2573ec1ee6bf306a30bc2b5feff06020e3950ab5afcaed7e6baf9e6c910ae896",
+      "matches": [],
+      "packages": [
+        {
+          "Name": "ch.qos.logback:logback-classic",
+          "Identifier": {
+            "PURL": "pkg:maven/ch.qos.logback/logback-classic@1.2.13",
+            "UID": "ffc9e1f0a878eabb"
+          },
+          "Version": "1.2.13",
+          "Layer": {
+            "DiffID": "sha256:c37fed5449876df298d5efa1d17924850a500d0fb14498bb0e52024c32ffc9c6"
+          },
+          "FilePath": "app/app.jar/BOOT-INF/lib/logback-classic-1.2.13.jar",
+          "AnalyzedBy": "jar"
+        },
+        {
+          "Name": "ch.qos.logback:logback-core",
+          "Identifier": {
+            "PURL": "pkg:maven/ch.qos.logback/logback-core@1.2.13",
+            "UID": "86c6d9b38f846bb5"
+          },
+          "Version": "1.2.13",
+          "Layer": {
+            "DiffID": "sha256:c37fed5449876df298d5efa1d17924850a500d0fb14498bb0e52024c32ffc9c6"
+          },
+          "FilePath": "app/app.jar/BOOT-INF/lib/logback-core-1.2.13.jar",
+          "AnalyzedBy": "jar"
+        }
+      ]
+    },
+    "coordinated-2": {
+      "fullReportSha256": "82feb93222be1c9ad904a696aabe6e0ad323db74e7a5791af8cf24a5440ac41a",
+      "matches": [],
+      "packages": [
+        {
+          "Name": "ch.qos.logback:logback-classic",
+          "Identifier": {
+            "PURL": "pkg:maven/ch.qos.logback/logback-classic@1.2.13",
+            "UID": "ffc9e1f0a878eabb"
+          },
+          "Version": "1.2.13",
+          "Layer": {
+            "DiffID": "sha256:c37fed5449876df298d5efa1d17924850a500d0fb14498bb0e52024c32ffc9c6"
+          },
+          "FilePath": "app/app.jar/BOOT-INF/lib/logback-classic-1.2.13.jar",
+          "AnalyzedBy": "jar"
+        },
+        {
+          "Name": "ch.qos.logback:logback-core",
+          "Identifier": {
+            "PURL": "pkg:maven/ch.qos.logback/logback-core@1.2.13",
+            "UID": "86c6d9b38f846bb5"
+          },
+          "Version": "1.2.13",
+          "Layer": {
+            "DiffID": "sha256:c37fed5449876df298d5efa1d17924850a500d0fb14498bb0e52024c32ffc9c6"
+          },
+          "FilePath": "app/app.jar/BOOT-INF/lib/logback-core-1.2.13.jar",
+          "AnalyzedBy": "jar"
+        }
+      ]
+    }
+  },
+  "securityValidation": [
+    {
+      "status": "TARGET_CVE_CLOSED",
+      "targetCve": "CVE-2023-6378",
+      "mode": "TRIVY_IMAGE_ARCHIVE",
+      "evaluatedSha": "7ae0f954f99628b69ce9b42f42c1e2acc8568d99",
+      "candidateContentSha256": "f36d6ecdc90ca0f1964da7064b097b3f8450fea622ec8934b62bb31a26b370c6",
+      "artifactDigest": "068c10c5f8657ca8fff5cc6fef8011ca7c142c9e454b096aa895faa3caaaec6d",
+      "reportDigest": "56cb53a7981a854999ceedf904698dd23728aeffa0af08385659ccf13b68a462",
+      "scannerVersion": "Version: 0.72.0\nVulnerability DB:\n  Version: 2\n  UpdatedAt: 2026-09-24 19:02:16.06394158 +0000 UTC\n  NextUpdate: 2026-09-25 19:02:16.063941138 +0000 UTC\n  DownloadedAt: 2026-09-24 23:11:01.361372501 +0000 UTC\nJava DB:\n  Version: 1\n  UpdatedAt: 2026-08-24 01:07:04.599776272 +0000 UTC\n  NextUpdate: 2026-08-27 01:07:04.599776152 +0000 UTC\n  DownloadedAt: 2026-08-25 00:23:42.260738923 +0000 UTC\nCheck Bundle:\n  Digest: sha256:1583562f8b90ed2a071b99f0e5ffff6b57e4ceb6ca3e4796577b4e6a339eb74c\n  DownloadedAt: 2026-09-25 07:53:31.190451789 +0000 UTC",
+      "targetCveMatchCount": 0,
+      "buildPassed": true,
+      "tests": "SKIPPED"
+    },
+    {
+      "status": "TARGET_CVE_CLOSED",
+      "targetCve": "CVE-2023-6378",
+      "mode": "TRIVY_IMAGE_ARCHIVE",
+      "evaluatedSha": "7ae0f954f99628b69ce9b42f42c1e2acc8568d99",
+      "candidateContentSha256": "f36d6ecdc90ca0f1964da7064b097b3f8450fea622ec8934b62bb31a26b370c6",
+      "artifactDigest": "068c10c5f8657ca8fff5cc6fef8011ca7c142c9e454b096aa895faa3caaaec6d",
+      "reportDigest": "36ceafcd116958b3de336be07dfb16eb982bca133cb3f8b13bb2c8b550ea14ad",
+      "scannerVersion": "Version: 0.72.0\nVulnerability DB:\n  Version: 2\n  UpdatedAt: 2026-09-24 19:02:16.06394158 +0000 UTC\n  NextUpdate: 2026-09-25 19:02:16.063941138 +0000 UTC\n  DownloadedAt: 2026-09-24 23:11:01.361372501 +0000 UTC\nJava DB:\n  Version: 1\n  UpdatedAt: 2026-08-24 01:07:04.599776272 +0000 UTC\n  NextUpdate: 2026-08-27 01:07:04.599776152 +0000 UTC\n  DownloadedAt: 2026-08-25 00:23:42.260738923 +0000 UTC\nCheck Bundle:\n  Digest: sha256:1583562f8b90ed2a071b99f0e5ffff6b57e4ceb6ca3e4796577b4e6a339eb74c\n  DownloadedAt: 2026-09-25 07:53:31.190451789 +0000 UTC",
+      "targetCveMatchCount": 0,
+      "buildPassed": true,
+      "tests": "SKIPPED"
+    }
+  ],
+  "candidateIdentity": "71531d5009b160fbe4d9e41dfe65efc203b676312003ae01c0b8d9596f851d9a",
+  "deterministicCandidateArtifacts": {
+    "hashes": [
+      "eb2789a4a9c51b0a2506ab561803ac6af97e8e4f78d88428c736f731a86b2aae",
+      "eb2789a4a9c51b0a2506ab561803ac6af97e8e4f78d88428c736f731a86b2aae"
+    ],
+    "identical": true
+  },
+  "artifactDefinition": "SHA-256 of JSON containing candidateIdentity, remediationScope and candidateManifest; excludes scan/build timestamps. Not a claim of cache-free reproducible OCI builds.",
+  "fullEvidenceDirectory": "/tmp/wf6-v17-audit",
+  "offlineBuild": "Audit-only Dockerfile injects the copied offline Maven cache instead of running network prefetch; mvn -o clean package -DskipTests; runtime stage unchanged. Candidate contains only pom.xml.",
+  "testsSkippedInCandidatePackage": true,
+  "scannerIsolation": "network=none; skip-db-update, skip-java-db-update, skip-check-update, skip-version-check, offline-scan; all severities, image archive mode",
+  "deploymentPrerequisites": [
+    "Provision and validate rootless Podman plus Trivy and DB/cache for default validator; current verifier Dockerfile does not provide them.",
+    "Resolve WF6 30-second HTTP timeout against synchronous Maven/build/scan duration; no workflow or routing changed."
+  ]
+}

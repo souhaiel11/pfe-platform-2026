@@ -10,6 +10,25 @@ export function computeContentSha256(content: string): string {
 }
 
 /**
+ * V1.7 image-provisioning phase — extracted verbatim from incidents.service.ts
+ * (its original home) into this existing pure/dependency-free module rather
+ * than a new file: `security-patch-guard.ts` and
+ * `security-finding-resolver.service.ts` (backend/src/security-remediation/)
+ * are compiled into the isolated candidate-verifier worker image, and
+ * previously imported this one predicate from incidents.service.ts purely
+ * for its type/shape check -- pulling in that file's full NestJS/TypeORM/
+ * business-service graph (InjectRepository, ManualRemediationService,
+ * CandidateVerificationService, ...) along with it, which candidate-verifier
+ * deliberately never provisions (no DB, no TypeORM -- see
+ * candidate-verifier/isolation.spec.ts). incidents.service.ts now imports
+ * and re-exports this SAME function instead of defining its own -- one
+ * implementation, not two.
+ */
+export function isFullGitSha(value: unknown): value is string {
+  return typeof value === 'string' && /^[a-f0-9]{40}$/i.test(value);
+}
+
+/**
  * R81.3 — the exact SHA-1 git itself uses to identify a blob's content:
  * sha1("blob " + byteLength + "\0" + content). Pure, no I/O, no git binary
  * invoked. This lets the write-guard independently RE-DERIVE the hash of a

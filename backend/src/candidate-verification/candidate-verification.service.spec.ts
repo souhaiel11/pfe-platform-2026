@@ -8,6 +8,8 @@ import * as assert from 'node:assert/strict';
 import { CandidateVerificationService } from './candidate-verification.service';
 import { computeCandidateDigest, computeContentSha256 } from './candidate-digest';
 import { CandidateManifest, CandidateVerification } from './candidate-verification.types';
+import { computeSecurityCandidateIdentity } from '../security-remediation/security-candidate-identity';
+import { WORKER_DEADLINE_MS, BACKEND_TRANSPORT_SLACK_MS, BACKEND_HTTP_TIMEOUT_MS } from '../security-remediation/security-remediation-deadline-contract';
 
 function manifest(overrides: Partial<CandidateManifest> = {}): CandidateManifest {
   const m: CandidateManifest = {
@@ -134,11 +136,61 @@ async function main() {
     const service = new CandidateVerificationService();
     const result = await service.evaluateSecurityRemediation(secInput);
     assert.equal(capturedUrl, 'http://candidate-verifier:4100/security-remediation/evaluate', 'the worker base URL is derived from the SAME workerUrl, no new env var');
-    assert.deepEqual(capturedBody, secInput, 'the exact trusted input is forwarded unchanged');
-    assert.deepEqual(result, workerResponse, 'the worker\'s real result passes through completely unchanged');
+    // V1.7 Blocker B: the exact trusted input is forwarded unchanged, EXTENDED
+    // with overallDeadlineMs == this call's own timeoutMs (the default here,
+    // since evaluateSecurityRemediation() was called with no explicit
+    // timeoutMs) -- so the worker's internal deadline finally agrees with
+    // the backend's own HTTP abort instead of being a disconnected figure.
+    assert.deepEqual(capturedBody, { ...secInput, overallDeadlineMs: WORKER_DEADLINE_MS }, 'the exact trusted input is forwarded, plus the caller\'s own timeout (defaulting to the shared WORKER_DEADLINE_MS contract) as overallDeadlineMs');
+    assert.equal(result.status, 'TECHNICAL_FAILURE', 'V1.6 ready response without candidate-wide closure must be rejected');
+  }
+
+  // V1.7: complete, candidate-bound proof passes; stale or detached proof fails.
+  {
+    const input = { ...secInput, finding: { ...secInput.finding, cveId: 'CVE-2023-6378' } };
+    const scope: any = { kind: 'SINGLE_CONTROL', targetCve: input.finding.cveId, evaluatedSha: input.candidateBaseSha,
+      controllingFile: 'pom.xml', originalBlobSha: 'b'.repeat(40),
+      affectedPackages: [{ package: 'g:a', installedVersion: '1.0.0', targetVersion: '1.0.1' }],
+      controls: [{ kind: 'DEPENDENCY_VERSION', key: 'g:a', start: 0, end: 5, oldVersion: '1.0.0', targetVersion: '1.0.1' }] };
+    const m = manifest({ repository: input.repository, candidateBaseSha: input.candidateBaseSha,
+      files: [{ path: 'pom.xml', operation: 'MODIFY', content: '1.0.1', contentSha256: computeContentSha256('1.0.1'), originalBlobSha: scope.originalBlobSha }] });
+    const ready: any = { status: 'CANDIDATE_READY', candidateManifest: m,
+      decision: { findingIdentity: input.finding.findingIdentity, evaluatedSha: input.candidateBaseSha,
+        provenance: { package: 'g:a', installedVersion: '1.0.0' }, selectedTargetVersion: '1.0.1', remediationScope: scope },
+      candidateIdentity: computeSecurityCandidateIdentity({ findingIdentity: input.finding.findingIdentity, evaluatedSha: input.candidateBaseSha,
+        package: 'g:a', installedVersion: '1.0.0', targetVersion: '1.0.1', controllingFile: 'pom.xml', remediationScope: scope }),
+      securityValidationEvidence: { status: 'TARGET_CVE_CLOSED', targetCveMatchCount: 0, buildPassed: true,
+        mode: 'TRIVY_IMAGE_ARCHIVE', targetCve: input.finding.cveId, evaluatedSha: input.candidateBaseSha,
+        artifactDigest: 'c'.repeat(64), reportDigest: 'd'.repeat(64), candidateContentSha256: computeContentSha256('1.0.1') } };
+    globalThis.fetch = (async () => new Response(JSON.stringify(ready))) as any;
+    assert.equal((await new CandidateVerificationService().evaluateSecurityRemediation(input)).status, 'CANDIDATE_READY');
+    for (const mutate of [
+      (r: any) => { delete r.securityValidationEvidence; },
+      (r: any) => { r.securityValidationEvidence.targetCveMatchCount = 1; },
+      (r: any) => { r.securityValidationEvidence.targetCve = 'CVE-2024-12345'; },
+      (r: any) => { r.securityValidationEvidence.evaluatedSha = 'e'.repeat(40); },
+      (r: any) => { r.securityValidationEvidence.buildPassed = false; },
+      (r: any) => { r.candidateManifest.files[0].content = 'extra mutation'; },
+      (r: any) => { r.decision.remediationScope.controls.push({ ...scope.controls[0], key: 'g:b' }); },
+      (r: any) => { r.candidateIdentity = 'e'.repeat(64); },
+    ]) {
+      const invalid = JSON.parse(JSON.stringify(ready)); mutate(invalid);
+      globalThis.fetch = (async () => new Response(JSON.stringify(invalid))) as any;
+      assert.equal((await new CandidateVerificationService().evaluateSecurityRemediation(input)).status, 'TECHNICAL_FAILURE');
+    }
   }
 
   // I: candidate-verifier timeout -> TECHNICAL_FAILURE / VERIFIER_TIMEOUT
+  for (const failureClass of ['VERIFIER_TIMEOUT', 'VERIFIER_UNAVAILABLE']) {
+    const runtimeFailure: any = { status: 'TECHNICAL_FAILURE', failureClass, reason: 'runtime-failure',
+      decision: { findingIdentity: secInput.finding.findingIdentity }, candidateManifest: null, candidateIdentity: null };
+    globalThis.fetch = (async () => new Response(JSON.stringify(runtimeFailure))) as any;
+    assert.deepEqual(await new CandidateVerificationService().evaluateSecurityRemediation(secInput), runtimeFailure);
+    for (const key of ['candidateManifest', 'candidateIdentity', 'securityValidationEvidence']) {
+      globalThis.fetch = (async () => new Response(JSON.stringify({ ...runtimeFailure, [key]: 'forged-success' }))) as any;
+      assert.equal((await new CandidateVerificationService().evaluateSecurityRemediation(secInput) as any).failureClass, 'VERIFIER_PROTOCOL_ERROR');
+    }
+  }
   {
     globalThis.fetch = (async (_url: any, init: any) => {
       if (init?.signal?.aborted) throw Object.assign(new Error('The operation was aborted'), { name: 'TimeoutError' });
@@ -190,6 +242,25 @@ async function main() {
     assert.equal(result.status, 'TECHNICAL_FAILURE');
     assert.equal(result.failureClass, 'VERIFIER_PROTOCOL_ERROR', 'K: non-2xx HTTP status');
   }
+  // V1.7 predeploy phase — Phase A deadline contract: one shared source of
+  // truth, never a state where the worker could legitimately still be
+  // running after the backend has already given up.
+  {
+    // Not pinned to a specific literal here (see
+    // n8n-workflows/WF6-V1_7-RUNTIME-INTEGRATION-AUDIT.md for the real
+    // evidence WORKER_DEADLINE_MS is currently sized against) -- only the
+    // INVARIANT the shared contract must always hold: derived, never a
+    // second hand-maintained literal, and strictly ordered.
+    assert.equal(BACKEND_HTTP_TIMEOUT_MS, WORKER_DEADLINE_MS + BACKEND_TRANSPORT_SLACK_MS, 'derived, never a second hand-maintained literal');
+    assert.ok(BACKEND_HTTP_TIMEOUT_MS > WORKER_DEADLINE_MS, 'backend must always wait strictly longer than the worker deadline it forwards');
+  }
+  for (const timeoutMs of [WORKER_DEADLINE_MS - 1, WORKER_DEADLINE_MS]) {
+    let capturedBody: any;
+    globalThis.fetch = (async (_url: any, init: any) => { capturedBody = JSON.parse(init.body); return new Response(JSON.stringify({ status: 'TECHNICAL_FAILURE', failureClass: 'VERIFIER_UNAVAILABLE', reason: 'x', decision: { findingIdentity: 'fp-x' } })); }) as any;
+    await new CandidateVerificationService().evaluateSecurityRemediation(secInput, timeoutMs);
+    assert.equal(capturedBody.overallDeadlineMs, timeoutMs, `an explicit ${timeoutMs}ms request is forwarded unchanged, not silently clamped by the CALLER side`);
+  }
+  console.log(`CandidateVerificationService: WORKER_DEADLINE_MS/BACKEND_HTTP_TIMEOUT_MS shared-contract invariant: PASS (${WORKER_DEADLINE_MS - 1}/${WORKER_DEADLINE_MS} forwarded unchanged; clamping itself is the worker's own responsibility, proven in worker-deadline.spec.ts)`);
   console.log('CandidateVerificationService.evaluateSecurityRemediation (thin HTTP client, R-SEC-V1.4): PASS');
 
   globalThis.fetch = originalFetch;

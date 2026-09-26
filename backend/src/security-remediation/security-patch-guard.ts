@@ -10,14 +10,13 @@
 // guard INDEPENDENTLY RE-DERIVES what the patch should be by calling the
 // SAME pure, deterministic writeSecurityPatch() again from the trusted
 // request, and requires the proposed candidate to be BYTE-IDENTICAL to that
-// re-derivation. writeSecurityPatch() only ever changes the one located
-// <version>/property value (proven in maven-security-patch-writer.spec.ts)
+// re-derivation. writeSecurityPatch() only ever changes the authorized
+// <version>/property values, re-deriving a coordinated scope from evidence
 // -- so if the proposed candidate differs from a fresh re-run at all, by
-// definition something outside that one substitution was altered, and the
+// definition something outside those authorized substitutions was altered, and the
 // guard rejects without needing a second, separately-maintained "did
 // anything else change" implementation to drift out of sync with the writer.
-import { isFullGitSha } from '../incidents/incidents.service';
-import { computeGitBlobSha1 } from '../candidate-verification/candidate-digest';
+import { computeGitBlobSha1, isFullGitSha } from '../candidate-verification/candidate-digest';
 import { majorOf, parseVersion } from './version-selection-policy';
 import { writeSecurityPatch } from './maven-security-patch-writer';
 import { SecurityPatchCandidate, SecurityPatchRequest } from './security-patch-request.types';
@@ -54,6 +53,9 @@ export function assertSecurityPatchSafeToWrite(
   request: SecurityPatchRequest,
   candidate: SecurityPatchCandidate,
 ): SecurityPatchGuardResult {
+  if (JSON.stringify(decision.remediationScope) !== JSON.stringify(request.remediationScope)) {
+    return fail('SECURITY_PATCH_SCOPE_MISMATCH', 'The request omitted or changed the complete trusted remediation scope.');
+  }
   // 9. provenance kind is DIRECT_EXPLICIT or PROPERTY_MANAGED.
   if (candidate.provenanceKind !== 'DIRECT_EXPLICIT' && candidate.provenanceKind !== 'PROPERTY_MANAGED') {
     return fail('SECURITY_PATCH_PROVENANCE_NOT_AUTOFIXABLE', `provenanceKind "${candidate.provenanceKind}" is never auto-fixable.`);
@@ -128,7 +130,7 @@ export function assertSecurityPatchSafeToWrite(
   }
   const expected = rederived.candidate;
   if (expected.file.content !== candidate.file.content) {
-    return fail('SECURITY_PATCH_UNAUTHORIZED_CHANGE', 'candidate.file.content differs from the deterministic re-derivation -- something beyond the one authorized version/property substitution was changed.');
+    return fail('SECURITY_PATCH_UNAUTHORIZED_CHANGE', 'candidate.file.content differs from the deterministic re-derivation -- something beyond the complete authorized version/property substitutions was changed.');
   }
   if (expected.file.path !== candidate.file.path || expected.file.sourceContent !== candidate.file.sourceContent) {
     return fail('SECURITY_PATCH_UNAUTHORIZED_CHANGE', 'candidate.file.path/sourceContent differs from the deterministic re-derivation.');

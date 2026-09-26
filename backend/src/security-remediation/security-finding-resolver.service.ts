@@ -16,7 +16,7 @@ import { Repository } from 'typeorm';
 import { ManualRemediationTask } from '../manual-remediation/manual-remediation.entity';
 import { Incident } from '../incidents/incident.entity';
 import { Project } from '../projects/project.entity';
-import { isFullGitSha } from '../incidents/incidents.service';
+import { isFullGitSha } from '../candidate-verification/candidate-digest';
 import { SecurityFindingDecisionInput } from './security-finding-decision.types';
 
 export type TrustedFindingResolutionFailureReason =
@@ -103,6 +103,7 @@ export class SecurityFindingResolverService {
       candidateBaseSha: candidateBaseSha.toLowerCase(),
       finding: {
         findingIdentity: task.findingFingerprint,
+        cveId: task.ruleOrCve || undefined,
         source: task.source,
         package: String(pkg),
         expectedInstalledVersion: String(installedVersion),

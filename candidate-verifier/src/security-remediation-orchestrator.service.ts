@@ -10,14 +10,19 @@
 //              isolated worktree at the same exact SHA)
 //           -> candidate result (new: SecurityRemediationCandidateResult)
 //
-// This file adds ONLY orchestration -- no new checkout/cleanup primitive,
-// no new Maven goal, no new business rule. Every decision (what counts as
-// eligible, what a valid patch looks like, what the guard rejects) is made
-// by code already reviewed and committed; this class only sequences it and
-// fails closed at every step, per §5.
+// V1.7 adds backend-owned scope derivation from scanner findings and Maven
+// control experiments, followed by package/build and candidate-wide CVE
+// closure. WF6 receives only the resulting verified candidate; it has no
+// authority to select versions or broaden the remediation scope.
 //
 // NEVER writes to GitHub, never creates a PR, never touches
 // remediationWorkflowFor()/n8n -- this produces a candidate record only.
+import { createHash } from 'crypto';
+import { performance } from 'perf_hooks';
+import { computeGitBlobSha1 } from '../../backend/src/candidate-verification/candidate-digest';
+import { localMavenControls, applyMavenControls, deriveMavenRemediationScope, graphClosesScope, MavenScopeEvidence } from '../../backend/src/security-remediation/maven-remediation-scope';
+import { ArtifactRuntimeError, SecurityArtifactValidator, cveTargets, provesSecurityClosure, trackedSourceDigest } from './security-artifact-validator';
+import { RemoteBuilderArtifactValidator } from './remote-builder-artifact-validator';
 import { Injectable, Optional } from '@nestjs/common';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -33,6 +38,11 @@ import { computeCandidateDigest, computeContentSha256 } from '../../backend/src/
 import { SecurityPatchRequest, SecurityPatchCandidate } from '../../backend/src/security-remediation/security-patch-request.types';
 import { SecurityRemediationOrchestrationInput, SecurityRemediationCandidateResult } from '../../backend/src/security-remediation/security-remediation-orchestration.types';
 import { CandidateManifest } from '../../backend/src/candidate-verification/candidate-verification.types';
+import { createWorkerDeadline, WorkerDeadline } from './worker-deadline';
+
+const GROUNDING_STAGE_CAP_MS = 5 * 60 * 1000;
+const MAVEN_STAGE_CAP_MS = 5 * 60 * 1000;
+const BUILD_STAGE_CAP_MS = 5 * 60 * 1000;
 
 // See maven-security-patch-writer.ts / security-finding-decision.service.ts
 // for why Extract<> + a cast is used instead of relying on `if (!x.ok)`
@@ -46,19 +56,75 @@ export class SecurityRemediationOrchestratorService {
     @Optional() private readonly workspaceManager: WorkspaceManager = new WorkspaceManager(),
     @Optional() private readonly repoCache: RepoCacheService = new RepoCacheService(),
     @Optional() private readonly mavenAdapter: MavenBuildAdapter = new MavenBuildAdapter(),
+    @Optional() private readonly securityValidator: SecurityArtifactValidator = new RemoteBuilderArtifactValidator(),
   ) {}
 
   orchestrate(input: SecurityRemediationOrchestrationInput): SecurityRemediationCandidateResult {
+    const started = performance.now(), timings: Record<string, number> = {};
+    // V1.7 Blocker B: one monotonic deadline for the whole synchronous
+    // evaluation, created before any I/O. `input.overallDeadlineMs` is the
+    // backend's own already-existing worker-call timeout, forwarded
+    // unchanged (see candidate-verification.service.ts.evaluateSecurityRemediation);
+    // absent falls back to createWorkerDeadline()'s own default.
+    const deadline = createWorkerDeadline(input.overallDeadlineMs);
+    const result = this.evaluate(input, timings, deadline);
+    timings.TOTAL_WORKER_DURATION_MS = Math.round(performance.now() - started);
+    // Named phase aliases (total/generation/runtime/scanner/cleanup) asked
+    // for by the V1.7 runtime-integration audit, computed from the SAME
+    // underlying per-stage timings already recorded below -- never a second,
+    // independently-measured clock.
+    timings.GENERATION_DURATION_MS = timings.PATCH_GENERATION_DURATION_MS ?? 0;
+    return { ...result, executionTimings: timings };
+  }
+
+  private evaluate(input: SecurityRemediationOrchestrationInput, timings: Record<string, number>, deadline: WorkerDeadline): SecurityRemediationCandidateResult {
+    const measure = <T>(key: string, operation: () => T): T => {
+      const started = performance.now();
+      try { return operation(); }
+      finally { timings[key] = (timings[key] ?? 0) + Math.round(performance.now() - started); }
+    };
+    const bucket = (scanTimings: Record<string, number> | undefined, keys: string[], target: string) => {
+      for (const k of keys) if (scanTimings?.[k] !== undefined) timings[target] = (timings[target] ?? 0) + scanTimings[k];
+    };
+    const inspect = (workspace: string) => {
+      const scan = measure('ARTIFACT_VALIDATION_DURATION_MS', () => this.securityValidator.inspect(workspace, deadline.remainingMs()));
+      // V1.7 runtime stabilization phase, Phase A — PODMAN_BASE_IMAGE_PULL
+      // is now its own distinct bucket (registry-contact time), separated
+      // from IMAGE_BUILD_DURATION_MS (pure build-execution time, now that
+      // the build itself runs with --pull=never) -- both still roll up
+      // into the same overall RUNTIME_DURATION_MS as before.
+      bucket(scan.timings, ['IMAGE_BUILD'], 'IMAGE_BUILD_DURATION_MS');
+      bucket(scan.timings, ['PODMAN_BASE_IMAGE_PULL'], 'PODMAN_BASE_IMAGE_PULL_DURATION_MS');
+      bucket(scan.timings, ['TRIVY_SCAN'], 'TRIVY_SCAN_DURATION_MS');
+      bucket(scan.timings, ['PODMAN_PREFLIGHT', 'PODMAN_BASE_IMAGE_PULL', 'IMAGE_BUILD', 'IMAGE_SAVE'], 'RUNTIME_DURATION_MS');
+      bucket(scan.timings, ['TRIVY_PREFLIGHT', 'TRIVY_SCAN'], 'SCANNER_DURATION_MS');
+      bucket(scan.timings, ['IMAGE_EXISTS', 'IMAGE_CLEANUP'], 'CLEANUP_DURATION_MS');
+      return scan;
+    };
+    // A dedicated, distinguishable ArtifactRuntimeError code (see
+    // security-artifact-validator.ts's own `run()`) already maps to
+    // failureClass VERIFIER_TIMEOUT below via `runtimeFailure` -- this
+    // helper is for phases that are refused BEFORE ever calling
+    // execFileSync at all (grounding's own mvn calls, the scope-evidence
+    // control-experiment loop, the post-patch dependency:tree, and the
+    // candidate package build), where no ArtifactRuntimeError was thrown
+    // because nothing was attempted.
+    const deadlineExceeded = (stage: string) => new ArtifactRuntimeError('WORKER_DEADLINE_EXCEEDED', stage);
     // §4 steps 2-6: grounded provenance + fixedVersions normalization +
     // eligibility classification + target selection, all already
     // implemented and committed -- reused verbatim, not re-implemented.
-    const decision = this.decisionService.decide(input.finding, {
+    const decision = measure('GROUNDING_DURATION_MS', () => this.decisionService.decide(input.finding, {
       repository: input.repository, candidateBaseSha: input.candidateBaseSha,
       requestId: input.requestId, batchId: input.batchId, candidateAttempt: input.candidateAttempt,
-    });
+      timeoutMs: deadline.budgetFor(GROUNDING_STAGE_CAP_MS),
+    }));
 
     const notEligible = (status: SecurityRemediationCandidateResult['status'], reason: string): SecurityRemediationCandidateResult => ({
       status, reason, decision, candidateIdentity: null, candidateManifest: null, patchEvidence: null, guardResult: null, dependencyResolutionEvidence: null,
+    });
+    const runtimeFailure = (error: ArtifactRuntimeError): SecurityRemediationCandidateResult => ({
+      ...notEligible('TECHNICAL_FAILURE', error.message),
+      failureClass: (error.code === 'RUNTIME_OPERATION_TIMEOUT' || error.code === 'WORKER_DEADLINE_EXCEEDED') ? 'VERIFIER_TIMEOUT' : 'VERIFIER_UNAVAILABLE',
     });
 
     // §4 step 5 / §5: never proceed past a non-AUTO_FIX_ELIGIBLE decision --
@@ -139,6 +205,54 @@ export class SecurityRemediationOrchestratorService {
         return notEligible('WORKSPACE_FAILURE', `Controlling file "${provenance.controllingFile}" not found in the exact-SHA patch-validation worktree.`);
       }
 
+      // V1.7: independently observed scanner targets and controlled Maven
+      // experiments determine scope. Nothing here is accepted from WF6.
+      let scopeEvidence: MavenScopeEvidence;
+      try {
+        const cve = input.finding.cveId;
+        if (!cve || !/^CVE-\d{4}-\d{4,}$/.test(cve)) throw new Error('TRUSTED_TARGET_CVE_REQUIRED');
+        if (deadline.expired()) throw deadlineExceeded('BASE_SCAN');
+        const originalDigest = trackedSourceDigest(workspacePath);
+        const scan = inspect(workspacePath);
+        if (scan.sourceDigest !== originalDigest || trackedSourceDigest(workspacePath) !== originalDigest)
+          throw new Error('BASE_SCAN_SOURCE_BINDING_FAILED');
+        if (deadline.expired()) throw deadlineExceeded('BASE_MAVEN_MODEL');
+        const baseTree = measure('MAVEN_RESOLUTION_DURATION_MS', () => this.mavenAdapter.dependencyTree(workspacePath, deadline.budgetFor(MAVEN_STAGE_CAP_MS)));
+        const effective = measure('MAVEN_RESOLUTION_DURATION_MS', () => this.mavenAdapter.effectivePom(workspacePath, deadline.budgetFor(MAVEN_STAGE_CAP_MS)));
+        if (baseTree.status !== 'SUCCESS' || effective.status !== 'SUCCESS' || !baseTree.text || !effective.text)
+          throw new Error('BASE_MAVEN_MODEL_UNAVAILABLE');
+        scopeEvidence = { targetCve: cve, evaluatedSha: decision.evaluatedSha,
+          originalBlobSha: computeGitBlobSha1(sourceContent), baselineTree: baseTree.text,
+          baselineEffectivePom: effective.text, cveTargets: cveTargets(scan, cve), experiments: [] };
+        for (const control of localMavenControls(sourceContent, provenance.package, decision.selectedTargetVersion)) {
+          // V1.7 Blocker B requirement #5: remaining-budget exhaustion must
+          // prevent starting ANOTHER expensive phase -- checked before every
+          // single control experiment, not just once before the loop, since
+          // each iteration runs two real `mvn` invocations. Breaking out
+          // silently here would leave `scopeEvidence.experiments` partial,
+          // which deriveMavenRemediationScope()/graphClosesScope() would
+          // then treat as complete -- so this fails the WHOLE evaluation
+          // closed instead, exactly like any other mid-flight timeout.
+          if (deadline.expired()) throw deadlineExceeded('CONTROL_EXPERIMENT');
+          const content = applyMavenControls(sourceContent, [control]);
+          try {
+            fs.writeFileSync(controllingPath, content);
+            const tree = measure('MAVEN_RESOLUTION_DURATION_MS', () => this.mavenAdapter.dependencyTree(workspacePath, deadline.budgetFor(MAVEN_STAGE_CAP_MS)));
+            const model = measure('MAVEN_RESOLUTION_DURATION_MS', () => this.mavenAdapter.effectivePom(workspacePath, deadline.budgetFor(MAVEN_STAGE_CAP_MS)));
+            if (tree.status !== 'SUCCESS' || model.status !== 'SUCCESS' || !tree.text || !model.text)
+              throw new Error('CONTROL_EXPERIMENT_FAILED');
+            scopeEvidence.experiments.push({ control, sourceSha256: createHash('sha256').update(content).digest('hex'),
+              dependencyTree: tree.text, effectivePom: model.text });
+          } finally { fs.writeFileSync(controllingPath, sourceContent); }
+        }
+        if (trackedSourceDigest(workspacePath) !== originalDigest) throw new Error('MAVEN_MUTATED_SOURCE');
+        decision.remediationScope = deriveMavenRemediationScope(sourceContent, provenance.package,
+          decision.selectedTargetVersion, provenance.controllingFile, scopeEvidence);
+      } catch (err: any) {
+        if (err instanceof ArtifactRuntimeError) return runtimeFailure(err);
+        return notEligible('REMEDIATION_SCOPE_UNPROVEN', String(err?.message || 'Scope evidence unavailable.'));
+      }
+
       // §4 step 7: deterministic patch generation. `sourceContent` here is
       // freshly read from a worktree that JUST proved it is at the exact
       // evaluatedSha (git's content-addressing guarantees it is
@@ -149,17 +263,17 @@ export class SecurityRemediationOrchestratorService {
         provenanceKind: provenance.kind, package: provenance.package, installedVersion: provenance.installedVersion,
         targetVersion: decision.selectedTargetVersion!, controllingFile: provenance.controllingFile,
         controllingElement: provenance.controllingElement, controllingProperty: provenance.controllingProperty,
-        sourceContent,
+        sourceContent, remediationScope: decision.remediationScope, scopeEvidence,
       };
 
-      const writeResult = writeSecurityPatch(request);
+      const writeResult = measure('PATCH_GENERATION_DURATION_MS', () => writeSecurityPatch(request));
       if (writeResult.ok !== true) {
         return notEligible('PATCH_GENERATION_FAILED', (writeResult as any).reason);
       }
       const candidate = (writeResult as WriteSuccess).candidate as any;
 
       // §4 step 8: independent security guard re-validation.
-      const guardResult = assertSecurityPatchSafeToWrite(decision, request, candidate);
+      const guardResult = measure('PATCH_GENERATION_DURATION_MS', () => assertSecurityPatchSafeToWrite(decision, request, candidate));
       if (guardResult.ok !== true) {
         return {
           status: 'GUARD_REJECTED', reason: (guardResult as any).reason, decision, candidateIdentity: null,
@@ -171,7 +285,16 @@ export class SecurityRemediationOrchestratorService {
       // re-run real `mvn dependency:tree` -- proves actual Maven dependency
       // resolution, not merely that the XML text looks right.
       fs.writeFileSync(controllingPath, candidate.file.content, 'utf8');
-      const treeResult = this.mavenAdapter.dependencyTree(workspacePath);
+      const candidateSourceDigest = trackedSourceDigest(workspacePath);
+      // V1.7 Blocker B requirement #5: this is a plain (non-try/catch)
+      // section of `evaluate()` -- returning a result directly (never
+      // throwing) is what keeps the outer `finally` cleanup running without
+      // an uncaught exception escaping orchestrate().
+      if (deadline.expired()) return runtimeFailure(deadlineExceeded('CANDIDATE_DEPENDENCY_TREE'));
+      const treeResult = measure('MAVEN_RESOLUTION_DURATION_MS', () => this.mavenAdapter.dependencyTree(workspacePath, deadline.budgetFor(MAVEN_STAGE_CAP_MS)));
+      if (trackedSourceDigest(workspacePath) !== candidateSourceDigest) {
+        return notEligible('CANDIDATE_SECURITY_VALIDATION_FAILED', 'MAVEN_MUTATED_CANDIDATE_SOURCE');
+      }
       if (treeResult.status !== 'SUCCESS' || treeResult.text === null) {
         return {
           status: 'MAVEN_RESOLUTION_FAILED', reason: treeResult.evidenceTail || 'mvn dependency:tree did not produce usable output.',
@@ -179,13 +302,33 @@ export class SecurityRemediationOrchestratorService {
           dependencyResolutionEvidence: { checked: true, resolvedMatch: null, evaluatedAtSha: decision.evaluatedSha! },
         };
       }
-      const resolvedMatch = dependencyTreeResolvesTo(treeResult.text, provenance.package, candidate.targetVersion);
+      const resolvedMatch = dependencyTreeResolvesTo(treeResult.text, provenance.package, candidate.targetVersion)
+        && graphClosesScope(scopeEvidence.baselineTree, treeResult.text, decision.remediationScope);
       if (!resolvedMatch) {
         return {
           status: 'MAVEN_RESOLUTION_MISMATCH', reason: `Real dependency:tree after patching does not resolve ${provenance.package} to ${candidate.targetVersion}.`,
           decision, candidateIdentity: null, candidateManifest: null, patchEvidence: null, guardResult,
           dependencyResolutionEvidence: { checked: true, resolvedMatch: false, evaluatedAtSha: decision.evaluatedSha! },
         };
+      }
+
+      // A version replacement is not security closure. Build and scan the
+      // complete packaged candidate, rejecting ANY remaining target-CVE match.
+      let closureScan: ReturnType<SecurityArtifactValidator['inspect']>;
+      try {
+        const expectedDigest = candidateSourceDigest;
+        if (deadline.expired()) throw deadlineExceeded('CANDIDATE_BUILD');
+        const build = measure('BUILD_DURATION_MS', () => this.mavenAdapter.packageCandidate(workspacePath, deadline.budgetFor(BUILD_STAGE_CAP_MS)));
+        if (build.status !== 'SUCCESS') return notEligible('CANDIDATE_BUILD_FAILED', 'Candidate package build failed (tests skipped).');
+        if (trackedSourceDigest(workspacePath) !== expectedDigest) throw new Error('BUILD_MUTATED_SOURCE');
+        if (deadline.expired()) throw deadlineExceeded('CANDIDATE_SECURITY_VALIDATION');
+        closureScan = inspect(workspacePath);
+        if (closureScan.sourceDigest !== expectedDigest || trackedSourceDigest(workspacePath) !== expectedDigest)
+          throw new Error('CANDIDATE_SCAN_SOURCE_BINDING_FAILED');
+        if (!provesSecurityClosure(closureScan, decision.remediationScope)) throw new Error('TARGET_CVE_NOT_CLOSED_OR_SCAN_INCOMPLETE');
+      } catch (err: any) {
+        if (err instanceof ArtifactRuntimeError) return runtimeFailure(err);
+        return notEligible('CANDIDATE_SECURITY_VALIDATION_FAILED', String(err?.message || 'Candidate-wide security validation failed.'));
       }
 
       // §4 step 12: candidate/evidence. Reuses the EXISTING CandidateManifest
@@ -203,10 +346,15 @@ export class SecurityRemediationOrchestratorService {
       const candidateIdentity = computeSecurityCandidateIdentity({
         findingIdentity: decision.findingIdentity, evaluatedSha: decision.evaluatedSha!, package: provenance.package,
         installedVersion: provenance.installedVersion, targetVersion: decision.selectedTargetVersion!, controllingFile: provenance.controllingFile,
+        remediationScope: decision.remediationScope,
       });
 
       return {
         status: 'CANDIDATE_READY', reason: 'DETERMINISTIC_CANDIDATE_READY', decision, candidateIdentity, candidateManifest,
+        securityValidationEvidence: { status: 'TARGET_CVE_CLOSED', targetCve: scopeEvidence.targetCve, mode: 'TRIVY_IMAGE_ARCHIVE',
+          evaluatedSha: decision.evaluatedSha, candidateContentSha256: computeContentSha256(candidate.file.content),
+          artifactDigest: closureScan.artifactDigest, reportDigest: closureScan.reportDigest, scannerVersion: closureScan.scannerVersion,
+          targetCveMatchCount: 0, buildPassed: true, tests: 'SKIPPED' },
         patchEvidence: {
           provenanceKind: provenance.kind, oldVersion: candidate.oldVersion, targetVersion: candidate.targetVersion,
           controllingFile: provenance.controllingFile, controllingElement: provenance.controllingElement, controllingProperty: provenance.controllingProperty,
@@ -215,7 +363,15 @@ export class SecurityRemediationOrchestratorService {
         dependencyResolutionEvidence: { checked: true, resolvedMatch: true, evaluatedAtSha: decision.evaluatedSha! },
       };
     } finally {
-      this.workspaceManager.cleanupWorkspace(workspaceId, repoPath);
+      // V1.7 Blocker B requirement #4: cleanup is attempted regardless of
+      // WHY this `try` block is exiting -- including a deadline-exceeded
+      // result returned above -- and a `finally` throw here supersedes any
+      // pending return value (existing JS semantics, already exercised by
+      // this file's own leakingManager test): cleanup failure stays
+      // fail-closed even for a TIMEOUT outcome, never silently swallowed
+      // into a result that looks like a clean stop.
+      measure('CLEANUP_DURATION_MS', () => this.workspaceManager.cleanupWorkspace(workspaceId, repoPath));
+      if (fs.existsSync(workspacePath)) throw new ArtifactRuntimeError('RUNTIME_CLEANUP_FAILED', 'WORKSPACE_CLEANUP');
     }
   }
 }

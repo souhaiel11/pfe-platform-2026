@@ -38,6 +38,19 @@ export interface SecurityRemediationOrchestrationInput {
   requestId: string;
   batchId: string;
   candidateAttempt: number;
+  /**
+   * V1.7 Blocker B: the caller's own overall time budget for this single
+   * evaluation, in milliseconds. Forwarded unchanged by the backend's
+   * CandidateVerificationService.evaluateSecurityRemediation() from the SAME
+   * `timeoutMs` it already uses to bound its own HTTP wait -- so the
+   * worker's internal deadline and the backend's HTTP abort finally agree,
+   * instead of the abort firing over a synchronous worker that keeps
+   * running regardless. Optional/absent falls back to the worker's own
+   * default (createWorkerDeadline() in candidate-verifier/src/
+   * worker-deadline.ts); always clamped server-side, never trusted as an
+   * unbounded request.
+   */
+  overallDeadlineMs?: number;
 }
 
 /**
@@ -46,6 +59,10 @@ export interface SecurityRemediationOrchestrationInput {
  * status carrying a non-null candidateManifest.
  */
 export type SecurityRemediationCandidateStatus =
+  | 'TECHNICAL_FAILURE'
+  | 'REMEDIATION_SCOPE_UNPROVEN'
+  | 'CANDIDATE_BUILD_FAILED'
+  | 'CANDIDATE_SECURITY_VALIDATION_FAILED'
   | 'CANDIDATE_READY'
   | 'NOT_ELIGIBLE'
   | 'GROUNDING_FAILED'
@@ -63,7 +80,25 @@ export type SecurityRemediationCandidateStatus =
  * it unchanged through the existing write-guard/candidate-verification
  * pipeline -- no second, incompatible candidate model.
  */
+export interface SecurityClosureEvidence {
+  status: 'TARGET_CVE_CLOSED';
+  targetCve: string;
+  mode: 'TRIVY_IMAGE_ARCHIVE';
+  evaluatedSha: string;
+  candidateContentSha256: string;
+  artifactDigest: string;
+  reportDigest: string;
+  scannerVersion: string;
+  targetCveMatchCount: 0;
+  buildPassed: true;
+  tests: 'SKIPPED';
+}
+
 export interface SecurityRemediationCandidateResult {
+  /** Observational timings, excluded from candidate identity/digest. */
+  executionTimings?: Record<string, number>;
+  failureClass?: 'VERIFIER_TIMEOUT' | 'VERIFIER_UNAVAILABLE' | 'VERIFIER_PROTOCOL_ERROR';
+  securityValidationEvidence?: SecurityClosureEvidence;
   status: SecurityRemediationCandidateStatus;
   reason: string;
   decision: SecurityFindingDecision;
@@ -122,6 +157,8 @@ export function assertSecurityRemediationOrchestrationInput(body: any): asserts 
   if (!isNonEmptyString(body.requestId)) fail('requestId is required.');
   if (!isNonEmptyString(body.batchId)) fail('batchId is required.');
   if (!Number.isInteger(body.candidateAttempt) || body.candidateAttempt < 0) fail('candidateAttempt must be a non-negative integer.');
+  if (body.overallDeadlineMs !== undefined && !(typeof body.overallDeadlineMs === 'number' && Number.isFinite(body.overallDeadlineMs) && body.overallDeadlineMs > 0))
+    fail('overallDeadlineMs must be a positive finite number when present.');
 }
 
 /**

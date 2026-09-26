@@ -4,7 +4,7 @@
 // fails closed on anything else -- it never fetches/infers anything itself
 // (that stays the caller's job, same as WF2's own `Branch Exists?` node),
 // it only refuses to guess when given inconsistent inputs.
-import { isFullGitSha } from '../incidents/incidents.service';
+import { isFullGitSha } from './candidate-digest';
 
 export interface CandidateBaseShaInput {
   remediationBranchExists: boolean;

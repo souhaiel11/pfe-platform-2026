@@ -4,7 +4,11 @@
 import { DependencyProvenance } from './dependency-provenance.types';
 import { SecurityRemediationType } from './security-eligibility-classifier';
 
+import { MavenRemediationScope } from './maven-remediation-scope';
+
 export interface SecurityFindingDecisionInput {
+  /** Backend-persisted advisory identity, never supplied by the webhook caller. */
+  cveId?: string;
   /** Stable cross-build identity — reuse findingFingerprint() (manual-remediation/finding-fingerprint.ts) at the call site; not recomputed here. */
   findingIdentity: string;
   source: string;
@@ -16,6 +20,7 @@ export interface SecurityFindingDecisionInput {
 }
 
 export interface SecurityFindingDecision {
+  remediationScope?: MavenRemediationScope;
   findingIdentity: string;
   /** null when grounding itself failed (checkout/tree failure) — never a guess. */
   evaluatedSha: string | null;

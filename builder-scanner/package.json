@@ -1,0 +1,16 @@
+{
+  "name": "builder-scanner",
+  "version": "1.0.0",
+  "description": "V1.7 dedicated builder/scanner worker: receives an already-authorized candidate workspace path and a remaining time budget, builds it with rootless Podman (--isolation=chroot) and scans it with Trivy, returns only a structured build/scan result. Makes no remediation decision, chooses no dependency version, authorizes no GitHub write, and has no database/GitHub/Jenkins/Sonar/n8n credential of any kind.",
+  "private": true,
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "start": "node dist/builder-scanner/src/server.js"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "ts-node": "^10.0.0",
+    "typescript": "^5.0.0"
+  }
+}

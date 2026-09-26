@@ -327,3 +327,53 @@ test('identical replay with exact historical PR performs zero mutations',()=>{
 for(const status of ['NOT_ELIGIBLE','TECHNICAL_FAILURE','CANDIDATE_DRIFTED','GUARD_REJECTED'])test(`fresh ${status} prevents first mutation`,()=>{
  const f=fixtures();f['Revalidate Before Write (New Branch)']=envelope({status});const r=run(f);assert.equal(r.writes.length,0);assert.notEqual(r.response.state,'PR_CREATED');
 });
+
+// V1.7 runtime prerequisites: a transport/worker timeout grants no write
+// authority. PR revalidation occurs AFTER two previously authorized writes;
+// its timeout prevents the PR, but cannot undo those earlier operations.
+for (const [node, existing, priorWrites] of [
+ ['Evaluate Security Remediation', false, 0],
+ ['Revalidate Before Write (New Branch)', false, 0],
+ ['Revalidate Before Write (Reuse)', true, 0],
+ ['Revalidate Before Write (PR)', false, 2],
+]) for (const failure of ['transport-timeout', 'worker-timeout']) {
+ test(`V1.7 ${node}: ${failure} stops all subsequent writes`, () => {
+  const f=fixtures(existing);
+  f[node]=failure==='transport-timeout' ? {error:{name:'TimeoutError',message:'ETIMEDOUT'}}
+   : envelope({status:'TECHNICAL_FAILURE',failureClass:'VERIFIER_TIMEOUT'});
+  const r=expect(f,'TECHNICAL_FAILURE',priorWrites); zeroPr(r);
+  const index=r.calls.findIndex(c=>c.name===node);
+  assert.equal(r.calls.slice(index+1).filter(c=>isWrite(nodes.get(c.name))).length,0);
+ });
+}
+test('V1.7 successful first-create path performs three full backend evaluations',()=>{
+ const r=expect(fixtures(),'PR_CREATED',3);
+ const backendCalls=r.calls.filter(c=>c.url.startsWith('http://offline-backend:3001/'));
+ assert.deepEqual(backendCalls.map(c=>c.name),['Evaluate Security Remediation','Revalidate Before Write (New Branch)','Revalidate Before Write (PR)']);
+ console.log('V1.7 create-path HTTP calls: '+r.calls.length+'; full evaluations: '+backendCalls.length);
+});
+
+// V1.7 predeploy phase — the reconciled worker/backend/WF6 deadline
+// contract (900000/910000/920000ms, n8n-workflows/WF6-V1_7-RUNTIME-
+// INTEGRATION-AUDIT.md -- re-evaluated from scratch in the FINAL predeploy
+// phase, not kept merely because 600000/610000/620000 pre-existed): exactly
+// the four real security-evaluation/revalidation nodes carry the new
+// 920000ms timeout; every OTHER HTTP node in this workflow (GitHub reads/
+// writes, none of which invoke the real, long-running worker) is unchanged
+// at 30000ms.
+test('V1.7 security evaluation/revalidation nodes carry the reconciled 920000ms timeout',()=>{
+ const SECURITY_NODES=['Evaluate Security Remediation','Revalidate Before Write (New Branch)','Revalidate Before Write (Reuse)','Revalidate Before Write (PR)'];
+ for(const name of SECURITY_NODES){
+  const n=nodes.get(name);
+  assert.ok(n,`node "${name}" must exist`);
+  assert.equal(n.parameters.options.timeout,920000,`${name} must carry the reconciled 920000ms timeout`);
+ }
+ const unaffected=[...nodes.keys()].filter(name=>n8nTypeIsHttp(nodes.get(name))&&!SECURITY_NODES.includes(name));
+ assert.ok(unaffected.length>10,'sanity: there really are other HTTP nodes to check');
+ for(const name of unaffected){
+  const n=nodes.get(name);
+  assert.equal(n.parameters.options.timeout,30000,`${name} (not a security-evaluation node) must remain unchanged at 30000ms`);
+ }
+ console.log(`V1.7 timeout reconciliation: 4/4 security nodes at 920000ms; ${unaffected.length} other HTTP nodes unchanged at 30000ms`);
+});
+function n8nTypeIsHttp(n){return n && n.type==='n8n-nodes-base.httpRequest';}

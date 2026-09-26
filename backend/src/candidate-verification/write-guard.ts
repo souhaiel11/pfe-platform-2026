@@ -5,7 +5,7 @@
 // later phase cannot accidentally skip it by inlining an ad hoc check.
 import { CandidateManifest, CandidateVerification, VerificationEvidence, VerificationResult } from './candidate-verification.types';
 import { buildVerificationEvidence } from './verification-evidence';
-import { isFullGitSha } from '../incidents/incidents.service';
+import { isFullGitSha } from './candidate-digest';
 import { evaluateGeneratedCommentGuardForFile } from './generated-comment-guard';
 
 export type WriteGuardRejectionReason =

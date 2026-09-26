@@ -18,6 +18,13 @@ import { validateCanonicalEvidenceBinding, mergeCanonicalEvidenceWithStatic, ide
 import { resolveSemanticEvidenceAdapter } from '../validation/adapters/registry';
 import { CandidateVerificationService } from '../candidate-verification/candidate-verification.service';
 import { HeadVerificationRequest, HeadVerification, VerificationEvidence } from '../candidate-verification/candidate-verification.types';
+// V1.7 image-provisioning phase — isFullGitSha moved to candidate-digest.ts
+// (a pure, dependency-free module already shared with candidate-verifier);
+// re-exported here so every existing external import of it from this file
+// (e.g. remediation-batch.spec.ts) keeps working unchanged. Single
+// implementation, not two — see candidate-digest.ts's own comment.
+import { isFullGitSha } from '../candidate-verification/candidate-digest';
+export { isFullGitSha };
 import { redactAndCapEvidence } from '../candidate-verification/verification-evidence';
 import { analyzeRegression, conservativeRegressionPolicy } from '../validation/pr-regression-engine';
 import { combineRegressionVerdict } from '../validation/regression-verdict';
@@ -190,10 +197,6 @@ export function prValidationIdentity(projectId: string, prNumber: number, prHead
 // identity already is.
 export function prValidationRevalidationIdentity(projectId: string, prNumber: number, prHeadSha: string, batchId: string, epoch: number): string {
   return createHash('sha256').update(`${projectId}\n${prNumber}\n${prHeadSha.toLowerCase()}\n${batchId}\nrevalidation\n${Number(epoch)}`).digest('hex');
-}
-
-export function isFullGitSha(value: unknown): value is string {
-  return typeof value === 'string' && /^[a-f0-9]{40}$/i.test(value);
 }
 
 // R79 — the sha a candidate's OWN writes are based on, for fetching its

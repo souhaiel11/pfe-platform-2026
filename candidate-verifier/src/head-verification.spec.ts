@@ -16,13 +16,21 @@ async function main() {
   const git = (...args: string[]) => execFileSync('git', ['-C', repo, ...args], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
   const originalFetch = globalThis.fetch;
   try {
-    git('init'); fs.writeFileSync(path.join(repo, 'proof.txt'), 'exact committed bytes');
-    git('add', '.'); git('-c', 'user.name=Test', '-c', 'user.email=test@example.com', 'commit', '-m', 'fixture');
+    // Offline audits can reuse an existing commit without creating commits.
+    const existingFixture = process.env.SECURITY_TEST_REPO;
+    let proofPath = 'proof.txt', proofBytes = 'exact committed bytes';
+    if (existingFixture) {
+      execFileSync('git', ['clone', '--no-hardlinks', existingFixture, repo], { stdio: 'pipe' });
+      proofPath = 'pom.xml'; proofBytes = fs.readFileSync(path.join(repo, proofPath), 'utf8');
+    } else {
+      git('init'); fs.writeFileSync(path.join(repo, proofPath), proofBytes);
+      git('add', '.'); git('-c', 'user.name=Test', '-c', 'user.email=test@example.com', 'commit', '-m', 'fixture');
+    }
     const sha = git('rev-parse', 'HEAD');
     const request: HeadVerificationRequest = { verifyHeadOnly: true, repository: 'owner/repo', targetSha: sha.toUpperCase(), validationRequestId: 'v1', requestId: 'r1', batchId: 'b1', candidateAttempt: 1 };
     let calls = 0;
     const adapter: any = { supports: () => true, compile: (ws: string) => {
-      calls++; assert.equal(fs.readFileSync(path.join(ws, 'proof.txt'), 'utf8'), 'exact committed bytes');
+      calls++; assert.equal(fs.readFileSync(path.join(ws, proofPath), 'utf8'), proofBytes);
       return { status: 'SUCCESS', exitCode: 0, durationMs: 1, evidenceTail: 'compile proof' };
     }, runRegressionTests: () => ({ status: 'SUCCESS', total: 1, failures: 0, errors: 0, skipped: 0, durationMs: 1, evidenceRef: 'test proof' }) };
     const manager = new WorkspaceManager(path.join(root, 'workspaces'));

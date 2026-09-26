@@ -50,7 +50,22 @@ const drifted = response('Respond - Candidate Drifted', 'CANDIDATE_DRIFTED');
 const baseMissing = response('Respond - Base SHA Unresolvable', 'BASE_SHA_UNRESOLVABLE');
 const branchConflict = response('Respond - Branch Content Conflict', 'BRANCH_CONTENT_CONFLICT');
 const writeConflict = response('Respond - Write Conflict', 'WRITE_CONFLICT');
-function http(name, method, url, body, backend = false) {
+// V1.7 predeploy phase — `timeoutMs` defaults to the SAME 30000 every
+// other (GitHub read/write) node here already used, unchanged. Only the
+// real security-evaluation/revalidation nodes below pass an explicit
+// override (WF6_SECURITY_EVALUATION_TIMEOUT_MS): those four are the only
+// ones that invoke the real, synchronous V1.7 worker (grounding + real
+// rootless Podman build + real Trivy scan), proven to legitimately need far
+// longer than 30s. V1.7 FINAL predeploy phase re-evaluated the deadline
+// from scratch (real evidence: successes at 464981/475195/576432ms, the
+// prior 600000ms ceiling legitimately reached twice under real transient
+// conditions, and one real uncapped-measurement outlier at 1,278,378ms) and
+// raised WORKER_DEADLINE_MS to 900000 -- see n8n-workflows/
+// WF6-V1_7-RUNTIME-INTEGRATION-AUDIT.md for the full real evidence and the
+// exact 900000/910000/920000ms contract this number is derived from. No
+// other HTTP node's timeout changes.
+const WF6_SECURITY_EVALUATION_TIMEOUT_MS = 920000;
+function http(name, method, url, body, backend = false, timeoutMs = 30000) {
   return add(name, 'httpRequest', {
     method, url: expr(url), sendHeaders: true,
     headerParameters: { parameters: backend
@@ -59,7 +74,7 @@ function http(name, method, url, body, backend = false) {
     ...(!backend ? { authentication: 'predefinedCredentialType', nodeCredentialType: 'githubApi' } : {}),
     ...(body ? { sendBody: true, contentType: 'json', specifyBody: 'json', jsonBody: expr(body) } : {}),
     options: { response: { response: { fullResponse: true, neverError: true, responseFormat: 'json' } },
-      redirect: { redirect: { followRedirects: false } }, timeout: 30000 },
+      redirect: { redirect: { followRedirects: false } }, timeout: timeoutMs },
   }, 4.2, { continueOnFail: true, retryOnFail: false, ...(!backend ? { credentials: { githubApi: githubCredential } } : {}),
     notes: 'Full response keeps arrays in body (including empty PR lists). HTTP and transport errors are explicitly gated. No redirect or automatic retry.' });
 }
@@ -73,7 +88,7 @@ const webhook = add('Webhook - Security Remediation Request', 'webhook', {
   httpMethod: 'POST', path: 'wf6-security-remediation-evaluate', authentication: 'headerAuth', responseMode: 'responseNode', options: {},
 }, 2, { credentials: { httpHeaderAuth: inboundCredential } });
 const request = `({projectId: ${ref(webhook)}.body?.projectId, findingTaskId: ${ref(webhook)}.body?.findingTaskId})`;
-const evaluate = http('Evaluate Security Remediation', 'POST', '$env.BACKEND_INTERNAL_URL + "/api/internal/security-remediation/evaluate"', request, true);
+const evaluate = http('Evaluate Security Remediation', 'POST', '$env.BACKEND_INTERNAL_URL + "/api/internal/security-remediation/evaluate"', request, true, WF6_SECURITY_EVALUATION_TIMEOUT_MS);
 link(webhook, evaluate);
 const evalOk = gate('Evaluation HTTP OK?', '$json.statusCode === 200 || $json.statusCode === 201', fail('EVALUATION_FAILED'));
 link(evaluate, evalOk);
@@ -142,7 +157,7 @@ return [{json: {ok: valid, repositoryDefaultBranch: ${branch}.repositoryDefaultB
 }
 function revalidate(label, previous) {
   const n = http(`Revalidate Before Write (${label})`, 'POST', '$env.BACKEND_INTERNAL_URL + "/api/internal/security-remediation/revalidate"',
-    `({...${request}, expectedCandidateIdentity: ${C}.candidateIdentity})`, true);
+    `({...${request}, expectedCandidateIdentity: ${C}.candidateIdentity})`, true, WF6_SECURITY_EVALUATION_TIMEOUT_MS);
   if (previous) link(previous, n);
   const ok = gate(`Revalidation HTTP OK? (${label})`, '($json.statusCode === 200 || $json.statusCode === 201) && !$json.error', fail('REVALIDATION_FAILED'));
   link(n, ok);

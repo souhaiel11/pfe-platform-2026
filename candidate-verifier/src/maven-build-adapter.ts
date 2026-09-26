@@ -34,7 +34,10 @@ function runMaven(args: string[], cwd: string, timeoutMs: number): { status: num
   const start = Date.now();
   try {
     const stdout = execFileSync('mvn', args, {
-      cwd, timeout: timeoutMs, encoding: 'utf8', env: safeMavenEnv(), stdio: ['ignore', 'pipe', 'pipe'],
+      // killSignal SIGKILL (not the default SIGTERM): a stuck/ignoring JVM
+      // must not be able to outlive its own timeout window -- same
+      // termination discipline as TrivyImageArtifactValidator's run().
+      cwd, timeout: timeoutMs, killSignal: 'SIGKILL', encoding: 'utf8', env: safeMavenEnv(), stdio: ['ignore', 'pipe', 'pipe'],
     });
     return { status: 0, stdout, stderr: '', timedOut: false, durationMs: Date.now() - start };
   } catch (err: any) {
@@ -58,6 +61,21 @@ export interface DependencyTreeResult {
 
 export class MavenBuildAdapter implements BuildAdapter {
   readonly buildType = 'maven';
+
+  packageCandidate(workspacePath: string, timeoutMs: number = DEFAULT_TIMEOUT_MS): CompileResult {
+    const r = runMaven(['clean', 'package', '-DskipTests', '-B'], workspacePath, timeoutMs);
+    return { status: r.status === 0 ? 'SUCCESS' : 'FAILED', exitCode: r.status, durationMs: r.durationMs,
+      evidenceTail: tail(r.stdout + '\n' + r.stderr) };
+  }
+
+  effectivePom(workspacePath: string, timeoutMs: number = DEFAULT_TIMEOUT_MS): DependencyTreeResult {
+    const output = path.join(workspacePath, '.pfe-effective-pom.xml');
+    const r = runMaven(['help:effective-pom', '-Dverbose', '-B', '-Doutput=' + output], workspacePath, timeoutMs);
+    try {
+      if (r.status !== 0) return { status: 'FAILED', text: null, evidenceTail: tail(r.stdout + r.stderr), timedOut: r.timedOut };
+      return { status: 'SUCCESS', text: fs.readFileSync(output, 'utf8'), evidenceTail: '', timedOut: false };
+    } finally { try { fs.unlinkSync(output); } catch {} }
+  }
 
   supports(workspacePath: string): boolean {
     return fs.existsSync(path.join(workspacePath, 'pom.xml'));

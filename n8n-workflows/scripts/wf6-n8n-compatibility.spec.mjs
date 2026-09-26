@@ -30,7 +30,16 @@ test('full response preserves empty/nonempty PR arrays in one item',()=>{
 test('neverError, continueOnFail and timeout allow explicit failure routing',()=>{
  assert.match(sources['HttpRequestV3.js'],/requestOptions.simple = false/);
  assert.match(sources['HttpRequestV3.js'],/this.continueOnFail\(\)/);
- for(const n of w.nodes.filter(n=>n.type.endsWith('.httpRequest'))){assert.equal(n.continueOnFail,true);assert.equal(n.parameters.options.timeout,30000);assert.equal(n.parameters.options.response.response.neverError,true);}
+ // V1.7 predeploy phase — the four real security-evaluation/revalidation
+ // nodes deliberately carry the reconciled 920000ms timeout (re-evaluated
+ // in the FINAL predeploy phase from the earlier 620000ms) instead of the
+ // baseline 30000ms every other HTTP node keeps (see
+ // wf6-security-remediation.spec.mjs's own dedicated test for the exact
+ // per-node assertion; n8n-workflows/WF6-V1_7-RUNTIME-INTEGRATION-
+ // AUDIT.md for the real evidence this number is derived from) — excluded
+ // here, not silently ignored.
+ const V17_RECONCILED_TIMEOUT_NODES=['Evaluate Security Remediation','Revalidate Before Write (New Branch)','Revalidate Before Write (Reuse)','Revalidate Before Write (PR)'];
+ for(const n of w.nodes.filter(n=>n.type.endsWith('.httpRequest'))){assert.equal(n.continueOnFail,true);assert.equal(n.parameters.options.timeout,V17_RECONCILED_TIMEOUT_NODES.includes(n.name)?920000:30000);assert.equal(n.parameters.options.response.response.neverError,true);}
 });
 test('redirect nesting disables default HTTP redirects',()=>{
  assert.match(sources['HttpRequestV3.js'],/defaultRedirect = nodeVersion >= 4 && redirect === undefined/);

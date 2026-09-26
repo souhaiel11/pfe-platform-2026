@@ -32,8 +32,7 @@
 //     (immediately after a `def`/`class` line) this tokenizer doesn't have,
 //     deliberately deferred rather than bolted on as a fragile regex.
 
-import { isFullGitSha } from '../incidents/incidents.service';
-import { computeGitBlobSha1 } from './candidate-digest';
+import { computeGitBlobSha1, isFullGitSha } from './candidate-digest';
 
 export interface CommentSyntax {
   /** Prefix that starts a line comment running to end-of-line (e.g. '//', '#'). Absent if the language has none. */

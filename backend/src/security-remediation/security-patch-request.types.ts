@@ -13,7 +13,11 @@
 import { CandidateFile } from '../candidate-verification/candidate-verification.types';
 import { DependencyProvenanceKind } from './dependency-provenance.types';
 
+import { MavenRemediationScope, MavenScopeEvidence } from './maven-remediation-scope';
+
 export interface SecurityPatchRequest {
+  remediationScope?: MavenRemediationScope;
+  scopeEvidence?: MavenScopeEvidence;
   findingIdentity: string;
   evaluatedSha: string;
   ecosystem: 'MAVEN';

@@ -9,8 +9,10 @@
 // worker's real result through unchanged.
 import { Injectable } from '@nestjs/common';
 import { CandidateManifest, CandidateVerification, FailureClass, HeadVerificationRequest, HeadVerification, VerificationMode, VerificationStep, assertHeadVerificationRequest } from './candidate-verification.types';
-import { computeCandidateDigest } from './candidate-digest';
+import { computeSecurityCandidateIdentity } from '../security-remediation/security-candidate-identity';
+import { computeCandidateDigest, computeContentSha256 } from './candidate-digest';
 import { SecurityRemediationOrchestrationInput, SecurityRemediationEvaluationResult, SecurityRemediationTransportFailure } from '../security-remediation/security-remediation-orchestration.types';
+import { WORKER_DEADLINE_MS, BACKEND_TRANSPORT_SLACK_MS } from '../security-remediation/security-remediation-deadline-contract';
 
 export interface VerifyOptions {
   allowedPaths?: string[];
@@ -148,15 +150,32 @@ export class CandidateVerificationService {
   // `input` must already be fully trusted (built by SecurityFindingResolverService,
   // never from raw caller input) -- this method makes no trust decision of
   // its own, it only classifies TRANSPORT outcomes.
-  async evaluateSecurityRemediation(input: SecurityRemediationOrchestrationInput, timeoutMs: number = DEFAULT_TIMEOUT_MS): Promise<SecurityRemediationEvaluationResult> {
+  // V1.7 predeploy phase: the default is WORKER_DEADLINE_MS (600,000ms),
+  // imported from security-remediation-deadline-contract.ts -- the SAME
+  // shared figure worker-deadline.ts's own default/clamp uses, replacing
+  // the previous locally-duplicated 360,000ms literal. Real evidence: two
+  // independent real end-to-end evaluations (real rootless Podman build +
+  // real Trivy scan, no fixture scanner) completed in 464,981ms/475,195ms --
+  // both would have been killed by the old 360,000ms default.
+  async evaluateSecurityRemediation(input: SecurityRemediationOrchestrationInput, timeoutMs: number = WORKER_DEADLINE_MS): Promise<SecurityRemediationEvaluationResult> {
     const workerBaseUrl = this.workerUrl.replace(/\/verify$/, '');
     const failure = (failureClass: SecurityRemediationTransportFailure['failureClass'], reason: string): SecurityRemediationTransportFailure => ({ status: 'TECHNICAL_FAILURE', failureClass, reason });
+    // V1.7 Blocker B: forward the SAME timeoutMs this call already uses to
+    // bound its own HTTP wait as the worker's internal deadline, so the
+    // worker actually stops the synchronous evaluation before this client's
+    // AbortSignal fires (10s slack), instead of the abort racing a worker
+    // that keeps running regardless. `input.overallDeadlineMs` (never set by
+    // real callers today) wins if a caller ever sets it explicitly.
+    const requestBody: SecurityRemediationOrchestrationInput = { overallDeadlineMs: timeoutMs, ...input };
 
     let response: Response;
     try {
       response = await fetch(`${workerBaseUrl}/security-remediation/evaluate`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(input),
-        signal: AbortSignal.timeout(timeoutMs + 10_000),
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(requestBody),
+        // BACKEND_TRANSPORT_SLACK_MS, not a bare literal: this is the SAME
+        // named slack security-remediation-deadline-contract.ts derives
+        // BACKEND_HTTP_TIMEOUT_MS from -- one shared number, not two.
+        signal: AbortSignal.timeout(timeoutMs + BACKEND_TRANSPORT_SLACK_MS),
       });
     } catch (err: any) {
       const timedOut = err?.name === 'AbortError' || err?.name === 'TimeoutError';
@@ -165,12 +184,41 @@ export class CandidateVerificationService {
     if (!response.ok) return failure('VERIFIER_PROTOCOL_ERROR', `Worker responded with HTTP ${response.status}.`);
     let body: any;
     try { body = await response.json(); } catch { return failure('VERIFIER_PROTOCOL_ERROR', 'Worker response was not valid JSON.'); }
-    const KNOWN_STATUSES = ['CANDIDATE_READY', 'NOT_ELIGIBLE', 'GROUNDING_FAILED', 'PATCH_GENERATION_FAILED', 'GUARD_REJECTED', 'WORKSPACE_FAILURE', 'MAVEN_RESOLUTION_FAILED', 'MAVEN_RESOLUTION_MISMATCH'];
+    const KNOWN_STATUSES = ['TECHNICAL_FAILURE', 'REMEDIATION_SCOPE_UNPROVEN', 'CANDIDATE_BUILD_FAILED', 'CANDIDATE_SECURITY_VALIDATION_FAILED', 'CANDIDATE_READY', 'NOT_ELIGIBLE', 'GROUNDING_FAILED', 'PATCH_GENERATION_FAILED', 'GUARD_REJECTED', 'WORKSPACE_FAILURE', 'MAVEN_RESOLUTION_FAILED', 'MAVEN_RESOLUTION_MISMATCH'];
     if (!body || typeof body !== 'object' || !KNOWN_STATUSES.includes(body.status) || !body.decision || typeof body.decision.findingIdentity !== 'string') {
       // Pass the worker's real result through unchanged when it IS shaped
       // correctly -- same "never re-derive, never re-classify" discipline
       // as verify() above -- but never trust an unrecognized shape.
       return failure('VERIFIER_PROTOCOL_ERROR', 'Worker response did not match the expected SecurityRemediationCandidateResult shape.');
+    }
+    if (body.status === 'TECHNICAL_FAILURE' && (
+      !['VERIFIER_TIMEOUT', 'VERIFIER_UNAVAILABLE', 'VERIFIER_PROTOCOL_ERROR'].includes(body.failureClass)
+      || body.candidateManifest != null || body.candidateIdentity != null || body.securityValidationEvidence != null)) {
+      return failure('VERIFIER_PROTOCOL_ERROR', 'Runtime failure must not carry a writable candidate or closure claim.');
+    }
+    if (body.status === 'CANDIDATE_READY') {
+      const proof = body.securityValidationEvidence, scope = body.decision.remediationScope;
+      const file = body.candidateManifest?.files?.[0];
+      if (!proof || proof.status !== 'TARGET_CVE_CLOSED' || proof.targetCveMatchCount !== 0 || proof.buildPassed !== true
+        || proof.mode !== 'TRIVY_IMAGE_ARCHIVE' || proof.targetCve !== input.finding.cveId
+        || proof.evaluatedSha !== input.candidateBaseSha || !scope || scope.targetCve !== proof.targetCve
+        || scope.evaluatedSha !== proof.evaluatedSha || !Array.isArray(scope.controls) || !scope.controls.length
+        || !Array.isArray(scope.affectedPackages) || !scope.affectedPackages.length
+        || !/^[0-9a-f]{64}$/.test(proof.artifactDigest || '') || !/^[0-9a-f]{64}$/.test(proof.reportDigest || '')
+        || body.candidateManifest?.files?.length !== 1 || !file || typeof file.content !== 'string'
+        || proof.candidateContentSha256 !== computeContentSha256(file.content)
+        || file.path !== scope.controllingFile || file.originalBlobSha !== scope.originalBlobSha
+        || body.candidateManifest.candidateBaseSha !== input.candidateBaseSha
+        || body.candidateManifest.repository !== input.repository
+        || body.candidateManifest.candidateDigest !== computeCandidateDigest(body.candidateManifest)
+        || body.decision.findingIdentity !== input.finding.findingIdentity
+        || body.candidateIdentity !== computeSecurityCandidateIdentity({
+          findingIdentity: body.decision.findingIdentity, evaluatedSha: body.decision.evaluatedSha,
+          package: body.decision.provenance?.package, installedVersion: body.decision.provenance?.installedVersion,
+          targetVersion: body.decision.selectedTargetVersion, controllingFile: file.path, remediationScope: scope,
+        })) {
+        return failure('VERIFIER_PROTOCOL_ERROR', 'V1.7 candidate-wide closure evidence missing or not bound to the candidate.');
+      }
     }
     return body;
   }

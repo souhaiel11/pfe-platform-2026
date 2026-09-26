@@ -18,12 +18,14 @@
 //     either).
 //   - old/target version not same-major -> reject (independent re-check of
 //     the same-major policy, never assumes the caller already enforced it).
+import { deriveMavenRemediationScope, applyMavenControls } from './maven-remediation-scope';
 import { CandidateFile } from '../candidate-verification/candidate-verification.types';
 import { computeContentSha256, computeGitBlobSha1 } from '../candidate-verification/candidate-digest';
 import { majorOf, parseVersion } from './version-selection-policy';
 import { SecurityPatchCandidate, SecurityPatchRequest } from './security-patch-request.types';
 
 export type SecurityPatchWriteFailureReason =
+  | 'COORDINATED_SCOPE_INVALID'
   | 'UNSUPPORTED_PROVENANCE_KIND'
   | 'MULTIPLE_CANDIDATE_DEPENDENCY_BLOCKS'
   | 'MULTIPLE_CANDIDATE_PROPERTY_DECLARATIONS'
@@ -175,6 +177,23 @@ export function writeSecurityPatch(request: SecurityPatchRequest): SecurityPatch
   const majorCheck = checkSameMajor(request.installedVersion, request.targetVersion);
   if (majorCheck) {
     return fail(majorCheck, `installedVersion="${request.installedVersion}" -> targetVersion="${request.targetVersion}" failed the same-major re-check (independent of the caller's own selection).`);
+  }
+
+  if (request.remediationScope) {
+    try {
+      if (!['DIRECT_EXPLICIT', 'PROPERTY_MANAGED'].includes(request.provenanceKind) || !request.scopeEvidence)
+        throw new Error('Unsupported or ungrounded scope.');
+      const scope = deriveMavenRemediationScope(request.sourceContent, request.package, request.targetVersion, request.controllingFile, request.scopeEvidence);
+      if (scope.affectedPackages.find(p => p.package === request.package)?.installedVersion !== request.installedVersion)
+        throw new Error('Installed version differs from independently grounded scope.');
+      if (scope.evaluatedSha !== request.evaluatedSha || JSON.stringify(scope) !== JSON.stringify(request.remediationScope))
+        throw new Error('Scope differs from complete fresh derivation.');
+      return { ok: true, candidate: {
+        file: buildCandidateFile(request, applyMavenControls(request.sourceContent, scope.controls)),
+        findingIdentity: request.findingIdentity, evaluatedSha: request.evaluatedSha,
+        provenanceKind: request.provenanceKind, oldVersion: request.installedVersion, targetVersion: request.targetVersion,
+      } };
+    } catch (e: any) { return fail('COORDINATED_SCOPE_INVALID', e.message); }
   }
 
   if (request.provenanceKind === 'DIRECT_EXPLICIT') {
