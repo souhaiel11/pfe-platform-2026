@@ -85,6 +85,13 @@ RUN npm install
 COPY builder-scanner/tsconfig.json ./
 COPY builder-scanner/tsconfig.build.json ./
 COPY builder-scanner/src ./src
+# V1.7 bootstrap-packaging fix — the out-of-band Trivy DB bootstrap script
+# (its own header comment documents `docker compose run --rm builder-scanner
+# sh scripts/bootstrap-trivy-cache.sh`) was never actually copied into this
+# image; that invocation had no scripts/ directory to run against. Not
+# compiled (it's `sh`, not TypeScript) so it belongs next to `src`, not
+# inside it.
+COPY builder-scanner/scripts ./scripts
 
 # Same minimal, explicitly-enumerated backend/src COPY discipline
 # candidate-verifier/Dockerfile uses (never a whole-tree COPY) -- exactly
