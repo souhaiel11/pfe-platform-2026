@@ -19,8 +19,10 @@ import { Injectable, Optional } from '@nestjs/common';
 import * as fs from 'fs';
 import * as path from 'path';
 import { WorkspaceManager, WorkspaceError } from './workspace-manager.service';
-import { RepoCacheService } from './repo-cache.service';
+import { RepoCacheService, GIT_OPERATION_CAP_MS } from './repo-cache.service';
 import { MavenBuildAdapter } from './maven-build-adapter';
+import { resolveDependencyTreeOffline } from './maven-dependency-warmup';
+import { createWorkerDeadline } from './worker-deadline';
 import { resolveMavenProvenance } from '../../backend/src/security-remediation/maven-provenance-resolver';
 import {
   GroundedMavenProvenanceRequest,
@@ -43,13 +45,30 @@ export class GroundedMavenProvenanceService {
     const requestedSha = request.candidateBaseSha.toLowerCase();
     const evidence: GroundedMavenProvenanceEvidence = { requestedSha, checkoutSha: null, evaluatedSha: null };
     const fail = (failureClass: GroundedMavenProvenanceFailureClass, detail: string): GroundedMavenProvenanceResult =>
-      ({ ok: false, failureClass, detail, evidence: { ...evidence } });
+      ({ ok: false, failureClass, detail, evidence: { ...evidence },
+        ...(failureClass.startsWith('WARMUP_') ? { retryable: true } : {}) });
 
     // §1 — repository materialization, reused verbatim from
-    // CandidateVerificationExecutor's own first step.
+    // CandidateVerificationExecutor's own first step. Execution-2057 fix:
+    // request.timeoutMs is already the orchestrator's own remaining
+    // worker-deadline budget for this whole grounding stage
+    // (deadline.budgetFor(GROUNDING_STAGE_CAP_MS)) -- forwarded here rather
+    // than handing git a fresh, unrelated window that ignores how much of
+    // the stage budget is already gone.
+    //
+    // Bounded-git-operations follow-up: request.timeoutMs itself used to be
+    // reused VERBATIM again for the dependencyTree() call below -- correct
+    // when this file only had one expensive operation, but once ensureRepo()
+    // became budget-aware too, that second reuse became the exact same
+    // "blind reuse of a single value across multiple sequential operations"
+    // gap already fixed at the orchestrator/executor call sites, just one
+    // level deeper. A local WorkerDeadline (seeded once, here) makes
+    // ensureRepo() consume from -- and dependencyTree() see -- the SAME
+    // monotonically-shrinking window, never two independent fresh ones.
+    const deadline = createWorkerDeadline(request.timeoutMs);
     let repoPath: string;
     try {
-      repoPath = this.repoCache.ensureRepo(request.repository);
+      repoPath = this.repoCache.ensureRepo(request.repository, deadline.budgetFor(GIT_OPERATION_CAP_MS));
     } catch (err: any) {
       return fail('WORKSPACE_INFRA_FAILURE', `Repository materialization failed: ${err?.message || 'unknown error'}`);
     }
@@ -95,13 +114,27 @@ export class GroundedMavenProvenanceService {
         return fail('POM_NOT_FOUND', `No pom.xml at the root of the exact-SHA worktree (${evidence.evaluatedSha}).`);
       }
 
-      const timeoutMs = request.timeoutMs ?? DEFAULT_TIMEOUT_MS;
-      const treeResult = this.mavenAdapter.dependencyTree(workspacePath, timeoutMs);
+      // Grounding has no candidate POM yet: both steps use the same verified
+      // baseline SHA. Warm-up is best-effort; the offline tree is mandatory.
+      const warmed = resolveDependencyTreeOffline(this.mavenAdapter, workspacePath, workspacePath, [], deadline.budgetFor(DEFAULT_TIMEOUT_MS));
+      const { text: _treeText, ...analysisEvidence } = warmed.analysis;
+      evidence.mavenResolution = {
+        baselineWarmup: warmed.baselineWarmup,
+        targetWarmups: warmed.targetWarmups,
+        analysis: analysisEvidence,
+      };
+      if (warmed.infrastructureFailure) {
+        return fail(warmed.infrastructureFailure.code, warmed.infrastructureFailure.detail);
+      }
+      const treeResult = warmed.analysis!;
       if (treeResult.status !== 'SUCCESS' || treeResult.text === null) {
-        return fail(
-          treeResult.timedOut ? 'DEPENDENCY_TREE_TIMEOUT' : 'DEPENDENCY_TREE_FAILED',
-          treeResult.evidenceTail || 'mvn dependency:tree did not produce usable output.',
-        );
+        const failureClass = treeResult.offlineFailure
+          ? 'DEPENDENCY_NOT_IN_CACHE' // warm-up has no infrastructure ambiguity; exact local absence, not remote nonexistence
+          : treeResult.timedOut ? 'DEPENDENCY_TREE_TIMEOUT' : 'DEPENDENCY_TREE_FAILED'; // defensive fallback, should not occur in offline mode
+        const detail = treeResult.offlineFailure
+          ? `Missing from cache: ${treeResult.offlineFailure.primaryMissingArtifact}`
+          : (treeResult.evidenceTail || 'mvn dependency:tree did not produce usable output.');
+        return fail(failureClass, detail);
       }
 
       const provenance = resolveMavenProvenance({

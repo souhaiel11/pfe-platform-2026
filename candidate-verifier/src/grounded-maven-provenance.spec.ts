@@ -119,21 +119,10 @@ console.log('grounded-maven-provenance F) package absent from real dependency tr
 console.log('grounded-maven-provenance G) real installed-version mismatch -> fails closed: PASS');
 
 // ============================================================================
-// I. Maven timeout -> non-auto/inconclusive. Real infra (a real checkout,
-// a real execFileSync call), a genuinely enforced (not simulated) 1ms
-// timeout — proves the REAL timeout code path, not a mocked one.
-// ============================================================================
-{
-  const result = service.resolve({
-    repository: 'souhaiel11/pfe-app-test', candidateBaseSha: EXACT_SHA,
-    requestId: nextRequestId(), batchId: 'r-sec-v1-1', candidateAttempt: 0,
-    package: 'ch.qos.logback:logback-classic', expectedInstalledVersion: '1.2.11',
-    timeoutMs: 1,
-  });
-  assert.equal(result.ok, false, 'I: a real 1ms timeout must fail the grounding, never silently succeed with partial data');
-  assert.equal(result.failureClass, 'DEPENDENCY_TREE_TIMEOUT');
-}
-console.log('grounded-maven-provenance I) real Maven timeout (1ms, genuinely enforced) -> DEPENDENCY_TREE_TIMEOUT, non-auto: PASS');
+// Timeout/classification coverage now lives in
+// grounded-maven-provenance-warmup-classification.spec.ts. A warm-up timeout
+// alone can no longer imply failure: a successful offline probe takes priority.
+// That test enforces real subprocess timeouts without a variable network fetch.
 
 // ── D. property-managed grounded — HONEST NOTE ──────────────────────────
 // The real souhaiel11/pfe-app-test repository has no actual ${property}-
@@ -150,4 +139,4 @@ console.log('grounded-maven-provenance D) PROPERTY_MANAGED: no real fixture exis
 
 fs.rmSync(scratchRoot, { recursive: true, force: true });
 fs.rmSync(repoCacheRoot, { recursive: true, force: true });
-console.log('grounded-maven-provenance.spec.ts: ALL CHECKS PASS (A/B/C/E/F/G/I real, D honestly documented)');
+console.log('grounded-maven-provenance.spec.ts: ALL CHECKS PASS (A/B/C/E/F/G real, I in dedicated classification spec, D honestly documented)');

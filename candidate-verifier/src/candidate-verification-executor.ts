@@ -20,7 +20,8 @@ import { MavenBuildAdapter } from './maven-build-adapter';
 import { GradleBuildAdapter } from './gradle-build-adapter';
 import { NpmBuildAdapter } from './npm-build-adapter';
 import { PythonBuildAdapter } from './python-build-adapter';
-import { RepoCacheService } from './repo-cache.service';
+import { RepoCacheService, GIT_OPERATION_CAP_MS } from './repo-cache.service';
+import { createWorkerDeadline } from './worker-deadline';
 
 export interface ExecuteVerifyOptions {
   allowedPaths?: string[];
@@ -128,9 +129,22 @@ export class CandidateVerificationExecutor {
       return base({ manifestValidation: { status: 'FAIL', errors: manifestErrors }, overall: 'FAIL', failureClass: 'CANDIDATE_MANIFEST_INVALID' });
     }
 
+    // Bounded-git-operations fix: previously ensureRepo() was called with no
+    // timeoutMs at all, so repo materialization always got the flat
+    // GIT_OPERATION_CAP_MS default regardless of what options.timeoutMs the
+    // caller actually requested for this run (backend's own
+    // candidate-verification.service.ts already treats options.timeoutMs as
+    // an overall per-call budget -- see its governingTimeoutMs = timeoutMs +
+    // slack HTTP wait). A WorkerDeadline seeded from options.timeoutMs is
+    // used ONLY to bound this repo-materialization step; it does NOT change
+    // compile/regression's own existing timeout semantics below (each still
+    // receives the full, undiminished options.timeoutMs, exactly as before
+    // -- that per-phase reuse is a separate, pre-existing, unchanged
+    // contract, not something this fix touches).
+    const deadline = createWorkerDeadline(options.timeoutMs);
     let repoPath: string;
     try {
-      repoPath = this.repoCache.ensureRepo(context.repository);
+      repoPath = this.repoCache.ensureRepo(context.repository, deadline.budgetFor(GIT_OPERATION_CAP_MS));
     } catch (err: any) {
       return base({
         manifestValidation: { status: 'PASS', errors: [] },

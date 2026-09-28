@@ -164,9 +164,19 @@ export class SecurityRemediationOrchestratorService {
     // workspace's own (undefined-verificationStep) identity, so the two
     // never collide even though they share requestId/batchId/candidateAttempt.
     const workspaceId = this.workspaceManager.workspaceId(input.requestId, input.batchId, input.candidateAttempt, 1);
+    // Bounded-git-operations fix: this second materialization previously
+    // called ensureRepo() with no timeoutMs at all, so it always fell back
+    // to RepoCacheService's own flat GIT_OPERATION_CAP_MS default regardless
+    // of how much of `deadline`'s overall budget the grounding stage above
+    // had already spent -- the one call in this function that didn't follow
+    // the deadline.expired()-guard + deadline.budgetFor(...) pattern every
+    // other stage here already uses. GROUNDING_STAGE_CAP_MS is reused (not a
+    // new cap) since this is the same class of operation (repo
+    // materialization) as the grounding stage's own ensureRepo() call.
+    if (deadline.expired()) return runtimeFailure(deadlineExceeded('PATCH_VALIDATION_WORKSPACE'));
     let repoPath: string;
     try {
-      repoPath = this.repoCache.ensureRepo(input.repository);
+      repoPath = this.repoCache.ensureRepo(input.repository, deadline.budgetFor(GROUNDING_STAGE_CAP_MS));
     } catch (err: any) {
       return notEligible('WORKSPACE_FAILURE', `Repository materialization failed: ${err?.message || 'unknown error'}`);
     }

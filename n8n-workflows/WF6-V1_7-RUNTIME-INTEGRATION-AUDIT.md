@@ -882,3 +882,133 @@ decisions are made and real-proven; the one honestly-disclosed residual
 risk (the 900000ms ceiling's imperfect real-world success rate) is a
 judgment call reserved for the user, not a technical gap left by this
 phase.
+
+---
+
+## Update 7 (execution-2058 follow-up: bounded git operations, Maven
+traceability, warm-up + offline grounding, later phase)
+
+Execution 2058 (a real WF6 run, `souhaiel11/pfe-app-test`,
+`7ae0f954f99628b69ce9b42f42c1e2acc8568d99`, CVE-2023-6378) reached
+`GROUNDING_FAILED:DEPENDENCY_TREE_TIMEOUT` — git materialization
+(`RepoCacheService.ensureRepo()`) succeeded cleanly for real (proof: the
+bounded-git-operations fix landed earlier this same phase — `setsid`-based
+process-group cleanup replacing the old unattributed PID-diff sweep, a real
+per-operation timeout, shared-deadline budget propagation across all three
+production `ensureRepo()` call sites), but the real `mvn dependency:tree`
+call that follows it exceeded its ~297s share of the 300000ms grounding
+budget. Root-caused with direct filesystem forensics (`.m2/repository`'s
+own file timestamps — created 3s into the run, zero `.lastUpdated`
+retry/failure markers, a real, uninterrupted, steady per-artifact download
+cadence, killed mid-flight on an in-progress, unstalled transfer): the
+Maven local repository is **not** a persistent volume, so every
+candidate-verifier redeploy starts grounding's dependency resolution from a
+completely cold cache. Real connectivity to Maven Central (DNS, HTTPS,
+latency) was independently verified healthy, both at investigation time and
+during the incident window itself — this was never a network-degradation
+or repository-availability problem.
+
+**Traceability fix (`maven-build-adapter.ts`).** `dependencyTree()`'s
+timeout branch previously discarded whatever stdout/stderr
+`execFileSync` had already captured before the SIGKILL, replacing it with
+a fixed string — the exact reason this incident's cause had to be
+reconstructed from `.m2`'s own timestamps instead of application evidence.
+Now captures, bounded and redacted (same discipline as
+`repo-cache.service.ts`'s own git-stderr redaction, now exported and
+reused): the last N lines of stdout/stderr, the last artifact/repo
+transfer line seen, and a retry-count lower bound — both as free text
+(`evidenceTail`) and as a structured `timeoutEvidence` field.
+
+**Warm-up + offline primitives, then wired (`maven-build-adapter.ts` /
+`maven-dependency-warmup.ts`).** `dependencyTree(..., {offline:true})`
+(`-o`), `dependencyGoOffline()` (`dependency:go-offline`, resolves
+everything a TRUSTED pom already declares), `resolveArtifact()`
+(`dependency:get -Dtransitive=false`, pre-warms one specific remediation
+target GAV, verified for real: works with no pom.xml at all). A structured
+`DEPENDENCY_NOT_IN_CACHE` failure (real Maven wording captured and
+verified: `Cannot access … in offline mode and the artifact <GAV> has not
+been downloaded from it before`) carries the exact missing GAV — fail-closed,
+never a muted offline miss. Composed into `resolveDependencyTreeOffline()`
+with an **active** guard, not just a documented contract: the offline
+analysis call is not reachable in that function's own code unless every
+warm-up step (baseline `go-offline` + each target `resolveArtifact`)
+already reported `SUCCESS`. A warm-up failure is classified
+`WARMUP_TIMEOUT` / `WARMUP_NETWORK_FAILURE` (a heuristic over well-known
+Java/Maven network-transport wording, disclosed as such) / `WARMUP_FAILED`
+— always infrastructure, never imputed to the candidate, and reported
+*before* any offline analysis is attempted, so a cache warm-up never
+finishing can never surface as a misleading "this dependency doesn't
+exist". Single monotonic budget (`createWorkerDeadline`, the same
+primitive `worker-deadline.ts` already used elsewhere in this codebase):
+120000ms per warm-up stage, 60000ms for the offline analysis, 300000ms
+total ceiling.
+
+**Wired into the real grounding call site**
+(`grounded-maven-provenance.service.ts`) — the exact `dependencyTree()`
+call that timed out in execution 2058. `baselineWorkspacePath ===
+analysisWorkspacePath` there deliberately: grounding has no separate
+"candidate pom" yet (`writeSecurityPatch()` creates one LATER, in the
+orchestrator, only after grounding succeeds and a target version is
+selected) and never needs one — it only ever resolves what the baseline
+pom already declares, which `go-offline` on that same worktree already
+covers completely, so `targetGavs` is `[]` at this call site.
+`GroundedMavenProvenanceFailureClass` gained the three new values plus
+`DEPENDENCY_NOT_IN_CACHE`; `DEPENDENCY_TREE_FAILED`/`_TIMEOUT` are kept
+only as a defensive fallback that offline mode should make unreachable in
+practice. Verified real, not just unit-tested: the exact tight-budget
+scenario that used to produce `DEPENDENCY_TREE_TIMEOUT` now — through the
+warm-up+offline path, real git fetch, real `go-offline` against Maven
+Central — produces `WARMUP_TIMEOUT` instead, stable across repeated runs.
+The two other new classifications (`WARMUP_NETWORK_FAILURE`,
+`DEPENDENCY_NOT_IN_CACHE`) were proven to reach `resolve()`'s own
+`result.failureClass` intact via a fake-mvn-on-PATH harness (fast,
+deterministic); the further, unchanged
+`SecurityFindingDecisionService`/orchestrator chain already carries
+`decision.reason` as a plain `GROUNDING_FAILED:${failureClass}` string
+regardless of which class it is (verified by direct code read, the same
+mechanism execution 2058 itself already demonstrated end-to-end for the
+old classes) — no code in that chain had to change, and none did.
+
+**⚠️ Known limitation, deliberately not addressed this phase — decided,
+not overlooked.** The offline analysis runs with `mvn -o`, so it cannot
+itself reach the network for anything beyond what warm-up already cached.
+But this is an **application-level** guarantee only: `candidate-verifier`
+carries **no container-level network isolation**.
+`candidate-verification-net` and `builder-scanner-net` are both confirmed
+`Internal: false` (real `docker network inspect`, re-verified at deploy
+time) — full NAT egress, same as any other Docker bridge network. A
+`--network=none` / read-only / `cap-drop ALL` sandbox around the analysis
+step, as originally envisioned for this correctif, does **not** exist and
+was explicitly decided as a **separate, later hardening step** rather than
+being built as part of this wiring. Until then, the isolation this warm-up
+architecture provides is behavioral (offline flag, cache discipline), not
+a security boundary a compromised build tool could not cross by other
+means. Do not represent this deployment as network-sandboxed in any future
+audit of this area.
+
+Full fresh regression, all green: repo-cache/repo-cache-deadline/
+repo-cache-command-failure, maven-build-adapter (+no-orphan +
+timeout-evidence + offline, new), maven-dependency-warmup (new),
+grounded-maven-provenance (+warmup-classification, new),
+security-remediation-orchestrator (+deadline +repo-budget),
+candidate-verification-executor (+repo-budget), worker-deadline — all
+PASS, stable across repeated runs where network-dependent. `tsc --noEmit`
+clean for both candidate-verifier and backend. Deployed in two controlled
+phases (traceability alone first, then the warm-up+offline wiring), each
+with an explicit tagged rollback image, real `/health` readiness checks
+(not just startup logs), and confirmation the compiled code was actually
+present and reachable (or deliberately still dormant, phase one) in the
+running container each time.
+
+PR36_MODIFIED = NO; PR36_MERGED = NO; WF6_LIVE_CHANGED = NO; WF6_EXECUTED =
+NO; LIVE_GITHUB_WRITE = NO; ROUTING_CHANGED = NO; COMMIT_PUSH = NO.
+LIVE_DEPLOYMENT = YES (candidate-verifier only, twice, both verified,
+rollback tagged both times) — WF6 itself was not invoked at any point in
+this phase; only the underlying grounding code it depends on was changed
+and deployed.
+
+**READY_FOR_V1_7_PREDEPLOY_REVIEW = NO** — the git-timeout root cause from
+execution 2057 and the Maven-timeout root cause from execution 2058 are
+both real-proven and fixed at their actual deployed call sites. The
+network-isolation gap disclosed above is the one remaining, explicitly
+deferred item in this specific area.

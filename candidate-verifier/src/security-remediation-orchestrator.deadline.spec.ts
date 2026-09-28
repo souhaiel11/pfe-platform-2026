@@ -130,19 +130,31 @@ try {
   // path rather than the CANDIDATE_READY path, proving the `finally` throw
   // (existing JS semantics) supersedes a pending TIMEOUT return exactly as
   // it supersedes a pending CANDIDATE_READY return.
+  //
+  // Bounded-git-operations fix note: this scenario used to overrun DURING
+  // grounding itself (a slow decide() against a 150ms budget), but the
+  // second repository materialization (§4 step 9) now correctly REFUSES to
+  // even start once the deadline is already gone (see this file's sibling
+  // security-remediation-orchestrator.repo-budget.spec.ts, scenario 2) --
+  // meaning a workspace would never have been created for this leaking
+  // manager to fail to clean up in the first place. Relocated to overrun at
+  // the BASE_SCAN stage instead (identical timing to scenario 2 above,
+  // already proven non-flaky there): grounding/materialization/workspace
+  // creation all succeed first for real, THEN the deadline expires inside
+  // the try/finally this test exists to prove cleanup-failure-supersedes
+  // for.
   {
     const leakingManager = new WorkspaceManager(path.join(root, 'cleanup-failure-deadline'));
     leakingManager.cleanupWorkspace = () => {};
-    const slowDecision = { decide: () => { busyWaitMs(300); return decision(); } };
     const mustNotRun: any = {
       dependencyTree: () => { throw new Error('MUST_NOT_RUN'); },
       effectivePom: () => { throw new Error('MUST_NOT_RUN'); },
       packageCandidate: () => { throw new Error('MUST_NOT_RUN'); },
     };
-    const scanner = { inspect: () => { throw new Error('MUST_NOT_RUN'); } };
+    const scanner = { inspect: (w: string) => { busyWaitMs(600); return scan(w); } };
     assert.throws(
-      () => new SecurityRemediationOrchestratorService(slowDecision as any, leakingManager, { ensureRepo: () => repo } as any, mustNotRun, scanner)
-        .orchestrate(input(150)),
+      () => new SecurityRemediationOrchestratorService({ decide: decision } as any, leakingManager, { ensureRepo: () => repo } as any, mustNotRun, scanner)
+        .orchestrate(input(1_300)),
       /RUNTIME_CLEANUP_FAILED:WORKSPACE_CLEANUP/,
       '4: cleanup failure must still throw (fail-closed) even though the underlying evaluation was itself a deadline timeout',
     );
