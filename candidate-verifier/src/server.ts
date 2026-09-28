@@ -17,8 +17,10 @@ import { MavenBuildAdapter } from './maven-build-adapter';
 import { GroundedMavenProvenanceService } from './grounded-maven-provenance.service';
 import { SecurityFindingDecisionService } from './security-finding-decision.service';
 import { SecurityRemediationOrchestratorService } from './security-remediation-orchestrator.service';
+import { SecurityRemediationBatchOrchestratorService } from './security-remediation-batch-orchestrator.service';
 import { VerificationRequest, assertHeadVerificationRequest, assertVerificationStep } from '../../backend/src/candidate-verification/candidate-verification.types';
 import { assertSecurityRemediationOrchestrationInput, SecurityRemediationRequestValidationError } from '../../backend/src/security-remediation/security-remediation-orchestration.types';
+import { assertSecurityRemediationBatchOrchestrationInput, SecurityRemediationBatchRequestValidationError } from '../../backend/src/security-remediation/security-remediation-batch-orchestration.types';
 
 const PORT = Number(process.env.PORT) || 4100;
 const WORKSPACE_ROOT = process.env.WORKSPACE_ROOT || undefined;
@@ -43,6 +45,18 @@ const executor = new CandidateVerificationExecutor(
 );
 
 const securityOrchestrator = new SecurityRemediationOrchestratorService(
+  new SecurityFindingDecisionService(new GroundedMavenProvenanceService(workspaceManager, repoCache, mavenAdapter)),
+  workspaceManager,
+  repoCache,
+  mavenAdapter,
+);
+
+// Increment 1 (WF6 multi-CVE wiring) — SAME collaborators as the singular
+// orchestrator above (same WORKSPACE_ROOT/REPO_CACHE_ROOT, same adapter
+// instances), a genuinely separate service instance per
+// SecurityRemediationBatchOrchestratorService's own header (never a
+// modification of securityOrchestrator or its proven single-CVE path).
+const securityBatchOrchestrator = new SecurityRemediationBatchOrchestratorService(
   new SecurityFindingDecisionService(new GroundedMavenProvenanceService(workspaceManager, repoCache, mavenAdapter)),
   workspaceManager,
   repoCache,
@@ -133,6 +147,37 @@ const server = http.createServer(async (req, res) => {
         throw err;
       }
       const result = securityOrchestrator.orchestrate(body);
+      sendJson(res, 200, result);
+    } catch (err: any) {
+      sendJson(res, 500, { error: 'INTERNAL_WORKER_ERROR', message: String(err?.message || err) });
+    }
+    return;
+  }
+
+  // Increment 1 (WF6 multi-CVE wiring) — the ONE new worker route this
+  // phase adds. Same shape-only validation + forward-unchanged discipline
+  // as /security-remediation/evaluate above: no business-trust decision
+  // here, only SecurityRemediationBatchOrchestratorService, unmodified.
+  if (req.method === 'POST' && req.url === '/security-remediation/evaluate-batch') {
+    try {
+      const raw = await readBody(req);
+      let body: any;
+      try {
+        body = JSON.parse(raw);
+      } catch {
+        sendJson(res, 400, { error: 'MALFORMED_JSON_BODY' });
+        return;
+      }
+      try {
+        assertSecurityRemediationBatchOrchestrationInput(body);
+      } catch (err) {
+        if (err instanceof SecurityRemediationBatchRequestValidationError) {
+          sendJson(res, 400, { error: 'INVALID_SECURITY_REMEDIATION_BATCH_REQUEST', message: err.message });
+          return;
+        }
+        throw err;
+      }
+      const result = securityBatchOrchestrator.orchestrate(body);
       sendJson(res, 200, result);
     } catch (err: any) {
       sendJson(res, 500, { error: 'INTERNAL_WORKER_ERROR', message: String(err?.message || err) });

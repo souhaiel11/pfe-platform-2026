@@ -1,10 +1,47 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { createHash } from 'crypto';
 import { In, Repository } from 'typeorm';
 import { Incident } from '../incidents/incident.entity';
 import { normalizeReport } from '../common/report-normalizer';
 import { findingFingerprint } from './finding-fingerprint';
 import { ManualRemediationEvent, ManualRemediationStatus, ManualRemediationTask, ScannerFindingStatus } from './manual-remediation.entity';
+import { Wf6RemediationResultDto } from '../security-remediation/wf6-remediation-result.dto';
+import { Wf6BatchRemediationResultDto } from '../security-remediation/wf6-batch-remediation-result.dto';
+
+// Increment 1 — WF6's own dispatch contract. Deliberately minimal:
+// findingTaskIds only, never the resolved finding detail (cveId/package/
+// version) -- WF6's graph re-resolves every finding itself, server-side,
+// via the SAME trusted SecurityFindingResolverService the singular path
+// already uses (see security-remediation.controller.ts's
+// resolveAndEvaluateBatch()) -- exactly the "never trust caller-supplied
+// business data" discipline the singular /evaluate path already enforces.
+// Sending more than the ids here would be dead weight the graph ignores,
+// not a second, competing source of truth.
+//
+// ★ ONE unified webhook (wf6-security-remediation-evaluate, unchanged
+// path) -- not a separate "-batch" endpoint. Per the explicit design
+// decision this increment implements ("le mono-CVE est le cas particulier
+// N=1 du multi, pas de branche legacy séparée"), a batch of 1 goes through
+// this SAME webhook with a one-element findingTaskIds array.
+export interface Wf6BatchDispatchPayload {
+  projectId: string; batchId: string; findingTaskIds: string[];
+}
+export interface Wf6BatchDispatcher { dispatch(payload: Wf6BatchDispatchPayload): Promise<void> }
+// Real, production dispatcher — mirrors incidents.service.ts's own WF2
+// dispatch pattern (short client-side timeout, n8n does the long work).
+// NOT exercised by any test in this increment (no deploy, no WF6 run) —
+// see manual-remediation.service.batch.spec.ts's own header comment.
+export class HttpWf6BatchDispatcher implements Wf6BatchDispatcher {
+  async dispatch(payload: Wf6BatchDispatchPayload): Promise<void> {
+    const base = String(process.env.N8N_URL || 'http://n8n:5678').replace(/\/$/, '');
+    const response = await fetch(`${base}/webhook/wf6-security-remediation-evaluate`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Internal-Secret': process.env.N8N_INTERNAL_SECRET || '' },
+      body: JSON.stringify(payload), signal: AbortSignal.timeout(15000),
+    });
+    if (!response.ok) throw new Error(`n8n returned HTTP ${response.status}`);
+  }
+}
 
 type Candidate = { source: string; finding: any; fingerprint: string };
 
@@ -13,6 +50,15 @@ export class ManualRemediationService {
   constructor(
     @InjectRepository(ManualRemediationTask) private readonly repo: Repository<ManualRemediationTask>,
     @InjectRepository(Incident) private readonly incidents: Repository<Incident>,
+    // Wf6BatchDispatcher is a TypeScript interface (erased at runtime) --
+    // Nest cannot resolve a DI token for it on its own. @Optional() makes
+    // Nest pass `undefined` instead of throwing, which is when this
+    // parameter's own default value (a real HttpWf6BatchDispatcher) takes
+    // over -- the exact same effect the manual `new ManualRemediationService(
+    // repo, incidents, fakeDispatcher)` calls in this module's own spec
+    // files get by simply supplying the 3rd argument directly, bypassing
+    // Nest's injector entirely.
+    @Optional() private readonly wf6BatchDispatcher: Wf6BatchDispatcher = new HttpWf6BatchDispatcher(),
   ) {}
 
   async list(projectId: string, filters: { status?: string; source?: string; severity?: string } = {}) {
@@ -134,6 +180,199 @@ export class ManualRemediationService {
   private snapshot(source: string, f: any) {
     const ruleOrCve = String(f.id || f.VulnerabilityID || f.cve || f.rule || f.alertRef || f.pluginid || f.name || 'Non disponible');
     return { source, ruleOrCve, title: String(f.title || f.Title || f.alert || f.name || f.description || ruleOrCve), severity: String(f.severity || f.Severity || f.risk || 'UNKNOWN').toUpperCase().split(' ')[0], component: f.pkg || f.PkgName || f.package || f.fileName || f.dependency || null, currentVersion: f.installedVersion || f.InstalledVersion || f.version || null, fixedVersion: f.fixedVersion || f.FixedVersion || null, description: f.description || f.Description || f.desc || null, evidence: f.evidence || null, recommendation: f.recommendation || f.solution || null, url: f.url || null, parameter: f.param || f.parameter || null };
+  }
+
+  // Execution-2060 follow-up — persists a WF6 result against the SAME
+  // finding row WF6 itself already resolved (findingTaskId ===
+  // ManualRemediationTask.id === the exact value WF6 sets as
+  // decision.findingIdentity's own source, security-finding-resolver.
+  // service.ts:105). Deliberately does NOT touch status/scannerStatus (the
+  // MANUAL human-tracking fields) -- this is a strictly separate,
+  // additive record; the UI decision of how/whether to derive a badge
+  // from it is a later, explicitly out-of-scope layer.
+  //
+  // Idempotence: WF6's own requestId is DETERMINISTIC per finding
+  // (`sec-eval-<findingTaskId>`, security-remediation.controller.ts), so
+  // every real attempt for the SAME finding necessarily looks like a
+  // repeat -- there is no meaningful "duplicate vs distinct" distinction
+  // to reject on. This always overwrites the top-level snapshot with the
+  // LATEST callback (the only state relevant to "is this currently
+  // fixed") while appending to `attempts` so no prior result is lost --
+  // the same trailing-record discipline `events[]` already uses on this
+  // same entity, just for a different (automated, not human) history.
+  // Never a write-authorizing gate: WF6's own /revalidate step already
+  // re-derives everything fresh immediately before any GitHub write,
+  // independent of whatever this table currently holds.
+  async recordWf6Result(dto: Wf6RemediationResultDto) {
+    const task = await this.repo.findOne({ where: { id: dto.findingTaskId } });
+    if (!task) throw new NotFoundException('Tâche de correction introuvable pour ce résultat WF6.');
+    if (String(task.projectId) !== String(dto.projectId)) {
+      throw new ForbiddenException('Ce résultat WF6 ne correspond pas au projet déclaré pour cette tâche.');
+    }
+    const previous = task.securityFindingRemediation;
+    const attemptNumber = (Number(previous?.attemptCount) || 0) + 1;
+    const at = new Date().toISOString();
+    const attempt = {
+      attempt: attemptNumber, at, status: dto.status, reason: dto.reason ?? null,
+      candidateIdentity: dto.candidateIdentity ?? null, evaluatedSha: dto.evaluatedSha ?? null,
+      branchName: dto.branchName ?? null, prUrl: dto.prUrl ?? null, prNumber: dto.prNumber ?? null,
+      executionId: dto.executionId ?? null,
+      patchEvidence: dto.patchEvidence ?? null, securityValidationEvidence: dto.securityValidationEvidence ?? null,
+    };
+    task.securityFindingRemediation = {
+      status: dto.status, reason: dto.reason ?? null,
+      candidateIdentity: dto.candidateIdentity ?? null, evaluatedSha: dto.evaluatedSha ?? null,
+      branchName: dto.branchName ?? null,
+      // A callback that does not repeat prUrl/prNumber (e.g. a non-PR-
+      // reaching outcome) never erases an EARLIER real PR link -- only an
+      // explicit new value ever overwrites one.
+      prUrl: dto.prUrl ?? previous?.prUrl ?? null, prNumber: dto.prNumber ?? previous?.prNumber ?? null,
+      patchEvidence: dto.patchEvidence ?? null, securityValidationEvidence: dto.securityValidationEvidence ?? null,
+      attemptCount: attemptNumber, updatedAt: at,
+      attempts: [...(Array.isArray(previous?.attempts) ? previous.attempts : []), attempt],
+    };
+    return this.repo.save(task);
+  }
+
+  // Increment 1 — multi-CVE remediation, ONE candidate/build/scan/PR for N
+  // selected findings. Mirrors incidents.service.ts's own WF2 dispatch
+  // pattern (validate -> write a transient DISPATCHING marker -> dispatch
+  // with a bounded timeout -> roll back to a FAILED marker on dispatch
+  // failure, never leave a task silently stuck) — adapted for N tasks
+  // sharing ONE batchId instead of one Report.metadata.fixRequest.
+  //
+  // Idempotence decision (explicit, per this increment's own instruction):
+  // a CVE already CANDIDATE_READY or DISPATCHING anywhere is a NAMED 409,
+  // never a silent exclusion from the batch — the caller (today: a human
+  // operator; later: the UI) decides what to do about it, this method
+  // never decides FOR them by quietly dropping a finding.
+  async launchBatchRemediation(projectId: string, findingTaskIds: string[], user: any) {
+    const role = String(user?.role || '').toLowerCase();
+    if (role === 'viewer' || !['developer', 'admin'].includes(role)) throw new ForbiddenException('Action non autorisée');
+
+    const ids = [...new Set((findingTaskIds || []).map(String))];
+    if (!ids.length) throw new BadRequestException('Au moins une CVE doit être sélectionnée.');
+    if (ids.length > 8) throw new BadRequestException('Un lot ne peut pas dépasser 8 CVE.');
+
+    const tasks = await this.repo.find({ where: { id: In(ids) } });
+    const byId = new Map(tasks.map(t => [t.id, t]));
+    const missing = ids.filter(id => !byId.has(id));
+    if (missing.length) throw new NotFoundException(`Tâche(s) de correction introuvable(s) : ${missing.join(', ')}.`);
+
+    const mismatched = tasks.filter(t => String(t.projectId) !== String(projectId));
+    if (mismatched.length) throw new ForbiddenException(`Tâche(s) ne correspondant pas au projet déclaré : ${mismatched.map(t => t.ruleOrCve || t.id).join(', ')}.`);
+
+    const adminOnly = tasks.filter(t => t.remediationType === 'ADMIN_ACTION_REQUIRED');
+    if (adminOnly.length && role !== 'admin') {
+      throw new ForbiddenException(`Nécessite l’intervention d’un administrateur : ${adminOnly.map(t => t.ruleOrCve || t.id).join(', ')}.`);
+    }
+
+    const incomplete = tasks.filter(t => !t.source || !t.ruleOrCve || !t.findingSnapshot?.component || !t.findingSnapshot?.currentVersion || !t.findingSnapshot?.fixedVersion);
+    if (incomplete.length) {
+      throw new BadRequestException(`Donnée insuffisante pour lancer une correction automatisée : ${incomplete.map(t => t.ruleOrCve || t.id).join(', ')}.`);
+    }
+
+    // Idempotence — explicit 409, every offending CVE named, never a
+    // silent drop from the batch (see this method's own header).
+    const alreadyInProgress = tasks.filter(t => ['CANDIDATE_READY', 'DISPATCHING'].includes(t.securityFindingRemediation?.status));
+    if (alreadyInProgress.length) {
+      throw new ConflictException(`Déjà en cours ou déjà proposée(s), sélection refusée : ${alreadyInProgress.map(t => t.ruleOrCve).join(', ')}.`);
+    }
+
+    // Cheap, static, pre-grounding conflict pre-check (§2 of the design
+    // cadrage): more than one selected CVE against the SAME Maven
+    // coordinate cannot be safely proven compatible without a real
+    // checkout — refuse up front, named, rather than guess at version
+    // compatibility from scanner strings alone.
+    const byComponent = new Map<string, ManualRemediationTask[]>();
+    for (const t of tasks) {
+      const key = String(t.findingSnapshot.component).toLowerCase();
+      byComponent.set(key, [...(byComponent.get(key) || []), t]);
+    }
+    const colliding = [...byComponent.values()].filter(group => group.length > 1);
+    if (colliding.length) {
+      const detail = colliding.map(group => `${group[0].findingSnapshot.component} (${group.map(t => t.ruleOrCve).join(' vs ')})`).join('; ');
+      throw new ConflictException(`Plusieurs CVE sélectionnées sur le même composant Maven — non supporté dans un même lot : ${detail}.`);
+    }
+
+    // Deterministic batchId: same selection -> same id, always (same
+    // discipline as WF6's own sec-eval-<findingTaskId> requestId).
+    const batchId = 'sec-batch-' + createHash('sha256').update([...ids].sort().join(',')).digest('hex').slice(0, 16);
+    const dispatchedAt = new Date().toISOString();
+    for (const task of tasks) {
+      const previous = task.securityFindingRemediation;
+      const attemptNumber = (Number(previous?.attemptCount) || 0) + 1;
+      task.securityRemediationBatchId = batchId;
+      task.securityFindingRemediation = {
+        status: 'DISPATCHING', reason: null, batchId,
+        candidateIdentity: previous?.candidateIdentity ?? null, evaluatedSha: previous?.evaluatedSha ?? null,
+        branchName: previous?.branchName ?? null, prUrl: previous?.prUrl ?? null, prNumber: previous?.prNumber ?? null,
+        patchEvidence: null, securityValidationEvidence: null,
+        attemptCount: attemptNumber, updatedAt: dispatchedAt,
+        attempts: [...(Array.isArray(previous?.attempts) ? previous.attempts : []), { attempt: attemptNumber, at: dispatchedAt, status: 'DISPATCHING', reason: null, batchId }],
+      };
+    }
+    await this.repo.save(tasks);
+
+    const payload: Wf6BatchDispatchPayload = { projectId, batchId, findingTaskIds: ids };
+    try {
+      await this.wf6BatchDispatcher.dispatch(payload);
+    } catch (err: any) {
+      const failedAt = new Date().toISOString();
+      for (const task of tasks) {
+        const current = task.securityFindingRemediation;
+        task.securityFindingRemediation = { ...current, status: 'DISPATCH_FAILED', reason: err?.message || 'Workflow unavailable', updatedAt: failedAt };
+      }
+      await this.repo.save(tasks);
+      throw new ConflictException(`La correction n’a pas pu démarrer : ${err?.message || 'workflow indisponible'}.`);
+    }
+
+    return { batchId, findingTaskIds: ids, status: 'DISPATCHING' };
+  }
+
+  // Increment 1 — persists the batch result: one shared candidate/PR
+  // identity (candidateIdentity/branchName/prUrl/prNumber/evaluatedSha),
+  // written onto EVERY task in the batch, plus each task's OWN per-CVE
+  // status/reason/evidence — never a single global blob covering multiple
+  // findings (the UI needs to mark each CVE individually later). Same
+  // attempts[]-history and non-erasure-of-a-real-PR-link discipline as
+  // recordWf6Result() above.
+  async recordWf6BatchResult(dto: Wf6BatchRemediationResultDto) {
+    const ids = dto.findings.map(f => f.findingTaskId);
+    const tasks = await this.repo.find({ where: { id: In(ids) } });
+    const byId = new Map(tasks.map(t => [t.id, t]));
+    const missing = ids.filter(id => !byId.has(id));
+    if (missing.length) throw new NotFoundException(`Tâche(s) de correction introuvable(s) pour ce résultat WF6 : ${missing.join(', ')}.`);
+    const mismatchedProject = tasks.filter(t => String(t.projectId) !== String(dto.projectId));
+    if (mismatchedProject.length) throw new ForbiddenException('Ce résultat WF6 ne correspond pas au projet déclaré pour ce lot.');
+    const mismatchedBatch = tasks.filter(t => t.securityRemediationBatchId && t.securityRemediationBatchId !== dto.batchId);
+    if (mismatchedBatch.length) throw new ForbiddenException(`Ce résultat WF6 ne correspond pas au lot déclaré pour : ${mismatchedBatch.map(t => t.id).join(', ')}.`);
+
+    const at = new Date().toISOString();
+    const saved: ManualRemediationTask[] = [];
+    for (const finding of dto.findings) {
+      const task = byId.get(finding.findingTaskId)!;
+      const previous = task.securityFindingRemediation;
+      const attemptNumber = (Number(previous?.attemptCount) || 0) + 1;
+      const attempt = {
+        attempt: attemptNumber, at, status: finding.status, reason: finding.reason ?? null, batchId: dto.batchId,
+        candidateIdentity: dto.candidateIdentity ?? null, evaluatedSha: dto.evaluatedSha ?? null,
+        branchName: dto.branchName ?? null, prUrl: dto.prUrl ?? null, prNumber: dto.prNumber ?? null,
+        executionId: dto.executionId ?? null, patchEvidence: finding.patchEvidence ?? null, securityValidationEvidence: finding.securityValidationEvidence ?? null,
+      };
+      task.securityRemediationBatchId = dto.batchId;
+      task.securityFindingRemediation = {
+        status: finding.status, reason: finding.reason ?? null, batchId: dto.batchId,
+        candidateIdentity: dto.candidateIdentity ?? null, evaluatedSha: dto.evaluatedSha ?? null,
+        branchName: dto.branchName ?? null,
+        prUrl: dto.prUrl ?? previous?.prUrl ?? null, prNumber: dto.prNumber ?? previous?.prNumber ?? null,
+        patchEvidence: finding.patchEvidence ?? null, securityValidationEvidence: finding.securityValidationEvidence ?? null,
+        attemptCount: attemptNumber, updatedAt: at,
+        attempts: [...(Array.isArray(previous?.attempts) ? previous.attempts : []), attempt],
+      };
+      saved.push(await this.repo.save(task));
+    }
+    return saved;
   }
 
   private async authorizedTask(id: string, user: any, reopening: boolean) {

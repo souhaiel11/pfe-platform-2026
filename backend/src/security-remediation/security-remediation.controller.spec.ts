@@ -24,6 +24,11 @@ function fakeCandidateVerification() {
   return { client, getCapturedInput: () => capturedInput };
 }
 
+// Unused by any test in this file (none of them exercise POST /result) --
+// exists purely to satisfy the constructor's third parameter now that
+// SecurityRemediationController also depends on ManualRemediationService.
+const fakeManualRemediation: any = { recordWf6Result: async () => { throw new Error('not exercised by this spec'); } };
+
 const TRUSTED_RESOLUTION = {
   ok: true, repository: 'souhaiel11/pfe-app-test', candidateBaseSha: 'a81be45709aba07da50d44206d073c2eb55892b5',
   finding: { findingIdentity: 'fp-trusted', source: 'TRIVY', package: 'ch.qos.logback:logback-classic', expectedInstalledVersion: '1.2.11', fixedVersion: '1.2.13' },
@@ -39,7 +44,7 @@ async function main() {
   {
     const { resolver, getCapturedArgs } = fakeResolver(TRUSTED_RESOLUTION);
     const { client, getCapturedInput } = fakeCandidateVerification();
-    const controller = new SecurityRemediationController(resolver, client);
+    const controller = new SecurityRemediationController(resolver, client, fakeManualRemediation);
 
     const maliciousBody: any = {
       projectId: 'project-1', findingTaskId: 'task-1',
@@ -75,7 +80,7 @@ async function main() {
   {
     const { resolver } = fakeResolver({ ok: false, reason: 'UNKNOWN_FINDING', detail: 'no such task' });
     const { client, getCapturedInput } = fakeCandidateVerification();
-    const controller = new SecurityRemediationController(resolver, client);
+    const controller = new SecurityRemediationController(resolver, client, fakeManualRemediation);
     const result: any = await controller.evaluate({ projectId: 'p', findingTaskId: 't' } as any);
     assert.equal(result.status, 'REJECTED');
     assert.equal(result.reason, 'UNKNOWN_FINDING');
@@ -89,8 +94,8 @@ async function main() {
     const { resolver } = fakeResolver(TRUSTED_RESOLUTION);
     const { client: client1, getCapturedInput: input1 } = fakeCandidateVerification();
     const { client: client2, getCapturedInput: input2 } = fakeCandidateVerification();
-    await new SecurityRemediationController(resolver, client1).evaluate({ projectId: 'project-1', findingTaskId: 'task-1' } as any);
-    await new SecurityRemediationController(resolver, client2).evaluate({ projectId: 'project-1', findingTaskId: 'task-1' } as any);
+    await new SecurityRemediationController(resolver, client1, fakeManualRemediation).evaluate({ projectId: 'project-1', findingTaskId: 'task-1' } as any);
+    await new SecurityRemediationController(resolver, client2, fakeManualRemediation).evaluate({ projectId: 'project-1', findingTaskId: 'task-1' } as any);
     assert.equal(input1()!.requestId, input2()!.requestId, 'O: identical findingTaskId -> identical requestId across two independent calls, deterministically');
     assert.equal(input1()!.batchId, input2()!.batchId);
   }
@@ -100,7 +105,7 @@ async function main() {
   {
     const { resolver } = fakeResolver(TRUSTED_RESOLUTION);
     const client: any = { evaluateSecurityRemediation: async () => ({ status: 'CANDIDATE_READY', reason: 'x', decision: { findingIdentity: 'fp-trusted' }, candidateIdentity: 'abc123', candidateManifest: { files: [{ path: 'pom.xml' }] }, patchEvidence: null, guardResult: { ok: true }, dependencyResolutionEvidence: null }) };
-    const controller = new SecurityRemediationController(resolver, client);
+    const controller = new SecurityRemediationController(resolver, client, fakeManualRemediation);
     const result: any = await controller.revalidate({ projectId: 'p', findingTaskId: 't', expectedCandidateIdentity: 'abc123' } as any);
     assert.equal(result.status, 'WRITE_AUTHORIZED');
     assert.equal(result.candidateIdentity, 'abc123');
@@ -112,7 +117,7 @@ async function main() {
   {
     const { resolver } = fakeResolver(TRUSTED_RESOLUTION);
     const client: any = { evaluateSecurityRemediation: async () => ({ status: 'CANDIDATE_READY', reason: 'x', decision: {}, candidateIdentity: 'DIFFERENT-FRESH-IDENTITY', candidateManifest: { files: [{ path: 'pom.xml', content: 'tampered' }] }, patchEvidence: null, guardResult: { ok: true }, dependencyResolutionEvidence: null }) };
-    const controller = new SecurityRemediationController(resolver, client);
+    const controller = new SecurityRemediationController(resolver, client, fakeManualRemediation);
     const result: any = await controller.revalidate({ projectId: 'p', findingTaskId: 't', expectedCandidateIdentity: 'abc123' } as any);
     assert.equal(result.status, 'CANDIDATE_DRIFTED', 'I: content/identity mutation between evaluation and write must be rejected, never authorized');
     assert.equal(result.expectedCandidateIdentity, 'abc123');
@@ -127,7 +132,7 @@ async function main() {
   for (const freshStatus of ['NOT_ELIGIBLE', 'TECHNICAL_FAILURE', 'GUARD_REJECTED', 'MAVEN_RESOLUTION_MISMATCH']) {
     const { resolver } = fakeResolver(TRUSTED_RESOLUTION);
     const client: any = { evaluateSecurityRemediation: async () => ({ status: freshStatus, reason: 'real reason', decision: {} }) };
-    const controller = new SecurityRemediationController(resolver, client);
+    const controller = new SecurityRemediationController(resolver, client, fakeManualRemediation);
     const result: any = await controller.revalidate({ projectId: 'p', findingTaskId: 't', expectedCandidateIdentity: 'abc123' } as any);
     assert.equal(result.status, freshStatus, `a non-CANDIDATE_READY fresh outcome (${freshStatus}) must pass through unchanged, never become WRITE_AUTHORIZED`);
   }
@@ -143,8 +148,8 @@ async function main() {
     const { resolver } = fakeResolver(TRUSTED_RESOLUTION);
     const decision = { findingIdentity: REAL_FP, evaluatedSha: 'a81be45709aba07da50d44206d073c2eb55892b5', selectedTargetVersion: '1.2.13', provenance: { ecosystem: 'MAVEN', kind: 'DIRECT_EXPLICIT', package: 'ch.qos.logback:logback-classic', installedVersion: '1.2.11', controllingFile: 'pom.xml', controllingElement: null, controllingProperty: null, groundedSha: 'a81be45709aba07da50d44206d073c2eb55892b5', evidence: 'x' } };
     const client: any = { evaluateSecurityRemediation: async () => ({ status: 'CANDIDATE_READY', reason: 'x', decision, candidateIdentity: REAL_CI, candidateManifest: { files: [] }, patchEvidence: null, guardResult: null, dependencyResolutionEvidence: null }) };
-    const evalResult: any = await new SecurityRemediationController(resolver, client).evaluate({ projectId: 'p', findingTaskId: 't' } as any);
-    const revalResult: any = await new SecurityRemediationController(resolver, client).revalidate({ projectId: 'p', findingTaskId: 't', expectedCandidateIdentity: REAL_CI } as any);
+    const evalResult: any = await new SecurityRemediationController(resolver, client, fakeManualRemediation).evaluate({ projectId: 'p', findingTaskId: 't' } as any);
+    const revalResult: any = await new SecurityRemediationController(resolver, client, fakeManualRemediation).revalidate({ projectId: 'p', findingTaskId: 't', expectedCandidateIdentity: REAL_CI } as any);
     const expected = computeSecurityBranchName(REAL_FP, REAL_CI);
     assert.equal(evalResult.branchName, expected);
     assert.equal(revalResult.branchName, expected, 'branchName is identical between evaluate (CANDIDATE_READY) and revalidate (WRITE_AUTHORIZED) for the same finding/candidate');
@@ -157,7 +162,7 @@ async function main() {
   {
     const { resolver } = fakeResolver({ ok: false, reason: 'UNKNOWN_FINDING', detail: 'x' });
     const client: any = { evaluateSecurityRemediation: async () => ({}) };
-    const result: any = await new SecurityRemediationController(resolver, client).evaluate({ projectId: 'p', findingTaskId: 't' } as any);
+    const result: any = await new SecurityRemediationController(resolver, client, fakeManualRemediation).evaluate({ projectId: 'p', findingTaskId: 't' } as any);
     assert.equal(result.branchName, null, 'a REJECTED outcome never carries a branch name');
   }
   console.log('security-remediation.controller) branchName computed server-side, identical across evaluate/revalidate, absent for non-ready statuses: PASS');

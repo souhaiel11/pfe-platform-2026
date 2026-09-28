@@ -4,11 +4,12 @@ import { ManualRemediationTask } from '../manual-remediation/manual-remediation.
 import { Incident } from '../incidents/incident.entity';
 import { Project } from '../projects/project.entity';
 import { CandidateVerificationModule } from '../candidate-verification/candidate-verification.module';
+import { ManualRemediationModule } from '../manual-remediation/manual-remediation.module';
 import { SecurityFindingResolverService } from './security-finding-resolver.service';
 import { SecurityRemediationController } from './security-remediation.controller';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([ManualRemediationTask, Incident, Project]), CandidateVerificationModule],
+  imports: [TypeOrmModule.forFeature([ManualRemediationTask, Incident, Project]), CandidateVerificationModule, ManualRemediationModule],
   controllers: [SecurityRemediationController],
   providers: [SecurityFindingResolverService],
   exports: [SecurityFindingResolverService],

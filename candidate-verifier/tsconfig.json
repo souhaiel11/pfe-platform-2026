@@ -33,6 +33,10 @@
     "../backend/src/security-remediation/security-patch-guard.ts",
     "../backend/src/security-remediation/security-candidate-identity.ts",
     "../backend/src/security-remediation/maven-dependency-resolution-check.ts",
-    "../backend/src/security-remediation/security-remediation-orchestration.types.ts"
+    "../backend/src/security-remediation/security-remediation-orchestration.types.ts",
+    "../backend/src/security-remediation/security-remediation-batch-orchestration.types.ts",
+    "../backend/src/security-remediation/maven-security-patch-writer-batch.ts",
+    "../backend/src/security-remediation/security-remediation-batch-closure.ts",
+    "../backend/src/security-remediation/security-artifact-scan.ts"
   ]
 }

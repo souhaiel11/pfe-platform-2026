@@ -48,6 +48,23 @@ export class ManualRemediationTask {
   @Column({ nullable: true }) verifiedBuild: number | null;
   @Column({ type: 'timestamp', nullable: true }) verifiedAt: Date | null;
   @Column({ type: 'jsonb', default: [] }) events: ManualRemediationEvent[];
+  // WF6 automated-remediation result (execution-2060 follow-up) — entirely
+  // separate from status/scannerStatus above, which remain the MANUAL
+  // human-tracking fields untouched by this column. Null until WF6 has ever
+  // reported a result for this finding. Always the LATEST callback's
+  // snapshot at the top level; `attempts` keeps every prior callback so no
+  // history is lost across retries (same discipline as Sonar's own
+  // fixRequest.attempts[], but scoped per-finding here, never per-report).
+  @Column({ type: 'jsonb', nullable: true, default: null }) securityFindingRemediation: Record<string, any> | null;
+  // Increment 1 (multi-CVE, one PR) — plain, indexed correlation key shared
+  // by every ManualRemediationTask dispatched together in the SAME WF6
+  // batch (one pom.xml patch, one build, one PR for N CVEs). Null for a
+  // task never part of a batch dispatch (the overwhelming majority, and
+  // every row that predates this column). Deliberately NOT inside the
+  // securityFindingRemediation jsonb blob -- see 20260928_add_security_
+  // remediation_batch_id.sql's own header comment for why a plain indexed
+  // column earns its keep here (cheap "every task in batch X" lookup).
+  @Column({ type: 'varchar', length: 64, nullable: true }) securityRemediationBatchId: string | null;
   @CreateDateColumn() createdAt: Date;
   @UpdateDateColumn() updatedAt: Date;
 }
