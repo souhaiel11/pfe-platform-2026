@@ -1012,3 +1012,100 @@ execution 2057 and the Maven-timeout root cause from execution 2058 are
 both real-proven and fixed at their actual deployed call sites. The
 network-isolation gap disclosed above is the one remaining, explicitly
 deferred item in this specific area.
+
+## Update 8 — Multi-CVE Increment 1: documented functional scope + known health-check defect
+
+Two decisions, both explicit, neither an oversight, made when scoping the
+multi-CVE ("N CVE, one PR") increment. Documented here rather than left
+implicit, per this project's own established discipline (see the
+grounding/warm-up limitation above — decided, not overlooked, same
+pattern).
+
+**Functional scope, audited and ACTED as a documented boundary, not
+widened this phase.** A full read of the live WF6 graph (149 nodes, all
+70 `IF` nodes' conditions individually inspected) plus the backend/
+candidate-verifier code it calls into found:
+- **Zero conditional branches keyed on project identity, CVE id, package,
+  or severity** across the entire 149-node graph — every `IF` node
+  branches on structural/technical proof state (HTTP status, SHA
+  equality, `.ok===true`, PR existence/merge state), never on a business
+  value. The one exception is two `code` nodes ("PR36 Protection Check
+  (Target)"/"(Resolved PR)") that compare `repository`/`branchName`/
+  `pullRequestNumber` against the literal `souhaiel11/pfe-app-test` /
+  `security/fix/a37e178f7ce1-1ebe4cecc872` / `36` — a deliberate,
+  deployment-specific safety rail against this session's own known
+  pre-existing protected PR, inert (`isProtected: false`) on any other
+  repository, never a generic-design gap.
+- **Two real, load-bearing structural assumptions, not hidden bugs**:
+  `grounded-maven-provenance.service.ts` reads `path.join(workspacePath,
+  'pom.xml')` unconditionally (root of the checkout), and
+  `builder-scanner/src/security-artifact-validator.ts` reads
+  `path.join(workspace, 'Dockerfile')` the same way. Both fail closed
+  (`POM_NOT_FOUND` / the equivalent Dockerfile-missing path), never
+  silently wrong, but **a genuinely multi-module Maven project (the
+  vulnerable dependency declared in a child module's own pom.xml, not the
+  root one) is out of scope today** — this is now the documented
+  boundary, not a future silent failure mode.
+- Versions declared as a literal `<version>` inside `<dependency>`
+  (`DIRECT_EXPLICIT`) or via a locally-declared `<properties>` entry
+  (`PROPERTY_MANAGED`) are supported; a version inherited from a parent
+  POM or a BOM's `<dependencyManagement>` import (`BOM_MANAGED`), or
+  resolved only transitively, is explicitly classified non-eligible
+  (`security-eligibility-classifier.ts`, proven by its own spec's BOM_
+  MANAGED/TRANSITIVE/PLUGIN cases) — already a deliberate V1 boundary
+  before this increment, reconfirmed unchanged by it.
+- Non-Maven ecosystems: `SUPPORTED_ECOSYSTEMS = new Set(['MAVEN'])`,
+  `SUPPORTED_SECURITY_SOURCES = new Set(['TRIVY', 'OWASP'])` — named,
+  exported constants, not a hidden gate.
+- **Parameters that exist in the contract but the current caller never
+  populates**: the orchestration input already carries `repository`/
+  `candidateBaseSha`/`branchName` as real per-call parameters (never
+  hardcoded, sourced from `Project.githubRepo`/`Incident.metadata.
+  sourceCommitSha` at call time) — but nothing in today's caller chain
+  (WF6's own graph, the backend resolver) ever varies the CANDIDATE
+  BUILD's Dockerfile path, target registry, or Trivy severity/CVSS
+  threshold: they are structurally *parameterizable* (nothing in the
+  orchestrator or the builder-scanner contract hardcodes them beyond the
+  two root-path assumptions above), but *unexercised* — no caller today
+  ever supplies a different value. This is a "never asked for" gap, not a
+  "cannot support" one.
+
+**Decision, recorded here**: this scope (Maven single-module, property-
+or direct-declared versions) is the ACCEPTED functional boundary for the
+multi-CVE increment. Multi-module Maven, inline-versioned dependencies
+inherited transitively, BOM/parent-managed versions, and non-Maven
+ecosystems are identified extensions, not silent gaps — out of scope
+until explicitly picked up.
+
+**Builder-scanner health-check defect — documented, not fixed, confirmed
+non-blocking today.** `/healthz` calls `checkTrivyCacheReadiness()`
+(a fast, synchronous `trivy --version` parse) and is architecturally
+sound on its own. The SEPARATE, real defect: `server.ts`'s single Node
+event loop runs `/internal/build-scan`'s real build+scan
+(`TrivyImageArtifactValidator.inspect()`, backed by synchronous
+`execFileSync` podman/Trivy calls) on the SAME thread that must also
+answer `/healthz` — during a real, multi-minute build, the health-check
+route cannot be served at all, and Docker's healthcheck (`--interval=30s
+--timeout=10s --retries=3`) will start failing purely from that
+contention, independent of whether the build itself is succeeding. A
+multi-CVE batch (§ this increment) makes this WORSE by construction: one
+shared build/scan cycle for N findings, chained per-finding grounding
+calls beforehand — all still synchronous, all still on the same thread,
+for a correspondingly longer stretch than any single-CVE run.
+Confirmed, this phase, NOT the cause of the CURRENTLY observed unhealthy
+status (that one is a real, unrelated Trivy vulnerability-DB staleness
+gate — see the separate live audit this same phase) — but a distinct,
+real architectural defect in its own right, worth recording before it is
+mistaken for a transient blip. **Non-blocking today**: the service
+answered every real request during execution 2060 (PR #37, real, single-
+CVE) despite this defect, because a `/healthz` check landing outside the
+build window simply succeeds. **To fix before any external supervision
+(orchestrator auto-restart, alerting) is wired to this container's health
+status**: move the build/scan work off the request-handling thread (a
+worker thread, or a separate process pool), so `/healthz` stays
+answerable throughout a build — not required to run a multi-CVE batch
+manually today.
+
+PR36_MODIFIED = NO; PR36_MERGED = NO; WF6_LIVE_CHANGED = NO; WF6_EXECUTED
+= NO; LIVE_GITHUB_WRITE = NO; ROUTING_CHANGED = NO; COMMIT_PUSH = NO;
+LIVE_DEPLOYMENT = NO (documentation only, this update).
