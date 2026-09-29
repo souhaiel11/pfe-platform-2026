@@ -82,7 +82,7 @@ try {
     const adapter: any = {
       dependencyTree: (w: string) => { calls.tree++; return { status: 'SUCCESS', text: variant(w).tree }; },
       effectivePom: (w: string) => { calls.effective++; return { status: 'SUCCESS', text: variant(w).effective }; },
-      packageCandidate: () => { calls.packageCandidate++; return { status: 'SUCCESS' }; },
+      packageCandidateWithTests: () => { calls.packageCandidate++; return { status: 'SUCCESS', testsExecuted: true, testsPassed: true, testsTotal: 1, testsFailures: 0, testsErrors: 0, testsSkipped: 0, durationMs: 1, evidenceTail: '', timedOut: false }; },
     };
     const scanner = { inspect: (w: string) => { calls.inspect++; return scan(w); } };
     const slowDecision = { decide: () => { busyWaitMs(300); return decision(); } };
@@ -109,7 +109,7 @@ try {
     const adapter: any = {
       dependencyTree: (w: string) => { calls.tree++; return { status: 'SUCCESS', text: variant(w).tree }; },
       effectivePom: (w: string) => ({ status: 'SUCCESS', text: variant(w).effective }),
-      packageCandidate: () => ({ status: 'SUCCESS' }),
+      packageCandidateWithTests: () => ({ status: 'SUCCESS', testsExecuted: true, testsPassed: true, testsTotal: 1, testsFailures: 0, testsErrors: 0, testsSkipped: 0, durationMs: 1, evidenceTail: '', timedOut: false }),
     };
     const scanner = { inspect: (w: string) => { calls.inspect++; busyWaitMs(600); return scan(w); } };
     const reqInput = input(1_300); // enough budget to start the base scan, not enough to survive it
@@ -149,7 +149,7 @@ try {
     const mustNotRun: any = {
       dependencyTree: () => { throw new Error('MUST_NOT_RUN'); },
       effectivePom: () => { throw new Error('MUST_NOT_RUN'); },
-      packageCandidate: () => { throw new Error('MUST_NOT_RUN'); },
+      packageCandidateWithTests: () => { throw new Error('MUST_NOT_RUN'); },
     };
     const scanner = { inspect: (w: string) => { busyWaitMs(600); return scan(w); } };
     assert.throws(
@@ -174,7 +174,7 @@ try {
         return { status: 'SUCCESS', text: v.tree };
       },
       effectivePom: (w: string) => ({ status: 'SUCCESS', text: variant(w).effective }),
-      packageCandidate: () => { calls.packageCandidate++; return { status: 'SUCCESS' }; },
+      packageCandidateWithTests: () => { calls.packageCandidate++; return { status: 'SUCCESS', testsExecuted: true, testsPassed: true, testsTotal: 1, testsFailures: 0, testsErrors: 0, testsSkipped: 0, durationMs: 1, evidenceTail: '', timedOut: false }; },
     };
     const scanner = { inspect: (w: string) => scan(w) };
     const reqInput = input(2_000);
@@ -197,7 +197,7 @@ try {
     const adapter: any = {
       dependencyTree: (w: string) => ({ status: 'SUCCESS', text: variant(w).tree }),
       effectivePom: (w: string) => ({ status: 'SUCCESS', text: variant(w).effective }),
-      packageCandidate: () => ({ status: 'SUCCESS' }),
+      packageCandidateWithTests: () => ({ status: 'SUCCESS', testsExecuted: true, testsPassed: true, testsTotal: 1, testsFailures: 0, testsErrors: 0, testsSkipped: 0, durationMs: 1, evidenceTail: '', timedOut: false }),
     };
     const scanner = { inspect: (w: string) => scan(w) };
     const result = new SecurityRemediationOrchestratorService({ decide: decision } as any, wm, { ensureRepo: () => repo } as any, adapter, scanner)

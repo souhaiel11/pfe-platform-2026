@@ -249,6 +249,37 @@ export interface DependencyTreeResult {
   offlineFailure?: OfflineResolutionFailure;
 }
 
+// Security-remediation V1.8 — full pre-CANDIDATE_READY validation. A single
+// `mvn clean package` (no -DskipTests) is used rather than a separate `mvn
+// test` followed by `mvn clean package`: Maven's own lifecycle already binds
+// `test` before `package`, so one invocation compiles, runs the application
+// test suite, AND packages -- exactly the phases needed, with no second full
+// compile. Surefire (`target/surefire-reports/*.txt`) is written as each
+// test class finishes, REGARDLESS of the overall goal's final exit code, so
+// `aggregateSurefireReports` (the SAME aggregator runRegressionTests() above
+// already uses, reused verbatim here) reliably distinguishes "tests ran and
+// some failed" (reports exist, failures>0) from "compilation/packaging never
+// reached the test phase" (no reports at all) even on a non-zero exit.
+export interface SecurityPackageResult {
+  status: 'SUCCESS' | 'FAILED';
+  exitCode: number | null;
+  durationMs: number;
+  timedOut: boolean;
+  evidenceTail: string;
+  /** True only when at least one Surefire "Tests run:" summary was actually
+   *  found -- never inferred from a successful exit code alone (a project
+   *  with zero test classes still exits 0, but must never be reported as
+   *  testsExecuted=true). */
+  testsExecuted: boolean;
+  /** null exactly when testsExecuted is false -- there is nothing to have
+   *  passed or failed. Never true/false as a stand-in for "unknown". */
+  testsPassed: boolean | null;
+  testsTotal: number | null;
+  testsFailures: number | null;
+  testsErrors: number | null;
+  testsSkipped: number | null;
+}
+
 export class MavenBuildAdapter implements BuildAdapter {
   readonly buildType = 'maven';
 
@@ -256,6 +287,36 @@ export class MavenBuildAdapter implements BuildAdapter {
     const r = runMaven(['clean', 'package', '-DskipTests', '-B'], workspacePath, timeoutMs);
     return { status: r.status === 0 ? 'SUCCESS' : 'FAILED', exitCode: r.status, durationMs: r.durationMs,
       evidenceTail: tail(r.stdout + '\n' + r.stderr) };
+  }
+
+  /** Security-remediation orchestrators' ONLY package call (V1.8) -- see
+   *  header comment above. `packageCandidate()` above is kept unchanged for
+   *  its other existing caller(s) (the general-purpose candidate-
+   *  verification-executor / test-fixtures proof runner), never reused here. */
+  packageCandidateWithTests(workspacePath: string, timeoutMs: number = DEFAULT_TIMEOUT_MS): SecurityPackageResult {
+    const r = runMaven(['clean', 'package', '-B'], workspacePath, timeoutMs);
+    if (r.timedOut) {
+      const timeoutEvidence = mavenTimeoutEvidence(r.stdout, r.stderr);
+      return {
+        status: 'FAILED', exitCode: r.status, durationMs: r.durationMs, timedOut: true,
+        evidenceTail: formatTimeoutEvidenceTail('clean package (with tests)', r.durationMs, timeoutMs, timeoutEvidence),
+        testsExecuted: false, testsPassed: null, testsTotal: null, testsFailures: null, testsErrors: null, testsSkipped: null,
+      };
+    }
+    const combined = redactSensitiveStderr(r.stdout + '\n' + r.stderr);
+    const aggregate = aggregateSurefireReports(workspacePath);
+    const testsExecuted = aggregate.matchCount > 0;
+    const testsFailedCount = aggregate.failures + aggregate.errors;
+    return {
+      status: r.status === 0 ? 'SUCCESS' : 'FAILED', exitCode: r.status, durationMs: r.durationMs, timedOut: false,
+      evidenceTail: tail(combined),
+      testsExecuted,
+      testsPassed: testsExecuted ? testsFailedCount === 0 : null,
+      testsTotal: testsExecuted ? aggregate.total : null,
+      testsFailures: testsExecuted ? aggregate.failures : null,
+      testsErrors: testsExecuted ? aggregate.errors : null,
+      testsSkipped: testsExecuted ? aggregate.skipped : null,
+    };
   }
 
   effectivePom(workspacePath: string, timeoutMs: number = DEFAULT_TIMEOUT_MS): DependencyTreeResult {

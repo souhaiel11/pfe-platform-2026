@@ -8,6 +8,7 @@ import { CandidateManifest } from '../candidate-verification/candidate-verificat
 import { SecurityFindingDecision, SecurityFindingDecisionInput } from './security-finding-decision.types';
 import { SecurityPatchGuardResult } from './security-patch-guard';
 import { DependencyProvenanceKind } from './dependency-provenance.types';
+import { ApplicationTestEvidence } from './security-remediation-orchestration.types';
 
 /**
  * Every finding in a batch MUST carry its own cveId (unlike the singular
@@ -62,6 +63,13 @@ export type SecurityRemediationBatchCandidateStatus =
   | 'MAVEN_RESOLUTION_FAILED'
   | 'MAVEN_RESOLUTION_MISMATCH'
   | 'CANDIDATE_BUILD_FAILED'
+  // V1.8 — same distinction as the singular flow's own status of the same
+  // name (security-remediation-orchestration.types.ts): the combined build
+  // failed because the application test suite failed / never ran, not
+  // because compilation/packaging itself failed. Not attributable to any
+  // single CVE (same discipline as buildOutput's own header comment above).
+  | 'APPLICATION_TESTS_FAILED'
+  | 'APPLICATION_TESTS_NOT_EXECUTED'
   | 'CANDIDATE_SECURITY_VALIDATION_FAILED'
   | 'CANDIDATE_READY';
 
@@ -89,6 +97,8 @@ export interface SecurityRemediationBatchCandidateResult {
    * design cadrage). Absent for every other status.
    */
   buildOutput?: string;
+  /** V1.8 — see ApplicationTestEvidence's own header comment (singular flow's types file). */
+  applicationTests?: ApplicationTestEvidence;
 }
 
 export class SecurityRemediationBatchRequestValidationError extends Error {

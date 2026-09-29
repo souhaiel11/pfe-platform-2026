@@ -36,7 +36,7 @@ import { computeSecurityCandidateIdentity } from '../../backend/src/security-rem
 import { dependencyTreeResolvesTo } from '../../backend/src/security-remediation/maven-dependency-resolution-check';
 import { computeCandidateDigest, computeContentSha256 } from '../../backend/src/candidate-verification/candidate-digest';
 import { SecurityPatchRequest, SecurityPatchCandidate } from '../../backend/src/security-remediation/security-patch-request.types';
-import { SecurityRemediationOrchestrationInput, SecurityRemediationCandidateResult } from '../../backend/src/security-remediation/security-remediation-orchestration.types';
+import { SecurityRemediationOrchestrationInput, SecurityRemediationCandidateResult, ApplicationTestEvidence } from '../../backend/src/security-remediation/security-remediation-orchestration.types';
 import { CandidateManifest } from '../../backend/src/candidate-verification/candidate-verification.types';
 import { createWorkerDeadline, WorkerDeadline } from './worker-deadline';
 
@@ -322,14 +322,52 @@ export class SecurityRemediationOrchestratorService {
         };
       }
 
-      // A version replacement is not security closure. Build and scan the
-      // complete packaged candidate, rejecting ANY remaining target-CVE match.
+      // V1.8 — a version replacement is not security closure, and a
+      // packaged candidate is not proven safe to ship just because it
+      // compiles. ONE combined `mvn clean package` (no -DskipTests) proves
+      // compile + application tests + packaging together (see
+      // MavenBuildAdapter.packageCandidateWithTests's own header comment for
+      // why this is one invocation, not two). Only once that has genuinely
+      // executed AND passed does this proceed to build/scan the image and
+      // reject any remaining target-CVE match.
+      const expectedDigest = candidateSourceDigest;
+      let packageResult: ReturnType<MavenBuildAdapter['packageCandidateWithTests']>;
+      try {
+        if (deadline.expired()) throw deadlineExceeded('CANDIDATE_BUILD_AND_TESTS');
+        packageResult = measure('BUILD_AND_TEST_DURATION_MS', () => this.mavenAdapter.packageCandidateWithTests(workspacePath, deadline.budgetFor(BUILD_STAGE_CAP_MS)));
+      } catch (err: any) {
+        if (err instanceof ArtifactRuntimeError) return runtimeFailure(err);
+        throw err;
+      }
+      const applicationTests: ApplicationTestEvidence = {
+        executed: packageResult.testsExecuted, passed: packageResult.testsPassed,
+        total: packageResult.testsTotal, failures: packageResult.testsFailures,
+        errors: packageResult.testsErrors, skipped: packageResult.testsSkipped,
+        durationMs: packageResult.durationMs, evidenceTail: packageResult.evidenceTail,
+      };
+      // A real subprocess timeout during build/tests is infrastructure
+      // evidence (VERIFIER_TIMEOUT), same vocabulary as every other timed-out
+      // stage -- never conflated with a genuine test FAILURE.
+      if (packageResult.timedOut) return { ...runtimeFailure(new ArtifactRuntimeError('RUNTIME_OPERATION_TIMEOUT', 'CANDIDATE_BUILD_AND_TESTS')), applicationTests };
+      if (packageResult.status !== 'SUCCESS') {
+        // Maven's own lifecycle binding means `package` cannot succeed while
+        // `test` has real failures -- so a non-zero exit with executed tests
+        // that failed IS the test failure; any other non-zero exit is a
+        // genuine compile/packaging problem, never mislabeled as a test result.
+        if (packageResult.testsExecuted && packageResult.testsPassed === false) {
+          return { ...notEligible('APPLICATION_TESTS_FAILED', `Application test suite failed: ${packageResult.testsFailures} failure(s), ${packageResult.testsErrors} error(s) of ${packageResult.testsTotal}.`), applicationTests };
+        }
+        return { ...notEligible('CANDIDATE_BUILD_FAILED', 'Candidate package build failed.'), applicationTests };
+      }
+      // Package succeeded but genuinely zero tests were proven to run (no
+      // Surefire reports at all) -- fail closed rather than silently
+      // treating "never executed" as "passed" (this phase's own explicit rule).
+      if (!packageResult.testsExecuted) {
+        return { ...notEligible('APPLICATION_TESTS_NOT_EXECUTED', 'Candidate package build succeeded, but no application tests were proven to run (no Surefire report found).'), applicationTests };
+      }
+
       let closureScan: ReturnType<SecurityArtifactValidator['inspect']>;
       try {
-        const expectedDigest = candidateSourceDigest;
-        if (deadline.expired()) throw deadlineExceeded('CANDIDATE_BUILD');
-        const build = measure('BUILD_DURATION_MS', () => this.mavenAdapter.packageCandidate(workspacePath, deadline.budgetFor(BUILD_STAGE_CAP_MS)));
-        if (build.status !== 'SUCCESS') return notEligible('CANDIDATE_BUILD_FAILED', 'Candidate package build failed (tests skipped).');
         if (trackedSourceDigest(workspacePath) !== expectedDigest) throw new Error('BUILD_MUTATED_SOURCE');
         if (deadline.expired()) throw deadlineExceeded('CANDIDATE_SECURITY_VALIDATION');
         closureScan = inspect(workspacePath);
@@ -337,8 +375,8 @@ export class SecurityRemediationOrchestratorService {
           throw new Error('CANDIDATE_SCAN_SOURCE_BINDING_FAILED');
         if (!provesSecurityClosure(closureScan, decision.remediationScope)) throw new Error('TARGET_CVE_NOT_CLOSED_OR_SCAN_INCOMPLETE');
       } catch (err: any) {
-        if (err instanceof ArtifactRuntimeError) return runtimeFailure(err);
-        return notEligible('CANDIDATE_SECURITY_VALIDATION_FAILED', String(err?.message || 'Candidate-wide security validation failed.'));
+        if (err instanceof ArtifactRuntimeError) return { ...runtimeFailure(err), applicationTests };
+        return { ...notEligible('CANDIDATE_SECURITY_VALIDATION_FAILED', String(err?.message || 'Candidate-wide security validation failed.')), applicationTests };
       }
 
       // §4 step 12: candidate/evidence. Reuses the EXISTING CandidateManifest
@@ -364,7 +402,8 @@ export class SecurityRemediationOrchestratorService {
         securityValidationEvidence: { status: 'TARGET_CVE_CLOSED', targetCve: scopeEvidence.targetCve, mode: 'TRIVY_IMAGE_ARCHIVE',
           evaluatedSha: decision.evaluatedSha, candidateContentSha256: computeContentSha256(candidate.file.content),
           artifactDigest: closureScan.artifactDigest, reportDigest: closureScan.reportDigest, scannerVersion: closureScan.scannerVersion,
-          targetCveMatchCount: 0, buildPassed: true, tests: 'SKIPPED' },
+          targetCveMatchCount: 0, buildPassed: true, tests: 'PASSED' },
+        applicationTests,
         patchEvidence: {
           provenanceKind: provenance.kind, oldVersion: candidate.oldVersion, targetVersion: candidate.targetVersion,
           controllingFile: provenance.controllingFile, controllingElement: provenance.controllingElement, controllingProperty: provenance.controllingProperty,

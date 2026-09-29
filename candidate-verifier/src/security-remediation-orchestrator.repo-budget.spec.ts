@@ -63,7 +63,7 @@ try {
     const adapter: any = {
       dependencyTree: (w: string) => ({ status: 'SUCCESS', text: f.baseTree }),
       effectivePom: (w: string) => ({ status: 'SUCCESS', text: f.baseEffective }),
-      packageCandidate: () => ({ status: 'SUCCESS' }),
+      packageCandidateWithTests: () => ({ status: 'SUCCESS', testsExecuted: true, testsPassed: true, testsTotal: 1, testsFailures: 0, testsErrors: 0, testsSkipped: 0, durationMs: 1, evidenceTail: '', timedOut: false }),
     };
     const scanner = { inspect: (w: string): SecurityArtifactScan => ({
       mode: 'TRIVY_IMAGE_ARCHIVE', sourceDigest: trackedSourceDigest(w), artifactDigest: 'b'.repeat(64),
@@ -90,7 +90,7 @@ try {
     const adapter: any = {
       dependencyTree: () => { throw new Error('MUST_NOT_RUN'); },
       effectivePom: () => { throw new Error('MUST_NOT_RUN'); },
-      packageCandidate: () => { throw new Error('MUST_NOT_RUN'); },
+      packageCandidateWithTests: () => { throw new Error('MUST_NOT_RUN'); },
     };
     const scanner = { inspect: () => { throw new Error('MUST_NOT_RUN'); } };
     const slowDecision = { decide: () => { busyWaitMs(250); return decision(); } }; // consumes almost all of a 260ms budget

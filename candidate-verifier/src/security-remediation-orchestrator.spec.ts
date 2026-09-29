@@ -24,10 +24,15 @@ function variant(w: string) {
  for (const k of ['v16', 'property-only', 'coordinated']) if (s === f[k].source) return f[k];
  throw new Error('UNEXPECTED_SOURCE');
 }
+// V1.8 — every mocked packageCandidateWithTests() below stands in for a real
+// `mvn clean package` that DID execute the application test suite; specs
+// exercising a build failure set testsExecuted:false explicitly (no Surefire
+// report ever existed for a build that failed before/without running tests).
+const testsPassedResult = { status: 'SUCCESS', testsExecuted: true, testsPassed: true, testsTotal: 1, testsFailures: 0, testsErrors: 0, testsSkipped: 0, durationMs: 1, evidenceTail: '', timedOut: false };
 const adapter: any = {
  dependencyTree: (w: string) => ({ status: 'SUCCESS', text: variant(w).tree }),
  effectivePom: (w: string) => ({ status: 'SUCCESS', text: variant(w).effective }),
- packageCandidate: () => ({ status: 'SUCCESS' }),
+ packageCandidateWithTests: () => testsPassedResult,
 };
 function scan(w: string): SecurityArtifactScan {
  const v = variant(w), r = JSON.parse(JSON.stringify(v.source === f.source ? f.baseReport
@@ -55,7 +60,10 @@ try {
    return s;
  } }).orchestrate(input());
  assert.equal(residual.status, 'CANDIDATE_SECURITY_VALIDATION_FAILED'); assert.equal(residual.candidateManifest, null);
- assert.equal(make({ ...adapter, packageCandidate: () => ({ status: 'FAILED' }) }).orchestrate(input()).status, 'CANDIDATE_BUILD_FAILED');
+ assert.equal(make({ ...adapter, packageCandidateWithTests: () => ({ status: 'FAILED', testsExecuted: false, testsPassed: null, durationMs: 1, evidenceTail: '', timedOut: false }) }).orchestrate(input()).status, 'CANDIDATE_BUILD_FAILED');
+ assert.equal(make({ ...adapter, packageCandidateWithTests: () => ({ status: 'FAILED', testsExecuted: true, testsPassed: false, testsTotal: 3, testsFailures: 1, testsErrors: 0, testsSkipped: 0, durationMs: 1, evidenceTail: '', timedOut: false }) }).orchestrate(input()).status, 'APPLICATION_TESTS_FAILED');
+ assert.equal(make({ ...adapter, packageCandidateWithTests: () => ({ status: 'SUCCESS', testsExecuted: false, testsPassed: null, durationMs: 1, evidenceTail: '', timedOut: false }) }).orchestrate(input()).status, 'APPLICATION_TESTS_NOT_EXECUTED');
+ assert.equal(make({ ...adapter, packageCandidateWithTests: () => ({ status: 'FAILED', testsExecuted: false, testsPassed: null, durationMs: 1, evidenceTail: '', timedOut: true }) }).orchestrate(input()).status, 'TECHNICAL_FAILURE');
  const mutatingTree = { ...adapter, dependencyTree: (w: string) => {
    const result = adapter.dependencyTree(w);
    if (variant(w).source === f.coordinated.source) fs.appendFileSync(path.join(w, 'pom.xml'), '\n<!-- unauthorized mutation -->');

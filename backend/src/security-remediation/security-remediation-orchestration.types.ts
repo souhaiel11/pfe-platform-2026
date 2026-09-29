@@ -62,6 +62,16 @@ export type SecurityRemediationCandidateStatus =
   | 'TECHNICAL_FAILURE'
   | 'REMEDIATION_SCOPE_UNPROVEN'
   | 'CANDIDATE_BUILD_FAILED'
+  // V1.8 — a candidate package build that failed BECAUSE the application
+  // test suite failed (distinguished from CANDIDATE_BUILD_FAILED, which now
+  // means compilation/packaging itself failed before or without a test
+  // verdict). Never CANDIDATE_READY when this occurs.
+  | 'APPLICATION_TESTS_FAILED'
+  // V1.8 — the package build succeeded but no Surefire report was ever
+  // produced (e.g. zero test classes, or a misconfigured/skipped test
+  // plugin) -- fail-closed rather than silently treating "no tests ran" as
+  // "tests passed".
+  | 'APPLICATION_TESTS_NOT_EXECUTED'
   | 'CANDIDATE_SECURITY_VALIDATION_FAILED'
   | 'CANDIDATE_READY'
   | 'NOT_ELIGIBLE'
@@ -71,6 +81,26 @@ export type SecurityRemediationCandidateStatus =
   | 'WORKSPACE_FAILURE'
   | 'MAVEN_RESOLUTION_FAILED'
   | 'MAVEN_RESOLUTION_MISMATCH';
+
+/**
+ * V1.8 — always present once the build+test phase has actually been
+ * attempted (absent only for statuses that stop strictly BEFORE that phase,
+ * e.g. NOT_ELIGIBLE/GROUNDING_FAILED/MAVEN_RESOLUTION_*). Exposed regardless
+ * of the final status so a caller can see WHY a candidate stopped even when
+ * it never reached CANDIDATE_READY -- never folded away into a single
+ * boolean, per this phase's own instruction not to fabricate metrics the
+ * real Surefire aggregation cannot support.
+ */
+export interface ApplicationTestEvidence {
+  executed: boolean;
+  passed: boolean | null;
+  total: number | null;
+  failures: number | null;
+  errors: number | null;
+  skipped: number | null;
+  durationMs: number;
+  evidenceTail: string;
+}
 
 /**
  * §3 — the ONE new type this phase introduces. `candidateManifest` reuses
@@ -91,7 +121,11 @@ export interface SecurityClosureEvidence {
   scannerVersion: string;
   targetCveMatchCount: 0;
   buildPassed: true;
-  tests: 'SKIPPED';
+  // V1.8 — was unconditionally 'SKIPPED' (mvn clean package -DskipTests).
+  // CANDIDATE_READY is only ever reached now once the application test
+  // suite has actually run and passed (see ApplicationTestEvidence above /
+  // orchestrate()'s own gate) -- 'SKIPPED' can no longer occur here.
+  tests: 'PASSED';
 }
 
 export interface SecurityRemediationCandidateResult {
@@ -99,6 +133,8 @@ export interface SecurityRemediationCandidateResult {
   executionTimings?: Record<string, number>;
   failureClass?: 'VERIFIER_TIMEOUT' | 'VERIFIER_UNAVAILABLE' | 'VERIFIER_PROTOCOL_ERROR';
   securityValidationEvidence?: SecurityClosureEvidence;
+  /** V1.8 — see ApplicationTestEvidence's own header comment. */
+  applicationTests?: ApplicationTestEvidence;
   status: SecurityRemediationCandidateStatus;
   reason: string;
   decision: SecurityFindingDecision;

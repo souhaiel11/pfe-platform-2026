@@ -69,7 +69,7 @@ try {
     const adapter: any = {
       dependencyTree: (w: string) => ({ status: 'SUCCESS', text: variant(w).tree }),
       effectivePom: (w: string) => ({ status: 'SUCCESS', text: variant(w).effective }),
-      packageCandidate: () => ({ status: 'SUCCESS' }),
+      packageCandidateWithTests: () => ({ status: 'SUCCESS', testsExecuted: true, testsPassed: true, testsTotal: 1, testsFailures: 0, testsErrors: 0, testsSkipped: 0, durationMs: 1, evidenceTail: '', timedOut: false }),
     };
     function scan(w: string): SecurityArtifactScan {
       const v = variant(w), r = JSON.parse(JSON.stringify(v.source === f.source ? f.baseReport
@@ -151,7 +151,7 @@ try {
   // B. Two DISTINCT, non-conflicting CVEs -> ONE build, ONE scan, BOTH closed.
   // ==========================================================================
   {
-    const adapter: any = { dependencyTree: genericDependencyTree, effectivePom: genericEffectivePom, packageCandidate: () => ({ status: 'SUCCESS' }) };
+    const adapter: any = { dependencyTree: genericDependencyTree, effectivePom: genericEffectivePom, packageCandidateWithTests: () => ({ status: 'SUCCESS', testsExecuted: true, testsPassed: true, testsTotal: 1, testsFailures: 0, testsErrors: 0, testsSkipped: 0, durationMs: 1, evidenceTail: '', timedOut: false }) };
     let scanCall = 0;
     const scanner = { inspect: (w: string) => {
       scanCall++;
@@ -191,7 +191,7 @@ try {
   {
     const conflictingB = { ...findingB, package: 'ch.qos.logback:logback-classic', expectedInstalledVersion: '1.2.11', fixedVersion: '1.2.20' }; // same package as A, different target
     const TARGET_CONFLICT_B: ScanTarget = { id: conflictingB.cveId, pkg: conflictingB.package, installed: conflictingB.expectedInstalledVersion, fixed: conflictingB.fixedVersion };
-    const adapter: any = { dependencyTree: genericDependencyTree, effectivePom: genericEffectivePom, packageCandidate: () => { throw new Error('MUST_NOT_BUILD_ON_CONFLICT'); } };
+    const adapter: any = { dependencyTree: genericDependencyTree, effectivePom: genericEffectivePom, packageCandidateWithTests: () => { throw new Error('MUST_NOT_BUILD_ON_CONFLICT'); } };
     let scanCall = 0;
     const scanner = { inspect: (w: string) => {
       scanCall++;
@@ -218,7 +218,7 @@ try {
   // detail names exactly which one stayed open.
   // ==========================================================================
   {
-    const adapter: any = { dependencyTree: genericDependencyTree, effectivePom: genericEffectivePom, packageCandidate: () => ({ status: 'SUCCESS' }) };
+    const adapter: any = { dependencyTree: genericDependencyTree, effectivePom: genericEffectivePom, packageCandidateWithTests: () => ({ status: 'SUCCESS', testsExecuted: true, testsPassed: true, testsTotal: 1, testsFailures: 0, testsErrors: 0, testsSkipped: 0, durationMs: 1, evidenceTail: '', timedOut: false }) };
     let scanCall = 0;
     const scanner = { inspect: (w: string) => {
       scanCall++;
@@ -242,7 +242,7 @@ try {
   // ==========================================================================
   {
     const MAVEN_ERROR_OUTPUT = '[ERROR] Failed to execute goal ... -> [Help 1]\nBUILD FAILURE';
-    const adapter: any = { dependencyTree: genericDependencyTree, effectivePom: genericEffectivePom, packageCandidate: () => ({ status: 'FAILED', evidenceTail: MAVEN_ERROR_OUTPUT }) };
+    const adapter: any = { dependencyTree: genericDependencyTree, effectivePom: genericEffectivePom, packageCandidateWithTests: () => ({ status: 'FAILED', testsExecuted: false, testsPassed: null, durationMs: 1, evidenceTail: MAVEN_ERROR_OUTPUT, timedOut: false }) };
     const svc = new SecurityRemediationBatchOrchestratorService(decisionServiceFor([findingA, findingB]) as any, wmBE, { ensureRepo: () => repoBE } as any, adapter, { inspect: (w: string) => scanFor([TARGET_A, TARGET_B], trackedSourceDigest(w)) } as any);
     const result = svc.orchestrate({ repository: 'x/y', candidateBaseSha: SHA, requestId: 'e-req', batchId: 'e-batch', candidateAttempt: 0, findings: [findingA, findingB] });
     assert.equal(result.status, 'CANDIDATE_BUILD_FAILED', `E: ${JSON.stringify(result)}`);

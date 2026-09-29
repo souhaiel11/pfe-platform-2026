@@ -62,6 +62,7 @@ import { allVulnerabilityIds, deriveBatchClosureVerdict } from '../../backend/sr
 import {
   SecurityRemediationBatchOrchestrationInput, SecurityRemediationBatchCandidateResult, SecurityRemediationBatchFindingEvidence,
 } from '../../backend/src/security-remediation/security-remediation-batch-orchestration.types';
+import { ApplicationTestEvidence } from '../../backend/src/security-remediation/security-remediation-orchestration.types';
 import { SecurityFindingDecision } from '../../backend/src/security-remediation/security-finding-decision.types';
 import { CandidateManifest } from '../../backend/src/candidate-verification/candidate-verification.types';
 import { createWorkerDeadline, WorkerDeadline } from './worker-deadline';
@@ -306,28 +307,58 @@ export class SecurityRemediationBatchOrchestratorService {
           decisions.map((d, i) => ({ findingIdentity: d.findingIdentity, cveId: cveIds[i], status: 'PENDING', reason: 'MAVEN_RESOLUTION_MISMATCH', patchEvidence: null })));
       }
 
-      // §5 — ONE build for the whole batch. On failure, no attribution to
-      // any single CVE: the real Maven output is captured verbatim instead.
+      // V1.8 — ONE combined build+test for the whole batch (see the
+      // singular orchestrator's identical rationale). A test failure is not
+      // attributable to any single CVE either, same discipline as a build
+      // failure below.
+      const expectedDigest = candidateSourceDigest;
+      let packageResult: ReturnType<MavenBuildAdapter['packageCandidateWithTests']>;
+      try {
+        if (deadline.expired()) throw deadlineExceeded('CANDIDATE_BUILD_AND_TESTS');
+        packageResult = measure('BUILD_AND_TEST_DURATION_MS', () => this.mavenAdapter.packageCandidateWithTests(workspacePath, deadline.budgetFor(BUILD_STAGE_CAP_MS)));
+      } catch (err: any) {
+        if (err instanceof ArtifactRuntimeError) return runtimeFailure(err, pendingEvidence(decisions.length));
+        throw err;
+      }
+      const applicationTests: ApplicationTestEvidence = {
+        executed: packageResult.testsExecuted, passed: packageResult.testsPassed,
+        total: packageResult.testsTotal, failures: packageResult.testsFailures,
+        errors: packageResult.testsErrors, skipped: packageResult.testsSkipped,
+        durationMs: packageResult.durationMs, evidenceTail: packageResult.evidenceTail,
+      };
+      if (packageResult.timedOut) {
+        return { ...runtimeFailure(new ArtifactRuntimeError('RUNTIME_OPERATION_TIMEOUT', 'CANDIDATE_BUILD_AND_TESTS'), pendingEvidence(decisions.length)), applicationTests };
+      }
+      if (packageResult.status !== 'SUCCESS') {
+        const testsCausedFailure = packageResult.testsExecuted && packageResult.testsPassed === false;
+        return {
+          status: testsCausedFailure ? 'APPLICATION_TESTS_FAILED' : 'CANDIDATE_BUILD_FAILED',
+          reason: testsCausedFailure
+            ? `Application test suite failed for the combined N-CVE patch: ${packageResult.testsFailures} failure(s), ${packageResult.testsErrors} error(s) of ${packageResult.testsTotal}.`
+            : 'Candidate package build failed for the combined N-CVE patch.',
+          buildOutput: packageResult.evidenceTail, applicationTests,
+          findings: decisions.map((d, i) => ({ findingIdentity: d.findingIdentity, cveId: cveIds[i], status: 'PENDING', reason: testsCausedFailure ? 'BATCH_TESTS_FAILED_NOT_ATTRIBUTED' : 'BATCH_BUILD_FAILED_NOT_ATTRIBUTED', patchEvidence: null })),
+          decisions, candidateIdentity: null, candidateManifest: null, guardResult: null,
+        };
+      }
+      if (!packageResult.testsExecuted) {
+        return {
+          status: 'APPLICATION_TESTS_NOT_EXECUTED', reason: 'Candidate package build succeeded for the combined N-CVE patch, but no application tests were proven to run (no Surefire report found).',
+          buildOutput: packageResult.evidenceTail, applicationTests,
+          findings: decisions.map((d, i) => ({ findingIdentity: d.findingIdentity, cveId: cveIds[i], status: 'PENDING', reason: 'BATCH_TESTS_NOT_EXECUTED', patchEvidence: null })),
+          decisions, candidateIdentity: null, candidateManifest: null, guardResult: null,
+        };
+      }
+
       let closureScan;
       try {
-        const expectedDigest = candidateSourceDigest;
-        if (deadline.expired()) throw deadlineExceeded('CANDIDATE_BUILD');
-        const build = measure('BUILD_DURATION_MS', () => this.mavenAdapter.packageCandidate(workspacePath, deadline.budgetFor(BUILD_STAGE_CAP_MS)));
-        if (build.status !== 'SUCCESS') {
-          return {
-            status: 'CANDIDATE_BUILD_FAILED', reason: 'Candidate package build failed for the combined N-CVE patch (tests skipped).',
-            buildOutput: build.evidenceTail,
-            findings: decisions.map((d, i) => ({ findingIdentity: d.findingIdentity, cveId: cveIds[i], status: 'PENDING', reason: 'BATCH_BUILD_FAILED_NOT_ATTRIBUTED', patchEvidence: null })),
-            decisions, candidateIdentity: null, candidateManifest: null, guardResult: null,
-          };
-        }
         if (trackedSourceDigest(workspacePath) !== expectedDigest) throw new Error('BUILD_MUTATED_SOURCE');
         if (deadline.expired()) throw deadlineExceeded('CANDIDATE_SECURITY_VALIDATION');
         closureScan = measure('ARTIFACT_VALIDATION_DURATION_MS', () => this.securityValidator.inspect(workspacePath, deadline.remainingMs()));
         if (closureScan.sourceDigest !== expectedDigest || trackedSourceDigest(workspacePath) !== expectedDigest) throw new Error('CANDIDATE_SCAN_SOURCE_BINDING_FAILED');
       } catch (err: any) {
-        if (err instanceof ArtifactRuntimeError) return runtimeFailure(err, pendingEvidence(decisions.length));
-        return notEligible('CANDIDATE_SECURITY_VALIDATION_FAILED', String(err?.message || 'Candidate-wide security validation failed.'), pendingEvidence(decisions.length));
+        if (err instanceof ArtifactRuntimeError) return { ...runtimeFailure(err, pendingEvidence(decisions.length)), applicationTests };
+        return { ...notEligible('CANDIDATE_SECURITY_VALIDATION_FAILED', String(err?.message || 'Candidate-wide security validation failed.'), pendingEvidence(decisions.length)), applicationTests };
       }
 
       // §4/§6 — per-CVE closure via baseline/candidate CVE-id intersection.
@@ -351,7 +382,7 @@ export class SecurityRemediationBatchOrchestratorService {
         return {
           status: 'CANDIDATE_SECURITY_VALIDATION_FAILED',
           reason: `Not every target CVE closed: ${verdict.perCve.filter(v => v.status !== 'CLOSED').map(v => `${v.cveId}:${v.status}`).join(', ')}`,
-          findings: findingsEvidence, decisions, candidateIdentity: null, candidateManifest: null, guardResult: null,
+          findings: findingsEvidence, decisions, candidateIdentity: null, candidateManifest: null, guardResult: null, applicationTests,
         };
       }
 
@@ -377,7 +408,7 @@ export class SecurityRemediationBatchOrchestratorService {
 
       return {
         status: 'CANDIDATE_READY', reason: 'DETERMINISTIC_BATCH_CANDIDATE_READY',
-        findings: findingsEvidence, decisions, candidateIdentity, candidateManifest, guardResult: null,
+        findings: findingsEvidence, decisions, candidateIdentity, candidateManifest, guardResult: null, applicationTests,
       };
     } finally {
       measure('CLEANUP_DURATION_MS', () => this.workspaceManager.cleanupWorkspace(workspaceId, repoPath));
