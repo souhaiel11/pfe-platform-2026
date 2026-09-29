@@ -21,6 +21,7 @@ const KEY = { cve: 'CVE-2023-6378', pkg: 'ch.qos.logback:logback-classic', insta
   assert.equal(resolved.fixedVersionSource, 'TRIVY_CORRELATED');
   assert.equal(resolved.fixedVersionEvidence.source, 'TRIVY');
   assert.equal(resolved.fixedVersionEvidence.match, 'CVE_MAVEN_INSTALLED_VERSION');
+  assert.equal(resolved.fixedVersionUnavailableReason, null, 'a target IS available here');
 }
 console.log('1. exact key + single Trivy FixedVersion -> enriched: PASS');
 
@@ -29,7 +30,9 @@ console.log('1. exact key + single Trivy FixedVersion -> enriched: PASS');
   const index = buildTrivyFixedVersionIndex([{ id: KEY.cve, pkg: 'com.example:other', installedVersion: KEY.installedVersion, fixedVersion: '9.9.9' }]);
   const q = qualifyOwaspFixedVersionCorrelation(KEY, index);
   assert.equal(q.kind, 'NO_MATCH');
-  assert.equal(resolveOwaspFixedVersion(null, null, q).fixedVersion, null);
+  const resolved = resolveOwaspFixedVersion(null, null, q);
+  assert.equal(resolved.fixedVersion, null);
+  assert.equal(resolved.fixedVersionUnavailableReason, 'NO_TRIVY_MATCH');
 }
 console.log('2. same CVE, different artifact -> NO_MATCH: PASS');
 
@@ -63,7 +66,9 @@ console.log('4. two Trivy rows, same key, same FixedVersion -> PASS (matchCount=
   const q = qualifyOwaspFixedVersionCorrelation(KEY, index);
   assert.equal(q.kind, 'AMBIGUOUS');
   assert.deepEqual([...(q as any).distinctValues].sort(), ['1.2.13', '1.2.14']);
-  assert.equal(resolveOwaspFixedVersion(null, null, q).fixedVersion, null, 'never picks arbitrarily between ambiguous candidates');
+  const resolved = resolveOwaspFixedVersion(null, null, q);
+  assert.equal(resolved.fixedVersion, null, 'never picks arbitrarily between ambiguous candidates');
+  assert.equal(resolved.fixedVersionUnavailableReason, 'MULTIPLE_CANDIDATES', 'AMBIGUOUS must read as "several possible targets", never lumped with "no match"');
 }
 console.log('5. two Trivy rows, same key, different FixedVersion -> AMBIGUOUS, no enrichment: PASS');
 
@@ -72,7 +77,9 @@ console.log('5. two Trivy rows, same key, different FixedVersion -> AMBIGUOUS, n
   const index = buildTrivyFixedVersionIndex([{ id: KEY.cve, pkg: KEY.pkg, installedVersion: KEY.installedVersion, fixedVersion: '' }]);
   const q = qualifyOwaspFixedVersionCorrelation(KEY, index);
   assert.equal(q.kind, 'NO_TARGET');
-  assert.equal(resolveOwaspFixedVersion(null, null, q).fixedVersion, null);
+  const resolved = resolveOwaspFixedVersion(null, null, q);
+  assert.equal(resolved.fixedVersion, null);
+  assert.equal(resolved.fixedVersionUnavailableReason, 'NO_TRIVY_MATCH', 'a matched-but-empty Trivy row is "no usable match", not "multiple targets"');
 }
 console.log('6. empty FixedVersion -> NO_TARGET, no enrichment: PASS');
 
@@ -82,12 +89,15 @@ console.log('6. empty FixedVersion -> NO_TARGET, no enrichment: PASS');
   const q = qualifyOwaspFixedVersionCorrelation(KEY, index);
   assert.equal(q.kind, 'UNSUPPORTED_FORMAT');
   assert.equal((q as any).format, 'MULTIPLE_CANDIDATES');
-  assert.equal(resolveOwaspFixedVersion(null, null, q).fixedVersion, null);
+  const resolved = resolveOwaspFixedVersion(null, null, q);
+  assert.equal(resolved.fixedVersion, null);
+  assert.equal(resolved.fixedVersionUnavailableReason, 'MULTIPLE_CANDIDATES');
 
   const rangeIndex = buildTrivyFixedVersionIndex([{ id: KEY.cve, pkg: KEY.pkg, installedVersion: KEY.installedVersion, fixedVersion: '[1.2.0]' }]);
   const rangeQ = qualifyOwaspFixedVersionCorrelation(KEY, rangeIndex);
   assert.equal(rangeQ.kind, 'UNSUPPORTED_FORMAT');
   assert.equal((rangeQ as any).format, 'RANGE_OR_UNSUPPORTED');
+  assert.equal(resolveOwaspFixedVersion(null, null, rangeQ).fixedVersionUnavailableReason, 'MULTIPLE_CANDIDATES', 'an unsupported single-value format is presented the same as multi-value -- both mean "Trivy evidence exists but is not a safe single target"');
 }
 console.log('7. multi-value / range FixedVersion -> UNSUPPORTED_FORMAT, no enrichment, never "first": PASS');
 

@@ -7,6 +7,7 @@ import { normalizeReport } from '../common/report-normalizer';
 import { findingFingerprint } from './finding-fingerprint';
 import { taskFingerprintAliases, owaspLegacyFingerprint } from './owasp-task-identity';
 import { buildTrivyFixedVersionIndex, qualifyOwaspFixedVersionCorrelation, resolveOwaspFixedVersion } from './owasp-trivy-fixed-version-correlation';
+import { resolveOwaspMavenIdentity } from '../common/owasp-finding-normalizer';
 import { withFindingTaskIds } from './finding-task-id-enrichment';
 import { ManualRemediationEvent, ManualRemediationStatus, ManualRemediationTask, ScannerFindingStatus } from './manual-remediation.entity';
 import { Wf6RemediationResultDto } from '../security-remediation/wf6-remediation-result.dto';
@@ -198,8 +199,15 @@ export class ManualRemediationService {
       const task = matches[0];
       if (!task) continue;
       const previousPackage = task.findingSnapshot?.packageType === 'maven' ? task.findingSnapshot?.pkg : null;
+      // Compare against the RESOLVED component (same resolver snapshot()
+      // itself uses just below), never candidate.finding.pkg directly: the
+      // raw finding reaching this method is a jar filename, never a Maven
+      // coordinate (see resolveOwaspIdentity()'s own header), so comparing
+      // it straight against a task's already-validated Maven pkg would flag
+      // every ordinary resync as a false "contradictory identity".
+      const freshComponent = this.resolveOwaspIdentity(candidate.finding, task.findingSnapshot).component;
       if ((owaspMatches.has(candidate.fingerprint) && owaspMatches.get(candidate.fingerprint).id !== task.id)
-        || (previousPackage && previousPackage !== candidate.finding.pkg)
+        || (previousPackage && freshComponent && previousPackage !== freshComponent)
         || (claimed.has(task.id) && claimed.get(task.id) !== candidate.fingerprint)) {
         throw new BadRequestException('Correspondance OWASP ambiguë : identité Maven contradictoire.');
       }
@@ -241,14 +249,69 @@ export class ManualRemediationService {
     }
   }
 
+  // OWASP-only Maven identity resolution. The finding actually reaching this
+  // method (incident.metadata.enrichedData.owasp.cves[] / report.rawData's
+  // equivalent) is ALREADY a flattened, one-row-per-CVE shape -- it never
+  // carries the original Dependency-Check dependency.packages[] PURL array
+  // (that is lost upstream, before enrichedData is built). Calling
+  // resolveOwaspMavenIdentity() here is still correct: it is the SAME
+  // canonical helper the rest of the OWASP pipeline uses (never a second,
+  // divergent PURL parser), and it degrades safely to null when .packages[]
+  // isn't present -- which is every real sync today. Since a resync can
+  // therefore never independently RE-DERIVE a Maven identity, the safe
+  // behaviour is to PRESERVE an already-validated one from existingSnapshot
+  // (same raw legacyPackage = same finding, nothing invalidated it) rather
+  // than regress component/purl/installedVersion back to the raw jar
+  // filename on every sync. If the raw identity itself changes (a real jar/
+  // version bump) there is nothing safe to preserve, so this correctly
+  // falls back to the raw-only shape instead of keeping stale data.
+  private resolveOwaspIdentity(f: any, existingSnapshot?: any): { component: string | null; currentVersion: string | null; owaspIdentity: Record<string, any> } {
+    // A finding that already self-declares a resolved Maven identity (e.g.
+    // normalizeOwaspFinding()'s own output, or any future ingestion step
+    // that pre-resolves it) is trusted directly -- never re-parsed, never a
+    // second PURL parser. Otherwise fall back to the canonical resolver
+    // itself, in case the raw nested dependency.packages[] shape is ever
+    // preserved this far.
+    const MAVEN_COORDINATE_RE = /^[A-Za-z0-9_.-]+:[A-Za-z0-9_.-]+$/;
+    const freshIdentity = (f.packageType === 'maven' && typeof f.pkg === 'string' && MAVEN_COORDINATE_RE.test(f.pkg) && f.purl)
+      ? { groupId: f.groupId || f.pkg.split(':')[0], artifactId: f.artifactId || f.pkg.split(':')[1], installedVersion: f.installedVersion || '', pkg: f.pkg, purl: f.purl }
+      : resolveOwaspMavenIdentity(f);
+    const rawLegacyPackage = String(f.legacyPackage || f.fileName || f.file || f.dependency || f.package || f.pkg || '').trim() || null;
+    if (freshIdentity) {
+      return {
+        component: freshIdentity.pkg, currentVersion: freshIdentity.installedVersion,
+        owaspIdentity: {
+          pkg: freshIdentity.pkg, purl: freshIdentity.purl, packageType: 'maven',
+          installedVersion: freshIdentity.installedVersion, legacyPackage: rawLegacyPackage || freshIdentity.pkg,
+          groupId: freshIdentity.groupId, artifactId: freshIdentity.artifactId,
+        },
+      };
+    }
+    const existingIsMaven = existingSnapshot?.packageType === 'maven' && !!existingSnapshot?.component && !!existingSnapshot?.legacyPackage;
+    if (existingIsMaven && existingSnapshot.legacyPackage === rawLegacyPackage) {
+      return {
+        component: existingSnapshot.component, currentVersion: existingSnapshot.installedVersion,
+        owaspIdentity: {
+          pkg: existingSnapshot.pkg ?? existingSnapshot.component, purl: existingSnapshot.purl ?? null, packageType: 'maven',
+          installedVersion: existingSnapshot.installedVersion ?? null, legacyPackage: existingSnapshot.legacyPackage,
+          groupId: existingSnapshot.groupId ?? null, artifactId: existingSnapshot.artifactId ?? null,
+        },
+      };
+    }
+    return {
+      component: rawLegacyPackage, currentVersion: f.installedVersion || null,
+      owaspIdentity: {
+        pkg: rawLegacyPackage, purl: null, packageType: null,
+        installedVersion: f.installedVersion || null, legacyPackage: rawLegacyPackage,
+        groupId: null, artifactId: null,
+      },
+    };
+  }
+
   private snapshot(source: string, f: any, existingSnapshot?: any, trivyFixedVersionIndex?: ReturnType<typeof buildTrivyFixedVersionIndex>) {
     const ruleOrCve = String(f.id || f.VulnerabilityID || f.cve || f.rule || f.alertRef || f.pluginid || f.name || 'Non disponible');
-    const owaspIdentity = source === 'OWASP' ? {
-      pkg: f.pkg || f.package || f.fileName || null,
-      purl: f.purl || null, packageType: f.packageType || null,
-      installedVersion: f.installedVersion || null,
-      legacyPackage: f.legacyPackage || null,
-    } : {};
+    const owaspResolved = source === 'OWASP' ? this.resolveOwaspIdentity(f, existingSnapshot) : null;
+    const owaspIdentity = owaspResolved?.owaspIdentity ?? {};
     // Trivy/ZAP fixedVersion resolution is UNCHANGED: native scan value only.
     // OWASP alone may additionally borrow a Trivy-correlated target version
     // -- see owasp-trivy-fixed-version-correlation.ts for the full ordering
@@ -258,17 +321,29 @@ export class ManualRemediationService {
     let fixedVersion: string | null = nativeFixedVersion;
     let fixedVersionSource: 'TRIVY_CORRELATED' | null = null;
     let fixedVersionEvidence: any = null;
+    // UX-only breadcrumb (never decision-affecting, see owasp-trivy-fixed-
+    // version-correlation.ts's own header): why a target is unavailable,
+    // distinguishing "Trivy evidence exists but doesn't collapse to one
+    // safe version" from "no Trivy evidence at all" for the frontend.
+    let fixedVersionUnavailableReason: 'MULTIPLE_CANDIDATES' | 'NO_TRIVY_MATCH' | null = null;
     if (source === 'OWASP') {
+      // Correlate on the RESOLVED Maven component (fresh or preserved), never
+      // the raw finding's own pkg -- Trivy's own index is keyed by Maven
+      // groupId:artifactId, so correlating on a jar filename could never
+      // match anything (silent, permanent NO_TRIVY_MATCH for every finding).
       const correlation = qualifyOwaspFixedVersionCorrelation(
-        { cve: ruleOrCve, pkg: f.pkg || '', installedVersion: f.installedVersion || '' },
+        { cve: ruleOrCve, pkg: owaspResolved?.component || '', installedVersion: owaspResolved?.currentVersion || '' },
         trivyFixedVersionIndex || new Map(),
       );
       const resolved = resolveOwaspFixedVersion(nativeFixedVersion, existingSnapshot, correlation);
       fixedVersion = resolved.fixedVersion;
       fixedVersionSource = resolved.fixedVersionSource;
       fixedVersionEvidence = resolved.fixedVersionEvidence;
+      fixedVersionUnavailableReason = resolved.fixedVersionUnavailableReason;
     }
-    return { ...owaspIdentity, source, ruleOrCve, title: String(f.title || f.Title || f.alert || f.name || f.description || ruleOrCve), severity: String(f.severity || f.Severity || f.risk || 'UNKNOWN').toUpperCase().split(' ')[0], component: f.pkg || f.PkgName || f.package || f.fileName || f.dependency || null, currentVersion: f.installedVersion || f.InstalledVersion || f.version || null, fixedVersion, fixedVersionSource, fixedVersionEvidence, description: f.description || f.Description || f.desc || null, evidence: f.evidence || null, recommendation: f.recommendation || f.solution || null, url: f.url || null, parameter: f.param || f.parameter || null };
+    const component = source === 'OWASP' ? owaspResolved!.component : (f.pkg || f.PkgName || f.package || f.fileName || f.dependency || null);
+    const currentVersion = source === 'OWASP' ? owaspResolved!.currentVersion : (f.installedVersion || f.InstalledVersion || f.version || null);
+    return { ...owaspIdentity, source, ruleOrCve, title: String(f.title || f.Title || f.alert || f.name || f.description || ruleOrCve), severity: String(f.severity || f.Severity || f.risk || 'UNKNOWN').toUpperCase().split(' ')[0], component, currentVersion, fixedVersion, fixedVersionSource, fixedVersionEvidence, fixedVersionUnavailableReason, description: f.description || f.Description || f.desc || null, evidence: f.evidence || null, recommendation: f.recommendation || f.solution || null, url: f.url || null, parameter: f.param || f.parameter || null };
   }
 
   // Execution-2060 follow-up — persists a WF6 result against the SAME
