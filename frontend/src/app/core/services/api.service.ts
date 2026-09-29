@@ -19,6 +19,11 @@ export class ApiService {
   getManualRemediationSummary(projectId: string) { return this.http.get<any>(`${this.base}/manual-remediation/summary`, { params: { projectId } }); }
   completeManualRemediation(id: string, note?: string) { return this.http.patch<any>(`${this.base}/manual-remediation/${id}/complete`, { note: note || undefined }); }
   reopenManualRemediation(id: string) { return this.http.patch<any>(`${this.base}/manual-remediation/${id}/reopen`, {}); }
+  // Increment 1 (sélection multiple CVE) — un candidat/build/scan/PR pour N
+  // findingTaskId sélectionnés (manual-remediation.controller.ts).
+  launchSecurityRemediationBatch(projectId: string, findingTaskIds: string[]) {
+    return this.http.post<any>(`${this.base}/manual-remediation/launch-batch`, { projectId, findingTaskIds });
+  }
 
   // ── Projects ─────────────────────────────────────────────
   getProjects()                          { return this.http.get<any[]>(`${this.base}/projects`); }

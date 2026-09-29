@@ -19,10 +19,10 @@
           </div>
         </div>
         <div class="header-actions">
-          <div class="score-ring" [class.indetermine]="scanIncomplete || scoreUnavailable"
-               [class.critical]="!scanIncomplete && !scoreUnavailable && lastScore < 40" [class.high]="!scanIncomplete && !scoreUnavailable && lastScore >= 40 && lastScore < 60"
-               [class.medium]="!scanIncomplete && !scoreUnavailable && lastScore >= 60 && lastScore < 80" [class.low]="!scanIncomplete && !scoreUnavailable && lastScore >= 80">
-            <span class="score-num">{{scanIncomplete ? '?' : (scoreUnavailable ? '—' : lastScore)}}</span>
+          <div class="score-ring" [class.indetermine]="scanIncomplete || scoreUnavailable || !hasValidScore()"
+               [class.critical]="!scanIncomplete && !scoreUnavailable && hasValidScore() && lastScore < 40" [class.high]="!scanIncomplete && !scoreUnavailable && hasValidScore() && lastScore >= 40 && lastScore < 60"
+               [class.medium]="!scanIncomplete && !scoreUnavailable && hasValidScore() && lastScore >= 60 && lastScore < 80" [class.low]="!scanIncomplete && !scoreUnavailable && hasValidScore() && lastScore >= 80">
+            <span class="score-num">{{scanIncomplete ? '?' : ((scoreUnavailable || !hasValidScore()) ? '—' : lastScore)}}<span class="score-max" *ngIf="!scanIncomplete && !scoreUnavailable && hasValidScore()">/100</span></span>
             <span class="score-lbl">SCORE</span>
           </div>
           <div class="risk-pill" [class.indetermine]="scanIncomplete || scoreUnavailable"
@@ -133,7 +133,7 @@
                 <span class="h-build">{{parseReport(r.aiAnalysis).build ? 'Build #' + parseReport(r.aiAnalysis).build : 'Build non disponible'}}</span>
                 <span class="h-date">{{r.createdAt | frenchDate}}</span>
                 <span class="h-dec" [style.color]="getDecisionColor(parseReport(r.aiAnalysis).decision)">{{decisionLabel(parseReport(r.aiAnalysis).decision)}}</span>
-                <span class="h-score" [class.critical]="r.securityScore != null && r.securityScore < 40">{{r.securityScore != null ? (r.securityScore + '/100') : 'non vérifié'}}</span>
+                <span class="h-score" [class.critical]="historyScoreCritical(r.securityScore)">{{historyScoreLabel(r.securityScore)}}</span>
               </div>
             </div>
             <button *ngIf="allReports.length > 5" type="button" class="btn btn-secondary btn-sm history-toggle" (click)="showAllHistory = !showAllHistory">{{showAllHistory ? 'Réduire l’historique' : 'Voir tout l’historique (' + allReports.length + ')'}}</button>
@@ -514,9 +514,9 @@
             <section><h3>Identification</h3><dl><div><dt>Sévérité</dt><dd>{{selectedSonarFinding.severity | presentationLabel}}</dd></div><div><dt>Règle</dt><dd>{{findingValue(selectedSonarFinding.rule || selectedSonarFinding.ruleKey)}}</dd></div><div><dt>Type</dt><dd>{{selectedSonarFinding.type || selectedSonarFinding.category | presentationLabel}}</dd></div><div><dt>Source</dt><dd>{{selectedSonarFinding.source || selectedSonarFinding.stage | presentationLabel}}</dd></div></dl></section>
             <section><h3>Localisation</h3><p class="drawer-path">{{findingValue(selectedSonarFinding.file || selectedSonarFinding.component)}}<span *ngIf="selectedSonarFinding.line">:{{selectedSonarFinding.line}}</span></p></section>
             <section><h3>Description</h3><p>{{sonarFindingSummary(selectedSonarFinding)}}</p></section>
-            <section><h3>Pourquoi c’est important</h3><p>{{findingValue(selectedSonarFinding.impact)}}</p></section>
+            <section><h3>Pourquoi c’est important</h3><p>{{findingWhyImportant(selectedSonarFinding)}}</p></section>
             <section><h3>Preuve technique</h3><p>{{findingEvidence(selectedSonarFinding)}}</p></section>
-            <section><h3>Correction</h3><dl><div><dt>Action recommandée</dt><dd>{{findingValue(selectedSonarFinding.recommendation)}}</dd></div><div><dt>Type</dt><dd>{{findingActionLabel(selectedSonarFinding)}}</dd></div><div><dt>Responsable</dt><dd>{{selectedSonarFinding.owner || 'UNASSIGNED' | presentationLabel}}</dd></div><div><dt>Éligibilité</dt><dd>{{selectedSonarFinding.remediationType === 'AUTO_FIX_ELIGIBLE' ? 'Correction automatisable' : 'Automatisation non disponible'}}</dd></div><div *ngIf="findingVerdict(selectedSonarFinding)"><dt>Validation post-PR (WF3)</dt><dd>{{findingVerdict(selectedSonarFinding) === 'VALID' ? 'Validée — problème corrigé' : (findingVerdict(selectedSonarFinding) === 'INVALID' ? 'Non corrigée' : 'Non concluante')}}</dd></div></dl></section>
+            <section><h3>Correction</h3><dl><div><dt>Action recommandée</dt><dd>{{findingRecommendationLabel(selectedSonarFinding)}}</dd></div><div><dt>Type</dt><dd>{{findingActionLabel(selectedSonarFinding)}}</dd></div><div><dt>Responsable</dt><dd>{{findingResponsibleLabel(selectedSonarFinding)}}</dd></div><div><dt>Éligibilité</dt><dd>{{findingEligibilityLabel(selectedSonarFinding)}}</dd></div><div *ngIf="findingVerdict(selectedSonarFinding)"><dt>Validation post-PR (WF3)</dt><dd>{{findingVerdict(selectedSonarFinding) === 'VALID' ? 'Validée — problème corrigé' : (findingVerdict(selectedSonarFinding) === 'INVALID' ? 'Non corrigée' : 'Non concluante')}}</dd></div></dl></section>
             <section><h3>Traçabilité</h3><dl><div><dt>Projet</dt><dd>{{project?.name || 'Non disponible'}}</dd></div><div><dt>Build</dt><dd>{{latestReport?.buildNumber ? '#' + latestReport.buildNumber : 'Non disponible'}}</dd></div><div><dt>Identifiant du problème</dt><dd class="drawer-id">{{findingValue(selectedSonarFinding.id || selectedSonarFinding.key)}}</dd></div><div *ngIf="showFindingPrLink(selectedSonarFinding)"><dt>Pull Request</dt><dd><a class="pr-link" [href]="batchPrUrl()" target="_blank" rel="noopener noreferrer">{{batchPrNumber() ? 'PR #' + batchPrNumber() : 'Voir la Pull Request'}}</a></dd></div></dl></section>
           </div>
           <footer class="drawer-footer">
@@ -637,9 +637,31 @@
           </div>
           <div class="manual-filters"><label>État<select [(ngModel)]="manualStatusFilter"><option value="ALL">Tous</option><option value="TODO">À traiter</option><option value="DONE_BY_USER">Traité manuellement</option><option value="STILL_DETECTED">Toujours détecté</option><option value="VERIFIED">Vérifié</option></select></label><label>Sévérité<select [(ngModel)]="manualSeverityFilter"><option value="ALL">Toutes</option><option value="CRITICAL">Critique</option><option value="HIGH">Élevée</option><option value="MEDIUM">Moyenne</option><option value="LOW">Faible</option></select></label></div>
         </section>
+        <!-- ── Filtre par source de scan ── -->
+        <div class="sec-scanner-filter" role="group" aria-label="Filtrer les findings sécurité par source">
+          <button type="button" class="sec-chip" [class.active]="securityFilter === 'all'" (click)="setSecurityFilter('all')">Tous <span class="sec-chip-count">{{securityFindingsCount('all')}}</span></button>
+          <button type="button" class="sec-chip" [class.active]="securityFilter === 'trivy'" (click)="setSecurityFilter('trivy')">Trivy <span class="sec-chip-count">{{securityFindingsCount('trivy')}}</span></button>
+          <button type="button" class="sec-chip" [class.active]="securityFilter === 'owasp'" (click)="setSecurityFilter('owasp')">OWASP <span class="sec-chip-count">{{securityFindingsCount('owasp')}}</span></button>
+          <button type="button" class="sec-chip" [class.active]="securityFilter === 'zap'" (click)="setSecurityFilter('zap')">ZAP <span class="sec-chip-count">{{securityFindingsCount('zap')}}</span></button>
+        </div>
         <div class="sec-filter-banner" *ngIf="securityFilter !== 'all'">
           <span>Filtré sur : {{ securityFilterLabel() }}</span>
           <button class="sec-filter-clear" (click)="securityFilter = 'all'">✕ Tout afficher</button>
+        </div>
+
+        <!-- ── Increment 1 : lancement de correction multi-CVE (Trivy/OWASP), même
+             patron visuel que la barre de sélection Sonar plus haut. Absente pour
+             ZAP (pas de sélection possible, cve-table n'y est pas monté). ── -->
+        <div style="margin-top:14px;padding:12px 16px;border:1px solid var(--border-color);border-radius:8px;background:var(--bg-secondary)" *ngIf="canOperate && securityFilter !== 'zap'">
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <button type="button" class="btn btn-primary btn-sm" [disabled]="!selectedCveCount() || cveBatchOverCap() || launchingCveBatch" (click)="launchCveBatch()">
+              {{ launchingCveBatch ? 'Lancement…' : (selectedCveCount() ? ('Corriger ' + selectedCveCount() + (selectedCveCount() > 1 ? ' vulnérabilités' : ' vulnérabilité')) : 'Sélectionnez des vulnérabilités à corriger') }}
+            </button>
+            <button type="button" class="btn btn-secondary btn-sm" *ngIf="selectedCveCount()" [disabled]="launchingCveBatch" (click)="clearCveSelection()">Effacer la sélection</button>
+            <span style="font-size:12px;font-weight:600;color:var(--text-muted)" *ngIf="selectedCveCount()">{{selectedCveCount()}}/8 sélectionnée{{selectedCveCount() > 1 ? 's' : ''}}</span>
+          </div>
+          <p style="margin:8px 0 0;font-size:12px;font-weight:600;color:var(--color-warning,#b45309)" *ngIf="cveBatchOverCap()">Maximum 8 vulnérabilités par lot — désélectionnez-en {{selectedCveCount() - 8}} pour continuer.</p>
+          <p style="margin:8px 0 0;font-size:12px;font-weight:600;color:var(--color-critical)" *ngIf="cveBatchError" role="alert">{{cveBatchError}}</p>
         </div>
 
         <!-- ── Section 1 : CVE conteneur (Trivy) ── -->
@@ -654,11 +676,15 @@
               <span class="sec-badge orange" *ngIf="ed.trivy?.high">{{ed.trivy.high}} ÉLEVÉ</span>
             </div>
           </div>
-          <app-cve-table [cves]="ed.trivy.cves" source="TRIVY" [guide]="devGuide(ed)" [tasks]="manualTasks" [statusFilter]="manualStatusFilter" [severityFilter]="manualSeverityFilter" [userRole]="manualUserRole" (completeTask)="completeManualTask($event)" (reopenTask)="reopenManualTask($event)"></app-cve-table>
+          <app-cve-table [cves]="ed.trivy.cves" source="TRIVY" [guide]="devGuide(ed)" [tasks]="manualTasks" [statusFilter]="manualStatusFilter" [severityFilter]="manualSeverityFilter" [userRole]="manualUserRole" [selectedTaskIds]="selectedCveTaskIds" [selectionRule]="canSelectCveTask" [selectionBusy]="launchingCveBatch" (toggleSelection)="toggleCveTaskSelection($event)" (completeTask)="completeManualTask($event)" (reopenTask)="reopenManualTask($event)"></app-cve-table>
         </div>
         <div class="sec-section scanner-not-run" *ngIf="(securityFilter === 'all' || securityFilter === 'trivy') && isScannerMissing(ed.trivy)">
           <div class="sec-section-title">🐳 Vulnérabilités conteneur</div>
           <div class="scanner-not-run-note">Ce scanner n'a pas été exécuté sur ce build.</div>
+        </div>
+        <div class="sec-section sec-empty" *ngIf="(securityFilter === 'all' || securityFilter === 'trivy') && securityScannerEmpty('trivy')">
+          <div class="sec-section-title">🐳 Vulnérabilités conteneur</div>
+          <div class="scanner-not-run-note">Aucun finding Trivy pour cette analyse.</div>
         </div>
 
         <!-- ── Section 2 : CVE dépendances (OWASP) ── -->
@@ -673,11 +699,15 @@
               <span class="sec-badge orange" *ngIf="ed.owasp?.high">{{ed.owasp.high}} ÉLEVÉ</span>
             </div>
           </div>
-          <app-cve-table [cves]="ed.owasp.cves" source="OWASP" [guide]="devGuide(ed)" [tasks]="manualTasks" [statusFilter]="manualStatusFilter" [severityFilter]="manualSeverityFilter" [userRole]="manualUserRole" (completeTask)="completeManualTask($event)" (reopenTask)="reopenManualTask($event)"></app-cve-table>
+          <app-cve-table [cves]="ed.owasp.cves" source="OWASP" [guide]="devGuide(ed)" [tasks]="manualTasks" [statusFilter]="manualStatusFilter" [severityFilter]="manualSeverityFilter" [userRole]="manualUserRole" [selectedTaskIds]="selectedCveTaskIds" [selectionRule]="canSelectCveTask" [selectionBusy]="launchingCveBatch" (toggleSelection)="toggleCveTaskSelection($event)" (completeTask)="completeManualTask($event)" (reopenTask)="reopenManualTask($event)"></app-cve-table>
         </div>
         <div class="sec-section scanner-not-run" *ngIf="(securityFilter === 'all' || securityFilter === 'owasp') && isScannerMissing(ed.owasp)">
           <div class="sec-section-title">📦 Vulnérabilités de dépendances</div>
           <div class="scanner-not-run-note">Ce scanner n'a pas été exécuté sur ce build.</div>
+        </div>
+        <div class="sec-section sec-empty" *ngIf="(securityFilter === 'all' || securityFilter === 'owasp') && securityScannerEmpty('owasp')">
+          <div class="sec-section-title">📦 Vulnérabilités de dépendances</div>
+          <div class="scanner-not-run-note">Aucun finding OWASP pour cette analyse.</div>
         </div>
 
         <!-- ── Section 3 : alertes DAST (ZAP) ── -->
@@ -697,6 +727,10 @@
         <div class="sec-section scanner-not-run" *ngIf="(securityFilter === 'all' || securityFilter === 'zap') && isScannerMissing(ed.zap)">
           <div class="sec-section-title">🌐 Alertes DAST</div>
           <div class="scanner-not-run-note">Ce scanner n'a pas été exécuté sur ce build.</div>
+        </div>
+        <div class="sec-section sec-empty" *ngIf="(securityFilter === 'all' || securityFilter === 'zap') && securityScannerEmpty('zap')">
+          <div class="sec-section-title">🌐 Alertes DAST</div>
+          <div class="scanner-not-run-note">Aucun finding ZAP pour cette analyse.</div>
         </div>
 
         <!-- ── Analyse IA sécurité ── -->

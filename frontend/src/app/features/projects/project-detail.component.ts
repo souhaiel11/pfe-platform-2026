@@ -16,6 +16,9 @@ import { PresentationLabelPipe } from '../../shared/presentation-label.pipe';
 import { FrenchDatePipe } from '../../shared/french-date.pipe';
 import { userHttpError } from '../../core/http-error-message';
 import { presentationLabel, remediationTypeLabel, riskLevelLabel } from '../../shared/status-labels';
+import { findingDescriptionText, findingEligibilityText, findingEvidenceText, findingRecommendationText, findingResponsibleText, findingWhyImportantText } from '../../shared/finding-presentation';
+import { formatScoreOn100, isValidScoreOn100 } from '../../shared/score-display';
+import { canSelectCveTask as canSelectCveTaskShared, CveSelectionEligibility } from '../../shared/cve-selection-eligibility';
 
 @Component({
   selector: 'app-project-detail',
@@ -133,6 +136,16 @@ export class ProjectDetailComponent implements OnInit {
   batchConfirmationOpen = false;
   private sonarTrigger: HTMLElement | null = null;
 
+  // Increment 1 (sélection multiple CVE) — même patron que la sélection
+  // Sonar ci-dessus (selectedSonarIds/canSelectFinding/confirmSonarCorrection),
+  // volontairement un Set/état SÉPARÉ : les deux onglets (Sonar,
+  // Trivy+OWASP) ont des cycles de vie de sélection indépendants, jamais
+  // partagés. Contient des ManualRemediationTask.id (findingTaskId), pas des
+  // identifiants de CVE — l'appel de lancement en a besoin tel quel.
+  selectedCveTaskIds = new Set<string>();
+  launchingCveBatch = false;
+  cveBatchError: string | null = null;
+
   // Correction manuelle (section 3, colonne droite) — recommandations réparties par priorité
   manualHigh: { text: string; high: boolean }[] = [];
   manualNormal: { text: string; high: boolean }[] = [];
@@ -201,13 +214,28 @@ export class ProjectDetailComponent implements OnInit {
   }
 
   findingValue(value: any): string { return value === null || value === undefined || value === '' ? 'Non disponible' : String(value); }
+  // R-UX — délègue au module scanner-agnostique partagé (finding-presentation.ts).
+  // Comportement inchangé pour un evidence exploitable ; seul le repli final
+  // (ni evidence ni message) devient un message lisible au lieu de "Non
+  // disponible" brut, sans jamais perdre la preuve brute quand elle existe.
   findingEvidence(finding: any): string {
-    const evidence = String(finding?.evidence || '').trim();
-    const id = String(finding?.id || finding?.key || '').trim();
-    if (!evidence || evidence === id || /^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(evidence)) return this.findingValue(finding?.message);
-    return evidence;
+    return findingEvidenceText(finding) ?? "Aucune preuve technique brute n'est fournie par la source d'analyse.";
   }
+  findingWhyImportant(finding: any): string { return findingWhyImportantText(finding); }
+  findingRecommendationLabel(finding: any): string { return findingRecommendationText(finding); }
+  findingResponsibleLabel(finding: any): string { return findingResponsibleText(finding); }
+  findingEligibilityLabel(finding: any): string { return findingEligibilityText(finding); }
   findingFileName(f: any): string { return String(f?.file || f?.component || 'Non disponible').split('/').pop() || 'Non disponible'; }
+
+  // ── Score de sécurité (0-100, voir security-score.ts) — présentation
+  // uniquement, générique sur n'importe quel score du même contrat (header
+  // ET historique ci-dessous partagent cette même vérité). `lastScore` peut
+  // rester `null`/invalide même quand scanIncomplete/scoreUnavailable sont
+  // tous deux faux (report corrélé par build.number mais sans score propre
+  // persisté) -- ce garde ferme ce cas plutôt que d'afficher un badge vide.
+  hasValidScore(): boolean { return isValidScoreOn100(this.lastScore); }
+  historyScoreLabel(score: any): string { return formatScoreOn100(score) ?? 'non vérifié'; }
+  historyScoreCritical(score: any): boolean { return isValidScoreOn100(score) && score < 40; }
   remediationLabel(raw: string): string {
     return remediationTypeLabel(raw);
   }
@@ -517,7 +545,10 @@ export class ProjectDetailComponent implements OnInit {
       return field ? `Supprimer le champ privé « ${field} » inutilisé.` : 'Supprimer ce champ privé inutilisé.';
     }
     if (rule === 'java:S125') return 'Supprimer ce bloc de code commenté devenu inutile.';
-    return message || 'Description non disponible';
+    // Générique (aucun autre rule-hardcoding) : reformule légèrement le
+    // message brut de la source pour tout finding non couvert ci-dessus,
+    // quel que soit le scanner (Sonar/Trivy/OWASP/ZAP) -- voir finding-presentation.ts.
+    return findingDescriptionText(finding);
   }
   openBatchConfirmation(): void {
     if (this.newCorrectionBlocked() || this.failedSelectionUnchanged() || !this.selectedSonarFindings().length) return;
@@ -551,6 +582,71 @@ export class ProjectDetailComponent implements OnInit {
         this.toast.success('Correction demandée', result.duplicate ? 'Cette demande existe déjà.' : 'La demande gouvernée a été enregistrée.');
       },
       error: (e: any) => { this.approving = false; this.toast.error('Demande refusée', userHttpError(e, 'Impossible de proposer cette correction.')); },
+    });
+  }
+
+  // ── Sélection multiple CVE (Trivy/OWASP) — même patron que la sélection
+  // Sonar ci-dessus, branchée directement sur POST /manual-remediation/
+  // launch-batch. "Appel direct" (cadrage increment 1) : pas de dialog de
+  // confirmation intermédiaire comme openBatchConfirmation() côté Sonar.
+  canSelectCveTask = (task: any, cve: { fixedVersion?: string; pkg?: string }): CveSelectionEligibility => {
+    return canSelectCveTaskShared(task, this.canOperate, cve);
+  };
+  selectedCveCount(): number { return this.selectedCveTaskIds.size; }
+  clearCveSelection(): void { this.selectedCveTaskIds = new Set(); }
+  toggleCveTaskSelection(taskId: string): void {
+    if (this.launchingCveBatch) return;
+    const next = new Set(this.selectedCveTaskIds);
+    next.has(taskId) ? next.delete(taskId) : next.add(taskId);
+    this.selectedCveTaskIds = next;
+  }
+  // launchBatchRemediation() refuse tout lot de plus de 8 CVE
+  // (manual-remediation.service.ts) — vérifié ici pour ne jamais laisser
+  // l'utilisateur déclencher un 400 générique évitable ; pas une nouvelle
+  // règle métier inventée côté UI, juste l'anticipation d'une règle serveur
+  // déjà réelle.
+  cveBatchOverCap(): boolean { return this.selectedCveTaskIds.size > 8; }
+  launchCveBatch(): void {
+    if (this.launchingCveBatch || !this.canOperate || !this.selectedCveTaskIds.size || this.cveBatchOverCap()) return;
+    this.launchingCveBatch = true;
+    this.cveBatchError = null;
+    const findingTaskIds = [...this.selectedCveTaskIds];
+    this.api.launchSecurityRemediationBatch(this.id, findingTaskIds).subscribe({
+      next: () => {
+        this.launchingCveBatch = false;
+        // Sélection vidée : le retour visuel détaillé (statut DISPATCHING en
+        // direct, polling) est l'incrément suivant — ici, loadManualRemediation()
+        // recharge une fois pour que le badge "en cours" apparaisse au prochain
+        // rendu, cohérent avec le seul mécanisme de rafraîchissement qui existe
+        // déjà sur cette page (un refresh ponctuel après chaque action, jamais
+        // un polling — voir completeManualTask() ci-dessus). Garder les CVE
+        // cochées n'aurait aucun sens : elles viennent d'entrer en DISPATCHING,
+        // donc canSelectCveTask() les aurait de toute façon rendues non
+        // sélectionnables au prochain affichage.
+        this.clearCveSelection();
+        this.toast.success('Correction lancée', `Le traitement de ${findingTaskIds.length} vulnérabilité${findingTaskIds.length > 1 ? 's' : ''} a démarré.`);
+        this.loadManualRemediation();
+      },
+      error: (err: any) => {
+        this.launchingCveBatch = false;
+        // Sélection volontairement CONSERVÉE sur refus (409 : conflit de
+        // propriété, CVE déjà en cours...) -- l'utilisateur doit pouvoir
+        // corriger juste la sélection fautive (retirer la CVE nommée dans le
+        // message) plutôt que tout recommencer depuis zéro.
+        let message = err?.status === 403 && typeof err?.error?.message === 'string'
+          ? err.error.message
+          : userHttpError(err, 'Impossible de lancer la correction.');
+        const selectedTasks = this.manualTasks.filter(task => findingTaskIds.includes(task.id));
+        for (const task of selectedTasks) {
+          message = message.split(task.id).join(task.ruleOrCve || task.findingSnapshot?.ruleOrCve || task.id);
+        }
+        if ((err?.status === 409 || err?.status === 403) && !selectedTasks.some(task =>
+          message.includes(task.ruleOrCve || task.findingSnapshot?.ruleOrCve || task.id))) {
+          const names = selectedTasks.map(task => task.ruleOrCve || task.findingSnapshot?.ruleOrCve || task.id);
+          message += ` Sélection refusée : ${names.join(', ')}.`;
+        }
+        this.cveBatchError = message;
+      },
     });
   }
 
@@ -611,6 +707,34 @@ export class ProjectDetailComponent implements OnInit {
       zap: 'DAST (ZAP)',
     };
     return labels[this.securityFilter] || '';
+  }
+
+  // ── Filtre "source" de l'onglet Sécurité (chips Tous/Trivy/OWASP/ZAP) ──
+  // Frontend-only : bascule la même propriété `securityFilter` déjà
+  // consommée par les *ngIf des 3 sections ci-dessous (déjà composée avec
+  // manualSeverityFilter/manualStatusFilter à l'intérieur de chaque
+  // app-cve-table/app-zap-table -- rien à changer côté composition).
+  // `ed.{trivy,owasp,zap}` est le contrat fermé actuel de EnrichedData
+  // (report-normalizer.ts) : aucune source supplémentaire n'existe
+  // aujourd'hui à agréger sous "Tous" -- voir la note dans le rapport F6.
+  setSecurityFilter(scanner: 'all' | 'trivy' | 'owasp' | 'zap'): void {
+    this.securityFilter = scanner;
+  }
+  securityFindingsCount(scanner: 'all' | 'trivy' | 'owasp' | 'zap'): number {
+    const trivy = this.ed?.trivy?.cves?.length || 0;
+    const owasp = this.ed?.owasp?.cves?.length || 0;
+    const zap = this.ed?.zap?.alerts?.length || 0;
+    if (scanner === 'trivy') return trivy;
+    if (scanner === 'owasp') return owasp;
+    if (scanner === 'zap') return zap;
+    return trivy + owasp + zap;
+  }
+  // Vrai quand ce scanner a bien tourné (donnée fiable) mais n'a produit
+  // aucun finding -- distinct de isScannerMissing (scanner non exécuté),
+  // pour ne jamais afficher une zone vide sans explication (voir F5).
+  securityScannerEmpty(scanner: 'trivy' | 'owasp' | 'zap'): boolean {
+    const block = this.ed?.[scanner];
+    return !this.isScannerMissing(block) && this.securityFindingsCount(scanner) === 0;
   }
 
   ngOnInit() {
