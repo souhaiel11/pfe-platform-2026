@@ -15,7 +15,7 @@
 // owasp-finding-normalizer.ts). When the displayed target version was
 // borrowed from Trivy's own evidence (fixedVersionSource=TRIVY_CORRELATED),
 // the UI says so explicitly and separately from the detecting scanner.
-import { CveSelectionEligibility, resolveFixedVersion } from './cve-selection-eligibility';
+import { CveSelectionEligibility, resolveFixedVersion, resolveInstalledVersion } from './cve-selection-eligibility';
 
 export type OwaspRemediationState =
   | 'NO_TASK'
@@ -37,6 +37,8 @@ export interface OwaspRemediationPresentation {
   explanation: string;
   /** Byte-identical to cve-selection-eligibility.ts's own canSelectCveTask() decision -- never recomputed differently. */
   selectable: boolean;
+  /** Resolved from the task's own snapshot for OWASP (the raw scan row never carries it) -- never the raw OWASP row directly. */
+  installedVersion: string | null;
   targetVersion: string | null;
   /** Human label for WHO supplied targetVersion -- never the detecting scanner. Null exactly when targetVersion is null. */
   targetSource: 'Trivy' | 'OWASP' | null;
@@ -83,18 +85,19 @@ function humanizeFailureReason(reason: string | null | undefined): string {
 export function getOwaspRemediationPresentation(
   task: any,
   eligibility: CveSelectionEligibility,
-  cve: { fixedVersion?: string; pkg?: string } = {},
+  cve: { fixedVersion?: string; pkg?: string; installedVersion?: string } = {},
 ): OwaspRemediationPresentation {
   if (!task?.id) {
     return {
       state: 'NO_TASK', label: 'Non suivi', explanation: 'Aucune tâche de correction associée à cette CVE pour le moment.',
-      selectable: false, targetVersion: null, targetSource: null, styleKey: 'muted',
+      selectable: false, installedVersion: null, targetVersion: null, targetSource: null, styleKey: 'muted',
     };
   }
 
   const snapshot = task.findingSnapshot || {};
   const remediation = task.securityFindingRemediation;
   const status = remediation?.status ? String(remediation.status) : null;
+  const installedVersion = resolveInstalledVersion(cve, task) || null;
 
   // ── An attempt already exists: its OWN outcome takes priority over the
   // static eligibility classification below (an already-DISPATCHING/
@@ -104,7 +107,7 @@ export function getOwaspRemediationPresentation(
     return {
       state: 'DISPATCHING', label: 'Correction en cours',
       explanation: 'Une tentative de remédiation est actuellement en cours.',
-      selectable: eligibility.selectable, targetVersion: resolveFixedVersion(cve, task) || null,
+      selectable: eligibility.selectable, installedVersion, targetVersion: resolveFixedVersion(cve, task) || null,
       targetSource: snapshot.fixedVersionSource === 'TRIVY_CORRELATED' ? 'Trivy' : null,
       styleKey: 'progress',
     };
@@ -115,7 +118,7 @@ export function getOwaspRemediationPresentation(
       state: 'CANDIDATE_READY',
       label: prNumber ? `Correction proposée (PR #${prNumber})` : 'Correction proposée',
       explanation: 'Une correction candidate a été générée et validée par le pipeline.',
-      selectable: eligibility.selectable, targetVersion: resolveFixedVersion(cve, task) || null,
+      selectable: eligibility.selectable, installedVersion, targetVersion: resolveFixedVersion(cve, task) || null,
       targetSource: snapshot.fixedVersionSource === 'TRIVY_CORRELATED' ? 'Trivy' : null,
       styleKey: 'success', prNumber, prUrl: remediation?.prUrl ?? null,
     };
@@ -125,7 +128,7 @@ export function getOwaspRemediationPresentation(
     return {
       state: 'CLOSED', label: 'Vulnérabilité corrigée',
       explanation: "La correction a été validée et la vulnérabilité ciblée n'est plus détectée par le rescan de sécurité.",
-      selectable: eligibility.selectable, targetVersion: resolveFixedVersion(cve, task) || null,
+      selectable: eligibility.selectable, installedVersion, targetVersion: resolveFixedVersion(cve, task) || null,
       targetSource: snapshot.fixedVersionSource === 'TRIVY_CORRELATED' ? 'Trivy' : null,
       styleKey: 'success', prNumber, prUrl: remediation?.prUrl ?? null,
     };
@@ -142,7 +145,7 @@ export function getOwaspRemediationPresentation(
       // backend contract: launch-batch only refuses a re-launch when the
       // task is currently DISPATCHING/CANDIDATE_READY/CLOSED, none of which
       // apply here) -- never a new retry rule invented client-side.
-      selectable: eligibility.selectable, targetVersion: resolveFixedVersion(cve, task) || null,
+      selectable: eligibility.selectable, installedVersion, targetVersion: resolveFixedVersion(cve, task) || null,
       targetSource: snapshot.fixedVersionSource === 'TRIVY_CORRELATED' ? 'Trivy' : null,
       styleKey: 'danger',
     };
@@ -155,7 +158,7 @@ export function getOwaspRemediationPresentation(
     return {
       state: 'MAVEN_DATA_MISSING', label: 'Données Maven insuffisantes',
       explanation: 'Les coordonnées Maven nécessaires à la correction automatique ne sont pas disponibles.',
-      selectable: eligibility.selectable, targetVersion: null, targetSource: null, styleKey: 'muted',
+      selectable: eligibility.selectable, installedVersion, targetVersion: null, targetSource: null, styleKey: 'muted',
     };
   }
 
@@ -164,7 +167,7 @@ export function getOwaspRemediationPresentation(
     return {
       state: 'AUTO_FIX_AVAILABLE', label: 'Correction automatique disponible',
       explanation: 'Une version corrigée unique a été identifiée. Cette vulnérabilité peut être soumise au processus automatique de correction et de validation.',
-      selectable: eligibility.selectable, targetVersion,
+      selectable: eligibility.selectable, installedVersion, targetVersion,
       targetSource: snapshot.fixedVersionSource === 'TRIVY_CORRELATED' ? 'Trivy' : 'OWASP',
       styleKey: 'success',
     };
@@ -175,7 +178,7 @@ export function getOwaspRemediationPresentation(
     return {
       state: 'MANUAL_REVIEW_MULTIPLE_TARGETS', label: 'Intervention manuelle requise',
       explanation: 'Plusieurs versions corrigées possibles ont été identifiées. La plateforme ne sélectionne pas automatiquement une version afin d\'éviter une mise à jour incorrecte.',
-      selectable: false, targetVersion: null, targetSource: null, styleKey: 'warning',
+      selectable: false, installedVersion, targetVersion: null, targetSource: null, styleKey: 'warning',
       tooltip: rawEvidence
         ? `Plusieurs versions corrigées ont été identifiées par le scanner (${rawEvidence}). La plateforme ne choisit pas automatiquement une version afin d'éviter une mise à jour incorrecte.`
         : "Plusieurs versions corrigées ont été identifiées par le scanner. La plateforme ne choisit pas automatiquement une version afin d'éviter une mise à jour incorrecte.",
@@ -186,7 +189,7 @@ export function getOwaspRemediationPresentation(
   return {
     state: 'MANUAL_REVIEW_NO_TARGET', label: 'Intervention manuelle requise',
     explanation: "Aucune version corrigée fiable n'a pu être déterminée automatiquement pour cette vulnérabilité. Elle reste suivie par la plateforme mais nécessite une analyse manuelle.",
-    selectable: false, targetVersion: null, targetSource: null, styleKey: 'warning',
+    selectable: false, installedVersion, targetVersion: null, targetSource: null, styleKey: 'warning',
     tooltip: "Aucune version corrigée fiable n'a pu être déterminée automatiquement. Cette vulnérabilité reste suivie mais nécessite une intervention manuelle.",
   };
 }
