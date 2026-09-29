@@ -606,13 +606,34 @@ export class IncidentsService {
       relations: ['project'],
       take: size || undefined,
     });
-    return incidents.map(i => this.sanitizeIncident(i));
+    // Increment 1 (sélection multiple CVE, cadrage OPTION A) — findingTaskId
+    // par CVE, additif, voir ManualRemediationService.attachFindingTaskIds()
+    // pour la raison de ce point d'attache exact (c'est ICI, pas ailleurs,
+    // que metadata.enrichedData.trivy/owasp.cves atteint réellement le
+    // frontend).
+    return this.manualRemediation.attachFindingTaskIds(incidents.map(i => this.sanitizeIncident(i)));
   }
 
   async findOne(id: string) {
     const i = await this.repo.findOne({ where: { id }, relations: ['project'] });
     if (!i) throw new NotFoundException('Incident introuvable.');
     return this.sanitizeIncident(i);
+  }
+
+  // Increment 1 (sélection multiple CVE, cadrage OPTION A) — findOne() elle-
+  // même reste STRICTEMENT inchangée : c'est un helper interne réutilisé par
+  // ~12 méthodes (startFix, approve, retryFix, reject, pr-validation, …,
+  // grep "this.findOne(" dans ce fichier) qui n'ont besoin ni de la requête
+  // findingTaskId supplémentaire ni de dépendre du mock manualRemediation
+  // pour fonctionner — la preuve concrète : brancher l'enrichissement DANS
+  // findOne() cassait modify-failed-selection.spec.ts (son fake
+  // manualRemediation n'implémente que syncIncident()) en plus d'ajouter une
+  // requête inutile à chaque appel interne. Seul IncidentsController.findOne
+  // (GET /incidents/:id, la réponse qui atteint réellement le frontend) a
+  // besoin de l'enrichissement -- d'où ce point d'entrée séparé.
+  async findOneForClient(id: string) {
+    const [enriched] = await this.manualRemediation.attachFindingTaskIds([await this.findOne(id)]);
+    return enriched;
   }
 
   async convergence(projectId: string) {

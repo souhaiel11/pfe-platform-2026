@@ -5,6 +5,9 @@ import { In, Repository } from 'typeorm';
 import { Incident } from '../incidents/incident.entity';
 import { normalizeReport } from '../common/report-normalizer';
 import { findingFingerprint } from './finding-fingerprint';
+import { taskFingerprintAliases, owaspLegacyFingerprint } from './owasp-task-identity';
+import { buildTrivyFixedVersionIndex, qualifyOwaspFixedVersionCorrelation, resolveOwaspFixedVersion } from './owasp-trivy-fixed-version-correlation';
+import { withFindingTaskIds } from './finding-task-id-enrichment';
 import { ManualRemediationEvent, ManualRemediationStatus, ManualRemediationTask, ScannerFindingStatus } from './manual-remediation.entity';
 import { Wf6RemediationResultDto } from '../security-remediation/wf6-remediation-result.dto';
 import { Wf6BatchRemediationResultDto } from '../security-remediation/wf6-batch-remediation-result.dto';
@@ -87,6 +90,38 @@ export class ManualRemediationService {
     };
   }
 
+  // Increment 1 (sélection multiple CVE, cadrage OPTION A) — appelé par
+  // IncidentsService.findAll()/findOne(), les deux endpoints qui servent
+  // effectivement enrichedData.trivy/owasp.cves au frontend (GET /incidents,
+  // consommé par project-detail.component.ts::loadReports() ->
+  // api.getDecisions()). PAS un endpoint propre : une méthode que le
+  // consommateur réel appelle avant de répondre, pour éviter d'ajouter une
+  // seconde route juste pour un enrichissement.
+  //
+  // Additif strict (voir finding-task-id-enrichment.ts) : chaque incident
+  // ressort avec le MÊME `metadata`, sauf `metadata.enrichedData.trivy/
+  // owasp.cves[*].findingTaskId` en plus. Une seule requête groupée sur
+  // TOUS les projectId présents dans le lot (jamais une requête par
+  // incident) -- le même souci de coût qu'ailleurs dans ce module
+  // (reconcileSource() groupe déjà par source/projet).
+  async attachFindingTaskIds<T extends { projectId: string; metadata?: any }>(incidents: T[]): Promise<T[]> {
+    const projectIds = [...new Set(incidents.map(i => i.projectId).filter(Boolean))];
+    if (!projectIds.length) return incidents;
+    const tasks = await this.repo.find({ where: { projectId: In(projectIds) } });
+    const byKey = new Map<string, string | null>();
+    for (const task of tasks) for (const fingerprint of taskFingerprintAliases(task)) {
+      const key = `${task.projectId}::${fingerprint}`;
+      // An ambiguous alias must never select another task arbitrarily.
+      byKey.set(key, byKey.has(key) && byKey.get(key) !== task.id ? null : task.id);
+    }
+    return incidents.map(incident => {
+      const enrichedData = incident.metadata?.enrichedData;
+      if (!enrichedData) return incident;
+      const lookup = (fingerprint: string) => byKey.get(`${incident.projectId}::${fingerprint}`) ?? null;
+      return { ...incident, metadata: { ...incident.metadata, enrichedData: withFindingTaskIds(enrichedData, lookup) } };
+    });
+  }
+
   async complete(id: string, user: any, note?: string) {
     const task = await this.authorizedTask(id, user, false);
     if (task.status === ManualRemediationStatus.VERIFIED) throw new BadRequestException('Une tâche déjà vérifiée par une analyse ne peut pas être traitée manuellement.');
@@ -122,6 +157,10 @@ export class ManualRemediationService {
     if (!raw) return;
     const normalized = normalizeReport(raw || {});
     const build = incident.buildNumber ?? incident.metadata?.build?.number ?? incident.metadata?.enrichedData?.build?.number ?? null;
+    // Built once per sync, from THIS build's own Trivy findings only -- never
+    // across builds/incidents. OWASP-only consumer (see reconcileSource());
+    // Trivy's own reconciliation never reads it.
+    const trivyFixedVersionIndex = buildTrivyFixedVersionIndex(normalized.trivy?.cves || []);
     const blocks: Array<{ source: string; block: any; findings: any[] }> = [
       { source: 'TRIVY', block: normalized.trivy, findings: normalized.trivy?.cves || [] },
       { source: 'OWASP', block: normalized.owasp, findings: normalized.owasp?.cves || [] },
@@ -134,19 +173,43 @@ export class ManualRemediationService {
         if (block?.status) await this.repo.update({ projectId: incident.projectId, source }, { scannerStatus: ScannerFindingStatus.UNAVAILABLE });
         continue;
       }
-      await this.reconcileSource(incident, source, findings, build);
+      await this.reconcileSource(incident, source, findings, build, trivyFixedVersionIndex);
     }
   }
 
-  private async reconcileSource(incident: Incident, source: string, findings: any[], build: number | null) {
+  private async reconcileSource(incident: Incident, source: string, findings: any[], build: number | null, trivyFixedVersionIndex?: ReturnType<typeof buildTrivyFixedVersionIndex>) {
     const candidates: Candidate[] = findings.map(finding => ({ source, finding, fingerprint: findingFingerprint(source, finding) }));
-    const fingerprints = [...new Set(candidates.map(c => c.fingerprint))];
     const existing = await this.repo.find({ where: { projectId: incident.projectId, source } });
     const byFingerprint = new Map(existing.map(t => [t.findingFingerprint, t]));
+    const byAlias = new Map<string, ManualRemediationTask[]>();
+    for (const task of existing) for (const key of taskFingerprintAliases(task)) {
+      byAlias.set(key, [...(byAlias.get(key) || []), task]);
+    }
+    const seenTaskIds = new Set<string>();
+    // Preflight OWASP migration before any save: never reuse one legacy task
+    // for two canonical packages, or choose among ambiguous canonical aliases.
+    const owaspMatches = new Map<string, ManualRemediationTask>();
+    const claimed = new Map<string, string>();
+    if (source === 'OWASP') for (const candidate of candidates) {
+      const legacy = owaspLegacyFingerprint(candidate.finding);
+      const legacyTask = legacy ? byFingerprint.get(legacy) : null;
+      const matches = [...new Map([...(legacyTask ? [legacyTask] : []), ...(byAlias.get(candidate.fingerprint) || [])].map(task => [task.id, task])).values()];
+      if (matches.length > 1) throw new BadRequestException('Correspondance OWASP ambiguë : plusieurs tâches pour le même composant.');
+      const task = matches[0];
+      if (!task) continue;
+      const previousPackage = task.findingSnapshot?.packageType === 'maven' ? task.findingSnapshot?.pkg : null;
+      if ((owaspMatches.has(candidate.fingerprint) && owaspMatches.get(candidate.fingerprint).id !== task.id)
+        || (previousPackage && previousPackage !== candidate.finding.pkg)
+        || (claimed.has(task.id) && claimed.get(task.id) !== candidate.fingerprint)) {
+        throw new BadRequestException('Correspondance OWASP ambiguë : identité Maven contradictoire.');
+      }
+      claimed.set(task.id, candidate.fingerprint);
+      owaspMatches.set(candidate.fingerprint, task);
+    }
     for (const candidate of candidates) {
       const f = candidate.finding;
-      let task = byFingerprint.get(candidate.fingerprint);
-      const snapshot = this.snapshot(source, f);
+      let task = source === 'OWASP' ? owaspMatches.get(candidate.fingerprint) || byFingerprint.get(candidate.fingerprint) : byFingerprint.get(candidate.fingerprint);
+      const snapshot = this.snapshot(source, f, task?.findingSnapshot, trivyFixedVersionIndex);
       if (!task) {
         task = this.repo.create({ projectId: incident.projectId, incidentId: incident.id, findingId: String(f.id || f.key || f.VulnerabilityID || f.pluginid || '') || null, findingFingerprint: candidate.fingerprint, source, ruleOrCve: snapshot.ruleOrCve, title: snapshot.title, severity: snapshot.severity, remediationType: f.remediationType || 'DEVELOPER_ACTION_REQUIRED', findingSnapshot: snapshot, status: ManualRemediationStatus.TODO, scannerStatus: ScannerFindingStatus.DETECTED, lastSeenBuild: build, events: [] });
         task.events = [this.event(null, null, task.status, 'CREATED', build)];
@@ -165,8 +228,9 @@ export class ManualRemediationService {
       }
       const saved = await this.repo.save(task);
       byFingerprint.set(candidate.fingerprint, saved);
+      seenTaskIds.add(saved.id);
     }
-    for (const task of existing.filter(t => !fingerprints.includes(t.findingFingerprint) && t.status !== ManualRemediationStatus.VERIFIED)) {
+    for (const task of existing.filter(t => !seenTaskIds.has(t.id) && t.status !== ManualRemediationStatus.VERIFIED)) {
       const old = task.status;
       task.status = ManualRemediationStatus.VERIFIED;
       task.scannerStatus = ScannerFindingStatus.NOT_DETECTED;
@@ -177,9 +241,34 @@ export class ManualRemediationService {
     }
   }
 
-  private snapshot(source: string, f: any) {
+  private snapshot(source: string, f: any, existingSnapshot?: any, trivyFixedVersionIndex?: ReturnType<typeof buildTrivyFixedVersionIndex>) {
     const ruleOrCve = String(f.id || f.VulnerabilityID || f.cve || f.rule || f.alertRef || f.pluginid || f.name || 'Non disponible');
-    return { source, ruleOrCve, title: String(f.title || f.Title || f.alert || f.name || f.description || ruleOrCve), severity: String(f.severity || f.Severity || f.risk || 'UNKNOWN').toUpperCase().split(' ')[0], component: f.pkg || f.PkgName || f.package || f.fileName || f.dependency || null, currentVersion: f.installedVersion || f.InstalledVersion || f.version || null, fixedVersion: f.fixedVersion || f.FixedVersion || null, description: f.description || f.Description || f.desc || null, evidence: f.evidence || null, recommendation: f.recommendation || f.solution || null, url: f.url || null, parameter: f.param || f.parameter || null };
+    const owaspIdentity = source === 'OWASP' ? {
+      pkg: f.pkg || f.package || f.fileName || null,
+      purl: f.purl || null, packageType: f.packageType || null,
+      installedVersion: f.installedVersion || null,
+      legacyPackage: f.legacyPackage || null,
+    } : {};
+    // Trivy/ZAP fixedVersion resolution is UNCHANGED: native scan value only.
+    // OWASP alone may additionally borrow a Trivy-correlated target version
+    // -- see owasp-trivy-fixed-version-correlation.ts for the full ordering
+    // (native > existing persisted value > fresh correlation > null) and why
+    // a once-resolved value is never flipped by a later correlation pass.
+    const nativeFixedVersion = f.fixedVersion || f.FixedVersion || null;
+    let fixedVersion: string | null = nativeFixedVersion;
+    let fixedVersionSource: 'TRIVY_CORRELATED' | null = null;
+    let fixedVersionEvidence: any = null;
+    if (source === 'OWASP') {
+      const correlation = qualifyOwaspFixedVersionCorrelation(
+        { cve: ruleOrCve, pkg: f.pkg || '', installedVersion: f.installedVersion || '' },
+        trivyFixedVersionIndex || new Map(),
+      );
+      const resolved = resolveOwaspFixedVersion(nativeFixedVersion, existingSnapshot, correlation);
+      fixedVersion = resolved.fixedVersion;
+      fixedVersionSource = resolved.fixedVersionSource;
+      fixedVersionEvidence = resolved.fixedVersionEvidence;
+    }
+    return { ...owaspIdentity, source, ruleOrCve, title: String(f.title || f.Title || f.alert || f.name || f.description || ruleOrCve), severity: String(f.severity || f.Severity || f.risk || 'UNKNOWN').toUpperCase().split(' ')[0], component: f.pkg || f.PkgName || f.package || f.fileName || f.dependency || null, currentVersion: f.installedVersion || f.InstalledVersion || f.version || null, fixedVersion, fixedVersionSource, fixedVersionEvidence, description: f.description || f.Description || f.desc || null, evidence: f.evidence || null, recommendation: f.recommendation || f.solution || null, url: f.url || null, parameter: f.param || f.parameter || null };
   }
 
   // Execution-2060 follow-up — persists a WF6 result against the SAME

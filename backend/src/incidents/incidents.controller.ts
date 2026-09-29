@@ -20,8 +20,12 @@ export class IncidentsController {
   @Get() findAll(@Query('projectId') projectId?: string, @Query('status') status?: string, @Query('size') size?: number) { return this.service.findAll(projectId, status, size); }
   @UseGuards(JwtAuthGuard)
   @Get('project/:projectId/cycles') convergence(@Param('projectId') projectId: string) { return this.service.convergence(projectId); }
+  // findOneForClient() (pas findOne()) : findOne() est un helper interne
+  // partagé par ~12 méthodes du service qui n'ont pas besoin de
+  // l'enrichissement findingTaskId (voir son propre commentaire) — seule
+  // cette route, la réponse qui atteint réellement le frontend, en a besoin.
   @UseGuards(JwtAuthGuard)
-  @Get(':id') findOne(@Param('id') id: string) { return this.service.findOne(id); }
+  @Get(':id') findOne(@Param('id') id: string) { return this.service.findOneForClient(id); }
   @UseGuards(JwtAuthGuard)
   @Post() create(@Body() dto: any) { return this.service.create(dto); }
   @UseGuards(JwtOrInternalSecretGuard)
