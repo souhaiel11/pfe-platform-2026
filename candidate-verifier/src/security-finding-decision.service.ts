@@ -74,7 +74,7 @@ export class SecurityFindingDecisionService {
 
     const success = grounded as GroundingSuccess;
     const result = classifySecurityAutoFixEligibility(
-      { source: finding.source, ecosystem: success.provenance.ecosystem, pkg: finding.package, installedVersion: finding.expectedInstalledVersion, fixedVersions },
+      { source: finding.source, ecosystem: success.provenance.ecosystem, pkg: finding.package, installedVersion: finding.expectedInstalledVersion, fixedVersions, pinnedTargetVersion: finding.pinnedTargetVersion },
       success.provenance,
     );
 

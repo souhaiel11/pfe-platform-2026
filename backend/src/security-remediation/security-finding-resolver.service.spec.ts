@@ -160,6 +160,38 @@ async function main() {
   }
   console.log('security-finding-resolver D) ZAP finding -> trusted evidence still resolved generically, rejection is the classifier\'s job: PASS');
 
+  // P. V1.8 — a persisted v1_8Plan whose actualEditTarget matches THIS
+  // task's own package is forwarded as pinnedTargetVersion.
+  {
+    const { tasksRepo, incidentsRepo, projectsRepo } = fakeRepos({ tasks: [{
+      id: TASK_ID, projectId: PROJECT_ID, incidentId: INCIDENT_ID, findingFingerprint: 'fp-pinned-1', source: 'TRIVY', ruleOrCve: 'CVE-2024-22257',
+      findingSnapshot: { component: 'org.springframework.security:spring-security-core', currentVersion: '5.6.4', fixedVersion: '5.7.12, 5.8.11, 6.1.8, 6.2.3' },
+      securityFindingRemediation: { status: 'DISPATCHING', v1_8Plan: { editType: 'DEPENDENCY_VERSION', actualEditTarget: 'org.springframework.security:spring-security-core', fromVersion: '5.6.4', toVersion: '5.7.12', expectedResolvedDependency: '5.7.12' } },
+    }] });
+    const service = new SecurityFindingResolverService(tasksRepo, incidentsRepo, projectsRepo);
+    const result: any = await service.resolve(PROJECT_ID, TASK_ID);
+    assert.equal(result.ok, true);
+    assert.equal(result.finding.pinnedTargetVersion, '5.7.12', 'P: matching v1_8Plan.actualEditTarget must be forwarded as pinnedTargetVersion');
+  }
+  console.log('security-finding-resolver P) V1.8 plan matching this package -> pinnedTargetVersion forwarded: PASS');
+
+  // Q. V1.8 — a persisted v1_8Plan whose actualEditTarget names a DIFFERENT
+  // coordinate (e.g. a stale pin from a prior batch, or a plan that
+  // redirected to an owner/parent) must NEVER leak into this finding's own
+  // pinnedTargetVersion -- fail closed to the existing pure-policy behavior.
+  {
+    const { tasksRepo, incidentsRepo, projectsRepo } = fakeRepos({ tasks: [{
+      id: TASK_ID, projectId: PROJECT_ID, incidentId: INCIDENT_ID, findingFingerprint: 'fp-mismatch-1', source: 'TRIVY', ruleOrCve: 'CVE-2024-22257',
+      findingSnapshot: { component: 'org.springframework.security:spring-security-core', currentVersion: '5.6.4', fixedVersion: '5.7.12, 5.8.11' },
+      securityFindingRemediation: { status: 'DISPATCHING', v1_8Plan: { editType: 'PARENT_VERSION', actualEditTarget: 'org.springframework.boot:spring-boot-starter-parent', fromVersion: '2.7.0', toVersion: '2.7.18', expectedResolvedDependency: null } },
+    }] });
+    const service = new SecurityFindingResolverService(tasksRepo, incidentsRepo, projectsRepo);
+    const result: any = await service.resolve(PROJECT_ID, TASK_ID);
+    assert.equal(result.ok, true);
+    assert.equal(result.finding.pinnedTargetVersion, undefined, 'Q: a plan bound to a different actualEditTarget must never be forwarded for this package');
+  }
+  console.log('security-finding-resolver Q) V1.8 plan for a DIFFERENT edit target -> never forwarded, fails closed to pure policy: PASS');
+
   console.log('security-finding-resolver.service.spec.ts: ALL CHECKS PASS');
 }
 

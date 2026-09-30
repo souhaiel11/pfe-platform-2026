@@ -17,6 +17,18 @@ export interface SecurityFindingDecisionInput {
   expectedInstalledVersion: string;
   /** Raw scanner fixedVersion string (pre-split) — parsed internally via parseFixedVersions(). */
   fixedVersion: string | null;
+  /**
+   * V1.8 — a server-persisted, already-validated target version that is
+   * authoritative over selectEligibleTargetVersion()'s own pure numeric
+   * policy when present. The ONLY writer of this field is
+   * security-finding-resolver.service.ts, reading it back from
+   * ManualRemediationTask.securityFindingRemediation.v1_8Plan (itself
+   * written ONLY by ManualRemediationService.launchBatchRemediation() in
+   * ENFORCED mode, from evidence that already passed
+   * canDispatchSecurityRemediationV1_8()) -- never a caller-supplied
+   * override, never present in SHADOW mode.
+   */
+  pinnedTargetVersion?: string;
 }
 
 export interface SecurityFindingDecision {

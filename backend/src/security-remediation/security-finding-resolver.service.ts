@@ -97,6 +97,17 @@ export class SecurityFindingResolverService {
       return fail('INCOMPLETE_FINDING_EVIDENCE', `Finding "${findingTaskId}" is missing package/installedVersion in its persisted snapshot.`);
     }
 
+    // 7. V1.8 — a pinned plan persisted by launchBatchRemediation() (ENFORCED
+    // mode only, see manual-remediation.service.ts) is authoritative over
+    // the pure numeric version-selection policy, but ONLY when it was
+    // validated for THIS exact dependency coordinate -- a plan whose
+    // actualEditTarget names a different package (e.g. a since-superseded
+    // pin, or a batch that also touched an owner/parent) is never applied
+    // to this one, fail-closed to the existing pure-policy behavior instead.
+    const v1_8Plan = task.securityFindingRemediation?.v1_8Plan;
+    const pinnedTargetVersion = v1_8Plan && String(v1_8Plan.actualEditTarget) === String(pkg) && String(v1_8Plan.toVersion || '').trim()
+      ? String(v1_8Plan.toVersion).trim() : undefined;
+
     return {
       ok: true,
       repository,
@@ -108,6 +119,7 @@ export class SecurityFindingResolverService {
         package: String(pkg),
         expectedInstalledVersion: String(installedVersion),
         fixedVersion: snapshot.fixedVersion != null ? String(snapshot.fixedVersion) : null,
+        ...(pinnedTargetVersion ? { pinnedTargetVersion } : {}),
       },
       cveId: task.ruleOrCve != null && String(task.ruleOrCve).trim() ? String(task.ruleOrCve) : null,
       title: task.title != null && String(task.title).trim() ? String(task.title) : null,

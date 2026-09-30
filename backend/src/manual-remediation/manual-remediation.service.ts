@@ -3,6 +3,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { createHash } from 'crypto';
 import { In, Repository } from 'typeorm';
 import { Incident } from '../incidents/incident.entity';
+import { Project } from '../projects/project.entity';
+import { isFullGitSha } from '../candidate-verification/candidate-digest';
 import { normalizeReport } from '../common/report-normalizer';
 import { findingFingerprint } from './finding-fingerprint';
 import { taskFingerprintAliases, owaspLegacyFingerprint } from './owasp-task-identity';
@@ -12,6 +14,10 @@ import { withFindingTaskIds } from './finding-task-id-enrichment';
 import { ManualRemediationEvent, ManualRemediationStatus, ManualRemediationTask, ScannerFindingStatus } from './manual-remediation.entity';
 import { Wf6RemediationResultDto } from '../security-remediation/wf6-remediation-result.dto';
 import { Wf6BatchRemediationResultDto } from '../security-remediation/wf6-batch-remediation-result.dto';
+import { V1_8CompatibilityDecisionService } from '../dependency-compatibility/v1_8-compatibility-decision.service';
+import { canDispatchSecurityRemediationV1_8 } from '../dependency-compatibility/v1_8-security-remediation-gate';
+import { v1_8EnforcementMode } from '../dependency-compatibility/v1_8-enforcement-mode';
+import { buildWf6ValidatedFindingPayload, Wf6ValidatedFindingPayload } from '../dependency-compatibility/v1_8-remediation-plan-payload.types';
 
 // Increment 1 — WF6's own dispatch contract. Deliberately minimal:
 // findingTaskIds only, never the resolved finding detail (cveId/package/
@@ -30,6 +36,18 @@ import { Wf6BatchRemediationResultDto } from '../security-remediation/wf6-batch-
 // this SAME webhook with a one-element findingTaskIds array.
 export interface Wf6BatchDispatchPayload {
   projectId: string; batchId: string; findingTaskIds: string[];
+  /**
+   * V1.8 Phase 5 ticket — Phase 6/7: the validated-plan payload. Present
+   * ONLY in ENFORCED mode (v1_8-enforcement-mode.ts), one entry per
+   * dispatched finding, built exclusively from evidence that ALREADY
+   * passed canDispatchSecurityRemediationV1_8() (ALLOW) -- never present in
+   * SHADOW mode, so the wire payload every existing n8n workflow/test has
+   * ever seen is completely unchanged unless enforcement is explicitly on.
+   * WF6 executes this plan; it must not independently pick a version/owner
+   * (see v1_8-security-remediation-gate.ts's own header comment on this
+   * architecture rule).
+   */
+  v1_8ValidatedFindings?: Wf6ValidatedFindingPayload[];
 }
 export interface Wf6BatchDispatcher { dispatch(payload: Wf6BatchDispatchPayload): Promise<void> }
 // Real, production dispatcher — mirrors incidents.service.ts's own WF2
@@ -63,9 +81,27 @@ export class ManualRemediationService {
     // files get by simply supplying the 3rd argument directly, bypassing
     // Nest's injector entirely.
     @Optional() private readonly wf6BatchDispatcher: Wf6BatchDispatcher = new HttpWf6BatchDispatcher(),
+    // V1.8 Phase 4 ticket — additive, read-only, opt-in ONLY (see list()'s
+    // own `includeV18` parameter below). Never consulted by
+    // launchBatchRemediation()/WF6 dispatch, never written back to any
+    // task -- see this service's own header comment for the full boundary.
+    @Optional() private readonly v1_8Decisions: V1_8CompatibilityDecisionService = new V1_8CompatibilityDecisionService(),
+    // V1.8 Phase 5 ticket — read-only, used ONLY by the new enforcement
+    // check in launchBatchRemediation() to resolve the SAME
+    // repository/trusted-commit context SecurityFindingResolverService
+    // already resolves for the singular /evaluate path (see this file's
+    // own resolveV1_8DispatchContext() below for why this is injected
+    // directly instead of that service, and manual-remediation.module.ts's
+    // own header comment on the circular import it deliberately avoids).
+    // Appended LAST and typed optional so every existing positional test
+    // constructor call (`new ManualRemediationService(repo, incidents,
+    // fakeDispatcher)`) keeps compiling and behaving exactly as before --
+    // see resolveV1_8DispatchContext()'s own guard for the (SHADOW-mode-only)
+    // absence case.
+    @Optional() @InjectRepository(Project) private readonly projects?: Repository<Project>,
   ) {}
 
-  async list(projectId: string, filters: { status?: string; source?: string; severity?: string } = {}) {
+  async list(projectId: string, filters: { status?: string; source?: string; severity?: string; includeV18?: boolean } = {}) {
     if (!projectId) throw new BadRequestException('L’identifiant technique projectId est requis.');
     // One-time idempotent backfill for projects whose reports predate this
     // feature. Normal page refreshes only read the already persisted tasks.
@@ -77,7 +113,20 @@ export class ManualRemediationService {
     if (filters.status) where.status = filters.status;
     if (filters.source) where.source = String(filters.source).toUpperCase();
     if (filters.severity) where.severity = String(filters.severity).toUpperCase();
-    return this.repo.find({ where, order: { updatedAt: 'DESC' } });
+    const tasks = await this.repo.find({ where, order: { updatedAt: 'DESC' } });
+    // V1.8 Phase 4 ticket — Phase 2/4/9: additive `v1_8Decision` field,
+    // ONLY when explicitly requested. Every existing caller (no query param)
+    // gets back exactly the same rows as before this change, byte-for-byte
+    // -- see this file's own attachFindingTaskIds() a few lines up for the
+    // identical "strict additive, one new field, same convention" pattern
+    // already established in this exact module.
+    if (!filters.includeV18) return tasks;
+    return tasks.map(t => ({
+      ...t,
+      v1_8Decision: (t.ruleOrCve && t.findingSnapshot?.component)
+        ? this.v1_8Decisions.lookup(t.source, t.ruleOrCve, String(t.findingSnapshot.component), String(t.findingSnapshot.currentVersion || ''))
+        : null,
+    }));
   }
 
   async summary(projectId: string) {
@@ -459,10 +508,43 @@ export class ManualRemediationService {
       throw new ConflictException(`Plusieurs CVE sélectionnées sur le même composant Maven — non supporté dans un même lot : ${detail}.`);
     }
 
+    // V1.8 Phase 5 ticket — Phase 4/5/9: the authoritative gate, ENFORCED
+    // mode only (default SHADOW leaves every existing test/environment
+    // byte-for-byte unchanged -- see v1_8-enforcement-mode.ts). Every task
+    // must independently ALLOW; a single BLOCK refuses the WHOLE batch,
+    // fail-closed, before anything is written or dispatched -- never a
+    // partial dispatch of "the ones that passed". This NEVER falls back to
+    // the old classifier/remediationType (Phase 5's own rule): a task
+    // already past the adminOnly/incomplete/alreadyInProgress/colliding
+    // checks above that still fails THIS gate is blocked here, full stop.
+    // Phase 6/7 — collected only in ENFORCED mode, attached to the dispatch
+    // payload below (Wf6BatchDispatchPayload.v1_8ValidatedFindings); absent
+    // entirely in SHADOW mode.
+    let v1_8ValidatedFindings: Wf6ValidatedFindingPayload[] | undefined;
+    if (v1_8EnforcementMode() === 'ENFORCED') {
+      v1_8ValidatedFindings = [];
+      for (const task of tasks) {
+        const context = await this.resolveV1_8DispatchContext(task);
+        if (!context) throw new ConflictException(`Contexte de dépôt/commit introuvable pour la correction — dispatch refusé : ${task.ruleOrCve || task.id}.`);
+        const evidence = this.v1_8Decisions.lookup(task.source, String(task.ruleOrCve), String(task.findingSnapshot.component), String(task.findingSnapshot.currentVersion || ''));
+        const gate = canDispatchSecurityRemediationV1_8({ ...context, source: task.source, cve: String(task.ruleOrCve), component: String(task.findingSnapshot.component), installedVersion: String(task.findingSnapshot.currentVersion || ''), statusPermitsDispatch: true }, evidence);
+        if (gate.decision !== 'ALLOW') {
+          throw new ConflictException(`Validation V1.8 refusée pour ${task.ruleOrCve || task.id} : ${gate.reason}.`);
+        }
+        v1_8ValidatedFindings.push(buildWf6ValidatedFindingPayload(task.id, gate.evidence));
+      }
+    }
+
     // Deterministic batchId: same selection -> same id, always (same
     // discipline as WF6's own sec-eval-<findingTaskId> requestId).
     const batchId = 'sec-batch-' + createHash('sha256').update([...ids].sort().join(',')).digest('hex').slice(0, 16);
     const dispatchedAt = new Date().toISOString();
+    // V1.8 — index this dispatch's validated findings (ENFORCED mode only;
+    // undefined/empty in SHADOW mode) by findingTaskId so each task can
+    // persist its OWN pinned plan below. This is the only place
+    // v1_8Plan is ever written -- security-finding-resolver.service.ts is
+    // the only place it is ever read back.
+    const v1_8PlanByTaskId = new Map((v1_8ValidatedFindings || []).map(f => [f.findingTaskId, f.remediationPlan]));
     for (const task of tasks) {
       const previous = task.securityFindingRemediation;
       const attemptNumber = (Number(previous?.attemptCount) || 0) + 1;
@@ -472,13 +554,14 @@ export class ManualRemediationService {
         candidateIdentity: previous?.candidateIdentity ?? null, evaluatedSha: previous?.evaluatedSha ?? null,
         branchName: previous?.branchName ?? null, prUrl: previous?.prUrl ?? null, prNumber: previous?.prNumber ?? null,
         patchEvidence: null, securityValidationEvidence: null,
+        v1_8Plan: v1_8PlanByTaskId.get(task.id) ?? null,
         attemptCount: attemptNumber, updatedAt: dispatchedAt,
         attempts: [...(Array.isArray(previous?.attempts) ? previous.attempts : []), { attempt: attemptNumber, at: dispatchedAt, status: 'DISPATCHING', reason: null, batchId }],
       };
     }
     await this.repo.save(tasks);
 
-    const payload: Wf6BatchDispatchPayload = { projectId, batchId, findingTaskIds: ids };
+    const payload: Wf6BatchDispatchPayload = { projectId, batchId, findingTaskIds: ids, ...(v1_8ValidatedFindings ? { v1_8ValidatedFindings } : {}) };
     try {
       await this.wf6BatchDispatcher.dispatch(payload);
     } catch (err: any) {
@@ -551,5 +634,28 @@ export class ManualRemediationService {
 
   private event(user: any, oldStatus: ManualRemediationStatus | null, newStatus: ManualRemediationStatus, reason: ManualRemediationEvent['reason'], buildNumber: number | null): ManualRemediationEvent {
     return { at: new Date().toISOString(), actorId: user?.id ? String(user.id) : null, actorDisplayName: user ? String(user.name || user.email || user.id) : 'Scanner', oldStatus, newStatus, reason, buildNumber };
+  }
+
+  // V1.8 Phase 5 ticket — resolves the SAME two trusted facts
+  // SecurityFindingResolverService.resolve() already resolves (project's
+  // githubRepo + the incident's own atomically-written sourceCommitSha),
+  // for launchBatchRemediation()'s ENFORCED-mode gate call above. Returns
+  // null (never throws) on any failure -- the caller turns that into a
+  // clean, named ConflictException rather than an unhandled rejection.
+  // Duplicates a couple of field reads, not any decision logic; kept
+  // separate from that service to avoid a circular module import (see
+  // manual-remediation.module.ts's own header comment).
+  private async resolveV1_8DispatchContext(task: ManualRemediationTask): Promise<{ repository: string; commitSha: string } | null> {
+    if (!task.incidentId || !this.projects) return null;
+    const [project, incident] = await Promise.all([
+      this.projects.findOne({ where: { id: task.projectId } }),
+      this.incidents.findOne({ where: { id: task.incidentId } }),
+    ]);
+    if (!project || !incident) return null;
+    const repository = String(project.githubRepo || '').trim();
+    if (!repository) return null;
+    const commitSha = String((incident.metadata as any)?.sourceCommitSha || '');
+    if (!isFullGitSha(commitSha)) return null;
+    return { repository, commitSha: commitSha.toLowerCase() };
   }
 }

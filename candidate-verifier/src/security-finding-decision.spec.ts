@@ -116,6 +116,30 @@ console.log('security-finding-decision H) real Maven failure (malformed pom.xml,
 // ============================================================================
 console.log('security-finding-decision J) ambiguous property: proven at the pure-resolver level (V1), reused unchanged by this phase — not re-duplicated here');
 
+// ============================================================================
+// N. V1.8 — real end-to-end grounded decision, pinnedTargetVersion wins over
+// the pure "lowest same-major" policy. Pinned to 5.8.11 (NOT the lowest of
+// "5.7.12, 5.8.11" -- that would be 5.7.12), so a match here can only be
+// explained by the pin actually being consulted, never by coincidence.
+// ============================================================================
+{
+  const unpinned = decisionService.decide(
+    { findingIdentity: 'fp-spring-security-core-1', source: 'TRIVY', package: 'org.springframework.security:spring-security-core', expectedInstalledVersion: '5.6.4', fixedVersion: '5.7.12, 5.8.11' },
+    workspaceFor(),
+  );
+  assert.equal(unpinned.remediationType, 'AUTO_FIX_ELIGIBLE', `expected AUTO_FIX_ELIGIBLE: ${JSON.stringify(unpinned)}`);
+  assert.equal(unpinned.selectedTargetVersion, '5.7.12', 'N (control): unpinned, the pure policy picks the lowest same-major candidate');
+
+  const pinned = decisionService.decide(
+    { findingIdentity: 'fp-spring-security-core-1', source: 'TRIVY', package: 'org.springframework.security:spring-security-core', expectedInstalledVersion: '5.6.4', fixedVersion: '5.7.12, 5.8.11', pinnedTargetVersion: '5.8.11' },
+    workspaceFor(),
+  );
+  assert.equal(pinned.remediationType, 'AUTO_FIX_ELIGIBLE', `expected AUTO_FIX_ELIGIBLE: ${JSON.stringify(pinned)}`);
+  assert.equal(pinned.selectedTargetVersion, '5.8.11', 'N: real end-to-end grounding still runs, but the FINAL selected version is the pin, not the pure-policy pick');
+  assert.equal(pinned.provenance.kind, 'DIRECT_EXPLICIT');
+}
+console.log('security-finding-decision N) V1.8 pinnedTargetVersion flows through real grounding end-to-end, wins over the pure policy: PASS');
+
 fs.rmSync(scratchRoot, { recursive: true, force: true });
 fs.rmSync(repoCacheRoot, { recursive: true, force: true });
 console.log('security-finding-decision.spec.ts: ALL CHECKS PASS');

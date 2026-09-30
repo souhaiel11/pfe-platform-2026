@@ -19,6 +19,8 @@ export interface SecurityFindingInput {
   pkg: string | null | undefined;
   installedVersion: string | null | undefined;
   fixedVersions: string[] | null | undefined;
+  /** V1.8 — see SecurityFindingDecisionInput's own header comment (the only place this ever originates). */
+  pinnedTargetVersion?: string;
 }
 
 export interface SecurityEligibilityResult {
@@ -86,6 +88,18 @@ export function classifySecurityAutoFixEligibility(
     case 'UNRESOLVED':
     default:
       return { remediationType: 'DEVELOPER_ACTION_REQUIRED', targetVersion: null, reason: 'PROVENANCE_UNRESOLVED' };
+  }
+
+  // V1.8 — a pinned, already-validated target version wins over the pure
+  // numeric policy below (never the reverse): it was chosen by real
+  // sandboxed compatibility testing (owner-discovery + regression checks),
+  // strictly more informed than "lowest same-major fixed version". Only
+  // ever present when the resolver already matched it to THIS exact
+  // package (see security-finding-resolver.service.ts) -- checked again
+  // here defensively rather than trusted blind.
+  const pinned = finding.pinnedTargetVersion != null ? String(finding.pinnedTargetVersion).trim() : '';
+  if (pinned) {
+    return { remediationType: 'AUTO_FIX_ELIGIBLE', targetVersion: pinned, reason: `${provenance.kind}:V1_8_PINNED` };
   }
 
   const selection = selectEligibleTargetVersion(finding.installedVersion, fixedVersions);

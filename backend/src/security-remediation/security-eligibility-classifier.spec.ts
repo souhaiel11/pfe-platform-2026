@@ -271,4 +271,38 @@ console.log('security-eligibility-classifier M) source/ecosystem casing normaliz
 }
 console.log('security-eligibility-classifier §9) REAL fixture proof (tomcat-embed-core, read-only, not patched): PASS');
 
-console.log('security-eligibility-classifier.spec.ts: ALL CHECKS PASS (A-M + §9 real fixture proof)');
+// ============================================================================
+// N. V1.8 — a pinned target version wins over selectEligibleTargetVersion()'s
+// own "lowest same-major" pick, using the REAL CVE-2024-22257 scanner data
+// (installed 5.6.4, fixedVersions "5.7.12, 5.8.11, 6.1.8, 6.2.3" — the pure
+// policy would ALSO pick 5.7.12 here since it happens to be the lowest
+// same-major candidate; the pin must still be what actually drove the
+// decision, proven by picking a version the pure policy would NEVER choose
+// on its own).
+// ============================================================================
+{
+  const provenance = resolveMavenProvenance({ ...base, package: 'org.springframework.security:spring-security-core', installedVersion: '5.6.4' });
+  assert.equal(provenance.kind, 'DIRECT_EXPLICIT');
+  const fixedVersions = parseFixedVersions('5.7.12, 5.8.11, 6.1.8, 6.2.3');
+
+  // N1 — no pin: unchanged, pure-policy behavior (lowest same-major = 5.7.12).
+  const unpinned = classifySecurityAutoFixEligibility(
+    { source: 'TRIVY', ecosystem: 'MAVEN', pkg: 'org.springframework.security:spring-security-core', installedVersion: '5.6.4', fixedVersions },
+    provenance,
+  );
+  assert.equal(unpinned.targetVersion, '5.7.12');
+  assert.equal(unpinned.reason, 'DIRECT_EXPLICIT:SELECTED');
+
+  // N2 — pinned to a version the pure policy would NEVER pick by itself
+  // (5.8.11 is same-major but NOT the lowest) -> the pin must win.
+  const pinned = classifySecurityAutoFixEligibility(
+    { source: 'TRIVY', ecosystem: 'MAVEN', pkg: 'org.springframework.security:spring-security-core', installedVersion: '5.6.4', fixedVersions, pinnedTargetVersion: '5.8.11' },
+    provenance,
+  );
+  assert.equal(pinned.remediationType, 'AUTO_FIX_ELIGIBLE');
+  assert.equal(pinned.targetVersion, '5.8.11');
+  assert.equal(pinned.reason, 'DIRECT_EXPLICIT:V1_8_PINNED');
+}
+console.log('security-eligibility-classifier N) V1.8 pinned target version wins over the pure same-major policy: PASS');
+
+console.log('security-eligibility-classifier.spec.ts: ALL CHECKS PASS (A-N + §9 real fixture proof)');
