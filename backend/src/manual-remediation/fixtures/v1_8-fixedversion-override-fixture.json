@@ -1,0 +1,67 @@
+{
+  "generatedAt": "2026-10-01T00:00:00.000Z",
+  "schemaVersion": 2,
+  "validationRunId": "phase7d-test-fixture",
+  "entryCount": 5,
+  "decisions": {
+    "OWASP:CVE-9001-0001:com.example:target-unknown": {
+      "evidenceId": "fixture0001", "schemaVersion": 2, "repository": "souhaiel11/pfe-app-test",
+      "validatedCommitSha": "7ae0f954f99628b69ce9b42f42c1e2acc8568d99", "findingSource": "OWASP",
+      "cve": "CVE-9001-0001", "component": "com.example:target-unknown", "installedVersion": "1.0.0",
+      "validationRunId": "phase7d-test-fixture", "validatedAt": "2026-10-01T00:00:00.000Z",
+      "actualEditTarget": null, "editType": null, "ownerType": null, "ownerCoordinate": null,
+      "requiresDeveloperReview": true, "fromVersion": null, "toVersion": null, "expectedResolvedDependency": null,
+      "state": "SECURITY_TARGET_UNKNOWN", "recommendedVersion": null,
+      "evidenceSummary": "fixture", "recommendationReason": "SECURITY_TARGET_UNKNOWN",
+      "sandboxValidated": false, "targetCveClosed": null, "newHighCriticalCount": null
+    },
+    "OWASP:CVE-9001-0002:com.example:validation-failed": {
+      "evidenceId": "fixture0002", "schemaVersion": 2, "repository": "souhaiel11/pfe-app-test",
+      "validatedCommitSha": "7ae0f954f99628b69ce9b42f42c1e2acc8568d99", "findingSource": "OWASP",
+      "cve": "CVE-9001-0002", "component": "com.example:validation-failed", "installedVersion": "1.0.0",
+      "validationRunId": "phase7d-test-fixture", "validatedAt": "2026-10-01T00:00:00.000Z",
+      "actualEditTarget": "org.springframework.boot:spring-boot-starter-parent", "editType": "PARENT_VERSION",
+      "ownerType": "PARENT", "ownerCoordinate": "org.springframework.boot:spring-boot-starter-parent",
+      "requiresDeveloperReview": false, "fromVersion": "2.7.0", "toVersion": "2.7.18", "expectedResolvedDependency": "9.0.83",
+      "state": "VALIDATION_FAILED", "recommendedVersion": "9.0.83",
+      "evidenceSummary": "fixture", "recommendationReason": "VALIDATION_FAILED",
+      "sandboxValidated": true, "targetCveClosed": false, "newHighCriticalCount": 0
+    },
+    "OWASP:CVE-9001-0003:com.example:missing-toversion": {
+      "evidenceId": "fixture0003", "schemaVersion": 2, "repository": "souhaiel11/pfe-app-test",
+      "validatedCommitSha": "7ae0f954f99628b69ce9b42f42c1e2acc8568d99", "findingSource": "OWASP",
+      "cve": "CVE-9001-0003", "component": "com.example:missing-toversion", "installedVersion": "1.0.0",
+      "validationRunId": "phase7d-test-fixture", "validatedAt": "2026-10-01T00:00:00.000Z",
+      "actualEditTarget": "org.springframework.boot:spring-boot-starter-parent", "editType": "PARENT_VERSION",
+      "ownerType": "PARENT", "ownerCoordinate": "org.springframework.boot:spring-boot-starter-parent",
+      "requiresDeveloperReview": false, "fromVersion": "2.7.0", "toVersion": null, "expectedResolvedDependency": null,
+      "state": "VALIDATED_RECOMMENDED", "recommendedVersion": null,
+      "evidenceSummary": "fixture: incomplete plan, toVersion missing", "recommendationReason": "VALIDATED_RECOMMENDED",
+      "sandboxValidated": true, "targetCveClosed": true, "newHighCriticalCount": 0
+    },
+    "OWASP:CVE-9001-0004:com.example:unsupported-edittype": {
+      "evidenceId": "fixture0004", "schemaVersion": 2, "repository": "souhaiel11/pfe-app-test",
+      "validatedCommitSha": "7ae0f954f99628b69ce9b42f42c1e2acc8568d99", "findingSource": "OWASP",
+      "cve": "CVE-9001-0004", "component": "com.example:unsupported-edittype", "installedVersion": "1.0.0",
+      "validationRunId": "phase7d-test-fixture", "validatedAt": "2026-10-01T00:00:00.000Z",
+      "actualEditTarget": "com.example:some-bom", "editType": "BOM_VERSION",
+      "ownerType": "IMPORTED_BOM", "ownerCoordinate": "com.example:some-bom",
+      "requiresDeveloperReview": false, "fromVersion": "1.0.0", "toVersion": "2.0.0", "expectedResolvedDependency": "2.0.0",
+      "state": "VALIDATED_RECOMMENDED", "recommendedVersion": "2.0.0",
+      "evidenceSummary": "fixture: BOM_VERSION is not writer-supported", "recommendationReason": "VALIDATED_RECOMMENDED",
+      "sandboxValidated": true, "targetCveClosed": true, "newHighCriticalCount": 0
+    },
+    "OWASP:CVE-9001-0005:com.example:stale-commit": {
+      "evidenceId": "fixture0005", "schemaVersion": 2, "repository": "souhaiel11/pfe-app-test",
+      "validatedCommitSha": "0000000000000000000000000000000000000000", "findingSource": "OWASP",
+      "cve": "CVE-9001-0005", "component": "com.example:stale-commit", "installedVersion": "1.0.0",
+      "validationRunId": "phase7d-test-fixture", "validatedAt": "2026-10-01T00:00:00.000Z",
+      "actualEditTarget": "org.springframework.boot:spring-boot-starter-parent", "editType": "PARENT_VERSION",
+      "ownerType": "PARENT", "ownerCoordinate": "org.springframework.boot:spring-boot-starter-parent",
+      "requiresDeveloperReview": false, "fromVersion": "2.7.0", "toVersion": "2.7.18", "expectedResolvedDependency": "9.0.83",
+      "state": "VALIDATED_RECOMMENDED", "recommendedVersion": "9.0.83",
+      "evidenceSummary": "fixture: validated against a DIFFERENT, stale commit", "recommendationReason": "VALIDATED_RECOMMENDED",
+      "sandboxValidated": true, "targetCveClosed": true, "newHighCriticalCount": 0
+    }
+  }
+}

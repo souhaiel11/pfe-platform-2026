@@ -480,7 +480,34 @@ export class ManualRemediationService {
       throw new ForbiddenException(`Nécessite l’intervention d’un administrateur : ${adminOnly.map(t => t.ruleOrCve || t.id).join(', ')}.`);
     }
 
-    const incomplete = tasks.filter(t => !t.source || !t.ruleOrCve || !t.findingSnapshot?.component || !t.findingSnapshot?.currentVersion || !t.findingSnapshot?.fixedVersion);
+    // V1.8 Phase 7D — SHADOW mode: byte-for-byte unchanged (this block is
+    // skipped entirely, exactly the existing "no v1_8CompleteOverride
+    // entries" behavior). ENFORCED mode ONLY: a task whose scanner-level
+    // fixedVersion is missing (the real, long-standing OWASP characteristic
+    // -- OWASP normalization never populates it) is NOT "incomplete data"
+    // when V1.8 ALREADY has an authoritative, exact, currently-valid
+    // remediation plan for it -- reuses the EXACT SAME gate
+    // (canDispatchSecurityRemediationV1_8) the ENFORCED block below already
+    // calls, never a second, separately-maintained rule that could drift:
+    // every sub-condition the ticket lists (state/evidence-freshness/plan-
+    // completeness/editType-supported/sandboxValidated/targetCveClosed/
+    // newHighCriticalCount) is exactly what that gate already fail-closes
+    // on. Scanner-level fixedVersion itself is NEVER written or faked here
+    // -- only this one local Set (never persisted) decides whether the
+    // MISSING-fixedVersion reason is excused for THIS dispatch attempt.
+    const v1_8CompleteOverride = new Set<string>();
+    if (v1_8EnforcementMode() === 'ENFORCED') {
+      for (const t of tasks) {
+        if (t.findingSnapshot?.fixedVersion) continue; // scanner data already sufficient -- no override needed, none computed
+        const context = await this.resolveV1_8DispatchContext(t);
+        if (!context) continue;
+        const evidence = this.v1_8Decisions.lookup(t.source, String(t.ruleOrCve), String(t.findingSnapshot?.component), String(t.findingSnapshot?.currentVersion || ''));
+        const gate = canDispatchSecurityRemediationV1_8({ ...context, source: t.source, cve: String(t.ruleOrCve), component: String(t.findingSnapshot?.component), installedVersion: String(t.findingSnapshot?.currentVersion || ''), statusPermitsDispatch: true }, evidence);
+        if (gate.decision === 'ALLOW') v1_8CompleteOverride.add(t.id);
+      }
+    }
+
+    const incomplete = tasks.filter(t => !t.source || !t.ruleOrCve || !t.findingSnapshot?.component || !t.findingSnapshot?.currentVersion || (!t.findingSnapshot?.fixedVersion && !v1_8CompleteOverride.has(t.id)));
     if (incomplete.length) {
       throw new BadRequestException(`Donnée insuffisante pour lancer une correction automatisée : ${incomplete.map(t => t.ruleOrCve || t.id).join(', ')}.`);
     }
