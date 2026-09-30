@@ -8,6 +8,10 @@
   ],
   "exclude": [
     "src/**/*.spec.ts",
-    "src/**/*.test.ts"
+    "src/**/*.test.ts",
+    "src/dependency-compatibility-validation-adapter.ts",
+    "src/v1_8_phase2_live_proof_snakeyaml.ts",
+    "src/v1_8_phase3_live_run_direct.ts",
+    "src/v1_8_phase3_live_run_owner.ts"
   ]
 }
