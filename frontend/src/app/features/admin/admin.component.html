@@ -1,3 +1,4 @@
+<div *ngIf="loadError" role="alert" class="card">{{loadError}} <button (click)="load()">Réessayer</button></div>
     <div class="page-container">
       <div class="page-header" style="display:flex;align-items:center;justify-content:space-between;">
         <div>
@@ -9,7 +10,7 @@
 
       <div *ngIf="loading" class="loading-overlay"><div class="spinner"></div></div>
 
-      <div class="card" style="padding:0;overflow:hidden;" *ngIf="!loading">
+      <div class="card" style="padding:0;overflow:hidden;" *ngIf="!loading && !loadError">
         <table class="data-table">
           <thead>
             <tr>

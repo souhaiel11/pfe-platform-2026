@@ -31,7 +31,8 @@ import { PresentationLabelPipe } from '../../shared/presentation-label.pipe';
       <p class="do-sub">Récupéré depuis le dépôt GitHub du projet, analysé en 3 volets : cohérence runtime (Dockerfile ↔ pom.xml/config), image de base, sécurité.</p>
 
       <div class="do-git-fields">
-        <input class="do-repo-in" placeholder="propriétaire (ex. : souhaiel11)"
+        <label>Branche cible de la PR <input class="do-repo-in" placeholder="Branche cible" [value]="baseBranch" (input)="baseBranch = $any($event.target).value" /></label>
+          <input class="do-repo-in" placeholder="Propriétaire du dépôt"
                [value]="ownerInput()" (input)="ownerInput.set($any($event.target).value)" />
         <input class="do-repo-in" placeholder="dépôt"
                [value]="repoInput()" (input)="repoInput.set($any($event.target).value)" />
@@ -86,7 +87,7 @@ import { PresentationLabelPipe } from '../../shared/presentation-label.pipe';
         <div class="do-decision">
           <p class="do-sub" style="margin:0">
             « Corriger » applique <strong>tous</strong> les problèmes ci-dessus et ouvre une Pull Request sur le dépôt —
-            rien n'est poussé directement sur <code class="mono">main</code>. Un contrôle automatique vérifie la correction avant toute PR.
+            rien n'est poussé directement sur la branche cible. Un contrôle automatique vérifie la correction avant toute PR.
           </p>
           <button class="do-btn" [disabled]="applying() || !(r.issues || []).length" (click)="apply(r)">
             {{ applying() ? 'Correction en cours…' : 'Corriger et créer une PR' }}
@@ -197,7 +198,7 @@ export class DockerfileOptimizerComponent implements OnInit, OnDestroy {
   @Input() projectName: string | null | undefined;
   @Input() owner: string | null | undefined;
   @Input() repo: string | null | undefined;
-  @Input() baseBranch = 'main';
+  @Input() baseBranch = '';
 
   ownerInput = signal<string>('');
   repoInput = signal<string>('');
@@ -337,6 +338,7 @@ export class DockerfileOptimizerComponent implements OnInit, OnDestroy {
   // fois agent + gate + PR terminés. Tous les findings sont envoyés, sans
   // sélection fine (MVP — voir en-tête du fichier).
   apply(r: any): void {
+    if (!this.baseBranch.trim()) { this.applyError.set('Renseignez la branche cible de la PR avant de continuer.'); return; }
     this.applying.set(true);
     this.applyError.set('');
     this.applyResult.set(null);

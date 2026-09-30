@@ -1,3 +1,4 @@
+<div *ngIf="loadError" role="alert" class="card">{{loadError}} <button (click)="load()">Réessayer</button></div>
     <div class="page-container">
       <div class="page-header">
         <h1 class="page-title">// agents IA</h1>
@@ -6,7 +7,7 @@
 
       <div *ngIf="loading" class="loading-overlay"><div class="spinner"></div></div>
 
-      <ng-container *ngIf="!loading">
+      <ng-container *ngIf="!loading && !loadError">
 
         <!-- ─── KPIs ─── -->
         <div class="kpi-grid">

@@ -10,6 +10,8 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 export class DashboardController {
   constructor(private readonly service: DashboardService) {}
 
+  @Get('capabilities') getCapabilities() { return this.service.getCapabilities(); }
+
   @Get('global') getGlobal() { return this.service.getGlobalStats(); }
   @Get('jenkins-global') getJenkinsGlobal() { return this.service.getJenkinsGlobal(); }
   @Get('security-global') getSecurityGlobal() { return this.service.getSecurityGlobal(); }

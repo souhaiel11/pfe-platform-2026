@@ -16,11 +16,10 @@ import { FrenchDatePipe } from '../../shared/french-date.pipe';
 })
 export class IncidentsComponent implements OnInit {
   incidents: any[] = [];
+  loadError = '';
   loading = false;
   total = 0;
-  // Pas de pagination : size=50 couvre le plus gros bucket de statut réel
-  // (pending=45, vérifié en base) avec marge. Le filtre Statut fait le
-  // travail de navigation — chaque vue filtrée tient sur une seule page.
+  // Taille de chargement, jamais un compteur ou une hypothèse sur les données.
   size = 50;
 
   filters = { status: '' };
@@ -30,6 +29,7 @@ export class IncidentsComponent implements OnInit {
   ngOnInit() { this.load(); }
 
   load() {
+    this.loadError = '';
     this.loading = true;
     const params = {
       ...this.filters,
@@ -46,6 +46,7 @@ export class IncidentsComponent implements OnInit {
         this.loading     = false;
       },
       error: () => {
+        this.loadError = 'Impossible de charger les incidents.';
         this.toast.error('Erreur', 'Impossible de charger les incidents');
         this.loading = false;
       }

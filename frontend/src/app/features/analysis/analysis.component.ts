@@ -22,6 +22,7 @@ import { presentationLabel } from '../../shared/status-labels';
   styleUrls: ['./analysis.component.scss'],
 })
 export class AnalysisComponent implements OnInit {
+  loadError = '';
   loading = true;
 
   stats = {
@@ -40,6 +41,7 @@ export class AnalysisComponent implements OnInit {
   ngOnInit() { this.load(); }
 
   load() {
+    this.loadError = '';
     this.loading = true;
     this.api.getDecisions().subscribe({
       next: (r: any) => {
@@ -70,7 +72,7 @@ export class AnalysisComponent implements OnInit {
 
         this.loading = false;
       },
-      error: () => { this.loading = false; }
+      error: () => { this.loadError = 'Impossible de charger les analyses.'; this.loading = false; }
     });
   }
 

@@ -74,13 +74,6 @@ export class ApiService {
     return this.http.get<any[]>(`${this.base}/reports`, { params: p });
   }
 
-  // ── Notifications — utilise incidents récents ─────────────
-  getNotifications() {
-    return this.http.get<any[]>(`${this.base}/incidents?size=10`);
-  }
-  markNotificationRead(id: string) { return this.http.put(`${this.base}/incidents/${id}`, { read: true }); }
-  markAllRead()                    { return this.http.get(`${this.base}/incidents?size=1`); }
-
   // ── Admin - Users ────────────────────────────────────────
   getUsers()                         { return this.http.get<any[]>(`${this.base}/auth/users`); }
   createUser(data: any)              { return this.http.post<any>(`${this.base}/auth/register`, data); }
@@ -97,6 +90,7 @@ export class ApiService {
   }
 
   // ── Integrations ─────────────────────────────────────────
+  getPlatformCapabilities() { return this.http.get<any>(`${this.base}/dashboard/capabilities`); }
   getIntegrations()                              { return this.http.get<any[]>(`${this.base}/integrations`); }
   getIntegration(id: string)                     { return this.http.get<any>(`${this.base}/integrations/${id}`); }
   createIntegration(data: any)                   { return this.http.post<any>(`${this.base}/integrations`, data); }

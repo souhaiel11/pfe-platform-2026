@@ -4,7 +4,6 @@ import { CommonModule } from '@angular/common';
 import { RouterModule, Router, NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs';
 import { AuthService } from '../../core/services/auth.service';
-import { ApiService } from '../../core/services/api.service';
 import { ThemeService } from '../../core/services/theme.service';
 import { RiskStateService } from '../../core/services/risk-state.service';
 import { ChatWidgetComponent } from '../chat-widget/chat-widget.component';
@@ -18,8 +17,6 @@ import { ChatWidgetComponent } from '../chat-widget/chat-widget.component';
 })
 export class LayoutComponent implements OnInit {
   mobileNavOpen = false;
-  openCount = 0;
-  notifCount = 0;
   pageTitle = "Vue d'ensemble";
 
   private pageTitles: Record<string, string> = {
@@ -33,7 +30,6 @@ export class LayoutComponent implements OnInit {
 
   constructor(
     private auth: AuthService,
-    private api: ApiService,
     private router: Router,
     public themeService: ThemeService,
     public riskState: RiskStateService,
@@ -50,7 +46,6 @@ export class LayoutComponent implements OnInit {
   }
 
   ngOnInit() {
-    this.loadCounts();
     this.router.events
       .pipe(filter(e => e instanceof NavigationEnd))
       .subscribe((e: any) => {
@@ -61,22 +56,13 @@ export class LayoutComponent implements OnInit {
     this.pageTitle = this.pageTitles[path] || 'DevSecOps IA';
   }
 
-  loadCounts() {
-    this.api.getIncidents({ status: 'OPEN', size: 1 }).subscribe((r: any) => {
-      this.openCount = r.totalElements || r.length || 0;
-    });
-    this.api.getNotifications().subscribe((n: any[]) => {
-      this.notifCount = n.filter((x: any) => !x.read).length;
-    });
-  }
-
   logout() { this.auth.logout(); }
   closeMobileNav() { this.mobileNavOpen = false; }
   get currentUser() { return this.auth.currentUser; }
   get isAdmin() { return this.auth.isAdmin; }
   get userInitials() {
     const u = this.auth.currentUser;
-    if (!u) return 'SA';
+    if (!u) return '—';
     return (u.username || u.email || 'U').substring(0, 2).toUpperCase();
   }
 }

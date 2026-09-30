@@ -16,20 +16,23 @@ import { ProjectEventsService } from '../../core/services/project-events.service
         <div><h2>Sécurité — Trivy & OWASP</h2><div class="page-sub">Vue plateforme — dernière analyse de chaque projet</div></div>
       </div>
 
+      <p *ngIf="loading" role="status">Chargement des résultats…</p>
+      <div *ngIf="loadError" role="alert">{{loadError}} <button (click)="load()">Réessayer</button></div>
       <div class="kpi-grid" *ngIf="summary">
         <div class="kpi r"><div class="kpi-l">CRITIQUES (plateforme)</div><div class="kpi-v">{{summary.totalCriticalCves}}</div></div>
         <div class="kpi o"><div class="kpi-l">ÉLEVÉES (plateforme)</div><div class="kpi-v">{{summary.totalHighCves}}</div></div>
         <div class="kpi o"><div class="kpi-l">MOYENNES</div><div class="kpi-v">{{summary.totalMediumCves}}</div></div>
-        <div class="kpi o"><div class="kpi-l">ZAP HIGH</div><div class="kpi-v">{{summary.zapHighAlerts}}</div></div>
-        <div class="kpi o"><div class="kpi-l">ZAP MEDIUM</div><div class="kpi-v">{{summary.zapMediumAlerts}}</div></div>
+        <div class="kpi o"><div class="kpi-l">ZAP — ÉLEVÉES</div><div class="kpi-v">{{summary.zapHighAlerts}}</div></div>
+        <div class="kpi o"><div class="kpi-l">ZAP — MOYENNES</div><div class="kpi-v">{{summary.zapMediumAlerts}}</div></div>
         <div class="kpi g"><div class="kpi-l">SCORE MOYEN</div><div class="kpi-v">{{summary.avgSecurityScore ?? '—'}}</div></div>
       </div>
 
       <div class="card">
         <div class="card-title"><i class="ti ti-list-details"></i> Par projet — trié par CVE critiques décroissant</div>
 
-        <div class="empty" *ngIf="!loading && !byProject.length">Aucun projet à afficher.</div>
+        <div class="empty" *ngIf="!loading && !loadError && !byProject.length">Aucun projet à afficher.</div>
 
+        <ng-template #missingScanner>Résultat non disponible</ng-template>
         <table class="proj-table" *ngIf="byProject.length">
           <thead>
             <tr>
@@ -48,9 +51,9 @@ import { ProjectEventsService } from '../../core/services/project-events.service
               <td><span class="score-badge" [style.color]="p.incomplete ? 'var(--text-muted)' : getScoreColor(p.securityScore)" [title]="p.incomplete ? ('Scanner(s) requis sans résultat : ' + (p.missingScanners || []).join(', ')) : ''">{{p.incomplete ? 'non vérifié' : p.securityScore}}</span></td>
               <td><span class="cnt" [class.alert]="p.criticalCves>0">{{p.criticalCves}}</span></td>
               <td><span class="cnt" [class.warn]="p.highCves>0">{{p.highCves}}</span></td>
-              <td class="sub">{{p.trivy.critical}}C / {{p.trivy.high}}H</td>
-              <td class="sub">{{p.owasp.critical}}C / {{p.owasp.high}}H</td>
-              <td class="sub">{{p.zap.high}}H / {{p.zap.medium}}M</td>
+              <td class="sub"><ng-container *ngIf="!(p.missingScanners || []).includes('trivy'); else missingScanner">{{p.trivy.critical}}C / {{p.trivy.high}}H</ng-container></td>
+              <td class="sub"><ng-container *ngIf="!(p.missingScanners || []).includes('owasp'); else missingScanner">{{p.owasp.critical}}C / {{p.owasp.high}}H</ng-container></td>
+              <td class="sub"><ng-container *ngIf="!(p.missingScanners || []).includes('zap'); else missingScanner">{{p.zap.high}}H / {{p.zap.medium}}M</ng-container></td>
             </tr>
           </tbody>
         </table>
@@ -95,6 +98,7 @@ export class SecurityComponent implements OnInit, OnDestroy {
   summary: any = null;
   byProject: any[] = [];
   projectsWithoutData: string[] = [];
+  loadError = '';
   loading = true;
   private projectEventsSub?: Subscription;
 
@@ -115,6 +119,7 @@ export class SecurityComponent implements OnInit, OnDestroy {
   }
 
   load() {
+    this.loadError = '';
     this.loading = true;
     this.api.getSecurityGlobal().subscribe({
       next: (data: any) => {
@@ -124,6 +129,7 @@ export class SecurityComponent implements OnInit, OnDestroy {
         this.loading = false;
       },
       error: () => {
+        this.loadError = 'Impossible de charger les résultats de sécurité.';
         this.summary = null;
         this.byProject = [];
         this.projectsWithoutData = [];

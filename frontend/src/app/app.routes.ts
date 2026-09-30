@@ -71,11 +71,6 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/settings/settings.component').then(m => m.SettingsComponent)
       },
-      // ── Nouvelles pages ──────────────────────────────────
-      // jenkins/sonarqube/kubernetes/dora : composants conservés sur disque
-      // (features/tools, features/analytics) mais retirés du routing — pages
-      // mockées, aucune ne correspond à une fonctionnalité déposée. Voir
-      // audit frontend (lot C).
       {
         path: 'security',
         loadComponent: () =>

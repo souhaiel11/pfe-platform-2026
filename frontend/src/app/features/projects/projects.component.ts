@@ -17,6 +17,7 @@ import { FrenchDatePipe } from '../../shared/french-date.pipe';
 })
 export class ProjectsComponent implements OnInit {
   projects: any[] = [];
+  loadError = '';
   loading   = false;
 
   constructor(
@@ -37,6 +38,7 @@ export class ProjectsComponent implements OnInit {
   // jamais un repli silencieux sur Project.securityScore (désynchronisable
   // sans alerte, comme on l'a constaté). Le template affiche un état neutre.
   load() {
+    this.loadError = '';
     this.loading = true;
     forkJoin({
       projects: this.api.getProjects(),
@@ -54,7 +56,7 @@ export class ProjectsComponent implements OnInit {
         }));
         this.loading = false;
       },
-      error: () => { this.toast.error('Erreur', 'Impossible de charger les projets'); this.loading = false; }
+      error: () => { this.loadError = 'Impossible de charger les projets.'; this.toast.error('Erreur', 'Impossible de charger les projets'); this.loading = false; }
     });
   }
 

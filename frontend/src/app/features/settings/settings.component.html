@@ -8,8 +8,12 @@
 
         <!-- ═══ INTÉGRATIONS ═══ -->
         <div class="section-block">
-          <div class="section-label">Intégrations Infrastructure</div>
+          <div class="section-label">Diagnostics des intégrations enregistrées</div>
 
+          <p class="field-hint">Ces paramètres alimentent les sondes de connexion. Leur enregistrement n’active aucun scanner ni déploiement.</p>
+          <p *ngIf="integrationsState === 'LOADING'" role="status">Chargement des intégrations…</p>
+          <div *ngIf="integrationsState === 'ERROR'" role="alert">Impossible de récupérer les intégrations. <button class="btn-test" (click)="loadIntegrations()">Réessayer</button></div>
+          <p *ngIf="integrationsState === 'EMPTY'">Aucune intégration de diagnostic enregistrée.</p>
           <div class="tool-list">
             <div class="tool-item" *ngFor="let tool of tools">
 
@@ -27,7 +31,7 @@
                      [class.error]="tool.status === 'error'"
                      [class.disconnected]="tool.status === 'disconnected'">
                   <span class="conn-dot">{{tool.status === 'connected' ? '●' : tool.status === 'error' ? '✕' : '○'}}</span>
-                  <span>{{tool.status === 'connected' ? 'Connecté' : tool.status === 'error' ? 'Erreur' : 'Non configuré'}}</span>
+                  <span>{{integrationStatusLabel(tool)}}</span>
                 </div>
                 <div class="chevron" [class.open]="tool.expanded">▸</div>
               </div>
@@ -38,14 +42,14 @@
                 <!-- URL -->
                 <div class="field-row">
                   <label class="field-label">URL</label>
-                  <input class="field-input" type="text" [(ngModel)]="tool.url"
+                  <input class="field-input" type="text" [disabled]="!canEdit || !tool.editable" [(ngModel)]="tool.url"
                          [placeholder]="getUrlPlaceholder(tool.toolType)" />
                 </div>
 
                 <!-- Jeton Kubernetes -->
                 <div class="field-row" *ngIf="tool.authType === 'token'">
                   <label class="field-label">{{tool.tokenLabel}}</label>
-                  <input class="field-input" type="password" [(ngModel)]="tool.token"
+                  <input class="field-input" type="password" [disabled]="!canEdit || !tool.editable" [(ngModel)]="tool.token"
                          [placeholder]="getSecretPlaceholder(tool.hasToken, '••••••••••••••••')" />
                 </div>
 
@@ -53,19 +57,19 @@
                 <ng-container *ngIf="tool.authType === 'basic'">
                   <div class="field-row">
                     <label class="field-label">Utilisateur</label>
-                    <input class="field-input" type="text" [(ngModel)]="tool.username"
-                           placeholder="admin" />
+                    <input class="field-input" type="text" [disabled]="!canEdit || !tool.editable" [(ngModel)]="tool.username"
+                           placeholder="Utilisateur du service" />
                   </div>
                   <div class="field-row">
                     <label class="field-label">Mot de passe</label>
-                    <input class="field-input" type="password" [(ngModel)]="tool.password"
+                    <input class="field-input" type="password" [disabled]="!canEdit || !tool.editable" [(ngModel)]="tool.password"
                            [placeholder]="getSecretPlaceholder(tool.hasPassword, '••••••••')" />
                   </div>
                 </ng-container>
 
                 <!-- Metadata display -->
-                <div class="meta-block" *ngIf="tool.metadata && tool.status !== 'disconnected'">
-                  <div class="meta-title">Réponse serveur</div>
+                <details class="meta-block" *ngIf="tool.metadata && tool.lastChecked">
+                  <summary class="meta-title">Détails techniques de la dernière vérification</summary>
                   <div class="meta-grid">
                     <ng-container *ngFor="let entry of getMetaEntries(tool.metadata)">
                       <span class="meta-key">{{entry.key}}</span>
@@ -75,19 +79,19 @@
                   <div class="meta-checked" *ngIf="tool.lastChecked">
                     Vérifié le {{tool.lastChecked | frenchDate}}
                   </div>
-                </div>
+                </details>
 
                 <!-- Actions -->
                 <div class="tool-actions">
                   <button class="btn-test" (click)="testTool(tool)"
-                          [disabled]="!canEdit || tool.testing || tool.saving || !tool.url">
+                          [disabled]="!canEdit || !tool.editable || tool.testing || tool.saving || !tool.url">
                     <span *ngIf="!tool.testing">⚡ Tester la connexion</span>
                     <span *ngIf="tool.testing" class="spin">↻</span>
                     <span *ngIf="tool.testing"> Test en cours…</span>
                   </button>
                   <button class="btn-save" [style.border-color]="tool.color" [style.color]="tool.color"
                           (click)="saveTool(tool)"
-                          [disabled]="!canEdit || tool.saving || tool.testing || !tool.url">
+                          [disabled]="!canEdit || !tool.editable || tool.saving || tool.testing || !tool.url">
                     <span *ngIf="!tool.saving">Enregistrer</span>
                     <span *ngIf="tool.saving" class="spin">↻</span>
                     <span *ngIf="tool.saving"> Sauvegarde…</span>
@@ -99,41 +103,38 @@
           </div>
         </div>
 
-        <!-- ═══ CONFIG IA ═══ -->
         <div class="section-block">
-          <div class="section-label">Configuration IA</div>
-          <div class="card">
-            <div class="field-row">
-              <label class="field-label">Modèle Ollama</label>
-              <input class="field-input mono accent-blue" value="llama3.2:3b" readonly />
+          <div class="section-label">Capacités observées et configuration</div>
+          <p *ngIf="capabilitiesState === 'LOADING'" role="status">Chargement des capacités…</p>
+          <div *ngIf="capabilitiesState === 'ERROR'" role="alert">Impossible de récupérer les capacités de la plateforme. <button class="btn-test" (click)="loadCapabilities()">Réessayer</button></div>
+          <ng-container *ngIf="capabilitiesState === 'LOADED' && capabilities">
+            <div class="card">
+              <h2 class="field-label">Scanners déclarés dans les dernières analyses</h2>
+              <p class="field-hint">Les résultats proviennent du dernier rapport de chaque projet. Ils ne prouvent pas la disponibilité actuelle des services.</p>
+              <p *ngIf="!capabilities.security?.length">Aucune étape de scanner rapportée. La disponibilité des scanners n’est pas déterminée.</p>
+              <div class="info-row" *ngFor="let scanner of capabilities.security">
+                <span class="info-key">{{pipelineStageLabel(scanner.id)}}</span>
+                <span class="info-val">{{scannerEvidenceLabel(scanner)}} · {{scanner.projectsCompleted}} / {{scanner.projectsReported}} projet(s)<span *ngIf="scanner.lastObservedAt"> · {{scanner.lastObservedAt | frenchDate}}</span></span>
+              </div>
             </div>
-            <div class="field-row">
-              <label class="field-label">URL Webhook n8n</label>
-              <input class="field-input mono" [value]="n8nUrl" readonly />
+            <div class="card governance-card">
+              <h2 class="field-label">Correction et compatibilité V1.8</h2>
+              <div class="info-row"><span class="info-key">Mode de correction</span><span class="info-val">{{enforcementModeLabel(capabilities.remediation?.enforcementMode)}}</span></div>
+              <p class="field-hint">Configuration backend en lecture seule. La possibilité de corriger une vulnérabilité reste soumise à ses preuves et aux contrôles métier.</p>
+              <p class="field-label">Types d’édition pris en charge par les mécanismes de correction</p>
+              <ul><li *ngFor="let type of capabilities.remediation?.supportedEditTypes">{{editTypeLabel(type)}}</li></ul>
+              <p *ngIf="!capabilities.remediation?.supportedEditTypes?.length">Aucun type d’édition disponible.</p>
             </div>
-          </div>
+            <div class="card governance-card">
+              <h2 class="field-label">Configuration CI et déploiement</h2>
+              <div class="info-row"><span class="info-key">Jenkins</span><span class="info-val">{{capabilities.ci?.configuredProjects}} projet(s) configuré(s)</span></div>
+              <div class="info-row"><span class="info-key">Azure</span><span class="info-val">{{capabilities.deployment?.configuredProjects}} projet(s) configuré(s)</span></div>
+              <div class="info-row"><span class="info-key">Agent Azure</span><span class="info-val">{{capabilities.deployment?.agentConfigured ? 'Configuration présente' : 'Non configuré'}}</span></div>
+              <p class="field-hint">Configuration présente ne signifie pas service disponible. Les vérifications et contrôles propres au projet restent nécessaires.</p>
 
-          <!-- Pas de seuil de confiance à régler : la gouvernance est
-               déterministe, pas probabiliste. Voir Prepare - Judge Body
-               (WF1) — décision calculée AVANT l'appel au Judge IA. -->
-          <div class="card governance-card">
-            <div class="field-label">Gouvernance des décisions</div>
-            <p class="field-hint governance-text">
-              La décision de déploiement (blocage, correction proposée ou notification) est déterminée par des règles appliquées aux problèmes réels : une CVE critique déclenche un blocage systématique ; les problèmes SonarQube bloquants, les vulnérabilités critiques et les anomalies déclenchent une proposition de correction. L’agent de gouvernance analyse le contexte et rédige la correction, mais ne prend jamais seul la décision — son score de confiance reste informatif. Cette séparation garantit des décisions reproductibles et auditables.
-            </p>
-          </div>
+              <p *ngIf="capabilities.generatedAt" class="field-hint">Actualisé le {{capabilities.generatedAt | frenchDate}} <button class="btn-test" (click)="loadCapabilities()">Actualiser</button></p>
+            </div>
+          </ng-container>
         </div>
-
-        <!-- ═══ INFOS PLATEFORME ═══ -->
-        <div class="section-block">
-          <div class="section-label">Informations plateforme</div>
-          <div class="card">
-            <div class="info-row" *ngFor="let info of platformInfo">
-              <span class="info-key">{{info.label}}</span>
-              <span class="info-val">{{info.value}}</span>
-            </div>
-          </div>
-        </div>
-
       </div>
     </div>

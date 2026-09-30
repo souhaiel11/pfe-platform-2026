@@ -1,3 +1,4 @@
+import { platformCapabilities } from './platform-capabilities';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -21,6 +22,17 @@ export class DashboardService {
     @InjectRepository(Report)
     private readonly reportRepo: Repository<Report>,
   ) {}
+
+  // Read-only projection of existing configuration, reports and V1.8 sources.
+  async getCapabilities() {
+    const projects = await this.projectsService.findAll();
+    const reports = await this.reportRepo.query(
+      `SELECT DISTINCT ON ("projectId") "projectId", "rawData", "createdAt"
+       FROM reports WHERE "archived" = false
+       ORDER BY "projectId", "createdAt" DESC`,
+    );
+    return platformCapabilities(projects, reports);
+  }
 
   async getGlobalStats() {
     const projects = await this.projectsService.findAll();

@@ -17,6 +17,7 @@ import { presentationLabel } from '../../shared/status-labels';
 })
 export class DashboardComponent implements OnInit, OnDestroy {
 
+  dataErrors: Record<string,string> = {};
   notifOpen = false;
 
   notifications: Array<{ level: string; title: string; meta: string }> = [];
@@ -72,16 +73,18 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   /* ── Data loading ── */
   loadSecuritySummary() {
+    delete this.dataErrors['security'];
     this.securitySummaryLoading = true;
     this.api.getSecurityGlobal().subscribe({
       next: (data: any) => { this.securitySummary = data.summary; this.securitySummaryLoading = false; },
-      error: () => { this.securitySummary = null; this.securitySummaryLoading = false; },
+      error: () => { this.dataErrors['security'] = 'Impossible de charger les résultats de sécurité.'; this.securitySummary = null; this.securitySummaryLoading = false; },
     });
   }
 
   goToSecurity() { this.router.navigate(['/security']); }
 
   loadBuildReliability() {
+    delete this.dataErrors['jenkins'];
     this.api.getJenkinsGlobal().subscribe({
       next: (data: any) => {
         const s = data?.summary;
@@ -94,11 +97,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
           return { ...p, buildStatus: j?.lastBuild?.result || null, buildNumber: j?.lastBuild?.number || null };
         });
       },
-      error: () => { this.buildReliability = null; this.jenkinsByProject.clear(); },
+      error: () => { this.dataErrors['jenkins'] = 'Impossible de charger les données Jenkins.'; this.buildReliability = null; this.jenkinsByProject.clear(); },
     });
   }
 
   loadIncidentFeeds() {
+    delete this.dataErrors['incidents'];
     this.activitiesLoading = true;
     this.api.getIncidents({ size: 20 }).subscribe({
       next: (data: any[]) => {
@@ -119,7 +123,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
           }));
         this.activitiesLoading = false;
       },
-      error: () => { this.activities = []; this.notifications = []; this.activitiesLoading = false; },
+      error: () => { this.dataErrors['incidents'] = 'Impossible de charger les incidents récents.'; this.activities = []; this.notifications = []; this.activitiesLoading = false; },
     });
   }
 
@@ -130,6 +134,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   loadProjects() {
+    delete this.dataErrors['projects'];
     this.projectsLoading = true;
     forkJoin({
       projects: this.api.getProjects(),
@@ -144,7 +149,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         this.projectsLoading = false;
         setTimeout(() => this.buildRiskRings(), 50);
       },
-      error: () => { this.projects = []; this.projectsLoading = false; },
+      error: () => { this.dataErrors['projects'] = 'Impossible de charger les projets.'; this.projects = []; this.projectsLoading = false; },
     });
   }
 

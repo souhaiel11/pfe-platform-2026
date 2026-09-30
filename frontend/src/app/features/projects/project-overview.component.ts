@@ -61,7 +61,7 @@ interface Stage {
       <div class="tools">
         <button class="tool" *ngFor="let t of tools()"
                 [attr.data-tone]="t.tone" (click)="goToTab.emit(t.tab)">
-          <span class="tool-count">{{ t.count }}</span>
+          <span class="tool-count">{{ t.count ?? '—' }}</span>
           <span class="tool-name">{{ t.name }}</span>
           <span class="tool-detail">{{ t.detail }}</span>
         </button>
@@ -458,21 +458,28 @@ export class ProjectOverviewComponent {
       return tone(fail, warn);
     };
     return [
-      { name: 'SonarQube', tab: 'sonar', count: d?.sonar?.issues_count ?? 0,
+      { key: 'sonar', name: 'SonarQube', tab: 'sonar', count: d?.sonar?.issues_count ?? 0,
         detail: `${s.BLOCKER} bloquant · ${s.CRITICAL} critique`, tone: governedTone('sonar', s.BLOCKER, s.CRITICAL) },
-      { name: 'CVE conteneur', tab: 'security:trivy', count: d?.trivy?.cves_count ?? 0,
+      { key: 'trivy', name: 'CVE conteneur', tab: 'security:trivy', count: d?.trivy?.cves_count ?? 0,
         detail: `${d?.trivy?.critical ?? 0} critique · ${d?.trivy?.high ?? 0} élevée`,
         tone: governedTone('trivy', d?.trivy?.critical ?? 0, d?.trivy?.high ?? 0) },
-      { name: 'CVE dépendances', tab: 'security:owasp', count: d?.owasp?.cves_count ?? 0,
+      { key: 'owasp', name: 'CVE dépendances', tab: 'security:owasp', count: d?.owasp?.cves_count ?? 0,
         detail: `${d?.owasp?.critical ?? 0} critique · ${d?.owasp?.high ?? 0} élevée`,
         tone: governedTone('owasp', d?.owasp?.critical ?? 0, d?.owasp?.high ?? 0) },
-      { name: 'Alertes DAST', tab: 'security:zap', count: d?.zap?.alerts_count ?? 0,
+      { key: 'zap', name: 'Alertes DAST', tab: 'security:zap', count: d?.zap?.alerts_count ?? 0,
         detail: `${d?.zap?.alerts_high ?? 0} élevée · ${d?.zap?.alerts_medium ?? 0} moyenne`,
         tone: governedTone('zap', d?.zap?.alerts_high ?? 0, d?.zap?.alerts_medium ?? 0) },
-      { name: 'Tests', tab: 'jenkins', count: d?.tests?.total ?? 0,
+      { key: 'tests', name: 'Tests', tab: 'jenkins', count: d?.tests?.total ?? 0,
         detail: `${d?.tests?.failures ?? 0} échec · ${d?.tests?.coverage ?? 0}% couverture`,
         tone: governedTone('tests', d?.tests?.failures ?? 0, 0) },
-    ];
+    ].filter(tool => this.presentationStages().some(stage => stage.stage === tool.key))
+      .map(tool => {
+        const block = d?.[tool.key];
+        const available = tool.key === 'tests'
+          ? this.presentationStages().some(stage => stage.stage === 'tests' && ['PASSED','FAILED'].includes(stage.status))
+          : block?.status === 'COMPLETED' || block?.resultAvailable === true;
+        return available ? tool : {...tool, count:null, detail:'Résultat non disponible', tone:'skip'};
+      });
   });
 
   severities = computed(() => {

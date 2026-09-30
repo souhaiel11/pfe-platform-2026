@@ -61,6 +61,7 @@ export class IncidentDetailComponent implements OnInit, OnDestroy {
   refreshValidationTargetBusy = false;
   approvalError: string | null = null;
   decision:    any  = null;   // legacy
+  loadError = '';
   loading      = true;
   activeTab    = 'analysis';
 
@@ -499,6 +500,7 @@ export class IncidentDetailComponent implements OnInit, OnDestroy {
   }
 
   load() {
+    this.loadError = '';
     this.loading = true;
     this.api.getIncident(this.id).subscribe({
       next: (inc: any) => {
@@ -544,7 +546,7 @@ export class IncidentDetailComponent implements OnInit, OnDestroy {
         // Si validé, ouvrir directement l'onglet validation — sauf si un onglet a été demandé explicitement via l'URL
         if (!this.requestedTab && this.validation) this.activeTab = 'validation';
       },
-      error: () => { this.toast.error('Erreur', 'Incident introuvable'); this.loading = false; }
+      error: () => { this.loadError = 'Impossible de charger cet incident. Vérifiez son existence puis réessayez.'; this.toast.error('Erreur', this.loadError); this.loading = false; }
     });
   }
 

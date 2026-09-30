@@ -52,7 +52,7 @@
     <div class="section" *ngIf="activeSection === 'general'">
       <div class="field" [class.err]="isInvalid('name')">
         <label>Nom du projet <span class="req">*</span></label>
-        <input formControlName="name" placeholder="ex: pfe-devsecops-2026">
+        <input formControlName="name" placeholder="Nom du projet">
         <span class="errmsg" *ngIf="isInvalid('name')">Nom requis (min 3 caractères)</span>
       </div>
       <div class="field">
@@ -73,34 +73,25 @@
     <div class="section" *ngIf="activeSection === 'cicd'">
       <div class="field">
         <label>Outil CI/CD <span class="req">*</span></label>
-        <div class="tool-grid">
-          <label class="tool-card" *ngFor="let t of [
-            {value:'jenkins', label:'Jenkins',          icon:'🔧'},
-            {value:'gitlab',  label:'GitLab CI',        icon:'🦊'},
-            {value:'github',  label:'GitHub Actions',   icon:'🐙'},
-            {value:'azure',   label:'Azure DevOps',     icon:'☁️'}
-          ]">
-            <input type="radio" formControlName="cicdTool" [value]="t.value">
-            <span class="tool-name">{{ t.icon }} {{ t.label }}</span>
-          </label>
-        </div>
+        <p>Pipeline implémenté : Jenkins</p>
+        <p class="hint" *ngIf="form.get('cicdTool')?.value !== 'jenkins'">L’outil enregistré pour ce projet ne dispose pas d’une intégration de pipeline implémentée.</p>
       </div>
 
       <div class="divider">🔧 Jenkins</div>
       <div class="field-row">
         <div class="field">
           <label>Jenkins URL interne <span class="hint">(appels serveur, jamais un lien navigateur)</span></label>
-          <input formControlName="jenkinsInternalUrl" placeholder="http://jenkins:8080">
+          <input formControlName="jenkinsInternalUrl" placeholder="URL interne réelle de Jenkins">
         </div>
         <div class="field">
           <label>Jenkins URL publique <span class="hint">(liens ouverts dans le navigateur)</span></label>
-          <input formControlName="jenkinsPublicUrl" placeholder="http://localhost:8082">
+          <input formControlName="jenkinsPublicUrl" placeholder="URL publique réelle de Jenkins">
         </div>
       </div>
       <div class="field-row">
         <div class="field">
           <label>Nom du job</label>
-          <input formControlName="jenkinsJobName" placeholder="pfe-devsecops-pipeline">
+          <input formControlName="jenkinsJobName" placeholder="Nom réel du job Jenkins">
           <div class="field-error" *ngIf="isInvalid('jenkinsJobName')">Requis. Lettres, chiffres, points, tirets et underscores uniquement.</div>
         </div>
       </div>
@@ -147,11 +138,11 @@
       <div class="field-row">
         <div class="field">
           <label>SonarQube URL</label>
-          <input formControlName="sonarqubeUrl" placeholder="https://sonarqube.example.internal">
+          <input formControlName="sonarqubeUrl" placeholder="URL réelle de SonarQube">
         </div>
         <div class="field">
           <label>Clé du projet</label>
-          <input formControlName="sonarqubeKey" placeholder="pfe-devsecops-2026">
+          <input formControlName="sonarqubeKey" placeholder="Clé réelle du projet SonarQube">
         </div>
       </div>
       <p class="hint">L'identifiant SonarQube est géré par la plateforme.</p>
@@ -160,43 +151,6 @@
       </div>
     </div>
 
-    <!-- ── NOTIFICATIONS ──────────────────────────────────── -->
-    <div class="section" *ngIf="activeSection === 'notifications'">
-
-      <div class="notif-row">
-        <div class="notif-header">
-          <span>📧 Courriel</span>
-          <label class="toggle">
-            <input type="checkbox" formControlName="emailEnabled">
-            <span class="slider"></span>
-          </label>
-        </div>
-        <div class="notif-body" *ngIf="form.get('emailEnabled')?.value">
-          <div class="field">
-            <label>Destinataire</label>
-            <input formControlName="emailRecipient" type="email" placeholder="souhaiel.amri@esprit.tn">
-          </div>
-        </div>
-      </div>
-
-      <div class="notif-row">
-        <div class="notif-header">
-          <span>💬 Slack</span>
-          <label class="toggle">
-            <input type="checkbox" formControlName="slackEnabled">
-            <span class="slider"></span>
-          </label>
-        </div>
-        <div class="notif-body" *ngIf="form.get('slackEnabled')?.value">
-          <div class="field">
-              <label>Canal</label>
-              <input formControlName="slackChannel" placeholder="#souhaiel">
-          </div>
-          <p class="hint">L'intégration Slack est administrée au niveau de la plateforme.</p>
-        </div>
-      </div>
-
-    </div>
   </form>
 
   <!-- Footer -->
@@ -214,9 +168,9 @@
 
 <style>
 * { box-sizing: border-box; }
-.pf-container { max-width: 800px; margin: 0 auto; padding: 24px; background: #0d1117; color: #e6edf3; font-family: 'Inter', sans-serif; min-height: 100vh; }
+.pf-container { color:#e6edf3; max-width: 800px; margin: 0 auto; padding: 24px; background: #0d1117; color: #e6edf3; font-family: 'Inter', sans-serif; min-height: 100vh; }
 .pf-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
-.pf-header h1 { flex: 1; margin: 0; font-size: 1.4rem; }
+.pf-header h1 { color:inherit; flex: 1; margin: 0; font-size: 1.4rem; }
 .pf-actions { display: flex; gap: 8px; }
 .btn-back     { background: transparent; border: 1px solid #30363d; color: #8b949e; padding: 8px 16px; border-radius: 6px; cursor: pointer; white-space: nowrap; }
 .btn-save     { background: #238636; border: none; color: #fff; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: 600; }
@@ -263,4 +217,13 @@
 .toggle input:checked + .slider:before { transform: translateX(18px); }
 .valid-inline { margin-top: 8px; font-size: 0.85rem; color: #8b949e; }
 .pf-footer { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; padding-top: 20px; border-top: 1px solid #21262d; }
+@media (max-width:600px) {
+  .pf-container { padding:16px; }
+  .pf-header { flex-wrap:wrap; }
+  .pf-header h1 { order:-1; flex:1 0 100%; font-size:1.25rem; margin:0; }
+  .pf-actions { flex:1 1 100%; flex-wrap:wrap; }
+  .pf-actions button { flex:1 1 120px; }
+  .field-row { flex-direction:column; }
+  .pf-footer { flex-wrap:wrap; }
+}
 </style>

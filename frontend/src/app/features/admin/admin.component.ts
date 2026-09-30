@@ -16,6 +16,7 @@ import { PresentationLabelPipe } from '../../shared/presentation-label.pipe';
 })
 export class AdminComponent implements OnInit {
   users: any[] = [];
+  loadError = '';
   loading   = false;
   showModal = false;
   // Valeurs alignées sur l'enum backend réel (user.entity.ts::UserRole,
@@ -27,10 +28,11 @@ export class AdminComponent implements OnInit {
   ngOnInit() { this.load(); }
 
   load() {
+    this.loadError = '';
     this.loading = true;
     this.api.getUsers().subscribe({
       next: u => { this.users = u; this.loading = false; },
-      error: () => { this.loading = false; }
+      error: () => { this.loadError = 'Impossible de charger les utilisateurs.'; this.loading = false; }
     });
   }
 

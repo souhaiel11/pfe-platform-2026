@@ -4,18 +4,9 @@
         <div><h2>Indicateurs de risque</h2><div class="page-sub">Score par règles explicites — dérivé des vraies données (CVE, builds, incidents, SonarQube)</div></div>
       </div>
 
-      <div class="card">
-        <div class="card-title"><i class="ti ti-list-check"></i> Barème appliqué</div>
-        <div class="rules-legend">
-          <span class="rule-chip">CVE critiques : +2/CVE (max 40)</span>
-          <span class="rule-chip">Dernier build en échec : +25</span>
-          <span class="rule-chip">Incidents ouverts : +5/incident (max 15)</span>
-          <span class="rule-chip">Contrôle qualité en échec : +10</span>
-          <span class="rule-chip">Couverture &lt; 50% : +10</span>
-        </div>
-      </div>
-
-      <div class="empty" *ngIf="!loading && !projects.length">Aucun projet à afficher.</div>
+      <p *ngIf="loading" role="status">Chargement des indicateurs…</p>
+      <div *ngIf="loadError" role="alert">{{loadError}} <button (click)="load()">Réessayer</button></div>
+      <div class="empty" *ngIf="!loading && !loadError && !projects.length">Aucun projet à afficher.</div>
 
       <div class="risk-card" *ngFor="let p of projects">
         <div class="risk-head">

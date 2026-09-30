@@ -50,11 +50,12 @@ import { PresentationLabelPipe } from '../../shared/presentation-label.pipe';
       <div *ngIf="mode() === 'git'">
         <p class="jo-sub">La plateforme récupère le Jenkinsfile directement depuis le dépôt GitHub.</p>
         <div class="jo-git-fields">
-          <input class="jo-repo-in" placeholder="propriétaire (ex. : souhaiel11)"
+          <label>Branche cible de la PR <input class="jo-repo-in" placeholder="Branche cible" [value]="baseBranch" (input)="baseBranch = $any($event.target).value" /></label>
+          <input class="jo-repo-in" placeholder="Propriétaire du dépôt"
                  [value]="ownerInput()" (input)="ownerInput.set($any($event.target).value)" />
           <input class="jo-repo-in" placeholder="dépôt"
                  [value]="repoInput()" (input)="repoInput.set($any($event.target).value)" />
-          <input class="jo-repo-in small" placeholder="branche (main)"
+          <input class="jo-repo-in small" placeholder="Branche à analyser"
                  [value]="refInput()" (input)="refInput.set($any($event.target).value)" />
           <input class="jo-repo-in small" placeholder="chemin (Jenkinsfile)"
                  [value]="pathInput()" (input)="pathInput.set($any($event.target).value)" />
@@ -163,7 +164,8 @@ import { PresentationLabelPipe } from '../../shared/presentation-label.pipe';
               rien n'est poussé sur <code class="mono">{{ baseBranch }}</code> directement. Vous relisez et fusionnez depuis GitHub.
             </p>
             <div class="jo-repo-fields" *ngIf="!owner || !repo">
-              <input class="jo-repo-in" placeholder="propriétaire (ex. : souhaiel11)"
+              <label>Branche cible de la PR <input class="jo-repo-in" placeholder="Branche cible" [value]="baseBranch" (input)="baseBranch = $any($event.target).value" /></label>
+          <input class="jo-repo-in" placeholder="Propriétaire du dépôt"
                      [value]="ownerInput()" (input)="ownerInput.set($any($event.target).value)" />
               <input class="jo-repo-in" placeholder="dépôt"
                      [value]="repoInput()" (input)="repoInput.set($any($event.target).value)" />
@@ -396,7 +398,7 @@ export class JenkinsfileOptimizerComponent implements OnInit, OnDestroy {
   // Renseignez owner/repo depuis le parent si connus (sinon champs de saisie affichés)
   @Input() owner: string | null | undefined;
   @Input() repo: string | null | undefined;
-  @Input() baseBranch = 'main';
+  @Input() baseBranch = '';
 
   source = signal<string>('');
   loading = signal<boolean>(false);
@@ -464,7 +466,7 @@ export class JenkinsfileOptimizerComponent implements OnInit, OnDestroy {
     }
     if (o) this.ownerInput.set(o);
     if (r) this.repoInput.set(r);
-    this.refInput.set('main');
+    this.refInput.set(this.baseBranch);
     this.pathInput.set('Jenkinsfile');
 
     this.loadLatestAnalysis();
@@ -533,16 +535,17 @@ export class JenkinsfileOptimizerComponent implements OnInit, OnDestroy {
     this.selectedIssueIds.set(next);
   }
 
-  canFetch(): boolean { return !!this.ownerInput().trim() && !!this.repoInput().trim(); }
+  canFetch(): boolean { return !!this.ownerInput().trim() && !!this.repoInput().trim() && !!this.refInput().trim(); }
 
   fetchFromGit(): void {
+    if (!this.canFetch()) return;
     this.fetching.set(true);
     this.fetchError.set('');
     this.fetched.set(false);
     this.http.post<any>('/api/jenkins/fetch', {
       owner: this.ownerInput().trim(),
       repo: this.repoInput().trim(),
-      ref: this.refInput().trim() || 'main',
+      ref: this.refInput().trim(),
       filePath: this.pathInput().trim() || 'Jenkinsfile',
     }).subscribe({
       next: (r) => {
@@ -572,6 +575,7 @@ export class JenkinsfileOptimizerComponent implements OnInit, OnDestroy {
   // Un aller-retour synchrone n'est plus tenable : l'Apply Agent peut
   // prendre plusieurs minutes, largement au-delà des timeouts de proxy.
   apply(r: any): void {
+    if (!this.baseBranch.trim()) { this.applyError.set('Renseignez la branche cible de la PR avant de continuer.'); return; }
     this.applying.set(true);
     this.applyError.set('');
     this.selectionViolation.set(null);

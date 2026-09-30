@@ -1,3 +1,4 @@
+import { repositoryUrl } from '../../shared/platform-capability-presentation';
 import { PresentationTextPipe } from '../../shared/presentation-label.pipe';
 import { frenchDate, frenchDuration } from '../../shared/french-format';
 import { sortPipelineStages, pipelineStageLabel } from '../../shared/pipeline-stage-presentation';
@@ -31,6 +32,11 @@ import { canSelectCveTask as canSelectCveTaskShared, CveSelectionEligibility } f
   styleUrls: ['./project-detail.component.scss'],
 })
 export class ProjectDetailComponent implements OnInit {
+  dataErrors: Record<string, string> = {};
+  repositoryUrl = repositoryUrl;
+  jenkinsLive = false;
+  jenkinsConnectionState(): string { return this.jenkinsMessage ? 'Indisponible' : this.jenkinsLive ? 'Données reçues' : this.project?.jenkinsJobName ? 'Configuré, connexion non vérifiée' : 'Non configuré'; }
+  reportedBranch(): string { return this.rp?.metadata?.sourceBranch || this.rp?.metadata?.branch || this.ed?.build?.branch || ''; }
   orderedStages(): any[] { return sortPipelineStages(this.deployReadiness?.requiredStages || []); }
   pipelineStageLabel = pipelineStageLabel;
   frenchDuration = frenchDuration;
@@ -172,10 +178,10 @@ export class ProjectDetailComponent implements OnInit {
     const stage = (key: string) => this.deployReadiness?.requiredStages?.find((s: any) => s.stage === key);
     return [
       { name: 'GitHub', state: this.project?.githubRepo ? 'Configuré' : 'Non configuré', ok: !!this.project?.githubRepo },
-      { name: 'Jenkins', state: this.jenkinsMessage ? 'Indisponible' : (this.project?.jenkinsJobName ? 'Connecté' : 'Non configuré'), ok: !this.jenkinsMessage && !!this.project?.jenkinsJobName },
+      { name: 'Jenkins', state: this.jenkinsConnectionState(), ok: this.jenkinsLive },
       { name: 'SonarQube', state: !this.project?.sonarqubeKey ? 'Non configuré' : (this.ed?.sonar ? 'Configuré' : 'Attention'), ok: !!this.project?.sonarqubeKey && !!this.ed?.sonar },
-      { name: 'Docker', state: stage('docker')?.status === 'PASSED' ? 'Dockerfile détecté' : 'Attention', ok: stage('docker')?.status === 'PASSED' },
-      { name: 'Tests', state: stage('tests')?.status === 'NOT_RUN' ? 'Désactivé' : (stage('tests')?.status === 'PASSED' ? 'Configuré' : 'Attention'), ok: stage('tests')?.status === 'PASSED' },
+      { name: 'Docker', state: stage('docker')?.status === 'PASSED' ? 'Étape Docker réussie' : 'Attention', ok: stage('docker')?.status === 'PASSED' },
+      { name: 'Tests', state: stage('tests')?.status === 'NOT_RUN' ? 'Non exécutés' : (stage('tests')?.status === 'PASSED' ? 'Configuré' : 'Attention'), ok: stage('tests')?.status === 'PASSED' },
       { name: 'ZAP', state: this.ed?.zap?.target_url ? 'Configuré' : (stage('zap') ? 'Attention' : 'Non configuré'), ok: !!this.ed?.zap?.target_url },
       { name: 'Azure', state: this.deploymentConfigured ? 'Configuré' : 'Non configuré', ok: this.deploymentConfigured },
     ];
@@ -772,11 +778,12 @@ export class ProjectDetailComponent implements OnInit {
   }
 
   loadManualRemediation() {
+    delete this.dataErrors['tasks'];
     // includeV18=true: additive `v1_8Decision` field per task, read-only
     // display (cve-table.component.ts's own v1_8Presentation()) -- see
     // api.service.ts's own header comment on this parameter.
-    this.api.getManualRemediationTasks(this.id, true).subscribe({ next: tasks => this.manualTasks = tasks || [], error: () => this.manualTasks = [] });
-    this.api.getManualRemediationSummary(this.id).subscribe({ next: summary => this.manualSummary = summary, error: () => {} });
+    this.api.getManualRemediationTasks(this.id, true).subscribe({ next: tasks => this.manualTasks = tasks || [], error: () => { this.manualTasks = []; this.dataErrors['tasks'] = 'Impossible de charger les tâches de correction. Actualisez la page pour réessayer.'; } });
+    this.api.getManualRemediationSummary(this.id).subscribe({ next: summary => this.manualSummary = summary, error: () => { this.dataErrors['summary'] = 'Impossible de charger le résumé des corrections.'; } });
   }
 
   completeManualTask(event: { task: any; note?: string }) {
@@ -794,12 +801,12 @@ export class ProjectDetailComponent implements OnInit {
   }
 
   loadIncidents() {
-    this.api.getIncidents({ projectId: this.id, size: 20 }).subscribe((r: any) => {
-      this.incidents = r.content || r;
-    });
+    delete this.dataErrors['incidents'];
+    this.api.getIncidents({ projectId: this.id, size: 20 }).subscribe({next: (r: any) => { this.incidents = r.content || r; }, error: () => { this.dataErrors['incidents'] = 'Impossible de charger les incidents du projet.'; }});
   }
 
   loadReports() {
+    delete this.dataErrors['decisions'];
     this.api.getDecisions({ projectId: this.id }).subscribe({
       next: (r: any) => {
         const list: any[] = Array.isArray(r) ? r : [];
@@ -808,7 +815,7 @@ export class ProjectDetailComponent implements OnInit {
           .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
         if (this.allReports.length > 0) this.selectReport(this.allReports[0]);
       },
-      error: () => {}
+      error: () => { this.dataErrors['decisions'] = 'Impossible de charger les analyses du projet.'; }
     });
   }
 
@@ -817,6 +824,7 @@ export class ProjectDetailComponent implements OnInit {
   // du header, corrélé par build. N'affecte pas l'onglet Rapport IA en
   // lui-même (qui reste sur /incidents, allReports/rp inchangés).
   loadJudgeStatus() {
+    delete this.dataErrors['reports'];
     this.api.getProjectReports({ projectId: this.id }).subscribe({
       next: (list: any[]) => {
         this.allReportsRaw = Array.isArray(list) ? list : [];
@@ -831,7 +839,7 @@ export class ProjectDetailComponent implements OnInit {
         // corrélation par buildNumber est possible.
         if (this.latestReport) this.selectReport(this.latestReport);
       },
-      error: () => { this.judge = { decision: null, confidence: null }; this.allReportsRaw = []; },
+      error: () => { this.judge = { decision: null, confidence: null }; this.allReportsRaw = []; this.dataErrors['reports'] = 'Impossible de charger les rapports du projet.'; },
     });
   }
 
@@ -872,9 +880,10 @@ export class ProjectDetailComponent implements OnInit {
   }
 
   loadConvergence() {
+    delete this.dataErrors['convergence'];
     this.api.getConvergence(this.id).subscribe({
       next: (r: any) => { this.convergenceCycles = Array.isArray(r?.cycles) ? r.cycles : []; },
-      error: () => { this.convergenceCycles = []; },
+      error: () => { this.convergenceCycles = []; this.dataErrors['convergence'] = 'Impossible de charger les cycles de validation.'; },
     });
   }
 
@@ -946,10 +955,11 @@ export class ProjectDetailComponent implements OnInit {
         // Même source que le dashboard (getJenkinsStatus) — null si _liveData
         // est faux (non configuré/erreur/timeout — plus aucun mock possible),
         // jamais un chiffre inventé.
+        this.jenkinsLive = d?._liveData === true;
         this.buildReliability = { rate: d?.buildSuccessRate ?? null, sampleSize: d?.sampleSize ?? 0 };
         this.jenkinsMessage = d?._liveData ? null : (d?.message || 'Données Jenkins indisponibles. Vérifiez sa configuration.');
       },
-      error: () => { this.buildReliability = null; this.jenkinsBuilds = []; this.jenkinsMessage = 'Impossible de contacter le backend'; }
+      error: () => { this.jenkinsLive = false; this.buildReliability = null; this.jenkinsBuilds = []; this.jenkinsMessage = 'Impossible de contacter le backend'; }
     });
   }
 

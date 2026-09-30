@@ -1,3 +1,4 @@
+<div *ngFor="let error of dataErrors | keyvalue" role="alert" class="card">{{error.value}}</div>
 <div class="dashboard">
 
   <!-- ═══════════════════════════════════════════════════════════════
@@ -58,10 +59,6 @@
         <span class="current">Tableau de bord</span>
       </div>
       <div class="topbar-actions">
-        <div class="live-badge">
-          <span class="live-dot"></span>
-          EN DIRECT
-        </div>
         <button class="btn-icon" (click)="toggleNotif()" [class.has-notif]="notifications.length">
           <i class="ti ti-bell"></i>
           <span class="notif-dot" *ngIf="notifications.length"></span>
@@ -83,7 +80,7 @@
             <div class="notif-meta">{{n.meta}}</div>
           </div>
         </div>
-        <div class="notif-empty" *ngIf="!notifications.length">Aucune notification</div>
+        <div class="notif-empty" *ngIf="!activitiesLoading && !dataErrors['incidents'] && !notifications.length">Aucune notification</div>
       </div>
     </div>
 
@@ -127,7 +124,7 @@
           <div class="loading-overlay" *ngIf="projectsLoading">
             <div class="spinner"></div><span>Chargement…</span>
           </div>
-          <div class="empty-state" *ngIf="!projectsLoading && !projects.length">
+          <div class="empty-state" *ngIf="!projectsLoading && !dataErrors['projects'] && !projects.length">
             <div class="empty-icon">◧</div>
             <div class="empty-title">Aucun projet</div>
             <div class="empty-sub">Ajoutez un projet pour voir son score de risque</div>
@@ -169,7 +166,7 @@
         <div class="loading-overlay" *ngIf="projectsLoading">
           <div class="spinner"></div><span>Chargement…</span>
         </div>
-        <div class="empty-state" *ngIf="!projectsLoading && !projects.length">
+        <div class="empty-state" *ngIf="!projectsLoading && !dataErrors['projects'] && !projects.length">
           <div class="empty-icon">◧</div>
           <div class="empty-title">Aucun projet</div>
           <div class="empty-sub">Créez votre premier projet pour commencer</div>
@@ -245,7 +242,7 @@
                 <div class="act-meta">{{a.meta}}</div>
               </div>
             </div>
-            <div class="act-empty" *ngIf="!activitiesLoading && !activities.length">Aucun incident récent.</div>
+            <div class="act-empty" *ngIf="!activitiesLoading && !dataErrors['incidents'] && !activities.length">Aucun incident récent.</div>
           </div>
         </section>
       </div>

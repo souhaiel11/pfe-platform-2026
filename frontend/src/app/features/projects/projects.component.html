@@ -1,3 +1,4 @@
+<div *ngIf="loadError" role="alert" class="card">{{loadError}} <button (click)="load()">Réessayer</button></div>
     <div class="page-container">
       <div class="page-header" style="display:flex;align-items:center;justify-content:space-between;">
         <div>
@@ -10,7 +11,7 @@
       <div *ngIf="loading" class="loading-overlay"><div class="spinner"></div><span>Chargement...</span></div>
 
       <!-- Projects grid -->
-      <div class="projects-grid" *ngIf="!loading">
+      <div class="projects-grid" *ngIf="!loading && !loadError">
         <div *ngIf="projects.length === 0" class="empty-state" style="grid-column:1/-1;">
           <div class="empty-icon">◧</div>
           <div class="empty-title">Aucun projet</div>

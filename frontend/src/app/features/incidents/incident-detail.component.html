@@ -1,3 +1,4 @@
+<div *ngIf="loadError" role="alert" class="card">{{loadError}} <button (click)="load()">Réessayer</button></div>
     <div class="page-container">
       <div class="page-header">
         <button class="btn btn-back" (click)="goBack()">← Retour</button>
@@ -6,7 +7,7 @@
 
       <div *ngIf="loading" class="loading-overlay"><div class="spinner"></div><span>Chargement...</span></div>
 
-      <ng-container *ngIf="incident && !loading">
+      <ng-container *ngIf="incident && !loading && !loadError">
 
         <!-- ─── HEADER CARD ─── -->
         <div class="card" style="margin-bottom:16px;border-left:3px solid {{dominantStatusColor()}};">

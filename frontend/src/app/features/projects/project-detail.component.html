@@ -1,3 +1,4 @@
+<div *ngFor="let error of dataErrors | keyvalue" role="alert" class="card">{{error.value}}</div>
     <div class="page" *ngIf="project">
 
       <!-- ═══ RETOUR ═══ -->
@@ -152,7 +153,7 @@
         <app-jenkinsfile-optimizer
           [projectId]="project?.id"
           [projectName]="project?.name"
-          [repo]="project?.githubRepo">
+          [repo]="project?.githubRepo" [baseBranch]="reportedBranch()">
         </app-jenkinsfile-optimizer>
 
         <!-- KPIs depuis enrichedData du dernier rapport -->
@@ -276,7 +277,7 @@
         <app-dockerfile-optimizer
           [projectId]="project?.id"
           [projectName]="project?.name"
-          [repo]="project?.githubRepo">
+          [repo]="project?.githubRepo" [baseBranch]="reportedBranch()">
         </app-dockerfile-optimizer>
       </div>
 
@@ -881,8 +882,8 @@
         <section class="card config-health"><div class="card-title">Santé de la configuration</div><div class="health-rows"><div *ngFor="let row of configHealthRows()" class="health-row"><span>{{row.name}}</span><strong [class.ok]="row.ok" [class.warn]="!row.ok"><span aria-hidden="true">{{row.ok ? '✓' : '⚠'}}</span> {{row.state}}</strong></div></div></section>
         <div class="config-grid">
           <section class="card"><div class="card-title">Général</div><dl class="config-list"><div><dt>Nom</dt><dd>{{project?.name || 'Non disponible'}}</dd></div><div><dt>Environnement</dt><dd>{{project?.environment || 'Non disponible'}}</dd></div><div><dt>Description</dt><dd>{{project?.description || 'Non disponible'}}</dd></div></dl></section>
-          <section class="card"><div class="card-title">Source</div><dl class="config-list"><div><dt>Dépôt</dt><dd>{{project?.githubRepo || 'Non configuré'}}</dd></div><div><dt>URL</dt><dd>{{project?.githubRepo ? 'https://github.com/' + project.githubRepo : 'Non configuré'}}</dd></div><div><dt>Branche par défaut</dt><dd>Non disponible</dd></div></dl></section>
-          <section class="card"><div class="card-title">CI/CD</div><dl class="config-list"><div><dt>Outil</dt><dd>{{project?.cicdTool || 'Non configuré'}}</dd></div><div><dt>Job Jenkins</dt><dd>{{project?.jenkinsJobName || 'Non configuré'}}</dd></div><div><dt>État</dt><dd>{{jenkinsMessage ? 'Indisponible' : 'Connecté'}}</dd></div></dl></section>
+          <section class="card"><div class="card-title">Source</div><dl class="config-list"><div><dt>Dépôt</dt><dd>{{project?.githubRepo || 'Non configuré'}}</dd></div><div><dt>URL</dt><dd>{{repositoryUrl(project?.githubRepo) || 'Non configuré'}}</dd></div><div><dt>Branche analysée</dt><dd>{{reportedBranch() || 'Non disponible'}}</dd></div></dl></section>
+          <section class="card"><div class="card-title">CI/CD</div><dl class="config-list"><div><dt>Outil</dt><dd>{{project?.cicdTool || 'Non configuré'}}</dd></div><div><dt>Job Jenkins</dt><dd>{{project?.jenkinsJobName || 'Non configuré'}}</dd></div><div><dt>État</dt><dd>{{jenkinsConnectionState()}}</dd></div></dl></section>
           <section class="card"><div class="card-title">Analyses</div><dl class="config-list"><div><dt>SonarQube</dt><dd>{{project?.sonarqubeKey || 'Non configuré'}}</dd></div><div><dt>Contrôle qualité</dt><dd>{{ed?.sonar?.quality_gate === 'OK' ? 'Réussi' : (ed?.sonar?.quality_gate ? 'Échec' : 'Non disponible')}}</dd></div><div><dt>ZAP</dt><dd>{{ed?.zap?.target_url || 'Non configuré'}}</dd></div></dl></section>
           <section class="card"><div class="card-title">Tests</div><dl class="config-list"><div><dt>État du build courant</dt><dd>{{configStageStatus('tests') | stageStatusLabel}}</dd></div><div><dt>Commande</dt><dd>Non disponible</dd></div></dl></section>
           <section class="card"><div class="card-title">Déploiement</div><dl class="config-list"><div><dt>Azure</dt><dd>{{deploymentConfigured ? 'Configuré' : 'Non configuré'}}</dd></div><div><dt>Cible</dt><dd>{{deploymentTarget?.targetName || 'Non disponible'}}</dd></div><div><dt>Préparation</dt><dd>{{deployReady ? 'Prêt' : 'Non prêt'}}</dd></div></dl></section>

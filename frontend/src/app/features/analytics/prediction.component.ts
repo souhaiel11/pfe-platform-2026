@@ -31,6 +31,7 @@ interface ProjectRisk {
 })
 export class PredictionComponent implements OnInit {
   projects: ProjectRisk[] = [];
+  loadError = '';
   loading = true;
 
   constructor(private api: ApiService) {}
@@ -40,6 +41,7 @@ export class PredictionComponent implements OnInit {
   }
 
   load() {
+    this.loadError = '';
     this.loading = true;
     this.api.getRiskIndicators().subscribe({
       next: (data: any) => {
@@ -53,7 +55,7 @@ export class PredictionComponent implements OnInit {
         }));
         this.loading = false;
       },
-      error: () => { this.projects = []; this.loading = false; },
+      error: () => { this.loadError = 'Impossible de charger les indicateurs de risque.'; this.projects = []; this.loading = false; },
     });
   }
 }

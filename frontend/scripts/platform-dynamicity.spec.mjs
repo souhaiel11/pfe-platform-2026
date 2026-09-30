@@ -1,0 +1,40 @@
+import assert from 'node:assert/strict';
+import {readFileSync,existsSync} from 'node:fs';
+import {createRequire} from 'node:module';
+import vm from 'node:vm';
+const ts=createRequire(import.meta.url)('typescript');
+const read=p=>readFileSync(new URL(p,import.meta.url),'utf8');
+const angular={Component:()=>v=>v};
+function load(path,deps={}){const exports={};vm.runInNewContext(ts.transpileModule(read(path),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,experimentalDecorators:true}}).outputText,{exports,console,Intl,Date,require:n=>deps[n] || (n==='@angular/core'?angular:{})});return exports;}
+const presentation=load('../src/app/shared/platform-capability-presentation.ts');
+const stages=load('../src/app/shared/pipeline-stage-presentation.ts');
+const {SettingsComponent}=load('../src/app/features/settings/settings.component.ts',{'../../core/http-error-message':load('../src/app/core/http-error-message.ts',{'@angular/common/http':{HttpErrorResponse:class{}}}),'../../shared/platform-capability-presentation':presentation,'../../shared/pipeline-stage-presentation':stages});
+let integrations=[],capabilities={security:[],remediation:{enforcementMode:'SHADOW',supportedEditTypes:['DEPENDENCY_VERSION']},ci:{configuredProjects:0},deployment:{configuredProjects:0,agentConfigured:false}},failure=false,updates=0,tests=0;
+const response=value=>({subscribe:observer=>failure?observer.error(new Error('network')):observer.next(value)});
+const api={getIntegrations:()=>response(integrations),getPlatformCapabilities:()=>response(capabilities),updateIntegration:()=>{updates++;return response({id:'i',status:'disconnected'});},testIntegration:()=>{tests++;return response({status:'connected',success:true});}};
+const toast={success(){},error(){}};
+const auth={currentUser:{role:'viewer'}};
+const settings=new SettingsComponent(toast,api,auth);
+settings.ngOnInit();assert.equal(settings.integrationsState,'EMPTY');assert.equal(settings.tools.length,0);assert.equal(settings.capabilities.security.length,0);
+assert.equal(settings.enforcementModeLabel(settings.capabilities.remediation.enforcementMode),'Observation (Shadow)');
+integrations=[{id:'i',toolType:'nexus',name:'Nexus',url:'https://registry.company.test',enabled:false,status:'connected',lastChecked:null},{id:'g',toolType:'grafana'}];
+settings.loadIntegrations();assert.equal(settings.tools.length,1);assert.equal(settings.tools[0].url,integrations[0].url);assert.equal(settings.tools[0].enabled,false);assert.equal(settings.integrationStatusLabel(settings.tools[0]),'Configuration marquée inactive');
+settings.saveTool(settings.tools[0]);assert.equal(updates,0,'read-only users cannot save');settings.testTool(settings.tools[0]);assert.equal(tests,0);
+auth.currentUser.role='admin';settings.saveTool(settings.tools[0]);assert.equal(updates,1,'editable field reaches persistence endpoint');
+capabilities={...capabilities,security:[{id:'trivy',projectsReported:1,projectsCompleted:0}],remediation:{enforcementMode:'ENFORCED',supportedEditTypes:['PARENT_VERSION','PROPERTY_VERSION']},ci:{configuredProjects:2}};
+settings.loadCapabilities();assert.equal(settings.capabilities.security[0].id,'trivy');assert.match(settings.scannerEvidenceLabel(settings.capabilities.security[0]),/sans résultat/);assert.equal(settings.enforcementModeLabel(settings.capabilities.remediation.enforcementMode),'Contrôle appliqué');assert.equal(settings.editTypeLabel(settings.capabilities.remediation.supportedEditTypes[0]),'Parent Maven');
+capabilities.security[0].projectsCompleted=1;settings.loadCapabilities();assert.match(settings.scannerEvidenceLabel(settings.capabilities.security[0]),/Résultat disponible/);
+failure=true;settings.loadIntegrations();settings.loadCapabilities();assert.equal(settings.integrationsState,'ERROR');assert.equal(settings.capabilitiesState,'ERROR');assert.equal(settings.tools.length,0);assert.equal(settings.capabilities,null);
+settings.testTool({...integrations[0],editable:true});assert.equal(tests,0,'failed save must never test old configuration');
+for(const repo of ['team/one','another/two'])assert.equal(presentation.repositoryUrl(repo),'https://github.com/'+repo);
+assert.equal(presentation.repositoryUrl('https://github.com/another/two'),'https://github.com/another/two');assert.equal(presentation.repositoryUrl(''),null);
+for(const ids of [['zap','build','deploy'],['tests','owasp','build','future']]){const sorted=stages.sortPipelineStages(ids.map(stage=>({stage,status:'FAILED'})));assert.equal(sorted.length,ids.length);assert.equal(sorted[0].stage,'build');assert.ok(!sorted.some(s=>!ids.includes(s.stage)));}
+const template=read('../src/app/features/settings/settings.component.html');assert.match(template,/Impossible de récupérer les capacités/);assert.match(template,/Aucune intégration/);assert.match(template,/!canEdit \|\| !tool.editable/);assert.doesNotMatch(template,/Grafana|Modèle Ollama|value="llama/);
+for(const f of ['jenkins','sonarqube','kubernetes'])assert.equal(existsSync(new URL('../src/app/features/tools/'+f+'.component.ts',import.meta.url)),false);
+const projectTemplate=read('../src/app/features/projects/project-detail.component.html');assert.match(projectTemplate,/repositoryUrl\(project\?\.githubRepo\)/);assert.match(projectTemplate,/reportedBranch\(\)/);assert.doesNotMatch(projectTemplate,/PR #(?:41|42)|Toutes \((?:105|146)\)/);
+console.log('Dynamic settings, real editing, capability changes, empty/error/unavailable states and second project PASS');
+
+const form=read('../src/app/features/projects/project-form.component.html');assert.doesNotMatch(form,/formControlName="(?:emailEnabled|slackEnabled)"|value:'(?:gitlab|github|azure)'/);
+const layout=read('../src/app/shared/layout/layout.component.html');assert.doesNotMatch(layout,/EN DIRECT/);
+const chat=read('../src/app/shared/chat-widget/chat-widget.component.html');assert.doesNotMatch(chat,/En ligne/);
+const mobileStyles=read('../src/app/features/settings/settings.component.scss');assert.match(mobileStyles,/grid-template-columns:40px minmax\(0,1fr\) 12px/);

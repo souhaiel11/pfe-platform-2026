@@ -1,3 +1,5 @@
+import { configuredIntegrationTools, integrationStatusLabel, enforcementModeLabel, editTypeLabel, scannerEvidenceLabel } from '../../shared/platform-capability-presentation';
+import { pipelineStageLabel } from '../../shared/pipeline-stage-presentation';
 import { userHttpError } from '../../core/http-error-message';
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -8,6 +10,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { FrenchDatePipe } from '../../shared/french-date.pipe';
 
 interface ToolConfig {
+  editable?: boolean;
   toolType: string;
   name: string;
   icon: string;
@@ -41,69 +44,39 @@ interface ToolConfig {
   styleUrls: ['./settings.component.scss'],
 })
 export class SettingsComponent implements OnInit {
-  n8nUrl = '/webhook/jenkins-event (service n8n interne)';
-
-  tools: ToolConfig[] = [
-    {
-      toolType: 'prometheus', name: 'Prometheus', icon: 'P', color: '#e24b4a',
-      description: 'Métriques et surveillance — GET /-/healthy',
-      authType: 'none', tokenLabel: '',
-      url: '', token: '', username: '', password: '', hasToken: false, hasPassword: false,
-      enabled: true, status: 'disconnected', expanded: false, testing: false, saving: false,
-    },
-    {
-      toolType: 'kubernetes', name: 'Kubernetes', icon: 'K', color: '#38bdf8',
-      description: 'Orchestration de conteneurs — GET /readyz',
-      authType: 'token', tokenLabel: 'Jeton d’accès (kubeconfig)',
-      url: '', token: '', username: '', password: '', hasToken: false, hasPassword: false,
-      enabled: true, status: 'disconnected', expanded: false, testing: false, saving: false,
-    },
-    {
-      toolType: 'nexus', name: 'Nexus', icon: 'N', color: '#a78bfa',
-      description: 'Dépôt d\'artefacts — GET /service/rest/v1/status',
-      authType: 'basic', tokenLabel: '',
-      url: '', token: '', username: '', password: '', hasToken: false, hasPassword: false,
-      enabled: true, status: 'disconnected', expanded: false, testing: false, saving: false,
-    },
-  ];
-
-  platformInfo = [
-    { label: 'Version Angular',     value: '17.x (Standalone)' },
-    { label: 'Version NestJS',      value: '10.x' },
-    { label: 'Version n8n',         value: '2.14.2 (self-hosted)' },
-    { label: 'Modèle LLM',          value: 'llama3.2:3b via Ollama' },
-    { label: 'Base de données',     value: 'PostgreSQL 16' },
-    { label: 'Environnement',       value: 'WSL Ubuntu 22.04' },
-    { label: 'Auteur',              value: 'Amri Souhaiel — ESPRIT / Vermeg' },
-  ];
+  tools: ToolConfig[] = [];
+  integrationsState: 'LOADING' | 'LOADED' | 'EMPTY' | 'ERROR' = 'LOADING';
+  capabilitiesState: 'LOADING' | 'LOADED' | 'ERROR' = 'LOADING';
+  capabilities: any = null;
+  integrationStatusLabel = integrationStatusLabel;
+  enforcementModeLabel = enforcementModeLabel;
+  editTypeLabel = editTypeLabel;
+  scannerEvidenceLabel = scannerEvidenceLabel;
+  pipelineStageLabel = pipelineStageLabel;
 
   constructor(private toast: ToastService, private api: ApiService, public auth: AuthService) {}
   get canEdit() { return ['admin', 'developer'].includes(this.auth.currentUser?.role); }
 
-  ngOnInit() {
+  ngOnInit() { this.loadIntegrations(); this.loadCapabilities(); }
+
+  loadIntegrations() {
+    this.integrationsState = 'LOADING';
+    this.tools = [];
     this.api.getIntegrations().subscribe({
-      next: (integrations) => {
-        for (const intg of integrations) {
-          const tool = this.tools.find(t => t.toolType === intg.toolType);
-          if (!tool) continue;
-          tool.id       = intg.id;
-          tool.url      = intg.url      || '';
-          // Le backend ne renvoie plus le token/password en clair (voir FIX
-          // sécurité 2026-08-04) — seuls hasToken/hasPassword indiquent si un
-          // secret est déjà enregistré ; le champ reste vide tant que
-          // l'utilisateur ne retape rien (voir saveTool()/getSecretPlaceholder()).
-          tool.token    = '';
-          tool.username = intg.username || '';
-          tool.password = '';
-          tool.hasToken    = !!intg.hasToken;
-          tool.hasPassword = !!intg.hasPassword;
-          tool.enabled  = intg.enabled;
-          tool.status   = intg.status   || 'disconnected';
-          tool.metadata = intg.metadata || null;
-          tool.lastChecked = intg.lastChecked || null;
-        }
+      next: rows => {
+        this.tools = configuredIntegrationTools(rows || []);
+        this.integrationsState = this.tools.length ? 'LOADED' : 'EMPTY';
       },
-      error: () => {},
+      error: () => { this.integrationsState = 'ERROR'; },
+    });
+  }
+
+  loadCapabilities() {
+    this.capabilitiesState = 'LOADING';
+    this.capabilities = null;
+    this.api.getPlatformCapabilities().subscribe({
+      next: data => { this.capabilities = data; this.capabilitiesState = 'LOADED'; },
+      error: () => { this.capabilitiesState = 'ERROR'; },
     });
   }
 
@@ -112,7 +85,7 @@ export class SettingsComponent implements OnInit {
   }
 
   saveTool(tool: ToolConfig) {
-    if (!tool.url) return;
+    if (!this.canEdit || !tool.editable || !tool.url) return;
     tool.saving = true;
 
     const payload = {
@@ -133,6 +106,10 @@ export class SettingsComponent implements OnInit {
       next: (result) => {
         tool.id     = result.id;
         tool.status = result.status;
+        tool.hasToken = !!result.hasToken;
+        tool.hasPassword = !!result.hasPassword;
+        tool.token = '';
+        tool.password = '';
         tool.saving = false;
         this.toast.success(`${tool.name} enregistré`, 'Configuration sauvegardée');
       },
@@ -144,7 +121,7 @@ export class SettingsComponent implements OnInit {
   }
 
   testTool(tool: ToolConfig) {
-    if (!tool.url) return;
+    if (!this.canEdit || !tool.editable || !tool.url) return;
     tool.testing = true;
 
     const doTest = (id: string) => {
@@ -152,6 +129,7 @@ export class SettingsComponent implements OnInit {
         next: (result) => {
           tool.status   = result.status;
           tool.metadata = result.metadata || null;
+          this.api.getIntegration(id).subscribe({ next: saved => tool.lastChecked = saved.lastChecked, error: () => tool.lastChecked = undefined });
           tool.testing  = false;
           if (result.success) {
             this.toast.success(`${tool.name} connecté`, 'Connexion établie avec succès');
@@ -174,7 +152,7 @@ export class SettingsComponent implements OnInit {
       };
       this.api.updateIntegration(tool.id, payload).subscribe({
         next: () => doTest(tool.id!),
-        error: () => doTest(tool.id!),
+        error: (e) => { tool.testing = false; this.toast.error('Configuration non enregistrée', userHttpError(e, 'Enregistrez la configuration avant de tester la connexion.')); },
       });
     } else {
       // Create then test
@@ -198,14 +176,7 @@ export class SettingsComponent implements OnInit {
     return hasSecret ? 'Déjà configuré — laisser vide pour ne pas changer' : generic;
   }
 
-  getUrlPlaceholder(type: string): string {
-    const map: Record<string, string> = {
-      prometheus: 'https://prometheus.example.internal',
-      kubernetes: 'https://kubernetes.example.internal',
-      nexus:      'https://nexus.example.internal',
-    };
-    return map[type] || 'https://...';
-  }
+  getUrlPlaceholder(_type: string): string { return 'URL réelle du service'; }
 
   getMetaEntries(metadata: any): { key: string; val: string }[] {
     if (!metadata) return [];

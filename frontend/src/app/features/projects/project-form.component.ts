@@ -38,7 +38,6 @@ export class ProjectFormComponent implements OnInit {
     { id: 'general',       label: 'Général',      icon: '📋' },
     { id: 'cicd',          label: 'CI/CD',         icon: '⚙️' },
     { id: 'sonarqube',     label: 'SonarQube',     icon: '🔍' },
-    { id: 'notifications', label: 'Notifications', icon: '🔔' },
   ];
 
   constructor(
@@ -57,13 +56,6 @@ export class ProjectFormComponent implements OnInit {
       this.isEdit = true;
       this.loadProject();
     }
-    // Activer/désactiver champs notifications
-    this.form.get('emailEnabled')?.valueChanges.subscribe(v =>
-      v ? this.form.get('emailRecipient')?.enable() : this.form.get('emailRecipient')?.disable()
-    );
-    this.form.get('slackEnabled')?.valueChanges.subscribe(v => {
-      v ? this.form.get('slackChannel')?.enable() : this.form.get('slackChannel')?.disable();
-    });
   }
 
   private buildForm() {
@@ -83,11 +75,6 @@ export class ProjectFormComponent implements OnInit {
       // SonarQube
       sonarqubeUrl:   [''],
       sonarqubeKey:   [''],
-      // Notifications
-      emailEnabled:   [false],
-      emailRecipient: [{ value: '', disabled: true }],
-      slackEnabled:   [false],
-      slackChannel:   [{ value: '', disabled: true }],
     });
   }
 
@@ -97,14 +84,10 @@ export class ProjectFormComponent implements OnInit {
       next: (p: any) => {
         this.form.patchValue(p);
         this.jenkinsCredentialConfigured = !!p.jenkinsCredentialConfigured;
-        if (p.emailEnabled) this.form.get('emailRecipient')?.enable();
-        if (p.slackEnabled) {
-          this.form.get('slackChannel')?.enable();
-        }
         this.form.markAsPristine();
         this.loading = false;
       },
-      error: () => { this.loading = false; }
+      error: () => { this.saveError = 'Impossible de charger la configuration du projet. Actualisez la page pour réessayer.'; this.loading = false; }
     });
   }
 
