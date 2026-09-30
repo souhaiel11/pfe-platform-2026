@@ -11,8 +11,25 @@
 // the live task it is about to authorize.
 import { V1_8CompatibilityDecision } from './v1_8-compatibility-decision.types';
 
-/** Edit types the REAL, live production patch writer (maven-security-patch-writer.ts) can actually perform today -- see this module's own Phase 8 audit. Never claim a type is dispatchable if it is not in this set. */
-export const LIVE_WRITER_SUPPORTED_EDIT_TYPES = new Set(['DEPENDENCY_VERSION', 'PROPERTY_VERSION']);
+/**
+ * Edit types the REAL, live production patch writer(s) can actually perform
+ * today -- see this module's own Phase 8 audit. Never claim a type is
+ * dispatchable if it is not in this set.
+ *
+ * V1.8 Phase 7 — PARENT_VERSION added: maven-parent-patch-writer.ts is the
+ * real, fail-closed writer for it (separate from maven-security-patch-
+ * writer.ts, which only ever handles DEPENDENCY_VERSION/PROPERTY_VERSION --
+ * see that new file's own header for why a parent edit is never folded
+ * into the same function). This flips the GATE's capability declaration
+ * only; it does not, by itself, wire a PARENT_VERSION plan through the live
+ * evaluate-batch/candidate-verifier decision pipeline (a separate,
+ * not-yet-built integration) -- an ENFORCED-mode dispatch of a
+ * PARENT_VERSION finding today would still fail safely downstream
+ * (NOT_ELIGIBLE / DEVELOPER_ACTION_REQUIRED, never a wrong write) rather
+ * than actually reach maven-parent-patch-writer.ts. See V1.8 Phase 7's own
+ * report for the explicit "no live dispatch this phase" boundary.
+ */
+export const LIVE_WRITER_SUPPORTED_EDIT_TYPES = new Set(['DEPENDENCY_VERSION', 'PROPERTY_VERSION', 'PARENT_VERSION']);
 
 export interface SecurityRemediationDispatchContext {
   repository: string;

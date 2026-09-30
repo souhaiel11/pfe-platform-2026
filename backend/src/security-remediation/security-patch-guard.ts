@@ -19,6 +19,7 @@
 import { computeGitBlobSha1, isFullGitSha } from '../candidate-verification/candidate-digest';
 import { majorOf, parseVersion } from './version-selection-policy';
 import { writeSecurityPatch } from './maven-security-patch-writer';
+import { writeParentVersionPatch, ParentVersionPatchCandidate, ParentVersionPatchRequest } from './maven-parent-patch-writer';
 import { SecurityPatchCandidate, SecurityPatchRequest } from './security-patch-request.types';
 import { SecurityFindingDecision } from './security-finding-decision.types';
 
@@ -134,6 +135,89 @@ export function assertSecurityPatchSafeToWrite(
   }
   if (expected.file.path !== candidate.file.path || expected.file.sourceContent !== candidate.file.sourceContent) {
     return fail('SECURITY_PATCH_UNAUTHORIZED_CHANGE', 'candidate.file.path/sourceContent differs from the deterministic re-derivation.');
+  }
+
+  return { ok: true };
+}
+
+// V1.8 Phase 7B — the PARENT_VERSION counterpart of assertSecurityPatchSafeToWrite()
+// above. A SEPARATE, self-contained function (that function is NEVER
+// modified for this -- "do not weaken the existing guard"): a
+// ParentVersionPatchCandidate carries a different shape entirely
+// (actualEditTarget/editType, no provenanceKind/controllingProperty), and
+// mixing the two guards would mean one of them silently accepting fields
+// the other never checks. Same core discipline as the existing guard:
+// independently RE-DERIVE the patch from the same trusted plan and require
+// byte-identical output -- never a second, separately-maintained "did
+// anything else change" implementation.
+export type ParentVersionPatchGuardReason =
+  | 'PARENT_PATCH_ELIGIBILITY_NOT_CONFIRMED'
+  | 'PARENT_PATCH_SCOPE_MISMATCH'
+  | 'PARENT_PATCH_EDIT_TARGET_MISMATCH'
+  | 'PARENT_PATCH_FROM_VERSION_MISMATCH'
+  | 'PARENT_PATCH_TARGET_VERSION_MISMATCH'
+  | 'PARENT_PATCH_SHA_NOT_GROUNDED'
+  | 'PARENT_PATCH_ORIGINAL_CONTENT_INTEGRITY_MISMATCH'
+  | 'PARENT_PATCH_UNAUTHORIZED_CHANGE';
+
+export type ParentVersionPatchGuardResult = { ok: true } | { ok: false; reason: ParentVersionPatchGuardReason; detail: string };
+
+function failParent(reason: ParentVersionPatchGuardReason, detail: string): ParentVersionPatchGuardResult {
+  return { ok: false, reason, detail };
+}
+
+/**
+ * `decision` = the already-computed SecurityFindingDecision produced by
+ * SecurityFindingDecisionService.decide()'s PARENT_VERSION branch.
+ * `request` = the exact ParentVersionPatchRequest used to build `candidate`.
+ * `candidate` = the proposed write. Requires every field to agree across
+ * all three, then independently re-calls writeParentVersionPatch() from
+ * the SAME request and requires byte-exact candidate.file.content --
+ * exactly the "guardedPatchBytes == candidatePatchBytes" invariant V1.8
+ * Phase 7B's own ticket asks for.
+ */
+export function assertParentVersionPatchSafeToWrite(
+  decision: SecurityFindingDecision,
+  request: ParentVersionPatchRequest,
+  candidate: ParentVersionPatchCandidate,
+): ParentVersionPatchGuardResult {
+  if (decision.editType !== 'PARENT_VERSION' || decision.remediationType !== 'AUTO_FIX_ELIGIBLE' || decision.selectedTargetVersion === null) {
+    return failParent('PARENT_PATCH_ELIGIBILITY_NOT_CONFIRMED', `decision.editType="${decision.editType}" remediationType="${decision.remediationType}" -- not a confirmed AUTO_FIX_ELIGIBLE PARENT_VERSION decision.`);
+  }
+  const plan = decision.parentRemediationPlan;
+  if (!plan) {
+    return failParent('PARENT_PATCH_SCOPE_MISMATCH', 'decision carries no parentRemediationPlan.');
+  }
+  if (plan.actualEditTarget !== request.actualEditTarget || request.actualEditTarget !== candidate.actualEditTarget) {
+    return failParent('PARENT_PATCH_EDIT_TARGET_MISMATCH', `actualEditTarget mismatch: decision="${plan.actualEditTarget}", request="${request.actualEditTarget}", candidate="${candidate.actualEditTarget}".`);
+  }
+  if (plan.fromVersion !== request.fromVersion || request.fromVersion !== candidate.oldVersion) {
+    return failParent('PARENT_PATCH_FROM_VERSION_MISMATCH', `fromVersion mismatch: decision="${plan.fromVersion}", request="${request.fromVersion}", candidate.oldVersion="${candidate.oldVersion}".`);
+  }
+  if (plan.toVersion !== request.toVersion || request.toVersion !== candidate.targetVersion || decision.selectedTargetVersion !== candidate.targetVersion) {
+    return failParent('PARENT_PATCH_TARGET_VERSION_MISMATCH', `toVersion mismatch: decision plan="${plan.toVersion}", decision.selectedTargetVersion="${decision.selectedTargetVersion}", request="${request.toVersion}", candidate.targetVersion="${candidate.targetVersion}".`);
+  }
+  if (!isFullGitSha(decision.evaluatedSha) || !isFullGitSha(request.evaluatedSha) || !isFullGitSha(candidate.evaluatedSha)
+    || decision.evaluatedSha!.toLowerCase() !== request.evaluatedSha.toLowerCase()
+    || request.evaluatedSha.toLowerCase() !== candidate.evaluatedSha.toLowerCase()) {
+    return failParent('PARENT_PATCH_SHA_NOT_GROUNDED', `evaluatedSha not consistently a proven full-SHA across decision/request/candidate: decision="${decision.evaluatedSha}", request="${request.evaluatedSha}", candidate="${candidate.evaluatedSha}".`);
+  }
+  if (computeGitBlobSha1(candidate.file.sourceContent ?? '').toLowerCase() !== String(candidate.file.originalBlobSha ?? '').toLowerCase()) {
+    return failParent('PARENT_PATCH_ORIGINAL_CONTENT_INTEGRITY_MISMATCH', 'computeGitBlobSha1(candidate.file.sourceContent) does not match candidate.file.originalBlobSha.');
+  }
+  if (candidate.file.sourceContent !== request.sourceContent) {
+    return failParent('PARENT_PATCH_ORIGINAL_CONTENT_INTEGRITY_MISMATCH', 'candidate.file.sourceContent does not match request.sourceContent (the grounded pre-edit text).');
+  }
+
+  const rederived: any = writeParentVersionPatch(request);
+  if (rederived.ok !== true) {
+    return failParent('PARENT_PATCH_UNAUTHORIZED_CHANGE', `Independent re-derivation of the parent patch from the same request FAILED (reason=${rederived.reason}) -- the proposed candidate cannot be trusted.`);
+  }
+  if (rederived.candidate.file.content !== candidate.file.content) {
+    return failParent('PARENT_PATCH_UNAUTHORIZED_CHANGE', 'candidate.file.content differs from the deterministic re-derivation -- something beyond the single authorized <parent> version substitution was changed.');
+  }
+  if (rederived.candidate.file.path !== candidate.file.path || rederived.candidate.file.sourceContent !== candidate.file.sourceContent) {
+    return failParent('PARENT_PATCH_UNAUTHORIZED_CHANGE', 'candidate.file.path/sourceContent differs from the deterministic re-derivation.');
   }
 
   return { ok: true };

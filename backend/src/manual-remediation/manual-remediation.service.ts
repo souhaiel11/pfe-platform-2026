@@ -497,12 +497,28 @@ export class ManualRemediationService {
     // coordinate cannot be safely proven compatible without a real
     // checkout — refuse up front, named, rather than guess at version
     // compatibility from scanner strings alone.
+    //
+    // V1.8 Phase 7C — the ONE narrow exception: two+ CVEs sharing a
+    // component are NOT actually colliding when every one of them is
+    // remediated by the SAME already-validated PARENT_VERSION plan (they
+    // never touch that component's own declaration at all -- the shared
+    // edit lands on a completely different node, the <parent>). Checked
+    // against the V1.8 evidence store directly (this.v1_8Decisions), never
+    // the task's own persisted state (no v1_8Plan has been written yet at
+    // this point in the method) -- byte-identical editType/actualEditTarget/
+    // fromVersion/toVersion required across the WHOLE group, never a
+    // partial/majority match.
     const byComponent = new Map<string, ManualRemediationTask[]>();
     for (const t of tasks) {
       const key = String(t.findingSnapshot.component).toLowerCase();
       byComponent.set(key, [...(byComponent.get(key) || []), t]);
     }
-    const colliding = [...byComponent.values()].filter(group => group.length > 1);
+    const colliding = [...byComponent.values()].filter(group => group.length > 1).filter(group => {
+      const plans = group.map(t => this.v1_8Decisions.lookup(t.source, String(t.ruleOrCve), String(t.findingSnapshot.component), String(t.findingSnapshot.currentVersion || '')));
+      const first = plans[0];
+      return !(first.editType === 'PARENT_VERSION' && first.actualEditTarget && plans.every(p =>
+        p.editType === 'PARENT_VERSION' && p.actualEditTarget === first.actualEditTarget && p.fromVersion === first.fromVersion && p.toVersion === first.toVersion));
+    });
     if (colliding.length) {
       const detail = colliding.map(group => `${group[0].findingSnapshot.component} (${group.map(t => t.ruleOrCve).join(' vs ')})`).join('; ');
       throw new ConflictException(`Plusieurs CVE sélectionnées sur le même composant Maven — non supporté dans un même lot : ${detail}.`);

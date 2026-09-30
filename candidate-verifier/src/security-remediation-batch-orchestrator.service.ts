@@ -54,7 +54,9 @@ import { SecurityFindingDecisionService } from './security-finding-decision.serv
 import { WorkspaceManager, WorkspaceError } from './workspace-manager.service';
 import { RepoCacheService } from './repo-cache.service';
 import { MavenBuildAdapter } from './maven-build-adapter';
-import { writeSecurityPatchBatch, SecurityPatchBatchItem } from '../../backend/src/security-remediation/maven-security-patch-writer-batch';
+import { writeSecurityPatchBatch, SecurityPatchBatchItem, SecurityPatchBatchFindingOutcome } from '../../backend/src/security-remediation/maven-security-patch-writer-batch';
+import { writeParentVersionPatch } from '../../backend/src/security-remediation/maven-parent-patch-writer';
+import { assertParentVersionPatchSafeToWrite } from '../../backend/src/security-remediation/security-patch-guard';
 import { computeSecurityBatchCandidateIdentity } from '../../backend/src/security-remediation/security-candidate-identity';
 import { dependencyTreeResolvesTo } from '../../backend/src/security-remediation/maven-dependency-resolution-check';
 import { computeCandidateDigest, computeContentSha256, computeGitBlobSha1 } from '../../backend/src/candidate-verification/candidate-digest';
@@ -64,7 +66,7 @@ import {
 } from '../../backend/src/security-remediation/security-remediation-batch-orchestration.types';
 import { ApplicationTestEvidence } from '../../backend/src/security-remediation/security-remediation-orchestration.types';
 import { SecurityFindingDecision } from '../../backend/src/security-remediation/security-finding-decision.types';
-import { CandidateManifest } from '../../backend/src/candidate-verification/candidate-verification.types';
+import { CandidateManifest, CandidateFile } from '../../backend/src/candidate-verification/candidate-verification.types';
 import { createWorkerDeadline, WorkerDeadline } from './worker-deadline';
 
 const GROUNDING_STAGE_CAP_MS = 5 * 60 * 1000;
@@ -148,6 +150,21 @@ export class SecurityRemediationBatchOrchestratorService {
       return notEligible('NOT_ELIGIBLE', 'CONTROLLING_FILE_MUST_BE_IDENTICAL_ACROSS_A_BATCH', pendingEvidence(decisions.length));
     }
 
+    // V1.8 Phase 7B — a batch is either ENTIRELY PARENT_VERSION findings (one
+    // shared owner plan, applied once, independent per-CVE closure below) or
+    // ENTIRELY non-parent findings (the existing DEPENDENCY_VERSION/
+    // PROPERTY_VERSION chained-write path, untouched) -- NEVER a mix. Mixing
+    // would mean two structurally different patch-generation mechanisms
+    // writing to the SAME file in one candidate, which neither path's own
+    // conflict detection is built to reason about; fail closed rather than
+    // guess an ordering.
+    const isParentDecision = (d: SecurityFindingDecision) => d.editType === 'PARENT_VERSION';
+    const allParent = decisions.every(isParentDecision);
+    const anyParent = decisions.some(isParentDecision);
+    if (anyParent && !allParent) {
+      return notEligible('NOT_ELIGIBLE', 'MIXED_PARENT_AND_NON_PARENT_BATCH_UNSUPPORTED', pendingEvidence(decisions.length));
+    }
+
     // §4 step 9 (singular flow) equivalent — ONE shared, independent,
     // isolated worktree at the SAME exact SHA for the whole batch.
     const workspaceId = this.workspaceManager.workspaceId(input.requestId, input.batchId, input.candidateAttempt, 1);
@@ -213,79 +230,154 @@ export class SecurityRemediationBatchOrchestratorService {
       // coordination (the common case) still goes through this — its own
       // localMavenControls() simply returns a single candidate, and
       // deriveMavenRemediationScope() naturally settles on 'SINGLE_CONTROL'.
+      //
+      // V1.8 Phase 7B — NEVER entered for an all-PARENT_VERSION batch:
+      // localMavenControls() only knows how to bind a DIRECT/PROPERTY-
+      // managed dependency declaration (decision.provenance.package) that is
+      // actually present in <dependencies> -- exactly the shape a parent-
+      // managed package structurally is NOT (that is the whole reason it
+      // needed a parent fix). Running it anyway would fail closed
+      // (TARGET_NOT_LOCALLY_CONTROLLED), which is safe but wrong: the parent
+      // batch has its own, separate write-generation branch below.
       const scopeEvidenceByCve = new Map<string, MavenScopeEvidence>();
-      for (let i = 0; i < decisions.length; i++) {
-        const decision = decisions[i], cveId = cveIds[i];
-        try {
-          if (deadline.expired()) throw deadlineExceeded('BASE_MAVEN_MODEL');
-          const baseTree = measure('MAVEN_RESOLUTION_DURATION_MS', () => this.mavenAdapter.dependencyTree(workspacePath, deadline.budgetFor(MAVEN_STAGE_CAP_MS)));
-          const baseEffective = measure('MAVEN_RESOLUTION_DURATION_MS', () => this.mavenAdapter.effectivePom(workspacePath, deadline.budgetFor(MAVEN_STAGE_CAP_MS)));
-          if (baseTree.status !== 'SUCCESS' || baseEffective.status !== 'SUCCESS' || !baseTree.text || !baseEffective.text) throw new Error('BASE_MAVEN_MODEL_UNAVAILABLE');
-          const scopeEvidence: MavenScopeEvidence = {
-            targetCve: cveId, evaluatedSha, originalBlobSha: computeGitBlobSha1(sourceContent),
-            baselineTree: baseTree.text, baselineEffectivePom: baseEffective.text,
-            cveTargets: cveTargets(baseScan, cveId), experiments: [],
-          };
-          for (const control of localMavenControls(sourceContent, decision.provenance!.package, decision.selectedTargetVersion!)) {
-            if (deadline.expired()) throw deadlineExceeded('CONTROL_EXPERIMENT');
-            const content = applyMavenControls(sourceContent, [control]);
-            try {
-              fs.writeFileSync(controllingPath, content);
-              const tree = measure('MAVEN_RESOLUTION_DURATION_MS', () => this.mavenAdapter.dependencyTree(workspacePath, deadline.budgetFor(MAVEN_STAGE_CAP_MS)));
-              const model = measure('MAVEN_RESOLUTION_DURATION_MS', () => this.mavenAdapter.effectivePom(workspacePath, deadline.budgetFor(MAVEN_STAGE_CAP_MS)));
-              if (tree.status !== 'SUCCESS' || model.status !== 'SUCCESS' || !tree.text || !model.text) throw new Error('CONTROL_EXPERIMENT_FAILED');
-              scopeEvidence.experiments.push({ control, sourceSha256: createHash('sha256').update(content).digest('hex'), dependencyTree: tree.text, effectivePom: model.text });
-            } finally { fs.writeFileSync(controllingPath, sourceContent); }
+      if (!allParent) {
+        for (let i = 0; i < decisions.length; i++) {
+          const decision = decisions[i], cveId = cveIds[i];
+          try {
+            if (deadline.expired()) throw deadlineExceeded('BASE_MAVEN_MODEL');
+            const baseTree = measure('MAVEN_RESOLUTION_DURATION_MS', () => this.mavenAdapter.dependencyTree(workspacePath, deadline.budgetFor(MAVEN_STAGE_CAP_MS)));
+            const baseEffective = measure('MAVEN_RESOLUTION_DURATION_MS', () => this.mavenAdapter.effectivePom(workspacePath, deadline.budgetFor(MAVEN_STAGE_CAP_MS)));
+            if (baseTree.status !== 'SUCCESS' || baseEffective.status !== 'SUCCESS' || !baseTree.text || !baseEffective.text) throw new Error('BASE_MAVEN_MODEL_UNAVAILABLE');
+            const scopeEvidence: MavenScopeEvidence = {
+              targetCve: cveId, evaluatedSha, originalBlobSha: computeGitBlobSha1(sourceContent),
+              baselineTree: baseTree.text, baselineEffectivePom: baseEffective.text,
+              cveTargets: cveTargets(baseScan, cveId), experiments: [],
+            };
+            for (const control of localMavenControls(sourceContent, decision.provenance!.package, decision.selectedTargetVersion!)) {
+              if (deadline.expired()) throw deadlineExceeded('CONTROL_EXPERIMENT');
+              const content = applyMavenControls(sourceContent, [control]);
+              try {
+                fs.writeFileSync(controllingPath, content);
+                const tree = measure('MAVEN_RESOLUTION_DURATION_MS', () => this.mavenAdapter.dependencyTree(workspacePath, deadline.budgetFor(MAVEN_STAGE_CAP_MS)));
+                const model = measure('MAVEN_RESOLUTION_DURATION_MS', () => this.mavenAdapter.effectivePom(workspacePath, deadline.budgetFor(MAVEN_STAGE_CAP_MS)));
+                if (tree.status !== 'SUCCESS' || model.status !== 'SUCCESS' || !tree.text || !model.text) throw new Error('CONTROL_EXPERIMENT_FAILED');
+                scopeEvidence.experiments.push({ control, sourceSha256: createHash('sha256').update(content).digest('hex'), dependencyTree: tree.text, effectivePom: model.text });
+              } finally { fs.writeFileSync(controllingPath, sourceContent); }
+            }
+            if (trackedSourceDigest(workspacePath) !== originalDigest) throw new Error('MAVEN_MUTATED_SOURCE');
+            decision.remediationScope = deriveMavenRemediationScope(sourceContent, decision.provenance!.package, decision.selectedTargetVersion!, decision.provenance!.controllingFile, scopeEvidence);
+            scopeEvidenceByCve.set(cveId, scopeEvidence);
+          } catch (err: any) {
+            if (err instanceof ArtifactRuntimeError) return runtimeFailure(err, pendingEvidence(decisions.length, i, 'GROUNDING_FAILED', String(err.message)));
+            return notEligible('NOT_ELIGIBLE', `REMEDIATION_SCOPE_UNPROVEN:${String(err?.message || 'Scope evidence unavailable.')}`,
+              pendingEvidence(decisions.length, i, 'GROUNDING_FAILED', String(err?.message || 'Scope evidence unavailable.')));
           }
-          if (trackedSourceDigest(workspacePath) !== originalDigest) throw new Error('MAVEN_MUTATED_SOURCE');
-          decision.remediationScope = deriveMavenRemediationScope(sourceContent, decision.provenance!.package, decision.selectedTargetVersion!, decision.provenance!.controllingFile, scopeEvidence);
-          scopeEvidenceByCve.set(cveId, scopeEvidence);
-        } catch (err: any) {
-          if (err instanceof ArtifactRuntimeError) return runtimeFailure(err, pendingEvidence(decisions.length, i, 'GROUNDING_FAILED', String(err.message)));
-          return notEligible('NOT_ELIGIBLE', `REMEDIATION_SCOPE_UNPROVEN:${String(err?.message || 'Scope evidence unavailable.')}`,
-            pendingEvidence(decisions.length, i, 'GROUNDING_FAILED', String(err?.message || 'Scope evidence unavailable.')));
         }
       }
 
-      // §2/★ — chain N single-CVE patch requests into ONE candidate file.
-      // Conflict detection is writeSecurityPatchBatch()'s own chaining
-      // (see that file's header) — nothing extra to do here.
-      // writeSecurityPatch()'s coordinated-scope branch re-derives and
-      // requires `computeGitBlobSha1(source) === scopeEvidence.
-      // originalBlobSha` -- true only against the PRISTINE, pre-chain
-      // content. For the common SINGLE_CONTROL case that requirement is
-      // unnecessary machinery (the plain provenanceKind-based write already
-      // proves everything needed) AND actively incompatible with chaining
-      // (a SINGLE_CONTROL finding applied anywhere but first would falsely
-      // "conflict" against its own already-satisfied scope). Only a
-      // genuinely COORDINATED_SAME_FILE finding needs remediationScope/
-      // scopeEvidence carried through to the write step at all -- see this
-      // file's own header for the disclosed ordering limitation that
-      // still applies to that case.
-      const items: SecurityPatchBatchItem[] = decisions.map((d, i) => {
-        const coordinated = d.remediationScope?.kind === 'COORDINATED_SAME_FILE';
-        return {
-          cveId: cveIds[i],
-          request: {
-            findingIdentity: d.findingIdentity, evaluatedSha: evaluatedSha, ecosystem: 'MAVEN',
-            provenanceKind: d.provenance!.kind, package: d.provenance!.package, installedVersion: d.provenance!.installedVersion,
-            targetVersion: d.selectedTargetVersion!, controllingFile: d.provenance!.controllingFile,
-            controllingElement: d.provenance!.controllingElement, controllingProperty: d.provenance!.controllingProperty,
-            sourceContent,
-            ...(coordinated ? { remediationScope: d.remediationScope, scopeEvidence: scopeEvidenceByCve.get(cveIds[i]) } : {}),
-          },
+      let writeResult: { ok: true; file: CandidateFile; perFinding: SecurityPatchBatchFindingOutcome[] };
+
+      if (allParent) {
+        // V1.8 Phase 7B — ONE shared owner/parent plan, applied ONCE against
+        // this batch's own shared `sourceContent` (never the 11 separately-
+        // grounded candidates decide() already produced during grounding
+        // above -- those only PROVE feasibility per-finding; the candidate
+        // that is actually scanned/built is always constructed fresh here,
+        // exactly like the non-parent path already does with
+        // decision.provenance!.package/selectedTargetVersion, never by
+        // reusing a whole pre-built candidate file). Every decision's own
+        // plan must agree byte-for-byte -- a batch that somehow carries two
+        // different parent plans is never silently collapsed to one.
+        const plan = decisions[0].parentRemediationPlan!;
+        const inconsistent = decisions.find(d => !d.parentRemediationPlan
+          || d.parentRemediationPlan.actualEditTarget !== plan.actualEditTarget
+          || d.parentRemediationPlan.fromVersion !== plan.fromVersion
+          || d.parentRemediationPlan.toVersion !== plan.toVersion);
+        if (inconsistent) {
+          return notEligible('NOT_ELIGIBLE', 'INCONSISTENT_PARENT_PLAN_ACROSS_BATCH', pendingEvidence(decisions.length));
+        }
+        // §9/§10 — the per-CVE effective-dependency assertion needs each
+        // finding's OWN expectedResolvedDependency (the vulnerable
+        // component's expected version, e.g. jackson-databind -> 2.13.5) --
+        // never the parent's own toVersion (2.7.18), never inferred.
+        const missingExpected = decisions.find(d => !d.parentRemediationPlan!.expectedResolvedDependency);
+        if (missingExpected) {
+          return notEligible('NOT_ELIGIBLE', 'EXPECTED_RESOLVED_DEPENDENCY_MISSING', pendingEvidence(decisions.length));
+        }
+
+        const parentRequest = {
+          findingIdentity: `batch-${input.batchId}`, evaluatedSha, ecosystem: 'MAVEN' as const, editType: 'PARENT_VERSION' as const,
+          actualEditTarget: plan.actualEditTarget, fromVersion: plan.fromVersion, toVersion: plan.toVersion,
+          controllingFile, sourceContent,
         };
-      });
-      const writeResult = measure('PATCH_GENERATION_DURATION_MS', () => writeSecurityPatchBatch(items));
-      if (writeResult.ok !== true) {
-        const conflictByCve = new Map(writeResult.conflicts.map(c => [c.cveId, c]));
-        return notEligible('PATCH_CONFLICT', `${writeResult.conflicts.length} conflicting CVE(s): ${writeResult.conflicts.map(c => c.cveId).join(', ')}`,
-          decisions.map((d, i) => {
-            const conflict = conflictByCve.get(cveIds[i]);
-            return conflict
-              ? { findingIdentity: d.findingIdentity, cveId: cveIds[i], status: 'PATCH_CONFLICT', reason: `${conflict.reason}: ${conflict.detail}`, patchEvidence: null }
-              : { findingIdentity: d.findingIdentity, cveId: cveIds[i], status: 'PENDING', reason: 'BATCH_ABORTED_BY_SIBLING_CONFLICT', patchEvidence: null };
-          }));
+        const parentWrite: any = measure('PATCH_GENERATION_DURATION_MS', () => writeParentVersionPatch(parentRequest));
+        if (parentWrite.ok !== true) {
+          return notEligible('PATCH_CONFLICT', `PARENT_WRITE_FAILED:${parentWrite.reason}`, pendingEvidence(decisions.length));
+        }
+        // §6/§7 — independent guard re-derivation, no fallback: a batch this
+        // size skips the singular per-finding guard for the non-parent path
+        // (see this file's own header) but a PARENT_VERSION batch is new
+        // enough, and edits a single shared node broad enough in blast
+        // radius, that re-proving it here is cheap and worthwhile.
+        const parentDecisionForGuard: SecurityFindingDecision = {
+          ...decisions[0], remediationType: 'AUTO_FIX_ELIGIBLE', editType: 'PARENT_VERSION',
+          selectedTargetVersion: plan.toVersion, parentRemediationPlan: plan,
+        };
+        const parentGuard = assertParentVersionPatchSafeToWrite(parentDecisionForGuard, parentRequest, parentWrite.candidate);
+        if (parentGuard.ok !== true) {
+          return notEligible('PATCH_CONFLICT', `PARENT_GUARD_FAILED:${(parentGuard as any).reason}`, pendingEvidence(decisions.length));
+        }
+        writeResult = {
+          ok: true, file: parentWrite.candidate.file,
+          perFinding: decisions.map((d, i) => ({
+            cveId: cveIds[i], findingIdentity: d.findingIdentity, package: d.provenance!.package,
+            provenanceKind: 'PARENT_MANAGED', oldVersion: d.provenance!.installedVersion,
+            targetVersion: d.parentRemediationPlan!.expectedResolvedDependency!,
+            controllingFile, controllingElement: null, controllingProperty: null,
+          })),
+        };
+      } else {
+        // §2/★ — chain N single-CVE patch requests into ONE candidate file.
+        // Conflict detection is writeSecurityPatchBatch()'s own chaining
+        // (see that file's header) — nothing extra to do here.
+        // writeSecurityPatch()'s coordinated-scope branch re-derives and
+        // requires `computeGitBlobSha1(source) === scopeEvidence.
+        // originalBlobSha` -- true only against the PRISTINE, pre-chain
+        // content. For the common SINGLE_CONTROL case that requirement is
+        // unnecessary machinery (the plain provenanceKind-based write already
+        // proves everything needed) AND actively incompatible with chaining
+        // (a SINGLE_CONTROL finding applied anywhere but first would falsely
+        // "conflict" against its own already-satisfied scope). Only a
+        // genuinely COORDINATED_SAME_FILE finding needs remediationScope/
+        // scopeEvidence carried through to the write step at all -- see this
+        // file's own header for the disclosed ordering limitation that
+        // still applies to that case.
+        const items: SecurityPatchBatchItem[] = decisions.map((d, i) => {
+          const coordinated = d.remediationScope?.kind === 'COORDINATED_SAME_FILE';
+          return {
+            cveId: cveIds[i],
+            request: {
+              findingIdentity: d.findingIdentity, evaluatedSha: evaluatedSha, ecosystem: 'MAVEN',
+              provenanceKind: d.provenance!.kind, package: d.provenance!.package, installedVersion: d.provenance!.installedVersion,
+              targetVersion: d.selectedTargetVersion!, controllingFile: d.provenance!.controllingFile,
+              controllingElement: d.provenance!.controllingElement, controllingProperty: d.provenance!.controllingProperty,
+              sourceContent,
+              ...(coordinated ? { remediationScope: d.remediationScope, scopeEvidence: scopeEvidenceByCve.get(cveIds[i]) } : {}),
+            },
+          };
+        });
+        const chainedWrite = measure('PATCH_GENERATION_DURATION_MS', () => writeSecurityPatchBatch(items));
+        if (chainedWrite.ok !== true) {
+          const conflictByCve = new Map(chainedWrite.conflicts.map(c => [c.cveId, c]));
+          return notEligible('PATCH_CONFLICT', `${chainedWrite.conflicts.length} conflicting CVE(s): ${chainedWrite.conflicts.map(c => c.cveId).join(', ')}`,
+            decisions.map((d, i) => {
+              const conflict = conflictByCve.get(cveIds[i]);
+              return conflict
+                ? { findingIdentity: d.findingIdentity, cveId: cveIds[i], status: 'PATCH_CONFLICT', reason: `${conflict.reason}: ${conflict.detail}`, patchEvidence: null }
+                : { findingIdentity: d.findingIdentity, cveId: cveIds[i], status: 'PENDING', reason: 'BATCH_ABORTED_BY_SIBLING_CONFLICT', patchEvidence: null };
+            }));
+        }
+        writeResult = chainedWrite;
       }
       const perFindingByCve = new Map(writeResult.perFinding.map(f => [f.cveId, f]));
 

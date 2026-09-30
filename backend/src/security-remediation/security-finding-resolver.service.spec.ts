@@ -176,21 +176,73 @@ async function main() {
   console.log('security-finding-resolver P) V1.8 plan matching this package -> pinnedTargetVersion forwarded: PASS');
 
   // Q. V1.8 — a persisted v1_8Plan whose actualEditTarget names a DIFFERENT
-  // coordinate (e.g. a stale pin from a prior batch, or a plan that
-  // redirected to an owner/parent) must NEVER leak into this finding's own
-  // pinnedTargetVersion -- fail closed to the existing pure-policy behavior.
+  // coordinate, AND is not itself a PARENT_VERSION plan (e.g. a stale
+  // DEPENDENCY_VERSION/PROPERTY_VERSION pin that names a different package)
+  // must NEVER leak into this finding's own pinnedTargetVersion -- fail
+  // closed to the existing pure-policy behavior.
   {
     const { tasksRepo, incidentsRepo, projectsRepo } = fakeRepos({ tasks: [{
       id: TASK_ID, projectId: PROJECT_ID, incidentId: INCIDENT_ID, findingFingerprint: 'fp-mismatch-1', source: 'TRIVY', ruleOrCve: 'CVE-2024-22257',
       findingSnapshot: { component: 'org.springframework.security:spring-security-core', currentVersion: '5.6.4', fixedVersion: '5.7.12, 5.8.11' },
-      securityFindingRemediation: { status: 'DISPATCHING', v1_8Plan: { editType: 'PARENT_VERSION', actualEditTarget: 'org.springframework.boot:spring-boot-starter-parent', fromVersion: '2.7.0', toVersion: '2.7.18', expectedResolvedDependency: null } },
+      securityFindingRemediation: { status: 'DISPATCHING', v1_8Plan: { editType: 'DEPENDENCY_VERSION', actualEditTarget: 'org.yaml:snakeyaml', fromVersion: '1.29', toVersion: '1.31', expectedResolvedDependency: '1.31' } },
     }] });
     const service = new SecurityFindingResolverService(tasksRepo, incidentsRepo, projectsRepo);
     const result: any = await service.resolve(PROJECT_ID, TASK_ID);
     assert.equal(result.ok, true);
-    assert.equal(result.finding.pinnedTargetVersion, undefined, 'Q: a plan bound to a different actualEditTarget must never be forwarded for this package');
+    assert.equal(result.finding.pinnedTargetVersion, undefined, 'Q: a DEPENDENCY_VERSION plan bound to a different actualEditTarget must never be forwarded for this package');
+    assert.equal(result.finding.parentRemediationPlan, undefined, 'Q: not a PARENT_VERSION plan at all -- no parentRemediationPlan either');
   }
-  console.log('security-finding-resolver Q) V1.8 plan for a DIFFERENT edit target -> never forwarded, fails closed to pure policy: PASS');
+  console.log('security-finding-resolver Q) non-parent V1.8 plan for a DIFFERENT edit target -> never forwarded, fails closed to pure policy: PASS');
+
+  // R. V1.8 Phase 7B — a PARENT_VERSION plan is forwarded as
+  // parentRemediationPlan UNCONDITIONALLY (never gated on
+  // actualEditTarget === this finding's own package): an owner/parent
+  // remediation's whole point is that the edit target differs from the
+  // finding's package (jackson-databind's CVE fixed by bumping the Spring
+  // Boot parent, never jackson-databind's own declaration). pinnedTargetVersion
+  // must stay undefined (mutually exclusive shapes).
+  {
+    const { tasksRepo, incidentsRepo, projectsRepo } = fakeRepos({ tasks: [{
+      id: TASK_ID, projectId: PROJECT_ID, incidentId: INCIDENT_ID, findingFingerprint: 'fp-parent-1', source: 'OWASP', ruleOrCve: 'CVE-2022-42003',
+      findingSnapshot: { component: 'com.fasterxml.jackson.core:jackson-databind', currentVersion: '2.13.3', fixedVersion: null },
+      securityFindingRemediation: { status: 'DISPATCHING', v1_8Plan: { editType: 'PARENT_VERSION', actualEditTarget: 'org.springframework.boot:spring-boot-starter-parent', fromVersion: '2.7.0', toVersion: '2.7.18', expectedResolvedDependency: '2.13.5' } },
+    }] });
+    const service = new SecurityFindingResolverService(tasksRepo, incidentsRepo, projectsRepo);
+    const result: any = await service.resolve(PROJECT_ID, TASK_ID);
+    assert.equal(result.ok, true);
+    assert.notEqual(result.finding.package, 'org.springframework.boot:spring-boot-starter-parent', 'R: sanity -- the finding\'s own package genuinely differs from the parent plan\'s target');
+    assert.deepEqual(result.finding.parentRemediationPlan, { actualEditTarget: 'org.springframework.boot:spring-boot-starter-parent', fromVersion: '2.7.0', toVersion: '2.7.18', expectedResolvedDependency: '2.13.5' }, 'R: parent plan (incl. expectedResolvedDependency) forwarded unconditionally, package!=actualEditTarget is expected, not a mismatch');
+    assert.equal(result.finding.pinnedTargetVersion, undefined, 'R: mutually exclusive with pinnedTargetVersion');
+  }
+  console.log('security-finding-resolver R) PARENT_VERSION plan forwarded unconditionally despite package != actualEditTarget: PASS');
+
+  // S. a structurally incomplete PARENT_VERSION plan (missing toVersion)
+  // must never be forwarded -- fail closed rather than hand the decision
+  // service a partial plan it could misinterpret.
+  {
+    const { tasksRepo, incidentsRepo, projectsRepo } = fakeRepos({ tasks: [{
+      id: TASK_ID, projectId: PROJECT_ID, incidentId: INCIDENT_ID, findingFingerprint: 'fp-parent-incomplete', source: 'OWASP', ruleOrCve: 'CVE-2022-42003',
+      findingSnapshot: { component: 'com.fasterxml.jackson.core:jackson-databind', currentVersion: '2.13.3', fixedVersion: null },
+      securityFindingRemediation: { status: 'DISPATCHING', v1_8Plan: { editType: 'PARENT_VERSION', actualEditTarget: 'org.springframework.boot:spring-boot-starter-parent', fromVersion: '2.7.0', toVersion: null, expectedResolvedDependency: null } },
+    }] });
+    const service = new SecurityFindingResolverService(tasksRepo, incidentsRepo, projectsRepo);
+    const result: any = await service.resolve(PROJECT_ID, TASK_ID);
+    assert.equal(result.ok, true);
+    assert.equal(result.finding.parentRemediationPlan, undefined, 'S: an incomplete parent plan must never be forwarded');
+  }
+  console.log('security-finding-resolver S) structurally incomplete PARENT_VERSION plan (missing toVersion) -> never forwarded: PASS');
+
+  // T. missing v1_8Plan entirely (task never dispatched under ENFORCED, or
+  // SHADOW mode) -> no parentRemediationPlan, no pinnedTargetVersion --
+  // decide() must take the normal path, never synthesize a parent edit.
+  {
+    const { tasksRepo, incidentsRepo, projectsRepo } = fakeRepos();
+    const service = new SecurityFindingResolverService(tasksRepo, incidentsRepo, projectsRepo);
+    const result: any = await service.resolve(PROJECT_ID, TASK_ID);
+    assert.equal(result.ok, true);
+    assert.equal(result.finding.parentRemediationPlan, undefined, 'T: no v1_8Plan at all -> no parentRemediationPlan');
+  }
+  console.log('security-finding-resolver T) no v1_8Plan at all -> no parentRemediationPlan forwarded: PASS');
 
   console.log('security-finding-resolver.service.spec.ts: ALL CHECKS PASS');
 }

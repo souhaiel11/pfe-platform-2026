@@ -43,7 +43,7 @@ export class GroundedMavenProvenanceService {
 
   resolve(request: GroundedMavenProvenanceRequest): GroundedMavenProvenanceResult {
     const requestedSha = request.candidateBaseSha.toLowerCase();
-    const evidence: GroundedMavenProvenanceEvidence = { requestedSha, checkoutSha: null, evaluatedSha: null };
+    const evidence: GroundedMavenProvenanceEvidence = { requestedSha, checkoutSha: null, evaluatedSha: null, pomXmlText: null };
     const fail = (failureClass: GroundedMavenProvenanceFailureClass, detail: string): GroundedMavenProvenanceResult =>
       ({ ok: false, failureClass, detail, evidence: { ...evidence },
         ...(failureClass.startsWith('WARMUP_') ? { retryable: true } : {}) });
@@ -113,6 +113,7 @@ export class GroundedMavenProvenanceService {
       } catch {
         return fail('POM_NOT_FOUND', `No pom.xml at the root of the exact-SHA worktree (${evidence.evaluatedSha}).`);
       }
+      evidence.pomXmlText = pomXmlText;
 
       // Grounding has no candidate POM yet: both steps use the same verified
       // baseline SHA. Warm-up is best-effort; the offline tree is mandatory.

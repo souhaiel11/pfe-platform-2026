@@ -16,7 +16,21 @@ export type DependencyProvenanceKind =
   | 'BOM_MANAGED'
   | 'TRANSITIVE'
   | 'PLUGIN'
-  | 'UNRESOLVED';
+  | 'UNRESOLVED'
+  /**
+   * V1.8 Phase 7B — the finding's own package is actually remediated by
+   * editing a DIFFERENT coordinate entirely (the Maven <parent>), never by
+   * touching this package's own declaration. Never produced by
+   * resolveMavenProvenance()'s own dependency-tree/pom classification (that
+   * function has no notion of a V1.8 plan) -- only ever set by
+   * SecurityFindingDecisionService.decide()'s PARENT_VERSION branch, and
+   * only when a ParentVersionRemediationPlan was actually supplied and the
+   * real writer (maven-parent-patch-writer.ts) proved it applies. See this
+   * kind's own SecurityFindingDecision.parentRemediationPlan/
+   * parentPatchCandidate fields for the actual edit target/candidate --
+   * never inferred from `package`/`installedVersion` on this record alone.
+   */
+  | 'PARENT_MANAGED';
 
 /**
  * Grounded evidence for exactly where a Maven dependency's effective

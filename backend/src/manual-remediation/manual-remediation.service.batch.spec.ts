@@ -124,6 +124,30 @@ async function main() {
   }
   console.log('launchBatchRemediation) two CVEs on the same Maven component -> refused before dispatch, named: PASS');
 
+  // 4b. V1.8 Phase 7C — the ONE exception: two REAL CVEs sharing the SAME
+  // Maven component are NOT refused when both are remediated by the SAME
+  // already-validated PARENT_VERSION plan (real evidence-store entries:
+  // OWASP CVE-2022-42003/CVE-2022-42004, both jackson-databind, both
+  // Spring Boot parent 2.7.0->2.7.18) -- proves the collision guard
+  // distinguishes "same component, would conflict" from "same component,
+  // shared parent edit, never touches the component's own declaration".
+  {
+    const taskJ1 = seedTask({
+      id: 'task-parent-j1', source: 'OWASP', ruleOrCve: 'CVE-2022-42003', findingFingerprint: 'fp-parent-j1',
+      findingSnapshot: { component: 'com.fasterxml.jackson.core:jackson-databind', currentVersion: '2.13.3', fixedVersion: '2.13.5' },
+    });
+    const taskJ2 = seedTask({
+      id: 'task-parent-j2', source: 'OWASP', ruleOrCve: 'CVE-2022-42004', findingFingerprint: 'fp-parent-j2',
+      findingSnapshot: { component: 'com.fasterxml.jackson.core:jackson-databind', currentVersion: '2.13.3', fixedVersion: '2.13.5' },
+    });
+    let dispatched = false;
+    const { service } = makeService([taskJ1, taskJ2], fakeDispatcher(() => { dispatched = true; }));
+    const result = await service.launchBatchRemediation(PROJECT_ID, ['task-parent-j1', 'task-parent-j2'], DEV_USER);
+    assert.equal(result.status, 'DISPATCHING', 'two CVEs on the same component, both sharing the SAME real PARENT_VERSION plan, must NOT be refused as colliding');
+    assert.equal(dispatched, true);
+  }
+  console.log('launchBatchRemediation) two REAL CVEs on the same component, same real PARENT_VERSION plan -> NOT a collision, dispatch proceeds: PASS');
+
   // 5. Dispatch failure -> every task rolled back to DISPATCH_FAILED, real
   // error surfaced, nothing left silently stuck at DISPATCHING.
   {

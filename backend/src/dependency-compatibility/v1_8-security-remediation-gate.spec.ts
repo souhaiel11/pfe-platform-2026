@@ -148,21 +148,37 @@ console.log('spring-web -> BLOCK: PASS');
 assert.equal(canDispatchSecurityRemediationV1_8(exactContext(tomcat24549), tomcat24549).decision, 'BLOCK');
 console.log('Tomcat CVE-2024-24549 -> BLOCK: PASS');
 
-// Phase 8 — the live writer support matrix, exercised directly: a
-// PARENT_VERSION plan that otherwise passed every gate (the 11
-// CAPABILITY_GAIN findings from Phase 4) must still BLOCK as
-// UNSUPPORTED_EDIT_TYPE, because production's real writer cannot perform
-// this edit at all yet.
+// V1.8 Phase 7 — the live writer support matrix, exercised directly: a
+// PARENT_VERSION plan that passes every other gate now ALLOWs (see
+// maven-parent-patch-writer.ts, added this phase) -- production's real
+// writer capability gain, not a gate relaxation: every other clause
+// (sandboxValidated/targetCveClosed/newHighCriticalCount/staleness/etc.)
+// still applies identically.
 {
   const jacksonViaParent = service.lookup('OWASP', 'CVE-2022-42003', 'com.fasterxml.jackson.core:jackson-databind');
   assert.equal(jacksonViaParent.state, 'VALIDATED_RECOMMENDED');
   assert.equal(jacksonViaParent.editType, 'PARENT_VERSION');
   const result = canDispatchSecurityRemediationV1_8(exactContext(jacksonViaParent), jacksonViaParent);
-  assert.equal(result.decision, 'BLOCK');
-  assert.equal(result.reason, 'UNSUPPORTED_EDIT_TYPE');
-  assert.equal(LIVE_WRITER_SUPPORTED_EDIT_TYPES.has('PARENT_VERSION'), false);
+  assert.equal(result.decision, 'ALLOW');
+  assert.equal(result.reason, 'ALL_GATES_PASSED');
+  assert.equal(LIVE_WRITER_SUPPORTED_EDIT_TYPES.has('PARENT_VERSION'), true);
   assert.equal(LIVE_WRITER_SUPPORTED_EDIT_TYPES.has('DEPENDENCY_VERSION'), true);
 }
-console.log('VALIDATED_RECOMMENDED via PARENT_VERSION (real capability gain) still BLOCKs live dispatch -- writer cannot perform this edit yet: PASS');
+console.log('VALIDATED_RECOMMENDED via PARENT_VERSION -> ALLOW now that maven-parent-patch-writer.ts exists (V1.8 Phase 7 capability gain): PASS');
+
+// A PARENT_VERSION plan that fails an EARLIER, unrelated gate clause
+// (developer-review-required) must still BLOCK on THAT reason, never
+// "upgraded" to ALLOW just because the edit type is now writer-supported --
+// proves the capability gain did not loosen anything else in the chain.
+{
+  const requiresReview: V1_8CompatibilityDecision = {
+    ...service.lookup('OWASP', 'CVE-2022-42003', 'com.fasterxml.jackson.core:jackson-databind'),
+    requiresDeveloperReview: true,
+  };
+  const result = canDispatchSecurityRemediationV1_8(exactContext(requiresReview), requiresReview);
+  assert.equal(result.decision, 'BLOCK');
+  assert.equal(result.reason, 'DEVELOPER_REVIEW_REQUIRED');
+}
+console.log('PARENT_VERSION plan still BLOCKs on an earlier gate clause (requiresDeveloperReview) -- capability gain never bypasses other checks: PASS');
 
 console.log('v1_8-security-remediation-gate.spec.ts: ALL CHECKS PASS');

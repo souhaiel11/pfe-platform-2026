@@ -74,6 +74,17 @@ export interface GroundedMavenProvenanceEvidence {
   checkoutSha: string | null;
   /** Only set once checkoutSha has been proven === requestedSha — see §3. */
   evaluatedSha: string | null;
+  /**
+   * V1.8 Phase 7B — the real, raw pom.xml text read from the exact-SHA
+   * worktree (BEFORE any patch), additive alongside the existing
+   * dependency-classification result. Exists so a PARENT_VERSION decision
+   * (which needs the raw source text for maven-parent-patch-writer.ts, not
+   * a dependency-tree classification of an unrelated package) can reuse
+   * this SAME checkout instead of a second one — "no second validation
+   * architecture" (V1.8 Phase 7B's own instruction). Null whenever pom.xml
+   * itself was never successfully read (workspace/checkout failures).
+   */
+  pomXmlText: string | null;
 }
 
 export type GroundedMavenProvenanceResult =

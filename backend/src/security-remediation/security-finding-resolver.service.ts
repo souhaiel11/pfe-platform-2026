@@ -104,8 +104,24 @@ export class SecurityFindingResolverService {
     // actualEditTarget names a different package (e.g. a since-superseded
     // pin, or a batch that also touched an owner/parent) is never applied
     // to this one, fail-closed to the existing pure-policy behavior instead.
+    //
+    // V1.8 Phase 7B — a PARENT_VERSION plan is a DIFFERENT shape, forwarded
+    // unconditionally (never gated on actualEditTarget === pkg): an owner/
+    // parent remediation's whole point is that the edit target is NOT the
+    // finding's own package -- see ParentVersionRemediationPlan's own header.
+    // Still fails closed if the persisted plan is structurally incomplete
+    // (missing actualEditTarget/fromVersion/toVersion) rather than forward a
+    // partial plan for the decision service to misinterpret.
     const v1_8Plan = task.securityFindingRemediation?.v1_8Plan;
-    const pinnedTargetVersion = v1_8Plan && String(v1_8Plan.actualEditTarget) === String(pkg) && String(v1_8Plan.toVersion || '').trim()
+    const isParentPlan = v1_8Plan && v1_8Plan.editType === 'PARENT_VERSION';
+    const parentRemediationPlan = isParentPlan
+      && String(v1_8Plan.actualEditTarget || '').trim() && String(v1_8Plan.fromVersion || '').trim() && String(v1_8Plan.toVersion || '').trim()
+      ? {
+          actualEditTarget: String(v1_8Plan.actualEditTarget).trim(), fromVersion: String(v1_8Plan.fromVersion).trim(), toVersion: String(v1_8Plan.toVersion).trim(),
+          ...(String(v1_8Plan.expectedResolvedDependency || '').trim() ? { expectedResolvedDependency: String(v1_8Plan.expectedResolvedDependency).trim() } : {}),
+        }
+      : undefined;
+    const pinnedTargetVersion = !isParentPlan && v1_8Plan && String(v1_8Plan.actualEditTarget) === String(pkg) && String(v1_8Plan.toVersion || '').trim()
       ? String(v1_8Plan.toVersion).trim() : undefined;
 
     return {
@@ -120,6 +136,7 @@ export class SecurityFindingResolverService {
         expectedInstalledVersion: String(installedVersion),
         fixedVersion: snapshot.fixedVersion != null ? String(snapshot.fixedVersion) : null,
         ...(pinnedTargetVersion ? { pinnedTargetVersion } : {}),
+        ...(parentRemediationPlan ? { parentRemediationPlan } : {}),
       },
       cveId: task.ruleOrCve != null && String(task.ruleOrCve).trim() ? String(task.ruleOrCve) : null,
       title: task.title != null && String(task.title).trim() ? String(task.title) : null,

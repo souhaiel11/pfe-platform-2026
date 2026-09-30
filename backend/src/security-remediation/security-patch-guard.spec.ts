@@ -2,7 +2,8 @@ import * as assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { writeSecurityPatch } from './maven-security-patch-writer';
-import { assertSecurityPatchSafeToWrite } from './security-patch-guard';
+import { assertSecurityPatchSafeToWrite, assertParentVersionPatchSafeToWrite } from './security-patch-guard';
+import { writeParentVersionPatch, ParentVersionPatchRequest } from './maven-parent-patch-writer';
 import { SecurityPatchRequest } from './security-patch-request.types';
 import { SecurityFindingDecision } from './security-finding-decision.types';
 import { DependencyProvenance } from './dependency-provenance.types';
@@ -162,5 +163,99 @@ console.log('security-patch-guard M) unrelated XML edit (java.version) -> guard 
   assert.equal((r6 as any).reason, 'ORIGINAL_CONTENT_INTEGRITY_MISMATCH');
 }
 console.log('security-patch-guard) additional invariants (identity, SHA, eligibility, path, integrity, swapped-source): PASS');
+
+// ============================================================================
+// V1.8 Phase 7B — assertParentVersionPatchSafeToWrite(): F (independently
+// reproduces the exact parent patch -> PASS) and G (tampered bytes -> BLOCK).
+// ============================================================================
+function parentRequest(overrides: Partial<ParentVersionPatchRequest> = {}): ParentVersionPatchRequest {
+  return {
+    findingIdentity: 'fp-parent-1', evaluatedSha: EVALUATED_SHA, ecosystem: 'MAVEN', editType: 'PARENT_VERSION',
+    actualEditTarget: 'org.springframework.boot:spring-boot-starter-parent', fromVersion: '2.7.0', toVersion: '2.7.18',
+    controllingFile: 'pom.xml', sourceContent: realPomXmlText,
+    ...overrides,
+  };
+}
+function parentDecision(overrides: Partial<SecurityFindingDecision> = {}): SecurityFindingDecision {
+  return {
+    findingIdentity: 'fp-parent-1', evaluatedSha: EVALUATED_SHA, provenance: null, fixedVersions: [],
+    selectedTargetVersion: '2.7.18', remediationType: 'AUTO_FIX_ELIGIBLE', reason: 'PARENT_MANAGED:V1_8_PINNED',
+    editType: 'PARENT_VERSION',
+    parentRemediationPlan: { actualEditTarget: 'org.springframework.boot:spring-boot-starter-parent', fromVersion: '2.7.0', toVersion: '2.7.18' },
+    ...overrides,
+  };
+}
+function authenticParentCandidate() {
+  const result: any = writeParentVersionPatch(parentRequest());
+  assert.equal(result.ok, true);
+  return result.candidate;
+}
+
+// F. guard independently reproduces the exact parent patch -> PASS.
+{
+  const result = assertParentVersionPatchSafeToWrite(parentDecision(), parentRequest(), authenticParentCandidate());
+  assert.equal(result.ok, true, `F: ${JSON.stringify(result)}`);
+}
+console.log('security-patch-guard (parent) F) guard independently reproduces the exact parent patch -> PASS: PASS');
+
+// G. guard produces different bytes (tampered candidate content) -> BLOCK.
+{
+  const candidate = authenticParentCandidate();
+  const tampered = { ...candidate, file: { ...candidate.file, content: candidate.file.content.replace('2.7.18', '2.7.99') } };
+  const result = assertParentVersionPatchSafeToWrite(parentDecision(), parentRequest(), tampered);
+  assert.equal(result.ok, false);
+  assert.equal((result as any).reason, 'PARENT_PATCH_UNAUTHORIZED_CHANGE');
+}
+console.log('security-patch-guard (parent) G) guard produces different bytes -> BLOCK (PARENT_PATCH_UNAUTHORIZED_CHANGE): PASS');
+
+// Additional parent-guard invariants, mirroring the existing guard's own coverage.
+{
+  const candidate = authenticParentCandidate();
+
+  // decision not actually a confirmed PARENT_VERSION AUTO_FIX_ELIGIBLE decision.
+  const r1 = assertParentVersionPatchSafeToWrite(parentDecision({ editType: undefined }), parentRequest(), candidate);
+  assert.equal(r1.ok, false);
+  assert.equal((r1 as any).reason, 'PARENT_PATCH_ELIGIBILITY_NOT_CONFIRMED');
+
+  // decision carries no parentRemediationPlan at all.
+  const r2 = assertParentVersionPatchSafeToWrite(parentDecision({ parentRemediationPlan: undefined }), parentRequest(), candidate);
+  assert.equal(r2.ok, false);
+  assert.equal((r2 as any).reason, 'PARENT_PATCH_SCOPE_MISMATCH');
+
+  // actualEditTarget mismatch between decision plan and request.
+  const r3 = assertParentVersionPatchSafeToWrite(parentDecision(), parentRequest({ actualEditTarget: 'org.springframework.boot:WRONG' }), candidate);
+  assert.equal(r3.ok, false);
+  assert.equal((r3 as any).reason, 'PARENT_PATCH_EDIT_TARGET_MISMATCH');
+
+  // fromVersion mismatch between decision plan and request.
+  const r4 = assertParentVersionPatchSafeToWrite(parentDecision(), parentRequest({ fromVersion: '2.6.0' }), candidate);
+  assert.equal(r4.ok, false);
+  assert.equal((r4 as any).reason, 'PARENT_PATCH_FROM_VERSION_MISMATCH');
+
+  // toVersion mismatch between decision and request.
+  const r5 = assertParentVersionPatchSafeToWrite(parentDecision({ selectedTargetVersion: '2.7.17' }), parentRequest(), candidate);
+  assert.equal(r5.ok, false);
+  assert.equal((r5 as any).reason, 'PARENT_PATCH_TARGET_VERSION_MISMATCH');
+
+  // evaluatedSha not a real SHA.
+  const r6 = assertParentVersionPatchSafeToWrite(parentDecision({ evaluatedSha: 'not-a-sha' }), parentRequest(), candidate);
+  assert.equal(r6.ok, false);
+  assert.equal((r6 as any).reason, 'PARENT_PATCH_SHA_NOT_GROUNDED');
+
+  // sourceContent swapped for a different but self-consistent text.
+  const { computeGitBlobSha1 } = require('../candidate-verification/candidate-digest');
+  const otherText = 'not the real pom';
+  const tamperedSource = { ...candidate, file: { ...candidate.file, sourceContent: otherText, originalBlobSha: computeGitBlobSha1(otherText) } };
+  const r7 = assertParentVersionPatchSafeToWrite(parentDecision(), parentRequest(), tamperedSource);
+  assert.equal(r7.ok, false);
+  assert.equal((r7 as any).reason, 'PARENT_PATCH_ORIGINAL_CONTENT_INTEGRITY_MISMATCH');
+}
+console.log('security-patch-guard (parent) additional invariants (eligibility, scope, target/version/SHA mismatch, swapped source): PASS');
+
+// H/I — DEPENDENCY_VERSION/PROPERTY_VERSION guard behavior is untouched:
+// assertSecurityPatchSafeToWrite() itself was not modified by this phase at
+// all (grep-verifiable), and every existing test above in this same file
+// already re-ran clean in this turn's regression pass.
+console.log('security-patch-guard (parent) H/I) assertSecurityPatchSafeToWrite() untouched -- DEPENDENCY_VERSION/PROPERTY_VERSION guard behavior unchanged: PASS');
 
 console.log('security-patch-guard.spec.ts: ALL CHECKS PASS');

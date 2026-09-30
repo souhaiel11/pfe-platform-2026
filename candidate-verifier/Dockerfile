@@ -156,6 +156,8 @@ COPY backend/src/security-remediation/maven-dependency-resolution-check.ts /back
 COPY backend/src/security-remediation/maven-provenance-resolver.ts /backend/src/security-remediation/maven-provenance-resolver.ts
 COPY backend/src/security-remediation/maven-remediation-scope.ts /backend/src/security-remediation/maven-remediation-scope.ts
 COPY backend/src/security-remediation/maven-security-patch-writer.ts /backend/src/security-remediation/maven-security-patch-writer.ts
+COPY backend/src/security-remediation/maven-parent-patch-writer.ts /backend/src/security-remediation/maven-parent-patch-writer.ts
+COPY backend/src/security-remediation/parent-version-effective-model-check.ts /backend/src/security-remediation/parent-version-effective-model-check.ts
 COPY backend/src/security-remediation/security-candidate-identity.ts /backend/src/security-remediation/security-candidate-identity.ts
 COPY backend/src/security-remediation/security-eligibility-classifier.ts /backend/src/security-remediation/security-eligibility-classifier.ts
 COPY backend/src/security-remediation/security-finding-decision.types.ts /backend/src/security-remediation/security-finding-decision.types.ts

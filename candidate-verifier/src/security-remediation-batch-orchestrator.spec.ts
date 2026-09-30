@@ -252,6 +252,157 @@ try {
   }
   console.log('security-remediation-batch-orchestrator E) build failure -> whole batch fails, real Maven output captured, NO per-CVE attribution: PASS');
 
+  // ==========================================================================
+  // F. V1.8 Phase 7B — a SHARED PARENT_VERSION plan across 3 findings ->
+  // ONE candidate/build/scan (never 3), each CVE closed INDEPENDENTLY.
+  // Mirrors the real 11-finding Spring Boot parent case: one CVE (mirroring
+  // real Tomcat CVE-2024-24549) must remain STILL_OPEN even though its
+  // sibling CVEs on the SAME package close, proving closure is never
+  // "everyone passes because the shared build succeeded".
+  // ==========================================================================
+  {
+    const repoF = path.join(root, 'repo-f');
+    fs.mkdirSync(repoF, { recursive: true });
+    const PARENT_POM_BEFORE = `<project>\n  <parent>\n    <groupId>org.springframework.boot</groupId>\n    <artifactId>spring-boot-starter-parent</artifactId>\n    <version>2.7.0</version>\n  </parent>\n  <dependencies>\n    <dependency><groupId>com.fasterxml.jackson.core</groupId><artifactId>jackson-databind</artifactId></dependency>\n    <dependency><groupId>org.apache.tomcat.embed</groupId><artifactId>tomcat-embed-core</artifactId></dependency>\n  </dependencies>\n</project>\n`;
+    fs.writeFileSync(path.join(repoF, 'pom.xml'), PARENT_POM_BEFORE);
+    execFileSync('git', ['init', '-q'], { cwd: repoF });
+    execFileSync('git', ['config', 'user.email', 'test@test.local'], { cwd: repoF });
+    execFileSync('git', ['config', 'user.name', 'test'], { cwd: repoF });
+    execFileSync('git', ['add', 'pom.xml'], { cwd: repoF });
+    execFileSync('git', ['commit', '-q', '-m', 'initial'], { cwd: repoF });
+    const SHA_F = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: repoF, encoding: 'utf8' }).trim();
+    const wmF = new WorkspaceManager(path.join(root, 'workspaces-f'));
+
+    const PLAN = { actualEditTarget: 'org.springframework.boot:spring-boot-starter-parent', fromVersion: '2.7.0', toVersion: '2.7.18' };
+    const findingJackson = { findingIdentity: 'f-jackson-parent', cveId: 'CVE-2022-42003', source: 'OWASP', package: 'com.fasterxml.jackson.core:jackson-databind', expectedInstalledVersion: '2.13.3', fixedVersion: null };
+    const findingTomcatA = { findingIdentity: 'f-tomcat-a', cveId: 'CVE-2022-42252', source: 'OWASP', package: 'org.apache.tomcat.embed:tomcat-embed-core', expectedInstalledVersion: '9.0.63', fixedVersion: null };
+    const findingTomcatStillOpen = { findingIdentity: 'f-tomcat-stillopen', cveId: 'CVE-2024-24549', source: 'OWASP', package: 'org.apache.tomcat.embed:tomcat-embed-core', expectedInstalledVersion: '9.0.63', fixedVersion: null };
+    const expectedResolved: Record<string, string> = { 'CVE-2022-42003': '2.13.5', 'CVE-2022-42252': '9.0.83', 'CVE-2024-24549': '9.0.83' };
+    const findings = [findingJackson, findingTomcatA, findingTomcatStillOpen];
+
+    const decisionServiceParent = {
+      decide: (finding: any): any => ({
+        findingIdentity: finding.findingIdentity, evaluatedSha: SHA_F,
+        provenance: { ecosystem: 'MAVEN', kind: 'PARENT_MANAGED', package: finding.package, installedVersion: finding.expectedInstalledVersion, controllingFile: 'pom.xml', controllingElement: null, controllingProperty: null, groundedSha: SHA_F, evidence: 'synthetic parent test' },
+        fixedVersions: [], selectedTargetVersion: PLAN.toVersion, remediationType: 'AUTO_FIX_ELIGIBLE', reason: 'PARENT_MANAGED:V1_8_PINNED',
+        editType: 'PARENT_VERSION', parentRemediationPlan: { ...PLAN, expectedResolvedDependency: expectedResolved[finding.cveId] },
+      }),
+    };
+
+    let dependencyTreeCallCount = 0;
+    const adapterF: any = {
+      dependencyTree: (w: string) => {
+        dependencyTreeCallCount++;
+        const parentVersion = /<parent>[\s\S]*?<version>([^<]+)<\/version>/.exec(fs.readFileSync(path.join(w, 'pom.xml'), 'utf8'))![1];
+        const resolved = parentVersion === '2.7.18' ? { jackson: '2.13.5', tomcat: '9.0.83' } : { jackson: '2.13.3', tomcat: '9.0.63' };
+        return { status: 'SUCCESS', text: `+- com.fasterxml.jackson.core:jackson-databind:jar:${resolved.jackson}:compile\n+- org.apache.tomcat.embed:tomcat-embed-core:jar:${resolved.tomcat}:compile\n` };
+      },
+      effectivePom: () => ({ status: 'SUCCESS', text: '<project></project>' }),
+      packageCandidateWithTests: () => ({ status: 'SUCCESS', testsExecuted: true, testsPassed: true, testsTotal: 1, testsFailures: 0, testsErrors: 0, testsSkipped: 0, durationMs: 1, evidenceTail: '', timedOut: false }),
+    };
+    let scanCallF = 0;
+    const scannerF = {
+      inspect: (w: string) => {
+        scanCallF++;
+        const digest = trackedSourceDigest(w);
+        // Baseline: all 3 present. Candidate (post-build): jackson + tomcatA
+        // gone, but CVE-2024-24549 (mirroring the REAL Tomcat case) is still
+        // reported -- the resolved version bump alone never closes it.
+        return scanCallF === 1
+          ? scanFor([
+              { id: 'CVE-2022-42003', pkg: findingJackson.package, installed: '2.13.3', fixed: '2.13.5' },
+              { id: 'CVE-2022-42252', pkg: findingTomcatA.package, installed: '9.0.63', fixed: '9.0.83' },
+              { id: 'CVE-2024-24549', pkg: findingTomcatStillOpen.package, installed: '9.0.63', fixed: '9.0.83' },
+            ], digest)
+          : scanFor([{ id: 'CVE-2024-24549', pkg: findingTomcatStillOpen.package, installed: '9.0.83', fixed: '9.0.83' }], digest);
+      },
+    };
+
+    const svc = new SecurityRemediationBatchOrchestratorService(decisionServiceParent as any, wmF, { ensureRepo: () => repoF } as any, adapterF, scannerF as any);
+    const result = svc.orchestrate({ repository: 'x/y', candidateBaseSha: SHA_F, requestId: 'f-req', batchId: 'f-batch', candidateAttempt: 0, findings });
+
+    assert.equal(result.status, 'CANDIDATE_SECURITY_VALIDATION_FAILED', `F: expected the whole batch to fail closed (one CVE still open), got ${JSON.stringify(result)}`);
+    const byIdF = new Map(result.findings.map(f => [f.cveId, f.status]));
+    assert.equal(byIdF.get('CVE-2022-42003'), 'CLOSED', 'F: jackson CVE closed independently');
+    assert.equal(byIdF.get('CVE-2022-42252'), 'CLOSED', 'F: tomcat CVE-A closed independently');
+    assert.equal(byIdF.get('CVE-2024-24549'), 'STILL_OPEN', 'F: the Tomcat-CVE-2024-24549-analog remains STILL_OPEN even though its sibling on the SAME package closed and the shared build succeeded');
+    // ONE shared candidate build/tree call for the dependency-tree-resolution
+    // check step (never one per finding/CVE) -- proves the parent edit was
+    // applied ONCE, not 3 times.
+    assert.equal(dependencyTreeCallCount, 1, `F: exactly one candidate dependency:tree call for the whole shared-plan batch, got ${dependencyTreeCallCount}`);
+    assert.match(result.candidateManifest === null ? '' : 'has-manifest', /^$/); // no PR-worthy candidate on a not-all-closed batch (already asserted via status, kept explicit)
+  }
+  console.log('security-remediation-batch-orchestrator F) V1.8 Phase 7B — shared PARENT_VERSION plan, ONE candidate build, independent per-CVE closure (Tomcat-CVE-2024-24549-analog stays open): PASS');
+
+  // ==========================================================================
+  // G. Same shared parent plan, but EVERY CVE closes -> CANDIDATE_READY, ONE
+  // shared candidate, correct patched content (parent-only edit).
+  // ==========================================================================
+  {
+    const repoG = path.join(root, 'repo-g');
+    fs.mkdirSync(repoG, { recursive: true });
+    const PARENT_POM_BEFORE = `<project>\n  <parent>\n    <groupId>org.springframework.boot</groupId>\n    <artifactId>spring-boot-starter-parent</artifactId>\n    <version>2.7.0</version>\n  </parent>\n  <dependencies>\n    <dependency><groupId>com.fasterxml.jackson.core</groupId><artifactId>jackson-databind</artifactId></dependency>\n  </dependencies>\n</project>\n`;
+    fs.writeFileSync(path.join(repoG, 'pom.xml'), PARENT_POM_BEFORE);
+    execFileSync('git', ['init', '-q'], { cwd: repoG });
+    execFileSync('git', ['config', 'user.email', 'test@test.local'], { cwd: repoG });
+    execFileSync('git', ['config', 'user.name', 'test'], { cwd: repoG });
+    execFileSync('git', ['add', 'pom.xml'], { cwd: repoG });
+    execFileSync('git', ['commit', '-q', '-m', 'initial'], { cwd: repoG });
+    const SHA_G = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: repoG, encoding: 'utf8' }).trim();
+    const wmG = new WorkspaceManager(path.join(root, 'workspaces-g'));
+    const PLAN = { actualEditTarget: 'org.springframework.boot:spring-boot-starter-parent', fromVersion: '2.7.0', toVersion: '2.7.18' };
+    const findingJ1 = { findingIdentity: 'g-jackson-1', cveId: 'CVE-2022-42003', source: 'OWASP', package: 'com.fasterxml.jackson.core:jackson-databind', expectedInstalledVersion: '2.13.3', fixedVersion: null };
+    const findingJ2 = { findingIdentity: 'g-jackson-2', cveId: 'CVE-2022-42004', source: 'TRIVY', package: 'com.fasterxml.jackson.core:jackson-databind', expectedInstalledVersion: '2.13.3', fixedVersion: null };
+    const decisionServiceG = {
+      decide: (finding: any): any => ({
+        findingIdentity: finding.findingIdentity, evaluatedSha: SHA_G,
+        provenance: { ecosystem: 'MAVEN', kind: 'PARENT_MANAGED', package: finding.package, installedVersion: finding.expectedInstalledVersion, controllingFile: 'pom.xml', controllingElement: null, controllingProperty: null, groundedSha: SHA_G, evidence: 'synthetic parent test' },
+        fixedVersions: [], selectedTargetVersion: PLAN.toVersion, remediationType: 'AUTO_FIX_ELIGIBLE', reason: 'PARENT_MANAGED:V1_8_PINNED',
+        editType: 'PARENT_VERSION', parentRemediationPlan: { ...PLAN, expectedResolvedDependency: '2.13.5' },
+      }),
+    };
+    const adapterG: any = {
+      dependencyTree: (w: string) => {
+        const parentVersion = /<parent>[\s\S]*?<version>([^<]+)<\/version>/.exec(fs.readFileSync(path.join(w, 'pom.xml'), 'utf8'))![1];
+        return { status: 'SUCCESS', text: `+- com.fasterxml.jackson.core:jackson-databind:jar:${parentVersion === '2.7.18' ? '2.13.5' : '2.13.3'}:compile\n` };
+      },
+      effectivePom: () => ({ status: 'SUCCESS', text: '<project></project>' }),
+      packageCandidateWithTests: () => ({ status: 'SUCCESS', testsExecuted: true, testsPassed: true, testsTotal: 1, testsFailures: 0, testsErrors: 0, testsSkipped: 0, durationMs: 1, evidenceTail: '', timedOut: false }),
+    };
+    let scanCallG = 0;
+    const scannerG = { inspect: (w: string) => {
+      scanCallG++;
+      const digest = trackedSourceDigest(w);
+      return scanCallG === 1
+        ? scanFor([{ id: 'CVE-2022-42003', pkg: findingJ1.package, installed: '2.13.3', fixed: '2.13.5' }, { id: 'CVE-2022-42004', pkg: findingJ2.package, installed: '2.13.3', fixed: '2.13.5' }], digest)
+        : scanFor([], digest);
+    } };
+    const svc = new SecurityRemediationBatchOrchestratorService(decisionServiceG as any, wmG, { ensureRepo: () => repoG } as any, adapterG, scannerG as any);
+    const result = svc.orchestrate({ repository: 'x/y', candidateBaseSha: SHA_G, requestId: 'g-req', batchId: 'g-batch', candidateAttempt: 0, findings: [findingJ1, findingJ2] });
+    assert.equal(result.status, 'CANDIDATE_READY', `G: ${JSON.stringify(result)}`);
+    assert.ok(result.findings.every(f => f.status === 'CLOSED'), `G: both OWASP+TRIVY findings for the SAME package, sharing the SAME parent plan, both closed: ${JSON.stringify(result.findings)}`);
+    assert.match(result.candidateManifest!.files[0].content, /<version>2\.7\.18<\/version>/, 'G: parent version bumped');
+    assert.doesNotMatch(result.candidateManifest!.files[0].content, /<version>2\.7\.0<\/version>/, 'G: old parent version gone');
+  }
+  console.log('security-remediation-batch-orchestrator G) shared PARENT_VERSION plan, every CVE closes -> CANDIDATE_READY, ONE shared candidate: PASS');
+
+  // ==========================================================================
+  // H. Mixed batch (one PARENT_VERSION finding + one ordinary DIRECT_EXPLICIT
+  // finding) -> fail closed, named, BEFORE any workspace/build cost.
+  // ==========================================================================
+  {
+    const mixedDecisionService = {
+      decide: (finding: any): any => finding.cveId === 'CVE-PARENT'
+        ? { findingIdentity: finding.findingIdentity, evaluatedSha: SHA, provenance: { ecosystem: 'MAVEN', kind: 'PARENT_MANAGED', package: 'com.example:owned', installedVersion: '1.0.0', controllingFile: 'pom.xml', controllingElement: null, controllingProperty: null, groundedSha: SHA, evidence: 'x' }, fixedVersions: [], selectedTargetVersion: '2.7.18', remediationType: 'AUTO_FIX_ELIGIBLE', reason: 'x', editType: 'PARENT_VERSION', parentRemediationPlan: { actualEditTarget: 'org.springframework.boot:spring-boot-starter-parent', fromVersion: '2.7.0', toVersion: '2.7.18', expectedResolvedDependency: '1.0.1' } }
+        : decisionFor(findingA),
+    };
+    const svc = new SecurityRemediationBatchOrchestratorService(mixedDecisionService as any, wmBE, { ensureRepo: () => repoBE } as any, { dependencyTree: genericDependencyTree, effectivePom: genericEffectivePom, packageCandidateWithTests: () => ({ status: 'SUCCESS' }) } as any, { inspect: () => scanFor([TARGET_A], 'x') } as any);
+    const result = svc.orchestrate({ repository: 'x/y', candidateBaseSha: SHA, requestId: 'h-req', batchId: 'h-batch', candidateAttempt: 0, findings: [{ ...findingA, cveId: 'CVE-PARENT' }, findingA] });
+    assert.equal(result.status, 'NOT_ELIGIBLE');
+    assert.equal(result.reason, 'MIXED_PARENT_AND_NON_PARENT_BATCH_UNSUPPORTED');
+  }
+  console.log('security-remediation-batch-orchestrator H) mixed PARENT_VERSION + non-parent batch -> fail closed, never guesses an ordering: PASS');
+
   console.log('security-remediation-batch-orchestrator.spec.ts: ALL CHECKS PASS');
 } finally {
   fs.rmSync(root, { recursive: true, force: true });
