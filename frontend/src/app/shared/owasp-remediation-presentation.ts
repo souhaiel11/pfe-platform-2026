@@ -1,3 +1,4 @@
+import { getV1_8Presentation } from './v1-8-compatibility-presentation';
 // ─────────────────────────────────────────────────────────────────────
 // OWASP remediation status, presented for a human. Pure, testable, and
 // deliberately separate from cve-selection-eligibility.ts's own
@@ -66,14 +67,7 @@ const CLOSED_STATUSES = new Set(['CLOSED']);
 
 function humanizeFailureReason(reason: string | null | undefined): string {
   if (!reason) return "La tentative de correction automatique a échoué. Consultez l'historique de la tâche pour le détail technique.";
-  // Reformats a backend reason CODE (e.g. "CANDIDATE_BUILD_FAILED",
-  // "MAVEN_RESOLUTION_MISMATCH") into readable words without inventing any
-  // fact not already in the code itself -- never a raw stack trace, never a
-  // fabricated diagnosis.
-  const words = String(reason).split(/[_:]/).filter(Boolean).map(w => w.toLowerCase());
-  if (!words.length) return "La tentative de correction automatique a échoué. Consultez l'historique de la tâche pour le détail technique.";
-  const sentence = words.join(' ');
-  return `La tentative de correction automatique a échoué (raison technique : ${sentence}).`;
+  return "La tentative de correction automatique a échoué. Consultez les détails de la tâche, puis vérifiez le projet avant de réessayer.";
 }
 
 /**
@@ -97,7 +91,7 @@ export function getOwaspRemediationPresentation(
   const snapshot = task.findingSnapshot || {};
   const remediation = task.securityFindingRemediation;
   const status = remediation?.status ? String(remediation.status) : null;
-  const installedVersion = resolveInstalledVersion(cve, task) || null;
+  const installedVersion = task.v1_8Decision?.installedVersion || resolveInstalledVersion(cve, task) || null;
 
   // ── An attempt already exists: its OWN outcome takes priority over the
   // static eligibility classification below (an already-DISPATCHING/
@@ -106,9 +100,9 @@ export function getOwaspRemediationPresentation(
   if (status && IN_PROGRESS_STATUSES.has(status)) {
     return {
       state: 'DISPATCHING', label: 'Correction en cours',
-      explanation: 'Une tentative de remédiation est actuellement en cours.',
+      explanation: 'Une tentative de correction est actuellement en cours.',
       selectable: eligibility.selectable, installedVersion, targetVersion: resolveFixedVersion(cve, task) || null,
-      targetSource: snapshot.fixedVersionSource === 'TRIVY_CORRELATED' ? 'Trivy' : null,
+      targetSource: (snapshot.fixedVersionSource === 'TRIVY_CORRELATED' || task.source === 'TRIVY') ? 'Trivy' : null,
       styleKey: 'progress',
     };
   }
@@ -119,7 +113,7 @@ export function getOwaspRemediationPresentation(
       label: prNumber ? `Correction proposée (PR #${prNumber})` : 'Correction proposée',
       explanation: 'Une correction candidate a été générée et validée par le pipeline.',
       selectable: eligibility.selectable, installedVersion, targetVersion: resolveFixedVersion(cve, task) || null,
-      targetSource: snapshot.fixedVersionSource === 'TRIVY_CORRELATED' ? 'Trivy' : null,
+      targetSource: (snapshot.fixedVersionSource === 'TRIVY_CORRELATED' || task.source === 'TRIVY') ? 'Trivy' : null,
       styleKey: 'success', prNumber, prUrl: remediation?.prUrl ?? null,
     };
   }
@@ -129,7 +123,7 @@ export function getOwaspRemediationPresentation(
       state: 'CLOSED', label: 'Vulnérabilité corrigée',
       explanation: "La correction a été validée et la vulnérabilité ciblée n'est plus détectée par le rescan de sécurité.",
       selectable: eligibility.selectable, installedVersion, targetVersion: resolveFixedVersion(cve, task) || null,
-      targetSource: snapshot.fixedVersionSource === 'TRIVY_CORRELATED' ? 'Trivy' : null,
+      targetSource: (snapshot.fixedVersionSource === 'TRIVY_CORRELATED' || task.source === 'TRIVY') ? 'Trivy' : null,
       styleKey: 'success', prNumber, prUrl: remediation?.prUrl ?? null,
     };
   }
@@ -146,29 +140,63 @@ export function getOwaspRemediationPresentation(
       // task is currently DISPATCHING/CANDIDATE_READY/CLOSED, none of which
       // apply here) -- never a new retry rule invented client-side.
       selectable: eligibility.selectable, installedVersion, targetVersion: resolveFixedVersion(cve, task) || null,
-      targetSource: snapshot.fixedVersionSource === 'TRIVY_CORRELATED' ? 'Trivy' : null,
+      targetSource: (snapshot.fixedVersionSource === 'TRIVY_CORRELATED' || task.source === 'TRIVY') ? 'Trivy' : null,
       styleKey: 'danger',
     };
+  }
+
+  if (task.status === 'VERIFIED' && task.scannerStatus === 'NOT_DETECTED') {
+    return { state: 'CLOSED', label: 'Vulnérabilité corrigée',
+      explanation: 'Une nouvelle analyse a confirmé que la vulnérabilité n’est plus détectée.',
+      selectable: false, installedVersion, targetVersion: resolveFixedVersion(cve, task) || null,
+      targetSource: task.source === 'TRIVY' || snapshot.fixedVersionSource === 'TRIVY_CORRELATED' ? 'Trivy' : null,
+      styleKey: 'success' };
+  }
+
+  const decision = task.v1_8Decision;
+  if (decision && (decision.state !== 'VALIDATED_RECOMMENDED' || decision.requiresDeveloperReview === true)) {
+    const v18 = getV1_8Presentation(decision, installedVersion)!;
+    return { state: 'MANUAL_REVIEW_NO_TARGET', label: v18.label, explanation: v18.reason,
+      selectable: false, installedVersion, targetVersion: null, targetSource: null, styleKey: v18.styleKey };
+  }
+  if (decision?.sandboxValidated && decision?.targetCveClosed && decision?.recommendedVersion) {
+    return { state: 'AUTO_FIX_AVAILABLE', label: 'Correction validée',
+      explanation: 'Une correction compatible a été validée par V1.8.', selectable: eligibility.selectable,
+      installedVersion, targetVersion: decision.recommendedVersion, targetSource: null, styleKey: 'success' };
   }
 
   // ── No remediation attempt yet: classify by what the data actually
   // supports, fail-closed exactly like the server does. ──
   const component = String(snapshot.component ?? '').trim();
   if (!MAVEN_COORDINATE_RE.test(component)) {
+    // Same state for both sources (shared classification), but the human
+    // explanation must not say "Maven" for a Trivy finding whose component
+    // isn't a Maven dependency at all (e.g. an OS/image package such as
+    // openssl -- Trivy also reports real Maven coordinates for bundled
+    // jars, which DO pass the regex above and never reach this branch).
+    const isTrivy = task.source === 'TRIVY';
     return {
-      state: 'MAVEN_DATA_MISSING', label: 'Données Maven insuffisantes',
-      explanation: 'Les coordonnées Maven nécessaires à la correction automatique ne sont pas disponibles.',
+      state: 'MAVEN_DATA_MISSING',
+      label: isTrivy ? 'Correction automatique non disponible' : 'Données Maven insuffisantes',
+      explanation: isTrivy
+        ? "Ce composant n'est pas géré comme une dépendance Maven (par exemple un paquet système de l'image de base). La plateforme ne peut pas proposer de correction automatique pour ce type de composant."
+        : 'Les coordonnées Maven nécessaires à la correction automatique ne sont pas disponibles.',
       selectable: eligibility.selectable, installedVersion, targetVersion: null, targetSource: null, styleKey: 'muted',
     };
   }
 
   const targetVersion = resolveFixedVersion(cve, task) || null;
+  if (targetVersion && /[,\s]/.test(targetVersion)) {
+    return { state: 'MANUAL_REVIEW_MULTIPLE_TARGETS', label: 'Intervention manuelle requise',
+      explanation: 'Plusieurs versions corrigées ont été identifiées. Une version cible unique doit être vérifiée avant toute correction.',
+      selectable: false, installedVersion, targetVersion: null, targetSource: null, styleKey: 'warning' };
+  }
   if (targetVersion) {
     return {
       state: 'AUTO_FIX_AVAILABLE', label: 'Correction automatique disponible',
       explanation: 'Une version corrigée unique a été identifiée. Cette vulnérabilité peut être soumise au processus automatique de correction et de validation.',
       selectable: eligibility.selectable, installedVersion, targetVersion,
-      targetSource: snapshot.fixedVersionSource === 'TRIVY_CORRELATED' ? 'Trivy' : 'OWASP',
+      targetSource: (snapshot.fixedVersionSource === 'TRIVY_CORRELATED' || task.source === 'TRIVY') ? 'Trivy' : 'OWASP',
       styleKey: 'success',
     };
   }

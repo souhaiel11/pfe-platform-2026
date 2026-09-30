@@ -1,3 +1,4 @@
+import { userHttpError } from '../../core/http-error-message';
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -43,7 +44,7 @@ export class AdminComponent implements OnInit {
       },
       // Remonte le vrai message backend (ex. rôle invalide, 400 explicite)
       // plutôt qu'un message générique qui masquerait la raison réelle.
-      error: (err: any) => this.toast.error('Erreur', err?.error?.message || 'Impossible de créer l\'utilisateur')
+      error: (err: any) => this.toast.error('Erreur', userHttpError(err, 'Impossible de créer l’utilisateur. Vérifiez les champs puis réessayez.'))
     });
   }
 

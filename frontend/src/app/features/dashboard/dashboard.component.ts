@@ -200,9 +200,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
     const diff = Date.now() - ts;
     const h = Math.floor(diff / 3600000);
     const m = Math.floor(diff / 60000);
-    if (h > 24) return 'il y a ' + Math.floor(h / 24) + 'j';
-    if (h > 0) return 'il y a ' + h + 'h';
-    return 'il y a ' + m + 'min';
+    if (h > 24) return 'il y a ' + Math.floor(h / 24) + ' j';
+    if (h > 0) return 'il y a ' + h + ' h';
+    return 'il y a ' + m + ' min';
   }
 
   private cssVar(name: string): string {

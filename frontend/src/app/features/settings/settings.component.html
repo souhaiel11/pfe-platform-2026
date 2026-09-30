@@ -42,7 +42,7 @@
                          [placeholder]="getUrlPlaceholder(tool.toolType)" />
                 </div>
 
-                <!-- Token (Grafana, Kubernetes) -->
+                <!-- Jeton Kubernetes -->
                 <div class="field-row" *ngIf="tool.authType === 'token'">
                   <label class="field-label">{{tool.tokenLabel}}</label>
                   <input class="field-input" type="password" [(ngModel)]="tool.token"

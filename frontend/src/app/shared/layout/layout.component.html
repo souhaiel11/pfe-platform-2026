@@ -14,8 +14,6 @@
           <a class="nav-item" routerLink="/analysis" routerLinkActive="active" (click)="closeMobileNav()"><i class="ti ti-robot"></i> Agents IA</a>
           <div class="nav-section">CI/CD & Sécurité</div>
           <a class="nav-item" routerLink="/security" routerLinkActive="active" (click)="closeMobileNav()"><i class="ti ti-bug"></i> Trivy / OWASP</a>
-          <div class="nav-section">Infrastructure</div>
-          <a class="nav-item" routerLink="/monitoring" routerLinkActive="active" (click)="closeMobileNav()"><i class="ti ti-activity"></i> Grafana</a>
           <div class="nav-section">Analyse</div>
           <a class="nav-item" routerLink="/prediction" routerLinkActive="active" (click)="closeMobileNav()"><i class="ti ti-gauge"></i> Indicateurs de risque</a>
           <div class="nav-section">Système</div>
@@ -27,7 +25,7 @@
             <div class="user-av">{{userInitials}}</div>
             <div class="user-info">
               <div class="user-name">{{currentUser?.username}}</div>
-              <div class="user-role">{{currentUser?.role}}</div>
+              <div class="user-role">{{currentUser?.role | presentationLabel}}</div>
             </div>
             <button class="logout-btn" (click)="logout()"><i class="ti ti-logout"></i></button>
           </div>

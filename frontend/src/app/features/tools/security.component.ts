@@ -13,7 +13,7 @@ import { ProjectEventsService } from '../../core/services/project-events.service
     <div class="page">
       <div class="page-header">
         <div class="page-icon" style="background:var(--accent-red-bg)"><i class="ti ti-shield-check" style="color:var(--accent-red)"></i></div>
-        <div><h2>Sécurité — Trivy & OWASP</h2><div class="page-sub">Vue plateforme — dernier scan de chaque projet</div></div>
+        <div><h2>Sécurité — Trivy & OWASP</h2><div class="page-sub">Vue plateforme — dernière analyse de chaque projet</div></div>
       </div>
 
       <div class="kpi-grid" *ngIf="summary">

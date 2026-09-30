@@ -82,11 +82,6 @@ export const routes: Routes = [
           import('./features/tools/security.component').then(m => m.SecurityComponent)
       },
       {
-        path: 'monitoring',
-        loadComponent: () =>
-          import('./features/tools/monitoring.component').then(m => m.MonitoringComponent)
-      },
-      {
         path: 'prediction',
         loadComponent: () =>
           import('./features/analytics/prediction.component').then(m => m.PredictionComponent)

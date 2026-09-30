@@ -1,3 +1,4 @@
+import { userHttpError } from '../../core/http-error-message';
 import { Component, OnInit, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
@@ -131,7 +132,7 @@ export class ProjectFormComponent implements OnInit {
       },
       error: (e: any) => {
         this.loading = false;
-        this.saveError = e?.error?.message || 'Erreur lors de la sauvegarde';
+        this.saveError = userHttpError(e, 'Impossible d’enregistrer le projet. Vérifiez les champs puis réessayez.');
       }
     });
   }
@@ -153,7 +154,7 @@ export class ProjectFormComponent implements OnInit {
       error: (e: any) => {
         this.jenkinsCredBusy = false;
         this.jenkinsCredSuccess = false;
-        this.jenkinsCredMessage = e?.error?.message || 'Les identifiants Jenkins sont invalides.';
+        this.jenkinsCredMessage = userHttpError(e, 'Vérifiez les identifiants Jenkins puis réessayez.');
         this.jenkinsCredToken = '';
       },
     });

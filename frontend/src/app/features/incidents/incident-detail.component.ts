@@ -1,3 +1,6 @@
+import { PresentationTextPipe } from '../../shared/presentation-label.pipe';
+import { presentationLabel } from '../../shared/status-labels';
+import { sortPipelineStages } from '../../shared/pipeline-stage-presentation';
 import { Component, OnInit, OnDestroy, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
@@ -25,7 +28,7 @@ import { userHttpError } from '../../core/http-error-message';
 @Component({
   selector: 'app-incident-detail',
   standalone: true,
-  imports: [CommonModule, RouterModule, DeveloperGuideTabComponent, ProjectOverviewComponent, RemediationCardComponent, StageStatusLabelPipe, PresentationLabelPipe, FrenchDatePipe],
+  imports: [PresentationTextPipe, CommonModule, RouterModule, DeveloperGuideTabComponent, ProjectOverviewComponent, RemediationCardComponent, StageStatusLabelPipe, PresentationLabelPipe, FrenchDatePipe],
   templateUrl: './incident-detail.component.html',
   styleUrls: ['./incident-detail.component.scss'],
 })
@@ -136,7 +139,7 @@ export class IncidentDetailComponent implements OnInit, OnDestroy {
 
   governedStages(): any[] {
     const stages = this.enrichedData?.stages;
-    return stages && typeof stages === 'object' ? Object.values(stages) : [];
+    return stages && typeof stages === 'object' ? sortPipelineStages(Object.values(stages) as any[]) : [];
   }
 
   // ── Carte Jenkins (Couche 2, mode A) ────────────────────────────────────
@@ -561,11 +564,7 @@ export class IncidentDetailComponent implements OnInit, OnDestroy {
       },
       error: (err: any) => {
         this.approvalBusy = false;
-        this.approvalError = err.status === 403
-          ? "Vous n'êtes pas autorisé à créer cette correction."
-          : err.status === 409
-            ? (err?.error?.message || 'Une correction ou une Pull Request existe déjà pour ce finding.')
-            : (err?.error?.message || err?.error?.code || 'Impossible de démarrer la correction');
+        this.approvalError = userHttpError(err, 'Impossible de démarrer la correction. Actualisez les données puis réessayez.');
         this.toast.error('Erreur', this.approvalError || 'Impossible de démarrer la correction');
       }
     });
@@ -576,7 +575,7 @@ export class IncidentDetailComponent implements OnInit, OnDestroy {
     this.approvalBusy = true;
     this.api.rejectFix(this.id).subscribe({
       next: () => { this.approvalBusy = false; this.toast.success('Correction refusée — action manuelle conservée'); this.load(); },
-      error: (err: any) => { this.approvalBusy = false; this.approvalError = err?.error?.message || 'Impossible de rejeter'; this.toast.error('Erreur', this.approvalError || 'Impossible de rejeter'); }
+      error: (err: any) => { this.approvalBusy = false; this.approvalError = userHttpError(err, 'Impossible de refuser la correction. Réessayez.'); this.toast.error('Erreur', this.approvalError || 'Impossible de rejeter'); }
     });
   }
 
@@ -935,10 +934,10 @@ export class IncidentDetailComponent implements OnInit, OnDestroy {
   advisoryLabel(a: any): string {
     const code = String(a?.code || '');
     if (code.startsWith('SONAR_QUALITY_GATE_')) {
-      return `Quality Gate SonarQube global : ${code.replace('SONAR_QUALITY_GATE_', '')}`;
+      return `Contrôle qualité global SonarQube : ${presentationLabel(code.replace('SONAR_QUALITY_GATE_', ''))}`;
     }
     if (code === 'PIPELINE_TECHNICAL_FAILURE') return 'Défaillance technique du pipeline de validation';
-    return a?.message || code;
+    return 'Un point de validation nécessite votre attention. Consultez les détails techniques.';
   }
 
   shortSha(s: string): string { return String(s || '').slice(0, 10); }

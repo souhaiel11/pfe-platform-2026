@@ -1,3 +1,4 @@
+import { userHttpError } from '../../core/http-error-message';
 import { Component, Input, OnInit, OnDestroy, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
@@ -550,7 +551,7 @@ export class JenkinsfileOptimizerComponent implements OnInit, OnDestroy {
         this.fetching.set(false);
       },
       error: (e) => {
-        this.fetchError.set(e?.error?.message || 'Jenkinsfile introuvable sur le dépôt.');
+        this.fetchError.set(userHttpError(e, 'Jenkinsfile introuvable. Vérifiez le dépôt et la branche.'));
         this.fetching.set(false);
       },
     });
@@ -601,7 +602,7 @@ export class JenkinsfileOptimizerComponent implements OnInit, OnDestroy {
       },
       error: (e) => {
         this.applying.set(false);
-        this.applyError.set(e?.error?.message || e?.message || 'Échec de création de la PR.');
+        this.applyError.set(userHttpError(e, 'Impossible de créer la Pull Request. Vérifiez le dépôt puis réessayez.'));
       },
     });
   }
@@ -650,11 +651,11 @@ export class JenkinsfileOptimizerComponent implements OnInit, OnDestroy {
             ? s.result.violations.map((v: any) => `${v.ref || '?'} (${v.pattern || v.title || ''})`).join(', ')
             : '';
           this.selectionViolation.set(
-            [s.result?.message || 'La PR a été bloquée par le gate de validation.', violations]
+            ['La Pull Request a été bloquée par les contrôles de validation. Consultez le rapport et corrigez les points signalés.', violations]
               .filter(Boolean).join(' — '),
           );
         } else {
-          this.applyError.set(s.result?.message || 'Échec de création de la PR.');
+          this.applyError.set('La Pull Request n’a pas pu être créée. Vérifiez le rapport de validation avant de réessayer.');
         }
       },
       error: (e) => {
@@ -714,7 +715,7 @@ export class JenkinsfileOptimizerComponent implements OnInit, OnDestroy {
         this.startPolling(r.id, true);
       },
       error: (e) => {
-        this.error.set(e?.error?.message || e?.message || "Impossible de démarrer l'analyse — vérifiez que le backend est joignable.");
+        this.error.set(userHttpError(e, 'Impossible de démarrer l’analyse. Vérifiez la connexion à la plateforme.'));
         this.loading.set(false);
       },
     });

@@ -15,7 +15,14 @@ export class ApiService {
   getJenkinsGlobal()  { return this.http.get<any>(`${this.base}/dashboard/jenkins-global`); }
   getRiskIndicators() { return this.http.get<any>(`${this.base}/dashboard/risk-indicators`); }
 
-  getManualRemediationTasks(projectId: string) { return this.http.get<any[]>(`${this.base}/manual-remediation`, { params: { projectId } }); }
+  // includeV18: V1.8 Phase 4 ticket — opt-in, additive `v1_8Decision` field
+  // per task (read-only display only; never changes remediationType or
+  // selection eligibility). Omit/false = identical to pre-V1.8 behavior.
+  getManualRemediationTasks(projectId: string, includeV18 = false) {
+    const params: any = { projectId };
+    if (includeV18) params.includeV18 = 'true';
+    return this.http.get<any[]>(`${this.base}/manual-remediation`, { params });
+  }
   getManualRemediationSummary(projectId: string) { return this.http.get<any>(`${this.base}/manual-remediation/summary`, { params: { projectId } }); }
   completeManualRemediation(id: string, note?: string) { return this.http.patch<any>(`${this.base}/manual-remediation/${id}/complete`, { note: note || undefined }); }
   reopenManualRemediation(id: string) { return this.http.patch<any>(`${this.base}/manual-remediation/${id}/reopen`, {}); }

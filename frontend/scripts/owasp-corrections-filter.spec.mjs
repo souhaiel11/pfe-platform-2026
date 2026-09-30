@@ -35,7 +35,7 @@ function load(path, dependencies = {}) {
 }
 
 const eligibility = load('../src/app/shared/cve-selection-eligibility.ts');
-const owaspPres = load('../src/app/shared/owasp-remediation-presentation.ts', { './cve-selection-eligibility': eligibility });
+const owaspPres = load('../src/app/shared/owasp-remediation-presentation.ts', { './cve-selection-eligibility': eligibility, './v1-8-compatibility-presentation': load('../src/app/shared/v1-8-compatibility-presentation.ts', { './status-labels': load('../src/app/shared/status-labels.ts') }) });
 const { CveTableComponent } = load('../src/app/features/projects/cve-table.component.ts', {
   '../../shared/cve-selection-eligibility': eligibility,
   '../../shared/owasp-remediation-presentation': owaspPres,
@@ -153,22 +153,9 @@ console.log('8. MULTIPLE_CANDIDATES rows excluded from "Corrections disponibles"
 }
 console.log('9. NO_TRIVY_MATCH rows excluded from "Corrections disponibles": PASS');
 
-// 10. Trivy findings behavior unchanged: the filter is a no-op for a Trivy table.
-{
-  const trivyTable = makeTable('TRIVY', [
-    { id: 'CVE-2023-6378', pkg: 'ch.qos.logback:logback-classic', fixedVersion: '1.2.13', installedVersion: '1.2.11', severity: 'HIGH' },
-  ], [
-    { id: 'trivy-task-1', source: 'TRIVY', findingSnapshot: { ruleOrCve: 'CVE-2023-6378', component: 'ch.qos.logback:logback-classic' } },
-  ]);
-  assert.equal(trivyTable.owaspPresentation(trivyTable.normalized()[0]), null);
-  const before = trivyTable.filtered().length;
-  trivyTable.owaspRemediationFilter.set('AUTO_FIX_AVAILABLE');
-  const after = trivyTable.filtered().length;
-  assert.equal(before, after, 'the OWASP remediation filter must never affect a Trivy table');
-  assert.equal(after, 1);
-  // Trivy's own installed-version display is also untouched (real value, not resolved via owaspPresentation).
-  assert.equal(trivyTable.normalized()[0].installedVersion, '1.2.11');
-}
-console.log('10. Trivy findings unaffected by the OWASP filter or the installed-version fix: PASS');
-
-console.log('owasp-corrections-filter.spec.mjs: ALL CHECKS PASS');
+// Trivy now uses the same state presentation and filters.
+const trivy = makeTable('TRIVY', [{ id: 'CVE-1', pkg: 'a:b', installedVersion: '1', fixedVersion: '2' }], [{ id: 't', source: 'TRIVY', findingSnapshot: { component: 'a:b', ruleOrCve: 'CVE-1', currentVersion: '1', fixedVersion: '2' } }]);
+assert.equal(trivy.owaspPresentation(trivy.normalized()[0]).state, 'AUTO_FIX_AVAILABLE');
+trivy.owaspRemediationFilter.set('MANUAL_REVIEW');
+assert.equal(trivy.filtered().length, 0);
+console.log('OWASP regression and shared Trivy presentation: PASS');

@@ -1,3 +1,4 @@
+import { zapAlertLabel } from '../../shared/status-labels';
 import { Component, EventEmitter, Input, Output, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -44,7 +45,7 @@ interface NormZapAlert {
           <ng-container *ngFor="let a of filtered()">
             <tr class="zap-row" [class.open]="isOpen(a.id)" (click)="toggle(a.id)">
               <td class="zap-caret">{{ isOpen(a.id) ? '▾' : '▸' }}</td>
-              <td class="zap-title">{{ a.title }}</td>
+              <td class="zap-title">{{ zapAlertLabel(a.title) }}</td>
               <td><span class="zap-sev" [attr.data-sev]="a.severity">{{ a.severity | presentationLabel }}</span></td>
               <td class="zap-url">{{ a.url || 'Non disponible' }}</td>
             </tr>
@@ -55,6 +56,7 @@ interface NormZapAlert {
 
                   <div class="zap-block">
                     <h4>Description technique du scanner</h4>
+                    <p><strong>Titre original :</strong> {{ a.title }}</p>
                     <p [innerHTML]="a.description || 'Non disponible'"></p>
                   </div>
 
@@ -97,7 +99,7 @@ interface NormZapAlert {
         <p>Aucune alerte DAST détectée sur ce build.</p>
       </div>
     </ng-template>
-    <div class="confirm-backdrop" *ngIf="pendingTask()" (click)="cancelConfirmation()"><section class="confirm-box" role="dialog" aria-modal="true" aria-labelledby="zap-confirm-title" (click)="$event.stopPropagation()"><h3 id="zap-confirm-title">Confirmer le traitement</h3><p><strong>Problème :</strong> {{pendingFinding()?.title}}</p><p><strong>Source :</strong> ZAP</p><p>Cette action signifie uniquement que vous avez effectué le traitement manuel.</p><p>La résolution technique sera confirmée lors d'une prochaine analyse.</p><label>Note de traitement (facultative)<textarea maxlength="500" [(ngModel)]="completionNote"></textarea></label><div class="confirm-actions"><button type="button" (click)="cancelConfirmation()">Annuler</button><button type="button" class="track-btn" (click)="confirmCompletion()">Confirmer</button></div></section></div>
+    <div class="confirm-backdrop" *ngIf="pendingTask()" (click)="cancelConfirmation()"><section class="confirm-box" role="dialog" aria-modal="true" aria-labelledby="zap-confirm-title" (click)="$event.stopPropagation()"><h3 id="zap-confirm-title">Confirmer le traitement</h3><p><strong>Problème :</strong> {{zapAlertLabel(pendingFinding()?.title)}}</p><p><strong>Source :</strong> ZAP</p><p>Cette action signifie uniquement que vous avez effectué le traitement manuel.</p><p>La résolution technique sera confirmée lors d'une prochaine analyse.</p><label>Note de traitement (facultative)<textarea maxlength="500" [(ngModel)]="completionNote"></textarea></label><div class="confirm-actions"><button type="button" (click)="cancelConfirmation()">Annuler</button><button type="button" class="track-btn" (click)="confirmCompletion()">Confirmer</button></div></section></div>
   `,
   styles: [`
     :host { display:block; font-size:13px; color:#1f2933; }
@@ -132,6 +134,7 @@ interface NormZapAlert {
   `]
 })
 export class ZapTableComponent {
+  zapAlertLabel = zapAlertLabel;
   @Input() set alerts(value: RawZapAlert[] | null | undefined) { this._raw.set(value ?? []); }
   @Input() tasks: any[] = [];
   @Input() statusFilter = 'ALL'; @Input() severityFilter = 'ALL'; @Input() userRole = 'viewer';

@@ -5,3 +5,9 @@ import { presentationLabel } from './status-labels';
 export class PresentationLabelPipe implements PipeTransform {
   transform(value: unknown): string { return presentationLabel(value == null ? null : String(value)); }
 }
+
+import { presentationText } from './status-labels';
+@Pipe({ name: 'presentationText', standalone: true })
+export class PresentationTextPipe implements PipeTransform {
+  transform(value: unknown): string { return presentationText(value); }
+}

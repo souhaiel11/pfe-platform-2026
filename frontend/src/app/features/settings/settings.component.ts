@@ -1,3 +1,4 @@
+import { userHttpError } from '../../core/http-error-message';
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -44,15 +45,8 @@ export class SettingsComponent implements OnInit {
 
   tools: ToolConfig[] = [
     {
-      toolType: 'grafana', name: 'Grafana', icon: 'G', color: '#f59e0b',
-      description: 'Dashboards & alerting — GET /api/health',
-      authType: 'token', tokenLabel: 'API Key (Bearer)',
-      url: '', token: '', username: '', password: '', hasToken: false, hasPassword: false,
-      enabled: true, status: 'disconnected', expanded: false, testing: false, saving: false,
-    },
-    {
       toolType: 'prometheus', name: 'Prometheus', icon: 'P', color: '#e24b4a',
-      description: 'Métriques & monitoring — GET /-/healthy',
+      description: 'Métriques et surveillance — GET /-/healthy',
       authType: 'none', tokenLabel: '',
       url: '', token: '', username: '', password: '', hasToken: false, hasPassword: false,
       enabled: true, status: 'disconnected', expanded: false, testing: false, saving: false,
@@ -60,7 +54,7 @@ export class SettingsComponent implements OnInit {
     {
       toolType: 'kubernetes', name: 'Kubernetes', icon: 'K', color: '#38bdf8',
       description: 'Orchestration de conteneurs — GET /readyz',
-      authType: 'token', tokenLabel: 'Bearer Token (kubeconfig)',
+      authType: 'token', tokenLabel: 'Jeton d’accès (kubeconfig)',
       url: '', token: '', username: '', password: '', hasToken: false, hasPassword: false,
       enabled: true, status: 'disconnected', expanded: false, testing: false, saving: false,
     },
@@ -144,7 +138,7 @@ export class SettingsComponent implements OnInit {
       },
       error: (e) => {
         tool.saving = false;
-        this.toast.error(`Erreur sauvegarde ${tool.name}`, e?.error?.message || e.message);
+        this.toast.error(`Erreur sauvegarde ${tool.name}`, userHttpError(e, 'Vérifiez la configuration et la connexion au service, puis réessayez.'));
       },
     });
   }
@@ -162,12 +156,12 @@ export class SettingsComponent implements OnInit {
           if (result.success) {
             this.toast.success(`${tool.name} connecté`, 'Connexion établie avec succès');
           } else {
-            this.toast.error(`${tool.name} inaccessible`, result.error || 'Impossible de joindre le service');
+            this.toast.error(`${tool.name} inaccessible`, 'Impossible de joindre le service. Vérifiez son URL et ses identifiants, puis réessayez.');
           }
         },
         error: (e) => {
           tool.testing = false;
-          this.toast.error(`Erreur test ${tool.name}`, e?.error?.message || e.message);
+          this.toast.error(`Erreur test ${tool.name}`, userHttpError(e, 'Vérifiez la configuration et la connexion au service, puis réessayez.'));
         },
       });
     };
@@ -194,7 +188,7 @@ export class SettingsComponent implements OnInit {
         next: (result) => { tool.id = result.id; doTest(result.id); },
         error: (e) => {
           tool.testing = false;
-          this.toast.error(`Erreur création ${tool.name}`, e?.error?.message || e.message);
+          this.toast.error(`Erreur création ${tool.name}`, userHttpError(e, 'Vérifiez la configuration et la connexion au service, puis réessayez.'));
         },
       });
     }
@@ -206,7 +200,6 @@ export class SettingsComponent implements OnInit {
 
   getUrlPlaceholder(type: string): string {
     const map: Record<string, string> = {
-      grafana:    'https://grafana.example.internal',
       prometheus: 'https://prometheus.example.internal',
       kubernetes: 'https://kubernetes.example.internal',
       nexus:      'https://nexus.example.internal',

@@ -35,7 +35,7 @@ function load(path, dependencies = {}) {
 }
 
 const eligibility = load('../src/app/shared/cve-selection-eligibility.ts');
-const owaspPres = load('../src/app/shared/owasp-remediation-presentation.ts', { './cve-selection-eligibility': eligibility });
+const owaspPres = load('../src/app/shared/owasp-remediation-presentation.ts', { './cve-selection-eligibility': eligibility, './v1-8-compatibility-presentation': load('../src/app/shared/v1-8-compatibility-presentation.ts', { './status-labels': load('../src/app/shared/status-labels.ts') }) });
 const { CveTableComponent } = load('../src/app/features/projects/cve-table.component.ts', {
   '../../shared/cve-selection-eligibility': eligibility,
   '../../shared/owasp-remediation-presentation': owaspPres,

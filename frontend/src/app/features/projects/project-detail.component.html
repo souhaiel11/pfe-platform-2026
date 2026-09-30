@@ -13,9 +13,9 @@
           <div class="header-meta">
             <span class="badge-env">{{project.environment || 'dev'}}</span>
             <span class="sep">·</span>
-            <span>{{project.githubRepo || 'No repo'}}</span>
+            <span>{{project.githubRepo || 'Dépôt non configuré'}}</span>
             <span class="sep">·</span>
-            <span>{{project.jenkinsJobName || 'No job'}}</span>
+            <span>{{project.jenkinsJobName || 'Job Jenkins non configuré'}}</span>
           </div>
         </div>
         <div class="header-actions">
@@ -85,7 +85,7 @@
                 <span class="ai-conf-text">Confiance : {{rp.confidence || '0%'}}</span>
               </div>
               <span class="ai-sec-badge" [style.color]="getSecColor(rp.security)"
-                    [style.border-color]="getSecColor(rp.security)">🔒 {{rp.security || 'UNKNOWN'}}</span>
+                    [style.border-color]="getSecColor(rp.security)">🔒 {{(rp.security || 'UNKNOWN') | presentationLabel}}</span>
             </div>
           </div>
 
@@ -101,7 +101,7 @@
               <span>Raisonnement complet de l’agent de gouvernance</span>
               <span class="justif-chevron">▸</span>
             </summary>
-            <p class="justif-body">{{rp.justification}}</p>
+            <p class="justif-body">{{rp.justification | presentationText}}</p>
           </details>
 
           <!-- ── Agents IA ── -->
@@ -220,7 +220,7 @@
           <div class="zone-header"><span>🤖</span><span class="zone-title">ANALYSE IA — PIPELINE CI/CD</span></div>
           <div class="zone-body">
             <div *ngFor="let item of splitItems(rp.cicdIssues)" class="zone-item">
-              <span class="item-dot orange">▸</span><span class="item-text">{{item}}</span>
+              <span class="item-dot orange">▸</span><span class="item-text">{{item | presentationText}}</span>
             </div>
           </div>
         </div>
@@ -246,7 +246,7 @@
               <div class="build-dot" [style.background]="b.result==='SUCCESS'?'var(--accent-green)':'var(--accent-red)'"></div>
               <span class="build-num" style="color:var(--accent-blue)">#{{b.number}}</span>
               <span class="build-result" [style.color]="b.result==='SUCCESS'?'var(--accent-green)':'var(--accent-red)'">{{(b.result || 'RUNNING') | presentationLabel}}</span>
-              <span class="build-dur">{{b.duration}}s</span>
+              <span class="build-dur">{{frenchDuration(b.duration)}}</span>
               <span class="build-time">{{b.timestamp | frenchDate}}</span>
               <a [href]="buildUrl(b.url)" target="_blank" rel="noopener" class="build-link" *ngIf="buildUrl(b.url)">→</a>
             </div>
@@ -258,7 +258,7 @@
              Neutre gris, jamais rouge : absence d'info ≠ échec. -->
         <div class="empty-state" *ngIf="!jenkinsBuilds.length && jenkinsMessage" style="color:var(--text-secondary)">
           <div class="empty-icon" style="color:var(--text-secondary)">⚙️</div>
-          <div class="empty-title" style="color:var(--text-secondary)">{{jenkinsMessage}}</div>
+          <div class="empty-title" style="color:var(--text-secondary)">{{jenkinsMessage | presentationText}}</div>
           <div class="empty-sub">Aucun historique de build à afficher.</div>
         </div>
 
@@ -287,7 +287,7 @@
         <!-- KPIs SonarQube -->
         <div class="kpi-grid" *ngIf="ed.sonar">
           <div class="kpi-card" [style.border-color]="ed.sonar.quality_gate==='OK'?'var(--accent-green)':'var(--accent-red)'">
-            <div class="kpi-label">Quality Gate</div>
+            <div class="kpi-label">Contrôle qualité</div>
             <div class="kpi-value" [style.color]="ed.sonar.quality_gate==='OK'?'var(--accent-green)':'var(--accent-red)'">
               {{ed.sonar.quality_gate==='OK'?'✓ Réussi':'✕ Échec'}}
             </div>
@@ -382,11 +382,11 @@
             <ng-container *ngIf="isMergeReadySuccess(); else genericPrLock">
               La correction sélectionnée a été validée avec succès.<br>
               La Pull Request #{{batchPrNumber()}} est prête à être fusionnée.<br>
-              Les autres problèmes seront traités lors d’un nouveau cycle après le prochain scan.
+              Les autres problèmes seront traités lors d’un nouveau cycle après le prochaine analyse.
             </ng-container>
             <ng-template #genericPrLock>
               Une Pull Request de correction existe déjà pour cet incident.
-              Les autres problèmes seront traités lors d’un nouveau cycle après le prochain scan.
+              Les autres problèmes seront traités lors d’un nouveau cycle après le prochaine analyse.
             </ng-template>
           </p>
         </div>
@@ -638,7 +638,7 @@
           <div class="manual-filters"><label>État<select [(ngModel)]="manualStatusFilter"><option value="ALL">Tous</option><option value="TODO">À traiter</option><option value="DONE_BY_USER">Traité manuellement</option><option value="STILL_DETECTED">Toujours détecté</option><option value="VERIFIED">Vérifié</option></select></label><label>Sévérité<select [(ngModel)]="manualSeverityFilter"><option value="ALL">Toutes</option><option value="CRITICAL">Critique</option><option value="HIGH">Élevée</option><option value="MEDIUM">Moyenne</option><option value="LOW">Faible</option></select></label></div>
         </section>
         <!-- ── Filtre par source de scan ── -->
-        <div class="sec-scanner-filter" role="group" aria-label="Filtrer les findings sécurité par source">
+        <div class="sec-scanner-filter" role="group" aria-label="Filtrer les vulnérabilités de sécurité par source">
           <button type="button" class="sec-chip" [class.active]="securityFilter === 'all'" (click)="setSecurityFilter('all')">Tous <span class="sec-chip-count">{{securityFindingsCount('all')}}</span></button>
           <button type="button" class="sec-chip" [class.active]="securityFilter === 'trivy'" (click)="setSecurityFilter('trivy')">Trivy <span class="sec-chip-count">{{securityFindingsCount('trivy')}}</span></button>
           <button type="button" class="sec-chip" [class.active]="securityFilter === 'owasp'" (click)="setSecurityFilter('owasp')">OWASP <span class="sec-chip-count">{{securityFindingsCount('owasp')}}</span></button>
@@ -684,7 +684,7 @@
         </div>
         <div class="sec-section sec-empty" *ngIf="(securityFilter === 'all' || securityFilter === 'trivy') && securityScannerEmpty('trivy')">
           <div class="sec-section-title">🐳 Vulnérabilités conteneur</div>
-          <div class="scanner-not-run-note">Aucun finding Trivy pour cette analyse.</div>
+          <div class="scanner-not-run-note">Aucune vulnérabilité Trivy pour cette analyse.</div>
         </div>
 
         <!-- ── Section 2 : CVE dépendances (OWASP) ── -->
@@ -707,7 +707,7 @@
         </div>
         <div class="sec-section sec-empty" *ngIf="(securityFilter === 'all' || securityFilter === 'owasp') && securityScannerEmpty('owasp')">
           <div class="sec-section-title">📦 Vulnérabilités de dépendances</div>
-          <div class="scanner-not-run-note">Aucun finding OWASP pour cette analyse.</div>
+          <div class="scanner-not-run-note">Aucune vulnérabilité OWASP pour cette analyse.</div>
         </div>
 
         <!-- ── Section 3 : alertes DAST (ZAP) ── -->
@@ -730,7 +730,7 @@
         </div>
         <div class="sec-section sec-empty" *ngIf="(securityFilter === 'all' || securityFilter === 'zap') && securityScannerEmpty('zap')">
           <div class="sec-section-title">🌐 Alertes DAST</div>
-          <div class="scanner-not-run-note">Aucun finding ZAP pour cette analyse.</div>
+          <div class="scanner-not-run-note">Aucune alerte ZAP pour cette analyse.</div>
         </div>
 
         <!-- ── Analyse IA sécurité ── -->
@@ -741,67 +741,10 @@
           </summary>
           <div class="justif-body">
             <div *ngFor="let item of splitItems(rp.securityIssues)" class="zone-item">
-              <span class="item-dot red">▸</span><span class="item-text">{{item}}</span>
+              <span class="item-dot red">▸</span><span class="item-text">{{item | presentationText}}</span>
             </div>
           </div>
         </details>
-
-        <!-- ── Déploiement Azure — le backend (isReadyToDeploy) reste seul juge ── -->
-        <div class="deploy-azure-box mt-10">
-          <div class="deploy-azure-row">
-            <input
-              class="deploy-tag-input"
-              type="text"
-              [(ngModel)]="deployImageTag"
-              [disabled]="deploying"
-              placeholder="tag d'image (ex: latest)"
-              spellcheck="false"
-            />
-            <button *ngIf="canOperate && deployReady && deploymentConfigured"
-              class="btn btn-action"
-              [class.blue]="deployReady && !deploying"
-              [class.gray]="!deployReady || deploying"
-              [disabled]="!deployReady || !deploymentConfigured || deploying || deployReadyLoading"
-              [title]="deployReady ? 'Déployer sur Azure' : readinessReasonsLabel()"
-              (click)="requestDeployConfirmation()"
-            >
-              <ng-container *ngIf="deployReadyLoading">⏳ Vérification…</ng-container>
-              <ng-container *ngIf="!deployReadyLoading && deploying">⏳ Déploiement en cours (~30-60s)…</ng-container>
-              <ng-container *ngIf="!deployReadyLoading && !deploying">☁️ Préparer le déploiement</ng-container>
-            </button>
-          </div>
-
-          <div class="deploy-not-ready" *ngIf="!deployReadyLoading && !deploymentConfigured">
-            ⚙️ Azure non configuré pour ce projet — aucun fallback vers une autre cible.
-          </div>
-
-          <div class="deploy-confirm" *ngIf="deployConfirmationOpen">
-            <h4>Confirmer le déploiement</h4>
-            <p><strong>Projet :</strong> {{project?.name}}</p>
-            <p><strong>Build :</strong> {{deployReadiness?.currentBuild ? '#' + deployReadiness.currentBuild : 'Non disponible'}}</p>
-            <p><strong>Cible :</strong> {{deploymentTarget?.targetName}} ({{deploymentTarget?.resourceGroup}})</p>
-            <p *ngIf="deployReadiness?.warnings?.length"><strong>Avertissements :</strong> {{deployReadiness.warnings.join(' · ')}}</p>
-            <div class="deploy-azure-row">
-              <button class="btn btn-action gray" [disabled]="deploying" (click)="cancelDeployConfirmation()">Annuler</button>
-              <button class="btn btn-action blue" [disabled]="deploying" (click)="deployToAzure()">Confirmer le déploiement</button>
-            </div>
-          </div>
-
-          <div class="deploy-not-ready" *ngIf="!deployReadyLoading && !deployReady && !deploying">
-            🔒 Non déployable — le backend refuse (fail-closed) :
-            <ul>
-              <li *ngFor="let reason of deployReasons">{{readinessReasonLabel(reason)}}</li>
-            </ul>
-          </div>
-
-          <div class="deploy-result success" *ngIf="deploySuccessInfo">
-            ✅ Déploiement réussi — état <strong>{{deploySuccessInfo.state}}</strong>, santé <strong>{{deploySuccessInfo.health}}</strong>
-          </div>
-
-          <div class="deploy-result error" *ngIf="deployErrorMessage">
-            ⚠️ {{deployErrorMessage}}
-          </div>
-        </div>
 
         <section class="cockpit-panel mt-10">
           <div class="cockpit-head">
@@ -818,16 +761,75 @@
             La corrélation de l’analyse Sonar n’est pas vérifiée — le déploiement reste non prêt.
           </div>
           <div class="stage-grid" *ngIf="deployReadiness?.requiredStages?.length">
-            <details class="stage-card" *ngFor="let stage of deployReadiness.requiredStages" [class]="'stage-card ' + stageCss(stage.status)">
-              <summary><strong>{{stage.stage | presentationLabel}}</strong><span>{{stage.status | stageStatusLabel}}</span></summary>
-              <p>{{stage.message || 'Aucun détail disponible'}}</p>
-              <small>Source : {{stage.source || 'backend'}} · Problèmes : {{stage.findingCount ?? 0}} · Bloquant : {{stage.blocking ? 'oui' : 'non'}} · Requis : {{stage.required ? 'oui' : 'non'}}</small>
+            <details class="stage-card" *ngFor="let stage of orderedStages()" [class]="'stage-card ' + stageCss(stage.status)">
+              <summary><strong>{{pipelineStageLabel(stage.stage)}}</strong><span>{{stage.status | stageStatusLabel}}</span></summary>
+              <p>{{stage.status | stageStatusLabel}} — {{stage.blocking ? 'Cette étape bloque le déploiement. Consultez son rapport.' : 'Consultez le rapport de cette étape pour les détails.'}}</p>
+              <small>Source : {{stage.source || 'Plateforme'}} · Problèmes : {{stage.findingCount ?? 0}} · Bloquant : {{stage.blocking ? 'oui' : 'non'}} · Requis : {{stage.required ? 'oui' : 'non'}}</small>
             </details>
           </div>
           <div class="next-action" *ngIf="deployReadiness?.recommendedNextAction || deployReasons[0]">
             <strong>Prochaine action recommandée</strong><span>{{readinessReasonLabel(deployReadiness?.recommendedNextAction || deployReasons[0])}}</span>
           </div>
         </section>
+
+        <!-- ── Déploiement Azure — le backend (isReadyToDeploy) reste seul juge ── -->
+        <div class="deploy-azure-box mt-10">
+          <h3>Déploiement final — Azure</h3>
+          <p>Le déploiement final nécessite la réussite des contrôles de sécurité et de validation ci-dessus.</p>
+          <div class="deploy-azure-row">
+            <input
+              class="deploy-tag-input"
+              type="text"
+              [(ngModel)]="deployImageTag"
+              [disabled]="deploying"
+              placeholder="Étiquette de l’image (ex. latest)"
+              spellcheck="false"
+            />
+            <button *ngIf="canOperate && deployReady && deploymentConfigured"
+              class="btn btn-action"
+              [class.blue]="deployReady && !deploying"
+              [class.gray]="!deployReady || deploying"
+              [disabled]="!deployReady || !deploymentConfigured || deploying || deployReadyLoading"
+              [title]="deployReady ? 'Déployer sur Azure' : readinessReasonsLabel()"
+              (click)="requestDeployConfirmation()"
+            >
+              <ng-container *ngIf="deployReadyLoading">⏳ Vérification…</ng-container>
+              <ng-container *ngIf="!deployReadyLoading && deploying">⏳ Déploiement en cours (30 à 60 s)…</ng-container>
+              <ng-container *ngIf="!deployReadyLoading && !deploying">☁️ Préparer le déploiement</ng-container>
+            </button>
+          </div>
+
+          <div class="deploy-not-ready" *ngIf="!deployReadyLoading && !deploymentConfigured">
+            ⚙️ Azure non configuré pour ce projet — configurez la cible Azure pour permettre le déploiement.
+          </div>
+
+          <div class="deploy-confirm" *ngIf="deployConfirmationOpen">
+            <h4>Confirmer le déploiement</h4>
+            <p><strong>Projet :</strong> {{project?.name}}</p>
+            <p><strong>Build :</strong> {{deployReadiness?.currentBuild ? '#' + deployReadiness.currentBuild : 'Non disponible'}}</p>
+            <p><strong>Cible :</strong> {{deploymentTarget?.targetName}} ({{deploymentTarget?.resourceGroup}})</p>
+            <p *ngIf="deployReadiness?.warnings?.length"><strong>Avertissements :</strong> {{deployReadiness.warnings.join(' · ')}}</p>
+            <div class="deploy-azure-row">
+              <button class="btn btn-action gray" [disabled]="deploying" (click)="cancelDeployConfirmation()">Annuler</button>
+              <button class="btn btn-action blue" [disabled]="deploying" (click)="deployToAzure()">Confirmer le déploiement</button>
+            </div>
+          </div>
+
+          <div class="deploy-not-ready" *ngIf="!deployReadyLoading && !deployReady && !deploying">
+            🔒 Déploiement bloqué par les contrôles de sécurité :
+            <ul>
+              <li *ngFor="let reason of deployReasons">{{readinessReasonLabel(reason)}}</li>
+            </ul>
+          </div>
+
+          <div class="deploy-result success" *ngIf="deploySuccessInfo">
+            ✅ Déploiement réussi — état <strong>{{deploySuccessInfo.state}}</strong>, santé <strong>{{deploySuccessInfo.health}}</strong>
+          </div>
+
+          <div class="deploy-result error" *ngIf="deployErrorMessage">
+            ⚠️ {{deployErrorMessage}}
+          </div>
+        </div>
 
         <section class="cockpit-panel mt-10">
           <div class="cockpit-head"><div><h3>Convergence</h3><small>Historique corrélé des cycles</small></div></div>
@@ -881,7 +883,7 @@
           <section class="card"><div class="card-title">Général</div><dl class="config-list"><div><dt>Nom</dt><dd>{{project?.name || 'Non disponible'}}</dd></div><div><dt>Environnement</dt><dd>{{project?.environment || 'Non disponible'}}</dd></div><div><dt>Description</dt><dd>{{project?.description || 'Non disponible'}}</dd></div></dl></section>
           <section class="card"><div class="card-title">Source</div><dl class="config-list"><div><dt>Dépôt</dt><dd>{{project?.githubRepo || 'Non configuré'}}</dd></div><div><dt>URL</dt><dd>{{project?.githubRepo ? 'https://github.com/' + project.githubRepo : 'Non configuré'}}</dd></div><div><dt>Branche par défaut</dt><dd>Non disponible</dd></div></dl></section>
           <section class="card"><div class="card-title">CI/CD</div><dl class="config-list"><div><dt>Outil</dt><dd>{{project?.cicdTool || 'Non configuré'}}</dd></div><div><dt>Job Jenkins</dt><dd>{{project?.jenkinsJobName || 'Non configuré'}}</dd></div><div><dt>État</dt><dd>{{jenkinsMessage ? 'Indisponible' : 'Connecté'}}</dd></div></dl></section>
-          <section class="card"><div class="card-title">Analyses</div><dl class="config-list"><div><dt>SonarQube</dt><dd>{{project?.sonarqubeKey || 'Non configuré'}}</dd></div><div><dt>Quality Gate</dt><dd>{{ed?.sonar?.quality_gate === 'OK' ? 'Réussi' : (ed?.sonar?.quality_gate ? 'Échec' : 'Non disponible')}}</dd></div><div><dt>ZAP</dt><dd>{{ed?.zap?.target_url || 'Non configuré'}}</dd></div></dl></section>
+          <section class="card"><div class="card-title">Analyses</div><dl class="config-list"><div><dt>SonarQube</dt><dd>{{project?.sonarqubeKey || 'Non configuré'}}</dd></div><div><dt>Contrôle qualité</dt><dd>{{ed?.sonar?.quality_gate === 'OK' ? 'Réussi' : (ed?.sonar?.quality_gate ? 'Échec' : 'Non disponible')}}</dd></div><div><dt>ZAP</dt><dd>{{ed?.zap?.target_url || 'Non configuré'}}</dd></div></dl></section>
           <section class="card"><div class="card-title">Tests</div><dl class="config-list"><div><dt>État du build courant</dt><dd>{{configStageStatus('tests') | stageStatusLabel}}</dd></div><div><dt>Commande</dt><dd>Non disponible</dd></div></dl></section>
           <section class="card"><div class="card-title">Déploiement</div><dl class="config-list"><div><dt>Azure</dt><dd>{{deploymentConfigured ? 'Configuré' : 'Non configuré'}}</dd></div><div><dt>Cible</dt><dd>{{deploymentTarget?.targetName || 'Non disponible'}}</dd></div><div><dt>Préparation</dt><dd>{{deployReady ? 'Prêt' : 'Non prêt'}}</dd></div></dl></section>
         </div>

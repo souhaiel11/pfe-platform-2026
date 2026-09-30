@@ -35,7 +35,7 @@ import { ToastService } from '../../core/services/toast.service';
             <div class="login-sub">Accédez à la plateforme DevSecOps</div>
           </div>
           <div class="form-group">
-            <label class="form-label">Email</label>
+            <label class="form-label">Courriel</label>
             <input class="form-control" [(ngModel)]="email"
                    placeholder="admin@devsecops.local" (keydown.enter)="login()" />
           </div>

@@ -1,3 +1,4 @@
+import { PresentationLabelPipe } from '../presentation-label.pipe';
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router, NavigationEnd } from '@angular/router';
@@ -11,7 +12,7 @@ import { ChatWidgetComponent } from '../chat-widget/chat-widget.component';
 @Component({
   selector: 'app-layout',
   standalone: true,
-  imports: [CommonModule, RouterModule, ChatWidgetComponent],
+  imports: [PresentationLabelPipe, CommonModule, RouterModule, ChatWidgetComponent],
   templateUrl: './layout.component.html',
   styleUrls: ['./layout.component.scss'],
 })

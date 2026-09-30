@@ -1,3 +1,4 @@
+import { userHttpError } from '../../core/http-error-message';
 import { Component, Input, OnInit, OnDestroy, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
@@ -85,7 +86,7 @@ import { PresentationLabelPipe } from '../../shared/presentation-label.pipe';
         <div class="do-decision">
           <p class="do-sub" style="margin:0">
             « Corriger » applique <strong>tous</strong> les problèmes ci-dessus et ouvre une Pull Request sur le dépôt —
-            rien n'est poussé directement sur <code class="mono">main</code>. Un gate déterministe vérifie la correction avant toute PR.
+            rien n'est poussé directement sur <code class="mono">main</code>. Un contrôle automatique vérifie la correction avant toute PR.
           </p>
           <button class="do-btn" [disabled]="applying() || !(r.issues || []).length" (click)="apply(r)">
             {{ applying() ? 'Correction en cours…' : 'Corriger et créer une PR' }}
@@ -93,7 +94,7 @@ import { PresentationLabelPipe } from '../../shared/presentation-label.pipe';
         </div>
         <div class="do-loading" *ngIf="applying()">
           <span class="do-spinner"></span>
-          Agent de remédiation + gate déterministe + création de la PR — peut prendre jusqu'à 1-2 minutes…
+          Correction automatisée, validation et création de la Pull Request — peut prendre jusqu'à 1-2 minutes…
         </div>
         <p class="do-error" *ngIf="applyError()">{{ applyError() }}</p>
       </section>
@@ -114,7 +115,7 @@ import { PresentationLabelPipe } from '../../shared/presentation-label.pipe';
           <a class="do-btn" [href]="ar.prUrl" target="_blank" rel="noopener">Ouvrir la PR ↗</a>
         </div>
         <div class="do-rejected" *ngSwitchCase="false">
-          <strong>⚠ Gate déterministe : correction rejetée, aucune PR créée.</strong>
+          <strong>⚠ Contrôle automatique : correction rejetée, aucune PR créée.</strong>
           <p class="do-sub" style="margin:6px 0 0">{{ ar.message }}</p>
           <ul class="do-violations" *ngIf="(ar.violations || []).length">
             <li *ngFor="let v of ar.violations">[{{ v.family }}] {{ v.message }}</li>
@@ -298,13 +299,13 @@ export class DockerfileOptimizerComponent implements OnInit, OnDestroy {
             this.startPolling(r.id);
           },
           error: (e) => {
-            this.error.set(e?.error?.message || e?.message || "Impossible de démarrer l'analyse.");
+            this.error.set(userHttpError(e, 'Impossible de démarrer l’analyse. Réessayez après avoir vérifié le dépôt.'));
             this.loading.set(false);
           },
         });
       },
       error: (e) => {
-        this.error.set(e?.error?.message || 'Dockerfile introuvable sur le dépôt.');
+        this.error.set(userHttpError(e, 'Dockerfile introuvable. Vérifiez le dépôt et la branche.'));
         this.loading.set(false);
       },
     });
@@ -357,7 +358,7 @@ export class DockerfileOptimizerComponent implements OnInit, OnDestroy {
       },
       error: (e) => {
         this.applying.set(false);
-        this.applyError.set(e?.error?.message || e?.message || 'Échec de la remédiation.');
+        this.applyError.set(userHttpError(e, 'La correction a échoué. Vérifiez le rapport avant de réessayer.'));
       },
     });
   }

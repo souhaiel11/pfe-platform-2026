@@ -1,3 +1,5 @@
+import { presentationText, presentationLabel } from '../../shared/status-labels';
+import { sortPipelineStages, pipelineStageLabel } from '../../shared/pipeline-stage-presentation';
 import { Component, Input, Output, EventEmitter, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { diagnoseTrivy, diagnoseOwasp, diagnoseZap, diagnoseSonar, diagnoseTests, diagnoseDocker, IncidentContext } from '../incidents/phase-diagnostics';
@@ -299,22 +301,23 @@ export class ProjectOverviewComponent {
   private _ed = signal<any>({});
   private _rp = signal<any>({});
   private _backendStages = signal<any[]>([]);
+  private presentationStages = computed<any[]>(() => this._backendStages().length ? this._backendStages() : Object.values(this._ed()?.stages || {}));
   private _readiness = signal<any>(null);
   readiness = this._readiness.asReadonly();
 
   readinessAction(): string {
     const raw = String(this.readiness()?.recommendedNextAction || '').trim();
-    if (/^resolve tests:\s*(skipped|not_run)$/i.test(raw)) return 'Configurer et exécuter les tests, actuellement non exécutés.';
+    if (/^(resolve tests|Corriger l’étape Tests):\s*(skipped|not_run)$/i.test(raw)) return 'Configurer et exécuter les tests, actuellement non exécutés.';
     if (/^Guide développeur généré automatiquement \(agent IA indisponible/i.test(raw)) return 'Guide de correction généré automatiquement à partir des résultats des étapes.';
-    return raw || this.verdictSub();
+    return presentationText(raw) || this.verdictSub();
   }
 
   isBlocking(key: string): boolean {
-    return !!this._backendStages().find((s: any) => s.stage === key && s.blocking === true);
+    return !!this.presentationStages().find((s: any) => s.stage === key && s.blocking === true);
   }
 
   blockerPriorities = computed(() => {
-    const stages = this._backendStages();
+    const stages = this.presentationStages();
     const result: {label:string;tab:string}[] = [];
     const tests = stages.find((s: any) => s.stage === 'tests' && s.status === 'NOT_RUN');
     if (tests) result.push({ label: 'Tests non exécutés', tab: 'jenkins' });
@@ -324,7 +327,7 @@ export class ProjectOverviewComponent {
       if (!s || !s.findingCount) continue;
       const data = this._ed()?.[key] || {};
       const critical = key === 'sonar' ? (data.issues || []).filter((x:any) => ['BLOCKER','CRITICAL'].includes(String(x.severity).toUpperCase())).length : (data.critical || data.alerts_high || 0);
-      if (critical > 0) result.push({ label: `${critical} ${labels[key]}`, tab: key === 'sonar' ? 'sonar' : `security:${key}` });
+      if (critical > 0) result.push({ label: `${critical} ${critical === 1 ? labels[key].replace('problèmes', 'problème').replace('critiques', 'critique').replace('alertes', 'alerte') : labels[key]}`, tab: key === 'sonar' ? 'sonar' : `security:${key}` });
     }
     return result;
   });
@@ -368,15 +371,14 @@ export class ProjectOverviewComponent {
   });
 
   stages = computed<Stage[]>(() => {
-    const governed = this._backendStages();
+    const governed = this.presentationStages();
     if (governed.length) {
       const tabs: Record<string, string> = { build: 'jenkins', tests: 'jenkins', sonar: 'sonar', trivy: 'security:trivy', owasp: 'security:owasp', zap: 'security:zap', container: 'jenkins', docker: 'jenkins', deploy: 'jenkins' };
       const state = (status: string): Stage['state'] => ({ PASSED: 'pass', FAILED: 'fail', WARNING: 'warn', RUNNING: 'warn', NOT_RUN: 'skip', NOT_REACHED: 'skip' } as any)[status] || 'skip';
       const humanStatus: Record<string,string> = { PASSED:'Réussi', FAILED:'Échec', WARNING:'Avertissement', RUNNING:'En cours', NOT_RUN:'Non exécuté', NOT_REACHED:'Non atteint' };
-      const humanStage: Record<string,string> = { build:'Build', tests:'Tests', sonar:'SonarQube', trivy:'Trivy', owasp:'OWASP', zap:'ZAP', docker:'Docker', deploy:'Déploiement' };
-      return governed.map(s => ({
+      return sortPipelineStages(governed).map(s => ({
         key: String(s.stage || 'unknown').toLowerCase(),
-        label: humanStage[String(s.stage || '').toLowerCase()] || 'Étape',
+        label: pipelineStageLabel(s.stage),
         detail: (() => { const count = Number(s.findingCount ?? s.findings?.length ?? 0); return `${humanStatus[String(s.status || 'NOT_RUN').toUpperCase()] || 'Non disponible'} · ${count} ${count === 1 ? 'problème' : 'problèmes'}`; })(),
         state: state(String(s.status || 'NOT_RUN').toUpperCase()),
         tab: tabs[String(s.stage || '').toLowerCase()] || null,
@@ -396,31 +398,31 @@ export class ProjectOverviewComponent {
 
     // Historique sans stage model : tous les états restent neutres. Aucun
     // signal legacy absent ne peut devenir vert.
-    return [
+    return sortPipelineStages<Stage>([
       { key: 'build', label: 'Build', tab: 'jenkins',
         detail: d?.build?.number ? '#' + d.build.number : '—',
-        state: 'skip' },
+        state: 'skip' as const },
       { key: 'tests', label: 'Tests', tab: 'jenkins',
         detail: (tests.total ?? 0) === 0 ? 'aucun test' : `${tests.failures ?? 0} échec(s)`,
-        state: 'skip' },
+        state: 'skip' as const },
       { key: 'sonar', label: 'SonarQube', tab: 'sonar',
-        detail: `${s.BLOCKER} bloquant(s)`, state: 'skip' },
+        detail: `${s.BLOCKER} bloquant(s)`, state: 'skip' as const },
       { key: 'trivy', label: 'Conteneur', tab: 'security:trivy',
         detail: `${d?.trivy?.critical ?? 0} critique(s)`,
-        state: 'skip' },
+        state: 'skip' as const },
       { key: 'owasp', label: 'Dépendances', tab: 'security:owasp',
         detail: `${d?.owasp?.critical ?? 0} critique(s)`,
-        state: 'skip' },
+        state: 'skip' as const },
       { key: 'zap', label: 'DAST', tab: 'security:zap',
         detail: `${d?.zap?.alerts_count ?? 0} alerte(s)`,
-        state: 'skip' },
+        state: 'skip' as const },
       { key: 'image', label: 'Image', tab: 'jenkins',
         detail: d?.docker?.image_tag ? String(d.docker.image_tag).split(':').pop() || '—' : '—',
-        state: 'skip' },
+        state: 'skip' as const },
       { key: 'deploy', label: 'Déploiement', tab: 'jenkins',
-        detail: String(d?.deploy?.status || 'non lancé').toLowerCase(),
-        state: 'skip' },
-    ];
+        detail: presentationLabel(d?.deploy?.status || 'NOT_RUN'),
+        state: 'skip' as const },
+    ].filter(s => !!d?.[s.key === 'image' ? 'docker' : s.key]).map(s => ({ ...s, label: pipelineStageLabel(s.key) })));
   });
 
   blockingKey = computed<string | null>(() => {
@@ -449,7 +451,7 @@ export class ProjectOverviewComponent {
     const s = this.sonarBySeverity();
     const tone = (fail: number, warn: number) => fail > 0 ? 'fail' : (warn > 0 ? 'warn' : 'pass');
     const governedTone = (stage: string, fail: number, warn: number) => {
-      const status = String(this._backendStages().find(s => String(s.stage || '').toLowerCase() === stage)?.status || 'NOT_RUN').toUpperCase();
+      const status = String(this.presentationStages().find(s => String(s.stage || '').toLowerCase() === stage)?.status || 'NOT_RUN').toUpperCase();
       if (status === 'FAILED') return 'fail';
       if (status === 'WARNING' || status === 'RUNNING') return 'warn';
       if (status !== 'PASSED') return 'skip';

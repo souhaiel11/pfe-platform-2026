@@ -274,7 +274,7 @@
               <ul class="deploy-list">
                 <li *ngFor="let line of deploymentLines()">
                   <span class="deploy-actor" [class.agent]="line.actor==='Agent'" [class.vous]="line.actor==='Vous'">[{{ line.actor }}]</span>
-                  <strong>{{ line.phase }}</strong> : {{ line.text }}
+                  <strong>{{ line.phase }}</strong> : {{ line.text | presentationText }}
                 </li>
               </ul>
             </div>
@@ -300,10 +300,10 @@
               </span>
             </div>
             <div class="historical-narrative" style="font-size:12px;color:var(--text-secondary);line-height:1.7;white-space:pre-wrap;margin-bottom:12px;">
-              {{aiAnalysis.justification}}
+              {{aiAnalysis.justification | presentationText}}
             </div>
             <div *ngIf="aiAnalysis.errorsSummary" class="historical-technical-evidence" style="font-family:var(--font-mono);font-size:11px;color:var(--accent-orange);background:var(--bg-primary);padding:10px 12px;border-radius:var(--radius-sm);">
-              {{aiAnalysis.errorsSummary}}
+              {{aiAnalysis.errorsSummary | presentationText}}
             </div>
           </div>
 
@@ -395,7 +395,7 @@
               <span class="card-title">Actions recommandées</span>
             </div>
             <div class="historical-narrative" style="font-size:12px;color:var(--text-secondary);line-height:1.8;white-space:pre-wrap;">
-              {{aiAnalysis.developerActions}}
+              {{aiAnalysis.developerActions | presentationText}}
             </div>
           </div>
 
@@ -486,7 +486,7 @@
                            style="margin-top:10px;padding:8px 10px;border-radius:6px;background:var(--accent-orange-bg, rgba(234,88,12,0.1));color:var(--accent-orange);font-size:11px;line-height:1.5;">
                         <strong>Qualité globale du projet : attention</strong>
                         <span *ngIf="preexistingFindingCountIfReliable() !== null">
-                          — {{ preexistingFindingCountIfReliable() }} finding(s) historique(s) restant(s), hors du lot corrigé.
+                          — {{ preexistingFindingCountIfReliable() }} vulnérabilité(s) historique(s) restante(s), hors du lot corrigé.
                         </span>
                       </div>
                     </ng-container>
@@ -580,7 +580,7 @@
               </div>
               <div *ngIf="showPreexistingSonarNote()"
                    style="margin-top:10px;padding:8px 10px;border-radius:6px;background:var(--accent-orange-bg, rgba(234,88,12,0.1));color:var(--accent-orange);font-size:11px;line-height:1.5;">
-                Des problèmes préexistants (hors du lot corrigé) maintiennent le Quality Gate en échec — ils seront
+                Des problèmes préexistants (hors du lot corrigé) maintiennent le contrôle qualité en échec — ils seront
                 traités lors des prochains cycles de correction et ne bloquent pas la fusion de cette PR.
               </div>
               <ul *ngIf="mergeAuthorization()?.advisories?.length"

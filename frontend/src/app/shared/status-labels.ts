@@ -8,9 +8,22 @@
 // ─────────────────────────────────────────────────────────────────────
 
 const STAGE_STATUS_LABELS: Record<string, string> = {
+  VALIDATED_RECOMMENDED: 'Correction validée',
+  VALIDATED_ALTERNATIVES: 'Corrections validées',
+  NO_COMPATIBLE_CANDIDATE: 'Aucune correction compatible',
+  SECURITY_TARGET_UNKNOWN: 'Version corrigée non déterminée',
+  MAJOR_UPGRADE_REQUIRES_REVIEW: 'Mise à niveau majeure requise',
+  VALIDATION_FAILED: 'Échec de la validation',
+  PROJECT_CONTEXT_INSUFFICIENT: 'Contexte du projet insuffisant',
+  NOT_YET_SANDBOXED: 'Validation non encore exécutée',
+  CLOSED: 'Corrigée',
+  OPEN: 'À traiter',
+  DISPATCHING: 'En cours',
+  CANDIDATE_READY: 'Correction proposée',
   FAILED: 'Échec',
   COMPLETED: 'Terminé',
   WARNING: 'Avertissement',
+  NOT_ATTEMPTED: 'Non tenté',
   NOT_RUN: 'Non exécuté',
   NOT_REACHED: 'Non atteint',
   PASSED: 'Réussi',
@@ -18,6 +31,12 @@ const STAGE_STATUS_LABELS: Record<string, string> = {
   UNKNOWN: 'Indéterminé',
   FAILURE: 'Échec',
   ERROR: 'Échec',
+  UP: 'Disponible',
+  EXITED: 'Arrêté',
+  CREATED: 'Créé',
+  HEALTHY: 'Disponible',
+  UNHEALTHY: 'Indisponible',
+  DEPLOYED: 'Déployé',
   RUNNING: 'En cours',
   SKIPPED: 'Non exécuté',
   PENDING: 'En attente',
@@ -109,3 +128,22 @@ export function riskLevelLabel(raw: string | null | undefined): string {
 }
 
 export const presentationLabel = stageStatusLabel;
+
+/** Translate known status tokens embedded in server recommendations. */
+export function presentationText(value: unknown): string {
+  return String(value || '').replace(/\bQuality Gate\b/gi, 'contrôle qualité').replace(/\bstatus:/gi, 'état :').replace(/\bstage(?=\s)/gi, 'étape').replace(/\b[A-Z][A-Z0-9_]+\b/g, token => token === 'OWASP' ? token : (STAGE_STATUS_LABELS[token] || token));
+}
+
+const ZAP_ALERT_LABELS: Record<string, string> = {
+  'spring actuator information leak': 'Exposition d’informations via Spring Actuator',
+  'weak authentication method': 'Méthode d’authentification insuffisante',
+  'missing anti-clickjacking header': 'Protection contre le détournement de clics absente',
+  'content security policy (csp) header not set': 'Politique de sécurité du contenu absente',
+  'x-content-type-options header missing': 'Protection contre la détection du type de contenu absente',
+  'sql injection': 'Injection SQL',
+  'cross site scripting (reflected)': 'Injection de script réfléchie',
+  'cross site scripting (persistent)': 'Injection de script persistante',
+};
+export function zapAlertLabel(title: unknown): string {
+  return ZAP_ALERT_LABELS[String(title || '').trim().toLowerCase()] || 'Alerte de sécurité ZAP';
+}

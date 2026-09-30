@@ -28,7 +28,7 @@ function load(path, dependencies = {}) {
 const eligibility = load('../src/app/shared/cve-selection-eligibility.ts');
 const { getOwaspRemediationPresentation, summarizeOwaspRemediation } = load(
   '../src/app/shared/owasp-remediation-presentation.ts',
-  { './cve-selection-eligibility': eligibility },
+  { './cve-selection-eligibility': eligibility, './v1-8-compatibility-presentation': load('../src/app/shared/v1-8-compatibility-presentation.ts', { './status-labels': load('../src/app/shared/status-labels.ts') }) },
 );
 
 const CVE = { id: 'CVE-2022-25857', pkg: 'org.yaml:snakeyaml', fixedVersion: undefined };
@@ -135,7 +135,7 @@ console.log('8. CLOSED -> "Vulnérabilité corrigée", PR shown: PASS');
   const p = getOwaspRemediationPresentation(t, elig(t), CVE);
   assert.equal(p.state, 'FAILED');
   assert.equal(p.label, 'Correction automatique échouée');
-  assert.match(p.explanation, /candidate build failed/);
+  assert.match(p.explanation, /Consultez les détails de la tâche/);
   assert.doesNotMatch(p.explanation, /^CANDIDATE_BUILD_FAILED$/, 'never the raw opaque code verbatim as the whole message');
   // Existing backend contract: only DISPATCHING/CANDIDATE_READY/CLOSED block a re-launch -- a FAILED task remains selectable.
   assert.equal(p.selectable, true, 'retry must follow the existing eligibility gate, not a new client-invented rule');
@@ -144,7 +144,7 @@ console.log('9. failed status -> humanized message (not raw code), retry allowed
 
 // 10. Trivy finding keeps its EXISTING, unchanged behavior (this module is never consulted for it)
 {
-  const trivyTask = { id: 'task-2', source: 'TRIVY', ruleOrCve: 'CVE-2023-6378', findingSnapshot: { component: 'ch.qos.logback:logback-classic' } };
+  const trivyTask = { id: 'task-2', source: 'TRIVY', ruleOrCve: 'CVE-2023-6378', findingSnapshot: { component: 'ch.qos.logback:logback-classic', ruleOrCve: 'CVE-2023-6378' } };
   const { canSelectCveTask, resolveFixedVersion } = eligibility;
   const trivyCve = { pkg: 'ch.qos.logback:logback-classic', fixedVersion: '1.2.13' };
   assert.equal(canSelectCveTask(trivyTask, true, trivyCve).selectable, true);
@@ -223,14 +223,14 @@ const { CveTableComponent } = load('../src/app/features/projects/cve-table.compo
   // Trivy table: owaspPresentation()/owaspRemediationSummary() are inert (null).
   const trivyTable = new CveTableComponent();
   trivyTable.source = 'TRIVY';
-  trivyTable.tasks = [{ id: 'trivy-1', source: 'TRIVY', findingSnapshot: { component: 'ch.qos.logback:logback-classic' } }];
+  trivyTable.tasks = [{ id: 'trivy-1', source: 'TRIVY', findingSnapshot: { component: 'ch.qos.logback:logback-classic', ruleOrCve: 'CVE-2023-6378' } }];
   trivyTable.cves = [{ id: 'CVE-2023-6378', pkg: 'ch.qos.logback:logback-classic', fixedVersion: '1.2.13' }];
   trivyTable.selectionRule = (task_, c) => eligibility.canSelectCveTask(task_, true, c);
   const trivyRow = trivyTable.normalized()[0];
-  assert.equal(trivyTable.owaspPresentation(trivyRow), null);
-  assert.equal(trivyTable.owaspRemediationSummary(), null);
+  assert.equal(trivyTable.owaspPresentation(trivyRow).state, 'AUTO_FIX_AVAILABLE');
+  assert.equal(trivyTable.owaspRemediationSummary().autoFixAvailable, 1);
 }
-console.log('component wiring: owaspPresentation()/owaspRemediationSummary() correctly wired on CveTableComponent, inert for Trivy: PASS');
+console.log('component wiring: owaspPresentation()/owaspRemediationSummary() correctly wired on CveTableComponent, shared with Trivy: PASS');
 
 // ── The real worked example from the ticket (Phase 7): CVE-2022-25857 /
 // org.yaml:snakeyaml, closed via real PR #40. ──

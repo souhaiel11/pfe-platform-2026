@@ -15,7 +15,7 @@ import { CommonModule } from '@angular/common';
 
       <div class="gate-banner">
         <i class="ti ti-circle-check gate-icon"></i>
-        <div><div class="gate-title">Quality Gate : réussi</div><div class="gate-sub">Tous les critères de qualité sont satisfaits</div></div>
+        <div><div class="gate-title">Contrôle qualité : réussi</div><div class="gate-sub">Tous les critères de qualité sont satisfaits</div></div>
       </div>
 
       <div class="kpi-grid">

@@ -1,3 +1,6 @@
+import { PresentationTextPipe } from '../../shared/presentation-label.pipe';
+import { frenchDate, frenchDuration } from '../../shared/french-format';
+import { sortPipelineStages, pipelineStageLabel } from '../../shared/pipeline-stage-presentation';
 import { Component, OnInit, Input, ElementRef, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -15,7 +18,7 @@ import { StageStatusLabelPipe } from '../../shared/stage-status-label.pipe';
 import { PresentationLabelPipe } from '../../shared/presentation-label.pipe';
 import { FrenchDatePipe } from '../../shared/french-date.pipe';
 import { userHttpError } from '../../core/http-error-message';
-import { presentationLabel, remediationTypeLabel, riskLevelLabel } from '../../shared/status-labels';
+import { presentationText, presentationLabel, remediationTypeLabel, riskLevelLabel } from '../../shared/status-labels';
 import { findingDescriptionText, findingEligibilityText, findingEvidenceText, findingRecommendationText, findingResponsibleText, findingWhyImportantText } from '../../shared/finding-presentation';
 import { formatScoreOn100, isValidScoreOn100 } from '../../shared/score-display';
 import { canSelectCveTask as canSelectCveTaskShared, CveSelectionEligibility } from '../../shared/cve-selection-eligibility';
@@ -23,11 +26,15 @@ import { canSelectCveTask as canSelectCveTaskShared, CveSelectionEligibility } f
 @Component({
   selector: 'app-project-detail',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, CveTableComponent, ZapTableComponent, ProjectOverviewComponent, JenkinsfileOptimizerComponent, DockerfileOptimizerComponent, StageStatusLabelPipe, PresentationLabelPipe, FrenchDatePipe],
+  imports: [PresentationTextPipe, CommonModule, FormsModule, RouterModule, CveTableComponent, ZapTableComponent, ProjectOverviewComponent, JenkinsfileOptimizerComponent, DockerfileOptimizerComponent, StageStatusLabelPipe, PresentationLabelPipe, FrenchDatePipe],
   templateUrl: './project-detail.component.html',
   styleUrls: ['./project-detail.component.scss'],
 })
 export class ProjectDetailComponent implements OnInit {
+  orderedStages(): any[] { return sortPipelineStages(this.deployReadiness?.requiredStages || []); }
+  pipelineStageLabel = pipelineStageLabel;
+  frenchDuration = frenchDuration;
+
   @ViewChild('sonarDrawer') sonarDrawer?: ElementRef<HTMLElement>;
   @ViewChild('batchDialog') batchDialog?: ElementRef<HTMLElement>;
   approving = false;
@@ -183,7 +190,7 @@ export class ProjectDetailComponent implements OnInit {
     const stage = reason.match(/^(tests|sonar|trivy|owasp|zap|docker|deploy)=(NOT_RUN|NOT_REACHED|FAILED|WARNING|RUNNING)$/i);
     if (stage) return `${presentationLabel(stage[1])} : ${presentationLabel(stage[2])}`;
     if (/^judgeDecision=BLOCK/i.test(reason)) return 'La décision de gouvernance bloque explicitement ce build.';
-    return reason;
+    return presentationText(reason);
   }
   readinessReasonsLabel(): string { return (this.deployReasons || []).map(r => this.readinessReasonLabel(r)).join(' · '); }
 
@@ -633,9 +640,7 @@ export class ProjectDetailComponent implements OnInit {
         // propriété, CVE déjà en cours...) -- l'utilisateur doit pouvoir
         // corriger juste la sélection fautive (retirer la CVE nommée dans le
         // message) plutôt que tout recommencer depuis zéro.
-        let message = err?.status === 403 && typeof err?.error?.message === 'string'
-          ? err.error.message
-          : userHttpError(err, 'Impossible de lancer la correction.');
+        let message = userHttpError(err, 'Impossible de lancer la correction.');
         const selectedTasks = this.manualTasks.filter(task => findingTaskIds.includes(task.id));
         for (const task of selectedTasks) {
           message = message.split(task.id).join(task.ruleOrCve || task.findingSnapshot?.ruleOrCve || task.id);
@@ -767,7 +772,10 @@ export class ProjectDetailComponent implements OnInit {
   }
 
   loadManualRemediation() {
-    this.api.getManualRemediationTasks(this.id).subscribe({ next: tasks => this.manualTasks = tasks || [], error: () => this.manualTasks = [] });
+    // includeV18=true: additive `v1_8Decision` field per task, read-only
+    // display (cve-table.component.ts's own v1_8Presentation()) -- see
+    // api.service.ts's own header comment on this parameter.
+    this.api.getManualRemediationTasks(this.id, true).subscribe({ next: tasks => this.manualTasks = tasks || [], error: () => this.manualTasks = [] });
     this.api.getManualRemediationSummary(this.id).subscribe({ next: summary => this.manualSummary = summary, error: () => {} });
   }
 
@@ -900,8 +908,8 @@ export class ProjectDetailComponent implements OnInit {
         this.deploying = false;
         this.deployConfirmationOpen = false;
         if (r?.success) {
-          this.deploySuccessInfo = { state: r.state, health: r.healthOk ? 'UP' : (r.health || 'inconnu') };
-          this.toast.success('Déploiement réussi', `Conteneur ${r.state} — santé ${r.healthOk ? 'UP' : 'KO'}`);
+          this.deploySuccessInfo = { state: presentationLabel(r.state), health: r.healthOk ? 'Disponible' : 'Indisponible' };
+          this.toast.success('Déploiement réussi', `Conteneur ${presentationLabel(r.state)} — application ${r.healthOk ? 'disponible' : 'indisponible'}`);
         } else {
           const msg = `Déploiement échoué côté agent (état: ${r?.state || 'inconnu'}).`;
           this.deployErrorMessage = msg;
@@ -920,7 +928,7 @@ export class ProjectDetailComponent implements OnInit {
           this.deployErrorMessage = msg;
           this.toast.error('Session Azure expirée', msg);
         } else {
-          const msg = body?.message || 'Erreur inattendue lors du déploiement.';
+          const msg = userHttpError(err, 'Le déploiement a échoué. Consultez son rapport avant de réessayer.');
           this.deployErrorMessage = msg;
           this.toast.error('Erreur', msg);
         }
@@ -939,7 +947,7 @@ export class ProjectDetailComponent implements OnInit {
         // est faux (non configuré/erreur/timeout — plus aucun mock possible),
         // jamais un chiffre inventé.
         this.buildReliability = { rate: d?.buildSuccessRate ?? null, sampleSize: d?.sampleSize ?? 0 };
-        this.jenkinsMessage = d?._liveData ? null : (d?.message || 'Données Jenkins indisponibles');
+        this.jenkinsMessage = d?._liveData ? null : (d?.message || 'Données Jenkins indisponibles. Vérifiez sa configuration.');
       },
       error: () => { this.buildReliability = null; this.jenkinsBuilds = []; this.jenkinsMessage = 'Impossible de contacter le backend'; }
     });
@@ -1008,7 +1016,7 @@ export class ProjectDetailComponent implements OnInit {
       },
       error: (err: any) => {
         this.buildTriggering = false;
-        const message = err?.error?.message || err?.error?.error?.message || 'Impossible de déclencher le build';
+        const message = userHttpError(err, 'Impossible de déclencher le build. Vérifiez la connexion Jenkins puis réessayez.');
         this.toast.error('Erreur Jenkins', message);
       },
     });
@@ -1176,7 +1184,7 @@ export class ProjectDetailComponent implements OnInit {
     return [
       { label: 'ID',             value: this.project.id },
       { label: 'Environnement',  value: this.project.environment || 'Non disponible' },
-      { label: 'Créé le',        value: this.project.createdAt ? new Date(this.project.createdAt).toLocaleDateString('fr-FR') : '—' },
+      { label: 'Créé le',        value: this.project.createdAt ? frenchDate(this.project.createdAt, false) : '—' },
       { label: 'Outil CI/CD',    value: this.project.cicdTool || 'Non configuré' },
       { label: 'Job Jenkins',    value: this.project.jenkinsJobName || 'Non configuré' },
       { label: 'URL Jenkins publique',  value: this.jenkinsPublicUrl() || 'Non configurée' },

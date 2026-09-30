@@ -10,8 +10,8 @@ const failures = [];
 const rawEnumInterpolation = /\{\{\s*[\w?.]+\.(?:status|decision|riskLevel|securityLevel|severity|remediationType)\s*(?:\|\|\s*['"][^'"]+['"])?\s*\}\}/g;
 const emptyCell = /<t[dh][^>]*>\s*<\/t[dh]>/g;
 const englishButton = /<button[^>]*>[^<]*(?:\bCancel\b|\bSave\b|\bDelete\b|\bRetry\b|\bReset\b)[^<]*<\/button>/gi;
-const forbiddenVisible = /\b(?:Finding|Findings|Owner|Remediation|Evidence|Root Cause|Developer Guidance|Judge Agent|Raw Data|PR Validation|Loading|No data|No results|Not Ready|Build unavailable)\b|\bN\/A\b/g;
-const rawVisibleEnum = /\b(?:PASSED|FAILED|FAILURE|WARNING|NOT_RUN|NOT_REACHED|RUNNING|BLOCK|READY|NOT_READY|AUTO_FIX_ELIGIBLE|DEVELOPER_ACTION_REQUIRED|ADMIN_ACTION_REQUIRED|DONE_BY_USER|REOPENED)\b/g;
+const forbiddenVisible = /\b(?:Finding|Findings|finding\(s\)|Owner|Remediation|Evidence|Root Cause|Developer Guidance|Judge Agent|Raw Data|PR Validation|Loading|No data|No results|Not Ready|Build unavailable)\b|\bN\/A\b/g;
+const rawVisibleEnum = /\b(?:PASSED|FAILED|FAILURE|WARNING|NOT_RUN|NOT_REACHED|RUNNING|BLOCK|READY|NOT_READY|AUTO_FIX_ELIGIBLE|DEVELOPER_ACTION_REQUIRED|ADMIN_ACTION_REQUIRED|DONE_BY_USER|REOPENED|VALIDATED_RECOMMENDED|VALIDATED_ALTERNATIVES|NO_COMPATIBLE_CANDIDATE|SECURITY_TARGET_UNKNOWN|MAJOR_UPGRADE_REQUIRES_REVIEW|VALIDATION_FAILED)\b/g;
 
 function presentationFragments(source, file) {
   const templates = file.endsWith('.html')

@@ -141,9 +141,9 @@ console.log('security-scanner-filter E) Trivy + CRITICAL -> intersection correct
   assert.deepEqual(visibleSections(c), [], 'F: no section actually renders the (now empty) table');
   assert.equal(c.isScannerMissing(c.ed.trivy), false, 'F: this is NOT the "scanner did not run" case');
   assert.equal(c.securityScannerEmpty('trivy'), true, 'F: the new clean-empty-state guard is true for this exact case');
-  assert.match(componentTemplate, /Aucun finding Trivy pour cette analyse\./, 'F: the template carries a clear, readable empty-state message for Trivy');
-  assert.match(componentTemplate, /Aucun finding OWASP pour cette analyse\./, 'F: same for OWASP');
-  assert.match(componentTemplate, /Aucun finding ZAP pour cette analyse\./, 'F: same for ZAP');
+  assert.match(componentTemplate, /Aucune vulnérabilité Trivy pour cette analyse\./, 'F: the template carries a clear, readable empty-state message for Trivy');
+  assert.match(componentTemplate, /Aucune vulnérabilité OWASP pour cette analyse\./, 'F: same for OWASP');
+  assert.match(componentTemplate, /Aucune alerte ZAP pour cette analyse\./, 'F: same for ZAP');
 }
 console.log('security-scanner-filter F) scanner sans résultat -> état vide lisible: PASS');
 
