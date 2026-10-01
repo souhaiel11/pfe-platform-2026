@@ -90,6 +90,7 @@ export class ApiService {
   }
 
   // ── Integrations ─────────────────────────────────────────
+  getEffectiveConfig() { return this.http.get<any>(`${this.base}/config/effective`); }
   getPlatformCapabilities() { return this.http.get<any>(`${this.base}/dashboard/capabilities`); }
   getIntegrations()                              { return this.http.get<any[]>(`${this.base}/integrations`); }
   getIntegration(id: string)                     { return this.http.get<any>(`${this.base}/integrations/${id}`); }

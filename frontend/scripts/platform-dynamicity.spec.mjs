@@ -5,13 +5,13 @@ import vm from 'node:vm';
 const ts=createRequire(import.meta.url)('typescript');
 const read=p=>readFileSync(new URL(p,import.meta.url),'utf8');
 const angular={Component:()=>v=>v};
-function load(path,deps={}){const exports={};vm.runInNewContext(ts.transpileModule(read(path),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,experimentalDecorators:true}}).outputText,{exports,console,Intl,Date,require:n=>deps[n] || (n==='@angular/core'?angular:{})});return exports;}
+function load(path,deps={}){const exports={};vm.runInNewContext(ts.transpileModule(read(path),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,experimentalDecorators:true}}).outputText,{exports,console,Intl,Date,URL,require:n=>deps[n] || (n==='@angular/core'?angular:{})});return exports;}
 const presentation=load('../src/app/shared/platform-capability-presentation.ts');
 const stages=load('../src/app/shared/pipeline-stage-presentation.ts');
 const {SettingsComponent}=load('../src/app/features/settings/settings.component.ts',{'../../core/http-error-message':load('../src/app/core/http-error-message.ts',{'@angular/common/http':{HttpErrorResponse:class{}}}),'../../shared/platform-capability-presentation':presentation,'../../shared/pipeline-stage-presentation':stages});
 let integrations=[],capabilities={security:[],remediation:{enforcementMode:'SHADOW',supportedEditTypes:['DEPENDENCY_VERSION']},ci:{configuredProjects:0},deployment:{configuredProjects:0,agentConfigured:false}},failure=false,updates=0,tests=0;
 const response=value=>({subscribe:observer=>failure?observer.error(new Error('network')):observer.next(value)});
-const api={getIntegrations:()=>response(integrations),getPlatformCapabilities:()=>response(capabilities),updateIntegration:()=>{updates++;return response({id:'i',status:'disconnected'});},testIntegration:()=>{tests++;return response({status:'connected',success:true});}};
+const api={getProjects:()=>response([]),getEffectiveConfig:()=>response(null),getIntegrations:()=>response(integrations),getPlatformCapabilities:()=>response(capabilities),updateIntegration:()=>{updates++;return response({id:'i',status:'disconnected'});},testIntegration:()=>{tests++;return response({status:'connected',success:true});}};
 const toast={success(){},error(){}};
 const auth={currentUser:{role:'viewer'}};
 const settings=new SettingsComponent(toast,api,auth);
@@ -20,7 +20,7 @@ assert.equal(settings.enforcementModeLabel(settings.capabilities.remediation.enf
 integrations=[{id:'i',toolType:'nexus',name:'Nexus',url:'https://registry.company.test',enabled:false,status:'connected',lastChecked:null},{id:'g',toolType:'grafana'}];
 settings.loadIntegrations();assert.equal(settings.tools.length,1);assert.equal(settings.tools[0].url,integrations[0].url);assert.equal(settings.tools[0].enabled,false);assert.equal(settings.integrationStatusLabel(settings.tools[0]),'Configuration marquée inactive');
 settings.saveTool(settings.tools[0]);assert.equal(updates,0,'read-only users cannot save');settings.testTool(settings.tools[0]);assert.equal(tests,0);
-auth.currentUser.role='admin';settings.saveTool(settings.tools[0]);assert.equal(updates,1,'editable field reaches persistence endpoint');
+auth.currentUser.role='admin';settings.tools[0].url='https://changed.company.test';settings.saveTool(settings.tools[0]);assert.equal(updates,1,'editable field reaches persistence endpoint');
 capabilities={...capabilities,security:[{id:'trivy',projectsReported:1,projectsCompleted:0}],remediation:{enforcementMode:'ENFORCED',supportedEditTypes:['PARENT_VERSION','PROPERTY_VERSION']},ci:{configuredProjects:2}};
 settings.loadCapabilities();assert.equal(settings.capabilities.security[0].id,'trivy');assert.match(settings.scannerEvidenceLabel(settings.capabilities.security[0]),/sans résultat/);assert.equal(settings.enforcementModeLabel(settings.capabilities.remediation.enforcementMode),'Contrôle appliqué');assert.equal(settings.editTypeLabel(settings.capabilities.remediation.supportedEditTypes[0]),'Parent Maven');
 capabilities.security[0].projectsCompleted=1;settings.loadCapabilities();assert.match(settings.scannerEvidenceLabel(settings.capabilities.security[0]),/Résultat disponible/);

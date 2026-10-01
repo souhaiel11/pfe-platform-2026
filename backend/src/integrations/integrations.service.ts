@@ -23,7 +23,12 @@ export class IntegrationsService {
   // secret ajouté à Integration sans être ajouté ici fuiterait silencieusement.
   private sanitize(integration: Integration) {
     const { token, password, ...rest } = integration;
-    return { ...rest, hasToken: !!token, hasPassword: !!password };
+    let url = rest.url;
+    try { const parsed = new URL(url); if (parsed.username || parsed.password || parsed.search || parsed.hash) url = null; } catch { url = null; }
+    // Diagnostic payloads are not a trusted configuration source. Never echo
+    // remote errors or arbitrary metadata into the settings response.
+    const metadata = rest.lastChecked ? { message: rest.status === IntegrationStatus.CONNECTED ? 'Connexion vérifiée.' : 'Échec de la vérification.' } : null;
+    return { ...rest, url, metadata, hasToken: !!token, hasPassword: !!password };
   }
 
   // Un champ token/password vide envoyé par le front lors d'un update ne veut
@@ -79,15 +84,15 @@ export class IntegrationsService {
     try {
       const metadata = await this.doTest(integration);
       await this.repo.update(id, { status: IntegrationStatus.CONNECTED, lastChecked: now, metadata });
-      return { success: true, status: IntegrationStatus.CONNECTED, metadata };
+      return { success: true, status: IntegrationStatus.CONNECTED, checkedAt: now, metadata: { message: 'Connexion vérifiée.' } };
     } catch (e: any) {
-      const error = e?.response?.data?.message || e?.message || 'Échec de la connexion.';
+      const error = 'Échec de la vérification. Vérifiez l’URL et les autorisations du service.';
       await this.repo.update(id, {
         status: IntegrationStatus.ERROR,
         lastChecked: now,
         metadata: { error: String(error) } as any,
       });
-      return { success: false, status: IntegrationStatus.ERROR, error: String(error) };
+      return { success: false, status: IntegrationStatus.ERROR, checkedAt: now, error: String(error) };
     }
   }
 

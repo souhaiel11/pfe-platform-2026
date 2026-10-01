@@ -269,15 +269,17 @@ export class ProjectsService {
         const headers = {
           Authorization: `Basic ${Buffer.from(project.sonarqubeToken + ':').toString('base64')}`
         };
-        await firstValueFrom(
+        const auth = await firstValueFrom(
           this.http.get(`${project.sonarqubeUrl}/api/authentication/validate`, { headers, timeout: 5000 })
         );
-        await firstValueFrom(
-          this.http.get(`${project.sonarqubeUrl}/api/projects/search?projects=${project.sonarqubeKey}`, { headers, timeout: 5000 })
+        if (auth.data?.valid !== true) throw new Error('Authentication rejected');
+        const lookup = await firstValueFrom(
+          this.http.get(`${project.sonarqubeUrl}/api/projects/search`, { headers, timeout: 5000, params: { projects: project.sonarqubeKey } })
         );
+        if (!lookup.data?.components?.some((component: any) => component.key === project.sonarqubeKey)) throw new Error('Project not found');
         results.sonarqube = { valid: true, message: 'SonarQube connecté — projet trouvé', checkedAt: now };
       } catch (e) {
-        results.sonarqube = { valid: false, message: `SonarQube inaccessible: ${e.message}`, checkedAt: now };
+        results.sonarqube = { valid: false, message: 'Échec de la vérification SonarQube. Vérifiez la configuration et les autorisations.', checkedAt: now };
       }
     }
 
@@ -289,18 +291,19 @@ export class ProjectsService {
         const headers = {
           Authorization: `Basic ${Buffer.from(`${user}:${token}`).toString('base64')}`
         };
-        await firstValueFrom(
-          this.http.get(`${validateJenkinsUrl}/job/${project.jenkinsJobName}/api/json`, { headers, timeout: 5000 })
+        const job = await firstValueFrom(
+          this.http.get(`${validateJenkinsUrl}/job/${project.jenkinsJobPath || project.jenkinsJobName}/api/json`, { headers, timeout: 5000 })
         );
+        if (!job.data || typeof job.data.name !== 'string' || !job.data.name) throw new Error('Job not found');
         results.jenkins = { valid: true, message: 'Jenkins connecté — job trouvé', checkedAt: now };
       } catch (e) {
-        results.jenkins = { valid: false, message: `Jenkins inaccessible: ${e.message}`, checkedAt: now };
+        results.jenkins = { valid: false, message: 'Échec de la vérification Jenkins. Vérifiez la configuration et les autorisations.', checkedAt: now };
       }
     }
 
     await this.repo.update(id, { validationStatus: results });
 
-    const allValid = Object.values(results).every((r: any) => r.valid);
+    const allValid = Object.keys(results).length > 0 && Object.values(results).every((r: any) => r.valid);
     return {
       projectId: id,
       projectName: project.name,

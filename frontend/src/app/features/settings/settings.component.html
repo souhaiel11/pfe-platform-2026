@@ -6,6 +6,105 @@
 
       <div class="settings-layout">
 
+        <section class="section-block" aria-label="Intégrations du projet">
+          <h2 class="section-label">Intégrations du projet</h2>
+          <div *ngIf="projectsState === 'LOADING'" class="loading-overlay" role="status"><div class="spinner"></div>Chargement des projets…</div>
+          <div *ngIf="projectsState === 'ERROR'" role="alert">Impossible de récupérer les projets. <button class="btn-test" (click)="loadProjects()">Réessayer</button></div>
+          <p *ngIf="projectsState === 'EMPTY'">Aucun projet enregistré.</p>
+          <ng-container *ngIf="projectsState === 'LOADED'">
+            <label class="field-label" for="settings-project">Projet</label>
+            <select id="settings-project" class="field-input" [(ngModel)]="selectedProjectId" (ngModelChange)="selectProject()" [disabled]="projectSaving || projectTesting || credentialSaving">
+              <option *ngFor="let item of projects" [value]="item.id">{{item.name}}</option>
+            </select>
+            <div *ngIf="projectState === 'LOADING'" class="loading-overlay" role="status"><div class="spinner"></div>Chargement de la configuration du projet…</div>
+            <div *ngIf="projectState === 'ERROR'" role="alert">Impossible de récupérer la configuration du projet. <button class="btn-test" (click)="selectProject()">Réessayer</button></div>
+            <ng-container *ngIf="projectState === 'LOADED' && project">
+              <div class="info-row"><span class="info-key">Identifiant du projet</span><span class="info-val">{{project.id}}</span></div>
+              <div class="info-row"><span class="info-key">Branche principale</span><span class="info-val">Valeur indisponible — aucune branche persistée dans la configuration du projet.</span></div>
+              <div class="info-row"><span class="info-key">Environnement</span><span class="info-val">{{environmentLabel(project.environment)}}</span></div>
+              <div class="card governance-card" *ngFor="let section of projectSections">
+                <h3 class="field-label">{{section.title}}</h3>
+                <p *ngIf="section.title === 'Azure / déploiement' && !project.azureConfig">Aucune cible Azure configurée. Aucun paramètre de cible n’est inventé.</p>
+                <ng-container *ngIf="section.title !== 'Azure / déploiement' || project.azureConfig">
+                  <div class="field-row" *ngFor="let field of section.fields">
+                    <label class="field-label" [for]="'setting-'+field.key">{{field.label}}</label>
+                    <input class="field-input" [id]="'setting-'+field.key" [type]="field.kind === 'url' ? 'url' : 'text'" [(ngModel)]="projectDraft[field.key]" [disabled]="!canEdit || projectSaving || projectTesting || credentialSaving" [attr.aria-invalid]="fieldInvalid(field)" />
+                    <p *ngIf="fieldInvalid(field)" class="field-hint" role="alert">Valeur invalide. Vérifiez le format du champ ; les URLs doivent utiliser HTTP(S), sans identifiants.</p>
+                  </div>
+                </ng-container>
+                <p *ngIf="section.title === 'Projet / dépôt'" class="field-hint">Authentification GitHub configurée : {{configuredLabel(project.githubCredentialConfigured)}}. Remplacement non disponible dans cette interface.</p>
+                <ng-container *ngIf="section.title === 'Jenkins'">
+                  <p class="field-hint">Authentification configurée : {{configuredLabel(project.jenkinsCredentialConfigured)}}</p>
+                  <p *ngIf="project.jenkinsUrl" class="field-hint">URL historique de repli : {{project.jenkinsUrl}}</p>
+                </ng-container>
+                <p *ngIf="section.title === 'SonarQube'" class="field-hint">Authentification configurée : {{configuredLabel(project.sonarqubeCredentialConfigured)}}. Remplacement non disponible dans cette interface.</p>
+                <p *ngIf="section.title === 'Azure / déploiement'" class="field-hint">Authentification Azure : état indisponible depuis ce backend. Les identifiants restent sur l’agent de déploiement.</p>
+              </div>
+              <p *ngIf="projectDirty" class="field-hint" role="status">Modifications non enregistrées.</p>
+              <div class="tool-actions" *ngIf="canEdit">
+                <button class="btn-save" (click)="saveProject()" [disabled]="!projectDirty || projectInvalid || projectSaving || projectTesting || credentialSaving">{{projectSaving ? 'Enregistrement…' : 'Enregistrer'}}</button>
+                <button class="btn-test" (click)="cancelProject()" [disabled]="!projectDirty || projectSaving || projectTesting || credentialSaving">Annuler</button>
+              </div>
+              <p *ngIf="projectMessage" role="status">{{projectMessage}}</p>
+              <div class="card governance-card" *ngIf="auth.isAdmin">
+                <h3 class="field-label">Remplacer l’authentification Jenkins</h3>
+                <p class="field-hint">La connexion est vérifiée avant l’enregistrement. Le jeton est à usage d’écriture uniquement.</p>
+                <label class="field-label" for="credential-username">Utilisateur Jenkins</label>
+                <input id="credential-username" class="field-input" [(ngModel)]="credentialUsername" [disabled]="credentialSaving" autocomplete="off" />
+                <label class="field-label" for="credential-token">Nouveau jeton Jenkins</label>
+                <input id="credential-token" class="field-input" type="password" [(ngModel)]="credentialToken" [disabled]="credentialSaving" autocomplete="new-password" />
+                <button class="btn-save" (click)="replaceJenkinsCredential()" [disabled]="!credentialUsername.trim() || !credentialToken.trim() || credentialSaving || projectDirty || projectSaving || projectTesting">{{credentialSaving ? 'Vérification…' : 'Enregistrer les identifiants'}}</button>
+                <button class="btn-test" (click)="credentialUsername = ''; credentialToken = ''" [disabled]="credentialSaving || (!credentialUsername && !credentialToken)">Annuler</button>
+              </div>
+              <div class="card governance-card">
+                <h3 class="field-label">Diagnostics Jenkins / SonarQube</h3>
+                <p class="field-hint">Vérification ponctuelle de la configuration enregistrée ; aucune surveillance continue.</p>
+                <button *ngIf="canEdit" class="btn-test" (click)="testProject()" [disabled]="projectDirty || projectSaving || projectTesting || credentialSaving">{{projectTesting ? 'Vérification…' : 'Tester la connexion'}}</button>
+                <div class="info-row"><span class="info-key">Jenkins</span><span class="info-val">{{diagnosticLabel(project.validationStatus?.jenkins)}}<span *ngIf="project.validationStatus?.jenkins?.checkedAt"> · Dernière vérification : {{project.validationStatus.jenkins.checkedAt | frenchDate}}</span></span></div>
+                <div class="info-row"><span class="info-key">SonarQube</span><span class="info-val">{{diagnosticLabel(project.validationStatus?.sonarqube)}}<span *ngIf="project.validationStatus?.sonarqube?.checkedAt"> · Dernière vérification : {{project.validationStatus.sonarqube.checkedAt | frenchDate}}</span></span></div>
+              </div>
+            </ng-container>
+          </ng-container>
+        </section>
+
+        <section class="section-block" aria-label="Configuration effective">
+          <h2 class="section-label">Configuration effective — lecture seule</h2>
+          <div *ngIf="effectiveConfigState === 'LOADING'" class="loading-overlay" role="status">
+            <div class="spinner" aria-hidden="true"></div><span>Chargement de la configuration…</span>
+          </div>
+          <div *ngIf="effectiveConfigState === 'ERROR'" role="alert">
+            Impossible de récupérer la configuration effective.
+            <button class="btn-test" (click)="loadEffectiveConfig()">Réessayer</button>
+          </div>
+          <ng-container *ngIf="effectiveConfigState === 'LOADED'">
+            <div class="card">
+              <h3 class="field-label">Plateforme</h3>
+              <div class="info-row"><span class="info-key">Environnement</span><span class="info-val">{{environmentLabel(effectiveConfig?.platform?.environment)}}</span></div>
+              <div class="info-row"><span class="info-key">Dépôt cible</span><span class="info-val">{{effectiveConfig?.platform?.targetRepository || 'Valeur indisponible'}}</span></div>
+              <div class="info-row"><span class="info-key">Branche par défaut</span><span class="info-val">{{effectiveConfig?.platform?.defaultBranch || 'Valeur indisponible'}}</span></div>
+              <p class="field-hint">{{effectiveConfig?.platform?.projectConfigurationReason}}</p>
+              <div class="info-row"><span class="info-key">WF2 configuré</span><span class="info-val">{{configuredLabel(effectiveConfig?.platform?.wf2?.configured)}}</span></div>
+              <div class="info-row"><span class="info-key">WF6 configuré</span><span class="info-val">{{configuredLabel(effectiveConfig?.platform?.wf6?.configured)}}</span></div>
+              <p class="field-hint">{{effectiveConfig?.platform?.workflowConfigurationReason}}</p>
+            </div>
+            <div class="card governance-card">
+              <h3 class="field-label">Trivy — configuration et fraîcheur des bases</h3>
+              <div class="info-row"><span class="info-key">Disponibilité</span><span class="info-val">{{availabilityLabel(effectiveConfig?.scanners?.trivy?.available)}}</span></div>
+              <div class="info-row"><span class="info-key">Seuils de sévérité actifs</span><span class="info-val">{{effectiveConfig?.scanners?.trivy?.severityThresholds?.join(', ') || 'Valeur indisponible'}}</span></div>
+              <div class="info-row"><span class="info-key">Base des vulnérabilités — âge</span><span class="info-val">{{durationLabel(effectiveConfig?.scanners?.trivy?.vulnDb?.ageMs)}}</span></div>
+              <div class="info-row"><span class="info-key">Base des vulnérabilités — seuil de fraîcheur</span><span class="info-val">{{durationLabel(effectiveConfig?.scanners?.trivy?.vulnDb?.maxAgeMs)}}</span></div>
+              <div class="info-row"><span class="info-key">Base Java — âge</span><span class="info-val">{{durationLabel(effectiveConfig?.scanners?.trivy?.javaDb?.ageMs)}}</span></div>
+              <div class="info-row"><span class="info-key">Base Java — seuil de fraîcheur</span><span class="info-val">{{durationLabel(effectiveConfig?.scanners?.trivy?.javaDb?.maxAgeMs)}}</span></div>
+              <p class="field-hint">{{effectiveConfig?.scanners?.trivy?.unavailableReason}}</p>
+            </div>
+            <div class="card governance-card">
+              <h3 class="field-label">Invariants de sécurité</h3>
+              <ul><li *ngFor="let invariant of effectiveConfig?.policies?.invariants">{{invariant}}</li></ul>
+              <p *ngIf="!effectiveConfig?.policies?.invariants?.length">Valeur indisponible</p>
+            </div>
+          </ng-container>
+        </section>
+
         <!-- ═══ INTÉGRATIONS ═══ -->
         <div class="section-block">
           <div class="section-label">Diagnostics des intégrations enregistrées</div>
@@ -81,21 +180,24 @@
                   </div>
                 </details>
 
+                <p *ngIf="toolDirty(tool)" role="status" class="field-hint">Modifications non enregistrées.</p>
+                <p *ngIf="toolInvalid(tool)" role="alert" class="field-hint">Saisissez une URL HTTP(S) sans identifiants.</p>
                 <!-- Actions -->
                 <div class="tool-actions">
                   <button class="btn-test" (click)="testTool(tool)"
-                          [disabled]="!canEdit || !tool.editable || tool.testing || tool.saving || !tool.url">
+                          [disabled]="!canEdit || !tool.editable || tool.testing || tool.saving || toolDirty(tool) || toolInvalid(tool)">
                     <span *ngIf="!tool.testing">⚡ Tester la connexion</span>
                     <span *ngIf="tool.testing" class="spin">↻</span>
                     <span *ngIf="tool.testing"> Test en cours…</span>
                   </button>
                   <button class="btn-save" [style.border-color]="tool.color" [style.color]="tool.color"
                           (click)="saveTool(tool)"
-                          [disabled]="!canEdit || !tool.editable || tool.saving || tool.testing || !tool.url">
+                          [disabled]="!canEdit || !tool.editable || tool.saving || tool.testing || !toolDirty(tool) || toolInvalid(tool)">
                     <span *ngIf="!tool.saving">Enregistrer</span>
                     <span *ngIf="tool.saving" class="spin">↻</span>
                     <span *ngIf="tool.saving"> Sauvegarde…</span>
                   </button>
+                  <button class="btn-test" (click)="cancelTool(tool)" [disabled]="!toolDirty(tool) || tool.saving || tool.testing">Annuler</button>
                 </div>
 
               </div>

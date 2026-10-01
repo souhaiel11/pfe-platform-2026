@@ -19,6 +19,7 @@ import { ContextModule } from './context/context.module';
 import { CandidateVerificationModule } from './candidate-verification/candidate-verification.module';
 import { IntegrationFixturesModule } from './integration-fixtures/integration-fixtures.module';
 import { SecurityRemediationModule } from './security-remediation/security-remediation.module';
+import { EffectiveConfigModule } from './effective-config/effective-config.module';
 
 @Module({
   imports: [
@@ -56,6 +57,7 @@ import { SecurityRemediationModule } from './security-remediation/security-remed
     CandidateVerificationModule,
     IntegrationFixturesModule,
     SecurityRemediationModule,
+    EffectiveConfigModule,
   ],
 })
 export class AppModule {}

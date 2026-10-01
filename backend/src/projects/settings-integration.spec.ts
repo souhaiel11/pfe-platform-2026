@@ -1,0 +1,46 @@
+import * as assert from 'node:assert/strict';
+import { of, throwError } from 'rxjs';
+import { validate } from 'class-validator';
+import { plainToInstance } from 'class-transformer';
+import { ProjectsService } from './projects.service';
+import { UpdateProjectDto } from './dto/update-project.dto';
+import { sanitizeProject } from '../common/sanitize-project';
+import { IntegrationsService } from '../integrations/integrations.service';
+
+async function run() {
+ const raw:any={id:'second',githubRepo:'team/second',githubToken:'LEAK_github',sonarqubeToken:'LEAK_sonar',jenkinsToken:'user:LEAK_jenkins',sonarqubeUrl:'https://sonar.test',sonarqubeKey:'team:second',azureConfig:null};
+ const azureClean:any=sanitizeProject({...raw,azureConfig:{provider:'azure-container-instances',targetName:'public-target',clientSecret:'LEAK_azure_secret'}});
+ assert.ok(!JSON.stringify(azureClean).includes('LEAK_'));assert.equal(azureClean.azureConfig.targetName,'public-target');
+ const clean:any=sanitizeProject(raw);
+ assert.equal(clean.githubCredentialConfigured,true);assert.equal(clean.sonarqubeCredentialConfigured,true);assert.equal(clean.jenkinsCredentialConfigured,true);
+ assert.ok(!JSON.stringify(clean).includes('LEAK_'));
+ assert.ok(!JSON.stringify(sanitizeProject({...raw,sonarqubeUrl:'https://user:LEAK_pw@sonar.test',validationStatus:{sonarqube:{valid:false,checkedAt:'2026-10-01',message:'LEAK_error'}}})).includes('LEAK_'));
+ const updates:any[]=[];
+ const repo:any={findOne:async()=>raw,update:async(_id:any,payload:any)=>{updates.push(payload);Object.assign(raw,payload);}};
+ let authValid=true,exists=true,fail=false,jobValid=true;
+ const http:any={get:(url:string)=>fail?throwError(()=>new Error('LEAK_remote_error')):of({data:url.includes('/job/')?{name:jobValid?'real-job':null}:url.includes('authentication')?{valid:authValid}:{components:exists?[{key:raw.sonarqubeKey}]:[]}})};
+ const service=new ProjectsService(repo,{} as any,http);
+ await service.update(raw.id,{githubRepo:'other/different',sonarqubeKey:'different:key'});
+ assert.equal(raw.githubRepo,'other/different');assert.equal(raw.sonarqubeKey,'different:key');
+ assert.equal(updates[0].githubRepo,'other/different');
+ let response=await service.validateProject(raw.id);assert.equal(response.results.sonarqube.valid,true);
+ raw.jenkinsInternalUrl='https://ci.test';raw.jenkinsJobName='real-job';
+ response=await service.validateProject(raw.id);assert.equal(response.results.jenkins.valid,true);
+ jobValid=false;response=await service.validateProject(raw.id);assert.equal(response.results.jenkins.valid,false);
+ authValid=false;response=await service.validateProject(raw.id);assert.equal(response.results.sonarqube.valid,false);
+ authValid=true;exists=false;response=await service.validateProject(raw.id);assert.equal(response.results.sonarqube.valid,false);
+ fail=true;response=await service.validateProject(raw.id);assert.ok(!JSON.stringify(response).includes('LEAK_'));
+ const emptyService=new ProjectsService({findOne:async()=>({id:'empty'}),update:async()=>{}} as any,{} as any,http);
+ assert.equal((await emptyService.validateProject('empty')).overallValid,false);
+ for(const payload of [{githubRepo:'invalid'},{sonarqubeUrl:'https://user:secret@sonar.test'},{sonarqubeUrl:'https://sonar.test?token=secret'},{sonarqubeKey:'1234'}]) assert.ok((await validate(plainToInstance(UpdateProjectDto,payload))).length);
+ assert.equal((await validate(plainToInstance(UpdateProjectDto,{githubRepo:'team/repo',sonarqubeUrl:'https://sonar.test',sonarqubeKey:'team:repo'}))).length,0);
+ const integration:any={id:'diag',toolType:'prometheus',url:'https://diag.test',token:'LEAK_token',password:'LEAK_password',status:'error',lastChecked:new Date(),metadata:{error:'LEAK_error'}};
+ const intRepo:any={find:async()=>[integration],findOne:async()=>integration,update:async(_id:any,payload:any)=>Object.assign(integration,payload)};
+ const integrations=new IntegrationsService(intRepo,{get:()=>throwError(()=>new Error('LEAK_url_token'))} as any);
+ assert.ok(!JSON.stringify(await integrations.findAll()).includes('LEAK_'));
+ assert.ok(!JSON.stringify(await integrations.testConnection('diag')).includes('LEAK_'));
+ await integrations.update('diag',{token:'',password:null} as any);assert.equal(integration.token,'LEAK_token');
+ await integrations.update('diag',{token:'replacement'});assert.equal(integration.token,'replacement');assert.ok(!JSON.stringify(await integrations.findOne('diag')).includes('replacement'));
+ console.log('Real integration persistence, DTO validation, credentials, truthful diagnostics and secret exclusion PASS');
+}
+run().catch(error=>{console.error(error);process.exitCode=1;});

@@ -20,6 +20,25 @@ export function sanitizeProject<T extends Record<string, any>>(
   // présence, pour que l'UI sache afficher "Identifiants Jenkins configurés"
   // sans jamais recevoir la valeur.
   clone.jenkinsCredentialConfigured = !!clone.jenkinsToken;
+  clone.githubCredentialConfigured = !!clone.githubToken;
+  clone.sonarqubeCredentialConfigured = !!clone.sonarqubeToken;
+  for (const field of ['jenkinsUrl','jenkinsInternalUrl','jenkinsPublicUrl','sonarqubeUrl']) {
+    if (!clone[field]) continue;
+    try {
+      const url = new URL(clone[field]);
+      if (url.username || url.password || url.search || url.hash) clone[field] = null;
+    } catch { clone[field] = null; }
+  }
+  if (clone.azureConfig) {
+    clone.azureConfig = Object.fromEntries(['provider','resourceGroup','targetName','registry','imageRepository','region','subscriptionRef','cpu','memoryInGb','ports'].filter(key => Object.prototype.hasOwnProperty.call(clone.azureConfig,key)).map(key => [key,clone.azureConfig[key]]));
+  }
+  if (clone.validationStatus) {
+    clone.validationStatus = Object.fromEntries(['jenkins','sonarqube'].filter(key => clone.validationStatus[key]).map(key => {
+      const result = clone.validationStatus[key];
+      return [key, {valid: result.valid === true, checkedAt: result.checkedAt,
+        message: result.valid === true ? 'Connexion vérifiée.' : 'Échec de la vérification.'}];
+    }));
+  }
   for (const field of SENSITIVE_PROJECT_FIELDS) delete clone[field];
   return clone;
 }

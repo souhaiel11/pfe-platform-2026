@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsEnum, IsArray, IsBoolean, IsObject } from 'class-validator';
+import { IsString, IsOptional, IsEnum, IsArray, IsBoolean, IsObject, IsUrl, Matches } from 'class-validator';
 import { AzureDeploymentConfig } from '../project.entity';
 import { ProjectEnvironment, CicdTool } from '../project.entity';
 
@@ -39,14 +39,15 @@ export class CreateProjectDto {
   jenkinsJobPath?: string;
 
   // GitHub
-  @IsOptional() @IsString()
+  @IsOptional() @Matches(/^(?:https:\/\/github\.com\/)?[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/ , { message: 'Le dépôt doit avoir la forme propriétaire/dépôt.' })
   githubRepo?: string;
 
   // SonarQube
-  @IsOptional() @IsString()
+  @IsOptional() @IsUrl({ require_tld: false, protocols: ['http', 'https'], require_protocol: true, disallow_auth: true }, { message: 'L’URL SonarQube doit être une URL HTTP(S) sans identifiants.' })
+  @Matches(/^[^?#]+$/, { message: 'L’URL SonarQube ne doit pas contenir de paramètres ni de fragment.' })
   sonarqubeUrl?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional() @Matches(/^(?=.*[^0-9])[A-Za-z0-9_.:-]+$/, { message: 'La clé SonarQube doit contenir une lettre ou un séparateur autorisé.' })
   sonarqubeKey?: string;
 
   // Notifications
