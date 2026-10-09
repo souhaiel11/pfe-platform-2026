@@ -374,11 +374,16 @@ export class ProjectsService {
       qualityGate: null, lastAnalysisAt: null,
     });
 
-    if (!project.sonarqubeUrl || !project.sonarqubeKey) return unavailable('SONAR_NOT_CONFIGURED');
+    // R47 — ce qui rend un projet « configure pour Sonar », c'est sa projectKey.
+    // L'URL, elle, est l'adresse de service de la plateforme : waitForSonarQualityGate()
+    // lui applique deja le meme repli. Exiger en plus une URL par projet faisait
+    // rapporter SONAR_NOT_CONFIGURED a des projets dont SonarQube detenait de
+    // vraies mesures -- une donnee perdue par la plateforme, pas une donnee absente.
+    if (!project.sonarqubeKey) return unavailable('SONAR_NOT_CONFIGURED');
     const sonarToken = this.resolveSonarToken(project);
     if (!sonarToken) return unavailable('SONAR_TOKEN_UNAVAILABLE');
 
-    const baseUrl = project.sonarqubeUrl.replace(/\/$/, '');
+    const baseUrl = (project.sonarqubeUrl || 'http://sonarqube:9000').replace(/\/$/, '');
     const headers = { Authorization: `Basic ${Buffer.from(`${sonarToken}:`).toString('base64')}` };
     const get = (path: string, params: any) => firstValueFrom(this.http.get(`${baseUrl}${path}`, {
       params, headers, timeout: 10_000, validateStatus: () => true,
