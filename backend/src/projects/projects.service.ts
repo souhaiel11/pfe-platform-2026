@@ -54,6 +54,20 @@ export class ProjectsService {
     }
     // Allow-list stricte : aucun token/password/credential arbitraire ne peut
     // être persisté dans Project.azureConfig.
+    let healthCheck;
+    if (input.healthCheck !== undefined) {
+      const h = input.healthCheck;
+      const port = String(h?.port ?? '8080');
+      const ports = Array.isArray(input.ports) ? input.ports.map(String) : ['8080'];
+      if (!h || typeof h !== 'object' || Array.isArray(h)
+        || Object.keys(h).some(k => !['path', 'port', 'client', 'expectedBody'].includes(k))
+        || typeof h.path !== 'string' || !/^\/[A-Za-z0-9/_-]{0,255}$/.test(h.path)
+        || !ports.includes(port) || !['curl', 'wget'].includes(h.client ?? 'curl')
+        || typeof h.expectedBody !== 'string' || !/^[A-Za-z0-9 _.-]{1,128}$/.test(h.expectedBody)) {
+        throw new BadRequestException('azureConfig.healthCheck invalide.');
+      }
+      healthCheck = { path: h.path, port, client: h.client ?? 'curl', expectedBody: h.expectedBody };
+    }
     return {
       provider: 'azure-container-instances' as const,
       resourceGroup: input.resourceGroup.trim(), targetName: input.targetName.trim(),
@@ -63,6 +77,7 @@ export class ProjectsService {
       ...(input.cpu ? { cpu: String(input.cpu) } : {}),
       ...(input.memoryInGb ? { memoryInGb: String(input.memoryInGb) } : {}),
       ...(Array.isArray(input.ports) ? { ports: input.ports.map(String) } : {}),
+      ...(healthCheck ? { healthCheck } : {}),
     };
   }
 
@@ -118,14 +133,15 @@ export class ProjectsService {
     if (!ceTaskId || !/^[A-Za-z0-9_-]{8,128}$/.test(ceTaskId)) {
       throw new BadRequestException('Un identifiant technique ceTaskId valide est requis.');
     }
-    if (!project.sonarqubeToken) {
+    const sonarToken = this.resolveSonarToken(project);
+    if (!sonarToken) {
       return { ceTaskId, analysisId: null, qualityGate: 'QUALITY_GATE_UNAVAILABLE', correlationVerified: false, state: 'SONAR_NOT_CONFIGURED' };
     }
 
     // L'URL interne est l'adresse de service de la plateforme, déjà utilisée
     // par WF1. Le projectKey/token restent strictement propres au projet.
     const baseUrl = (project.sonarqubeUrl || 'http://sonarqube:9000').replace(/\/$/, '');
-    const headers = { Authorization: `Basic ${Buffer.from(`${project.sonarqubeToken}:`).toString('base64')}` };
+    const headers = { Authorization: `Basic ${Buffer.from(`${sonarToken}:`).toString('base64')}` };
     const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
     for (let attempt = 1; attempt <= 60; attempt++) {
@@ -314,24 +330,83 @@ export class ProjectsService {
   }
 
   // ── Métriques SonarQube ───────────────────────────────────
+  /**
+   * Jeton Sonar effectif pour ce projet.
+   *
+   * Un jeton SonarQube est un jeton d'UTILISATEUR, pas un secret propre a un
+   * projet : la plateforme peut donc en porter un seul, exactement comme
+   * Jenkins le fait avec son credential SONAR_TOKEN. Sans ce repli, tout
+   * projet onboarde sans jeton propre voyait son controle qualite rapporte
+   * QUALITY_GATE_UNAVAILABLE alors que SonarQube le calculait bel et bien --
+   * et aucune route d'API ne permet de poser un sonarqubeToken (update() le
+   * retire volontairement pour ne jamais ecraser un secret existant).
+   *
+   * Le jeton du projet reste prioritaire : le repli ne s'applique qu'a son
+   * absence, jamais en remplacement.
+   */
+  private resolveSonarToken(project: Project): string | null {
+    const own = String(project.sonarqubeToken || '').trim();
+    if (own) return own;
+    const platform = String(process.env.SONAR_TOKEN || '').trim();
+    return platform || null;
+  }
+
+  /**
+   * Mesures Sonar reelles, plus le controle qualite.
+   *
+   * Cette methode ne fabrique RIEN. Quand la source autoritaire ne repond pas,
+   * elle le dit (`available: false` + `reason`) au lieu de renvoyer des valeurs
+   * plausibles. La version precedente retombait sur des mesures inventees
+   * (couverture 85 %, 12 code smells, 1500 lignes) indistinguables de vraies
+   * donnees -- une valeur absente redevenait ainsi un constat propre.
+   *
+   * Le statut d'EXECUTION de l'analyse et le CONTROLE QUALITE sont deux choses
+   * distinctes : ils sont donc rapportes separement, jamais fusionnes.
+   */
   async getSonarMetrics(id: string) {
     const project = await this.findOneInternal(id);
-    if (!project.sonarqubeUrl || !project.sonarqubeKey) {
-      return this.getMockSonarMetrics(project.name);
-    }
+    const unavailable = (reason: string) => ({
+      available: false, reason,
+      projectKey: project.sonarqubeKey || null,
+      bugs: null, vulnerabilities: null, codeSmells: null, coverage: null,
+      duplications: null, securityRating: null, reliabilityRating: null,
+      maintainabilityRating: null, linesOfCode: null,
+      qualityGate: null, lastAnalysisAt: null,
+    });
+
+    if (!project.sonarqubeUrl || !project.sonarqubeKey) return unavailable('SONAR_NOT_CONFIGURED');
+    const sonarToken = this.resolveSonarToken(project);
+    if (!sonarToken) return unavailable('SONAR_TOKEN_UNAVAILABLE');
+
+    const baseUrl = project.sonarqubeUrl.replace(/\/$/, '');
+    const headers = { Authorization: `Basic ${Buffer.from(`${sonarToken}:`).toString('base64')}` };
+    const get = (path: string, params: any) => firstValueFrom(this.http.get(`${baseUrl}${path}`, {
+      params, headers, timeout: 10_000, validateStatus: () => true,
+    }));
+
     try {
-      const url = `${project.sonarqubeUrl}/api/measures/component`;
-      const params = {
+      const measures = await get('/api/measures/component', {
         component: project.sonarqubeKey,
         metricKeys: 'bugs,vulnerabilities,code_smells,coverage,duplicated_lines_density,security_rating,reliability_rating,sqale_rating,ncloc',
-      };
-      const headers = project.sonarqubeToken
-        ? { Authorization: `Basic ${Buffer.from(project.sonarqubeToken + ':').toString('base64')}` }
-        : {};
-      const { data } = await firstValueFrom(this.http.get(url, { params, headers }));
-      return this.parseSonarMetrics(data);
+      });
+      if (measures.status === 404) return unavailable('SONAR_PROJECT_NOT_FOUND');
+      if (measures.status < 200 || measures.status >= 300) return unavailable(`SONAR_API_STATUS_${measures.status}`);
+
+      // Controle qualite et date d'analyse : deux appels distincts, chacun
+      // facultatif. Leur echec n'invente jamais une mesure, il laisse null.
+      const [gate, analyses] = await Promise.all([
+        get('/api/qualitygates/project_status', { projectKey: project.sonarqubeKey }).catch(() => null),
+        get('/api/project_analyses/search', { project: project.sonarqubeKey, ps: 1 }).catch(() => null),
+      ]);
+      const qualityGate = (gate && gate.status >= 200 && gate.status < 300)
+        ? (String(gate.data?.projectStatus?.status || '').toUpperCase() || null) : null;
+      const lastAnalysisAt = (analyses && analyses.status >= 200 && analyses.status < 300)
+        ? (analyses.data?.analyses?.[0]?.date ?? null) : null;
+
+      return { available: true, reason: null, projectKey: project.sonarqubeKey,
+        ...this.parseSonarMetrics(measures.data), qualityGate, lastAnalysisAt };
     } catch {
-      return this.getMockSonarMetrics(project.name);
+      return unavailable('SONAR_API_ERROR');
     }
   }
 
@@ -400,14 +475,28 @@ export class ProjectsService {
     };
   }
 
+  /**
+   * Trivy n'est pas interrogeable par API : ses resultats arrivent par le
+   * rapport de build, dans l'evidence de l'incident. Cette route ne peut donc
+   * rien produire d'autoritaire, et le dit explicitement.
+   *
+   * La version precedente renvoyait INCONDITIONNELLEMENT un rapport invente
+   * (3 elevees, 12 moyennes, 24 faibles) sans meme tenter un appel.
+   */
   async getTrivyReport(id: string) {
-    const project = await this.findOneInternal(id);
-    return this.getMockTrivyReport(project.name);
+    await this.findOneInternal(id);
+    return {
+      available: false,
+      reason: 'TRIVY_NOT_QUERYABLE_BY_API',
+      source: 'evidence du rapport de build (enrichedData.trivy)',
+      critical: null, high: null, medium: null, low: null, unknown: null,
+      vulnerabilities: null,
+    };
   }
 
   async getGithubStats(id: string) {
     const project = await this.findOneInternal(id);
-    if (!project.githubRepo) return this.getMockGithubStats();
+    if (!project.githubRepo) return this.unavailableGithubStats('GITHUB_REPO_NOT_CONFIGURED');
     try {
       const [owner, repo] = project.githubRepo.replace('https://github.com/', '').split('/');
       const headers: any = { 'User-Agent': 'DevSecOps-Platform' };
@@ -425,7 +514,7 @@ export class ProjectsService {
         })),
       };
     } catch {
-      return this.getMockGithubStats();
+      return this.unavailableGithubStats('GITHUB_API_ERROR');
     }
   }
 
@@ -433,29 +522,37 @@ export class ProjectsService {
   private parseSonarMetrics(data: any) {
     const measures: any = {};
     data?.component?.measures?.forEach((m: any) => { measures[m.metric] = m.value; });
+    // Une mesure absente reste absente. Substituer 0 ou 'A' rendait une
+    // metrique non calculee indistinguable d'une metrique reellement bonne.
+    const num = (raw: unknown) => {
+      const value = Number(raw);
+      return raw === undefined || raw === null || raw === '' || !Number.isFinite(value) ? null : value;
+    };
+    const rating = (raw: unknown) => {
+      const letters: Record<string, string> = { '1': 'A', '2': 'B', '3': 'C', '4': 'D', '5': 'E' };
+      const key = String(raw ?? '').trim().split('.')[0];
+      return letters[key] ?? null;
+    };
     return {
-      bugs: parseInt(measures.bugs || '0'),
-      vulnerabilities: parseInt(measures.vulnerabilities || '0'),
-      codeSmells: parseInt(measures.code_smells || '0'),
-      coverage: parseFloat(measures.coverage || '0'),
-      duplications: parseFloat(measures.duplicated_lines_density || '0'),
-      securityRating: measures.security_rating || 'A',
-      reliabilityRating: measures.reliability_rating || 'A',
-      maintainabilityRating: measures.sqale_rating || 'A',
-      linesOfCode: parseInt(measures.ncloc || '0'),
+      bugs: num(measures.bugs),
+      vulnerabilities: num(measures.vulnerabilities),
+      codeSmells: num(measures.code_smells),
+      coverage: num(measures.coverage),
+      duplications: num(measures.duplicated_lines_density),
+      securityRating: rating(measures.security_rating),
+      reliabilityRating: rating(measures.reliability_rating),
+      maintainabilityRating: rating(measures.sqale_rating),
+      linesOfCode: num(measures.ncloc),
     };
   }
 
-  private getMockSonarMetrics(name: string) {
-    return { bugs: 0, vulnerabilities: 0, codeSmells: 12, coverage: 85, duplications: 0.5, securityRating: 'A', reliabilityRating: 'A', maintainabilityRating: 'A', linesOfCode: 1500 };
-  }
-
-  private getMockTrivyReport(name: string) {
-    return { critical: 0, high: 3, medium: 12, low: 24, unknown: 0, vulnerabilities: [] };
-  }
-
-  private getMockGithubStats() {
-    return { openPRs: 2, mergedPRs: 18, totalPRs: 25, recentPRs: [] };
+  // Les trois replis fabriques precedents sont supprimes. Ils renvoyaient des
+  // valeurs plausibles -- couverture 85 %, 12 code smells, 1500 lignes, 3 CVE
+  // elevees, 18 PR fusionnees -- indistinguables de vraies donnees par
+  // n'importe quel consommateur. Une donnee absente doit se presenter comme
+  // absente, avec son motif.
+  private unavailableGithubStats(reason: string) {
+    return { available: false, reason, openPRs: null, mergedPRs: null, totalPRs: null, recentPRs: null };
   }
 
   /**
