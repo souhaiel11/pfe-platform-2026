@@ -344,6 +344,23 @@ export class ProjectsService {
    * Le jeton du projet reste prioritaire : le repli ne s'applique qu'a son
    * absence, jamais en remplacement.
    */
+  /**
+   * Identifiant Jenkins effectif pour ce projet.
+   *
+   * Exactement le même raisonnement que resolveSonarToken() : la plateforme
+   * parle à UN Jenkins, avec un identifiant d'utilisateur. Le jeton du projet
+   * reste prioritaire ; le repli ne s'applique qu'à son absence et ne rend
+   * jamais un projet « configuré » (getJenkinsStatus exige un jenkinsJobName).
+   *
+   * Format attendu : "utilisateur:jeton", comme le champ par projet.
+   */
+  private resolveJenkinsCredential(project: Project): string | null {
+    const own = String(project.jenkinsToken || '').trim();
+    if (own) return own;
+    const platform = String(process.env.JENKINS_TOKEN || '').trim();
+    return platform || null;
+  }
+
   private resolveSonarToken(project: Project): string | null {
     const own = String(project.sonarqubeToken || '').trim();
     if (own) return own;
@@ -370,7 +387,7 @@ export class ProjectsService {
       projectKey: project.sonarqubeKey || null,
       bugs: null, vulnerabilities: null, codeSmells: null, coverage: null,
       duplications: null, securityRating: null, reliabilityRating: null,
-      maintainabilityRating: null, linesOfCode: null,
+      maintainabilityRating: null, linesOfCode: null, securityHotspots: null,
       qualityGate: null, lastAnalysisAt: null,
     });
 
@@ -392,7 +409,7 @@ export class ProjectsService {
     try {
       const measures = await get('/api/measures/component', {
         component: project.sonarqubeKey,
-        metricKeys: 'bugs,vulnerabilities,code_smells,coverage,duplicated_lines_density,security_rating,reliability_rating,sqale_rating,ncloc',
+        metricKeys: 'bugs,vulnerabilities,code_smells,coverage,duplicated_lines_density,security_rating,reliability_rating,sqale_rating,ncloc,security_hotspots',
       });
       if (measures.status === 404) return unavailable('SONAR_PROJECT_NOT_FOUND');
       if (measures.status < 200 || measures.status >= 300) return unavailable(`SONAR_API_STATUS_${measures.status}`);
@@ -429,8 +446,12 @@ export class ProjectsService {
       return this.emptyJenkinsStatus(project, 'Jenkins non configuré pour ce projet');
     }
     try {
-      const [user, token] = (project.jenkinsToken || ':').split(':');
-      const headers = project.jenkinsToken
+      // R48 — repli plateforme, même principe que resolveSonarToken() : un
+      // identifiant Jenkins est un identifiant d'UTILISATEUR de la plateforme,
+      // pas un secret par projet. Le jeton du projet reste prioritaire.
+      const jenkinsCredential = this.resolveJenkinsCredential(project);
+      const [user, token] = (jenkinsCredential || ':').split(':');
+      const headers = jenkinsCredential
         ? { Authorization: `Basic ${Buffer.from(`${user}:${token}`).toString('base64')}` }
         : {};
       const timeout = ProjectsService.JENKINS_STATUS_TIMEOUT_MS;
@@ -548,6 +569,7 @@ export class ProjectsService {
       reliabilityRating: rating(measures.reliability_rating),
       maintainabilityRating: rating(measures.sqale_rating),
       linesOfCode: num(measures.ncloc),
+      securityHotspots: num(measures.security_hotspots),
     };
   }
 

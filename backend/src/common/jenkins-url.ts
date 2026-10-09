@@ -19,8 +19,23 @@ function normalize(url: string | null | undefined): string | null {
 // URL serveur-à-serveur (backend → Jenkins). Jamais utilisée pour un lien
 // navigateur — une URL Docker interne (http://jenkins:8080) n'est pas
 // résoluble hors du réseau Docker.
+// R48 — repli plateforme, symétrique de ProjectsService.resolveSonarToken().
+//
+// L'adresse interne de Jenkins est une propriété de la PLATEFORME, pas un
+// secret propre à un projet : tous les projets parlent au même Jenkins, par
+// le même nom de service Docker. Sans ce repli, un projet onboardé sans
+// jenkinsInternalUrl — ou dont le jenkinsUrl porte une IP d'hôte devenue
+// obsolète — voyait ses builds rapportés indisponibles alors que Jenkins les
+// détenait réellement. La donnée était perdue par la plateforme.
+//
+// L'ordre de priorité ne change pas : la configuration du projet reste
+// prioritaire, le repli ne s'applique qu'à son absence. Il ne rend JAMAIS un
+// projet « configuré » : getJenkinsStatus() exige toujours un jenkinsJobName,
+// donc un projet sans job Jenkins reste NON CONFIGURÉ.
 export function resolveJenkinsInternalUrl(project: JenkinsUrlSource): string | null {
-  return normalize(project.jenkinsInternalUrl) || normalize(project.jenkinsUrl);
+  return normalize(project.jenkinsInternalUrl)
+    || normalize(project.jenkinsUrl)
+    || normalize(process.env.JENKINS_INTERNAL_URL);
 }
 
 // URL affichée/cliquée dans le navigateur. Jamais utilisée pour un appel
