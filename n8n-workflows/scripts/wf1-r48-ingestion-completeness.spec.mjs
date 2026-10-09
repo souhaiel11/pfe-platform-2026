@@ -147,3 +147,35 @@ try {
 }
 
 console.log(`R48 WF1 ingestion completeness: PASS (rapport reel : ${realChecked})`);
+
+// ════════════════════════════════════════════════════════════════════════════
+// 9. R50 — les faits de PUBLICATION ne sont plus perdus a l'ingestion
+// Le bloc docker ne transportait que image/build_status/push_status : le
+// registre, le depot, le tag publie et le digest etaient jetes.
+// ════════════════════════════════════════════════════════════════════════════
+// Bornes exactes de la normalisation docker : du debut de `const docker={`
+// jusqu'a sa fin. Une fenetre approximative deborderait sur le bloc `deploy`
+// voisin, qui parle legitimement de deploiement.
+const dockerStart = code.indexOf('const docker={image_tag:');
+assert.notEqual(dockerStart, -1, 'la normalisation docker doit etre identifiable');
+const dockerNorm = code.slice(dockerStart, code.indexOf('};', dockerStart) + 2);
+for (const field of ['provenance_status', 'registry', 'repository', 'published_tag',
+                     'published_reference', 'digest']) {
+  assert.ok(new RegExp(`${field} *:`).test(dockerNorm),
+    `le bloc docker normalise doit transporter ${field}`);
+}
+// Construire, publier et deployer restent trois etats distincts.
+assert.ok(/build_status *:/.test(dockerNorm) && /push_status *:/.test(dockerNorm)
+          && /provenance_status *:/.test(dockerNorm),
+  'les trois statuts doivent rester distincts');
+assert.ok(!/deployed/i.test(dockerNorm),
+  "l'ingestion ne doit jamais fabriquer un etat de deploiement");
+// Un digest douteux vaut absence, jamais identite.
+assert.ok(/sha256:\[a-f0-9\]\{64\}/.test(dockerNorm),
+  'le digest doit etre valide par sa forme avant d etre transporte');
+// Les coordonnees publiees ne sont pas deduites de la configuration projet.
+assert.ok(!/registry *: *[^,]*projectConfig/.test(dockerNorm)
+          && !/repository *: *[^,]*applicationName/.test(dockerNorm),
+  'les coordonnees publiees viennent du resultat du push, pas de la configuration');
+
+console.log('R50 WF1 publication facts: PASS');
