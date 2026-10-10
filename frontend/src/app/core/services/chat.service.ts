@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { BehaviorSubject } from 'rxjs';
+import { BehaviorSubject, defer, finalize } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
 export interface ChatMessage {
@@ -8,6 +8,11 @@ export interface ChatMessage {
   content: string;
   timestamp: Date;
   loading?: boolean;
+  /** True only for a client-side failure fallback (HTTP error, or a 200
+   * response the backend itself marked unusable) -- never for a real
+   * assistant answer, so the UI can tell the two apart instead of
+   * rendering a failed request as if it were a normal reply. */
+  isError?: boolean;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -43,17 +48,20 @@ export class ChatService {
     this.addMessage('user', question);
     this.loadingSubject.next(true);
 
-    this.http.post<any>(this.chatUrl, {
+    defer(() => this.http.post<unknown>(this.chatUrl, {
       question: question.trim(),
       ...(projectId ? { projectId } : {})
-    }).subscribe({
+    })).pipe(
+      finalize(() => this.loadingSubject.next(false)),
+    ).subscribe({
       next: res => {
-        this.addMessage('assistant', res.answer || 'Réponse indisponible.');
-        this.loadingSubject.next(false);
+        const response = res as { ok?: unknown; answer?: unknown } | null;
+        const ok = response?.ok === true && typeof response.answer === 'string';
+        const answer = ok ? (response!.answer as string).trim() : '';
+        this.addMessage('assistant', answer || "Réponse indisponible. Vous pouvez réessayer.", !answer);
       },
       error: () => {
-        this.addMessage('assistant', '⚠️ Impossible de contacter l\'agent IA. Vérifiez que le workflow n8n est actif.');
-        this.loadingSubject.next(false);
+        this.addMessage('assistant', "Le service de discussion n'a pas pu répondre. Vous pouvez réessayer.", true);
       }
     });
   }
@@ -62,8 +70,8 @@ export class ChatService {
     this.messagesSubject.next([]);
   }
 
-  private addMessage(role: 'user' | 'assistant', content: string) {
+  private addMessage(role: 'user' | 'assistant', content: string, isError = false) {
     const current = this.messagesSubject.value;
-    this.messagesSubject.next([...current, { role, content, timestamp: new Date() }]);
+    this.messagesSubject.next([...current, { role, content, timestamp: new Date(), isError }]);
   }
 }

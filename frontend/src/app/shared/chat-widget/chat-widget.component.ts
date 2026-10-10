@@ -3,12 +3,13 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
 import { ChatService, ChatMessage } from '../../core/services/chat.service';
+import { ChatMarkdownComponent } from './chat-markdown.component';
 
 @Component({
   selector: 'app-chat-widget',
   standalone: true,
   // FIX: No HttpClientModule here — already provided globally in app.config.ts
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ChatMarkdownComponent],
   templateUrl: './chat-widget.component.html',
   styleUrls: ['./chat-widget.component.scss'],
 })

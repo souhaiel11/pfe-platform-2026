@@ -1,3 +1,5 @@
+<p *ngIf="loading" role="status" class="card">Chargement du projet…</p>
+<div *ngIf="loadError" role="alert" class="card">Impossible de charger le projet. <button type="button" class="btn btn-secondary btn-sm" (click)="loadProject()">Réessayer</button></div>
 <div *ngFor="let error of dataErrors | keyvalue" role="alert" class="card">{{error.value}}</div>
     <div class="page" *ngIf="project">
 
@@ -12,7 +14,7 @@
         <div class="header-info">
           <h1>{{project.name}}</h1>
           <div class="header-meta">
-            <span class="badge-env">{{project.environment || 'dev'}}</span>
+            <span class="badge-env">{{project.environment || 'Environnement non configuré'}}</span>
             <span class="sep">·</span>
             <span>{{project.githubRepo || 'Dépôt non configuré'}}</span>
             <span class="sep">·</span>
@@ -21,10 +23,10 @@
         </div>
         <div class="header-actions">
           <div class="score-ring" [class.indetermine]="scanIncomplete || scoreUnavailable || !hasValidScore()"
-               [class.critical]="!scanIncomplete && !scoreUnavailable && hasValidScore() && lastScore < 40" [class.high]="!scanIncomplete && !scoreUnavailable && hasValidScore() && lastScore >= 40 && lastScore < 60"
-               [class.medium]="!scanIncomplete && !scoreUnavailable && hasValidScore() && lastScore >= 60 && lastScore < 80" [class.low]="!scanIncomplete && !scoreUnavailable && hasValidScore() && lastScore >= 80">
+               [class.critical]="!scanIncomplete && !scoreUnavailable && hasValidScore() && lastScore! < 40" [class.high]="!scanIncomplete && !scoreUnavailable && hasValidScore() && lastScore! >= 40 && lastScore! < 60"
+               [class.medium]="!scanIncomplete && !scoreUnavailable && hasValidScore() && lastScore! >= 60 && lastScore! < 80" [class.low]="!scanIncomplete && !scoreUnavailable && hasValidScore() && lastScore! >= 80">
             <span class="score-num">{{scanIncomplete ? '?' : ((scoreUnavailable || !hasValidScore()) ? '—' : lastScore)}}<span class="score-max" *ngIf="!scanIncomplete && !scoreUnavailable && hasValidScore()">/100</span></span>
-            <span class="score-lbl">SCORE</span>
+            <span class="score-lbl">SCORE<app-info-hint term="security-score"></app-info-hint></span>
           </div>
           <div class="risk-pill" [class.indetermine]="scanIncomplete || scoreUnavailable"
                [class.critical]="!scanIncomplete && !scoreUnavailable && lastRisk==='critical'" [class.high]="!scanIncomplete && !scoreUnavailable && lastRisk==='high'"
@@ -34,28 +36,48 @@
         </div>
       </div>
 
+      <!-- ═══ CONTEXTE (§3) ═══
+           Bandeau compact, non répété dans les sous-sections. Chaque champ
+           absent disparaît : aucun repli inventé. -->
+      <app-project-context-strip
+        [branch]="reportedBranch() || null"
+        [buildNumber]="contextBuildNumber()"
+        [buildStatus]="contextBuildStatus()"
+        [commitFull]="contextCommitFull()"
+        [freshness]="contextFreshness()"
+        [timestamp]="contextTimestamp()"
+        [repositoryEvidence]="projectEvidenceSlot('GIT_REPOSITORY')"
+        [buildEvidence]="evidence('JENKINS_BUILD')"
+        [state]="evidenceState()"
+        [copiedValue]="contextCopied"
+        (copy)="copyValue($event)">
+      </app-project-context-strip>
+
       <!-- ═══ TABS ═══ -->
       <div class="tabs-row">
         <button class="tab-btn" [class.active]="activeTab==='rapport'"   (click)="setActiveTab('rapport')">
-          <i class="ti ti-report-analytics"></i> Rapport IA <span class="tab-badge" *ngIf="allReports.length">{{allReports.length}}</span>
+          <i class="ti ti-report-analytics" aria-hidden="true"></i> Rapport IA <span class="tab-badge" *ngIf="allReportsTotal">{{allReportsTotal}}</span>
         </button>
         <button class="tab-btn" [class.active]="activeTab==='jenkins'"   (click)="setActiveTab('jenkins')">
-          <i class="ti ti-settings-automation"></i> Jenkins
+          <i class="ti ti-settings-automation" aria-hidden="true"></i> Jenkins
         </button>
         <button class="tab-btn" [class.active]="activeTab==='sonarqube'" (click)="setActiveTab('sonarqube')">
-          <i class="ti ti-radar"></i> SonarQube
+          <i class="ti ti-radar" aria-hidden="true"></i> SonarQube
         </button>
         <button class="tab-btn" [class.active]="activeTab==='docker'"    (click)="setActiveTab('docker')">
-          <i class="ti ti-brand-docker"></i> Docker
+          <i class="ti ti-brand-docker" aria-hidden="true"></i> Docker
         </button>
         <button class="tab-btn" [class.active]="activeTab==='securite'"  (click)="selectTab('securite')">
-          <i class="ti ti-shield-lock"></i> Sécurité
+          <i class="ti ti-shield-lock" aria-hidden="true"></i> Sécurité
+        </button>
+        <button class="tab-btn" [class.active]="activeTab==='deploiement'" (click)="setActiveTab('deploiement')">
+          <i class="ti ti-cloud-upload" aria-hidden="true"></i> Déploiement
         </button>
         <button class="tab-btn" [class.active]="activeTab==='incidents'" (click)="setActiveTab('incidents')">
-          <i class="ti ti-alert-triangle"></i> Incidents <span class="tab-badge danger" *ngIf="incidents.length">{{incidents.length}}</span>
+          <i class="ti ti-alert-triangle" aria-hidden="true"></i> Incidents <span class="tab-badge danger" *ngIf="incidents.length">{{incidents.length}}</span>
         </button>
         <button class="tab-btn" [class.active]="activeTab==='config'"    (click)="setActiveTab('config')">
-          <i class="ti ti-adjustments"></i> Config
+          <i class="ti ti-adjustments" aria-hidden="true"></i> Config
         </button>
       </div>
 
@@ -63,8 +85,11 @@
       <!-- ONGLET RAPPORT IA                           -->
       <!-- ═══════════════════════════════════════════ -->
       <div *ngIf="activeTab === 'rapport'">
-        <div *ngIf="!latestReport" class="empty-state">
-          <div class="empty-icon">🤖</div>
+        <app-zone-label kind="information"
+          note="Résultats de la dernière analyse et historique. Lecture seule."></app-zone-label>
+        <p *ngIf="reportsLoading" role="status">Chargement des analyses…</p>
+        <div *ngIf="!reportsLoading && !dataErrors['decisions'] && !dataErrors['reportDetail'] && !latestReport" class="empty-state">
+          <div class="empty-icon"><i class="ti ti-robot" aria-hidden="true"></i></div>
           <div class="empty-title">Aucun rapport IA disponible</div>
           <div class="empty-sub">Lancez un build Jenkins pour générer une analyse</div>
         </div>
@@ -83,10 +108,10 @@
                     [style.border-color]="getDecisionColor(rp.decision)">{{decisionLabel(rp.decision)}}</span>
               <div class="ai-confidence">
                 <div class="ai-conf-bar"><div class="ai-conf-fill" [style.width]="rp.confidence" [style.background]="getDecisionColor(rp.decision)"></div></div>
-                <span class="ai-conf-text">Confiance : {{rp.confidence || '0%'}}</span>
+                <span class="ai-conf-text">Confiance : {{rp.confidence || 'Non disponible'}}</span>
               </div>
               <span class="ai-sec-badge" [style.color]="getSecColor(rp.security)"
-                    [style.border-color]="getSecColor(rp.security)">🔒 {{(rp.security || 'UNKNOWN') | presentationLabel}}</span>
+                    [style.border-color]="getSecColor(rp.security)"><i class="ti ti-lock" aria-hidden="true"></i> {{(rp.security || 'UNKNOWN') | presentationLabel}}</span>
             </div>
           </div>
 
@@ -95,6 +120,19 @@
             [ed]="ed" [rp]="rp" [backendStages]="deployReadiness?.requiredStages || []" [deployReadiness]="deployReadiness"
             (goToTab)="onGoToTab($event)">
           </app-project-overview>
+
+          <!-- ── Provenance de CETTE analyse (§12) ──
+               Le jury doit pouvoir remonter de l'écran jusqu'à la preuve :
+               build, commit, rapports de scanner, image, PR, exécution n8n.
+               Les sections viennent du backend, qui garde les étapes
+               SÉPARÉES — un constat d'origine n'est pas une validation. -->
+          <app-source-evidence-list class="mt-10"
+            title="Provenance de cette analyse"
+            [note]="reportProvenanceNote()"
+            [sections]="reportEvidenceSections()"
+            [slots]="allEvidenceSlots()"
+          [state]="evidenceState()" (retry)="retrySourceEvidence()">
+          </app-source-evidence-list>
 
           <!-- ── Justification IA repliable ── -->
           <details class="justif-details" *ngIf="rp.justification">
@@ -108,25 +146,25 @@
           <!-- ── Agents IA ── -->
           <div class="agents-grid" *ngIf="rp.agentActions">
             <div class="agent-card">
-              <div class="agent-card-hd"><span>🔎</span> Agent d’analyse de la cause</div>
+              <div class="agent-card-hd"><span><i class="ti ti-search" aria-hidden="true"></i></span> Agent d’analyse de la cause</div>
               <p class="agent-card-txt">{{getAgentText('root') || 'Non disponible'}}</p>
             </div>
             <div class="agent-card">
-              <div class="agent-card-hd"><span>🛡️</span> Agent d’analyse du risque</div>
+              <div class="agent-card-hd"><span><i class="ti ti-shield-lock" aria-hidden="true"></i></span> Agent d’analyse du risque</div>
               <p class="agent-card-txt">{{getAgentText('security') || 'Non disponible'}}</p>
             </div>
             <div class="agent-card">
-              <div class="agent-card-hd"><span>🛠️</span> Agent de remédiation</div>
+              <div class="agent-card-hd"><span><i class="ti ti-tool" aria-hidden="true"></i></span> Agent de remédiation</div>
               <p class="agent-card-txt">{{getAgentText('remediation') || 'Non disponible'}}</p>
             </div>
             <div class="judge-warning full" *ngIf="rp.warning">
-              ⚠️ <strong>Avertissement de l’agent de gouvernance :</strong> {{rp.warning}}
+              <i class="ti ti-alert-triangle" aria-hidden="true"></i> <strong>Avertissement de l’agent de gouvernance :</strong> {{rp.warning}}
             </div>
           </div>
 
           <!-- ── Historique des rapports ── -->
-          <div class="history-box" *ngIf="allReports.length > 1">
-            <div class="history-title">📋 Historique des rapports</div>
+          <div class="history-box" *ngIf="allReportsTotal !== null && allReportsTotal > 1">
+            <div class="history-title"><i class="ti ti-clipboard" aria-hidden="true"></i> Historique des rapports</div>
             <div class="history-list">
               <div *ngFor="let r of (showAllHistory ? allReports : allReports.slice(0, 5))" class="history-item"
                    [class.selected]="r.id === latestReport.id" (click)="selectReport(r)">
@@ -137,11 +175,12 @@
                 <span class="h-score" [class.critical]="historyScoreCritical(r.securityScore)">{{historyScoreLabel(r.securityScore)}}</span>
               </div>
             </div>
-            <button *ngIf="allReports.length > 5" type="button" class="btn btn-secondary btn-sm history-toggle" (click)="showAllHistory = !showAllHistory">{{showAllHistory ? 'Réduire l’historique' : 'Voir tout l’historique (' + allReports.length + ')'}}</button>
+            <button *ngIf="showAllHistory && historyHasNext" type="button" class="btn btn-secondary btn-sm" [disabled]="historyLoading" (click)="loadHistory()">{{historyLoading ? 'Chargement…' : 'Charger la suite de l’historique'}}</button>
+            <button *ngIf="allReports.length > 5" type="button" class="btn btn-secondary btn-sm history-toggle" (click)="showAllHistory = !showAllHistory">{{showAllHistory ? 'Réduire l’historique' : 'Voir l’historique (' + allReportsTotal + ')' }}</button>
           </div>
 
           <div style="text-align:right;margin-top:8px">
-            <button class="btn btn-secondary btn-sm" (click)="copyReport()">📋 Copier le rapport</button>
+            <button class="btn btn-secondary btn-sm" (click)="copyReport()"><i class="ti ti-clipboard" aria-hidden="true"></i> Copier le rapport</button>
           </div>
         </div>
       </div>
@@ -150,6 +189,10 @@
       <!-- ONGLET JENKINS                              -->
       <!-- ═══════════════════════════════════════════ -->
       <div *ngIf="activeTab === 'jenkins'">
+        <app-zone-label [kind]="canOperate ? 'action' : 'information'"
+          [note]="canOperate
+            ? 'État des builds, et déclenchement d’un build ou d’une optimisation du Jenkinsfile.'
+            : 'État des builds rapporté par Jenkins. Lecture seule.'"></app-zone-label>
         <app-jenkinsfile-optimizer
           [projectId]="project?.id"
           [projectName]="project?.name"
@@ -160,37 +203,37 @@
         <div class="kpi-grid" *ngIf="ed.build">
           <div class="kpi-card">
             <div class="kpi-label">Build</div>
-            <div class="kpi-value" [style.color]="ed.build.status==='SUCCESS'?'var(--accent-green)':'var(--accent-red)'">{{ed.build.number ? '#' + ed.build.number : 'Non disponible'}}</div>
-            <div class="kpi-sub" [style.color]="ed.build.status==='SUCCESS'?'var(--accent-green)':'var(--accent-red)'">{{ed.build.status | stageStatusLabel}}</div>
+            <div class="kpi-value" [style.color]="statusColor(ed.build.status)">{{ed.build.number ? '#' + ed.build.number : 'Non disponible'}}</div>
+            <div class="kpi-sub"><app-status-chip [status]="ed.build.status"></app-status-chip></div>
           </div>
           <div class="kpi-card">
             <div class="kpi-label">Tests</div>
-            <div class="kpi-value" [style.color]="ed.tests?.failures>0?'var(--accent-red)':'var(--accent-green)'">
-              {{ed.tests?.total || 0}}
+            <div class="kpi-value" [style.color]="ed.tests?.failures == null ? 'var(--text-muted)' : ed.tests?.failures>0?'var(--accent-red)':'var(--accent-green)'">
+              {{ed.tests?.total ?? 'Non disponible'}}
             </div>
-            <div class="kpi-sub">{{ed.tests?.failures || 0}} échecs</div>
+            <div class="kpi-sub">{{ed.tests?.failures ?? 'Non disponible'}} échecs</div>
           </div>
           <div class="kpi-card">
             <div class="kpi-label">Couverture</div>
-            <div class="kpi-value" style="color:var(--accent-blue)">{{ed.tests?.coverage || '0'}}%</div>
+            <div class="kpi-value" style="color:var(--accent-blue)">{{authoritativeCoverage() == null ? coverageState() : authoritativeCoverage() + '%'}}</div>
           </div>
           <div class="kpi-card">
             <div class="kpi-label">Docker</div>
-            <div class="kpi-value" style="font-size:12px" [style.color]="ed.docker?.build_status==='SUCCESS'?'var(--accent-green)':'var(--accent-red)'">
+            <div class="kpi-value" style="font-size:12px" [style.color]="statusColor(ed.docker?.build_status)">
               {{ed.docker?.build_status ? (ed.docker.build_status | presentationLabel) : 'Non disponible'}}
             </div>
             <div class="kpi-sub">{{ed.docker?.image_tag || 'Image non disponible'}}</div>
           </div>
           <div class="kpi-card">
             <div class="kpi-label">Déploiement</div>
-            <div class="kpi-value" style="font-size:14px" [style.color]="ed.deploy?.status==='SUCCESS'?'var(--accent-green)':'var(--accent-red)'">
+            <div class="kpi-value" style="font-size:14px" [style.color]="statusColor(ed.deploy?.status)">
               {{ed.deploy?.status | presentationLabel}}
             </div>
             <div class="kpi-sub">{{ed.deploy?.namespace || 'Espace de noms non disponible'}}</div>
           </div>
           <div class="kpi-card">
             <div class="kpi-label">Nexus</div>
-            <div class="kpi-value" style="font-size:14px" [style.color]="ed.docker?.push_status==='SUCCESS'?'var(--accent-green)':'var(--accent-red)'">
+            <div class="kpi-value" style="font-size:14px" [style.color]="statusColor(ed.docker?.push_status)">
               {{ed.docker?.push_status ? (ed.docker.push_status | presentationLabel) : 'Non disponible'}}
             </div>
           </div>
@@ -218,7 +261,7 @@
 
         <!-- Analyse IA Jenkins -->
         <div class="zone-card zone-cicd mt-10" *ngIf="rp.cicdIssues">
-          <div class="zone-header"><span>🤖</span><span class="zone-title">ANALYSE IA — PIPELINE CI/CD</span></div>
+          <div class="zone-header"><span><i class="ti ti-robot" aria-hidden="true"></i></span><span class="zone-title">ANALYSE IA — PIPELINE CI/CD</span></div>
           <div class="zone-body">
             <div *ngFor="let item of splitItems(rp.cicdIssues)" class="zone-item">
               <span class="item-dot orange">▸</span><span class="item-text">{{item | presentationText}}</span>
@@ -226,30 +269,41 @@
           </div>
         </div>
 
-        <!-- Actions Jenkins -->
+        <!-- Actions Jenkins — l'action de build reste ici ; les liens
+             sortants sont désormais des PREUVES dérivées par le backend
+             (jamais une URL recomposée dans ce gabarit). -->
         <div class="action-row mt-10">
           <button *ngIf="canOperate" class="btn btn-action green" (click)="triggerBuild()" [disabled]="buildTriggering">
             {{ buildTriggering ? '⏳ Déclenchement…' : '🔄 Déclencher un build' }}
           </button>
-          <a *ngIf="toolUrl(jenkinsPublicUrl(), '/job/' + (project.jenkinsJobName || '')) as jenkinsLink" [href]="jenkinsLink" target="_blank" rel="noopener" class="btn btn-action">
-            🔗 Ouvrir Jenkins
-          </a>
-          <a [href]="buildUrl(ed.build?.url)" target="_blank" rel="noopener" class="btn btn-action" *ngIf="buildUrl(ed.build?.url)">
-            📋 Voir les logs
-          </a>
         </div>
 
+        <app-source-evidence-list class="mt-10"
+          title="Sources & preuves — intégration continue"
+          note="Le job, le build exact et son journal, tels que Jenkins les détient."
+          [sections]="jenkinsEvidenceSections()"
+          [slots]="allEvidenceSlots()"
+          [state]="evidenceState()" (retry)="retrySourceEvidence()">
+        </app-source-evidence-list>
+
         <!-- Historique builds depuis Jenkins API -->
+        <p *ngIf="jenkinsLoading" role="status">Chargement de l’historique Jenkins…</p>
         <div class="card mt-10" *ngIf="jenkinsBuilds.length">
-          <div class="card-title">📊 Derniers builds</div>
+          <div class="card-title"><i class="ti ti-chart-bar" aria-hidden="true"></i> Derniers builds</div>
           <div class="build-list">
             <div *ngFor="let b of jenkinsBuilds" class="build-item">
-              <div class="build-dot" [style.background]="b.result==='SUCCESS'?'var(--accent-green)':'var(--accent-red)'"></div>
+              <div class="build-dot" [style.background]="statusColor(b.result || 'RUNNING')"></div>
               <span class="build-num" style="color:var(--accent-blue)">#{{b.number}}</span>
-              <span class="build-result" [style.color]="b.result==='SUCCESS'?'var(--accent-green)':'var(--accent-red)'">{{(b.result || 'RUNNING') | presentationLabel}}</span>
+              <span class="build-result"><app-status-chip [status]="b.result || 'RUNNING'"></app-status-chip></span>
               <span class="build-dur">{{frenchDuration(b.duration)}}</span>
               <span class="build-time">{{b.timestamp | frenchDate}}</span>
-              <a [href]="buildUrl(b.url)" target="_blank" rel="noopener" class="build-link" *ngIf="buildUrl(b.url)">→</a>
+              <!-- Lien de build exact. buildUrl() rebase le CHEMIN enregistré
+                   par Jenkins sur l'URL publique configurée : l'hôte
+                   enregistré est souvent une IP d'hôte périmée. -->
+              <a [href]="buildUrl(b.url)" target="_blank" rel="noopener noreferrer" class="build-link"
+                 *ngIf="buildUrl(b.url) as exactBuild" [attr.title]="'Voir le build #' + b.number + ' dans Jenkins'">→</a>
+              <span class="build-link" style="color:var(--text-muted);cursor:default;" *ngIf="!buildUrl(b.url)"
+                    title="Aucune URL Jenkins navigateur configurée pour ce projet.">—</span>
             </div>
           </div>
         </div>
@@ -257,16 +311,16 @@
         <!-- État dégradé honnête (non configuré / indisponible) — jamais un
              tableau de builds fabriqués (getMockJenkinsStatus supprimé).
              Neutre gris, jamais rouge : absence d'info ≠ échec. -->
-        <div class="empty-state" *ngIf="!jenkinsBuilds.length && jenkinsMessage" style="color:var(--text-secondary)">
-          <div class="empty-icon" style="color:var(--text-secondary)">⚙️</div>
+        <div class="empty-state" *ngIf="!jenkinsLoading && !jenkinsBuilds.length && jenkinsMessage" style="color:var(--text-secondary)">
+          <div class="empty-icon" style="color:var(--text-secondary)"><i class="ti ti-settings" aria-hidden="true"></i></div>
           <div class="empty-title" style="color:var(--text-secondary)">{{jenkinsMessage | presentationText}}</div>
           <div class="empty-sub">Aucun historique de build à afficher.</div>
         </div>
 
-        <div class="empty-state" *ngIf="!ed.build && !jenkinsBuilds.length && !jenkinsMessage">
-          <div class="empty-icon">⚙️</div>
-          <div class="empty-title">Aucune donnée Jenkins</div>
-          <div class="empty-sub">Lancez un build pour voir les données</div>
+        <div class="empty-state" *ngIf="!jenkinsLoading && !ed.build && !jenkinsBuilds.length && !jenkinsMessage">
+          <div class="empty-icon"><i class="ti ti-settings" aria-hidden="true"></i></div>
+          <div class="empty-title">Aucun build Jenkins enregistré</div>
+          <div class="empty-sub">Aucun build n’a encore été rapporté pour ce projet.</div>
         </div>
       </div>
 
@@ -274,36 +328,152 @@
       <!-- ONGLET DOCKER                                -->
       <!-- ═══════════════════════════════════════════ -->
       <div *ngIf="activeTab === 'docker'">
+        <app-zone-label [kind]="canOperate ? 'action' : 'information'"
+          [note]="canOperate
+            ? 'Identité, publication et provenance de l’image ; optimisation du Dockerfile sur demande.'
+            : 'Identité, publication et provenance de l’image. Lecture seule.'"></app-zone-label>
+        <!-- ═══ R49 — IMAGE DOCKER DU BUILD ═══
+             Destination propre a Docker : la carte et l'etape de pipeline
+             ouvrent cette vue, plus Jenkins. Chaque valeur vient d'une source
+             autoritaire (Jenkins pour le build et la reference d'image, le
+             contrat de gouvernance pour le digest/registre/commit, Trivy pour
+             le resume securite, azureConfig pour ports/sonde/cible). Les champs
+             sans source — taille d'image, image de base, chemin du Dockerfile —
+             ne sont PAS affiches plutot qu'inventes. -->
+        <div class="card">
+          <div class="card-title">
+            <i class="ti ti-brand-docker" aria-hidden="true"></i> Image Docker
+            <span class="badge badge-muted" *ngIf="dockerBuildNumber() !== null">build #{{dockerBuildNumber()}}</span>
+          </div>
+
+          <div class="alert alert-info" role="status" *ngIf="dockerImageState()">
+            État de l’image : <strong>{{dockerImageState()}}</strong>
+          </div>
+
+          <!-- IDENTITE / PROVENANCE : le digest est immuable, le tag ne l'est pas. -->
+          <dl class="config-list">
+            <div><dt>Référence d’image</dt><dd>{{dockerImageRef() || dockerImageState() || 'Non disponible'}}</dd></div>
+            <div><dt>Repository</dt><dd>{{dockerRepository() || 'Non disponible'}}</dd></div>
+            <div><dt>Tag</dt><dd>{{dockerTag() || 'Non disponible'}}</dd></div>
+            <div><dt>Digest<app-info-hint term="digest"></app-info-hint></dt>
+              <dd><app-copyable-id *ngIf="dockerDigest(); else noDigest" [value]="dockerDigest()" label="le digest" keepPrefix="sha256:" [length]="16"></app-copyable-id>
+                <ng-template #noDigest>{{ imageProvenanceLoading ? 'Chargement…' : (dockerProvenanceVerified() === false ? 'Provenance non vérifiée' : 'Non disponible') }}</ng-template>
+              </dd></div>
+            <div><dt>Commit source</dt>
+              <dd><app-copyable-id *ngIf="dockerCommitSha(); else noSha" [value]="dockerCommitSha()" label="le commit"></app-copyable-id>
+                <ng-template #noSha>Non disponible</ng-template>
+              </dd></div>
+            <div><dt>Date du build</dt><dd>{{ latestReport?.createdAt ? (latestReport.createdAt | frenchDate) : 'Non disponible' }}</dd></div>
+          </dl>
+
+          <!-- CONSTRUCTION — distincte de l'image et du scan. -->
+          <div class="card-title mt-10">Construction</div>
+          <dl class="config-list">
+            <div><dt>Étape Docker</dt><dd>{{ (dockerBuildStatus() | stageStatusLabel) || 'Non disponible' }}</dd></div>
+            <div><dt>Build Jenkins</dt><dd>{{ ed?.build?.status ? (ed.build.status | stageStatusLabel) : 'Non disponible' }}</dd></div>
+            <div><dt>Ports exposés</dt><dd>{{ dockerPorts() || 'Non disponible' }}</dd></div>
+            <div><dt>Sonde de santé</dt><dd>{{ dockerHealthCheck() || 'Non disponible' }}</dd></div>
+          </dl>
+
+          <!-- REGISTRE — « poussee » n'est ni « construite » ni « deployee ». -->
+          <div class="card-title mt-10">Registre</div>
+          <dl class="config-list">
+            <div><dt>Registre</dt><dd>{{ dockerRegistry() || 'Non configuré' }}</dd></div>
+            <div><dt>Publication</dt><dd>{{ dockerPushState() }}</dd></div>
+            <!-- R50 — publier et enregistrer la provenance sont deux faits : une image
+                 peut etre poussee et sa provenance refusee. Aucun des deux ne dit
+                 « deployee ». -->
+            <div><dt>Provenance enregistrée<app-info-hint term="provenance"></app-info-hint></dt><dd>{{ dockerProvenanceState() }}</dd></div>
+            <div *ngIf="dockerPublishedReference()"><dt>Référence publiée</dt>
+              <dd><app-copyable-id [value]="dockerPublishedReference()" label="la référence publiée" [length]="40"></app-copyable-id></dd></div>
+            <div><dt>Provenance vérifiée</dt>
+              <dd>{{ dockerProvenanceVerified() === null ? 'Non disponible' : (dockerProvenanceVerified() ? 'Oui' : 'Non') }}</dd></div>
+          </dl>
+
+          <!-- SECURITE — resume seulement : les CVE detaillees restent en Securite. -->
+          <div class="card-title mt-10">Sécurité de l’image (Trivy)</div>
+          <dl class="config-list">
+            <div><dt>État du scan</dt><dd>{{ scannerState(ed?.trivy) }}</dd></div>
+            <div><dt>Critiques</dt><dd>{{ scannerMetric(ed?.trivy, 'critical') ?? 'Non disponible' }}</dd></div>
+            <div><dt>Élevées</dt><dd>{{ scannerMetric(ed?.trivy, 'high') ?? 'Non disponible' }}</dd></div>
+            <div><dt>Total des vulnérabilités</dt><dd>{{ scannerMetric(ed?.trivy, 'cves_count') ?? 'Non disponible' }}</dd></div>
+          </dl>
+          <div class="small text-muted" *ngIf="hasStaleScannerFindings(ed?.trivy)">{{staleScannerNotice(ed?.trivy)}}</div>
+
+          <!-- DEPLOIEMENT — « prete » n'est jamais « deployee ». -->
+          <div class="card-title mt-10">Déploiement</div>
+          <dl class="config-list">
+            <div><dt>Cible</dt><dd>{{ deploymentTarget?.targetName || 'Non configuré' }}</dd></div>
+            <div><dt>Relation</dt><dd>{{ dockerDeploymentRelation() }}</dd></div>
+          </dl>
+
+          <!-- ACTIONS — navigation INTERNE uniquement. Les liens sortants
+               (build Jenkins, Dockerfile, registre) vivent dans le bloc
+               « Sources & preuves » plus bas : cliquer sur la carte Docker
+               ouvre la vue Docker, et la preuve Jenkins reste un lien dans
+               cette vue — jamais une redirection qui remplace la vue. -->
+          <div class="mt-10" style="display:flex;gap:10px;flex-wrap:wrap;">
+            <button class="btn btn-secondary" type="button"
+                    *ngIf="scannerHasResult(ed?.trivy)"
+                    (click)="setActiveTab('securite'); setSecurityFilter('trivy')">
+              Voir les vulnérabilités de l’image
+            </button>
+            <button class="btn btn-secondary" type="button" (click)="setActiveTab('deploiement')">
+              Voir le déploiement
+            </button>
+          </div>
+          <div class="alert alert-error mt-10" role="status" *ngIf="dataErrors['imageProvenance']">
+            {{ dataErrors['imageProvenance'] }}
+          </div>
+        </div>
+
         <app-dockerfile-optimizer
           [projectId]="project?.id"
           [projectName]="project?.name"
           [repo]="project?.githubRepo" [baseBranch]="reportedBranch()">
         </app-dockerfile-optimizer>
+
+        <app-source-evidence-list class="mt-10"
+          title="Sources & preuves — image"
+          note="Une référence de registre est une coordonnée de tirage, pas une adresse navigable : elle est affichée telle quelle. Le Dockerfile est lié au commit exact du build, jamais à la branche."
+          [sections]="dockerEvidenceSections()"
+          [slots]="allEvidenceSlots()"
+          [state]="evidenceState()" (retry)="retrySourceEvidence()">
+        </app-source-evidence-list>
       </div>
 
       <!-- ═══════════════════════════════════════════ -->
       <!-- ONGLET SONARQUBE                            -->
       <!-- ═══════════════════════════════════════════ -->
       <div *ngIf="activeTab === 'sonarqube'">
+        <app-zone-label [kind]="canOperate ? 'action' : 'information'"
+          [note]="canOperate
+            ? 'Problèmes détectés par SonarQube ; la sélection d’un problème permet de demander une correction.'
+            : 'Problèmes détectés par SonarQube. Lecture seule.'"></app-zone-label>
         <!-- KPIs SonarQube -->
         <div class="kpi-grid" *ngIf="ed.sonar">
-          <div class="kpi-card" [style.border-color]="ed.sonar.quality_gate==='OK'?'var(--accent-green)':'var(--accent-red)'">
-            <div class="kpi-label">Contrôle qualité</div>
-            <div class="kpi-value" [style.color]="ed.sonar.quality_gate==='OK'?'var(--accent-green)':'var(--accent-red)'">
-              {{ed.sonar.quality_gate==='OK'?'✓ Réussi':'✕ Échec'}}
+          <div class="kpi-card" [style.border-color]="qualityGatePresentation(ed.sonar).color">
+            <div class="kpi-label">Contrôle qualité<app-info-hint term="quality-gate"></app-info-hint></div>
+            <div class="kpi-value" [style.color]="qualityGatePresentation(ed.sonar).color">
+              {{qualityGatePresentation(ed.sonar).label}}
             </div>
           </div>
           <div class="kpi-card"><div class="kpi-label">Bugs</div>
-            <div class="kpi-value" [style.color]="ed.sonar.bugs>0?'var(--accent-red)':'var(--accent-green)'">{{ed.sonar.bugs || 0}}</div>
+            <div class="kpi-value" [style.color]="ed.sonar.bugs == null ? 'var(--text-muted)' : ed.sonar.bugs>0?'var(--accent-red)':'var(--accent-green)'">{{scannerMetric(ed.sonar, 'bugs') ?? 'Non disponible'}}</div>
           </div>
           <div class="kpi-card"><div class="kpi-label">Vulnérabilités</div>
-            <div class="kpi-value" [style.color]="ed.sonar.vulnerabilities>0?'var(--accent-orange)':'var(--accent-green)'">{{ed.sonar.vulnerabilities || 0}}</div>
+            <div class="kpi-value" [style.color]="ed.sonar.vulnerabilities == null ? 'var(--text-muted)' : ed.sonar.vulnerabilities>0?'var(--accent-orange)':'var(--accent-green)'">{{scannerMetric(ed.sonar, 'vulnerabilities') ?? 'Non disponible'}}</div>
           </div>
           <div class="kpi-card"><div class="kpi-label">Problèmes de maintenabilité</div>
-            <div class="kpi-value" style="color:var(--accent-yellow,#f59e0b)">{{ed.sonar.code_smells || 0}}</div>
+            <div class="kpi-value" style="color:var(--accent-yellow,#f59e0b)">{{scannerMetric(ed.sonar, 'code_smells') ?? 'Non disponible'}}</div>
           </div>
+          <!-- R46 — la couverture vient du rapport du build (`tests.coverage`),
+               seule source autoritaire : le bloc Sonar la lit sur la reponse de
+               l'API /issues, qui ne porte pas ce champ, et valait donc 0 par
+               construction. Meme source que la vue d'ensemble : une seule
+               verite, pas deux calculs. -->
           <div class="kpi-card"><div class="kpi-label">Couverture</div>
-            <div class="kpi-value" style="color:var(--accent-blue)">{{ed.sonar.coverage || '0'}}%</div>
+            <div class="kpi-value" style="color:var(--accent-blue)">{{authoritativeCoverage() == null ? coverageState() : authoritativeCoverage() + '%'}}</div>
           </div>
           <div class="kpi-card"><div class="kpi-label">Statut</div>
             <div class="kpi-value" style="font-size:14px" [style.color]="ed.sonar.status==='SUCCESS'?'var(--accent-green)':'var(--accent-orange)'">
@@ -392,9 +562,93 @@
           </p>
         </div>
 
+        <!-- R48 — Mesures SonarQube COURANTES.
+             Deliberement separees de l'instantane du build ci-dessus : ce sont
+             deux verites de dates differentes, et les melanger laisserait croire
+             que l'instantane est l'etat actuel. Chaque mesure absente affiche son
+             motif, jamais 0. Source : GET /api/projects/:id/sonar-metrics. -->
+        <div class="card mt-10">
+          <div class="card-title">
+            <i class="ti ti-chart-bar" aria-hidden="true"></i> Mesures SonarQube courantes
+            <span class="badge badge-muted" *ngIf="sonarLiveText('lastAnalysisAt')">
+              analyse du {{ sonarLiveText('lastAnalysisAt') | frenchDate }}
+            </span>
+          </div>
+          <p class="text-muted small">
+            État actuel du serveur SonarQube, interrogé à l’ouverture de cet onglet.
+            Les cartes ci-dessus décrivent l’analyse <strong>de ce build</strong> :
+            les deux peuvent légitimement différer si le projet a été ré-analysé depuis.
+          </p>
+
+          <div class="alert alert-info" role="status" *ngIf="sonarLiveState()">
+            Mesures courantes : <strong>{{ sonarLiveState() }}</strong>
+            <span *ngIf="sonarLive?.reason === 'SONAR_TOKEN_UNAVAILABLE'">
+              — SonarQube détient peut-être des mesures pour ce projet, mais la plateforme
+              n’a pas d’identifiant pour les lire.
+            </span>
+          </div>
+
+          <div class="kpi-grid" *ngIf="sonarLive?.available === true">
+            <div class="kpi-card">
+              <div class="kpi-label">Contrôle qualité<app-info-hint term="quality-gate"></app-info-hint></div>
+              <div class="kpi-value" [style.color]="sonarLiveText('qualityGate') === 'OK' ? 'var(--accent-green)' : (sonarLiveText('qualityGate') ? 'var(--accent-red)' : 'var(--text-muted)')">
+                {{ sonarLiveText('qualityGate') === 'OK' ? 'Réussi' : (sonarLiveText('qualityGate') === 'ERROR' ? 'Échec' : (sonarLiveText('qualityGate') || 'Non disponible')) }}
+              </div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-label">Bugs</div>
+              <div class="kpi-value" [style.color]="sonarLiveMetric('bugs') === null ? 'var(--text-muted)' : (sonarLiveMetric('bugs')! > 0 ? 'var(--accent-red)' : 'var(--accent-green)')">
+                {{ sonarLiveMetric('bugs') ?? 'Non disponible' }}
+              </div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-label">Vulnérabilités</div>
+              <div class="kpi-value" [style.color]="sonarLiveMetric('vulnerabilities') === null ? 'var(--text-muted)' : (sonarLiveMetric('vulnerabilities')! > 0 ? 'var(--accent-orange)' : 'var(--accent-green)')">
+                {{ sonarLiveMetric('vulnerabilities') ?? 'Non disponible' }}
+              </div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-label">Problèmes de maintenabilité</div>
+              <div class="kpi-value">{{ sonarLiveMetric('codeSmells') ?? 'Non disponible' }}</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-label">Points chauds de sécurité</div>
+              <div class="kpi-value">{{ sonarLiveMetric('securityHotspots') ?? 'Non disponible' }}</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-label">Couverture (SonarQube)</div>
+              <div class="kpi-value" style="color:var(--accent-blue)">
+                {{ sonarLiveMetric('coverage') === null ? 'Non disponible' : sonarLiveMetric('coverage') + '%' }}
+              </div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-label">Duplication</div>
+              <div class="kpi-value">
+                {{ sonarLiveMetric('duplications') === null ? 'Non disponible' : sonarLiveMetric('duplications') + '%' }}
+              </div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-label">Lignes de code</div>
+              <div class="kpi-value">{{ sonarLiveMetric('linesOfCode') ?? 'Non disponible' }}</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-label">Note de fiabilité</div>
+              <div class="kpi-value">{{ sonarLiveText('reliabilityRating') || 'Non disponible' }}</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-label">Note de sécurité</div>
+              <div class="kpi-value">{{ sonarLiveText('securityRating') || 'Non disponible' }}</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-label">Note de maintenabilité</div>
+              <div class="kpi-value">{{ sonarLiveText('maintainabilityRating') || 'Non disponible' }}</div>
+            </div>
+          </div>
+        </div>
+
         <!-- Issues SonarQube détaillées -->
         <div class="card mt-10" *ngIf="ed.sonar?.issues?.length">
-          <div class="card-title">🐛 {{ed.sonar.issues.length}} {{ed.sonar.issues.length === 1 ? 'problème détecté' : 'problèmes détectés'}}</div>
+          <div class="card-title"><i class="ti ti-bug" aria-hidden="true"></i> {{ed.sonar.issues.length}} {{ed.sonar.issues.length === 1 ? 'problème détecté' : 'problèmes détectés'}}<app-info-hint term="sast"></app-info-hint></div>
           <div *ngIf="activeFixRequest()?.status === 'FIX_FAILED'" class="alert alert-error" role="status">
             <strong>Échec de la correction</strong>
             <span> · Tentative {{activeFixRequest()?.attemptCount || 1}}</span>
@@ -402,7 +656,7 @@
             <ng-container *ngIf="activeFixRequest()?.lastErrorCode === 'WF2_BATCH_INCOMPLETE'">
               <p>La proposition de correction est incomplète.</p>
               <p *ngIf="activeFixRequest()?.completionEvidence as evidence">
-                {{evidence.processedFindingCount || 0}} correction appliquée sur {{evidence.approvedFindingCount || requestFindingIds().length}}.
+                {{evidence.processedFindingCount ?? 'Non disponible'}} correction appliquée sur {{evidence.approvedFindingCount || requestFindingIds().length}}.
                 <span *ngIf="evidence.missingFile"> {{evidence.missingFile}} non traité.</span>
               </p>
             </ng-container>
@@ -430,7 +684,7 @@
               <select [(ngModel)]="sonarSeverity"><option value="ALL">Toutes</option><option value="BLOCKER">Bloquante</option><option value="CRITICAL">Critique</option><option value="MAJOR">Majeure</option><option value="MINOR">Mineure</option></select>
             </label>
             <label>Correction
-              <select [(ngModel)]="sonarRemediation"><option value="ALL">Toutes</option><option value="AUTO_FIX_ELIGIBLE">Correction automatisable</option><option value="DEVELOPER_ACTION_REQUIRED">Action développeur requise</option><option value="ADMIN_ACTION_REQUIRED">Action administrateur requise</option></select>
+              <select [(ngModel)]="sonarRemediation"><option value="ALL">Toutes</option><option value="AUTO_FIX_ELIGIBLE">Correction assistée candidate</option><option value="DEVELOPER_ACTION_REQUIRED">Action développeur requise</option><option value="ADMIN_ACTION_REQUIRED">Action administrateur requise</option></select>
             </label>
             <label>Responsable
               <select [(ngModel)]="sonarOwner"><option value="ALL">Tous</option><option value="UNASSIGNED">Non assigné</option><option *ngFor="let owner of sonarOwners()" [value]="owner">{{owner | presentationLabel}}</option></select>
@@ -513,12 +767,17 @@
           </header>
           <div class="drawer-body">
             <section><h3>Identification</h3><dl><div><dt>Sévérité</dt><dd>{{selectedSonarFinding.severity | presentationLabel}}</dd></div><div><dt>Règle</dt><dd>{{findingValue(selectedSonarFinding.rule || selectedSonarFinding.ruleKey)}}</dd></div><div><dt>Type</dt><dd>{{selectedSonarFinding.type || selectedSonarFinding.category | presentationLabel}}</dd></div><div><dt>Source</dt><dd>{{selectedSonarFinding.source || selectedSonarFinding.stage | presentationLabel}}</dd></div></dl></section>
-            <section><h3>Localisation</h3><p class="drawer-path">{{findingValue(selectedSonarFinding.file || selectedSonarFinding.component)}}<span *ngIf="selectedSonarFinding.line">:{{selectedSonarFinding.line}}</span></p></section>
+            <section><h3>Localisation</h3><p class="drawer-path">{{findingValue(selectedSonarFinding.file || selectedSonarFinding.component)}}<span *ngIf="selectedSonarFinding.line">:{{selectedSonarFinding.line}}</span></p>
+              <!-- Fichier au COMMIT analysé, avec la ligne — jamais sur la
+                   branche : la branche a bougé depuis, la ligne ne
+                   désignerait plus le même code. -->
+              <div style="margin-top:6px;display:flex;flex-wrap:wrap;align-items:baseline;"><app-source-evidence-link [item]="sonarIssueEvidence(selectedSonarFinding)?.['GIT_FILE'] || null" variant="inline" [showProvider]="false" [showReason]="false" [state]="evidenceState()"></app-source-evidence-link></div>
+            </section>
             <section><h3>Description</h3><p>{{sonarFindingSummary(selectedSonarFinding)}}</p></section>
             <section><h3>Pourquoi c’est important</h3><p>{{findingWhyImportant(selectedSonarFinding)}}</p></section>
             <section><h3>Preuve technique</h3><p>{{findingEvidence(selectedSonarFinding)}}</p></section>
-            <section><h3>Correction</h3><dl><div><dt>Action recommandée</dt><dd>{{findingRecommendationLabel(selectedSonarFinding)}}</dd></div><div><dt>Type</dt><dd>{{findingActionLabel(selectedSonarFinding)}}</dd></div><div><dt>Responsable</dt><dd>{{findingResponsibleLabel(selectedSonarFinding)}}</dd></div><div><dt>Éligibilité</dt><dd>{{findingEligibilityLabel(selectedSonarFinding)}}</dd></div><div *ngIf="findingVerdict(selectedSonarFinding)"><dt>Validation post-PR (WF3)</dt><dd>{{findingVerdict(selectedSonarFinding) === 'VALID' ? 'Validée — problème corrigé' : (findingVerdict(selectedSonarFinding) === 'INVALID' ? 'Non corrigée' : 'Non concluante')}}</dd></div></dl></section>
-            <section><h3>Traçabilité</h3><dl><div><dt>Projet</dt><dd>{{project?.name || 'Non disponible'}}</dd></div><div><dt>Build</dt><dd>{{latestReport?.buildNumber ? '#' + latestReport.buildNumber : 'Non disponible'}}</dd></div><div><dt>Identifiant du problème</dt><dd class="drawer-id">{{findingValue(selectedSonarFinding.id || selectedSonarFinding.key)}}</dd></div><div *ngIf="showFindingPrLink(selectedSonarFinding)"><dt>Pull Request</dt><dd><a class="pr-link" [href]="batchPrUrl()" target="_blank" rel="noopener noreferrer">{{batchPrNumber() ? 'PR #' + batchPrNumber() : 'Voir la Pull Request'}}</a></dd></div></dl></section>
+            <section><h3>Correction</h3><dl><div><dt>Action recommandée</dt><dd>{{findingRecommendationLabel(selectedSonarFinding)}}</dd></div><div><dt>Type</dt><dd>{{findingActionLabel(selectedSonarFinding)}}</dd></div><div><dt>Responsable</dt><dd>{{findingResponsibleLabel(selectedSonarFinding)}}</dd></div><div><dt>Éligibilité</dt><dd>{{findingEligibilityLabel(selectedSonarFinding)}}</dd></div><div *ngIf="findingVerdict(selectedSonarFinding)"><dt>Validation post-PR (WF3)<app-info-hint term="merge-authorization"></app-info-hint></dt><dd>{{findingVerdict(selectedSonarFinding) === 'VALID' ? 'Validée — problème corrigé' : (findingVerdict(selectedSonarFinding) === 'INVALID' ? 'Non corrigée' : 'Non concluante')}}</dd></div></dl></section>
+            <section><h3>Traçabilité</h3><dl><div><dt>Projet</dt><dd>{{project?.name || 'Non disponible'}}</dd></div><div><dt>Build</dt><dd>{{latestReport?.buildNumber ? '#' + latestReport.buildNumber : 'Non disponible'}}</dd></div><div><dt>Issue SonarQube</dt><dd><app-source-evidence-link [item]="sonarIssueEvidence(selectedSonarFinding)?.['SONAR_ISSUE'] || null" variant="inline" [showProvider]="false" [showReason]="false" [state]="evidenceState()"></app-source-evidence-link></dd></div><div><dt>Règle</dt><dd><app-source-evidence-link [item]="sonarIssueEvidence(selectedSonarFinding)?.['SONAR_RULE'] || null" variant="inline" [showProvider]="false" [showReason]="false" [state]="evidenceState()"></app-source-evidence-link></dd></div><div><dt>Build Jenkins</dt><dd><app-source-evidence-link [item]="evidence('JENKINS_BUILD')" variant="inline" [showProvider]="false" [showReason]="false" [state]="evidenceState()"></app-source-evidence-link></dd></div><div><dt>Identifiant du problème</dt><dd class="drawer-id">{{findingValue(selectedSonarFinding.id || selectedSonarFinding.key)}}</dd></div><div *ngIf="showFindingPrLink(selectedSonarFinding)"><dt>Pull Request</dt><dd><a class="pr-link" [href]="batchPrUrl()" target="_blank" rel="noopener noreferrer">{{batchPrNumber() ? 'PR #' + batchPrNumber() : 'Voir la Pull Request'}}</a></dd></div></dl></section>
           </div>
           <footer class="drawer-footer">
             <button *ngIf="canSelectFinding(selectedSonarFinding)" type="button" class="btn btn-primary" (click)="toggleFindingSelection(selectedSonarFinding)">{{isSelected(selectedSonarFinding) ? 'Retirer de la sélection' : 'Ajouter à la sélection'}}</button>
@@ -546,22 +805,29 @@
 
         <!-- Analyse IA SonarQube -->
         <div class="zone-card mt-10" style="border-left:3px solid var(--accent-blue)" *ngIf="sonarAiAnalysis">
-          <div class="zone-header"><span>🤖</span><span class="zone-title">ANALYSE IA — QUALITÉ CODE</span></div>
+          <div class="zone-header"><span><i class="ti ti-robot" aria-hidden="true"></i></span><span class="zone-title">ANALYSE IA — QUALITÉ CODE</span></div>
           <div class="zone-body">
             <p style="font-size:12px;color:var(--text-secondary)">{{sonarAiAnalysis}}</p>
           </div>
         </div>
 
-        <!-- Actions SonarQube -->
-        <div class="action-row mt-10">
-          <a *ngIf="toolUrl(project.sonarqubeUrl) as sonarLink" [href]="sonarLink" target="_blank" rel="noopener" class="btn btn-action">🔗 Ouvrir SonarQube</a>
-          <a *ngIf="toolUrl(project.sonarqubeUrl, '/project/issues?id=' + (project.sonarqubeKey || '')) as sonarIssuesLink" [href]="sonarIssuesLink" target="_blank" rel="noopener" class="btn btn-action">📋 Voir toutes les issues</a>
-        </div>
+        <!-- Sources SonarQube — le lien vise le PROJET exact
+             (/dashboard?id=<clé>) dérivé par le backend. L'ancien lien
+             utilisait project.sonarqubeUrl brut, qui vaut couramment un alias
+             de service Docker : il était cliquable et n'arrivait nulle part. -->
+        <app-source-evidence-list class="mt-10"
+          title="Sources & preuves — qualité du code"
+          [note]="'Projet SonarQube : ' + (project?.sonarqubeKey || 'non configuré')"
+          [sections]="sonarEvidenceSections()"
+          [slots]="allEvidenceSlots()"
+          [state]="evidenceState()" (retry)="retrySourceEvidence()">
+        </app-source-evidence-list>
 
-        <div class="empty-state" *ngIf="!ed.sonar">
+
+        <div class="empty-state" *ngIf="!ed.sonar && !reportsLoading && !dataErrors['reportDetail']">
           <div class="empty-icon">🔍</div>
-          <div class="empty-title">Aucune donnée SonarQube</div>
-          <div class="empty-sub">Lancez un build pour voir l'analyse</div>
+          <div class="empty-title">Aucune analyse SonarQube sur ce build</div>
+          <div class="empty-sub">Le pipeline n’a pas encore produit d’analyse SonarQube pour ce projet.</div>
         </div>
       </div>
 
@@ -569,45 +835,57 @@
       <!-- ONGLET SÉCURITÉ                             -->
       <!-- ═══════════════════════════════════════════ -->
       <div *ngIf="activeTab === 'securite'">
+        <app-zone-label kind="information"
+          note="Vulnérabilités rapportées par Trivy, OWASP Dependency-Check et ZAP. Les zones d’intervention sont signalées séparément ci-dessous."></app-zone-label>
+        <p *ngIf="manualTasksLoading" role="status">Chargement du suivi des remédiations…</p>
 
         <!-- ── KPIs vue d'ensemble ── -->
         <div class="kpi-grid">
           <div class="kpi-card" *ngIf="!isScannerMissing(ed.trivy)" [class.kpi-alert]="(ed.trivy?.critical||0)>0">
             <div class="kpi-label">Conteneur (Trivy)</div>
-            <div class="kpi-value" [style.color]="(ed.trivy?.critical||0)>0?'var(--accent-red)':'var(--accent-green)'">
-              {{ed.trivy?.critical || 0}} <span style="font-size:13px;opacity:.6">{{(ed.trivy?.critical || 0) === 1 ? 'critique' : 'critiques'}}</span>
+            <div class="kpi-value" [style.color]="scannerMetric(ed.trivy, 'critical') === null ? 'var(--text-muted)' : ((ed.trivy?.critical||0)>0?'var(--accent-red)':'var(--accent-green)')">
+              {{scannerMetric(ed.trivy, 'critical') ?? 'Non disponible'}} <span style="font-size:13px;opacity:.6">{{scannerMetric(ed.trivy, 'critical') === 1 ? 'critique' : 'critiques'}}</span>
             </div>
-            <div class="kpi-sub">{{ed.trivy?.high || 0}} {{(ed.trivy?.high || 0) === 1 ? 'élevée' : 'élevées'}} · {{ed.trivy?.cves_count || 0}} au total</div>
+            <div class="kpi-sub">{{scannerMetric(ed.trivy, 'high') ?? 'Non disponible'}} {{scannerMetric(ed.trivy, 'high') === 1 ? 'élevée' : 'élevées'}} · {{scannerMetric(ed.trivy, 'cves_count') ?? 'Non disponible'}} au total</div>
           </div>
           <div class="kpi-card scanner-missing" *ngIf="isScannerMissing(ed.trivy)">
             <div class="kpi-label">Conteneur (Trivy)</div>
-            <div class="kpi-value scanner-missing-value">SCANNER NON EXÉCUTÉ</div>
+            <div class="kpi-value scanner-missing-value">{{scannerState(ed.trivy)}}</div>
+            <!-- R48 — des constats reels d'un build anterieur existent : on le dit
+                 au lieu de les taire, sans les compter pour ce build. -->
+            <div class="small text-muted" *ngIf="hasStaleScannerFindings(ed.trivy)">{{staleScannerNotice(ed.trivy)}}</div>
             <div class="kpi-sub">Aucune donnée sur ce build</div>
           </div>
 
           <div class="kpi-card" *ngIf="!isScannerMissing(ed.owasp)" [class.kpi-alert]="(ed.owasp?.critical||0)>0">
             <div class="kpi-label">Dépendances (OWASP)</div>
-            <div class="kpi-value" [style.color]="(ed.owasp?.critical||0)>0?'var(--accent-red)':'var(--accent-green)'">
-              {{ed.owasp?.critical || 0}} <span style="font-size:13px;opacity:.6">{{(ed.owasp?.critical || 0) === 1 ? 'critique' : 'critiques'}}</span>
+            <div class="kpi-value" [style.color]="scannerMetric(ed.owasp, 'critical') === null ? 'var(--text-muted)' : ((ed.owasp?.critical||0)>0?'var(--accent-red)':'var(--accent-green)')">
+              {{scannerMetric(ed.owasp, 'critical') ?? 'Non disponible'}} <span style="font-size:13px;opacity:.6">{{scannerMetric(ed.owasp, 'critical') === 1 ? 'critique' : 'critiques'}}</span>
             </div>
-            <div class="kpi-sub">{{ed.owasp?.high || 0}} {{(ed.owasp?.high || 0) === 1 ? 'élevée' : 'élevées'}} · {{ed.owasp?.cves_count || 0}} au total</div>
+            <div class="kpi-sub">{{scannerMetric(ed.owasp, 'high') ?? 'Non disponible'}} {{scannerMetric(ed.owasp, 'high') === 1 ? 'élevée' : 'élevées'}} · {{scannerMetric(ed.owasp, 'cves_count') ?? 'Non disponible'}} au total</div>
           </div>
           <div class="kpi-card scanner-missing" *ngIf="isScannerMissing(ed.owasp)">
             <div class="kpi-label">Dépendances (OWASP)</div>
-            <div class="kpi-value scanner-missing-value">SCANNER NON EXÉCUTÉ</div>
+            <div class="kpi-value scanner-missing-value">{{scannerState(ed.owasp)}}</div>
+            <!-- R48 — des constats reels d'un build anterieur existent : on le dit
+                 au lieu de les taire, sans les compter pour ce build. -->
+            <div class="small text-muted" *ngIf="hasStaleScannerFindings(ed.owasp)">{{staleScannerNotice(ed.owasp)}}</div>
             <div class="kpi-sub">Aucune donnée sur ce build</div>
           </div>
 
           <div class="kpi-card" *ngIf="!isScannerMissing(ed.zap)" [class.kpi-alert]="(ed.zap?.alerts_high||0)>0">
             <div class="kpi-label">DAST (ZAP)</div>
-            <div class="kpi-value" [style.color]="(ed.zap?.alerts_high||0)>0?'var(--accent-red)':((ed.zap?.alerts_medium||0)>0?'var(--accent-orange)':'var(--accent-green)')">
-              {{ed.zap?.alerts_high || 0}} <span style="font-size:13px;opacity:.6">{{(ed.zap?.alerts_high || 0) === 1 ? 'élevée' : 'élevées'}}</span>
+            <div class="kpi-value" [style.color]="scannerMetric(ed.zap, 'alerts_high') === null || scannerMetric(ed.zap, 'alerts_medium') === null ? 'var(--text-muted)' : ((ed.zap?.alerts_high||0)>0?'var(--accent-red)':((ed.zap?.alerts_medium||0)>0?'var(--accent-orange)':'var(--accent-green)'))">
+              {{scannerMetric(ed.zap, 'alerts_high') ?? 'Non disponible'}} <span style="font-size:13px;opacity:.6">{{scannerMetric(ed.zap, 'alerts_high') === 1 ? 'élevée' : 'élevées'}}</span>
             </div>
-            <div class="kpi-sub">{{ed.zap?.alerts_medium || 0}} {{(ed.zap?.alerts_medium || 0) === 1 ? 'moyenne' : 'moyennes'}} · {{ed.zap?.alerts_count || 0}} au total</div>
+            <div class="kpi-sub">{{scannerMetric(ed.zap, 'alerts_medium') ?? 'Non disponible'}} {{scannerMetric(ed.zap, 'alerts_medium') === 1 ? 'moyenne' : 'moyennes'}} · {{scannerMetric(ed.zap, 'alerts_count') ?? 'Non disponible'}} au total</div>
           </div>
           <div class="kpi-card scanner-missing" *ngIf="isScannerMissing(ed.zap)">
             <div class="kpi-label">DAST (ZAP)</div>
-            <div class="kpi-value scanner-missing-value">SCANNER NON EXÉCUTÉ</div>
+            <div class="kpi-value scanner-missing-value">{{scannerState(ed.zap)}}</div>
+            <!-- R48 — des constats reels d'un build anterieur existent : on le dit
+                 au lieu de les taire, sans les compter pour ce build. -->
+            <div class="small text-muted" *ngIf="hasStaleScannerFindings(ed.zap)">{{staleScannerNotice(ed.zap)}}</div>
             <div class="kpi-sub">Aucune donnée sur ce build</div>
           </div>
           <div class="kpi-card">
@@ -629,31 +907,49 @@
 
         <!-- ── Filtre actif ── -->
         <section class="manual-security-summary" aria-labelledby="manual-security-title">
+          <app-zone-label [kind]="canOperate ? 'action' : 'information'"
+            [note]="canOperate
+              ? 'Marquer un traitement effectué à la main. Ne remplace jamais la validation des scanners.'
+              : 'Suivi des traitements manuels. Lecture seule.'"></app-zone-label>
           <div><h3 id="manual-security-title">Sécurité — suivi manuel</h3><p>Le traitement humain ne remplace jamais la validation des scanners.</p></div>
-          <div class="manual-summary-grid">
+          <div class="manual-summary-grid" *ngIf="manualSummaryLoaded && !dataErrors['summary']">
             <span><strong>{{manualSummary.todo}}</strong> À traiter</span>
             <span><strong>{{manualSummary.doneByUser}}</strong> Traités</span>
             <span><strong>{{manualSummary.stillDetected}}</strong> Toujours détectés</span>
             <span><strong>{{manualSummary.verified}}</strong> Vérifiés</span>
           </div>
+          <p *ngIf="!manualSummaryLoaded && !dataErrors['summary']" role="status">Chargement du suivi…</p>
           <div class="manual-filters"><label>État<select [(ngModel)]="manualStatusFilter"><option value="ALL">Tous</option><option value="TODO">À traiter</option><option value="DONE_BY_USER">Traité manuellement</option><option value="STILL_DETECTED">Toujours détecté</option><option value="VERIFIED">Vérifié</option></select></label><label>Sévérité<select [(ngModel)]="manualSeverityFilter"><option value="ALL">Toutes</option><option value="CRITICAL">Critique</option><option value="HIGH">Élevée</option><option value="MEDIUM">Moyenne</option><option value="LOW">Faible</option></select></label></div>
         </section>
         <!-- ── Filtre par source de scan ── -->
         <div class="sec-scanner-filter" role="group" aria-label="Filtrer les vulnérabilités de sécurité par source">
-          <button type="button" class="sec-chip" [class.active]="securityFilter === 'all'" (click)="setSecurityFilter('all')">Tous <span class="sec-chip-count">{{securityFindingsCount('all')}}</span></button>
-          <button type="button" class="sec-chip" [class.active]="securityFilter === 'trivy'" (click)="setSecurityFilter('trivy')">Trivy <span class="sec-chip-count">{{securityFindingsCount('trivy')}}</span></button>
-          <button type="button" class="sec-chip" [class.active]="securityFilter === 'owasp'" (click)="setSecurityFilter('owasp')">OWASP <span class="sec-chip-count">{{securityFindingsCount('owasp')}}</span></button>
-          <button type="button" class="sec-chip" [class.active]="securityFilter === 'zap'" (click)="setSecurityFilter('zap')">ZAP <span class="sec-chip-count">{{securityFindingsCount('zap')}}</span></button>
+          <button type="button" class="sec-chip" [class.active]="securityFilter === 'all'" (click)="setSecurityFilter('all')">Tous <span class="sec-chip-count">{{securityFindingsCount('all') ?? '—'}}</span></button>
+          <button type="button" class="sec-chip" [class.active]="securityFilter === 'trivy'" (click)="setSecurityFilter('trivy')">Trivy <span class="sec-chip-count">{{securityFindingsCount('trivy') ?? '—'}}</span></button>
+          <button type="button" class="sec-chip" [class.active]="securityFilter === 'owasp'" (click)="setSecurityFilter('owasp')">OWASP <span class="sec-chip-count">{{securityFindingsCount('owasp') ?? '—'}}</span></button>
+          <button type="button" class="sec-chip" [class.active]="securityFilter === 'zap'" (click)="setSecurityFilter('zap')">ZAP <span class="sec-chip-count">{{securityFindingsCount('zap') ?? '—'}}</span></button>
         </div>
         <div class="sec-filter-banner" *ngIf="securityFilter !== 'all'">
           <span>Filtré sur : {{ securityFilterLabel() }}</span>
           <button class="sec-filter-clear" (click)="securityFilter = 'all'">✕ Tout afficher</button>
         </div>
 
+        <!-- ── Bandeau global : lot(s) de correction en cours (polling actif) ──
+             Visible quel que soit le filtre de scanner actif -- ce n'est pas
+             propre à Trivy ou OWASP, c'est l'état global du projet. -->
+        <div class="batch-progress-banner" *ngIf="dispatchingCount() > 0" role="status" aria-live="polite">
+          <span *ngIf="batchPolling" class="spinner" style="width:14px;height:14px;flex-shrink:0" aria-hidden="true"></span>
+          <span>{{ dispatchingCount() }} correction(s) en cours. Cela peut prendre plusieurs minutes ; inutile de relancer, cette page se met à jour automatiquement.</span>
+        </div>
+        <div class="batch-progress-banner" style="border-color:var(--color-warning,#b45309);background:rgba(180,83,9,.08);color:var(--color-warning,#b45309)" *ngIf="batchPollTimedOut" role="alert">
+          <span>Le traitement prend plus de temps que prévu — actualisez la page pour vérifier son état.</span>
+        </div>
+
         <!-- ── Increment 1 : lancement de correction multi-CVE (Trivy/OWASP), même
              patron visuel que la barre de sélection Sonar plus haut. Absente pour
              ZAP (pas de sélection possible, cve-table n'y est pas monté). ── -->
         <div style="margin-top:14px;padding:12px 16px;border:1px solid var(--border-color);border-radius:8px;background:var(--bg-secondary)" *ngIf="canOperate && securityFilter !== 'zap'">
+          <app-zone-label kind="action"
+            note="Demander une correction automatique sur les vulnérabilités sélectionnées."></app-zone-label>
           <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
             <button type="button" class="btn btn-primary btn-sm" [disabled]="!selectedCveCount() || cveBatchOverCap() || launchingCveBatch" (click)="launchCveBatch()">
               {{ launchingCveBatch ? 'Lancement…' : (selectedCveCount() ? ('Corriger ' + selectedCveCount() + (selectedCveCount() > 1 ? ' vulnérabilités' : ' vulnérabilité')) : 'Sélectionnez des vulnérabilités à corriger') }}
@@ -665,49 +961,63 @@
           <p style="margin:8px 0 0;font-size:12px;font-weight:600;color:var(--color-critical)" *ngIf="cveBatchError" role="alert">{{cveBatchError}}</p>
         </div>
 
+        <div class="cve-batch-banner" *ngIf="failedRetryableCount() > 0">{{ failedRetryableCount() }} correction(s) ont échoué et peuvent être relancées.</div>
+        <div class="cve-batch-banner" *ngIf="candidateReadyCount() > 0">{{ candidateReadyCount() }} correction(s) proposée(s) à examiner.</div>
         <!-- ── Section 1 : CVE conteneur (Trivy) ── -->
-        <div class="sec-section" *ngIf="(securityFilter === 'all' || securityFilter === 'trivy') && ed.trivy?.cves?.length">
+        <div class="sec-section" *ngIf="(securityFilter === 'all' || securityFilter === 'trivy') && hasSecurityRows('TRIVY')">
           <div class="sec-section-head">
             <div>
-              <div class="sec-section-title">🐳 Vulnérabilités conteneur</div>
+              <div class="sec-section-title"><i class="ti ti-brand-docker" aria-hidden="true"></i> Vulnérabilités conteneur<app-info-hint term="sca"></app-info-hint></div>
               <div class="sec-section-sub">Source : Trivy · image {{ed.docker?.image_tag || 'inconnue'}}</div>
+              <!-- Provenance EXACTE du constat : le rapport qui l'a produit.
+                   Un chemin de fichier dans le workspace du build est une
+                   source exacte mais pas une adresse : il s'affiche, il ne se
+                   clique pas (voir SourceEvidenceLinkComponent). -->
+              <div style="margin-top:4px;display:flex;flex-wrap:wrap;align-items:baseline;">
+                <app-source-evidence-link [item]="evidence('TRIVY_REPORT')" variant="inline" [showProvider]="false" [state]="evidenceState()"></app-source-evidence-link>
+              </div>
             </div>
             <div class="sec-section-badges">
               <span class="sec-badge red" *ngIf="ed.trivy?.critical">{{ed.trivy.critical}} CRITIQUE</span>
               <span class="sec-badge orange" *ngIf="ed.trivy?.high">{{ed.trivy.high}} ÉLEVÉ</span>
             </div>
           </div>
-          <app-cve-table [cves]="ed.trivy.cves" source="TRIVY" [guide]="devGuide(ed)" [tasks]="manualTasks" [statusFilter]="manualStatusFilter" [severityFilter]="manualSeverityFilter" [userRole]="manualUserRole" [selectedTaskIds]="selectedCveTaskIds" [selectionRule]="canSelectCveTask" [selectionBusy]="launchingCveBatch" (toggleSelection)="toggleCveTaskSelection($event)" (completeTask)="completeManualTask($event)" (reopenTask)="reopenManualTask($event)"></app-cve-table>
+          <app-cve-table *ngIf="!manualTasksLoading || manualTasks.length" [cves]="ed.trivy?.cves || []" source="TRIVY" [findingEvidence]="reportEvidence?.findings || null" [guide]="devGuide(ed)" [tasks]="manualTasks" [statusFilter]="manualStatusFilter" [severityFilter]="manualSeverityFilter" [userRole]="manualUserRole" [selectedTaskIds]="selectedCveTaskIds" [selectionRule]="canSelectCveTask" [selectionBusy]="launchingCveBatch" [retryPendingIds]="retryPendingIds" (retryTask)="retrySecurityFinding($event)" (correctTask)="correctSecurityFinding($event)" (toggleSelection)="toggleCveTaskSelection($event)" (completeTask)="completeManualTask($event)" (reopenTask)="reopenManualTask($event)"></app-cve-table>
         </div>
         <div class="sec-section scanner-not-run" *ngIf="(securityFilter === 'all' || securityFilter === 'trivy') && isScannerMissing(ed.trivy)">
-          <div class="sec-section-title">🐳 Vulnérabilités conteneur</div>
-          <div class="scanner-not-run-note">Ce scanner n'a pas été exécuté sur ce build.</div>
+          <div class="sec-section-title"><i class="ti ti-brand-docker" aria-hidden="true"></i> Vulnérabilités conteneur<app-info-hint term="sca"></app-info-hint></div>
+          <div class="scanner-not-run-note">{{scannerState(ed.trivy)}} pour cette analyse.</div>
+          <div class="scanner-not-run-note" *ngIf="hasStaleScannerFindings(ed.trivy)">{{staleScannerNotice(ed.trivy)}}</div>
         </div>
-        <div class="sec-section sec-empty" *ngIf="(securityFilter === 'all' || securityFilter === 'trivy') && securityScannerEmpty('trivy')">
-          <div class="sec-section-title">🐳 Vulnérabilités conteneur</div>
+        <div class="sec-section sec-empty" *ngIf="(securityFilter === 'all' || securityFilter === 'trivy') && securityScannerEmpty('trivy') && !hasSecurityRows('TRIVY')">
+          <div class="sec-section-title"><i class="ti ti-brand-docker" aria-hidden="true"></i> Vulnérabilités conteneur<app-info-hint term="sca"></app-info-hint></div>
           <div class="scanner-not-run-note">Aucune vulnérabilité Trivy pour cette analyse.</div>
         </div>
 
         <!-- ── Section 2 : CVE dépendances (OWASP) ── -->
-        <div class="sec-section" *ngIf="(securityFilter === 'all' || securityFilter === 'owasp') && ed.owasp?.cves?.length">
+        <div class="sec-section" *ngIf="(securityFilter === 'all' || securityFilter === 'owasp') && hasSecurityRows('OWASP')">
           <div class="sec-section-head">
             <div>
-              <div class="sec-section-title">📦 Vulnérabilités de dépendances</div>
-              <div class="sec-section-sub">Source : OWASP Dependency-Check · pom.xml / package.json</div>
+              <div class="sec-section-title"><i class="ti ti-package" aria-hidden="true"></i> Vulnérabilités de dépendances<app-info-hint term="sca"></app-info-hint></div>
+              <div class="sec-section-sub">Source : OWASP Dependency-Check · dépendances du projet</div>
+              <div style="margin-top:4px;display:flex;flex-wrap:wrap;align-items:baseline;">
+                <app-source-evidence-link [item]="evidence('OWASP_REPORT')" variant="inline" [showProvider]="false" [state]="evidenceState()"></app-source-evidence-link>
+              </div>
             </div>
             <div class="sec-section-badges">
               <span class="sec-badge red" *ngIf="ed.owasp?.critical">{{ed.owasp.critical}} CRITIQUE</span>
               <span class="sec-badge orange" *ngIf="ed.owasp?.high">{{ed.owasp.high}} ÉLEVÉ</span>
             </div>
           </div>
-          <app-cve-table [cves]="ed.owasp.cves" source="OWASP" [guide]="devGuide(ed)" [tasks]="manualTasks" [statusFilter]="manualStatusFilter" [severityFilter]="manualSeverityFilter" [userRole]="manualUserRole" [selectedTaskIds]="selectedCveTaskIds" [selectionRule]="canSelectCveTask" [selectionBusy]="launchingCveBatch" (toggleSelection)="toggleCveTaskSelection($event)" (completeTask)="completeManualTask($event)" (reopenTask)="reopenManualTask($event)"></app-cve-table>
+          <app-cve-table *ngIf="!manualTasksLoading || manualTasks.length" [cves]="ed.owasp?.cves || []" source="OWASP" [findingEvidence]="reportEvidence?.findings || null" [guide]="devGuide(ed)" [tasks]="manualTasks" [statusFilter]="manualStatusFilter" [severityFilter]="manualSeverityFilter" [userRole]="manualUserRole" [selectedTaskIds]="selectedCveTaskIds" [selectionRule]="canSelectCveTask" [selectionBusy]="launchingCveBatch" [retryPendingIds]="retryPendingIds" (retryTask)="retrySecurityFinding($event)" (correctTask)="correctSecurityFinding($event)" (toggleSelection)="toggleCveTaskSelection($event)" (completeTask)="completeManualTask($event)" (reopenTask)="reopenManualTask($event)"></app-cve-table>
         </div>
         <div class="sec-section scanner-not-run" *ngIf="(securityFilter === 'all' || securityFilter === 'owasp') && isScannerMissing(ed.owasp)">
-          <div class="sec-section-title">📦 Vulnérabilités de dépendances</div>
-          <div class="scanner-not-run-note">Ce scanner n'a pas été exécuté sur ce build.</div>
+          <div class="sec-section-title"><i class="ti ti-package" aria-hidden="true"></i> Vulnérabilités de dépendances<app-info-hint term="sca"></app-info-hint></div>
+          <div class="scanner-not-run-note">{{scannerState(ed.owasp)}} pour cette analyse.</div>
+          <div class="scanner-not-run-note" *ngIf="hasStaleScannerFindings(ed.owasp)">{{staleScannerNotice(ed.owasp)}}</div>
         </div>
-        <div class="sec-section sec-empty" *ngIf="(securityFilter === 'all' || securityFilter === 'owasp') && securityScannerEmpty('owasp')">
-          <div class="sec-section-title">📦 Vulnérabilités de dépendances</div>
+        <div class="sec-section sec-empty" *ngIf="(securityFilter === 'all' || securityFilter === 'owasp') && securityScannerEmpty('owasp') && !hasSecurityRows('OWASP')">
+          <div class="sec-section-title"><i class="ti ti-package" aria-hidden="true"></i> Vulnérabilités de dépendances<app-info-hint term="sca"></app-info-hint></div>
           <div class="scanner-not-run-note">Aucune vulnérabilité OWASP pour cette analyse.</div>
         </div>
 
@@ -715,29 +1025,45 @@
         <div class="sec-section" *ngIf="(securityFilter === 'all' || securityFilter === 'zap') && ed.zap?.alerts?.length">
           <div class="sec-section-head">
             <div>
-              <div class="sec-section-title">🌐 Alertes DAST</div>
-              <div class="sec-section-sub">Source : OWASP ZAP · cible {{ed.zap?.target_url || 'inconnue'}}</div>
+              <div class="sec-section-title"><i class="ti ti-world" aria-hidden="true"></i> Alertes DAST<app-info-hint term="dast"></app-info-hint></div>
+              <div class="sec-section-sub">Source : OWASP ZAP</div>
+              <!-- §6 — la CIBLE analysée n'est pas la PREUVE ZAP : deux
+                   emplacements distincts, jamais confondus. -->
+              <div style="margin-top:4px;display:flex;flex-wrap:wrap;align-items:baseline;">
+                <app-source-evidence-link [item]="evidence('ZAP_REPORT')" variant="inline" [showProvider]="false" [state]="evidenceState()"></app-source-evidence-link>
+              </div>
+              <div style="margin-top:4px;display:flex;flex-wrap:wrap;align-items:baseline;">
+                <app-source-evidence-link [item]="evidence('ZAP_TARGET')" variant="inline" [showProvider]="false" [state]="evidenceState()"></app-source-evidence-link>
+              </div>
             </div>
             <div class="sec-section-badges">
               <span class="sec-badge red" *ngIf="ed.zap?.alerts_high">{{ed.zap.alerts_high}} ÉLEVÉ</span>
               <span class="sec-badge yellow" *ngIf="ed.zap?.alerts_medium">{{ed.zap.alerts_medium}} MOYEN</span>
             </div>
           </div>
-          <app-zap-table [alerts]="ed.zap.alerts" [tasks]="manualTasks" [statusFilter]="manualStatusFilter" [severityFilter]="manualSeverityFilter" [userRole]="manualUserRole" (completeTask)="completeManualTask($event)" (reopenTask)="reopenManualTask($event)"></app-zap-table>
+          <app-zap-table *ngIf="!manualTasksLoading || manualTasks.length" [alerts]="ed.zap.alerts" [findingEvidence]="reportEvidence?.findings || null" [targetEvidence]="evidence('ZAP_TARGET')" [buildEvidence]="evidence('JENKINS_BUILD')" [tasks]="manualTasks" [statusFilter]="manualStatusFilter" [severityFilter]="manualSeverityFilter" [userRole]="manualUserRole" (completeTask)="completeManualTask($event)" (reopenTask)="reopenManualTask($event)"></app-zap-table>
         </div>
         <div class="sec-section scanner-not-run" *ngIf="(securityFilter === 'all' || securityFilter === 'zap') && isScannerMissing(ed.zap)">
-          <div class="sec-section-title">🌐 Alertes DAST</div>
+          <div class="sec-section-title"><i class="ti ti-world" aria-hidden="true"></i> Alertes DAST<app-info-hint term="dast"></app-info-hint></div>
           <div class="scanner-not-run-note">Ce scanner n'a pas été exécuté sur ce build.</div>
         </div>
         <div class="sec-section sec-empty" *ngIf="(securityFilter === 'all' || securityFilter === 'zap') && securityScannerEmpty('zap')">
-          <div class="sec-section-title">🌐 Alertes DAST</div>
+          <div class="sec-section-title"><i class="ti ti-world" aria-hidden="true"></i> Alertes DAST<app-info-hint term="dast"></app-info-hint></div>
           <div class="scanner-not-run-note">Aucune alerte ZAP pour cette analyse.</div>
         </div>
+
+        <app-source-evidence-list class="mt-10"
+          title="Sources & preuves — sécurité"
+          note="Chaque constat vient d’un rapport produit par un build précis. Un chemin connu sans URL navigateur reste un chemin."
+          [sections]="securityEvidenceSections()"
+          [slots]="allEvidenceSlots()"
+          [state]="evidenceState()" (retry)="retrySourceEvidence()">
+        </app-source-evidence-list>
 
         <!-- ── Analyse IA sécurité ── -->
         <details class="justif-details mt-10" *ngIf="rp.securityIssues">
           <summary class="justif-summary">
-            <span>🤖 Analyse IA — risques identifiés</span>
+            <span><i class="ti ti-robot" aria-hidden="true"></i> Analyse IA — risques identifiés</span>
             <span class="justif-chevron">▸</span>
           </summary>
           <div class="justif-body">
@@ -749,7 +1075,7 @@
 
         <section class="cockpit-panel mt-10">
           <div class="cockpit-head">
-            <div><h3>Pilotage DevSecOps</h3><small>Source de vérité : serveur</small></div>
+            <div><h3>Pilotage DevSecOps<app-info-hint term="deployment-governance"></app-info-hint></h3><small>Source de vérité : serveur</small></div>
             <span class="readiness-pill" [class.ready]="deployReadiness?.status === 'READY'">{{(deployReadiness?.status || 'NOT_READY') | presentationLabel}}</span>
           </div>
           <div class="cockpit-grid">
@@ -765,7 +1091,7 @@
             <details class="stage-card" *ngFor="let stage of orderedStages()" [class]="'stage-card ' + stageCss(stage.status)">
               <summary><strong>{{pipelineStageLabel(stage.stage)}}</strong><span>{{stage.status | stageStatusLabel}}</span></summary>
               <p>{{stage.status | stageStatusLabel}} — {{stage.blocking ? 'Cette étape bloque le déploiement. Consultez son rapport.' : 'Consultez le rapport de cette étape pour les détails.'}}</p>
-              <small>Source : {{stage.source || 'Plateforme'}} · Problèmes : {{stage.findingCount ?? 0}} · Bloquant : {{stage.blocking ? 'oui' : 'non'}} · Requis : {{stage.required ? 'oui' : 'non'}}</small>
+              <small>Source : {{stage.source || 'Plateforme'}} · Problèmes : {{stage.findingCount ?? 'Non disponible'}} · Bloquant : {{stage.blocking ? 'oui' : 'non'}} · Requis : {{stage.required ? 'oui' : 'non'}}</small>
             </details>
           </div>
           <div class="next-action" *ngIf="deployReadiness?.recommendedNextAction || deployReasons[0]">
@@ -773,104 +1099,92 @@
           </div>
         </section>
 
-        <!-- ── Déploiement Azure — le backend (isReadyToDeploy) reste seul juge ── -->
-        <div class="deploy-azure-box mt-10">
-          <h3>Déploiement final — Azure</h3>
-          <p>Le déploiement final nécessite la réussite des contrôles de sécurité et de validation ci-dessus.</p>
-          <div class="deploy-azure-row">
-            <input
-              class="deploy-tag-input"
-              type="text"
-              [(ngModel)]="deployImageTag"
-              [disabled]="deploying"
-              placeholder="Étiquette de l’image (ex. latest)"
-              spellcheck="false"
-            />
-            <button *ngIf="canOperate && deployReady && deploymentConfigured"
-              class="btn btn-action"
-              [class.blue]="deployReady && !deploying"
-              [class.gray]="!deployReady || deploying"
-              [disabled]="!deployReady || !deploymentConfigured || deploying || deployReadyLoading"
-              [title]="deployReady ? 'Déployer sur Azure' : readinessReasonsLabel()"
-              (click)="requestDeployConfirmation()"
-            >
-              <ng-container *ngIf="deployReadyLoading">⏳ Vérification…</ng-container>
-              <ng-container *ngIf="!deployReadyLoading && deploying">⏳ Déploiement en cours (30 à 60 s)…</ng-container>
-              <ng-container *ngIf="!deployReadyLoading && !deploying">☁️ Préparer le déploiement</ng-container>
-            </button>
-          </div>
-
-          <div class="deploy-not-ready" *ngIf="!deployReadyLoading && !deploymentConfigured">
-            ⚙️ Azure non configuré pour ce projet — configurez la cible Azure pour permettre le déploiement.
-          </div>
-
-          <div class="deploy-confirm" *ngIf="deployConfirmationOpen">
-            <h4>Confirmer le déploiement</h4>
-            <p><strong>Projet :</strong> {{project?.name}}</p>
-            <p><strong>Build :</strong> {{deployReadiness?.currentBuild ? '#' + deployReadiness.currentBuild : 'Non disponible'}}</p>
-            <p><strong>Cible :</strong> {{deploymentTarget?.targetName}} ({{deploymentTarget?.resourceGroup}})</p>
-            <p *ngIf="deployReadiness?.warnings?.length"><strong>Avertissements :</strong> {{deployReadiness.warnings.join(' · ')}}</p>
-            <div class="deploy-azure-row">
-              <button class="btn btn-action gray" [disabled]="deploying" (click)="cancelDeployConfirmation()">Annuler</button>
-              <button class="btn btn-action blue" [disabled]="deploying" (click)="deployToAzure()">Confirmer le déploiement</button>
-            </div>
-          </div>
-
-          <div class="deploy-not-ready" *ngIf="!deployReadyLoading && !deployReady && !deploying">
-            🔒 Déploiement bloqué par les contrôles de sécurité :
-            <ul>
-              <li *ngFor="let reason of deployReasons">{{readinessReasonLabel(reason)}}</li>
-            </ul>
-          </div>
-
-          <div class="deploy-result success" *ngIf="deploySuccessInfo">
-            ✅ Déploiement réussi — état <strong>{{deploySuccessInfo.state}}</strong>, santé <strong>{{deploySuccessInfo.health}}</strong>
-          </div>
-
-          <div class="deploy-result error" *ngIf="deployErrorMessage">
-            ⚠️ {{deployErrorMessage}}
-          </div>
-        </div>
 
         <section class="cockpit-panel mt-10">
           <div class="cockpit-head"><div><h3>Convergence</h3><small>Historique corrélé des cycles</small></div></div>
-          <div class="cycle-list" *ngIf="convergenceCycles.length; else noCycles">
-            <article class="cycle-item" *ngFor="let cycle of convergenceCycles">
-              <strong>{{cycle.buildNumber ? 'Build #' + cycle.buildNumber : 'Build non disponible'}}</strong>
-              <span>{{(cycle.status || 'UNVERIFIED') | presentationLabel}}</span>
-              <small>{{cycle.blockingCount ?? 0}} {{(cycle.blockingCount ?? 0) === 1 ? 'blocage' : 'blocages'}} · Pull Request {{cycle.prNumber ? '#' + cycle.prNumber : 'non disponible'}} · {{cycle.correlationVerified ? 'Corrélation vérifiée' : 'Non vérifié'}}</small>
-            </article>
-          </div>
-          <ng-template #noCycles><p class="deploy-not-ready">Aucun cycle corrélé disponible.</p></ng-template>
+          <ng-container *ngIf="!convergenceLoading; else convergenceLoadingTpl">
+            <div class="cycle-list" *ngIf="convergenceCycles.length; else noCycles">
+              <article class="cycle-item" *ngFor="let cycle of convergenceCycles">
+                <strong>{{cycle.buildNumber ? 'Build #' + cycle.buildNumber : 'Build non disponible'}}</strong>
+                <span>{{(cycle.status || 'UNVERIFIED') | presentationLabel}}</span>
+                <small>{{cycle.blockingCount ?? 'Non disponible'}} {{(cycle.blockingCount ?? 'Non disponible') === 1 ? 'blocage' : 'blocages'}} · Pull Request {{cycle.prNumber ? '#' + cycle.prNumber : 'non disponible'}} · {{cycle.correlationVerified ? 'Corrélation vérifiée' : 'Non vérifié'}}</small>
+              </article>
+            </div>
+            <ng-template #noCycles><p class="deploy-not-ready">Aucun cycle corrélé disponible.</p></ng-template>
+          </ng-container>
+          <ng-template #convergenceLoadingTpl>
+            <div class="loading-overlay"><div class="spinner"></div><span>Chargement…</span></div>
+          </ng-template>
         </section>
 
-        <div class="empty-state" *ngIf="!ed.trivy && !ed.zap && !ed.owasp">
-          <div class="empty-icon">🛡️</div>
-          <div class="empty-title">Aucune donnée de sécurité</div>
-          <div class="empty-sub">Lancez un build avec Trivy et ZAP activés</div>
+        <div class="empty-state" *ngIf="!ed.trivy && !ed.zap && !ed.owasp && !reportsLoading && !dataErrors['reportDetail']">
+          <div class="empty-icon"><i class="ti ti-shield-lock" aria-hidden="true"></i></div>
+          <div class="empty-title">Aucun rapport de sécurité sur ce build</div>
+          <div class="empty-sub">Aucun scanner (Trivy, OWASP, ZAP) n’a produit de rapport pour cette analyse. Cela ne signifie pas que le projet est sans vulnérabilité.</div>
         </div>
       </div>
 
       <!-- ═══════════════════════════════════════════ -->
+      <!-- ═══════════════════════════════════════════ -->
+      <!-- ONGLET DÉPLOIEMENT                          -->
+      <!-- ═══════════════════════════════════════════ -->
+      <!-- Déploiement gouverné par la plateforme. Volontairement SÉPARÉ de
+           l'onglet Jenkins : Jenkins fournit la preuve de build (CI/CD), il
+           n'est jamais l'interface de déploiement. Aucune donnée spécifique
+           à un projet n'est encodée ici — seul l'identifiant de la route est
+           transmis, et tout le reste vient du backend. -->
+      <!-- Monté à la première ouverture, puis gardé (et seulement masqué) :
+           la vérification Azure de 10-12 s n'est payée qu'une fois par
+           visite. Voir visitedTabs dans le composant. -->
+      <div *ngIf="visitedTabs.has('deploiement')" [hidden]="activeTab !== 'deploiement'">
+        <app-zone-label kind="action"
+          note="Décision de gouvernance du déploiement, et autorisation humaine quand elle est permise."></app-zone-label>
+        <app-deployment-governance
+          [projectId]="id"
+          [requiredStages]="deployReadiness?.requiredStages || null"
+          [deploymentConfigured]="deploymentConfigured"
+          [deploymentTarget]="deploymentTarget"
+          [projectName]="project?.name || null"
+          [sourceEvidence]="allEvidenceSlots()"
+          [sourceEvidenceSections]="deploymentEvidenceSections()">
+        </app-deployment-governance>
+      </div>
+
       <!-- ONGLET INCIDENTS                            -->
       <!-- ═══════════════════════════════════════════ -->
       <div *ngIf="activeTab === 'incidents'">
+        <app-zone-label kind="information"
+          note="Incidents enregistrés pour ce projet. Le traitement se fait sur la page de l’incident."></app-zone-label>
         <div class="card" style="padding:0;overflow:hidden">
+          <!-- §23 — le tableau défile dans son conteneur, jamais la page. -->
+          <div class="table-scroll">
           <table class="data-table">
             <thead><tr><th>Titre</th><th>Statut</th><th>Source</th><th>Date</th><th>Action</th></tr></thead>
             <tbody>
-              <tr *ngIf="incidents.length === 0">
-                <td colspan="5" style="text-align:center;padding:30px;color:var(--text-faint)">Aucun incident</td>
+              <tr *ngIf="incidentsLoading"><td colspan="5" role="status">Chargement des incidents…</td></tr>
+              <!-- §16 — un état vide dit DE QUOI il est vide, et ne laisse pas
+                   entendre que l'absence d'incident vaut absence de problème. -->
+              <tr *ngIf="!incidentsLoading && !dataErrors['incidents'] && incidents.length === 0">
+                <td colspan="5">
+                  <div class="empty-state">
+                    <div class="empty-title">Aucun incident détecté</div>
+                    <div class="empty-sub">Aucun incident n’a été enregistré pour ce projet.</div>
+                  </div>
+                </td>
               </tr>
               <tr *ngFor="let i of incidents">
-                <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{i.title}}</td>
-                <td><span class="badge" [class.info]="i.status==='analyzed'" [class.danger]="i.status==='failed'">{{i.status | presentationLabel}}</span></td>
-                <td><span class="badge">{{i.source}}</span></td>
+                <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" [title]="i.title">{{i.title}}</td>
+                <td><app-status-chip [status]="i.status"></app-status-chip></td>
+                <td>
+                  <span *ngIf="i.source">{{i.source | presentationLabel}}</span>
+                  <span *ngIf="!i.source" class="na" title="Non disponible" aria-label="Non disponible">—</span>
+                </td>
                 <td style="font-size:10px;font-family:var(--font-mono)">{{i.createdAt | frenchDate}}</td>
-                <td><a [routerLink]="['/incidents', i.id]" class="btn btn-secondary btn-sm">→</a></td>
+                <td><a [routerLink]="['/incidents', i.id]" class="btn btn-secondary btn-sm" [attr.aria-label]="'Voir le détail de l’incident ' + (i.title || '')">Voir le détail <span aria-hidden="true">→</span></a></td>
               </tr>
             </tbody>
           </table>
+          </div>
         </div>
       </div>
 
@@ -878,21 +1192,32 @@
       <!-- ONGLET CONFIG                               -->
       <!-- ═══════════════════════════════════════════ -->
       <div *ngIf="activeTab === 'config'">
+        <app-zone-label [kind]="canOperate ? 'action' : 'information'"
+          [note]="canOperate
+            ? 'Configuration du projet et état des services ; la modification ouvre le formulaire.'
+            : 'Configuration du projet et état des services. Lecture seule.'"></app-zone-label>
         <div class="config-heading"><div><h2>Configuration du projet</h2><p>Configuration applicative et état des services, sans exposer de secrets.</p></div><button *ngIf="canOperate" type="button" class="btn btn-primary" (click)="editProject()">Modifier le projet</button></div>
         <section class="card config-health"><div class="card-title">Santé de la configuration</div><div class="health-rows"><div *ngFor="let row of configHealthRows()" class="health-row"><span>{{row.name}}</span><strong [class.ok]="row.ok" [class.warn]="!row.ok"><span aria-hidden="true">{{row.ok ? '✓' : '⚠'}}</span> {{row.state}}</strong></div></div></section>
         <div class="config-grid">
           <section class="card"><div class="card-title">Général</div><dl class="config-list"><div><dt>Nom</dt><dd>{{project?.name || 'Non disponible'}}</dd></div><div><dt>Environnement</dt><dd>{{project?.environment || 'Non disponible'}}</dd></div><div><dt>Description</dt><dd>{{project?.description || 'Non disponible'}}</dd></div></dl></section>
-          <section class="card"><div class="card-title">Source</div><dl class="config-list"><div><dt>Dépôt</dt><dd>{{project?.githubRepo || 'Non configuré'}}</dd></div><div><dt>URL</dt><dd>{{repositoryUrl(project?.githubRepo) || 'Non configuré'}}</dd></div><div><dt>Branche analysée</dt><dd>{{reportedBranch() || 'Non disponible'}}</dd></div></dl></section>
+          <section class="card"><div class="card-title">Source</div><dl class="config-list"><div><dt>Dépôt</dt><dd>{{project?.githubRepo || 'Non configuré'}}</dd></div><div><dt>Lien</dt><dd><app-source-evidence-link [item]="projectEvidenceSlot('GIT_REPOSITORY')" variant="inline" [showProvider]="false" [showReason]="false" [state]="evidenceState()"></app-source-evidence-link></dd></div><div><dt>Branche analysée</dt><dd>{{reportedBranch() || 'Non disponible'}}</dd></div><div><dt>Dockerfile</dt><dd>{{project?.dockerfilePath || 'Convention de la plateforme (Dockerfile)'}}</dd></div></dl></section>
           <section class="card"><div class="card-title">CI/CD</div><dl class="config-list"><div><dt>Outil</dt><dd>{{project?.cicdTool || 'Non configuré'}}</dd></div><div><dt>Job Jenkins</dt><dd>{{project?.jenkinsJobName || 'Non configuré'}}</dd></div><div><dt>État</dt><dd>{{jenkinsConnectionState()}}</dd></div></dl></section>
-          <section class="card"><div class="card-title">Analyses</div><dl class="config-list"><div><dt>SonarQube</dt><dd>{{project?.sonarqubeKey || 'Non configuré'}}</dd></div><div><dt>Contrôle qualité</dt><dd>{{ed?.sonar?.quality_gate === 'OK' ? 'Réussi' : (ed?.sonar?.quality_gate ? 'Échec' : 'Non disponible')}}</dd></div><div><dt>ZAP</dt><dd>{{ed?.zap?.target_url || 'Non configuré'}}</dd></div></dl></section>
+          <section class="card"><div class="card-title">Analyses</div><dl class="config-list"><div><dt>SonarQube</dt><dd>{{project?.sonarqubeKey || 'Non configuré'}}</dd></div><div><dt>Lien SonarQube</dt><dd><app-source-evidence-link [item]="projectEvidenceSlot('SONAR_PROJECT')" variant="inline" [showProvider]="false" [showReason]="false" [state]="evidenceState()"></app-source-evidence-link></dd></div><div><dt>Contrôle qualité</dt><dd>{{ed?.sonar?.quality_gate === 'OK' ? 'Réussi' : (ed?.sonar?.quality_gate ? 'Échec' : 'Non disponible')}}</dd></div><div><dt>Cible ZAP</dt><dd>{{ed?.zap?.target_url || 'Non configuré'}}</dd></div></dl></section>
+          <!-- Chemins de rapport : c'est la configuration de PREUVE du projet.
+               Vide = l'UI dira « Source non disponible » pour ce scanner, au
+               lieu d'inventer un chemin par convention d'outil (tous les
+               projets ne sont pas des projets Maven). -->
+          <section class="card"><div class="card-title">Chemins de rapport (preuve)</div><dl class="config-list"><div><dt>Trivy</dt><dd style="font-family:var(--font-mono);font-size:11px;overflow-wrap:anywhere;">{{project?.trivyReportPath || 'Non configuré'}}</dd></div><div><dt>OWASP</dt><dd style="font-family:var(--font-mono);font-size:11px;overflow-wrap:anywhere;">{{project?.owaspReportPath || 'Non configuré'}}</dd></div><div><dt>ZAP</dt><dd style="font-family:var(--font-mono);font-size:11px;overflow-wrap:anywhere;">{{project?.zapReportPath || 'Non configuré'}}</dd></div></dl></section>
           <section class="card"><div class="card-title">Tests</div><dl class="config-list"><div><dt>État du build courant</dt><dd>{{configStageStatus('tests') | stageStatusLabel}}</dd></div><div><dt>Commande</dt><dd>Non disponible</dd></div></dl></section>
           <section class="card"><div class="card-title">Déploiement</div><dl class="config-list"><div><dt>Azure</dt><dd>{{deploymentConfigured ? 'Configuré' : 'Non configuré'}}</dd></div><div><dt>Cible</dt><dd>{{deploymentTarget?.targetName || 'Non disponible'}}</dd></div><div><dt>Préparation</dt><dd>{{deployReady ? 'Prêt' : 'Non prêt'}}</dd></div></dl></section>
         </div>
-        <details class="technical-details"><summary>Détails techniques</summary><dl class="config-list"><div><dt>Identifiant projet</dt><dd class="drawer-id">{{project?.id || 'Non disponible'}}</dd></div><div><dt>Créé le</dt><dd>{{project?.createdAt | frenchDate:false}}</dd></div></dl></details>
+        <details class="technical-details"><summary>Détails techniques</summary><dl class="config-list"><div><dt>Identifiant projet</dt><dd><app-copyable-id *ngIf="project?.id; else noProjectId" [value]="project.id" label="l’identifiant du projet" [length]="36"></app-copyable-id><ng-template #noProjectId>Non disponible</ng-template></dd></div><div><dt>Créé le</dt><dd>{{project?.createdAt | frenchDate:false}}</dd></div></dl></details>
       </div>
 
     </div>
-    <div *ngIf="loading" class="loading-state">Chargement...</div>
+    <div *ngIf="loading" class="loading-overlay">
+      <div class="spinner"></div><span>Chargement…</span>
+    </div>
     <div *ngIf="!loading && loadError" class="error-state">
       <p>Impossible de charger le projet</p>
       <button class="btn btn-secondary" (click)="loadProject()">Réessayer</button>

@@ -1,0 +1,22 @@
+[
+  {
+    "id": "49bca390-3661-40b1-8f7e-c5dfa3a5cca6",
+    "name": "vuln-testapp",
+    "jenkinsUrl": "http://172.31.172.61:8082",
+    "jenkinsInternalUrl": null,
+    "jenkinsPublicUrl": null,
+    "jenkinsJobName": "vuln-testapp",
+    "jenkinsJobPath": "vuln-testapp/job/main",
+    "jenkinsCredentialConfigured": true
+  },
+  {
+    "id": "75d13a2c-cf80-479c-8ec9-d5e1c01a4ce6",
+    "name": "devsecops-testbed",
+    "jenkinsUrl": "http://172.31.172.61:8082",
+    "jenkinsInternalUrl": null,
+    "jenkinsPublicUrl": null,
+    "jenkinsJobName": "devsecops-testbed",
+    "jenkinsJobPath": "devsecops-testbed/job/main",
+    "jenkinsCredentialConfigured": true
+  }
+]

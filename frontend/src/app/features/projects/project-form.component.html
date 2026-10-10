@@ -2,35 +2,36 @@
 
   <!-- Header -->
   <div class="pf-header">
-    <button class="btn-back" (click)="goBack()">← Retour</button>
-    <h1>{{ isEdit ? '✏️ Modifier le projet' : '➕ Nouveau projet' }}</h1>
+    <button class="btn-back" (click)="goBack()"><span aria-hidden="true">←</span> Retour</button>
+    <h1>{{ isEdit ? 'Modifier le projet' : 'Nouveau projet' }}</h1>
     <div class="pf-actions">
       <button class="btn-validate" (click)="validateProject()" [disabled]="!projectId || validating">
-        {{ validating ? '⏳ Vérification...' : '🔍 Vérifier la config' }}
+        {{ validating ? 'Vérification…' : 'Vérifier la configuration' }}
       </button>
-      <button class="btn-save" (click)="save()" [disabled]="loading">
-        {{ loading ? '⏳ Sauvegarde...' : '💾 Sauvegarder' }}
+      <button class="btn-save" (click)="save()" [disabled]="loading || projectLoading">
+        {{ loading ? 'Sauvegarde…' : 'Sauvegarder' }}
       </button>
     </div>
   </div>
 
   <!-- Alerts -->
-  <div class="alert success" *ngIf="saveSuccess">✅ Projet sauvegardé avec succès</div>
-  <div class="alert error"   *ngIf="saveError">❌ {{ saveError }}</div>
+  <div class="alert success" *ngIf="saveSuccess" role="status"><span aria-hidden="true">✓</span> Projet enregistré.</div>
+  <div class="alert error"   *ngIf="saveError" role="alert"><span aria-hidden="true">✕</span> {{ saveError }}</div>
 
   <!-- Validation résultats -->
   <div class="validation-box" *ngIf="validationResult">
     <div class="vbox-title" [class.ok]="validationResult.overallValid">
-      {{ validationResult.overallValid ? '✅ Configuration valide' : '⚠️ Problèmes détectés' }}
+      <span aria-hidden="true">{{ validationResult.overallValid ? '✓' : '!' }}</span>
+      {{ validationResult.overallValid ? 'Configuration valide' : 'Problèmes détectés' }}
     </div>
     <div class="vbox-items">
       <div class="vbox-item" *ngIf="validationResult.results?.jenkins">
-        <span>{{ getValidIcon('jenkins') }}</span>
+        <span class="valid-glyph" aria-hidden="true">{{ getValidIcon('jenkins') }}</span>
         <span class="vbox-label">Jenkins</span>
         <span class="vbox-msg">{{ getValidMsg('jenkins') }}</span>
       </div>
       <div class="vbox-item" *ngIf="validationResult.results?.sonarqube">
-        <span>{{ getValidIcon('sonarqube') }}</span>
+        <span class="valid-glyph" aria-hidden="true">{{ getValidIcon('sonarqube') }}</span>
         <span class="vbox-label">SonarQube</span>
         <span class="vbox-msg">{{ getValidMsg('sonarqube') }}</span>
       </div>
@@ -38,15 +39,19 @@
   </div>
 
   <!-- Sections nav -->
-  <div class="section-nav">
+  <div class="section-nav" *ngIf="!projectLoading">
     <button *ngFor="let s of sections"
       class="snav-btn" [class.active]="activeSection === s.id"
       (click)="setSection(s.id)">
-      {{ s.icon }} {{ s.label }}
+      <i class="ti" [ngClass]="s.icon" aria-hidden="true"></i> {{ s.label }}
     </button>
   </div>
 
-  <form [formGroup]="form">
+  <div class="loading-overlay" *ngIf="projectLoading">
+    <div class="spinner"></div><span>Chargement…</span>
+  </div>
+
+  <form [formGroup]="form" *ngIf="!projectLoading">
 
     <!-- ── GÉNÉRAL ─────────────────────────────────────────── -->
     <div class="section" *ngIf="activeSection === 'general'">
@@ -77,7 +82,7 @@
         <p class="hint" *ngIf="form.get('cicdTool')?.value !== 'jenkins'">L’outil enregistré pour ce projet ne dispose pas d’une intégration de pipeline implémentée.</p>
       </div>
 
-      <div class="divider">🔧 Jenkins</div>
+      <div class="divider"><i class="ti ti-git-branch" aria-hidden="true"></i> Jenkins</div>
       <div class="field-row">
         <div class="field">
           <label>Jenkins URL interne <span class="hint">(appels serveur, jamais un lien navigateur)</span></label>
@@ -124,7 +129,7 @@
       </div>
       <p class="hint" *ngIf="isEdit && !auth.isAdmin">Les identifiants Jenkins sont réservés aux administrateurs.</p>
 
-      <div class="divider">🐙 GitHub</div>
+      <div class="divider"><i class="ti ti-brand-github" aria-hidden="true"></i> GitHub</div>
       <div class="field">
           <label>Dépôt <span class="hint">(propriétaire/dépôt)</span></label>
           <input formControlName="githubRepo" placeholder="organisation/dépôt">
@@ -137,9 +142,15 @@
     <div class="section" *ngIf="activeSection === 'sonarqube'">
       <div class="field-row">
         <div class="field">
-          <label>SonarQube URL</label>
-          <input formControlName="sonarqubeUrl" placeholder="URL réelle de SonarQube">
+          <label>SonarQube URL interne <span class="hint">(appels serveur, jamais un lien navigateur)</span></label>
+          <input formControlName="sonarqubeUrl" placeholder="URL interne réelle de SonarQube">
         </div>
+        <div class="field">
+          <label>SonarQube URL publique <span class="hint">(liens ouverts dans le navigateur)</span></label>
+          <input formControlName="sonarqubePublicUrl" placeholder="URL publique réelle de SonarQube">
+        </div>
+      </div>
+      <div class="field-row">
         <div class="field">
           <label>Clé du projet</label>
           <input formControlName="sonarqubeKey" placeholder="Clé réelle du projet SonarQube">
@@ -151,79 +162,51 @@
       </div>
     </div>
 
+    <!-- ── SOURCES / PREUVES ───────────────────────────────── -->
+    <div class="section" *ngIf="activeSection === 'sources'">
+      <p class="hint">
+        Chemins RÉELS des rapports produits par le pipeline de ce projet, relatifs au
+        workspace du build (ou URL HTTP(S) si le rapport est réellement publié).
+        Laissés vides, l’interface affiche « Source non disponible » pour ces preuves
+        plutôt qu’un chemin supposé.
+      </p>
+      <div class="field-row">
+        <div class="field">
+          <label>Rapport Trivy</label>
+          <input formControlName="trivyReportPath" placeholder="chemin réel du rapport Trivy">
+          <div class="field-error" *ngIf="isInvalid('trivyReportPath')">Chemin relatif simple ou URL HTTP(S), sans remontée de répertoire.</div>
+        </div>
+        <div class="field">
+          <label>Rapport OWASP Dependency-Check</label>
+          <input formControlName="owaspReportPath" placeholder="chemin réel du rapport OWASP">
+          <div class="field-error" *ngIf="isInvalid('owaspReportPath')">Chemin relatif simple ou URL HTTP(S), sans remontée de répertoire.</div>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Rapport ZAP</label>
+          <input formControlName="zapReportPath" placeholder="chemin réel du rapport ZAP">
+          <div class="field-error" *ngIf="isInvalid('zapReportPath')">Chemin relatif simple ou URL HTTP(S), sans remontée de répertoire.</div>
+        </div>
+        <div class="field">
+          <label>Dockerfile <span class="hint">(dans le dépôt)</span></label>
+          <input formControlName="dockerfilePath" placeholder="chemin réel du Dockerfile">
+          <div class="field-error" *ngIf="isInvalid('dockerfilePath')">Chemin relatif simple, sans remontée de répertoire.</div>
+        </div>
+      </div>
+    </div>
+
   </form>
 
   <!-- Footer -->
   <div class="pf-footer">
     <button class="btn-back" (click)="goBack()">Annuler</button>
     <button class="btn-validate" (click)="validateProject()" [disabled]="!projectId || validating">
-      {{ validating ? '⏳' : '🔍 Vérifier' }}
+      {{ validating ? 'Vérification…' : 'Vérifier la configuration' }}
     </button>
-    <button class="btn-save" (click)="save()" [disabled]="loading">
-      {{ loading ? '⏳' : '💾 Sauvegarder' }}
+    <button class="btn-save" (click)="save()" [disabled]="loading || projectLoading">
+      {{ loading ? 'Sauvegarde…' : 'Sauvegarder' }}
     </button>
   </div>
 
 </div>
-
-<style>
-* { box-sizing: border-box; }
-.pf-container { color:#e6edf3; max-width: 800px; margin: 0 auto; padding: 24px; background: #0d1117; color: #e6edf3; font-family: 'Inter', sans-serif; min-height: 100vh; }
-.pf-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
-.pf-header h1 { color:inherit; flex: 1; margin: 0; font-size: 1.4rem; }
-.pf-actions { display: flex; gap: 8px; }
-.btn-back     { background: transparent; border: 1px solid #30363d; color: #8b949e; padding: 8px 16px; border-radius: 6px; cursor: pointer; white-space: nowrap; }
-.btn-save     { background: #238636; border: none; color: #fff; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: 600; }
-.btn-validate { background: #1f6feb; border: none; color: #fff; padding: 10px 20px; border-radius: 6px; cursor: pointer; }
-.btn-save:disabled, .btn-validate:disabled { opacity: 0.5; cursor: not-allowed; }
-.field-error { color: #f85149; font-size: 0.8rem; margin-top: 4px; }
-.alert { padding: 10px 16px; border-radius: 6px; margin-bottom: 12px; font-size: 0.875rem; }
-.alert.success { background: #0d4429; border: 1px solid #238636; }
-.alert.error   { background: #3d1212; border: 1px solid #f85149; }
-.validation-box { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 14px; margin-bottom: 16px; }
-.vbox-title { font-weight: 600; margin-bottom: 10px; }
-.vbox-title.ok { color: #3fb950; }
-.vbox-items { display: flex; flex-direction: column; gap: 6px; }
-.vbox-item  { display: flex; gap: 10px; font-size: 0.85rem; align-items: center; }
-.vbox-label { font-weight: 600; min-width: 90px; }
-.vbox-msg   { color: #8b949e; }
-.section-nav { display: flex; gap: 2px; margin-bottom: 20px; border-bottom: 1px solid #21262d; }
-.snav-btn { background: transparent; border: none; color: #8b949e; padding: 10px 16px; cursor: pointer; border-bottom: 2px solid transparent; font-size: 0.875rem; white-space: nowrap; }
-.snav-btn.active { color: #58a6ff; border-bottom-color: #58a6ff; }
-.section { background: #161b22; border: 1px solid #21262d; border-radius: 8px; padding: 20px; }
-.field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 14px; }
-.field label { font-size: 0.85rem; color: #8b949e; font-weight: 500; }
-.field input, .field select, .field textarea { background: #0d1117; border: 1px solid #30363d; color: #e6edf3; padding: 8px 12px; border-radius: 6px; font-size: 0.875rem; }
-.field input:focus, .field select:focus, .field textarea:focus { outline: none; border-color: #58a6ff; }
-.field.err input { border-color: #f85149; }
-.errmsg { color: #f85149; font-size: 0.75rem; }
-.hint { color: #8b949e; font-size: 0.75rem; }
-.req { color: #f85149; }
-.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-.divider { color: #8b949e; font-size: 0.85rem; font-weight: 600; padding: 10px 0 6px; border-bottom: 1px solid #21262d; margin-bottom: 12px; }
-.tool-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.tool-card { display: flex; align-items: center; gap: 8px; cursor: pointer; background: #0d1117; border: 1px solid #30363d; border-radius: 6px; padding: 10px 14px; }
-.tool-card input { display: none; }
-.tool-card:has(input:checked) { border-color: #58a6ff; background: #1a2d4a; }
-.tool-name { font-size: 0.875rem; }
-.notif-row { background: #0d1117; border: 1px solid #21262d; border-radius: 6px; padding: 14px; margin-bottom: 12px; }
-.notif-header { display: flex; justify-content: space-between; align-items: center; font-weight: 600; }
-.notif-body { margin-top: 12px; }
-.toggle { position: relative; display: inline-block; width: 40px; height: 22px; }
-.toggle input { opacity: 0; width: 0; height: 0; }
-.slider { position: absolute; cursor: pointer; top:0; left:0; right:0; bottom:0; background: #21262d; border-radius: 22px; transition: .3s; }
-.slider:before { position: absolute; content:''; height:16px; width:16px; left:3px; bottom:3px; background:#fff; border-radius:50%; transition:.3s; }
-.toggle input:checked + .slider { background: #238636; }
-.toggle input:checked + .slider:before { transform: translateX(18px); }
-.valid-inline { margin-top: 8px; font-size: 0.85rem; color: #8b949e; }
-.pf-footer { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; padding-top: 20px; border-top: 1px solid #21262d; }
-@media (max-width:600px) {
-  .pf-container { padding:16px; }
-  .pf-header { flex-wrap:wrap; }
-  .pf-header h1 { order:-1; flex:1 0 100%; font-size:1.25rem; margin:0; }
-  .pf-actions { flex:1 1 100%; flex-wrap:wrap; }
-  .pf-actions button { flex:1 1 120px; }
-  .field-row { flex-direction:column; }
-  .pf-footer { flex-wrap:wrap; }
-}
-</style>

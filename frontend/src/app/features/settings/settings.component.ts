@@ -1,3 +1,5 @@
+import { jenkinsSettingsPresentation } from './jenkins-settings-presentation';
+import { generalSettingsSummary } from './general-settings-presentation';
 import { configuredIntegrationTools, integrationStatusLabel, enforcementModeLabel, editTypeLabel, scannerEvidenceLabel } from '../../shared/platform-capability-presentation';
 import { pipelineStageLabel } from '../../shared/pipeline-stage-presentation';
 import { userHttpError } from '../../core/http-error-message';
@@ -45,22 +47,66 @@ interface ToolConfig {
   styleUrls: ['./settings.component.scss'],
 })
 export class SettingsComponent implements OnInit {
+  activeSection = 'general';
+  readonly settingsSections = [
+    {id:'general',label:'Général'}, {id:'integrations',label:'Intégrations'},
+    {id:'security',label:'Sécurité'}, {id:'delivery',label:'CI/CD et déploiement'},
+    {id:'diagnostics',label:'Diagnostics'},
+  ];
+  readinessState: 'IDLE' | 'LOADING' | 'LOADED' | 'ERROR' = 'IDLE';
+  deployReadiness: any = null;
+  private readinessRequest = 0;
+
+  setSettingsSection(id: string) {
+    if (!this.settingsSections.some(section => section.id === id)) return;
+    this.activeSection = id;
+    if (id === 'delivery' && this.project && this.readinessState === 'IDLE') this.loadDeployReadiness();
+  }
+
+  navigateSettings(event: KeyboardEvent, index: number) {
+    const last = this.settingsSections.length - 1;
+    const next = event.key === 'ArrowRight' ? (index + 1) % this.settingsSections.length
+      : event.key === 'ArrowLeft' ? (index + last) % this.settingsSections.length
+      : event.key === 'Home' ? 0 : event.key === 'End' ? last : null;
+    if (next === null) return;
+    event.preventDefault();
+    this.setSettingsSection(this.settingsSections[next].id);
+    const nav = (event.currentTarget as HTMLElement)?.parentElement;
+    (nav?.querySelectorAll<HTMLButtonElement>('[role="tab"]')[next])?.focus();
+  }
+
+  trackProjectSection(_index: number, section: {title:string}) { return section.title; }
+
+  get visibleProjectSections() {
+    const connectionFields = new Set(['githubRepo','jenkinsInternalUrl','jenkinsPublicUrl','sonarqubeUrl','sonarqubeKey','azure.registry','azure.imageRepository']);
+    return this.projectSections.map(section => ({...section,fields:section.fields.filter(field =>
+      this.activeSection === 'integrations' ? connectionFields.has(field.key) : !connectionFields.has(field.key))})).filter(section => section.fields.length);
+  }
+
+  get securityScanners() { return (this.capabilities?.security || []).filter((scanner: any) => ['sonar','owasp','trivy','zap'].includes(scanner.id)); }
+  securityDescription(id: string) {
+    return ({sonar:'Analyse de qualité et de sécurité du code.',owasp:'Analyse des dépendances du projet.',trivy:'Analyse de sécurité des images et conteneurs.',zap:'Tests dynamiques de sécurité sur une application accessible.'} as Record<string,string>)[id] || 'Capacité de sécurité rapportée par le backend.';
+  }
+
+  loadDeployReadiness() {
+    if (!this.project) return;
+    const id = this.project.id;
+    const request = ++this.readinessRequest;
+    this.readinessState = 'LOADING'; this.deployReadiness = null;
+    this.api.getDeployReadiness(id).subscribe({
+      next: data => { if (request === this.readinessRequest && this.project?.id === id) { this.deployReadiness = data; this.readinessState = 'LOADED'; } },
+      error: () => { if (request === this.readinessRequest && this.project?.id === id) this.readinessState = 'ERROR'; },
+    });
+  }
+  deploymentGateLabel() { return this.deployReadiness?.ready === true ? 'Déploiement autorisé par les contrôles' : this.deployReadiness?.ready === false ? 'Déploiement non autorisé par les contrôles' : 'État non disponible'; }
+
+  get jenkinsSummary() { return jenkinsSettingsPresentation(this.project); }
+
+  get generalSummary() { return generalSettingsSummary(this.project, this.capabilities); }
   tools: ToolConfig[] = [];
   integrationsState: 'LOADING' | 'LOADED' | 'EMPTY' | 'ERROR' = 'LOADING';
   capabilitiesState: 'LOADING' | 'LOADED' | 'ERROR' = 'LOADING';
   capabilities: any = null;
-  effectiveConfigState: 'LOADING' | 'LOADED' | 'ERROR' = 'LOADING';
-  effectiveConfig: any = null;
-
-  loadEffectiveConfig() {
-    this.effectiveConfigState = 'LOADING';
-    this.effectiveConfig = null;
-    this.api.getEffectiveConfig().subscribe({
-      next: data => { this.effectiveConfig = data; this.effectiveConfigState = 'LOADED'; },
-      error: () => { this.effectiveConfigState = 'ERROR'; },
-    });
-  }
-
   availabilityLabel(value: boolean | null | undefined) {
     return value === true ? 'Disponible' : value === false ? 'Indisponible' : 'Disponibilité non déterminée';
   }
@@ -132,17 +178,19 @@ export class SettingsComponent implements OnInit {
     const request = ++this.projectRequest;
     const id = this.selectedProjectId;
     this.project = null;
+    this.deployReadiness = null; this.readinessState = 'IDLE'; this.readinessRequest++;
     this.projectState = 'LOADING';
     this.projectMessage = '';
     this.credentialUsername = ''; this.credentialToken = '';
     this.api.getProject(id).subscribe({
-      next: project => { if (request === this.projectRequest) { this.setProject(project); this.projectState = 'LOADED'; } },
+      next: project => { if (request === this.projectRequest) { this.setProject(project); this.projectState = 'LOADED'; if (this.activeSection === 'delivery') this.loadDeployReadiness(); } },
       error: () => { if (request === this.projectRequest) this.projectState = 'ERROR'; },
     });
   }
 
   private setProject(project: any) {
     this.project = project;
+    this.deployReadiness = null; this.readinessState = 'IDLE'; this.readinessRequest++;
     const draft: Record<string, string> = {};
     for (const section of this.projectSections) for (const field of section.fields) {
       draft[field.key] = String(field.key.startsWith('azure.') ? project.azureConfig?.[field.key.slice(6)] || '' : project[field.key] || '');
@@ -180,7 +228,7 @@ export class SettingsComponent implements OnInit {
     }
     this.projectSaving = true; this.projectMessage = '';
     this.api.updateProject(this.project.id, payload).subscribe({
-      next: project => { this.projectSaving = false; this.setProject(project); this.projectMessage = 'Configuration enregistrée.'; },
+      next: project => { this.projectSaving = false; this.setProject(project); this.projectMessage = 'Configuration enregistrée.'; if (this.activeSection === 'delivery') this.loadDeployReadiness(); },
       error: error => { this.projectSaving = false; this.projectMessage = userHttpError(error, 'Impossible d’enregistrer la configuration. Vérifiez les champs puis réessayez.'); },
     });
   }
@@ -219,7 +267,7 @@ export class SettingsComponent implements OnInit {
 
   get canEdit() { return ['admin', 'developer'].includes(this.auth.currentUser?.role); }
 
-  ngOnInit() { this.loadIntegrations(); this.loadCapabilities(); this.loadEffectiveConfig(); this.loadProjects(); }
+  ngOnInit() { this.loadIntegrations(); this.loadCapabilities(); this.loadProjects(); }
 
   loadIntegrations() {
     this.integrationsState = 'LOADING';

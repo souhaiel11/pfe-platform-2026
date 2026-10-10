@@ -1,85 +1,128 @@
-<div *ngIf="loadError" role="alert" class="card">{{loadError}} <button (click)="load()">Réessayer</button></div>
-    <div class="page-container">
-      <div class="page-header" style="display:flex;align-items:center;justify-content:space-between;">
-        <div>
-          <h1 class="page-title">// incidents</h1>
-          <p class="page-subtitle">Gestion et suivi des incidents détectés par la plateforme IA</p>
-        </div>
-        <div class="live-indicator" [title]="total >= size ? 'Le backend limite cette liste à ' + size + ' résultats ; le nombre réel peut être supérieur.' : ''">
-          <div class="live-dot"></div> {{total}} incidents{{ total >= size ? ' affichés (limite ' + size + ')' : '' }}
-        </div>
-      </div>
+<div class="page-container">
 
-      <!-- Filters -->
-      <div class="card" style="margin-bottom:16px;padding:14px 20px;">
-        <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
-          <select class="form-control" [(ngModel)]="filters.status" (change)="load()" style="width:200px;">
-            <option value="">Tous statuts</option>
-            <option value="pending">En attente</option>
-            <option value="analyzing">En cours d'analyse</option>
-            <option value="analyzed">Analysé</option>
-            <option value="fix_generated">Correction générée</option>
-            <option value="validating">Validation en cours</option>
-            <option value="approved">Approuvé</option>
-            <option value="completed">Terminé</option>
-            <option value="blocked">Bloqué</option>
-            <option value="failed">Échec</option>
-            <option value="rejected">Rejeté</option>
-          </select>
-          <button class="btn btn-secondary btn-sm" (click)="resetFilters()">↺ Réinitialiser</button>
-        </div>
-      </div>
-
-      <!-- Table -->
-      <div class="card" style="padding:0;overflow:hidden;">
-        <div *ngIf="loading" class="loading-overlay"><div class="spinner"></div><span>Chargement...</span></div>
-
-        <table class="data-table" *ngIf="!loading && !loadError">
-          <thead>
-            <tr>
-              <th>Identifiant</th>
-              <th>Titre</th>
-              <th>Source</th>
-              <th>Sévérité</th>
-              <th>Statut</th>
-              <th>Créé le</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngIf="incidents.length === 0">
-              <td colspan="7" style="text-align:center;padding:40px;color:var(--text-faint);">
-                Aucun incident trouvé
-              </td>
-            </tr>
-            <tr *ngFor="let inc of incidents">
-              <td>
-                <span style="font-family:var(--font-mono);font-size:11px;color:var(--accent-blue);" [title]="inc.id">
-                  {{inc.id?.substring(0,8)}}
-                </span>
-              </td>
-              <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
-                {{inc.title || 'Incident sans titre'}}
-              </td>
-              <td>
-                <span class="source-tag">{{inc.sourceType || inc.source || 'Non disponible'}}</span>
-              </td>
-              <td>
-                <span *ngIf="inc._severity" class="badge" [class]="getSeverityBadgeClass(inc._severity)">{{inc._severity | presentationLabel}}</span>
-                <span *ngIf="!inc._severity" class="badge severity-unknown">Non déterminée</span>
-              </td>
-              <td><span class="badge {{inc.status?.toLowerCase()}}">{{inc.status | presentationLabel}}</span></td>
-              <td style="font-family:var(--font-mono);font-size:11px;">
-                {{inc.createdAt | frenchDate}}
-              </td>
-              <td>
-                <a [routerLink]="['/incidents', inc.id]" class="btn btn-secondary btn-sm">
-                  Voir le détail →
-                </a>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
+  <div class="page-header" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+    <div>
+      <h1 class="page-title">Incidents</h1>
+      <p class="page-subtitle">Incidents détectés par la plateforme sur les builds surveillés</p>
     </div>
+    <div class="live-indicator" *ngIf="!loading && !loadError"
+         [title]="total >= size ? 'Le backend limite cette liste à ' + size + ' résultats ; le nombre réel peut être supérieur.' : ''">
+      <div class="live-dot"></div>
+      {{total}} incident{{total === 1 ? '' : 's'}}{{ total >= size ? ' affichés (limite ' + size + ')' : '' }}
+    </div>
+  </div>
+
+  <app-zone-label kind="information"
+    note="Incidents détectés et leur état. Le traitement se fait sur la page de l’incident."></app-zone-label>
+
+  <!-- Filtres -->
+  <div class="card" style="margin-bottom:16px;padding:14px 20px;">
+    <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+      <label for="incident-status-filter" class="sr-only">Filtrer par statut</label>
+      <select id="incident-status-filter" class="form-control" [(ngModel)]="filters.status" (change)="load()" style="width:220px;">
+        <option value="">Tous statuts</option>
+        <option value="pending">En attente</option>
+        <option value="analyzing">En cours d'analyse</option>
+        <option value="analyzed">Analysé</option>
+        <option value="fix_generated">Correction générée</option>
+        <option value="validating">Validation en cours</option>
+        <option value="approved">Approuvé</option>
+        <option value="completed">Terminé</option>
+        <option value="blocked">Bloqué</option>
+        <option value="failed">Échec</option>
+        <option value="rejected">Rejeté</option>
+      </select>
+      <button class="btn btn-secondary btn-sm" (click)="resetFilters()" [disabled]="!filters.status">
+        <span aria-hidden="true">↺</span> Réinitialiser
+      </button>
+    </div>
+  </div>
+
+  <!-- §18 — pendant la lecture, ni tableau vide ni compteur provisoire. -->
+  <div class="card" *ngIf="loading">
+    <div class="loading-overlay" role="status"><div class="spinner"></div><span>Chargement des incidents…</span></div>
+  </div>
+
+  <!-- §17 — un échec de requête est dit comme tel, jamais rendu comme
+       « aucun incident » : l'un se réessaie, l'autre non. -->
+  <div class="card" *ngIf="!loading && loadError" role="alert">
+    <div class="empty-state">
+      <div class="empty-icon"><i class="ti ti-plug-connected-x" aria-hidden="true"></i></div>
+      <div class="empty-title">Impossible de charger les incidents</div>
+      <div class="empty-sub">{{loadError}}</div>
+      <button class="btn btn-secondary btn-sm" style="margin-top:14px;" (click)="load()">Réessayer</button>
+    </div>
+  </div>
+
+  <!-- §16 — une liste vide dit ce qui est vide, et ne laisse jamais croire
+       qu'un filtre actif est l'état réel de la plateforme. -->
+  <div class="card" *ngIf="!loading && !loadError && !incidents.length">
+    <div class="empty-state">
+      <div class="empty-icon"><i class="ti ti-shield-check" aria-hidden="true"></i></div>
+      <div class="empty-title">{{filters.status ? 'Aucun incident avec ce statut' : 'Aucun incident détecté'}}</div>
+      <div class="empty-sub">
+        {{filters.status
+          ? 'Aucun incident ne porte le statut sélectionné. Les autres incidents restent visibles sans filtre.'
+          : 'Aucun incident n’a été enregistré pour les projets surveillés.'}}
+      </div>
+      <button class="btn btn-secondary btn-sm" style="margin-top:14px;" *ngIf="filters.status" (click)="resetFilters()">Voir tous les incidents</button>
+    </div>
+  </div>
+
+  <!-- §10 — colonnes retenues : ce qu'un développeur lit pour décider.
+       L'identifiant technique n'occupe plus une colonne entière ; il reste
+       copiable sous le titre (§20/§21). -->
+  <div class="card" style="padding:0;overflow:hidden;" *ngIf="!loading && !loadError && incidents.length">
+    <div class="table-scroll">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th scope="col">Sévérité</th>
+            <th scope="col">Problème</th>
+            <th scope="col">Projet</th>
+            <th scope="col">Source</th>
+            <th scope="col">Build</th>
+            <th scope="col">Statut</th>
+            <th scope="col">Dernière activité</th>
+            <th scope="col">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let inc of incidents">
+            <td>
+              <app-status-chip [status]="inc.severity"
+                               [labelOverride]="inc.severity ? null : 'Non déterminée'"></app-status-chip>
+            </td>
+            <td class="inc-problem">
+              <div class="inc-title" [title]="inc.title || 'Incident sans titre'">{{inc.title || 'Incident sans titre'}}</div>
+              <app-copyable-id [value]="inc.id" label="l’identifiant de l’incident" [length]="8"></app-copyable-id>
+            </td>
+            <td>
+              <a *ngIf="inc.projectId" [routerLink]="['/projects', inc.projectId]">{{inc.projectName || 'Projet sans nom'}}</a>
+              <span *ngIf="!inc.projectId" class="na" title="Non disponible" aria-label="Non disponible">—</span>
+            </td>
+            <td>
+              <span *ngIf="inc.source">{{inc.source | presentationLabel}}</span>
+              <span *ngIf="!inc.source" class="na" title="Non disponible" aria-label="Non disponible">—</span>
+            </td>
+            <td>
+              <span *ngIf="inc.buildNumber">#{{inc.buildNumber}}</span>
+              <span *ngIf="!inc.buildNumber" class="na" title="Non disponible" aria-label="Non disponible">—</span>
+            </td>
+            <td><app-status-chip [status]="inc.status"></app-status-chip></td>
+            <td>
+              <span *ngIf="inc.lastActivity" [title]="inc.lastActivityExact">{{inc.lastActivity}}</span>
+              <span *ngIf="!inc.lastActivity" class="na" title="Non disponible" aria-label="Non disponible">—</span>
+            </td>
+            <td>
+              <a [routerLink]="['/incidents', inc.id]" class="btn btn-secondary btn-sm">
+                Voir le détail <span aria-hidden="true">→</span>
+              </a>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>

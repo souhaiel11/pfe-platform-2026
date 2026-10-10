@@ -5,6 +5,8 @@ import { FormsModule } from '@angular/forms';
 import { FrenchDatePipe } from '../../shared/french-date.pipe';
 import { remediationTypeLabel } from '../../shared/status-labels';
 import { PresentationLabelPipe } from '../../shared/presentation-label.pipe';
+import { SourceEvidenceLinkComponent } from '../../shared/source-evidence/source-evidence-link.component';
+import { FindingEvidence, SourceEvidence } from '../../shared/source-evidence/source-evidence.types';
 
 // ─────────────────────────────────────────────────────────────────────
 //  Tableau des alertes ZAP (DAST) — clic sur une ligne = description
@@ -19,6 +21,12 @@ import { PresentationLabelPipe } from '../../shared/presentation-label.pipe';
 type RawZapAlert = any;
 
 interface NormZapAlert {
+  // R48 — champs importes depuis le rapport ZAP (absents des alertes
+  // normalisees avant ce correctif, donc toujours optionnels).
+  confidence?: number | null;
+  confidenceLabel?: string | null;
+  pluginId?: string | number | null;
+  cweId?: string | number | null;
   id: string;
   severity: string;
   title: string;
@@ -34,7 +42,7 @@ interface NormZapAlert {
 @Component({
   selector: 'app-zap-table',
   standalone: true,
-  imports: [CommonModule, FormsModule, FrenchDatePipe, PresentationLabelPipe],
+  imports: [CommonModule, FormsModule, FrenchDatePipe, PresentationLabelPipe, SourceEvidenceLinkComponent],
   template: `
     <div class="zap-wrap" *ngIf="normalized().length; else empty">
       <table class="zap-table">
@@ -43,8 +51,11 @@ interface NormZapAlert {
         </thead>
         <tbody>
           <ng-container *ngFor="let a of filtered()">
-            <tr class="zap-row" [class.open]="isOpen(a.id)" (click)="toggle(a.id)">
-              <td class="zap-caret">{{ isOpen(a.id) ? '▾' : '▸' }}</td>
+            <tr class="zap-row" [class.open]="isOpen(a.id)" (click)="toggle(a.id)"
+                tabindex="0" role="button" [attr.aria-expanded]="isOpen(a.id)"
+                [attr.aria-label]="'Détail de l’alerte ' + zapAlertLabel(a.title)"
+                (keydown.enter)="toggle(a.id)" (keydown.space)="toggle(a.id)">
+              <td class="zap-caret" aria-hidden="true">{{ isOpen(a.id) ? '▾' : '▸' }}</td>
               <td class="zap-title">{{ zapAlertLabel(a.title) }}</td>
               <td><span class="zap-sev" [attr.data-sev]="a.severity">{{ a.severity | presentationLabel }}</span></td>
               <td class="zap-url">{{ a.url || 'Non disponible' }}</td>
@@ -74,15 +85,33 @@ interface NormZapAlert {
 
                   <div class="zap-meta">
                     <span *ngIf="a.param"><strong>Paramètre :</strong> {{ a.param }}</span>
+                    <!-- R48 — confiance et identifiant de règle ZAP : fournis par le
+                         rapport ZAP (champs confidence 0..4 et pluginid) et jusqu'ici
+                         perdus a l'ingestion WF1. Affiches seulement quand la source les
+                         porte : une alerte issue d'un ancien rapport n'en a pas, et on
+                         n'invente rien. La confiance 0 (« Faux positif ») est une valeur
+                         reelle, donc testee par != null et non par verite booleenne. -->
+                    <span *ngIf="a.confidenceLabel"><strong>Confiance ZAP :</strong> {{ a.confidenceLabel }}</span>
+                    <span *ngIf="a.pluginId"><strong>Règle ZAP :</strong> {{ a.pluginId }}</span>
+                    <span *ngIf="a.cweId"><strong>CWE :</strong> {{ a.cweId }}</span>
                     <span *ngIf="a.reference"><strong>Référence :</strong> {{ a.reference }}</span>
                     <span><strong>Identifiant :</strong> {{ a.id }}</span>
                   </div>
+                  <!-- §6 — la PREUVE ZAP (le rapport qui a observé l'alerte)
+                       n'est pas la CIBLE analysée (l'URL de l'application).
+                       Les deux sont affichés, séparément et nommément. -->
+                  <div class="zap-block zap-sources">
+                    <h4>Sources & preuves</h4>
+                    <app-source-evidence-link [item]="reportEvidence(a)" variant="inline" [showProvider]="false"></app-source-evidence-link>
+                    <app-source-evidence-link [item]="targetEvidence" variant="inline" [showProvider]="false"></app-source-evidence-link>
+                    <app-source-evidence-link [item]="buildEvidence" variant="inline" [showProvider]="false"></app-source-evidence-link>
+                  </div>
                   <section class="tracking" *ngIf="taskFor(a) as task">
                     <h4>Suivi du traitement</h4>
-                    <button *ngIf="(task.status === 'TODO' || task.status === 'REOPENED') && canComplete(task)" type="button" class="track-btn" (click)="$event.stopPropagation(); openConfirmation(task, a)">☐ Marquer comme traité</button><span *ngIf="(task.status === 'TODO' || task.status === 'REOPENED') && !canComplete(task)">Lecture seule</span>
+                    <button *ngIf="(task.status === 'TODO' || task.status === 'REOPENED') && canComplete(task)" type="button" class="btn btn-primary btn-sm" (click)="$event.stopPropagation(); openConfirmation(task, a)">Marquer comme traité</button><span *ngIf="(task.status === 'TODO' || task.status === 'REOPENED') && !canComplete(task)">Lecture seule</span>
                     <ng-container *ngIf="task.status === 'DONE_BY_USER' || task.status === 'VERIFIED'">
                       <p class="done">✓ {{task.status === 'VERIFIED' ? 'Vérifié' : 'Traité manuellement'}}</p><p><strong>Traité par :</strong> {{task.completedByDisplayName || 'Non disponible'}}</p><p><strong>Date du traitement :</strong> {{task.completedAt | frenchDate}}</p><p *ngIf="task.completionNote"><strong>Note de traitement :</strong> {{task.completionNote}}</p><p><strong>Dernière détection :</strong> {{task.lastSeenBuild ? 'build #' + task.lastSeenBuild : 'Non disponible'}}</p><p *ngIf="task.verifiedBuild"><strong>Vérifié au build :</strong> #{{task.verifiedBuild}}</p>
-                      <button *ngIf="task.status !== 'VERIFIED' && userRole === 'admin'" type="button" class="reopen-btn" (click)="$event.stopPropagation(); reopenTask.emit(task)">Rouvrir la tâche</button>
+                      <button *ngIf="task.status !== 'VERIFIED' && userRole === 'admin'" type="button" class="btn btn-secondary btn-sm" (click)="$event.stopPropagation(); reopenTask.emit(task)">Rouvrir la tâche</button>
                     </ng-container>
                     <p><strong>Analyse :</strong> {{scannerLabel(task)}} · <strong>État du traitement :</strong> {{task.status === 'VERIFIED' ? 'Vérifié' : (task.status === 'DONE_BY_USER' ? 'À vérifier' : 'Action requise')}}</p>
                   </section>
@@ -99,38 +128,42 @@ interface NormZapAlert {
         <p>Aucune alerte DAST détectée sur ce build.</p>
       </div>
     </ng-template>
-    <div class="confirm-backdrop" *ngIf="pendingTask()" (click)="cancelConfirmation()"><section class="confirm-box" role="dialog" aria-modal="true" aria-labelledby="zap-confirm-title" (click)="$event.stopPropagation()"><h3 id="zap-confirm-title">Confirmer le traitement</h3><p><strong>Problème :</strong> {{zapAlertLabel(pendingFinding()?.title)}}</p><p><strong>Source :</strong> ZAP</p><p>Cette action signifie uniquement que vous avez effectué le traitement manuel.</p><p>La résolution technique sera confirmée lors d'une prochaine analyse.</p><label>Note de traitement (facultative)<textarea maxlength="500" [(ngModel)]="completionNote"></textarea></label><div class="confirm-actions"><button type="button" (click)="cancelConfirmation()">Annuler</button><button type="button" class="track-btn" (click)="confirmCompletion()">Confirmer</button></div></section></div>
+    <div class="confirm-backdrop" *ngIf="pendingTask()" (click)="cancelConfirmation()"><section class="confirm-box" role="dialog" aria-modal="true" aria-labelledby="zap-confirm-title" (click)="$event.stopPropagation()"><h3 id="zap-confirm-title">Confirmer le traitement</h3><p><strong>Problème :</strong> {{zapAlertLabel(pendingFinding()?.title)}}</p><p><strong>Source :</strong> ZAP</p><p>Cette action signifie uniquement que vous avez effectué le traitement manuel.</p><p>La résolution technique sera confirmée lors d'une prochaine analyse.</p><label>Note de traitement (facultative)<textarea maxlength="500" [(ngModel)]="completionNote"></textarea></label><div class="confirm-actions"><button type="button" class="btn btn-secondary" (click)="cancelConfirmation()">Annuler</button><button type="button" class="btn btn-primary" (click)="confirmCompletion()">Confirmer</button></div></section></div>
   `,
   styles: [`
-    :host { display:block; font-size:13px; color:#1f2933; }
+    :host { display:block; font-size:13px; color:var(--text-primary); }
 
-    .zap-table { width:100%; border-collapse:collapse; background:#fff; border:1px solid #e2e8f0; border-radius:10px; overflow:hidden; }
+    /* §23 — conteneur de défilement : à 390 px, quatre colonnes dont une
+       URL défilent dans le tableau, sans débordement horizontal du corps. */
+    .zap-wrap { overflow-x:auto; max-width:100%; }
+    .zap-table { width:100%; border-collapse:collapse; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:10px; overflow:hidden; }
     .zap-table thead th { text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.05em;
-                          color:#64748b; background:#f8fafc; padding:9px 12px; border-bottom:1px solid #e2e8f0; }
-    .zap-row { cursor:pointer; border-bottom:1px solid #f1f5f9; transition:background .12s; }
-    .zap-row:hover { background:#f8fafc; }
-    .zap-row.open { background:#eff6ff; }
+                          color:var(--text-muted); background:var(--bg-tertiary); padding:9px 12px; border-bottom:1px solid var(--border-color); }
+    .zap-row { cursor:pointer; border-bottom:1px solid var(--bg-tertiary); transition:background .12s; }
+    .zap-row:hover { background:var(--bg-tertiary); }
+    .zap-row.open { background:var(--accent-blue-bg); }
     .zap-row td { padding:9px 12px; }
-    .zap-caret { color:#94a3b8; text-align:center; }
+    .zap-caret { color:var(--text-muted); text-align:center; }
     .zap-title { font-weight:600; max-width:260px; }
     .zap-sev { font-size:11px; font-weight:700; padding:2px 8px; border-radius:4px; }
-    .zap-sev[data-sev='HIGH']   { background:#fee2e2; color:#b91c1c; }
-    .zap-sev[data-sev='MEDIUM'] { background:#fef9c3; color:#a16207; }
-    .zap-sev[data-sev='LOW']    { background:#e0f2fe; color:#0369a1; }
-    .zap-url { font-family:'JetBrains Mono', ui-monospace, monospace; font-size:11px; color:#64748b; word-break:break-all; }
+    .zap-sev[data-sev='HIGH']   { background:var(--accent-red-bg); color:var(--accent-red); }
+    .zap-sev[data-sev='MEDIUM'] { background:var(--color-warning-bg); color:var(--color-warning); }
+    .zap-sev[data-sev='LOW']    { background:var(--accent-blue-bg); color:var(--accent-blue); }
+    .zap-url { font-family:'JetBrains Mono', ui-monospace, monospace; font-size:11px; color:var(--text-muted); word-break:break-all; }
 
-    .zap-detail-row td { padding:0; background:#f8fafc; }
-    .zap-detail { padding:14px 18px 18px; border-bottom:2px solid #e2e8f0; }
+    .zap-detail-row td { padding:0; background:var(--bg-tertiary); }
+    .zap-detail { padding:14px 18px 18px; border-bottom:2px solid var(--border-color); }
     .zap-block { margin-bottom:14px; }
-    .zap-block h4 { margin:0 0 5px; font-size:12px; text-transform:uppercase; letter-spacing:.04em; color:#475569; }
+    .zap-block h4 { margin:0 0 5px; font-size:12px; text-transform:uppercase; letter-spacing:.04em; color:var(--text-secondary); }
+    .zap-sources { display:flex; flex-direction:column; gap:6px; align-items:flex-start; }
     .zap-block p { margin:0; line-height:1.55; }
-    .zap-fix p { color:#166534; }
-    .zap-owner { display:inline-block; background:#fef3c7; color:#92400e; border-radius:6px; padding:4px 10px;
+    .zap-fix p { color:var(--accent-green); }
+    .zap-owner { display:inline-block; background:var(--color-warning-bg); color:var(--color-warning); border-radius:6px; padding:4px 10px;
                  font-size:12px; font-weight:600; margin-bottom:10px; }
-    .zap-meta { display:flex; gap:16px; flex-wrap:wrap; font-size:12px; color:#64748b; }
+    .zap-meta { display:flex; gap:16px; flex-wrap:wrap; font-size:12px; color:var(--text-muted); }
 
-    .zap-empty { text-align:center; color:#64748b; padding:36px 20px; }
-    .tracking{margin-top:14px;padding:13px;background:#fff;border:1px solid #cbd5e1;border-radius:8px}.tracking p{margin:6px 0}.done{color:#15803d;font-weight:700}.track-btn{border:0;border-radius:7px;background:#2563eb;color:#fff;padding:8px 12px;font-weight:700;cursor:pointer}.reopen-btn{border:1px solid #cbd5e1;border-radius:7px;background:#fff;padding:7px 10px}.confirm-backdrop{position:fixed;inset:0;background:#0f172a99;display:flex;align-items:center;justify-content:center;z-index:1200;padding:20px}.confirm-box{max-width:520px;width:100%;background:#fff;border-radius:12px;padding:22px}.confirm-box h3{margin-top:0}.confirm-box label{display:grid;gap:6px;font-weight:600}.confirm-box textarea{min-height:75px;padding:8px;border:1px solid #cbd5e1;border-radius:7px}.confirm-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}
+    .zap-empty { text-align:center; color:var(--text-muted); padding:36px 20px; }
+    .tracking{margin-top:14px;padding:13px;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:8px}.tracking p{margin:6px 0}.done{color:var(--accent-green);font-weight:700}.confirm-backdrop{position:fixed;inset:0;background:#0f172a99;display:flex;align-items:center;justify-content:center;z-index:1200;padding:20px}.confirm-box{max-width:520px;width:100%;background:var(--bg-secondary);border-radius:12px;padding:22px}.confirm-box h3{margin-top:0}.confirm-box label{display:grid;gap:6px;font-weight:600}.confirm-box textarea{min-height:75px;padding:8px;border:1px solid var(--border-color);border-radius:7px}.confirm-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}
   `]
 })
 export class ZapTableComponent {
@@ -138,6 +171,21 @@ export class ZapTableComponent {
   @Input() set alerts(value: RawZapAlert[] | null | undefined) { this._raw.set(value ?? []); }
   @Input() tasks: any[] = [];
   @Input() statusFilter = 'ALL'; @Input() severityFilter = 'ALL'; @Input() userRole = 'viewer';
+
+  // Preuves dérivées par le backend (GET /api/source-evidence/*). Ce
+  // composant ne construit aucune URL : une alerte ZAP est identifiée par un
+  // identifiant de règle ZAP, qui n'a pas de référentiel public de
+  // vulnérabilité — on ne lui en invente donc pas.
+  @Input() findingEvidence: FindingEvidence[] | null = null;
+  @Input() targetEvidence: SourceEvidence | null = null;
+  @Input() buildEvidence: SourceEvidence | null = null;
+
+  /** Rapport de scan qui a observé CETTE alerte. */
+  reportEvidence(a: NormZapAlert): SourceEvidence | null {
+    const id = String(a?.id || '').trim();
+    if (!id) return null;
+    return (this.findingEvidence || []).find(f => f.findingId === id)?.slots?.['REPORT'] || null;
+  }
   @Output() completeTask = new EventEmitter<{ task: any; note?: string }>();
   @Output() reopenTask = new EventEmitter<any>();
   pendingTask = signal<any>(null); pendingFinding = signal<NormZapAlert | null>(null); completionNote = '';
@@ -180,7 +228,7 @@ export class ZapTableComponent {
   }
   taskFor(a: NormZapAlert): any { return this.tasks.find(t => t.source === 'ZAP' && String(t.findingSnapshot?.ruleOrCve).toLowerCase() === a.id.toLowerCase() && String(t.findingSnapshot?.url || '').replace(/\/$/, '').toLowerCase() === String(a.url || '').replace(/\/$/, '').toLowerCase() && String(t.findingSnapshot?.parameter || '').toLowerCase() === a.param.toLowerCase()); }
   canComplete(task: any): boolean { return this.userRole === 'admin' || (this.userRole === 'developer' && task.remediationType !== 'ADMIN_ACTION_REQUIRED'); }
-  scannerLabel(task: any): string { return task.scannerStatus === 'NOT_DETECTED' ? 'Non détecté' : task.scannerStatus === 'UNAVAILABLE' ? 'Analyse indisponible' : task.scannerStatus === 'STILL_DETECTED' ? `Toujours détecté${task.lastSeenBuild ? ' au build #' + task.lastSeenBuild : ''}` : 'Détecté'; }
+  scannerLabel(task: any): string { return task.scannerStatus === 'NOT_DETECTED' ? 'Non détecté' : task.scannerStatus === 'UNAVAILABLE' ? 'Analyse indisponible' : task.scannerStatus === 'STILL_DETECTED' ? `Toujours détecté${task.lastSeenBuild ? ' au build #' + task.lastSeenBuild : ''}` : task.scannerStatus === 'DETECTED' ? 'Détecté' : 'État d’analyse non disponible'; }
   openConfirmation(task: any, finding: NormZapAlert) { this.pendingTask.set(task); this.pendingFinding.set(finding); this.completionNote = ''; }
   cancelConfirmation() { this.pendingTask.set(null); this.pendingFinding.set(null); this.completionNote = ''; }
   confirmCompletion() { const task = this.pendingTask(); if (task) this.completeTask.emit({ task, note: this.completionNote }); this.cancelConfirmation(); }

@@ -1,0 +1,349 @@
+<section class="dg-box" aria-labelledby="dg-title">
+  <div class="dg-header">
+    <h3 id="dg-title">Déploiement Azure</h3>
+    <button class="btn btn-secondary btn-sm" type="button" [disabled]="previewLoading"
+            [attr.aria-busy]="previewLoading ? 'true' : null" (click)="reevaluate()">
+      <span aria-hidden="true">↻</span> Réévaluer
+    </button>
+  </div>
+  <p class="dg-subtitle">Source de vérité : serveur — la décision de gouvernance est calculée par le backend.</p>
+
+  <!-- ── §15/§18 — squelette de chargement, et surtout : ce qu'il ATTEND.
+       Mesuré sur la plateforme live, cette vérification prend 10 à 12 s
+       parce qu'elle sort du réseau : le serveur interroge le registre Azure
+       pour résoudre l'empreinte immuable de l'image puis lire ses
+       étiquettes. C'est le prix de la garantie — la décision n'est jamais
+       rendue sur une copie locale potentiellement périmée.
+
+       La cause EXACTE de ces 10 s n'est pas établie : le registre et l'API
+       Azure répondent chacun en quelques centaines de millisecondes. Ni la
+       région, ni le réseau ne sont donc démontrés comme le goulot. Ne pas
+       le deviner ici.
+
+       Un squelette muet pendant 12 s se lit comme une interface figée. Le
+       dire change la nature de l'attente : on ne subit pas un blocage, on
+       attend une vérification dont on connaît l'objet. ─────────────────── -->
+  <div class="dg-skeleton" *ngIf="previewLoading" role="status" aria-live="polite">
+    <span class="dg-sr">Vérification de l'état de gouvernance du déploiement…</span>
+    <p class="dg-wait">
+      <strong>Vérification de l’artefact auprès du registre Azure.</strong>
+      Le serveur résout l’empreinte immuable de l’image et lit ses étiquettes
+      directement dans le registre ; cet aller-retour distant prend
+      généralement une dizaine de secondes. Aucune décision n’est rendue
+      avant qu’il aboutisse.
+    </p>
+    <div class="dg-skel-line dg-skel-lg"></div>
+    <div class="dg-skel-grid"><div class="dg-skel-line"></div><div class="dg-skel-line"></div><div class="dg-skel-line"></div><div class="dg-skel-line"></div></div>
+  </div>
+
+  <!-- ── §15 — governance unavailable / backend unreachable ─────── -->
+  <div class="dg-error-panel" *ngIf="!previewLoading && previewError" role="alert">
+    <p><span aria-hidden="true">⚠️</span> {{previewError}}</p>
+    <p class="dg-error-note">Aucune action de déploiement n'est proposée tant que l'état de gouvernance n'est pas connu.</p>
+    <button class="btn btn-secondary btn-sm" type="button" (click)="reevaluate()">Réessayer</button>
+  </div>
+
+  <ng-container *ngIf="!previewLoading && preview">
+
+    <p class="dg-stale" *ngIf="staleNotice" role="alert"><span aria-hidden="true">⚠️</span> {{staleNotice}}</p>
+
+    <!-- ── §7 — deployment CAPABILITY, distinct from the governance decision.
+         The section always exists; only the action area is conditional. ── -->
+    <div class="dg-capability-card" [ngClass]="'dg-cap-' + capabilityInfo.tone">
+      <span class="dg-cap-icon" aria-hidden="true">{{capabilityInfo.icon}}</span>
+      <div class="dg-cap-text">
+        <strong class="dg-cap-label">{{capabilityInfo.label}}</strong>
+        <small class="dg-cap-detail">{{capabilityInfo.detail}}</small>
+      </div>
+    </div>
+
+    <!-- ── §4 — governance status card: icon + text, never colour alone.
+         Shown once governance is known for THIS project. ── -->
+    <div class="dg-status-card" [ngClass]="decisionToneClass" *ngIf="decisionPresentation">
+      <span class="dg-status-icon" aria-hidden="true">{{decisionPresentation.icon}}</span>
+      <div class="dg-status-text">
+        <strong class="dg-status-label">{{decisionPresentation.label}}</strong>
+      </div>
+    </div>
+
+    <!-- ── R53 §11 — etat PRECIS de l'identite d'artefact.
+         La decision de gouvernance dit « ce n'est pas deployable » ; cette ligne
+         dit POURQUOI, ce qui est la seule information actionnable. Elle ne
+         s'affiche que quand un motif exact existe : provenance acquise, ou motif
+         inconnu du front (backend anterieur), elle reste muette plutot que
+         d'inventer une cause. ── -->
+    <div class="alert alert-info" role="status" *ngIf="artifactStatePresentation as artifactState">
+      <strong>Artefact : {{artifactState.label}}</strong>
+      <p style="margin:6px 0 0;">{{artifactState.detail}}</p>
+    </div>
+    <div class="alert alert-info" role="status" *ngIf="artifactReady">
+      <strong>Artefact prêt</strong>
+      <p style="margin:6px 0 0;">
+        Une image vérifiée est rattachée à ce build, avec son empreinte immuable.
+        Prête à être déployée ne veut pas dire déployée : la décision de gouvernance
+        ci-dessus reste la seule autorité.
+      </p>
+    </div>
+
+    <!-- ── §3 — deployment identity. Absent values read "Non disponible". ── -->
+    <h4 class="dg-sub">Identité du déploiement</h4>
+    <dl class="dg-identity">
+      <div><dt>Projet</dt><dd>{{orNotAvailable(projectName)}}</dd></div>
+      <div><dt>Environnement</dt><dd>{{orNotAvailable(preview.environment.name)}}</dd></div>
+      <div><dt>Build</dt><dd>{{preview.mainBuildNumber ? '#' + preview.mainBuildNumber : 'Non disponible'}}</dd></div>
+      <div><dt>Commit</dt><dd><app-copyable-id *ngIf="preview.buildIdentity.commitSha; else noCommit" [value]="preview.buildIdentity.commitSha" label="le commit"></app-copyable-id><ng-template #noCommit>Non disponible</ng-template></dd></div>
+      <div><dt>Tag d'artefact</dt><dd>{{orNotAvailable(preview.artifact.tag)}}</dd></div>
+      <div><dt>Digest d'artefact<app-info-hint term="digest"></app-info-hint></dt><dd><app-copyable-id *ngIf="preview.artifact.digest; else noDigest" [value]="preview.artifact.digest" label="le digest" keepPrefix="sha256:" [length]="16"></app-copyable-id><ng-template #noDigest>Non disponible</ng-template></dd></div>
+      <div><dt>Registre</dt><dd>{{orNotAvailable(preview.artifact.registry)}}</dd></div>
+      <div><dt>Dépôt d'image</dt><dd>{{orNotAvailable(preview.artifact.repository)}}</dd></div>
+      <div><dt>Cible de déploiement</dt><dd>{{orNotAvailable(preview.environment.targetName || deploymentTarget?.targetName)}}</dd></div>
+      <div><dt>Groupe de ressources</dt><dd>{{orNotAvailable(preview.environment.resourceGroup || deploymentTarget?.resourceGroup)}}</dd></div>
+      <div><dt>Région</dt><dd>{{orNotAvailable(preview.environment.region || deploymentTarget?.region)}}</dd></div>
+      <div><dt>Fournisseur</dt><dd>{{orNotAvailable(deploymentTarget?.provider)}}</dd></div>
+      <div><dt>Cible de santé</dt><dd>{{healthTargetLabel}}</dd></div>
+    </dl>
+
+    <!-- Sources/preuves — délibérément des LIENS SORTANTS, jamais l'action
+         de déploiement. Jenkins, le registre et le portail Azure sont des
+         endroits où l'on INSPECTE ; ils ne sont pas cette interface. Chaque
+         lien est dérivé par le backend ; une cible Azure sans identifiant
+         d'abonnement reste un fait affiché, sans lien fabriqué. -->
+    <app-source-evidence-list class="dg-cicd-evidence"
+      title="Sources & preuves"
+      note="Liens d’inspection : aucun n’exécute de déploiement."
+      [sections]="sourceEvidenceSections"
+      [slots]="sourceEvidence">
+    </app-source-evidence-list>
+
+    <!-- ── §5 — security / quality controls, as returned by the backend ── -->
+    <h4 class="dg-sub" id="dg-controls-title">Contrôles de sécurité et de qualité</h4>
+    <ul class="dg-controls" aria-labelledby="dg-controls-title">
+      <li *ngFor="let c of visibleControlRows" class="dg-control" [ngClass]="'dg-ctrl-' + c.status">
+        <span class="dg-ctrl-status">
+          <span class="dg-ctrl-icon" aria-hidden="true">{{
+            c.status === 'PASS' ? '✅' : c.status === 'FAIL' ? '❌' : c.status === 'WARNING' ? '⚠️' : c.status === 'NOT_RUN' ? '○' : '?'
+          }}</span>
+          <span class="dg-ctrl-status-text">{{controlStatusLabels[c.status]}}</span>
+        </span>
+        <span class="dg-ctrl-body">
+          <strong class="dg-ctrl-name">{{c.name}}</strong>
+          <small class="dg-ctrl-explanation">{{c.explanation}}</small>
+          <small class="dg-ctrl-blocking" *ngIf="c.blocking !== null">{{c.blocking ? 'Bloquant' : 'Non bloquant'}}</small>
+        </span>
+      </li>
+    </ul>
+    <button class="btn btn-secondary btn-sm dg-controls-toggle" type="button" *ngIf="hasHiddenControls"
+            [attr.aria-expanded]="controlsExpanded" (click)="toggleControls()">
+      {{controlsExpanded ? 'Masquer les contrôles' : 'Voir tous les contrôles (' + controlRows.length + ')'}}
+    </button>
+
+    <!-- Blocking reasons and non-blocking warnings are two DISTINCT backend
+         fields (failedControls vs warnings) — never merged. -->
+    <div class="dg-reasons" *ngIf="preview.failedControls?.length">
+      <h4 class="dg-sub">Motifs bloquants pour cette décision</h4>
+      <ul class="dg-failed-controls">
+        <li *ngFor="let reason of preview.failedControls">{{reason}}</li>
+      </ul>
+    </div>
+    <div class="dg-reasons" *ngIf="preview.warnings?.length">
+      <h4 class="dg-sub">Avertissements non bloquants</h4>
+      <ul class="dg-warnings">
+        <li *ngFor="let w of preview.warnings">{{w}}</li>
+      </ul>
+    </div>
+
+    <!-- ── §6 — READY ────────────────────────────────────────────── -->
+    <div class="dg-state dg-ready" *ngIf="showsDeployAction && decision === 'READY'">
+      <p *ngIf="!canAuthorizeCurrentDecision" class="dg-restricted" role="note">
+        Votre rôle ne permet pas de déclencher ce déploiement.
+      </p>
+      <button class="btn btn-primary" type="button" *ngIf="canAuthorizeCurrentDecision"
+              [disabled]="authorizing || deploying" (click)="submitNormalAuthorization()">
+        {{authorizing || deploying ? 'Déploiement en cours…' : 'Déployer sur Azure'}}
+      </button>
+    </div>
+
+    <!-- ── §7 — CONDITIONAL ──────────────────────────────────────── -->
+    <div class="dg-state dg-conditional" *ngIf="showsDeployAction && decision === 'CONDITIONAL'">
+      <p *ngIf="!canAuthorizeCurrentDecision" class="dg-restricted" role="note">
+        Votre rôle ne permet pas d'autoriser cette exception.
+      </p>
+      <button class="btn btn-primary" type="button" *ngIf="canAuthorizeCurrentDecision && !showConditionalForm"
+              (click)="openConditionalForm()">Autoriser et déployer</button>
+
+      <div class="dg-modal" *ngIf="showConditionalForm" role="dialog" aria-modal="true" aria-labelledby="dg-conditional-title">
+        <h5 id="dg-conditional-title">Exception conditionnelle</h5>
+        <p class="dg-modal-intro">Le backend exige un motif explicite et une acceptation des risques avant d'autoriser ce déploiement.</p>
+
+        <label for="dg-conditional-reason">Motif explicite et significatif (requis)</label>
+        <textarea id="dg-conditional-reason" name="dg-conditional-reason" rows="3" autofocus
+                  [(ngModel)]="conditionalReason" [disabled]="authorizing"
+                  aria-describedby="dg-conditional-hint"></textarea>
+        <small id="dg-conditional-hint" class="dg-hint">Au moins 10 caractères.</small>
+
+        <label class="dg-ack-label" for="dg-conditional-ack">
+          <input id="dg-conditional-ack" name="dg-conditional-ack" type="checkbox"
+                 [(ngModel)]="conditionalAck" [disabled]="authorizing" />
+          J’accepte les risques identifiés.
+        </label>
+
+        <p class="dg-authorize-error" *ngIf="authorizeError" role="alert">{{authorizeError}}</p>
+        <p class="dg-disabled-reason" *ngIf="conditionalDisabledReason" id="dg-conditional-disabled" aria-live="polite">
+          {{conditionalDisabledReason}}
+        </p>
+        <div class="dg-modal-actions">
+          <button class="btn btn-secondary" type="button" [disabled]="authorizing" (click)="cancelConditionalForm()">Annuler</button>
+          <button class="btn btn-primary" type="button"
+                  [disabled]="!conditionalFormValid || authorizing || deploying"
+                  [attr.aria-describedby]="conditionalDisabledReason ? 'dg-conditional-disabled' : null"
+                  (click)="submitConditionalAuthorization()">
+            {{authorizing ? 'Autorisation…' : 'Autoriser et déployer'}}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── §8 — CRITICAL_RISK (administrateur uniquement) ────────── -->
+    <div class="dg-state dg-critical" *ngIf="showsDeployAction && decision === 'CRITICAL_RISK'">
+      <p class="dg-restricted" *ngIf="!isAdmin" role="note">
+        Déploiement critique réservé aux administrateurs.
+      </p>
+
+      <ng-container *ngIf="isAdmin">
+        <button class="btn btn-danger" type="button" *ngIf="!showCriticalForm" (click)="openCriticalForm()">
+          Forcer le déploiement
+        </button>
+
+        <div class="dg-modal dg-critical-modal" *ngIf="showCriticalForm" role="dialog" aria-modal="true" aria-labelledby="dg-critical-title">
+          <h5 id="dg-critical-title">Dérogation critique</h5>
+          <p class="dg-critical-warning" role="alert">
+            <span aria-hidden="true">⛔</span>
+            Vous autorisez un déploiement malgré des contrôles de sécurité en échec ou absents. Cette action est
+            journalisée de façon permanente et non réversible.
+          </p>
+
+          <label for="dg-critical-reason">Motif explicite et significatif (requis)</label>
+          <textarea id="dg-critical-reason" name="dg-critical-reason" rows="3" autofocus
+                    [(ngModel)]="criticalReason" [disabled]="authorizing"
+                    aria-describedby="dg-critical-hint"></textarea>
+          <small id="dg-critical-hint" class="dg-hint">Au moins 10 caractères.</small>
+
+          <label class="dg-ack-label" for="dg-ack-critical">
+            <input id="dg-ack-critical" name="dg-ack-critical" type="checkbox"
+                   [(ngModel)]="criticalAcks.criticalRiskAccepted" [disabled]="authorizing" />
+            J'accepte que ce déploiement comporte un risque de sécurité critique connu.
+          </label>
+          <label class="dg-ack-label" for="dg-ack-controls">
+            <input id="dg-ack-controls" name="dg-ack-controls" type="checkbox"
+                   [(ngModel)]="criticalAcks.securityControlsMayHaveFailed" [disabled]="authorizing" />
+            Je reconnais que les contrôles de sécurité automatisés (tests, Sonar, Trivy, OWASP, validation WF3) peuvent avoir échoué ou être absents pour cet artefact exact.
+          </label>
+          <label class="dg-ack-label" for="dg-ack-expose">
+            <input id="dg-ack-expose" name="dg-ack-expose" type="checkbox"
+                   [(ngModel)]="criticalAcks.deploymentMayExposeKnownRisk" [disabled]="authorizing" />
+            Je reconnais que ce déploiement peut exposer un risque connu en production.
+          </label>
+
+          <label for="dg-critical-phrase">
+            Tapez exactement la phrase suivante pour confirmer :
+            <strong class="dg-phrase">{{criticalOverridePhrase}}</strong>
+          </label>
+          <input id="dg-critical-phrase" name="dg-critical-phrase" type="text" autocomplete="off"
+                 [(ngModel)]="criticalPhrase" [disabled]="authorizing" aria-describedby="dg-critical-phrase-hint" />
+          <small id="dg-critical-phrase-hint" class="dg-hint">La phrase doit correspondre caractère pour caractère.</small>
+
+          <p class="dg-authorize-error" *ngIf="authorizeError" role="alert">{{authorizeError}}</p>
+          <p class="dg-disabled-reason" *ngIf="criticalDisabledReason" id="dg-critical-disabled" aria-live="polite">
+            {{criticalDisabledReason}}
+          </p>
+          <div class="dg-modal-actions">
+            <button class="btn btn-secondary" type="button" [disabled]="authorizing" (click)="cancelCriticalForm()">Annuler</button>
+            <button class="btn btn-danger" type="button"
+                    [disabled]="!criticalFormValid || authorizing || deploying"
+                    [attr.aria-describedby]="criticalDisabledReason ? 'dg-critical-disabled' : null"
+                    (click)="submitCriticalAuthorization()">
+              {{authorizing ? 'Autorisation…' : 'Forcer le déploiement'}}
+            </button>
+          </div>
+        </div>
+      </ng-container>
+    </div>
+
+    <!-- ── §9 — TECHNICALLY_IMPOSSIBLE: no deploy, no force, no override ── -->
+    <div class="dg-state dg-impossible" *ngIf="capability === 'DEPLOYMENT_TECHNICALLY_IMPOSSIBLE'">
+      <p class="dg-impossible-note" role="note"><strong>{{nonOverridableNotice}}</strong></p>
+      <p class="dg-impossible-sub">Aucune action d'autorisation n'est disponible — y compris pour un administrateur.</p>
+    </div>
+
+    <!-- No deployment action exists until a deployment environment is
+         configured for this project. The section itself always remains. -->
+    <div class="dg-state dg-unconfigured"
+         *ngIf="capability === 'DEPLOYMENT_NOT_CONFIGURED' || capability === 'DEPLOYMENT_CONFIGURATION_INVALID'">
+      <p class="dg-impossible-note" role="note"><strong>{{capabilityInfo.detail}}</strong></p>
+      <p class="dg-impossible-sub">
+        Aucune action de déploiement n'est disponible pour ce projet. La cible de déploiement se configure
+        côté projet (fournisseur, groupe de ressources, registre, image, région) — aucun identifiant ni secret
+        n'est saisi dans cette interface.
+      </p>
+    </div>
+
+    <!-- ── §10 — held authorization (short lived, single use) ─────── -->
+    <div class="dg-authorization" *ngIf="authorization">
+      <p>
+        Autorisation <code>{{authorization.authorizationId}}</code> ({{authorization.governanceClass}})
+        — expire le {{authorization.expiresAt | date:'short'}}
+      </p>
+      <small>Usage unique : une nouvelle autorisation est requise après consommation ou expiration.</small>
+    </div>
+
+    <!-- ── §11 — deployment progress, backend truth only ─────────── -->
+    <div class="dg-progress" *ngIf="deployPhase !== 'IDLE'" role="status" aria-live="polite">
+      <strong>État du déploiement :</strong>
+      <span class="dg-phase" [ngClass]="'dg-phase-' + deployPhase">
+        <span aria-hidden="true">{{
+          deployPhase === 'DEPLOYED' ? '✅' : deployPhase === 'FAILED' ? '❌' : '⏳'
+        }}</span>
+        {{
+          deployPhase === 'AUTHORISING' ? 'Autorisation en cours' :
+          deployPhase === 'AUTHORIZED' ? 'Autorisé' :
+          deployPhase === 'DISPATCHING' ? 'Déploiement en cours' :
+          deployPhase === 'DEPLOYED' ? 'Déployé' : 'Échoué'
+        }}
+        <span class="dg-phase-code">({{deployPhase}})</span>
+      </span>
+    </div>
+
+    <!-- ── §12 — success only when the backend proved success AND health ── -->
+    <div class="dg-deploy-result dg-success" *ngIf="deploySuccessInfo" role="status">
+      <p><span aria-hidden="true">✅</span> Déploiement réussi — état <strong>{{deploySuccessInfo.state}}</strong>, santé <strong>{{deploySuccessInfo.health}}</strong></p>
+      <dl class="dg-evidence">
+        <div><dt>Autorisation</dt><dd><code>{{orNotAvailable(deploySuccessInfo.authorizationId)}}</code></dd></div>
+        <div><dt>Digest déployé</dt><dd>{{shortDigest(deploySuccessInfo.artifactDigest)}}</dd></div>
+        <div *ngIf="deployAttemptId"><dt>Tentative</dt><dd><code>{{deployAttemptId}}</code></dd></div>
+      </dl>
+    </div>
+
+    <!-- ── §13 — failure UX ──────────────────────────────────────── -->
+    <div class="dg-deploy-result dg-error" *ngIf="deployErrorMessage" role="alert">
+      <p><span aria-hidden="true">⚠️</span> {{deployErrorMessage}}</p>
+      <dl class="dg-evidence">
+        <div *ngIf="deployErrorCode"><dt>Code backend</dt><dd><code>{{deployErrorCode}}</code></dd></div>
+        <div *ngIf="deployAttemptId"><dt>Tentative</dt><dd><code>{{deployAttemptId}}</code></dd></div>
+        <div *ngIf="deployRequestId"><dt>Requête</dt><dd><code>{{deployRequestId}}</code></dd></div>
+        <div><dt>Autorisation consommée</dt><dd>{{authorizationConsumed ? 'Oui — une nouvelle autorisation est requise' : 'Non'}}</dd></div>
+      </dl>
+      <button class="btn btn-secondary btn-sm" type="button" *ngIf="canRetryDeploy"
+              [disabled]="deploying" (click)="retryAmbiguousDeploy()">
+        Réessayer (même autorisation, même requête)
+      </button>
+    </div>
+
+    <!-- ── §14 — history: no backend read endpoint exists for
+         DeploymentAttempt rows, so no client-side history is fabricated. ── -->
+    <p class="dg-history-deferred" *ngIf="historyDeferred">
+      Historique des déploiements : non disponible — la plateforme enregistre chaque tentative côté serveur,
+      mais n'expose pas encore d'API de lecture pour les afficher ici.
+    </p>
+
+  </ng-container>
+</section>

@@ -1,5 +1,7 @@
     :host { display:block }
-    .page { padding:18px 20px; background:var(--bg-primary); min-height:100vh; color:var(--text-primary) }
+    /* min-height:100vh retiré : la page vit dans la coquille, qui gère déjà
+       le défilement — la contrainte provoquait un dépassement vertical. */
+    .page { padding:18px 20px; background:var(--bg-primary); color:var(--text-primary) }
 
     /* Header */
     .page-header { display:flex; align-items:center; gap:14px; margin-bottom:20px; padding:16px; background:var(--bg-secondary); border:1px solid var(--border); border-radius:10px }
@@ -57,7 +59,6 @@
     .ai-conf-text { color:var(--text-muted) }
 
     .judge-warning { color:var(--accent-orange); margin-bottom:12px }
-    .btn-action.gray { border-color:var(--text-muted); color:var(--text-muted); background:var(--bg-hover) }
 
     /* Zones (partagées avec les onglets Jenkins / SonarQube / Sécurité) */
     .zone-card { background:var(--bg-secondary); border:1px solid var(--border); border-radius:8px; overflow:hidden }
@@ -123,13 +124,11 @@
     /* Empty / loading */
     .empty-title { color:var(--text-secondary); margin-bottom:6px }
     .empty-sub { color:var(--text-muted) }
-    .loading-state { text-align:center; padding:40px; color:var(--text-muted); font-size:13px }
-    .error-state { text-align:center; padding:40px; color:var(--text-muted); font-size:13px }
+        .error-state { text-align:center; padding:40px; color:var(--text-muted); font-size:13px }
     .error-state p { color:var(--color-critical, var(--accent-red)); font-weight:600; margin-bottom:14px }
-.sec-filter-banner {
+.sec-filter-banner, .batch-progress-banner {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 10px;
   margin-top: 14px;
   padding: 9px 16px;
@@ -140,6 +139,7 @@
   font-size: 12px;
   font-weight: 600;
 }
+.sec-filter-banner { justify-content: space-between; }
 // Increment 1 (sélection CVE) — style entièrement inline dans le template
 // (voir .cve-batch-bar / .cve-batch-bar-main) : ce fichier est déjà au budget
 // CSS max du composant (pré-existant, hors scope de cet incrément).
@@ -168,7 +168,7 @@
    ═══════════════════════════════════════════════════════════════ */
 
 /* ── Rythme général de l'onglet ── */
-.tab-content, [class*='tab-'] { font-variant-numeric: tabular-nums; }
+[class*='tab-'] { font-variant-numeric: tabular-nums; }
 
 /* ── Hero du rapport : hiérarchie nette ── */
 .ai-hero {
@@ -337,10 +337,12 @@
 .action-row { display: flex; gap: 10px; flex-wrap: wrap; }
 .mt-10 { margin-top: 10px; }
 
-/* ── Déploiement Azure ── */
-.deploy-azure-box { display: flex; flex-direction: column; gap: 8px; }
-.deploy-azure-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-.deploy-confirm, .cockpit-panel { padding: 16px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-secondary); }
+/* ── Pilotage du déploiement ──
+   §27 — les règles .deploy-azure-box / .deploy-azure-row / .deploy-confirm /
+   .deploy-tag-input / .deploy-result ont été retirées : leur balisage a migré
+   vers app-deployment-governance, qui porte sa propre feuille. Elles ne
+   pouvaient plus s'appliquer à rien dans ce gabarit. */
+.cockpit-panel { padding: 16px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-secondary); }
 .cockpit-head { display:flex; justify-content:space-between; gap:12px; align-items:center; }
 .cockpit-head h3 { margin:0; }
 .cockpit-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:10px; margin:14px 0; }
@@ -360,7 +362,7 @@
 .next-action { display:flex; flex-direction:column; gap:4px; margin-top:12px; }
 .cycle-list { display:flex; flex-direction:column; gap:8px; margin-top:12px; }
 .cycle-item { display:grid; grid-template-columns:120px 120px 1fr; gap:10px; padding:10px; border-left:3px solid var(--accent-blue); background:var(--bg-primary); }
-.project-name, .header-meta, .stage-card p, .cycle-item, .deploy-confirm p { overflow-wrap:anywhere; word-break:break-word; }
+.header-meta, .stage-card p, .cycle-item { overflow-wrap:anywhere; word-break:break-word; }
 @media (max-width: 1024px) {
   .cockpit-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
   .stage-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
@@ -376,15 +378,7 @@
   .header-actions { grid-column:1 / -1; margin-left:0; justify-content:flex-start; flex-wrap:wrap; }
   .cockpit-grid, .stage-grid { grid-template-columns:1fr; }
   .cycle-item { grid-template-columns:1fr; }
-  .deploy-confirm { padding:12px; }
-  .deploy-azure-row > * { width:100%; }
 }
-.deploy-tag-input {
-  padding: 7px 10px; font-size: 12px; font-family: var(--font-mono);
-  border: 1px solid var(--border-color, rgba(127,127,127,.3)); border-radius: 6px;
-  background: var(--bg-hover); color: var(--text-primary); min-width: 180px;
-}
-.deploy-tag-input:disabled { opacity: .5; }
 .btn-action.blue { border-color: var(--accent-blue); color: var(--accent-blue); background: var(--accent-blue-bg); }
 .btn-action:disabled { opacity: .55; cursor: not-allowed; }
 .deploy-not-ready {
@@ -393,9 +387,6 @@
 }
 .deploy-not-ready ul { margin: 4px 0 0 18px; padding: 0; }
 .deploy-not-ready li { font-size: 11.5px; color: var(--text-secondary); }
-.deploy-result { font-size: 12.5px; border-radius: 6px; padding: 8px 10px; }
-.deploy-result.success { color: var(--accent-green); background: var(--accent-green-bg); border: 1px solid rgba(29,158,117,.25); }
-.deploy-result.error { color: var(--accent-orange, #f59e0b); background: rgba(245,158,11,.08); border: 1px solid rgba(245,158,11,.25); }
 
 /* ── États vides : direction, pas décoration ── */
 .empty-state { text-align: center; padding: 46px 20px; }

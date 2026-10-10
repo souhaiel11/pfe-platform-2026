@@ -1,0 +1,96 @@
+/* ─────────────────────────────────────────────────────────────────────
+   Formulaire de projet.
+
+   Ces règles vivaient dans une balise <style> à l'intérieur du gabarit, ce
+   qui produisait deux défauts réels :
+
+    — la balise n'est pas encapsulée par Angular : des sélecteurs aussi
+      génériques que `.alert`, `.field`, `.section`, `.hint` ou `.divider`
+      fuyaient dans le document et continuaient de s'appliquer aux autres
+      écrans après un passage sur ce formulaire ;
+    — la palette était une palette GitHub-sombre codée en dur (#0d1117,
+      #e6edf3, #58a6ff…), donc cet écran restait sombre en thème clair —
+      le seul de la plateforme à ne pas suivre le thème (§2).
+
+   Les couleurs passent par les variables de thème existantes, et la page
+   hérite de la typographie et du défilement de la coquille applicative.
+   ───────────────────────────────────────────────────────────────────── */
+* { box-sizing: border-box; }
+.pf-container { max-width: 800px; margin: 0 auto; padding: 24px; background: var(--bg-primary); color: var(--text-primary); }
+.pf-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+.pf-header h1 { color:inherit; flex: 1; margin: 0; font-size: 1.4rem; }
+.pf-actions { display: flex; gap: 8px; }
+.btn-back     { background: transparent; border: 1px solid var(--border-color); color: var(--text-muted); padding: 8px 16px; border-radius: 6px; cursor: pointer; white-space: nowrap; }
+.btn-save     { background: var(--accent-green); border: 1px solid var(--accent-green); color: var(--bg-primary); padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: 600; }
+.btn-validate { background: transparent; border: 1px solid var(--accent-blue); color: var(--accent-blue); padding: 10px 20px; border-radius: 6px; cursor: pointer; }
+.btn-save:disabled, .btn-validate:disabled { opacity: 0.5; cursor: not-allowed; }
+.field-error { color: var(--accent-red); font-size: 0.8rem; margin-top: 4px; }
+.alert { padding: 10px 16px; border-radius: 6px; margin-bottom: 12px; font-size: 0.875rem; }
+.alert.success { background: var(--accent-green-bg); border: 1px solid var(--accent-green); }
+.alert.error   { background: var(--accent-red-bg); border: 1px solid var(--accent-red); }
+.validation-box { background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px; padding: 14px; margin-bottom: 16px; }
+.vbox-title { font-weight: 600; margin-bottom: 10px; }
+.vbox-title.ok { color: var(--accent-green); }
+.vbox-items { display: flex; flex-direction: column; gap: 6px; }
+.vbox-item  { display: flex; gap: 10px; font-size: 0.85rem; align-items: center; }
+.vbox-label { font-weight: 600; min-width: 90px; }
+.vbox-msg   { color: var(--text-muted); }
+.section-nav { display: flex; gap: 2px; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); }
+.snav-btn { background: transparent; border: none; color: var(--text-muted); padding: 10px 16px; cursor: pointer; border-bottom: 2px solid transparent; font-size: 0.875rem; white-space: nowrap; }
+.snav-btn.active { color: var(--accent-blue); border-bottom-color: var(--accent-blue); }
+.section { background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px; padding: 20px; }
+.field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 14px; }
+.field label { font-size: 0.85rem; color: var(--text-muted); font-weight: 500; }
+.field input, .field select, .field textarea { background: var(--bg-primary); border: 1px solid var(--border-color); color: var(--text-primary); padding: 8px 12px; border-radius: 6px; font-size: 0.875rem; }
+.field input:focus, .field select:focus, .field textarea:focus { outline: none; border-color: var(--accent-blue); }
+.field.err input { border-color: var(--accent-red); }
+.errmsg { color: var(--accent-red); font-size: 0.75rem; }
+.hint { color: var(--text-muted); font-size: 0.75rem; }
+.req { color: var(--accent-red); }
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.divider { color: var(--text-muted); font-size: 0.85rem; font-weight: 600; padding: 10px 0 6px; border-bottom: 1px solid var(--border-color); margin-bottom: 12px; }
+.tool-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.tool-card { display: flex; align-items: center; gap: 8px; cursor: pointer; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 6px; padding: 10px 14px; }
+.tool-card input { display: none; }
+.tool-card:has(input:checked) { border-color: var(--accent-blue); background: var(--accent-blue-bg); }
+.tool-name { font-size: 0.875rem; }
+.notif-row { background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 6px; padding: 14px; margin-bottom: 12px; }
+.notif-header { display: flex; justify-content: space-between; align-items: center; font-weight: 600; }
+.notif-body { margin-top: 12px; }
+.toggle { position: relative; display: inline-block; width: 40px; height: 22px; }
+.toggle input { opacity: 0; width: 0; height: 0; }
+.slider { position: absolute; cursor: pointer; top:0; left:0; right:0; bottom:0; background: var(--border-color); border-radius: 22px; transition: .3s; }
+.slider:before { position: absolute; content:''; height:16px; width:16px; left:3px; bottom:3px; background:var(--bg-primary); border-radius:50%; transition:.3s; }
+.toggle input:checked + .slider { background: var(--accent-green); }
+.toggle input:checked + .slider:before { transform: translateX(18px); }
+.valid-inline { margin-top: 8px; font-size: 0.85rem; color: var(--text-muted); }
+.pf-footer { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border-color); }
+@media (max-width:600px) {
+  .pf-container { padding:16px; }
+  .pf-header { flex-wrap:wrap; }
+  .pf-header h1 { order:-1; flex:1 0 100%; font-size:1.25rem; margin:0; }
+  .pf-actions { flex:1 1 100%; flex-wrap:wrap; }
+  .pf-actions button { flex:1 1 120px; }
+  /* §23 — `.field-row` et `.tool-grid` sont des grilles : l'ancienne règle
+     écrivait `flex-direction:column`, qui n'a aucun effet sur une grille.
+     Les deux colonnes restaient donc côte à côte à 390 px, chaque champ
+     réduit à ~150 px. */
+  .field-row, .tool-grid { grid-template-columns: minmax(0, 1fr); }
+  .pf-footer { flex-wrap:wrap; }
+}
+
+/* §24 — un focus clavier visible sur chaque contrôle de ce formulaire :
+   l'ancienne feuille supprimait l'outline des champs (`outline: none`) sans
+   rien mettre à la place pour les boutons. */
+.btn-back:focus-visible, .btn-save:focus-visible, .btn-validate:focus-visible,
+.snav-btn:focus-visible, .tool-card:focus-within, .toggle input:focus-visible + .slider {
+  outline: 2px solid var(--accent-blue);
+  outline-offset: 2px;
+}
+.alert { display: flex; align-items: center; gap: 8px; }
+.alert.success { color: var(--accent-green); }
+.alert.error { color: var(--accent-red); }
+.vbox-title { display: flex; align-items: center; gap: 6px; }
+.vbox-item .valid-glyph { font-weight: 700; }
+.snav-btn { display: inline-flex; align-items: center; gap: 6px; }
+.divider { display: flex; align-items: center; gap: 6px; }

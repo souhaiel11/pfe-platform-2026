@@ -1,125 +1,134 @@
-    .projects-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      gap: 16px;
-    }
+/* ─────────────────────────────────────────────────────────────────────
+   Liste des projets (§29) — une ligne par projet, mêmes champs au même
+   endroit, pour que deux projets se comparent sans lecture attentive.
 
-    .project-card {
-      background: var(--bg-secondary);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      padding: 18px;
-      transition: border-color 0.2s;
-      &:hover { border-color: var(--border-light); }
-    }
+   Le format « inventaire » est volontaire : une grille de tuiles riches
+   invite à lire chaque carte, une liste alignée invite à balayer la
+   colonne. C'est ce second geste que fait un développeur qui cherche
+   « lequel de mes projets va mal ».
+   ───────────────────────────────────────────────────────────────────── */
 
-    .project-card-header {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 14px;
-    }
+.list-summary {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: 0 0 10px;
+  .attention { color: var(--color-warning); font-weight: 600; }
+}
 
-    .project-avatar {
-      width: 36px; height: 36px;
-      border-radius: var(--radius-md);
-      background: var(--bg-tertiary);
-      border: 1px solid;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 12px;
-      font-weight: 700;
-      font-family: var(--font-mono);
-      color: var(--text-secondary);
-      flex-shrink: 0;
-    }
+.partial-notice {
+  margin-bottom: 14px;
+  ul { margin: 6px 0 10px; padding-left: 18px; font-size: 12px; }
+}
 
-    .project-name {
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--text-primary);
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
+.projects-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--bg-secondary);
+}
 
-    .project-id {
-      font-size: 10px;
-      color: var(--text-faint);
-      font-family: var(--font-mono);
-    }
+.project-card {
+  display: grid;
+  grid-template-columns: minmax(200px, 1fr) minmax(0, 2.2fr);
+  align-items: start;
+  gap: 18px 24px;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--border-color);
+  &:last-child { border-bottom: 0; }
+  &:hover, &:focus-within { background: var(--bg-tertiary); }
+}
 
-    .health-badge {
-      font-size: 12px;
-      font-weight: 700;
-      padding: 4px 8px;
-      border-radius: var(--radius-sm);
-      font-family: var(--font-mono);
-      flex-shrink: 0;
-    }
+/* Repère non chromatique en plus de la bordure : un liseré seul ne dit rien
+   à qui ne distingue pas les couleurs (§24). La pastille « À traiter » reste
+   l'information portante. */
+.project-card.attention { box-shadow: inset 3px 0 0 var(--color-warning); }
 
-    .project-stats {
-      display: flex;
-      gap: 12px;
-      margin-bottom: 12px;
-    }
+.pc-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; min-width: 0; }
+.pc-ident { min-width: 0; }
 
-    .stat { text-align: center; flex: 1; }
+.pc-name {
+  display: block;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  text-decoration: none;
+  overflow-wrap: anywhere;
+  &:hover { color: var(--accent-blue); text-decoration: underline; }
+  &:focus-visible { outline: 2px solid var(--accent-blue); outline-offset: 2px; border-radius: 3px; }
+}
 
-    .stat-val {
-      font-size: 20px;
-      font-weight: 700;
-      font-family: var(--font-mono);
-      &.red    { color: var(--accent-red); }
-      &.orange { color: var(--accent-orange); }
-      &.green  { color: var(--accent-green); }
-    }
+.pc-repo {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 8px;
+  margin-top: 4px; font-size: 11px; color: var(--text-muted);
+}
+.pc-repo-val { font-family: var(--font-mono); overflow-wrap: anywhere; }
+.pc-env {
+  font-size: 9px; text-transform: uppercase; letter-spacing: .06em;
+  padding: 1px 6px; border-radius: 3px;
+  background: var(--bg-tertiary); border: 1px solid var(--border-color); color: var(--text-secondary);
+}
 
-    .stat-label {
-      font-size: 9px;
-      color: var(--text-faint);
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
+.pc-attention {
+  flex: 0 0 auto;
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 10px; font-weight: 700; letter-spacing: .03em;
+  padding: 2px 7px; border-radius: 999px;
+  color: var(--color-warning); background: var(--color-warning-bg);
+  border: 1px solid currentColor;
+}
 
-    .health-bar-wrap { margin-bottom: 12px; }
+/* Les quatre faits, toujours dans le même ordre. */
+.pc-facts {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(120px, 1fr));
+  gap: 12px 18px;
+  margin: 0;
+}
+.pc-fact { min-width: 0; }
+.pc-fact dt {
+  display: flex; align-items: center;
+  font-size: 9px; text-transform: uppercase; letter-spacing: .06em;
+  color: var(--text-faint); font-family: var(--font-mono); margin-bottom: 5px;
+}
+.pc-fact dd {
+  margin: 0;
+  display: flex; align-items: center; flex-wrap: wrap; gap: 4px 8px;
+  font-size: 12px; color: var(--text-secondary);
+}
 
-    .health-bar {
-      height: 3px;
-      background: var(--border);
-      border-radius: 2px;
-      overflow: hidden;
-      div { height: 100%; border-radius: 2px; transition: width 0.8s ease; }
-    }
+.pc-build-num { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); }
+.pc-score { font-family: var(--font-mono); font-size: 15px; font-weight: 700; }
+.pc-incidents {
+  font-family: var(--font-mono); font-size: 15px; font-weight: 700; color: var(--text-muted);
+  &.some { color: var(--accent-red); }
+}
+.pc-note { font-size: 10px; color: var(--text-muted); overflow-wrap: anywhere; }
 
-    .project-footer {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
+.pc-foot {
+  grid-column: 1 / -1;
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding-top: 4px;
+}
+.pc-activity { font-size: 10px; color: var(--text-faint); }
 
-    .modal-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.6);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 500;
-    }
+.pc-delete {
+  flex: 0 0 auto;
+  border: 1px solid var(--border-color); background: transparent;
+  color: var(--text-muted); border-radius: var(--radius-sm);
+  padding: 4px 8px; cursor: pointer; font-size: 12px; line-height: 1;
+  &:hover, &:focus-visible { color: var(--accent-red); border-color: var(--accent-red); }
+}
 
-    .modal {
-      background: var(--bg-secondary);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      padding: 24px;
-      width: 420px;
-    }
-
-    .modal-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 20px;
-    }
+/* §23 — 1024 px : les faits passent sur deux colonnes ; 768 px et moins :
+   l'identité et les faits s'empilent. Aucun débordement horizontal. */
+@media (max-width: 1150px) {
+  .project-card { grid-template-columns: minmax(0, 1fr); }
+  .pc-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 560px) {
+  .project-card { padding: 14px 12px; }
+  .pc-facts { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+}

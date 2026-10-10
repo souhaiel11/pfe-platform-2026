@@ -1,3 +1,4 @@
+import {sharedDependency} from './security-lifecycle-test-loader.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -36,6 +37,7 @@ const componentCode = ts.transpileModule(componentSource, {
 vm.runInNewContext(componentCode, {
   exports: componentExports,
   require: (spec) => {
+    if (spec.endsWith('data-truth')) return sharedDependency(spec);
     if (spec.endsWith('status-labels')) return statusLabelsExports;
     if (spec.endsWith('finding-presentation')) return findingPresentationExports;
     if (spec.endsWith('score-display')) return scoreDisplayExports;

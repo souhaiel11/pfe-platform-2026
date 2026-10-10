@@ -1,116 +1,126 @@
-<div *ngIf="loadError" role="alert" class="card">{{loadError}} <button (click)="load()">Réessayer</button></div>
-    <div class="page-container">
-      <div class="page-header">
-        <h1 class="page-title">// agents IA</h1>
-        <p class="page-subtitle">Performance et activité des agents IA — cause, sécurité, remédiation et gouvernance</p>
+<div class="page-container">
+  <div class="page-header">
+    <h1 class="page-title">Agents IA</h1>
+    <p class="page-subtitle">Activité des agents IA — cause racine, sécurité, remédiation et gouvernance</p>
+  </div>
+
+  <app-zone-label kind="information"
+    note="Activité et décisions des agents. Le traitement se fait sur la page de l’incident concerné."></app-zone-label>
+
+  <!-- §18 — patron standard et libellé annoncé pendant la lecture. -->
+  <div *ngIf="loading" class="loading-overlay" role="status"><div class="spinner"></div><span>Chargement des analyses…</span></div>
+
+  <!-- §17 — un échec de requête n'est pas « aucune analyse ». -->
+  <div class="card" *ngIf="!loading && loadError" role="alert">
+    <div class="empty-state">
+      <div class="empty-icon"><i class="ti ti-plug-connected-x" aria-hidden="true"></i></div>
+      <div class="empty-title">Impossible de charger les analyses</div>
+      <div class="empty-sub">{{loadError}}</div>
+      <button class="btn btn-secondary btn-sm" style="margin-top:14px;" (click)="load()">Réessayer</button>
+    </div>
+  </div>
+
+  <ng-container *ngIf="!loading && !loadError">
+
+    <!-- ─── KPIs ───
+         §6 — mêmes icônes que le reste de la plateforme (police ti) et
+         couleurs issues des variables de thème : les anciennes valeurs
+         hexadécimales ne suivaient pas le thème clair/sombre. -->
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-icon" style="background:var(--accent-purple-bg);color:var(--accent-purple)"><i class="ti ti-chart-bar" aria-hidden="true"></i></div>
+        <div>
+          <div class="kpi-value">{{ stats.total }}</div>
+          <div class="kpi-label">Analyses effectuées</div>
+        </div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-icon" style="background:var(--accent-green-bg);color:var(--accent-green)"><i class="ti ti-target-arrow" aria-hidden="true"></i></div>
+        <div>
+          <div class="kpi-value">{{ stats.avgConfidence === null ? 'Non disponible' : stats.avgConfidence + '%' }}</div>
+          <div class="kpi-label">Confiance moyenne de l’IA</div>
+        </div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-icon" style="background:var(--accent-blue-bg);color:var(--accent-blue)"><i class="ti ti-tool" aria-hidden="true"></i></div>
+        <div>
+          <div class="kpi-value">{{ stats.autoFixablePct === null ? 'Non disponible' : stats.autoFixablePct + '%' }}</div>
+          <!-- §11 — « proposé » n'est pas « corrigé » : le libellé le dit. -->
+          <div class="kpi-label">Corrections proposées par l’IA</div>
+        </div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-icon" style="background:var(--accent-red-bg);color:var(--accent-red)"><i class="ti ti-alert-octagon" aria-hidden="true"></i></div>
+        <div>
+          <div class="kpi-value">{{ stats.criticalCount }}</div>
+          <div class="kpi-label">Analyses de niveau critique</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── RÉPARTITIONS ─── -->
+    <div class="charts-grid">
+      <div class="card">
+        <div class="card-header" style="margin-bottom:14px;">
+          <span class="card-title"><i class="ti ti-gavel" aria-hidden="true"></i> Décisions de gouvernance<app-info-hint term="deployment-governance"></app-info-hint></span>
+        </div>
+        <div class="bar-chart">
+          <div *ngFor="let d of decisionBars" class="bar-row">
+            <div class="bar-label">{{ d.label }}</div>
+            <div class="bar-track"><div class="bar-fill" [style.width]="d.pct + '%'" [style.background]="d.color"></div></div>
+            <div class="bar-value">{{ d.count }}</div>
+          </div>
+          <div *ngIf="decisionBars.length === 0" class="empty-mini">Aucune décision de gouvernance enregistrée.</div>
+        </div>
       </div>
 
-      <div *ngIf="loading" class="loading-overlay"><div class="spinner"></div></div>
-
-      <ng-container *ngIf="!loading && !loadError">
-
-        <!-- ─── KPIs ─── -->
-        <div class="kpi-grid">
-          <div class="kpi-card">
-            <div class="kpi-icon" style="background:#a78bfa22;color:#a78bfa;">📊</div>
-            <div>
-              <div class="kpi-value">{{ stats.total }}</div>
-              <div class="kpi-label">Analyses effectuées</div>
-            </div>
-          </div>
-          <div class="kpi-card">
-            <div class="kpi-icon" style="background:#22c55e22;color:#22c55e;">◈</div>
-            <div>
-              <div class="kpi-value">{{ stats.avgConfidence }}%</div>
-              <div class="kpi-label">Confiance moyenne IA</div>
-            </div>
-          </div>
-          <div class="kpi-card">
-            <div class="kpi-icon" style="background:#38bdf822;color:#38bdf8;">◆</div>
-            <div>
-              <div class="kpi-value">{{ stats.autoFixablePct }}%</div>
-              <div class="kpi-label">Correctifs auto-proposés</div>
-            </div>
-          </div>
-          <div class="kpi-card">
-            <div class="kpi-icon" style="background:#e24b4a22;color:#e24b4a;">⬡</div>
-            <div>
-              <div class="kpi-value">{{ stats.criticalCount }}</div>
-              <div class="kpi-label">Incidents CRITICAL</div>
-            </div>
-          </div>
+      <div class="card">
+        <div class="card-header" style="margin-bottom:14px;">
+          <span class="card-title"><i class="ti ti-alert-triangle" aria-hidden="true"></i> Niveaux de sévérité détectés</span>
         </div>
-
-        <!-- ─── GRAPHIQUES ─── -->
-        <div class="charts-grid">
-
-          <!-- Décisions du Judge -->
-          <div class="card">
-            <div class="card-header" style="margin-bottom:14px;">
-              <span class="card-title">▣ Décisions de gouvernance</span>
-            </div>
-            <div class="bar-chart">
-              <div *ngFor="let d of decisionBars" class="bar-row">
-                <div class="bar-label">{{ d.label }}</div>
-                <div class="bar-track">
-                  <div class="bar-fill" [style.width]="d.pct + '%'" [style.background]="d.color"></div>
-                </div>
-                <div class="bar-value">{{ d.count }}</div>
-              </div>
-              <div *ngIf="decisionBars.length === 0" class="empty-mini">Aucune donnée</div>
-            </div>
+        <div class="bar-chart">
+          <div *ngFor="let s of severityBars" class="bar-row">
+            <div class="bar-label">{{ s.label }}</div>
+            <div class="bar-track"><div class="bar-fill" [style.width]="s.pct + '%'" [style.background]="s.color"></div></div>
+            <div class="bar-value">{{ s.count }}</div>
           </div>
-
-          <!-- Niveaux de sévérité -->
-          <div class="card">
-            <div class="card-header" style="margin-bottom:14px;">
-              <span class="card-title">⬡ Niveaux de sévérité détectés</span>
-            </div>
-            <div class="bar-chart">
-              <div *ngFor="let s of severityBars" class="bar-row">
-                <div class="bar-label">{{ s.label }}</div>
-                <div class="bar-track">
-                  <div class="bar-fill" [style.width]="s.pct + '%'" [style.background]="s.color"></div>
-                </div>
-                <div class="bar-value">{{ s.count }}</div>
-              </div>
-              <div *ngIf="severityBars.length === 0" class="empty-mini">Aucune donnée</div>
-            </div>
-          </div>
-
+          <div *ngIf="severityBars.length === 0" class="empty-mini">Aucune sévérité enregistrée.</div>
         </div>
-
-        <!-- ─── ACTIVITÉ RÉCENTE ─── -->
-        <div style="margin-top:20px;">
-          <div class="card-header" style="margin-bottom:12px;">
-            <span class="card-title">Activité récente des agents</span>
-            <span style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono);">
-              {{ recentReports.length }} derniers rapports
-            </span>
-          </div>
-
-          <div *ngIf="recentReports.length === 0" class="empty-state">
-            <div class="empty-icon">📋</div>
-            <div class="empty-title">Aucun rapport disponible</div>
-            <div class="empty-sub">Lancez un build Jenkins pour générer une analyse IA</div>
-          </div>
-
-          <div class="activity-list">
-            <a *ngFor="let r of recentReports" [routerLink]="['/incidents', r.id]" class="activity-row">
-              <span class="badge" [class]="getDecisionBadgeClass(r.decision)" style="min-width:110px;text-align:center;">
-                {{ r.decision | presentationLabel }}
-              </span>
-              <div class="activity-main">
-                <div class="activity-title">{{ r.title || 'Rapport sans titre' }}</div>
-                <div class="activity-sub">{{ r.projectName || 'Projet non disponible' }} · {{ r.securityLevel | presentationLabel }} · confiance {{ r.confidence ?? 'Non disponible' }}{{r.confidence != null ? ' %' : ''}}</div>
-              </div>
-              <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-faint);">
-                {{ r.createdAt | frenchDate }}
-              </span>
-              <span style="color:var(--text-muted);">→</span>
-            </a>
-          </div>
-        </div>
-
-      </ng-container>
+      </div>
     </div>
+
+    <!-- ─── ACTIVITÉ RÉCENTE ─── -->
+    <div style="margin-top:20px;">
+      <div class="card-header" style="margin-bottom:12px;">
+        <span class="card-title">Activité récente des agents</span>
+        <span class="activity-count">
+          {{ recentReports.length }} dernier{{ recentReports.length > 1 ? 's' : '' }} rapport{{ recentReports.length > 1 ? 's' : '' }}
+        </span>
+      </div>
+
+      <!-- §16 — un état vide dit ce qui est vide et quoi faire ensuite. -->
+      <div *ngIf="recentReports.length === 0" class="empty-state">
+        <div class="empty-icon"><i class="ti ti-report-analytics" aria-hidden="true"></i></div>
+        <div class="empty-title">Aucune analyse IA enregistrée</div>
+        <div class="empty-sub">Un build Jenkins doit s’exécuter pour qu’une analyse soit produite.</div>
+      </div>
+
+      <div class="activity-list">
+        <a *ngFor="let r of recentReports" [routerLink]="['/incidents', r.id]" class="activity-row">
+          <app-status-chip [status]="r.decision"></app-status-chip>
+          <div class="activity-main">
+            <div class="activity-title">{{ r.title || 'Rapport sans titre' }}</div>
+            <div class="activity-sub">
+              {{ r.projectName || 'Projet non disponible' }} ·
+              {{ r.securityLevel ? (r.securityLevel | presentationLabel) : 'Sévérité non déterminée' }} ·
+              confiance {{ r.confidence ?? 'non disponible' }}{{ r.confidence != null ? ' %' : '' }}
+            </div>
+          </div>
+          <span class="activity-date">{{ r.createdAt | frenchDate }}</span>
+          <span aria-hidden="true" class="activity-arrow">→</span>
+        </a>
+      </div>
+    </div>
+
+  </ng-container>
+</div>

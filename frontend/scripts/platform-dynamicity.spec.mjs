@@ -31,7 +31,13 @@ assert.equal(presentation.repositoryUrl('https://github.com/another/two'),'https
 for(const ids of [['zap','build','deploy'],['tests','owasp','build','future']]){const sorted=stages.sortPipelineStages(ids.map(stage=>({stage,status:'FAILED'})));assert.equal(sorted.length,ids.length);assert.equal(sorted[0].stage,'build');assert.ok(!sorted.some(s=>!ids.includes(s.stage)));}
 const template=read('../src/app/features/settings/settings.component.html');assert.match(template,/Impossible de récupérer les capacités/);assert.match(template,/Aucune intégration/);assert.match(template,/!canEdit \|\| !tool.editable/);assert.doesNotMatch(template,/Grafana|Modèle Ollama|value="llama/);
 for(const f of ['jenkins','sonarqube','kubernetes'])assert.equal(existsSync(new URL('../src/app/features/tools/'+f+'.component.ts',import.meta.url)),false);
-const projectTemplate=read('../src/app/features/projects/project-detail.component.html');assert.match(projectTemplate,/repositoryUrl\(project\?\.githubRepo\)/);assert.match(projectTemplate,/reportedBranch\(\)/);assert.doesNotMatch(projectTemplate,/PR #(?:41|42)|Toutes \((?:105|146)\)/);
+const projectTemplate=read('../src/app/features/projects/project-detail.component.html');// L'URL du depot est desormais derivee par le backend (emplacement
+// GIT_REPOSITORY du contrat de preuve) au lieu d'etre recomposee dans le
+// gabarit : la garantie testee reste la meme — rien n'est code en dur, tout
+// vient de la configuration du projet affiche.
+assert.match(projectTemplate,/projectEvidenceSlot\('GIT_REPOSITORY'\)/);
+assert.match(projectTemplate,/\{\{project\?\.githubRepo \|\| 'Non configuré'\}\}/);
+assert.match(projectTemplate,/reportedBranch\(\)/);assert.doesNotMatch(projectTemplate,/PR #(?:41|42)|Toutes \((?:105|146)\)/);
 console.log('Dynamic settings, real editing, capability changes, empty/error/unavailable states and second project PASS');
 
 const form=read('../src/app/features/projects/project-form.component.html');assert.doesNotMatch(form,/formControlName="(?:emailEnabled|slackEnabled)"|value:'(?:gitlab|github|azure)'/);

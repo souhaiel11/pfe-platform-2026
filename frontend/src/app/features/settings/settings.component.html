@@ -1,13 +1,11 @@
     <div class="page-container">
       <div class="page-header">
-        <h1 class="page-title">// paramètres</h1>
+        <h1 class="page-title">Paramètres</h1>
         <p class="page-subtitle">Configuration de la plateforme DevSecOps IA</p>
       </div>
 
       <div class="settings-layout">
 
-        <section class="section-block" aria-label="Intégrations du projet">
-          <h2 class="section-label">Intégrations du projet</h2>
           <div *ngIf="projectsState === 'LOADING'" class="loading-overlay" role="status"><div class="spinner"></div>Chargement des projets…</div>
           <div *ngIf="projectsState === 'ERROR'" role="alert">Impossible de récupérer les projets. <button class="btn-test" (click)="loadProjects()">Réessayer</button></div>
           <p *ngIf="projectsState === 'EMPTY'">Aucun projet enregistré.</p>
@@ -18,12 +16,44 @@
             </select>
             <div *ngIf="projectState === 'LOADING'" class="loading-overlay" role="status"><div class="spinner"></div>Chargement de la configuration du projet…</div>
             <div *ngIf="projectState === 'ERROR'" role="alert">Impossible de récupérer la configuration du projet. <button class="btn-test" (click)="selectProject()">Réessayer</button></div>
+          </ng-container>
+        <nav class="settings-tabs" role="tablist" aria-label="Sections des paramètres">
+          <button *ngFor="let section of settingsSections; let index = index" class="tab-btn" role="tab" [id]="'settings-tab-'+section.id" [attr.aria-controls]="'settings-panel-'+section.id" [attr.aria-selected]="activeSection === section.id" [attr.tabindex]="activeSection === section.id ? 0 : -1" [class.active]="activeSection === section.id" (click)="setSettingsSection(section.id)" (keydown)="navigateSettings($event,index)">{{section.label}}</button>
+        </nav>
+        <section class="section-block general-settings" *ngIf="activeSection === 'general'" id="settings-panel-general" role="tabpanel" aria-labelledby="settings-tab-general" aria-label="Paramètres généraux">
+          <h2 class="section-label">Paramètres généraux</h2>
+          <div class="general-groups">
+            <div class="card">
+              <h3 class="field-label">Projet</h3>
+              <div class="info-row"><span class="info-key">Projet actif</span><span class="info-val">{{generalSummary.project}}</span></div>
+              <div class="info-row"><span class="info-key">Dépôt Git</span><span class="info-val">{{generalSummary.repository}}</span></div>
+            </div>
+            <div class="card">
+              <h3 class="field-label">Exécution</h3>
+              <div class="info-row"><span class="info-key">CI</span><span class="info-val">{{generalSummary.ci}}</span></div>
+              <div class="info-row"><span class="info-key">Déploiement</span><span class="info-val">{{generalSummary.deployment}}</span></div>
+            </div>
+            <div class="card">
+              <h3 class="field-label">Sécurité et remédiation</h3>
+              <p *ngIf="capabilitiesState === 'LOADING'" role="status">Chargement des capacités…</p>
+              <div *ngIf="capabilitiesState === 'ERROR'" role="alert">Impossible de récupérer les capacités de la plateforme. <button class="btn-test" (click)="loadCapabilities()">Réessayer</button></div>
+              <div class="info-row"><span class="info-key">Mode V1.8</span><span class="info-val">{{generalSummary.mode}}</span></div>
+              <div class="info-row"><span class="info-key">Types de correction supportés</span><span class="info-val">{{generalSummary.editTypes.join(' · ') || 'Non disponible'}}</span></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="section-block" *ngIf="activeSection === 'integrations' || activeSection === 'delivery'" [id]="'settings-panel-'+activeSection" role="tabpanel" [attr.aria-labelledby]="'settings-tab-'+activeSection" aria-label="Intégrations du projet">
+          <h2 class="section-label">{{activeSection === 'integrations' ? 'Connexions des intégrations' : 'Exécution et déploiement'}}</h2>
+          <ng-container *ngIf="projectsState === 'LOADED'">
             <ng-container *ngIf="projectState === 'LOADED' && project">
+              <ng-container *ngIf="activeSection === 'delivery'">
               <div class="info-row"><span class="info-key">Identifiant du projet</span><span class="info-val">{{project.id}}</span></div>
               <div class="info-row"><span class="info-key">Branche principale</span><span class="info-val">Valeur indisponible — aucune branche persistée dans la configuration du projet.</span></div>
               <div class="info-row"><span class="info-key">Environnement</span><span class="info-val">{{environmentLabel(project.environment)}}</span></div>
-              <div class="card governance-card" *ngFor="let section of projectSections">
-                <h3 class="field-label">{{section.title}}</h3>
+              </ng-container>
+              <div class="card governance-card" *ngFor="let section of visibleProjectSections; trackBy: trackProjectSection">
+                <h3 class="field-label">{{section.title === 'Projet / dépôt' ? 'GitHub' : section.title}}</h3>
                 <p *ngIf="section.title === 'Azure / déploiement' && !project.azureConfig">Aucune cible Azure configurée. Aucun paramètre de cible n’est inventé.</p>
                 <ng-container *ngIf="section.title !== 'Azure / déploiement' || project.azureConfig">
                   <div class="field-row" *ngFor="let field of section.fields">
@@ -33,12 +63,22 @@
                   </div>
                 </ng-container>
                 <p *ngIf="section.title === 'Projet / dépôt'" class="field-hint">Authentification GitHub configurée : {{configuredLabel(project.githubCredentialConfigured)}}. Remplacement non disponible dans cette interface.</p>
-                <ng-container *ngIf="section.title === 'Jenkins'">
+                <ng-container *ngIf="section.title === 'Jenkins' && activeSection === 'integrations'">
+                  <div class="info-row"><span class="info-key">Configuration</span><span class="info-val">{{jenkinsSummary.configuration}}</span></div>
                   <p class="field-hint">Authentification configurée : {{configuredLabel(project.jenkinsCredentialConfigured)}}</p>
                   <p *ngIf="project.jenkinsUrl" class="field-hint">URL historique de repli : {{project.jenkinsUrl}}</p>
                 </ng-container>
                 <p *ngIf="section.title === 'SonarQube'" class="field-hint">Authentification configurée : {{configuredLabel(project.sonarqubeCredentialConfigured)}}. Remplacement non disponible dans cette interface.</p>
-                <p *ngIf="section.title === 'Azure / déploiement'" class="field-hint">Authentification Azure : état indisponible depuis ce backend. Les identifiants restent sur l’agent de déploiement.</p>
+                <p *ngIf="section.title === 'Azure / déploiement' && activeSection === 'integrations'" class="field-hint">Authentification Azure : état indisponible depuis ce backend. Les identifiants restent sur l’agent de déploiement.</p>
+              </div>
+              <div class="card governance-card" *ngIf="activeSection === 'delivery'">
+                <h3 class="field-label">Contrôles de déploiement</h3>
+                <p class="field-hint">Évaluation en lecture seule des contrôles backend pour le projet sélectionné.</p>
+                <p *ngIf="readinessState === 'IDLE'">État non disponible. Actualisez les contrôles.</p>
+                <p *ngIf="readinessState === 'LOADING'" role="status">Chargement des contrôles…</p>
+                <p *ngIf="readinessState === 'ERROR'" role="alert">Impossible de récupérer les contrôles de déploiement.</p>
+                <p *ngIf="readinessState === 'LOADED'">{{deploymentGateLabel()}}</p>
+                <button class="btn-test" (click)="loadDeployReadiness()" [disabled]="readinessState === 'LOADING'">{{readinessState === 'ERROR' ? 'Réessayer' : 'Actualiser'}}</button>
               </div>
               <p *ngIf="projectDirty" class="field-hint" role="status">Modifications non enregistrées.</p>
               <div class="tool-actions" *ngIf="canEdit">
@@ -46,7 +86,7 @@
                 <button class="btn-test" (click)="cancelProject()" [disabled]="!projectDirty || projectSaving || projectTesting || credentialSaving">Annuler</button>
               </div>
               <p *ngIf="projectMessage" role="status">{{projectMessage}}</p>
-              <div class="card governance-card" *ngIf="auth.isAdmin">
+              <div class="card governance-card" *ngIf="auth.isAdmin && activeSection === 'integrations'">
                 <h3 class="field-label">Remplacer l’authentification Jenkins</h3>
                 <p class="field-hint">La connexion est vérifiée avant l’enregistrement. Le jeton est à usage d’écriture uniquement.</p>
                 <label class="field-label" for="credential-username">Utilisateur Jenkins</label>
@@ -56,56 +96,47 @@
                 <button class="btn-save" (click)="replaceJenkinsCredential()" [disabled]="!credentialUsername.trim() || !credentialToken.trim() || credentialSaving || projectDirty || projectSaving || projectTesting">{{credentialSaving ? 'Vérification…' : 'Enregistrer les identifiants'}}</button>
                 <button class="btn-test" (click)="credentialUsername = ''; credentialToken = ''" [disabled]="credentialSaving || (!credentialUsername && !credentialToken)">Annuler</button>
               </div>
-              <div class="card governance-card">
-                <h3 class="field-label">Diagnostics Jenkins / SonarQube</h3>
-                <p class="field-hint">Vérification ponctuelle de la configuration enregistrée ; aucune surveillance continue.</p>
-                <button *ngIf="canEdit" class="btn-test" (click)="testProject()" [disabled]="projectDirty || projectSaving || projectTesting || credentialSaving">{{projectTesting ? 'Vérification…' : 'Tester la connexion'}}</button>
-                <div class="info-row"><span class="info-key">Jenkins</span><span class="info-val">{{diagnosticLabel(project.validationStatus?.jenkins)}}<span *ngIf="project.validationStatus?.jenkins?.checkedAt"> · Dernière vérification : {{project.validationStatus.jenkins.checkedAt | frenchDate}}</span></span></div>
-                <div class="info-row"><span class="info-key">SonarQube</span><span class="info-val">{{diagnosticLabel(project.validationStatus?.sonarqube)}}<span *ngIf="project.validationStatus?.sonarqube?.checkedAt"> · Dernière vérification : {{project.validationStatus.sonarqube.checkedAt | frenchDate}}</span></span></div>
-              </div>
+
             </ng-container>
           </ng-container>
         </section>
 
-        <section class="section-block" aria-label="Configuration effective">
-          <h2 class="section-label">Configuration effective — lecture seule</h2>
-          <div *ngIf="effectiveConfigState === 'LOADING'" class="loading-overlay" role="status">
-            <div class="spinner" aria-hidden="true"></div><span>Chargement de la configuration…</span>
+        <section class="section-block" *ngIf="activeSection === 'security'" id="settings-panel-security" role="tabpanel" aria-labelledby="settings-tab-security" aria-label="Sécurité">
+          <h2 class="section-label">Capacités de sécurité</h2>
+          <p class="field-hint">Capacités rapportées par le backend, en lecture seule. Les observations et vérifications datées sont disponibles dans Diagnostics.</p>
+          <p *ngIf="capabilitiesState === 'LOADING'" role="status">Chargement des capacités…</p>
+          <div *ngIf="capabilitiesState === 'ERROR'" role="alert">Impossible de récupérer les capacités de la plateforme. <button class="btn-test" (click)="loadCapabilities()">Réessayer</button></div>
+          <p *ngIf="capabilitiesState === 'LOADED' && !securityScanners.length">Aucune capacité de scanner rapportée.</p>
+          <div class="card governance-card" *ngFor="let scanner of securityScanners">
+            <h3 class="field-label">{{pipelineStageLabel(scanner.id)}}</h3>
+            <p class="field-hint">{{securityDescription(scanner.id)}}</p>
           </div>
-          <div *ngIf="effectiveConfigState === 'ERROR'" role="alert">
-            Impossible de récupérer la configuration effective.
-            <button class="btn-test" (click)="loadEffectiveConfig()">Réessayer</button>
+          <div class="card governance-card" *ngIf="capabilitiesState === 'LOADED' && capabilities?.remediation">
+            <h3 class="field-label">Validation des corrections V1.8</h3>
+            <div class="info-row"><span class="info-key">Mode V1.8</span><span class="info-val">{{generalSummary.mode}}</span></div>
+            <div class="info-row"><span class="info-key">Types de correction supportés</span><span class="info-val">{{generalSummary.editTypes.join(' · ') || 'Non disponible'}}</span></div>
+            <p class="field-hint">Les corrections dépendent des preuves validées et des contrôles métier.</p>
           </div>
-          <ng-container *ngIf="effectiveConfigState === 'LOADED'">
-            <div class="card">
-              <h3 class="field-label">Plateforme</h3>
-              <div class="info-row"><span class="info-key">Environnement</span><span class="info-val">{{environmentLabel(effectiveConfig?.platform?.environment)}}</span></div>
-              <div class="info-row"><span class="info-key">Dépôt cible</span><span class="info-val">{{effectiveConfig?.platform?.targetRepository || 'Valeur indisponible'}}</span></div>
-              <div class="info-row"><span class="info-key">Branche par défaut</span><span class="info-val">{{effectiveConfig?.platform?.defaultBranch || 'Valeur indisponible'}}</span></div>
-              <p class="field-hint">{{effectiveConfig?.platform?.projectConfigurationReason}}</p>
-              <div class="info-row"><span class="info-key">WF2 configuré</span><span class="info-val">{{configuredLabel(effectiveConfig?.platform?.wf2?.configured)}}</span></div>
-              <div class="info-row"><span class="info-key">WF6 configuré</span><span class="info-val">{{configuredLabel(effectiveConfig?.platform?.wf6?.configured)}}</span></div>
-              <p class="field-hint">{{effectiveConfig?.platform?.workflowConfigurationReason}}</p>
-            </div>
-            <div class="card governance-card">
-              <h3 class="field-label">Trivy — configuration et fraîcheur des bases</h3>
-              <div class="info-row"><span class="info-key">Disponibilité</span><span class="info-val">{{availabilityLabel(effectiveConfig?.scanners?.trivy?.available)}}</span></div>
-              <div class="info-row"><span class="info-key">Seuils de sévérité actifs</span><span class="info-val">{{effectiveConfig?.scanners?.trivy?.severityThresholds?.join(', ') || 'Valeur indisponible'}}</span></div>
-              <div class="info-row"><span class="info-key">Base des vulnérabilités — âge</span><span class="info-val">{{durationLabel(effectiveConfig?.scanners?.trivy?.vulnDb?.ageMs)}}</span></div>
-              <div class="info-row"><span class="info-key">Base des vulnérabilités — seuil de fraîcheur</span><span class="info-val">{{durationLabel(effectiveConfig?.scanners?.trivy?.vulnDb?.maxAgeMs)}}</span></div>
-              <div class="info-row"><span class="info-key">Base Java — âge</span><span class="info-val">{{durationLabel(effectiveConfig?.scanners?.trivy?.javaDb?.ageMs)}}</span></div>
-              <div class="info-row"><span class="info-key">Base Java — seuil de fraîcheur</span><span class="info-val">{{durationLabel(effectiveConfig?.scanners?.trivy?.javaDb?.maxAgeMs)}}</span></div>
-              <p class="field-hint">{{effectiveConfig?.scanners?.trivy?.unavailableReason}}</p>
-            </div>
-            <div class="card governance-card">
-              <h3 class="field-label">Invariants de sécurité</h3>
-              <ul><li *ngFor="let invariant of effectiveConfig?.policies?.invariants">{{invariant}}</li></ul>
-              <p *ngIf="!effectiveConfig?.policies?.invariants?.length">Valeur indisponible</p>
-            </div>
-          </ng-container>
         </section>
 
-        <!-- ═══ INTÉGRATIONS ═══ -->
+        <section class="section-block settings-diagnostics" *ngIf="activeSection === 'diagnostics'" id="settings-panel-diagnostics" role="tabpanel" aria-labelledby="settings-tab-diagnostics" aria-label="Diagnostics">
+          <h2 class="section-label">Diagnostics</h2>
+          <p class="field-hint">Vérifications ponctuelles et observations historiques ; aucune surveillance continue.</p>
+          <ng-container *ngIf="projectState === 'LOADED' && project">
+              <div class="card governance-card">
+                <h3 class="field-label">Diagnostics Jenkins / SonarQube</h3>
+                <p class="field-hint">Vérification ponctuelle de la configuration enregistrée ; aucune surveillance continue.</p>
+                <button *ngIf="canEdit" class="btn-test" (click)="testProject()" [disabled]="projectDirty || projectSaving || projectTesting || credentialSaving">{{projectTesting ? 'Vérification…' : 'Tester la connexion'}}</button>
+                <div class="jenkins-diagnostic" aria-label="Diagnostic Jenkins">
+                  <h4 class="field-label">Jenkins</h4>
+                  <div class="info-row"><span class="info-key">Configuration</span><span class="info-val">{{jenkinsSummary.configuration}}</span></div>
+                  <div class="info-row"><span class="info-key">Connexion</span><span class="info-val">{{jenkinsSummary.connection}}</span></div>
+                  <div class="info-row"><span class="info-key">Dernière vérification</span><span class="info-val">{{jenkinsSummary.checkedAt ? (jenkinsSummary.checkedAt | frenchDate) : 'Non vérifiée'}}</span></div>
+                  <div class="info-row" *ngIf="jenkinsSummary.job"><span class="info-key">Job configuré</span><span class="info-val">{{jenkinsSummary.job}}</span></div>
+                </div>
+                <div class="info-row"><span class="info-key">SonarQube</span><span class="info-val">{{diagnosticLabel(project.validationStatus?.sonarqube)}}<span *ngIf="project.validationStatus?.sonarqube?.checkedAt"> · Dernière vérification : {{project.validationStatus.sonarqube.checkedAt | frenchDate}}</span></span></div>
+              </div>
+          </ng-container>
         <div class="section-block">
           <div class="section-label">Diagnostics des intégrations enregistrées</div>
 
@@ -204,9 +235,8 @@
             </div>
           </div>
         </div>
-
         <div class="section-block">
-          <div class="section-label">Capacités observées et configuration</div>
+          <div class="section-label">Sécurité — capacités observées</div>
           <p *ngIf="capabilitiesState === 'LOADING'" role="status">Chargement des capacités…</p>
           <div *ngIf="capabilitiesState === 'ERROR'" role="alert">Impossible de récupérer les capacités de la plateforme. <button class="btn-test" (click)="loadCapabilities()">Réessayer</button></div>
           <ng-container *ngIf="capabilitiesState === 'LOADED' && capabilities">
@@ -219,24 +249,8 @@
                 <span class="info-val">{{scannerEvidenceLabel(scanner)}} · {{scanner.projectsCompleted}} / {{scanner.projectsReported}} projet(s)<span *ngIf="scanner.lastObservedAt"> · {{scanner.lastObservedAt | frenchDate}}</span></span>
               </div>
             </div>
-            <div class="card governance-card">
-              <h2 class="field-label">Correction et compatibilité V1.8</h2>
-              <div class="info-row"><span class="info-key">Mode de correction</span><span class="info-val">{{enforcementModeLabel(capabilities.remediation?.enforcementMode)}}</span></div>
-              <p class="field-hint">Configuration backend en lecture seule. La possibilité de corriger une vulnérabilité reste soumise à ses preuves et aux contrôles métier.</p>
-              <p class="field-label">Types d’édition pris en charge par les mécanismes de correction</p>
-              <ul><li *ngFor="let type of capabilities.remediation?.supportedEditTypes">{{editTypeLabel(type)}}</li></ul>
-              <p *ngIf="!capabilities.remediation?.supportedEditTypes?.length">Aucun type d’édition disponible.</p>
-            </div>
-            <div class="card governance-card">
-              <h2 class="field-label">Configuration CI et déploiement</h2>
-              <div class="info-row"><span class="info-key">Jenkins</span><span class="info-val">{{capabilities.ci?.configuredProjects}} projet(s) configuré(s)</span></div>
-              <div class="info-row"><span class="info-key">Azure</span><span class="info-val">{{capabilities.deployment?.configuredProjects}} projet(s) configuré(s)</span></div>
-              <div class="info-row"><span class="info-key">Agent Azure</span><span class="info-val">{{capabilities.deployment?.agentConfigured ? 'Configuration présente' : 'Non configuré'}}</span></div>
-              <p class="field-hint">Configuration présente ne signifie pas service disponible. Les vérifications et contrôles propres au projet restent nécessaires.</p>
-
-              <p *ngIf="capabilities.generatedAt" class="field-hint">Actualisé le {{capabilities.generatedAt | frenchDate}} <button class="btn-test" (click)="loadCapabilities()">Actualiser</button></p>
-            </div>
           </ng-container>
         </div>
+        </section>
       </div>
     </div>

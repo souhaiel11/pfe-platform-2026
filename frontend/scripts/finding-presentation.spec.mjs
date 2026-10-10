@@ -140,8 +140,17 @@ console.log('finding-presentation 4) responsable absent: PASS');
   const criticalFinding = { severity: 'CRITICAL', rule: 'java:S3305', source: 'SONARQUBE' };
   assert.match(findingWhyImportantText(infoFinding), /sévérité info/, '5: INFO severity correctly reflected');
   assert.match(findingWhyImportantText(criticalFinding), /sévérité critical/, '5: CRITICAL severity correctly reflected');
-  // Éligibilité générique, indépendante de la sévérité -- dérivée uniquement de remediationType.
-  assert.equal(findingEligibilityText({ ...infoFinding, remediationType: 'AUTO_FIX_ELIGIBLE' }), 'Correction automatisable', '5: INFO + AUTO_FIX_ELIGIBLE -> automatable');
+  // Éligibilité indépendante de la sévérité -- dérivée de remediationType, plus
+  // la nature du constat. R46 : pour un défaut de CODE SOURCE, l'étiquette
+  // amont vient d'un classement par sévérité (WF1), pas d'une qualification ;
+  // le planificateur de WF2 statue ensuite et peut conclure
+  // MANUAL_OR_SPECIALIST. On annonce donc une CANDIDATURE. Pour une
+  // DÉPENDANCE, la qualification est déterministe et prouvée de bout en bout :
+  // « automatisable » y reste exact.
+  assert.equal(findingEligibilityText({ ...infoFinding, remediationType: 'AUTO_FIX_ELIGIBLE' }), 'Correction assistée candidate', '5: source Sonar + AUTO_FIX_ELIGIBLE -> candidature assistée, jamais une garantie');
+  assert.equal(findingEligibilityText({ ...criticalFinding, remediationType: 'AUTO_FIX_ELIGIBLE' }), 'Correction assistée candidate', '5: la sévérité ne transforme pas une candidature en garantie');
+  assert.equal(findingEligibilityText({ source: 'TRIVY', category: 'DEPENDENCY', remediationType: 'AUTO_FIX_ELIGIBLE' }), 'Correction automatisable', '5: dépendance + AUTO_FIX_ELIGIBLE -> automatisable (qualification déterministe)');
+  assert.equal(findingEligibilityText({ source: 'OWASP', category: 'DEPENDENCY', remediationType: 'AUTO_FIX_ELIGIBLE' }), 'Correction automatisable', '5: même traitement pour OWASP -- la distinction porte sur la nature du constat, jamais sur le scanner');
   assert.equal(findingEligibilityText({ ...criticalFinding, remediationType: 'DEVELOPER_ACTION_REQUIRED' }), 'Nécessite une action humaine', '5: CRITICAL + DEVELOPER_ACTION_REQUIRED -> human action, never "Automatisation non disponible"');
   assert.match(componentTemplate, /findingEligibilityLabel\(selectedSonarFinding\)/, '5: template wired to the new generic eligibility method');
   assert.doesNotMatch(componentTemplate, /Automatisation non disponible/, '5: the old raw weak eligibility label is gone');

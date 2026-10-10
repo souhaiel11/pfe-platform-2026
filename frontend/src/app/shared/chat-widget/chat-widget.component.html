@@ -20,8 +20,12 @@
 
         <div class="chat-messages" #messagesContainer>
           <div *ngFor="let msg of messages" class="message" [class.user]="msg.role === 'user'">
-            <div class="message-bubble" [class.user-bubble]="msg.role === 'user'">
-              <pre class="message-content">{{msg.content}}</pre>
+            <div class="message-bubble" [class.user-bubble]="msg.role === 'user'" [class.message-error]="msg.isError">
+              <div class="message-error-label" *ngIf="msg.isError">⚠️ Échec de la requête</div>
+              <app-chat-markdown *ngIf="msg.role === 'assistant'; else userContent" [content]="msg.content"></app-chat-markdown>
+              <ng-template #userContent>
+                <div class="message-content">{{msg.content}}</div>
+              </ng-template>
               <div class="message-time">{{msg.timestamp | date:'HH:mm'}}</div>
             </div>
           </div>
@@ -45,20 +49,20 @@
 
         <div class="chat-input-area">
           <input
-            class="chat-input"
+            class="chat-input" aria-label="Message à l’assistant"
             [(ngModel)]="inputText"
             (keydown)="onKeydown($event)"
             placeholder="Posez votre question..."
             [disabled]="loading"
           />
-          <button class="send-btn" (click)="send()" [disabled]="!inputText.trim() || loading">
+          <button class="send-btn" aria-label="Envoyer le message" (click)="send()" [disabled]="!inputText.trim() || loading">
             ▶
           </button>
         </div>
       </div>
 
       <!-- FAB Button -->
-      <button class="chat-fab" (click)="toggle()" [class.open]="isOpen">
+      <button class="chat-fab" [attr.aria-label]="isOpen ? 'Fermer l’assistant' : 'Ouvrir l’assistant'" (click)="toggle()" [class.open]="isOpen">
         <span *ngIf="!isOpen">💬</span>
         <span *ngIf="isOpen">✕</span>
       </button>

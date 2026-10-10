@@ -1,0 +1,53 @@
+
+── app-test-pfe-vermeg ***
+   dépôt        : souhaiel11/app-test-pfe-vermeg
+   build        : état=UNAVAILABLE statut=∅ -> « Indisponible » tonalité=neutral n°=10 (corrélé plateforme) motif=Données Jenkins temporairement indisponibles Aucun identifiant Jenkins n’est enregistré pour ce projet.
+   sécurité     : état=KNOWN score=92 criticalCves=2 scannersManquants=[]
+   déploiement  : état=NOT_READY -> « Non prêt » tonalité=warning bloquants=11 premier=La validation ne correspond pas au build courant
+   incidents    : ouverts=10 analyse=0
+   activité     : il y a 2 h (10 octobre 2026 à 14:26)
+   À traiter    : OUI -> 10 incidents ouverts | Déploiement bloqué — 11 conditions non satisfaites
+
+── devsecops-platform-testbed
+   dépôt        : souhaiel11/devsecops-platform-testbed
+   build        : état=UNAVAILABLE statut=∅ -> « Indisponible » tonalité=neutral n°=17 (corrélé plateforme) motif=Données Jenkins temporairement indisponibles Aucun identifiant Jenkins n’est enregistré pour ce projet.
+   sécurité     : état=KNOWN score=92 criticalCves=2 scannersManquants=[]
+   déploiement  : état=NOT_CONFIGURED -> « Non configuré » tonalité=disabled bloquants=∅ premier=∅
+   incidents    : ouverts=9 analyse=0
+   activité     : il y a 8 j (1 octobre 2026 à 19:48)
+   À traiter    : OUI -> 9 incidents ouverts
+
+── vuln-testapp
+   dépôt        : souhaiel11/vuln-testapp
+   build        : état=KNOWN statut=UNSTABLE -> « Instable » tonalité=warning n°=42 motif=∅
+   sécurité     : état=INCOMPLETE score=84 criticalCves=0 scannersManquants=[trivy,owasp,zap]
+   déploiement  : état=NOT_CONFIGURED -> « Non configuré » tonalité=disabled bloquants=∅ premier=∅
+   incidents    : ouverts=54 analyse=10
+   activité     : il y a moins d’une minute (10 octobre 2026 à 16:50)
+   À traiter    : OUI -> Build #42 instable ou interrompu | 54 incidents ouverts
+
+── devsecops-testbed
+   dépôt        : souhaiel11/devsecops-testbed
+   build        : état=KNOWN statut=UNSTABLE -> « Instable » tonalité=warning n°=20 motif=∅
+   sécurité     : état=INCOMPLETE score=80 criticalCves=34 scannersManquants=[trivy,owasp,zap]
+   déploiement  : état=NOT_READY -> « Non prêt » tonalité=warning bloquants=18 premier=La validation ne correspond pas au build courant
+   incidents    : ouverts=27 analyse=0
+   activité     : il y a moins d’une minute (10 octobre 2026 à 16:50)
+   À traiter    : OUI -> Build #20 instable ou interrompu | 27 incidents ouverts | Déploiement bloqué — 18 conditions non satisfaites
+
+── pfe-app-test ***
+   dépôt        : souhaiel11/pfe-app-test
+   build        : état=KNOWN statut=SUCCESS -> « Réussi » tonalité=success n°=151 motif=∅
+   sécurité     : état=KNOWN score=13 criticalCves=37 scannersManquants=[]
+   déploiement  : état=NOT_READY -> « Non prêt » tonalité=warning bloquants=15 premier=La validation ne correspond pas au build courant
+   incidents    : ouverts=77 analyse=54
+   activité     : il y a 3 j (6 octobre 2026 à 18:57)
+   À traiter    : OUI -> 77 incidents ouverts | Déploiement bloqué — 15 conditions non satisfaites | Score de sécurité 13/100
+
+── Liste d'incidents (6 lignes) ──
+   sévérité=CRITICAL | app-test-pfe-vermeg - Build #10 | projet=app-test-pfe-vermeg | source=jenkins -> « Jenkins » | build=10 | statut=blocked -> « Bloqué » tonalité=warning | activité=il y a 17 h
+   sévérité=CRITICAL | app-test-pfe-vermeg - Build #9 | projet=app-test-pfe-vermeg | source=jenkins -> « Jenkins » | build=9 | statut=blocked -> « Bloqué » tonalité=warning | activité=il y a 21 h
+   sévérité=LOW | app-test-pfe-vermeg - Build #8 | projet=app-test-pfe-vermeg | source=jenkins -> « Jenkins » | build=8 | statut=blocked -> « Bloqué » tonalité=warning | activité=il y a 1 j
+   sévérité=LOW | app-test-pfe-vermeg - Build #7 | projet=app-test-pfe-vermeg | source=jenkins -> « Jenkins » | build=7 | statut=blocked -> « Bloqué » tonalité=warning | activité=il y a 1 j
+   sévérité=LOW | app-test-pfe-vermeg - Build #6 | projet=app-test-pfe-vermeg | source=jenkins -> « Jenkins » | build=6 | statut=blocked -> « Bloqué » tonalité=warning | activité=il y a 1 j
+   sévérité=CRITICAL | app-test-pfe-vermeg - Build #5 | projet=app-test-pfe-vermeg | source=jenkins -> « Jenkins » | build=5 | statut=blocked -> « Bloqué » tonalité=warning | activité=il y a 1 j

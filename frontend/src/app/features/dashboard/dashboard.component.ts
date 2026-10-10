@@ -1,258 +1,244 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router, RouterModule } from '@angular/router';
+import { RouterModule } from '@angular/router';
 import { Subscription, forkJoin, of, catchError } from 'rxjs';
 import { ApiService } from '../../core/services/api.service';
-import { ThemeService } from '../../core/services/theme.service';
 import { ProjectEventsService } from '../../core/services/project-events.service';
-import { AuthService } from '../../core/services/auth.service';
+import { StatusChipComponent } from '../../shared/status-chip/status-chip.component';
+import { InfoHintComponent } from '../../shared/info-hint/info-hint.component';
+import { ZoneLabelComponent } from '../../shared/zone-label/zone-label.component';
 import { presentationLabel } from '../../shared/status-labels';
+import { frenchRelative } from '../../shared/french-format';
+import {
+  ProjectListRow, attentionReasons, buildProjectListRow, needsAttention, sortByAttention,
+} from '../projects/project-list-row';
+
+// ─────────────────────────────────────────────────────────────────────
+//  Tableau de bord (§28).
+//
+//  Quatre questions, dans cet ordre : combien de projets, lesquels demandent
+//  une attention, qu'est-ce qui a échoué récemment, quels problèmes de
+//  sécurité ou de déploiement existent. Rien d'autre.
+//
+//  Ce qui a été retiré ici l'a été parce qu'il répétait (§27) :
+//   — un bandeau latéral et une barre supérieure propres au tableau de bord,
+//     masqués en CSS mais toujours dans le DOM, qui dupliquaient la
+//     navigation, le bouton de thème et la fiche utilisateur de la coquille
+//     applicative ;
+//   — un panneau d'anneaux de risque qui affichait, en graphique, le MÊME
+//     score déjà écrit deux fois sur la carte du projet juste en dessous ;
+//   — une colonne « Risque » dérivée de ce même score, soit une quatrième
+//     représentation du même nombre.
+//
+//  Le modèle de ligne est celui de la liste des projets
+//  (features/projects/project-list-row.ts) : une seule définition de ce
+//  qu'est un build connu, un score partiel ou un déploiement bloqué, donc
+//  aucun risque que les deux écrans affirment deux choses différentes du
+//  même projet.
+// ─────────────────────────────────────────────────────────────────────
+
+interface AttentionItem {
+  row: ProjectListRow;
+  reasons: string[];
+}
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, StatusChipComponent, InfoHintComponent, ZoneLabelComponent],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.scss'],
 })
 export class DashboardComponent implements OnInit, OnDestroy {
 
-  dataErrors: Record<string,string> = {};
-  notifOpen = false;
+  dataErrors: Record<string, string> = {};
 
-  notifications: Array<{ level: string; title: string; meta: string }> = [];
-
-  projects: any[] = [];
+  rows: ProjectListRow[] = [];
   projectsLoading = true;
+  /** §18 — tant que la gouvernance n'a pas répondu, la colonne le dit. */
+  deploymentLoading = false;
+  /** §18 — idem pour Jenkins, la lecture la plus lente du tableau de bord. */
+  buildLoading = false;
 
   securitySummary: any = null;
   securitySummaryLoading = true;
-  private projectEventsSub?: Subscription;
 
-  private readonly avatarPalette = [
-    { bg: 'var(--accent-blue-bg)',   color: 'var(--accent-primary)' },
-    { bg: 'var(--accent-purple-bg)', color: 'var(--accent-purple)' },
-    { bg: 'var(--accent-green-bg)',  color: 'var(--accent-green)' },
-    { bg: 'var(--accent-orange-bg)', color: 'var(--accent-orange)' },
-  ];
-
-  activities: Array<{ color: string; title: string; meta: string }> = [];
+  activities: Array<{ tone: string; title: string; meta: string; incidentId: string }> = [];
   activitiesLoading = true;
 
+  // §18 — le taux de réussite affichait « Non disponible » pendant sa propre
+  // lecture : une absence affirmée avant même d'avoir interrogé Jenkins.
+  buildReliabilityLoading = true;
   // Taux de réussite des builds — même source que l'onglet Jenkins
-  // (GET /dashboard/jenkins-global::summary, lui-même bâti sur
-  // getJenkinsStatus). rate=null => "Non disponible", jamais un chiffre
-  // dérivé de builds fabriqués (getMockJenkinsStatus).
+  // (GET /dashboard/jenkins-global::summary). rate=null => "Non disponible",
+  // jamais un chiffre dérivé de builds fabriqués.
   buildReliability: { rate: number | null; sampleSize: number } | null = null;
+
+  private projectEventsSub?: Subscription;
+  private rawProjects: any[] = [];
+  private securityByProject = new Map<string, any>();
   private jenkinsByProject = new Map<string, any>();
+  private readinessByProject = new Map<string, any>();
+
+  needsAttention = needsAttention;
 
   constructor(
     private api: ApiService,
-    public themeService: ThemeService,
-    private router: Router,
     private projectEvents: ProjectEventsService,
-    public auth: AuthService,
   ) {}
 
   ngOnInit() {
     this.loadProjects();
     this.loadSecuritySummary();
     this.loadIncidentFeeds();
-    this.loadBuildReliability();
     this.projectEventsSub = this.projectEvents.projectsChanged$.subscribe(() => {
       this.loadProjects();
       this.loadSecuritySummary();
       this.loadIncidentFeeds();
-      this.loadBuildReliability();
     });
   }
 
-  ngOnDestroy() {
-    this.projectEventsSub?.unsubscribe();
+  ngOnDestroy() { this.projectEventsSub?.unsubscribe(); }
+
+  /** Projets à traiter, les plus dégradés d'abord, avec le motif exact. */
+  get attentionItems(): AttentionItem[] {
+    return sortByAttention(this.rows)
+      .filter(row => needsAttention(row))
+      .map(row => ({ row, reasons: attentionReasons(row) }));
   }
 
-  /* ── Data loading ── */
+  get orderedRows(): ProjectListRow[] { return sortByAttention(this.rows); }
+
   loadSecuritySummary() {
     delete this.dataErrors['security'];
     this.securitySummaryLoading = true;
     this.api.getSecurityGlobal().subscribe({
-      next: (data: any) => { this.securitySummary = data.summary; this.securitySummaryLoading = false; },
-      error: () => { this.dataErrors['security'] = 'Impossible de charger les résultats de sécurité.'; this.securitySummary = null; this.securitySummaryLoading = false; },
-    });
-  }
-
-  goToSecurity() { this.router.navigate(['/security']); }
-
-  loadBuildReliability() {
-    delete this.dataErrors['jenkins'];
-    this.api.getJenkinsGlobal().subscribe({
-      next: (data: any) => {
-        const s = data?.summary;
-        this.buildReliability = s
-          ? { rate: s.aggregateSuccessRate ?? null, sampleSize: s.aggregateSampleSize ?? 0 }
-          : null;
-        this.jenkinsByProject = new Map((data?.projects || []).map((p: any) => [p.projectId, p]));
-        this.projects = this.projects.map(p => {
-          const j: any = this.jenkinsByProject.get(p.id);
-          return { ...p, buildStatus: j?.lastBuild?.result || null, buildNumber: j?.lastBuild?.number || null };
-        });
+      next: (data: any) => { this.securitySummary = data?.summary || null; this.securitySummaryLoading = false; },
+      error: () => {
+        this.dataErrors['security'] = 'Impossible de charger les résultats de sécurité.';
+        this.securitySummary = null;
+        this.securitySummaryLoading = false;
       },
-      error: () => { this.dataErrors['jenkins'] = 'Impossible de charger les données Jenkins.'; this.buildReliability = null; this.jenkinsByProject.clear(); },
     });
   }
 
-  loadIncidentFeeds() {
-    delete this.dataErrors['incidents'];
-    this.activitiesLoading = true;
-    this.api.getIncidents({ size: 20 }).subscribe({
-      next: (data: any[]) => {
-        const incidents = data || [];
-        this.activities = incidents.slice(0, 5).map(i => ({
-          color: this.getIncidentColor(i.status),
-          title: i.title,
-          meta: `${this.timeAgo(new Date(i.createdAt).getTime())} · ${i.project?.name || 'projet inconnu'} · ${presentationLabel(i.status)}`,
-        }));
-        const OPEN_STATUSES = ['pending', 'blocked', 'failed'];
-        this.notifications = incidents
-          .filter(i => OPEN_STATUSES.includes(i.status))
-          .slice(0, 5)
-          .map(i => ({
-            level: i.status === 'failed' ? 'error' : 'warn',
-            title: `${presentationLabel(i.status)} — ${i.title || 'Incident sans titre'}`,
-            meta: `${this.timeAgo(new Date(i.createdAt).getTime())} · ${i.project?.name || 'projet inconnu'}`,
-          }));
-        this.activitiesLoading = false;
-      },
-      error: () => { this.dataErrors['incidents'] = 'Impossible de charger les incidents récents.'; this.activities = []; this.notifications = []; this.activitiesLoading = false; },
-    });
-  }
-
-  private getIncidentColor(status: string): string {
-    if (['completed', 'approved'].includes(status)) return 'var(--accent-green)';
-    if (['failed', 'blocked', 'rejected'].includes(status)) return 'var(--accent-red)';
-    return 'var(--accent-orange)';
-  }
-
+  /**
+   * Lectures étagées — même correctif que la liste des projets, même cause.
+   *
+   * /dashboard/jenkins-global met 5 008 ms sur ce backend (son plafond de
+   * 5 000 ms, atteint dès qu'un projet pointe vers une adresse Jenkins
+   * injoignable), contre 7 ms pour /projects et 20 ms pour security-global.
+   * Dans un `forkJoin` bloquant, le tableau de bord entier attendait donc la
+   * plus lente des trois. Jenkins part désormais en parallèle : ni le
+   * panneau « À traiter en priorité » ni le tableau des projets ne
+   * l'attendent, et le panneau « Taux de réussite des builds » garde son
+   * propre indicateur de chargement, qui est exactement ce qu'il attend.
+   */
   loadProjects() {
     delete this.dataErrors['projects'];
     this.projectsLoading = true;
     forkJoin({
       projects: this.api.getProjects(),
-      security: this.api.getSecurityGlobal().pipe(catchError(() => of({ byProject: [] }))),
+      security: this.api.getSecurityGlobal().pipe(catchError(() => of(null))),
     }).subscribe({
       next: ({ projects, security }) => {
-        const liveScores = new Map<string, number>(
-          (security?.byProject || []).map((p: any) => [p.projectId, p.securityScore]),
-        );
-        this.projects = (projects || []).map((p, i) => this.mapProject(p, i, liveScores));
-        this.loadReadinessForProjects();
+        this.rawProjects = projects || [];
+        this.securityByProject = new Map((security?.byProject || []).map((p: any) => [p.projectId, p]));
+        this.rebuildRows();
         this.projectsLoading = false;
-        setTimeout(() => this.buildRiskRings(), 50);
+        this.deploymentLoading = this.rawProjects.length > 0;
+        this.loadReadiness();
+        this.loadJenkins();
       },
-      error: () => { this.dataErrors['projects'] = 'Impossible de charger les projets.'; this.projects = []; this.projectsLoading = false; },
+      error: () => {
+        this.dataErrors['projects'] = 'Impossible de charger les projets.';
+        this.rows = [];
+        this.projectsLoading = false;
+        this.buildReliabilityLoading = false;
+        this.buildLoading = false;
+      },
     });
   }
 
-  private mapProject(p: any, index: number, liveScores: Map<string, number>) {
-    const initials = (p.name || '?').substring(0, 2).toUpperCase();
-    const avatar = this.avatarPalette[index % this.avatarPalette.length];
-    const score = liveScores.has(p.id) ? Math.round(liveScores.get(p.id)!) : null;
-    return {
-      id: p.id, name: p.name,
-      platformStatus: p.status,
-      tech: `${p.cicdTool || 'jenkins'} · ${p.environment || 'dev'}`,
-      initials, avatarBg: avatar.bg, avatarColor: avatar.color,
-      incidents: (p.openIncidents || 0) + (p.analyzingIncidents || 0),
-      buildStatus: this.jenkinsByProject.get(p.id)?.lastBuild?.result || null,
-      buildNumber: this.jenkinsByProject.get(p.id)?.lastBuild?.number || null,
-      health: score, riskScore: score,
-      lastUpdate: p.updatedAt ? this.timeAgo(new Date(p.updatedAt).getTime()) : 'Non disponible',
-      riskBreakdown: score !== null ? [{ label: 'Score sécurité', value: score }] : [],
-      readiness: null,
-    };
+  /** Recompose les lignes depuis les lectures déjà arrivées, et elles seules. */
+  private rebuildRows() {
+    this.rows = this.rawProjects.map(p => buildProjectListRow(
+      p,
+      this.securityByProject.get(p.id),
+      this.jenkinsByProject.get(p.id),
+      this.readinessByProject.get(p.id),
+    ));
   }
 
-  private loadReadinessForProjects() {
-    if (!this.projects.length) return;
-    forkJoin(this.projects.map(p => forkJoin({
-      readiness: this.api.getDeployReadiness(p.id).pipe(catchError(() => of(null))),
-      jenkins: this.api.getJenkins(p.id).pipe(catchError(() => of(null))),
-    }))).subscribe(rows => {
-      this.projects = this.projects.map((p, i) => {
-        const readiness = rows[i].readiness;
-        const buildStage = readiness?.requiredStages?.find((s: any) => String(s.stage).toLowerCase() === 'build');
-        return {
-          ...p,
-          readiness,
-          // Le GET Jenkins est prioritaire. Si l’intégration est momentanément
-          // indisponible, le build corrélé et son stage gouverné du GET
-          // readiness restent une source canonique — jamais une valeur simulée.
-          buildStatus: rows[i].jenkins?._liveData ? rows[i].jenkins?.result || null : (buildStage?.status === 'PASSED' ? 'SUCCESS' : p.buildStatus),
-          buildNumber: rows[i].jenkins?._liveData ? rows[i].jenkins?.buildNumber || null : readiness?.currentBuild || p.buildNumber,
-        };
+  /** Jenkins, hors du chemin critique : colonne de build ET taux de réussite. */
+  private loadJenkins() {
+    delete this.dataErrors['jenkins'];
+    this.buildReliabilityLoading = true;
+    this.buildLoading = this.rawProjects.length > 0;
+    this.api.getJenkinsGlobal().pipe(catchError(() => of(null))).subscribe(jenkins => {
+      if (!jenkins) {
+        this.dataErrors['jenkins'] = 'Impossible de charger les données Jenkins.';
+        this.buildReliability = null;
+        this.jenkinsByProject.clear();
+      } else {
+        const s = jenkins.summary;
+        this.buildReliability = s
+          ? { rate: s.aggregateSuccessRate ?? null, sampleSize: s.aggregateSampleSize ?? 0 }
+          : null;
+        this.jenkinsByProject = new Map((jenkins.projects || []).map((p: any) => [p.projectId, p]));
+      }
+      this.buildReliabilityLoading = false;
+      this.buildLoading = false;
+      this.rebuildRows();
+    });
+  }
+
+  private loadReadiness() {
+    if (!this.rawProjects.length) { this.deploymentLoading = false; return; }
+    const projects = this.rawProjects;
+    forkJoin(projects.map(p => this.api.getDeployReadiness(p.id).pipe(catchError(() => of(null)))))
+      .subscribe(readinessRows => {
+        this.readinessByProject = new Map<string, any>(projects.map((p, i) => [p.id, readinessRows[i]]));
+        this.deploymentLoading = false;
+        this.rebuildRows();
       });
+  }
+
+  /**
+   * Activité récente — incidents, les plus récents d'abord. La tonalité vient
+   * de la table de statuts partagée, pas d'un second barème local.
+   */
+  loadIncidentFeeds() {
+    delete this.dataErrors['incidents'];
+    this.activitiesLoading = true;
+    this.api.getIncidents({ size: 20 }).subscribe({
+      next: (data: any) => {
+        const incidents: any[] = (Array.isArray(data) ? data : data?.content) || [];
+        this.activities = incidents.slice(0, 6).map(i => ({
+          tone: i.status || '',
+          title: i.title || 'Incident sans titre',
+          incidentId: i.id,
+          meta: [
+            frenchRelative(i.updatedAt || i.createdAt) || 'Date non disponible',
+            i.project?.name || 'Projet non disponible',
+            presentationLabel(i.status),
+          ].join(' · '),
+        }));
+        this.activitiesLoading = false;
+      },
+      error: () => {
+        this.dataErrors['incidents'] = 'Impossible de charger les incidents récents.';
+        this.activities = [];
+        this.activitiesLoading = false;
+      },
     });
   }
 
-  buildLabel(status: string | null): string { return status ? presentationLabel(status) : 'Indisponible'; }
-  platformLabel(p: any): string {
-    if (p.readiness?.reasons?.some((r: string) => /judgeDecision=BLOCK/i.test(r))) return 'Bloqué';
-    return p.platformStatus === 'critical' ? 'Bloqué' : p.platformStatus === 'warning' ? 'Attention' : 'Stable';
-  }
-  riskLabel(p: any): string { return p.platformStatus === 'critical' || (p.health !== null && p.health < 40) ? 'Critique' : p.platformStatus === 'warning' || (p.health !== null && p.health < 70) ? 'Élevé' : 'Faible'; }
-
-  private timeAgo(ts: number): string {
-    const diff = Date.now() - ts;
-    const h = Math.floor(diff / 3600000);
-    const m = Math.floor(diff / 60000);
-    if (h > 24) return 'il y a ' + Math.floor(h / 24) + ' j';
-    if (h > 0) return 'il y a ' + h + ' h';
-    return 'il y a ' + m + ' min';
-  }
-
-  private cssVar(name: string): string {
-    return getComputedStyle(document.body).getPropertyValue(name).trim();
-  }
-
-  buildRiskRings() {
-    this.projects.forEach(p => {
-      const canvas = document.getElementById('risk-' + p.id) as HTMLCanvasElement;
-      if (!canvas || !(window as any).Chart) return;
-      const ex = (window as any).Chart.getChart(canvas);
-      if (ex) ex.destroy();
-      if (p.riskScore === null) return;
-      const color = this.cssVar(this.getRiskCssVar(p.riskScore));
-      const bg = this.cssVar('--bg-tertiary') || '#F1F4F9';
-      new (window as any).Chart(canvas, {
-        type: 'doughnut',
-        data: { datasets: [{ data: [p.riskScore, 100 - p.riskScore], backgroundColor: [color, bg], borderWidth: 0 }] },
-        options: { responsive: false, cutout: '72%', plugins: { legend: { display: false } } }
-      });
-    });
-  }
-
-  getRiskColor(score: number): string {
+  /** Couleur d'un score sur 100 — gris neutre quand il n'est pas connu. */
+  scoreColor(score: number | null): string {
+    if (score === null) return 'var(--text-muted)';
     if (score >= 80) return 'var(--accent-green)';
     if (score >= 60) return 'var(--accent-orange)';
     return 'var(--accent-red)';
-  }
-
-  getBarColor(val: number): string {
-    if (val >= 75) return 'var(--accent-green)';
-    if (val >= 50) return 'var(--accent-orange)';
-    return 'var(--accent-red)';
-  }
-
-  private getRiskCssVar(score: number): string {
-    if (score >= 80) return '--accent-green';
-    if (score >= 60) return '--accent-orange';
-    return '--accent-red';
-  }
-
-  toggleNotif() { this.notifOpen = !this.notifOpen; }
-
-  toggleTheme() {
-    this.themeService.toggleTheme();
-    setTimeout(() => this.buildRiskRings(), 50);
   }
 }

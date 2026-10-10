@@ -1,3 +1,4 @@
+import { availableNumber, scannerHasResult, scannerMetric, scannerState, testStageCoverage, dockerImageState, sourceInteger } from '../../shared/data-truth';
 import { presentationText, presentationLabel } from '../../shared/status-labels';
 import { sortPipelineStages, pipelineStageLabel } from '../../shared/pipeline-stage-presentation';
 import { Component, Input, Output, EventEmitter, computed, signal } from '@angular/core';
@@ -27,7 +28,7 @@ interface Stage {
     <section class="chain">
       <header class="chain-head">
         <span class="eyebrow">Chaîne de contrôle du pipeline</span>
-        <h3 class="chain-title">{{ readiness()?.ready ? 'Déploiement prêt' : 'Déploiement non prêt' }}</h3>
+        <h3 class="chain-title">{{ !readiness() ? 'État du déploiement indisponible' : (readiness()?.ready ? 'Déploiement prêt' : 'Déploiement non prêt') }}</h3>
         <p class="chain-sub">{{ readinessAction() }}</p>
         <ul class="blocker-list" *ngIf="!readiness()?.ready && blockerPriorities().length">
           <li *ngFor="let p of blockerPriorities()"><button type="button" (click)="p.tab && goToTab.emit(p.tab)">{{p.label}}</button></li>
@@ -69,36 +70,20 @@ interface Stage {
     </section>
 
     <!-- ══ GRAVITÉ + PRISE EN CHARGE ══ -->
-    <div class="split">
-      <section class="panel">
-        <span class="eyebrow">Répartition par gravité</span>
-        <div class="bar" *ngIf="totalSeverity() > 0; else noSev">
-          <span class="seg" *ngFor="let s of severities()"
-                [style.width.%]="s.count / totalSeverity() * 100"
-                [attr.data-sev]="s.key"
-                [title]="s.count + ' ' + s.label"></span>
-        </div>
-        <ng-template #noSev><p class="empty">Aucun problème remonté par les scanners.</p></ng-template>
-        <ul class="legend">
-          <li *ngFor="let s of severities()" [attr.data-sev]="s.key">
-            <span class="legend-pip"></span>
-            <span class="legend-count">{{ s.count }}</span>
-            <span class="legend-label">{{ s.label }}</span>
-          </li>
-        </ul>
-      </section>
+    <div class="split" style="grid-template-columns:1fr">
+
 
       <section class="panel">
         <span class="eyebrow">Prise en charge</span>
         <div class="care">
           <div class="care-side">
-            <span class="care-num auto">{{ autoCount() }}</span>
-            <span class="care-lab">corrigés par l'agent</span>
+            <span class="care-num auto">{{ hasGuide() ? autoCount() : 'Non disponible' }}</span>
+            <span class="care-lab">recommandations automatiques</span>
           </div>
           <div class="care-div"></div>
           <div class="care-side">
-            <span class="care-num manual">{{ manualCount() }}</span>
-            <span class="care-lab">à corriger vous-même</span>
+            <span class="care-num manual">{{ hasGuide() ? manualCount() : 'Non disponible' }}</span>
+            <span class="care-lab">recommandations manuelles</span>
           </div>
         </div>
         <div class="care-bar" *ngIf="autoCount() + manualCount() > 0">
@@ -136,7 +121,7 @@ interface Stage {
           <span class="act-effort mono" *ngIf="a.estimatedEffortMinutes">{{ a.estimatedEffortMinutes }} min</span>
         </li>
       </ol>
-      <button class="link" (click)="goToTab.emit('guide')">Voir les {{ issueCount() }} problèmes détaillés</button>
+      <button class="link" *ngIf="issueCount()" (click)="goToTab.emit('guide')">Voir les {{ issueCount() }} recommandations détaillées</button>
     </section>
   `,
   styles: [`
@@ -298,6 +283,7 @@ export class ProjectOverviewComponent {
   @Input() errorStep: string | null = null;
   @Output() goToTab = new EventEmitter<string>();
 
+  scannerAvailable = (tool: any) => tool.count !== null;
   private _ed = signal<any>({});
   private _rp = signal<any>({});
   private _backendStages = signal<any[]>([]);
@@ -332,6 +318,7 @@ export class ProjectOverviewComponent {
     return result;
   });
 
+  hasGuide = computed(() => this._rp()?.developerGuide != null);
   private guide = computed<any>(() => this._rp()?.developerGuide || {});
   private issues = computed<any[]>(() => {
     const i = this.guide()?.issues;
@@ -373,13 +360,23 @@ export class ProjectOverviewComponent {
   stages = computed<Stage[]>(() => {
     const governed = this.presentationStages();
     if (governed.length) {
-      const tabs: Record<string, string> = { build: 'jenkins', tests: 'jenkins', sonar: 'sonar', trivy: 'security:trivy', owasp: 'security:owasp', zap: 'security:zap', container: 'jenkins', docker: 'jenkins', deploy: 'jenkins' };
+      // 'deploy' opens the platform's OWN deployment-governance section
+      // ('deploiement'), never Jenkins: Jenkins is build evidence under the
+      // CI/CD tab, it is not the deployment UI.
+      // R49 — l'etape 'docker' ouvre la vue Docker du projet, pas Jenkins.
+      // Le pipeline reel expose les etapes zap/build/owasp/sonar/tests/trivy/
+      // deploy/docker : 'docker' est donc une destination vivante, et la router
+      // vers 'jenkins' envoyait l'utilisateur sur la preuve de build au lieu de
+      // l'image. Jenkins reste accessible depuis la vue Docker, en preuve
+      // secondaire. 'container' designe le meme travail d'image (aucune etape ne
+      // porte ce nom aujourd'hui) et suit la meme destination.
+      const tabs: Record<string, string> = { build: 'jenkins', tests: 'jenkins', sonar: 'sonar', trivy: 'security:trivy', owasp: 'security:owasp', zap: 'security:zap', container: 'docker', docker: 'docker', deploy: 'deploiement' };
       const state = (status: string): Stage['state'] => ({ PASSED: 'pass', FAILED: 'fail', WARNING: 'warn', RUNNING: 'warn', NOT_RUN: 'skip', NOT_REACHED: 'skip' } as any)[status] || 'skip';
       const humanStatus: Record<string,string> = { PASSED:'Réussi', FAILED:'Échec', WARNING:'Avertissement', RUNNING:'En cours', NOT_RUN:'Non exécuté', NOT_REACHED:'Non atteint' };
       return sortPipelineStages(governed).map(s => ({
         key: String(s.stage || 'unknown').toLowerCase(),
         label: pipelineStageLabel(s.stage),
-        detail: (() => { const count = Number(s.findingCount ?? s.findings?.length ?? 0); return `${humanStatus[String(s.status || 'NOT_RUN').toUpperCase()] || 'Non disponible'} · ${count} ${count === 1 ? 'problème' : 'problèmes'}`; })(),
+        detail: (() => { const count = availableNumber(s.findingCount ?? s.findings?.length); if (count === null) return humanStatus[String(s.status || '').toUpperCase()] || 'Non disponible'; return `${humanStatus[String(s.status || 'NOT_RUN').toUpperCase()] || 'Non disponible'} · ${count} ${count === 1 ? 'problème' : 'problèmes'}`; })(),
         state: state(String(s.status || 'NOT_RUN').toUpperCase()),
         tab: tabs[String(s.stage || '').toLowerCase()] || null,
         source: s.source || null,
@@ -400,26 +397,32 @@ export class ProjectOverviewComponent {
     // signal legacy absent ne peut devenir vert.
     return sortPipelineStages<Stage>([
       { key: 'build', label: 'Build', tab: 'jenkins',
-        detail: d?.build?.number ? '#' + d.build.number : '—',
+        // R49 — meme regle que l'etape Image : un tiret n'est pas un etat.
+        detail: sourceInteger(d?.build?.number) === null ? 'Non disponible' : '#' + sourceInteger(d?.build?.number),
         state: 'skip' as const },
       { key: 'tests', label: 'Tests', tab: 'jenkins',
-        detail: (tests.total ?? 0) === 0 ? 'aucun test' : `${tests.failures ?? 0} échec(s)`,
+        detail: tests.total == null ? 'Résultat non disponible' : tests.total === 0 ? 'aucun test' : `${tests.failures ?? 'Non disponible'} échec(s)`,
         state: 'skip' as const },
       { key: 'sonar', label: 'SonarQube', tab: 'sonar',
         detail: `${s.BLOCKER} bloquant(s)`, state: 'skip' as const },
       { key: 'trivy', label: 'Conteneur', tab: 'security:trivy',
-        detail: `${d?.trivy?.critical ?? 0} critique(s)`,
+        detail: `${scannerMetric(d?.trivy, 'critical') ?? 'Non disponible'} critique(s)`,
         state: 'skip' as const },
       { key: 'owasp', label: 'Dépendances', tab: 'security:owasp',
-        detail: `${d?.owasp?.critical ?? 0} critique(s)`,
+        detail: `${scannerMetric(d?.owasp, 'critical') ?? 'Non disponible'} critique(s)`,
         state: 'skip' as const },
       { key: 'zap', label: 'DAST', tab: 'security:zap',
-        detail: `${d?.zap?.alerts_count ?? 0} alerte(s)`,
+        detail: `${scannerMetric(d?.zap, 'alerts_count') ?? 'Non disponible'} alerte(s)`,
         state: 'skip' as const },
-      { key: 'image', label: 'Image', tab: 'jenkins',
-        detail: d?.docker?.image_tag ? String(d.docker.image_tag).split(':').pop() || '—' : '—',
+      { key: 'image', label: 'Image', tab: 'docker',
+        detail: (() => {
+          // R49 — un tiret n'est pas un etat : une image non construite se dit.
+          const ref = String(d?.docker?.image_tag || '').trim();
+          if (!ref) return dockerImageState(d?.docker);
+          return ref.split(':').pop() || dockerImageState(d?.docker);
+        })(),
         state: 'skip' as const },
-      { key: 'deploy', label: 'Déploiement', tab: 'jenkins',
+      { key: 'deploy', label: 'Déploiement', tab: 'deploiement',
         detail: presentationLabel(d?.deploy?.status || 'NOT_RUN'),
         state: 'skip' as const },
     ].filter(s => !!d?.[s.key === 'image' ? 'docker' : s.key]).map(s => ({ ...s, label: pipelineStageLabel(s.key) })));
@@ -458,41 +461,29 @@ export class ProjectOverviewComponent {
       return tone(fail, warn);
     };
     return [
-      { key: 'sonar', name: 'SonarQube', tab: 'sonar', count: d?.sonar?.issues_count ?? 0,
+      { key: 'sonar', name: 'SonarQube', tab: 'sonar', count: scannerMetric(d?.sonar, 'issues_count'),
         detail: `${s.BLOCKER} bloquant · ${s.CRITICAL} critique`, tone: governedTone('sonar', s.BLOCKER, s.CRITICAL) },
-      { key: 'trivy', name: 'CVE conteneur', tab: 'security:trivy', count: d?.trivy?.cves_count ?? 0,
-        detail: `${d?.trivy?.critical ?? 0} critique · ${d?.trivy?.high ?? 0} élevée`,
+      { key: 'trivy', name: 'CVE conteneur', tab: 'security:trivy', count: scannerMetric(d?.trivy, 'cves_count'),
+        detail: `${scannerMetric(d?.trivy, 'critical') ?? 'Non disponible'} critique · ${scannerMetric(d?.trivy, 'high') ?? 'Non disponible'} élevée`,
         tone: governedTone('trivy', d?.trivy?.critical ?? 0, d?.trivy?.high ?? 0) },
-      { key: 'owasp', name: 'CVE dépendances', tab: 'security:owasp', count: d?.owasp?.cves_count ?? 0,
-        detail: `${d?.owasp?.critical ?? 0} critique · ${d?.owasp?.high ?? 0} élevée`,
+      { key: 'owasp', name: 'CVE dépendances', tab: 'security:owasp', count: scannerMetric(d?.owasp, 'cves_count'),
+        detail: `${scannerMetric(d?.owasp, 'critical') ?? 'Non disponible'} critique · ${scannerMetric(d?.owasp, 'high') ?? 'Non disponible'} élevée`,
         tone: governedTone('owasp', d?.owasp?.critical ?? 0, d?.owasp?.high ?? 0) },
-      { key: 'zap', name: 'Alertes DAST', tab: 'security:zap', count: d?.zap?.alerts_count ?? 0,
-        detail: `${d?.zap?.alerts_high ?? 0} élevée · ${d?.zap?.alerts_medium ?? 0} moyenne`,
+      { key: 'zap', name: 'Alertes DAST', tab: 'security:zap', count: scannerMetric(d?.zap, 'alerts_count'),
+        detail: `${scannerMetric(d?.zap, 'alerts_high') ?? 'Non disponible'} élevée · ${scannerMetric(d?.zap, 'alerts_medium') ?? 'Non disponible'} moyenne`,
         tone: governedTone('zap', d?.zap?.alerts_high ?? 0, d?.zap?.alerts_medium ?? 0) },
-      { key: 'tests', name: 'Tests', tab: 'jenkins', count: d?.tests?.total ?? 0,
-        detail: `${d?.tests?.failures ?? 0} échec · ${d?.tests?.coverage ?? 0}% couverture`,
+      { key: 'tests', name: 'Tests', tab: 'jenkins', count: availableNumber(d?.tests?.total),
+        detail: `${availableNumber(d?.tests?.failures) ?? 'Non disponible'} échec · ${testStageCoverage(d?.tests) ?? 'Non disponible'}% couverture`,
         tone: governedTone('tests', d?.tests?.failures ?? 0, 0) },
     ].filter(tool => this.presentationStages().some(stage => stage.stage === tool.key))
       .map(tool => {
         const block = d?.[tool.key];
         const available = tool.key === 'tests'
           ? this.presentationStages().some(stage => stage.stage === 'tests' && ['PASSED','FAILED'].includes(stage.status))
-          : block?.status === 'COMPLETED' || block?.resultAvailable === true;
-        return available ? tool : {...tool, count:null, detail:'Résultat non disponible', tone:'skip'};
+          : scannerHasResult(block);
+        return available && tool.count !== null ? tool : {...tool, count:null, detail:scannerState(block), tone:'skip'};
       });
   });
-
-  severities = computed(() => {
-    const d = this._ed();
-    const s = this.sonarBySeverity();
-    return [
-      { key: 'critical', label: 'critiques', count: s.BLOCKER + s.CRITICAL + (d?.trivy?.critical ?? 0) + (d?.owasp?.critical ?? 0) },
-      { key: 'high', label: 'élevés', count: s.MAJOR + (d?.trivy?.high ?? 0) + (d?.owasp?.high ?? 0) + (d?.zap?.alerts_high ?? 0) },
-      { key: 'medium', label: 'moyens', count: s.MINOR + (d?.zap?.alerts_medium ?? 0) },
-    ];
-  });
-
-  totalSeverity = computed<number>(() => this.severities().reduce((a, s) => a + s.count, 0));
 
   autoCount = computed<number>(() =>
     this.guide()?.autoCount ?? this.issues().filter(i => i.resolution === 'AUTO').length);

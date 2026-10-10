@@ -274,3 +274,34 @@
       .live-badge { padding-inline: 7px; }
       .page-wrap { min-width: 0; }
     }
+
+/* Navigation de travail. */
+.sidebar { width: var(--sidebar-width); }
+.sb-logo { padding: 22px 18px; gap: 12px; }
+.logo-mark { width: 34px; height: 34px; border-radius: 4px; font-size: 17px; }
+.logo-title { font-size: 14px; }
+.logo-sub { font-size: 11px; margin-top: 3px; }
+.sb-nav { padding: 12px 10px; }
+.nav-section { padding: 18px 10px 7px; font-size: 10px; letter-spacing: .09em; }
+.nav-item { min-height: 42px; padding: 10px; gap: 10px; font-size: 13px; border-right: 0; border-left: 3px solid transparent; border-radius: 3px; }
+.nav-item i { width: 18px; font-size: 18px; }
+.nav-item.active { border-left-color: var(--accent-primary); font-weight: 600; }
+.sb-footer { padding: 16px; }
+.user-name { font-size: 12px; }
+.user-role { font-size: 11px; }
+.logout-btn, .theme-btn { min-width: 36px; min-height: 36px; border-radius: 4px; }
+.main-content { margin-left: var(--sidebar-width); min-width: 0; min-height: 0; }
+.topbar { height: var(--topbar-height); padding: 0 28px; gap: 18px; }
+.topbar-title { font-size: 14px; padding-left: 18px; border-left: 1px solid var(--border); }
+.page-wrap { min-width: 0; }
+@media (max-width: 720px) {
+  .main-content { margin-left: 0; }
+  .topbar { padding: 0 14px; gap: 10px; }
+  .topbar-title { padding-left: 0; border: 0; }
+  .mobile-menu-btn { width: 40px; height: 40px; border-radius: 4px; }
+  .sidebar { box-shadow: none; }
+}
+@media (max-width: 720px) {
+  .sidebar { visibility: hidden; }
+  .sidebar.mobile-open { visibility: visible; }
+}

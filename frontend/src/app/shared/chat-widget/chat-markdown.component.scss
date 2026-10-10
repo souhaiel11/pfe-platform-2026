@@ -1,0 +1,102 @@
+app-chat-markdown {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+
+  .chat-markdown {
+    font-size: 13px;
+    line-height: 1.65;
+    color: var(--text-primary);
+    overflow-wrap: anywhere;
+
+    > :first-child { margin-top: 0; }
+    > :last-child { margin-bottom: 0; }
+
+    p, ul, ol, blockquote, pre, .chat-table-scroll { margin: 0 0 12px; }
+    ul, ol { padding-left: 22px; }
+    li + li { margin-top: 4px; }
+    li > p { margin-bottom: 4px; }
+    strong { font-weight: 700; }
+
+    h1, h2, h3, h4, h5, h6 {
+      margin: 16px 0 8px;
+      font-weight: 650;
+      line-height: 1.35;
+    }
+    h1 { font-size: 19px; }
+    h2 { font-size: 17px; }
+    h3 { font-size: 15px; }
+    h4, h5, h6 { font-size: 13px; }
+
+    a {
+      color: var(--accent-blue);
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+    a:focus-visible, .chat-table-scroll:focus-visible {
+      outline: 2px solid var(--accent-blue);
+      outline-offset: 2px;
+    }
+
+    code {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      background: var(--bg-secondary);
+      border-radius: 4px;
+      padding: 2px 5px;
+    }
+    pre {
+      max-width: 100%;
+      overflow-x: auto;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--bg-secondary);
+      white-space: pre;
+      overflow-wrap: normal;
+      line-height: 1.6;
+    }
+    pre code {
+      display: block;
+      padding: 0;
+      background: transparent;
+      white-space: inherit;
+    }
+    blockquote {
+      padding-left: 12px;
+      border-left: 3px solid var(--accent-blue);
+      color: var(--text-secondary);
+    }
+    hr { border: 0; border-top: 1px solid var(--border); margin: 16px 0; }
+    img { max-width: 100%; height: auto; }
+
+    .chat-table-scroll {
+      max-width: 100%;
+      overflow-x: auto;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+    }
+    table {
+      min-width: 100%;
+      width: max-content;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+    th, td {
+      min-width: 80px;
+      max-width: 280px;
+      padding: 9px 12px;
+      text-align: left;
+      vertical-align: top;
+      border-bottom: 1px solid var(--border);
+    }
+    th {
+      background: var(--bg-secondary);
+      font-weight: 700;
+    }
+    th + th, td + td { border-left: 1px solid var(--border); }
+    th[align='center'], td[align='center'] { text-align: center; }
+    th[align='right'], td[align='right'] { text-align: right; }
+    tbody tr:last-child td { border-bottom: 0; }
+  }
+}

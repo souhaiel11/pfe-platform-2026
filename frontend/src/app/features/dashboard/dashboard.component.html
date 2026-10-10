@@ -1,254 +1,203 @@
-<div *ngFor="let error of dataErrors | keyvalue" role="alert" class="card">{{error.value}}</div>
-<div class="dashboard">
+<div class="dash">
 
-  <!-- ═══════════════════════════════════════════════════════════════
-       SIDEBAR — Navigation latérale
-       ═══════════════════════════════════════════════════════════════ -->
-  <aside class="sidebar">
-    <div class="sidebar-brand">
-      <div class="brand-icon">◈</div>
-      <span class="brand-text">SecOps<span class="brand-accent">Hub</span></span>
+  <app-zone-label kind="information"
+    note="Synthèse de la plateforme. Chaque élément renvoie vers la page où l’action est possible."></app-zone-label>
+
+  <!-- ══ 1 · Sécurité plateforme ══════════════════════════════════════
+       §4 — l'état d'ensemble d'abord, le détail ensuite. -->
+  <section class="panel" *ngIf="securitySummaryLoading">
+    <div class="loading-overlay" role="status"><div class="spinner"></div><span>Chargement…</span></div>
+  </section>
+  <!-- §17 — un échec de requête est dit explicitement, jamais rendu comme
+       « aucune vulnérabilité ». -->
+  <section class="panel" *ngIf="!securitySummaryLoading && dataErrors['security']" role="alert">
+    <div class="panel-header"><h3><i class="ti ti-shield-check" aria-hidden="true"></i> Sécurité plateforme</h3></div>
+    <p class="panel-error">{{dataErrors['security']}}</p>
+    <button type="button" class="btn btn-secondary btn-sm" (click)="loadSecuritySummary()">Réessayer</button>
+  </section>
+  <section class="sec-panel" *ngIf="!securitySummaryLoading && securitySummary">
+    <div class="sec-panel-head">
+      <div class="sec-panel-title">
+        <i class="ti ti-shield-check" aria-hidden="true"></i>
+        Sécurité plateforme
+        <span class="sec-panel-sub">{{securitySummary.totalProjects}} {{securitySummary.totalProjects === 1 ? 'projet analysé' : 'projets analysés'}}</span>
+      </div>
+      <a class="panel-link" routerLink="/security">Voir Trivy / OWASP <span aria-hidden="true">→</span></a>
     </div>
-
-    <nav class="sidebar-nav">
-      <a class="nav-item active" [routerLink]="['/dashboard']">
-        <span class="nav-icon">▤</span>
-        <span>Tableau de bord</span>
-      </a>
-      <a class="nav-item" [routerLink]="['/projects']">
-        <span class="nav-icon">◫</span>
-        <span>Projets</span>
-        <span class="nav-badge" *ngIf="projects.length">{{projects.length}}</span>
-      </a>
-      <a class="nav-item" [routerLink]="['/incidents']">
-        <span class="nav-icon">⚠</span>
-        <span>Incidents</span>
-        <span class="nav-badge alert" *ngIf="notifications.length">{{notifications.length}}</span>
-      </a>
-      <a class="nav-item" [routerLink]="['/security']">
-        <span class="nav-icon">◧</span>
-        <span>Sécurité</span>
-      </a>
-      <a class="nav-item" (click)="toggleTheme()" style="cursor:pointer">
-        <span class="nav-icon">{{themeService.theme() === 'dark' ? '☀' : '☾'}}</span>
-        <span>{{themeService.theme() === 'dark' ? 'Clair' : 'Sombre'}}</span>
-      </a>
-    </nav>
-
-    <div class="sidebar-footer">
-      <div class="user-pill">
-        <div class="user-avatar">{{(auth.currentUser?.username || auth.currentUser?.email || 'U').substring(0,2).toUpperCase()}}</div>
-        <div class="user-info">
-          <div class="user-name">{{auth.currentUser?.username || auth.currentUser?.email}}</div>
-          <div class="user-role">{{auth.currentUser?.role}}</div>
-        </div>
+    <div class="sec-kpi-grid">
+      <div class="sec-kpi">
+        <span class="sec-kpi-label">CVE critiques</span>
+        <span class="sec-kpi-value" style="color:var(--accent-red)">{{securitySummary.totalCriticalCves}}</span>
+      </div>
+      <div class="sec-kpi">
+        <span class="sec-kpi-label">CVE élevées</span>
+        <span class="sec-kpi-value" style="color:var(--accent-orange)">{{securitySummary.totalHighCves}}</span>
+      </div>
+      <div class="sec-kpi">
+        <span class="sec-kpi-label">Problèmes SonarQube</span>
+        <span class="sec-kpi-value">{{securitySummary.sonarBugs + securitySummary.sonarVulnerabilities}}</span>
+      </div>
+      <div class="sec-kpi">
+        <span class="sec-kpi-label">Score moyen<app-info-hint term="security-score"></app-info-hint></span>
+        <span class="sec-kpi-value" [style.color]="scoreColor(securitySummary.avgSecurityScore)">{{securitySummary.avgSecurityScore}}</span>
       </div>
     </div>
-  </aside>
+  </section>
 
-  <!-- ═══════════════════════════════════════════════════════════════
-       MAIN CONTENT
-       ═══════════════════════════════════════════════════════════════ -->
-  <main class="main">
+  <!-- ══ 2 · À traiter en priorité ════════════════════════════════════
+       §28 — la question à laquelle un tableau de bord doit répondre en
+       premier : lesquels de mes projets demandent une action, et pourquoi. -->
+  <section class="panel">
+    <div class="panel-header">
+      <h3><i class="ti ti-alert-triangle" aria-hidden="true"></i> À traiter en priorité</h3>
+      <span class="panel-count" *ngIf="!projectsLoading && !dataErrors['projects']">{{attentionItems.length}}</span>
+    </div>
 
-    <!-- ── Topbar ── -->
-    <header class="topbar">
-      <div class="breadcrumb">
-        <span>Plateforme</span>
-        <span class="sep">/</span>
-        <span class="current">Tableau de bord</span>
-      </div>
-      <div class="topbar-actions">
-        <button class="btn-icon" (click)="toggleNotif()" [class.has-notif]="notifications.length">
-          <i class="ti ti-bell"></i>
-          <span class="notif-dot" *ngIf="notifications.length"></span>
-        </button>
-      </div>
-    </header>
+    <div class="loading-overlay" role="status" *ngIf="projectsLoading"><div class="spinner"></div><span>Chargement…</span></div>
 
-    <!-- ── Notification Panel ── -->
-    <div class="notif-panel" [class.open]="notifOpen">
-      <div class="notif-header">
-        <span>Notifications</span>
-        <button class="close-btn" (click)="toggleNotif()"><i class="ti ti-x"></i></button>
-      </div>
-      <div class="notif-list">
-        <div class="notif-item" *ngFor="let n of notifications" [class]="n.level">
-          <div class="notif-dot"></div>
-          <div>
-            <div class="notif-title">{{n.title}}</div>
-            <div class="notif-meta">{{n.meta}}</div>
-          </div>
-        </div>
-        <div class="notif-empty" *ngIf="!activitiesLoading && !dataErrors['incidents'] && !notifications.length">Aucune notification</div>
+    <div class="panel-error-body" *ngIf="!projectsLoading && dataErrors['projects']" role="alert">
+      <p class="panel-error">{{dataErrors['projects']}}</p>
+      <button type="button" class="btn btn-secondary btn-sm" (click)="loadProjects()">Réessayer</button>
+    </div>
+
+    <!-- §16/§31 — « rien à traiter » n'est affirmé que sur des données
+         chargées, et seulement pour ce qui a été constaté. -->
+    <div class="empty-state" *ngIf="!projectsLoading && !dataErrors['projects'] && !attentionItems.length">
+      <div class="empty-icon"><i class="ti ti-circle-check" aria-hidden="true"></i></div>
+      <div class="empty-title">{{rows.length ? 'Aucun projet ne demande d’attention' : 'Aucun projet surveillé'}}</div>
+      <div class="empty-sub">
+        {{rows.length
+          ? 'Aucun build en échec, incident ouvert ni déploiement bloqué n’a été constaté sur les données chargées.'
+          : 'Ajoutez un projet pour que la plateforme commence à le surveiller.'}}
       </div>
     </div>
 
-    <!-- ── Content ── -->
-    <div class="content">
+    <ul class="attention-list" *ngIf="!projectsLoading && attentionItems.length">
+      <li class="attention-item" *ngFor="let item of attentionItems">
+        <a class="attention-name" [routerLink]="['/projects', item.row.id]">{{item.row.name}}</a>
+        <ul class="attention-reasons">
+          <li *ngFor="let reason of item.reasons">{{reason}}</li>
+        </ul>
+      </li>
+    </ul>
+  </section>
 
-      <!-- ══ Synthèse Sécurité Plateforme ══ -->
-      <section class="sec-panel" *ngIf="!securitySummaryLoading && securitySummary" (click)="goToSecurity()" role="button" tabindex="0">
-        <div class="sec-panel-head">
-          <div class="sec-panel-title">
-            <i class="ti ti-shield-check"></i>
-            Sécurité plateforme
-            <span class="sec-panel-sub">{{securitySummary.totalProjects}} {{securitySummary.totalProjects === 1 ? 'projet' : 'projets'}} · voir le détail →</span>
-          </div>
-        </div>
-        <div class="sec-kpi-grid">
-          <div class="sec-kpi">
-            <span class="sec-kpi-label">CVE critiques</span>
-            <span class="sec-kpi-value" style="color:var(--accent-red)">{{securitySummary.totalCriticalCves}}</span>
-          </div>
-          <div class="sec-kpi">
-            <span class="sec-kpi-label">CVE élevées</span>
-            <span class="sec-kpi-value" style="color:var(--accent-orange)">{{securitySummary.totalHighCves}}</span>
-          </div>
-          <div class="sec-kpi">
-            <span class="sec-kpi-label">Score moyen</span>
-            <span class="sec-kpi-value" [style.color]="getRiskColor(securitySummary.avgSecurityScore)">
-              {{securitySummary.avgSecurityScore}}
-            </span>
-          </div>
-        </div>
-      </section>
+  <!-- ══ 3 · Projets ══════════════════════════════════════════════════
+       Vue de comparaison, pas une copie de la page de détail (§28) : les
+       mêmes quatre faits que la liste des projets, dans le même ordre, et
+       un lien pour aller à la liste complète. -->
+  <section class="panel">
+    <div class="panel-header">
+      <h3><i class="ti ti-folder" aria-hidden="true"></i> Projets</h3>
+      <a class="panel-link" routerLink="/projects">Voir tous les projets <span aria-hidden="true">→</span></a>
+    </div>
 
-      <!-- ══ Charts Row ══ -->
-      <div class="charts-row">
-        <!-- Risk Scores -->
-        <section class="panel wide">
-          <div class="panel-header">
-            <h3><i class="ti ti-shield-half"></i> Scores de sécurité des projets</h3>
-          </div>
-          <div class="loading-overlay" *ngIf="projectsLoading">
-            <div class="spinner"></div><span>Chargement…</span>
-          </div>
-          <div class="empty-state" *ngIf="!projectsLoading && !dataErrors['projects'] && !projects.length">
-            <div class="empty-icon">◧</div>
-            <div class="empty-title">Aucun projet</div>
-            <div class="empty-sub">Ajoutez un projet pour voir son score de risque</div>
-          </div>
-          <div class="risk-list" *ngIf="!projectsLoading && projects.length">
-            <div class="risk-item" *ngFor="let p of projects">
-              <div class="risk-proj">
-                <div class="risk-av" [style.background]="p.avatarBg" [style.color]="p.avatarColor">{{p.initials}}</div>
-                <div class="risk-info">
-                  <div class="risk-name">{{p.name}}</div>
-                  <div class="risk-tech">{{p.tech}}</div>
-                </div>
-              </div>
-              <div class="risk-ring-wrap">
-                <canvas [id]="'risk-' + p.id" width="64" height="64"></canvas>
-                <div class="risk-center" [style.color]="p.riskScore !== null ? getRiskColor(p.riskScore) : 'var(--text-secondary)'">
-                  {{p.riskScore !== null ? p.riskScore : '—'}}
-                </div>
-              </div>
-              <div class="risk-breakdown">
-                <div class="rb-row" *ngFor="let r of p.riskBreakdown">
-                  <span class="rb-lbl">{{r.label}}</span>
-                  <div class="rb-track"><div class="rb-fill" [style.width.%]="r.value" [style.background]="getBarColor(r.value)"></div></div>
-                  <span class="rb-val" [style.color]="getBarColor(r.value)">{{r.value}}</span>
-                </div>
-                <div class="rb-row empty" *ngIf="!p.riskBreakdown.length">Score indisponible</div>
-              </div>
-            </div>
-          </div>
-        </section>
-      </div>
+    <div class="loading-overlay" role="status" *ngIf="projectsLoading"><div class="spinner"></div><span>Chargement…</span></div>
 
-      <!-- ══ Projets ══ -->
-      <section class="projects-section">
-        <div class="section-head">
-          <h3><i class="ti ti-folder"></i> Projets surveillés</h3>
-          <span class="section-count">{{projects.length}}</span>
-        </div>
-        <div class="loading-overlay" *ngIf="projectsLoading">
-          <div class="spinner"></div><span>Chargement…</span>
-        </div>
-        <div class="empty-state" *ngIf="!projectsLoading && !dataErrors['projects'] && !projects.length">
-          <div class="empty-icon">◧</div>
-          <div class="empty-title">Aucun projet</div>
-          <div class="empty-sub">Créez votre premier projet pour commencer</div>
-        </div>
-        <div class="proj-grid" *ngIf="!projectsLoading && projects.length">
-          <a class="proj-card" *ngFor="let p of projects" [routerLink]="['/projects', p.id]">
-            <div class="proj-card-header">
-              <div class="proj-av" [style.background]="p.avatarBg" [style.color]="p.avatarColor">{{p.initials}}</div>
-              <div class="proj-info">
-                <div class="proj-name">{{p.name}}</div>
-                <div class="proj-tech">{{p.tech}}</div>
-              </div>
-            </div>
-            <div class="proj-pills">
-              <span class="pill" [class.red]="p.incidents > 0" [class.green]="p.incidents === 0">
-                {{p.incidents}} incident{{p.incidents > 1 ? 's' : ''}}
+    <div class="table-scroll" *ngIf="!projectsLoading && orderedRows.length">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th scope="col">Projet</th>
+            <th scope="col">Dernier build</th>
+            <th scope="col">Sécurité</th>
+            <th scope="col">Déploiement</th>
+            <th scope="col">Incidents ouverts</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of orderedRows">
+            <td>
+              <a [routerLink]="['/projects', row.id]">{{row.name}}</a>
+              <span class="dash-attention" *ngIf="needsAttention(row)" title="Ce projet demande une action"><span aria-hidden="true">!</span> À traiter</span>
+            </td>
+            <td>
+              <ng-container *ngIf="row.build.state === 'KNOWN'">
+                <app-status-chip [status]="row.build.status"></app-status-chip>
+                <span class="dash-mono" *ngIf="!buildLoading && row.build.number !== null">#{{row.build.number}}</span>
+              </ng-container>
+              <app-status-chip *ngIf="row.build.state === 'NO_BUILD'" status="NO_BUILD"></app-status-chip>
+              <span *ngIf="row.build.state === 'NOT_CONFIGURED'" [attr.title]="row.build.detail">
+                <app-status-chip status="NOT_CONFIGURED"></app-status-chip>
               </span>
-            </div>
-            <div class="truth-grid" aria-label="Statuts indépendants du projet">
-              <div class="truth"><span>Jenkins</span><strong [class.ok]="p.buildStatus === 'SUCCESS'">{{buildLabel(p.buildStatus)}}<ng-container *ngIf="p.buildNumber"> · Build #{{p.buildNumber}}</ng-container></strong></div>
-              <div class="truth"><span>Plateforme</span><strong [class.danger]="platformLabel(p) === 'Bloqué'">{{platformLabel(p)}}</strong></div>
-              <div class="truth"><span>Déploiement</span><strong [class.ok]="p.readiness?.ready" [class.danger]="p.readiness && !p.readiness.ready">{{p.readiness ? (p.readiness.ready ? 'Prêt' : 'Non prêt') : 'Vérification…'}}</strong></div>
-              <div class="truth"><span>Risque</span><strong [class.danger]="riskLabel(p) === 'Critique'">{{riskLabel(p)}}</strong></div>
-            </div>
-            <div class="health-track">
-              <div class="health-fill" [style.width.%]="p.health !== null ? p.health : 0" [style.background]="p.health !== null ? getBarColor(p.health) : 'var(--text-secondary)'"></div>
-            </div>
-            <div class="health-meta">
-              <span>Score de sécurité</span>
-              <span [style.color]="p.health !== null ? getBarColor(p.health) : 'var(--text-secondary)'">
-                {{p.health !== null ? p.health + '%' : 'indisponible'}}
+              <app-status-chip *ngIf="row.build.state === 'UNAVAILABLE' && buildLoading" status="PENDING" labelOverride="Vérification…"></app-status-chip>
+              <span *ngIf="row.build.state === 'UNAVAILABLE' && !buildLoading" [attr.title]="row.build.detail">
+                <app-status-chip status="UNAVAILABLE"></app-status-chip>
               </span>
-            </div>
-            <div class="proj-footer">
-              <span class="proj-date">{{p.lastUpdate}}</span>
-              <span class="proj-risk" [style.color]="p.riskScore !== null ? getRiskColor(p.riskScore) : 'var(--text-secondary)'">
-                Score de sécurité : {{p.riskScore !== null ? p.riskScore + '/100' : 'indisponible'}}
-              </span>
-            </div>
-          </a>
-        </div>
-      </section>
-
-      <!-- ══ Bottom Row : Activité ══ -->
-      <div class="bottom-row">
-        <!-- Taux de réussite des builds — jamais un chiffre issu de builds
-             fabriqués (getMockJenkinsStatus) : null explicite => "Non disponible". -->
-        <section class="panel">
-          <div class="panel-header">
-            <h3><i class="ti ti-git-branch"></i> Taux de réussite des builds</h3>
-          </div>
-          <div class="reliability-body" *ngIf="buildReliability?.rate != null">
-            <div class="reliability-value" [style.color]="getRiskColor(buildReliability!.rate!)">{{buildReliability!.rate}}%</div>
-            <div class="reliability-sub" [title]="buildReliability!.sampleSize + (buildReliability!.sampleSize === 1 ? ' build pris en compte' : ' builds pris en compte')">
-              sur {{buildReliability!.sampleSize}} build{{buildReliability!.sampleSize! > 1 ? 's' : ''}} (historique Jenkins)
-            </div>
-          </div>
-          <div class="reliability-body" *ngIf="buildReliability?.rate == null">
-            <div class="reliability-value" style="color:var(--text-secondary)">Non disponible</div>
-            <div class="reliability-sub">Non disponible</div>
-          </div>
-        </section>
-
-        <section class="panel">
-          <div class="panel-header">
-            <h3><i class="ti ti-activity"></i> Activité récente</h3>
-          </div>
-          <div class="activity-list">
-            <div class="activity-item" *ngFor="let a of activities">
-              <div class="act-dot" [style.background]="a.color"></div>
-              <div class="act-body">
-                <div class="act-title">{{a.title}}</div>
-                <div class="act-meta">{{a.meta}}</div>
-              </div>
-            </div>
-            <div class="act-empty" *ngIf="!activitiesLoading && !dataErrors['incidents'] && !activities.length">Aucun incident récent.</div>
-          </div>
-        </section>
-      </div>
-
+            </td>
+            <td>
+              <span class="dash-score" *ngIf="row.security.score !== null" [style.color]="scoreColor(row.security.score)">{{row.security.score}}/100</span>
+              <span class="na" *ngIf="row.security.score === null" title="Aucun score n’a été calculé" aria-label="Aucun score n’a été calculé">—</span>
+            </td>
+            <td>
+              <app-status-chip *ngIf="row.deployment.state !== 'UNAVAILABLE' || !deploymentLoading" [status]="row.deployment.state"></app-status-chip>
+              <app-status-chip *ngIf="row.deployment.state === 'UNAVAILABLE' && deploymentLoading" status="PENDING" labelOverride="Vérification…"></app-status-chip>
+            </td>
+            <td>
+              <span class="dash-count" [class.some]="row.openIncidents > 0" *ngIf="row.openIncidents !== null">{{row.openIncidents}}</span>
+              <span class="na" *ngIf="row.openIncidents === null" title="Non disponible" aria-label="Non disponible">—</span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
-  </main>
 
+    <div class="empty-state" *ngIf="!projectsLoading && !dataErrors['projects'] && !orderedRows.length">
+      <div class="empty-icon"><i class="ti ti-folder" aria-hidden="true"></i></div>
+      <div class="empty-title">Aucun projet surveillé</div>
+      <div class="empty-sub">Aucun projet n’est enregistré sur la plateforme.</div>
+    </div>
+  </section>
+
+  <!-- ══ 4 · Santé du pipeline & activité ═════════════════════════════ -->
+  <div class="bottom-row">
+    <section class="panel">
+      <div class="panel-header">
+        <h3><i class="ti ti-git-branch" aria-hidden="true"></i> Taux de réussite des builds</h3>
+      </div>
+      <div class="loading-overlay" role="status" *ngIf="buildReliabilityLoading"><div class="spinner"></div><span>Chargement…</span></div>
+      <div class="reliability-body" *ngIf="!buildReliabilityLoading && buildReliability?.rate != null">
+        <div class="reliability-value" [style.color]="scoreColor(buildReliability!.rate)">{{buildReliability!.rate}}%</div>
+        <div class="reliability-sub">
+          sur {{buildReliability!.sampleSize}} build{{buildReliability!.sampleSize! > 1 ? 's' : ''}} (historique Jenkins)
+        </div>
+      </div>
+      <!-- §17/§18 — « Non disponible » n'est affirmé qu'une fois la lecture
+           terminée, et un échec de requête est dit comme tel : ne pas
+           confondre « Jenkins n'a rien rapporté » et « l'appel a échoué ». -->
+      <div class="reliability-body" *ngIf="!buildReliabilityLoading && !dataErrors['jenkins'] && buildReliability?.rate == null">
+        <div class="reliability-value" style="color:var(--text-secondary)">Non disponible</div>
+        <div class="reliability-sub">Aucun historique de build exploitable n’a été rapporté par Jenkins.</div>
+      </div>
+      <div class="reliability-body" *ngIf="!buildReliabilityLoading && dataErrors['jenkins']" role="alert">
+        <div class="reliability-value" style="font-size:16px;color:var(--color-warning)">Non chargé</div>
+        <div class="reliability-sub">{{dataErrors['jenkins']}}</div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <h3><i class="ti ti-activity" aria-hidden="true"></i> Activité récente</h3>
+        <a class="panel-link" routerLink="/incidents">Voir les incidents <span aria-hidden="true">→</span></a>
+      </div>
+      <div class="activity-list">
+        <div class="loading-overlay" role="status" *ngIf="activitiesLoading"><div class="spinner"></div><span>Chargement…</span></div>
+        <a class="activity-item" *ngFor="let a of activities" [routerLink]="['/incidents', a.incidentId]">
+          <app-status-chip [status]="a.tone"></app-status-chip>
+          <div class="act-body">
+            <div class="act-title">{{a.title}}</div>
+            <div class="act-meta">{{a.meta}}</div>
+          </div>
+        </a>
+        <div class="panel-error-body" *ngIf="!activitiesLoading && dataErrors['incidents']" role="alert">
+          <p class="panel-error">{{dataErrors['incidents']}}</p>
+          <button type="button" class="btn btn-secondary btn-sm" (click)="loadIncidentFeeds()">Réessayer</button>
+        </div>
+        <div class="act-empty" *ngIf="!activitiesLoading && !dataErrors['incidents'] && !activities.length">
+          Aucun incident n’a été enregistré.
+        </div>
+      </div>
+    </section>
+  </div>
 
 </div>

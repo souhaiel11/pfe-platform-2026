@@ -50,3 +50,17 @@
     .activity-main { flex: 1; min-width: 0; }
     .activity-title { font-size: 12px; color: var(--text-primary); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .activity-sub { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+
+    .card-title { display: flex; align-items: center; gap: 6px; }
+    .activity-count { font-size: 11px; color: var(--text-muted); font-family: var(--font-mono); }
+    .activity-date { font-family: var(--font-mono); font-size: 10px; color: var(--text-faint); flex-shrink: 0; }
+    .activity-arrow { color: var(--text-muted); flex-shrink: 0; }
+    .activity-row:focus-visible { outline: 2px solid var(--accent-blue); outline-offset: 2px; }
+
+    /* §23 — sous 700 px la ligne d'activité s'empile au lieu de comprimer
+       le titre jusqu'à l'illisible. */
+    @media (max-width: 700px) {
+      .activity-row { flex-wrap: wrap; gap: 8px; }
+      .activity-main { flex-basis: 100%; }
+      .bar-label { width: 90px; }
+    }

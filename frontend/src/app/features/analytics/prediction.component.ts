@@ -1,6 +1,9 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { RouterModule } from '@angular/router';
 import { ApiService } from '../../core/services/api.service';
+import { PresentationTextPipe } from '../../shared/presentation-label.pipe';
+import { ZoneLabelComponent } from '../../shared/zone-label/zone-label.component';
 
 interface RiskRule {
   label: string;
@@ -25,7 +28,7 @@ interface ProjectRisk {
 @Component({
   selector: 'app-prediction',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, RouterModule, PresentationTextPipe, ZoneLabelComponent],
   templateUrl: './prediction.component.html',
   styleUrls: ['./prediction.component.scss'],
 })
@@ -35,6 +38,15 @@ export class PredictionComponent implements OnInit {
   loading = true;
 
   constructor(private api: ApiService) {}
+
+  /**
+   * Repère non chromatique du niveau de risque (§24) — une pastille colorée
+   * seule n'est pas lisible pour qui ne distingue pas les couleurs.
+   */
+  riskGlyph(levelClass: string): string {
+    const glyphs: Record<string, string> = { faible: '✓', modere: '!', eleve: '!!', critique: '✕' };
+    return glyphs[levelClass] || '–';
+  }
 
   ngOnInit() {
     this.load();

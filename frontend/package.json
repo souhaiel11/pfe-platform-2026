@@ -6,6 +6,7 @@
     "start": "ng serve --host 0.0.0.0 --port 4200",
     "build": "ng build",
     "build:prod": "ng build --configuration production",
+    "build:offline": "node scripts/build-offline.mjs",
     "test:merge-ready": "node scripts/merge-ready-success.spec.mjs",
     "qa:french": "node scripts/qa-french-ui.mjs",
     "test:frontend-finalization": "node --test scripts/*.spec.mjs && node scripts/qa-french-ui.mjs"
@@ -20,6 +21,7 @@
     "@angular/platform-browser-dynamic": "^17.3.0",
     "@angular/router": "^17.3.0",
     "chart.js": "^4.5.1",
+    "marked": "18.0.14",
     "rxjs": "~7.8.0",
     "tslib": "^2.6.0",
     "zone.js": "~0.14.0"

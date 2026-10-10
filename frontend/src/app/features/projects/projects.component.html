@@ -1,70 +1,161 @@
-<div *ngIf="loadError" role="alert" class="card">{{loadError}} <button (click)="load()">Réessayer</button></div>
-    <div class="page-container">
-      <div class="page-header" style="display:flex;align-items:center;justify-content:space-between;">
-        <div>
-          <h1 class="page-title">// projets</h1>
-          <p class="page-subtitle">Gestion des projets sous surveillance DevSecOps IA</p>
-        </div>
-        <button *ngIf="canEdit" class="btn btn-primary" (click)="goToNewProject()">+ Nouveau projet</button>
-      </div>
+<div class="page-container">
 
-      <div *ngIf="loading" class="loading-overlay"><div class="spinner"></div><span>Chargement...</span></div>
-
-      <!-- Projects grid -->
-      <div class="projects-grid" *ngIf="!loading && !loadError">
-        <div *ngIf="projects.length === 0" class="empty-state" style="grid-column:1/-1;">
-          <div class="empty-icon">◧</div>
-          <div class="empty-title">Aucun projet</div>
-          <div class="empty-sub">Créez votre premier projet pour commencer</div>
-        </div>
-
-        <div *ngFor="let p of projects" class="project-card">
-          <div class="project-card-header">
-            <div class="project-avatar" [style.border-color]="getHealthColor(p.securityScore)">
-              {{p.name?.substring(0,2).toUpperCase()}}
-            </div>
-            <div style="flex:1;min-width:0;">
-              <div class="project-name">{{p.name}}</div>
-              <div class="project-id">{{p.id?.substring(0,8)}}...</div>
-            </div>
-            <div class="health-badge" [style.color]="getHealthColor(p.securityScore)"
-                 [style.background]="getHealthColor(p.securityScore)+'11'">
-              {{p.securityScore !== null ? (p.securityScore | number:'1.0-0') + '%' : 'indisponible'}}
-            </div>
-          </div>
-
-          <div class="project-stats">
-            <div class="stat">
-              <div class="stat-val red">{{p.openIncidents || 0}}</div>
-              <div class="stat-label">ouverts</div>
-            </div>
-            <div class="stat">
-              <div class="stat-val orange">{{p.analyzingIncidents || 0}}</div>
-              <div class="stat-label">analyse</div>
-            </div>
-            <div class="stat">
-              <div class="stat-val green">{{p.resolvedIncidents || 0}}</div>
-              <div class="stat-label">résolus</div>
-            </div>
-          </div>
-
-          <div class="health-bar-wrap">
-            <div class="health-bar">
-              <div [style.width]="(p.securityScore ?? 0)+'%'"
-                   [style.background]="getHealthColor(p.securityScore)"></div>
-            </div>
-          </div>
-
-          <div class="project-footer">
-            <span style="font-size:10px;color:var(--text-faint);font-family:var(--font-mono);">
-              Créé le {{p.createdAt | frenchDate:false}}
-            </span>
-            <div style="display:flex;gap:6px;">
-              <a [routerLink]="['/projects', p.id]" class="btn btn-secondary btn-sm">Voir →</a>
-              <button *ngIf="canEdit" class="btn btn-danger btn-sm" (click)="confirmDelete(p)">✕</button>
-            </div>
-          </div>
-        </div>
-      </div>
-
+  <div class="page-header" style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+    <div>
+      <h1 class="page-title">Projets</h1>
+      <p class="page-subtitle">Projets sous surveillance DevSecOps</p>
     </div>
+    <button *ngIf="canEdit" class="btn btn-primary" (click)="goToNewProject()">
+      <i class="ti ti-plus" aria-hidden="true"></i> Nouveau projet
+    </button>
+  </div>
+
+  <app-zone-label [kind]="canEdit ? 'action' : 'information'"
+    [note]="canEdit
+      ? 'État comparé des projets ; création et suppression depuis cette page.'
+      : 'État comparé des projets surveillés. Lecture seule.'"></app-zone-label>
+
+  <!-- §18 — pendant la lecture, aucune carte, aucun compteur provisoire. -->
+  <div class="card" *ngIf="loading">
+    <div class="loading-overlay" role="status"><div class="spinner"></div><span>Chargement des projets…</span></div>
+  </div>
+
+  <!-- §17 — « la requête a échoué » n'est pas « aucun projet ». -->
+  <div class="card" *ngIf="!loading && loadError" role="alert">
+    <div class="empty-state">
+      <div class="empty-icon"><i class="ti ti-plug-connected-x" aria-hidden="true"></i></div>
+      <div class="empty-title">Impossible de charger les projets</div>
+      <div class="empty-sub">{{loadError}}</div>
+      <button class="btn btn-secondary btn-sm" style="margin-top:14px;" (click)="load()">Réessayer</button>
+    </div>
+  </div>
+
+  <ng-container *ngIf="!loading && !loadError">
+
+    <!-- §17 — dégradation partielle : la liste reste exacte, et dit ce qui
+         manque plutôt que de combler les colonnes concernées. -->
+    <div class="alert alert-warning partial-notice" role="alert" *ngIf="partialErrors.length">
+      <strong>Certaines données ne sont pas chargées</strong>
+      <ul><li *ngFor="let e of partialErrors">{{e}}</li></ul>
+      <button class="btn btn-secondary btn-sm" (click)="load()">Réessayer</button>
+    </div>
+
+    <!-- §28 — l'information la plus utile d'une liste : combien demandent
+         une attention. Comptée sur des faits constatés, jamais sur une
+         absence de données. -->
+    <p class="list-summary" *ngIf="rows.length">
+      {{rows.length}} projet{{rows.length > 1 ? 's' : ''}} ·
+      <span [class.attention]="attentionCount > 0">
+        {{attentionCount === 0 ? 'aucun ne demande d’attention' :
+          attentionCount + (attentionCount > 1 ? ' demandent une attention' : ' demande une attention')}}
+      </span>
+    </p>
+
+    <!-- §16 — un état vide dit ce qui est vide et quoi faire ensuite. -->
+    <div class="card" *ngIf="!rows.length">
+      <div class="empty-state">
+        <div class="empty-icon"><i class="ti ti-folder" aria-hidden="true"></i></div>
+        <div class="empty-title">Aucun projet surveillé</div>
+        <div class="empty-sub">Aucun projet n’est enregistré sur la plateforme. Créez-en un pour commencer la surveillance.</div>
+        <button *ngIf="canEdit" class="btn btn-primary btn-sm" style="margin-top:14px;" (click)="goToNewProject()">Créer un projet</button>
+      </div>
+    </div>
+
+    <!-- §29 — mêmes champs, même ordre pour chaque projet : les projets sont
+         comparables d'un coup d'œil. -->
+    <div class="projects-grid" *ngIf="rows.length">
+      <article class="project-card" *ngFor="let row of rows" [class.attention]="needsAttention(row)">
+
+        <header class="pc-head">
+          <div class="pc-ident">
+            <!-- Action primaire UNIQUE de la carte : ouvrir le projet (§7). -->
+            <a class="pc-name" [routerLink]="['/projects', row.id]">{{row.name}}</a>
+            <div class="pc-repo">
+              <span *ngIf="row.repository" class="pc-repo-val">{{row.repository}}</span>
+              <span *ngIf="!row.repository" class="na" title="Aucun dépôt configuré" aria-label="Aucun dépôt configuré">Dépôt non configuré</span>
+              <span class="pc-env" *ngIf="row.environment">{{row.environment}}</span>
+            </div>
+          </div>
+          <span class="pc-attention" *ngIf="needsAttention(row)" title="Au moins un fait constaté demande une action">
+            <span aria-hidden="true">!</span> À traiter
+          </span>
+        </header>
+
+        <dl class="pc-facts">
+          <div class="pc-fact">
+            <dt>Dernier build</dt>
+            <dd>
+              <ng-container *ngIf="row.build.state === 'KNOWN'">
+                <app-status-chip [status]="row.build.status"></app-status-chip>
+                <span class="pc-build-num" *ngIf="row.build.number !== null">#{{row.build.number}}</span>
+              </ng-container>
+              <ng-container *ngIf="row.build.state === 'NO_BUILD'">
+                <app-status-chip status="NO_BUILD"></app-status-chip>
+              </ng-container>
+              <ng-container *ngIf="row.build.state === 'NOT_CONFIGURED'">
+                <span [attr.title]="row.build.detail">
+                  <app-status-chip status="NOT_CONFIGURED"></app-status-chip>
+                </span>
+              </ng-container>
+              <ng-container *ngIf="row.build.state === 'UNAVAILABLE'">
+                <app-status-chip *ngIf="buildLoading" status="PENDING" labelOverride="Vérification…"></app-status-chip>
+                <span *ngIf="!buildLoading" [attr.title]="row.build.detail">
+                  <app-status-chip status="UNAVAILABLE"></app-status-chip>
+                </span>
+                <span class="pc-build-num" *ngIf="!buildLoading && row.build.number !== null"
+                      title="Build corrélé par la plateforme ; le résultat Jenkins n’est pas connu.">#{{row.build.number}}</span>
+              </ng-container>
+            </dd>
+          </div>
+
+          <div class="pc-fact">
+            <dt>Sécurité<app-info-hint term="security-score"></app-info-hint></dt>
+            <dd>
+              <span class="pc-score" *ngIf="row.security.score !== null" [style.color]="scoreColor(row)">{{row.security.score}}/100</span>
+              <span class="na" *ngIf="row.security.score === null" title="Aucun score n’a été calculé" aria-label="Aucun score n’a été calculé">—</span>
+              <span class="pc-note" *ngIf="securityNote(row)">{{securityNote(row)}}</span>
+            </dd>
+          </div>
+
+          <div class="pc-fact">
+            <dt>Déploiement<app-info-hint term="deployment-governance"></app-info-hint></dt>
+            <dd>
+              <app-status-chip *ngIf="row.deployment.state !== 'UNAVAILABLE' || !deploymentLoading"
+                               [status]="row.deployment.state"
+                               [attr.title]="deploymentTooltip(row)"></app-status-chip>
+              <app-status-chip *ngIf="row.deployment.state === 'UNAVAILABLE' && deploymentLoading"
+                               status="PENDING" labelOverride="Vérification…"></app-status-chip>
+              <span class="pc-note" *ngIf="row.deployment.state === 'NOT_READY' && row.deployment.blockingCount"
+                    [attr.title]="row.deployment.firstReason">
+                {{row.deployment.blockingCount}} condition{{row.deployment.blockingCount > 1 ? 's' : ''}} bloquante{{row.deployment.blockingCount > 1 ? 's' : ''}}
+              </span>
+            </dd>
+          </div>
+
+          <div class="pc-fact">
+            <dt>Incidents ouverts</dt>
+            <dd>
+              <span class="pc-incidents" [class.some]="row.openIncidents > 0" *ngIf="row.openIncidents !== null">{{row.openIncidents}}</span>
+              <span class="na" *ngIf="row.openIncidents === null" title="Non disponible" aria-label="Non disponible">—</span>
+              <span class="pc-note" *ngIf="row.analyzingIncidents">{{row.analyzingIncidents}} en analyse</span>
+            </dd>
+          </div>
+        </dl>
+
+        <footer class="pc-foot">
+          <span class="pc-activity" *ngIf="row.lastActivity" [title]="row.lastActivityExact">
+            Dernière activité : {{row.lastActivity}}
+          </span>
+          <span class="pc-activity na" *ngIf="!row.lastActivity" title="Non disponible">Dernière activité non disponible</span>
+          <button *ngIf="canEdit" class="pc-delete" (click)="confirmDelete(row, $event)"
+                  [attr.aria-label]="'Supprimer le projet ' + row.name" title="Supprimer le projet">
+            <i class="ti ti-trash" aria-hidden="true"></i>
+          </button>
+        </footer>
+
+      </article>
+    </div>
+
+  </ng-container>
+
+</div>

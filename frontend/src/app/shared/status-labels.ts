@@ -16,7 +16,15 @@ const STAGE_STATUS_LABELS: Record<string, string> = {
   VALIDATION_FAILED: 'Échec de la validation',
   PROJECT_CONTEXT_INSUFFICIENT: 'Contexte du projet insuffisant',
   NOT_YET_SANDBOXED: 'Validation non encore exécutée',
-  CLOSED: 'Corrigée',
+  CLOSED: 'Clôturé',
+  ELEVE: 'Élevé',
+  MOYEN: 'Moyen',
+  FAIBLE: 'Faible',
+  SECURITE: 'Sécurité',
+  FIABILITE: 'Fiabilité',
+  DEVSECOPS: 'DevSecOps',
+  PERFORMANCE: 'Performance',
+  LISIBILITE: 'Lisibilité',
   OPEN: 'À traiter',
   DISPATCHING: 'En cours',
   CANDIDATE_READY: 'Correction proposée',
@@ -65,6 +73,19 @@ const STAGE_STATUS_LABELS: Record<string, string> = {
   STILL_DETECTED: 'Toujours détecté',
   NOT_DETECTED: 'Non détecté',
   UNAVAILABLE: 'Indisponible',
+  NOT_CONFIGURED: 'Non configuré',
+  NOT_APPLICABLE: 'Non applicable',
+  STALE: 'Données anciennes',
+  REVOKED: 'Révoqué',
+  PROVENANCE_VERIFIED: 'Provenance vérifiée',
+  PROVENANCE_PENDING: 'Provenance en attente',
+  UNVERIFIED_MANUAL_ARTEFACT: 'Artefact manuel non vérifié',
+  MERGE_READY: 'Prêt à fusionner',
+  QUEUED: 'En file d’attente',
+  REQUESTED: 'Demandé',
+  IN_PROGRESS: 'En cours',
+  ABORTED: 'Interrompu',
+  UNSTABLE: 'Instable',
   SCANNER_UNAVAILABLE: 'Analyse indisponible',
   CRITICAL: 'Critique',
   HIGH: 'Élevée',
@@ -86,7 +107,13 @@ const STAGE_STATUS_LABELS: Record<string, string> = {
   UNASSIGNED: 'Non assigné',
   BUILD: 'Build',
   TESTS: 'Tests',
+  JENKINS: 'Jenkins',
+  NO_BUILD: 'Aucun build',
+  GITHUB: 'GitHub',
+  WEBHOOK: 'Webhook',
+  PLATFORM: 'Plateforme',
   SONAR: 'SonarQube',
+  SONARQUBE: 'SonarQube',
   SECURITY: 'Sécurité',
   TRIVY: 'Trivy',
   OWASP: 'OWASP Dependency-Check',
@@ -128,6 +155,34 @@ export function riskLevelLabel(raw: string | null | undefined): string {
 }
 
 export const presentationLabel = stageStatusLabel;
+
+// ─────────────────────────────────────────────────────────────────────
+// metadata.fixRequest.status (WF2 remediation lifecycle) — distinct map
+// from STAGE_STATUS_LABELS above: the same technical tokens can carry a
+// different, more specific French label in this context (e.g. DISPATCHED
+// is "en cours" generically, but here it means "the WF2 fix itself is
+// running", not a scan stage). Never expose the raw backend value; an
+// unmapped token falls back to stageStatusLabel's own fallback (the raw
+// token as last resort), same convention as the rest of this file.
+// ─────────────────────────────────────────────────────────────────────
+const FIX_REQUEST_STATUS_LABELS: Record<string, string> = {
+  FIX_STARTING: 'Préparation de la correction',
+  DISPATCHED: 'Correction en cours',
+  CANCEL_REQUESTED: 'Annulation en cours',
+  CANCELLED: 'Correction annulée',
+  PR_CREATED: 'Correction proposée',
+  FIX_FAILED: 'Échec de la correction',
+  VALIDATING: 'Validation en cours',
+  VALIDATED: 'Correction validée',
+  COMPLETED: 'Correction terminée',
+  REJECTED: 'Correction rejetée',
+};
+
+export function fixRequestStatusLabel(raw: string | null | undefined): string {
+  if (!raw) return 'Non disponible';
+  const key = String(raw).toUpperCase();
+  return FIX_REQUEST_STATUS_LABELS[key] ?? stageStatusLabel(raw);
+}
 
 /** Translate known status tokens embedded in server recommendations. */
 export function presentationText(value: unknown): string {

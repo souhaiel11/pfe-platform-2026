@@ -140,7 +140,20 @@ export function findingResponsibleText(finding: FindingLike): string {
  * lit comme une donnée manquante) mais une formulation qui décrit l'état réel.
  */
 export function findingEligibilityText(finding: FindingLike): string {
-  return finding?.remediationType === 'AUTO_FIX_ELIGIBLE'
-    ? 'Correction automatisable'
-    : 'Nécessite une action humaine';
+  if (finding?.remediationType !== 'AUTO_FIX_ELIGIBLE') return 'Nécessite une action humaine';
+  // R46 — distinction de sincérité, selon ce que le constat déclare lui-même.
+  //
+  // Pour une DÉPENDANCE, la qualification est déterministe et prouvée :
+  // provenance supportée, version corrigée de même majeure, candidat construit,
+  // tests passés, double rescan. « Automatisable » y est exact.
+  //
+  // Pour un défaut de CODE SOURCE, l'étiquette posée en amont vient d'un
+  // classement par SÉVÉRITÉ (WF1), pas d'une qualification. Le planificateur de
+  // WF2 statue ensuite lui-même et peut conclure MANUAL_OR_SPECIALIST -- cela
+  // s'est déjà produit en réel sur une règle d'injection de dépendance, depuis
+  // ajoutée à la liste d'exclusion de WF1. Ce module reste volontairement sans
+  // aucun littéral propre à une règle : un test l'impose.
+  // On annonce donc une candidature, jamais une garantie.
+  const isSourceDefect = String(finding?.source || '').toUpperCase() === 'SONARQUBE';
+  return isSourceDefect ? 'Correction assistée candidate' : 'Correction automatisable';
 }

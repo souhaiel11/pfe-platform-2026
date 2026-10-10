@@ -7,6 +7,10 @@ import { ToastService } from '../../core/services/toast.service';
 import { PresentationLabelPipe } from '../../shared/presentation-label.pipe';
 import { FrenchDatePipe } from '../../shared/french-date.pipe';
 import { presentationLabel } from '../../shared/status-labels';
+import { StatusChipComponent } from '../../shared/status-chip/status-chip.component';
+import { InfoHintComponent } from '../../shared/info-hint/info-hint.component';
+import { ZoneLabelComponent } from '../../shared/zone-label/zone-label.component';
+import { statusColor } from '../../shared/status-chip/status-tone';
 
 // ═══════════════════════════════════════════════════════════════════
 //  AGENTS IA — Performance Dashboard v2.0
@@ -17,7 +21,7 @@ import { presentationLabel } from '../../shared/status-labels';
 @Component({
   selector: 'app-analysis',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule, PresentationLabelPipe, FrenchDatePipe],
+  imports: [CommonModule, RouterModule, FormsModule, PresentationLabelPipe, FrenchDatePipe, StatusChipComponent, InfoHintComponent, ZoneLabelComponent],
   templateUrl: './analysis.component.html',
   styleUrls: ['./analysis.component.scss'],
 })
@@ -27,8 +31,8 @@ export class AnalysisComponent implements OnInit {
 
   stats = {
     total: 0,
-    avgConfidence: 0,
-    autoFixablePct: 0,
+    avgConfidence: null as number | null,
+    autoFixablePct: null as number | null,
     criticalCount: 0,
   };
 
@@ -60,7 +64,7 @@ export class AnalysisComponent implements OnInit {
               createdAt: inc.createdAt,
               decision: (a.decision || '').toUpperCase(),
               securityLevel: (a.securityLevel || '').toUpperCase(),
-              confidence: a.confidenceScore || 0,
+              confidence: typeof a.confidenceScore === 'number' ? a.confidenceScore : null,
             };
           })
           .filter(x => x !== null) as any[];
@@ -81,8 +85,8 @@ export class AnalysisComponent implements OnInit {
     this.stats.total = total;
 
     if (total === 0) {
-      this.stats.avgConfidence = 0;
-      this.stats.autoFixablePct = 0;
+      this.stats.avgConfidence = null;
+      this.stats.autoFixablePct = null;
       this.stats.criticalCount = 0;
       this.decisionBars = [];
       this.severityBars = [];
@@ -90,8 +94,8 @@ export class AnalysisComponent implements OnInit {
     }
 
     // Confiance moyenne
-    const confSum = parsed.reduce((s, x) => s + (x.confidence || 0), 0);
-    this.stats.avgConfidence = Math.round(confSum / total);
+    const measured = parsed.filter(x => x.confidence !== null);
+    this.stats.avgConfidence = measured.length ? Math.round(measured.reduce((s, x) => s + x.confidence, 0) / measured.length) : null;
 
     // % correctifs auto-proposés (FIX_PROPOSED + AUTO_FIX)
     const autoFixable = parsed.filter(x => x.decision === 'FIX_PROPOSED' || x.decision === 'AUTO_FIX').length;
@@ -100,10 +104,13 @@ export class AnalysisComponent implements OnInit {
     // Incidents CRITICAL
     this.stats.criticalCount = parsed.filter(x => x.securityLevel === 'CRITICAL').length;
 
-    // Répartition décisions
-    const decisionColors: any = {
-      FIX_PROPOSED: '#38bdf8', AUTO_FIX: '#22c55e', BLOCK: '#e24b4a', NOTIFY_ONLY: '#f59e0b',
-    };
+    // Répartition décisions.
+    //
+    // Les couleurs viennent de la table de tonalités partagée
+    // (shared/status-chip/status-tone.ts) et non d'un barème local en
+    // hexadécimal : les anciennes valeurs (#38bdf8, #22c55e…) ne suivaient
+    // ni le thème clair ni le thème sombre, et donnaient à cet écran une
+    // sémantique de couleur différente de tous les autres.
     const decisionCounts: any = {};
     parsed.forEach(x => {
       const key = x.decision || 'INCONNU';
@@ -112,16 +119,13 @@ export class AnalysisComponent implements OnInit {
     const maxDecision = Math.max(...Object.values(decisionCounts) as number[]);
     this.decisionBars = Object.entries(decisionCounts)
       .sort((a: any, b: any) => b[1] - a[1])
-      .map(([label, count]: any) => ({
-        label: presentationLabel(label), count,
+      .map(([raw, count]: any) => ({
+        label: presentationLabel(raw), count,
         pct: Math.round((count / maxDecision) * 100),
-        color: decisionColors[label] || '#7ba8c8',
+        color: statusColor(raw),
       }));
 
-    // Répartition sévérité
-    const severityColors: any = {
-      CRITICAL: '#e24b4a', HIGH: '#f97316', MEDIUM: '#f59e0b', LOW: '#22c55e',
-    };
+    // Répartition sévérité — même table de tonalités partagée.
     const severityCounts: any = {};
     parsed.forEach(x => {
       const key = x.securityLevel || 'INCONNU';
@@ -130,15 +134,11 @@ export class AnalysisComponent implements OnInit {
     const maxSeverity = Math.max(...Object.values(severityCounts) as number[]);
     this.severityBars = Object.entries(severityCounts)
       .sort((a: any, b: any) => b[1] - a[1])
-      .map(([label, count]: any) => ({
-        label: presentationLabel(label), count,
+      .map(([raw, count]: any) => ({
+        label: presentationLabel(raw), count,
         pct: Math.round((count / maxSeverity) * 100),
-        color: severityColors[label] || '#7ba8c8',
+        color: statusColor(raw),
       }));
   }
 
-  getDecisionBadgeClass(d: string) {
-    const map: any = { FIX_PROPOSED: 'info', AUTO_FIX: 'info', BLOCK: 'high', NOTIFY_ONLY: 'medium' };
-    return map[d] || '';
-  }
 }

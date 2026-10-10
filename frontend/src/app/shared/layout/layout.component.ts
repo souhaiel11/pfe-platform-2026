@@ -26,6 +26,8 @@ export class LayoutComponent implements OnInit {
     '/analysis':      'Agents IA',
     '/settings':      'Paramètres',
     '/admin':         'Administration',
+    '/security':      'Sécurité',
+    '/prediction':    'Indicateurs de risque',
   };
 
   constructor(

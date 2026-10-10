@@ -1,8 +1,12 @@
-import { repositoryUrl } from '../../shared/platform-capability-presentation';
+import { Subject, takeUntil } from 'rxjs';
+import { availableNumber, scannerHasResult, scannerMetric, scannerState, qualityGatePresentation, testStageCoverage, testStageCoverageState, scannerHasStaleFindings, scannerStaleFindingCount, dockerImageState, dockerImageRef, dockerImageParts, dockerPushState, dockerProvenanceState, sourceInteger } from '../../shared/data-truth';
+import { SecurityRemediationTask } from '../../shared/security-remediation.types';
+import { getSecurityRemediationPresentation, summarizeSecurityRemediation } from '../../shared/security-remediation-presentation';
+import { mergeSecurityFindings, SecurityFindingRow } from '../../shared/security-findings-view';
 import { PresentationTextPipe } from '../../shared/presentation-label.pipe';
-import { frenchDate, frenchDuration } from '../../shared/french-format';
+import { frenchDate, frenchDuration, frenchRelative } from '../../shared/french-format';
 import { sortPipelineStages, pipelineStageLabel } from '../../shared/pipeline-stage-presentation';
-import { Component, OnInit, Input, ElementRef, ViewChild } from '@angular/core';
+import { Component, ElementRef, Input, OnChanges, OnDestroy, OnInit, SimpleChanges, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
@@ -11,6 +15,7 @@ import { ZapTableComponent } from './zap-table.component';
 import { ProjectOverviewComponent } from './project-overview.component';
 import { JenkinsfileOptimizerComponent } from './jenkinsfile-optimizer.component';
 import { DockerfileOptimizerComponent } from './dockerfile-optimizer.component';
+import { DeploymentGovernanceComponent } from './deployment-governance.component';
 import { ApiService } from '../../core/services/api.service';
 import { ToastService } from '../../core/services/toast.service';
 import { RiskStateService } from '../../core/services/risk-state.service';
@@ -23,23 +28,88 @@ import { presentationText, presentationLabel, remediationTypeLabel, riskLevelLab
 import { findingDescriptionText, findingEligibilityText, findingEvidenceText, findingRecommendationText, findingResponsibleText, findingWhyImportantText } from '../../shared/finding-presentation';
 import { formatScoreOn100, isValidScoreOn100 } from '../../shared/score-display';
 import { canSelectCveTask as canSelectCveTaskShared, CveSelectionEligibility } from '../../shared/cve-selection-eligibility';
+import { StatusChipComponent } from '../../shared/status-chip/status-chip.component';
+import { ProjectContextStripComponent } from '../../shared/project-context/project-context-strip.component';
+import { CopyableIdComponent } from '../../shared/copyable-id/copyable-id.component';
+import { InfoHintComponent } from '../../shared/info-hint/info-hint.component';
+import { ZoneLabelComponent } from '../../shared/zone-label/zone-label.component';
+import { statusColor } from '../../shared/status-chip/status-tone';
+import { SourceEvidenceLinkComponent } from '../../shared/source-evidence/source-evidence-link.component';
+import { SourceEvidenceListComponent } from '../../shared/source-evidence/source-evidence-list.component';
+import { EvidenceSection, IncidentSourceEvidence, ProjectSourceEvidence, SourceEvidence, normalizeEvidenceView, EvidenceLoadState } from '../../shared/source-evidence/source-evidence.types';
 
 @Component({
   selector: 'app-project-detail',
   standalone: true,
-  imports: [PresentationTextPipe, CommonModule, FormsModule, RouterModule, CveTableComponent, ZapTableComponent, ProjectOverviewComponent, JenkinsfileOptimizerComponent, DockerfileOptimizerComponent, StageStatusLabelPipe, PresentationLabelPipe, FrenchDatePipe],
+  imports: [PresentationTextPipe, CommonModule, FormsModule, RouterModule, CveTableComponent, ZapTableComponent, ProjectOverviewComponent, JenkinsfileOptimizerComponent, DockerfileOptimizerComponent, DeploymentGovernanceComponent, SourceEvidenceLinkComponent, SourceEvidenceListComponent, StatusChipComponent, ProjectContextStripComponent, CopyableIdComponent, InfoHintComponent, ZoneLabelComponent, StageStatusLabelPipe, PresentationLabelPipe, FrenchDatePipe],
   templateUrl: './project-detail.component.html',
   styleUrls: ['./project-detail.component.scss'],
 })
-export class ProjectDetailComponent implements OnInit {
+export class ProjectDetailComponent implements OnInit, OnChanges, OnDestroy {
+  private readonly projectScopeReset$ = new Subject<void>();
+  // Tonalité de statut dérivée en UN endroit (shared/status-chip/status-tone.ts).
+  // Remplace les binaires `=== 'SUCCESS' ? vert : rouge' des gabarits, qui
+  // peignaient en rouge un build en cours, interrompu ou inconnu.
+  statusColor = statusColor;
+  scannerMetric = scannerMetric;
+  scannerState = scannerState;
+  qualityGatePresentation = qualityGatePresentation;
+  // R49 — expose au gabarit, comme ses voisins : la vue Docker n'affiche le
+  // lien « vulnerabilites de l'image » que si le scan a reellement un resultat.
+  scannerHasResult = scannerHasResult;
   dataErrors: Record<string, string> = {};
-  repositoryUrl = repositoryUrl;
+  // repositoryUrl() a été retiré : l'URL du dépôt vient de l'emplacement
+  // GIT_REPOSITORY du contrat de preuve, qui respecte le fournisseur et
+  // n'invente pas d'URL GitHub pour un dépôt hébergé ailleurs.
   jenkinsLive = false;
+  jenkinsLoading = false;
   jenkinsConnectionState(): string { return this.jenkinsMessage ? 'Indisponible' : this.jenkinsLive ? 'Données reçues' : this.project?.jenkinsJobName ? 'Configuré, connexion non vérifiée' : 'Non configuré'; }
   reportedBranch(): string { return this.rp?.metadata?.sourceBranch || this.rp?.metadata?.branch || this.ed?.build?.branch || ''; }
   orderedStages(): any[] { return sortPipelineStages(this.deployReadiness?.requiredStages || []); }
   pipelineStageLabel = pipelineStageLabel;
   frenchDuration = frenchDuration;
+
+  // ── Bandeau de contexte projet (§3) ──────────────────────────────────
+  // Répond d'un coup d'œil : quel projet, quelle branche, quel build, quel
+  // commit, quand. Chaque valeur vient d'une source réelle et vaut null
+  // quand elle n'est pas enregistrée — jamais un repli inventé.
+
+  /** Build de l'analyse affichée. */
+  contextBuildNumber(): number | null {
+    const n = this.reportEvidence?.buildNumber ?? this.ed?.build?.number ?? this.latestReport?.buildNumber ?? null;
+    return typeof n === 'number' && Number.isSafeInteger(n) ? n : null;
+  }
+
+  contextBuildStatus(): string | null {
+    const value = String(this.ed?.build?.status ?? '').trim();
+    return value ? value : null;
+  }
+
+  contextCommitFull(): string | null {
+    const sha = this.reportEvidence?.commitSha || this.latestReport?.metadata?.sourceCommitSha || null;
+    return typeof sha === 'string' && /^[0-9a-f]{7,40}$/i.test(sha) ? sha : null;
+  }
+
+  /** Fraîcheur relative de la dernière analyse — jamais fabriquée (§19). */
+  contextFreshness(): string | null {
+    return frenchRelative(this.latestReport?.createdAt);
+  }
+
+  contextTimestamp(): string | null {
+    return this.latestReport?.createdAt ? frenchDate(this.latestReport.createdAt) : null;
+  }
+
+  /** Copie une valeur technique complète (§21). */
+  contextCopied: string | null = null;
+  copyValue(value: string | null) {
+    if (!value) return;
+    const clipboard = (navigator as any)?.clipboard;
+    if (!clipboard?.writeText) return;
+    clipboard.writeText(value).then(
+      () => { this.contextCopied = value; setTimeout(() => { if (this.contextCopied === value) this.contextCopied = null; }, 1600); },
+      () => { this.contextCopied = null; },
+    );
+  }
 
   @ViewChild('sonarDrawer') sonarDrawer?: ElementRef<HTMLElement>;
   @ViewChild('batchDialog') batchDialog?: ElementRef<HTMLElement>;
@@ -54,18 +124,55 @@ export class ProjectDetailComponent implements OnInit {
 
   project: any = null;
   incidents: any[] = [];
+
+  // ── Sources & preuves (« Voir dans la source ») ─────────────────────
+  // DEUX tables distinctes, jamais fusionnées :
+  //   projectEvidence  — portée PROJET (job Jenkins, projet Sonar, dépôt,
+  //                      cible Azure) : vraie quel que soit le build affiché ;
+  //   reportEvidence   — portée ANALYSE SÉLECTIONNÉE (build, commit, chemins
+  //                      de rapport, image publiée, PR, exécution n8n).
+  // Les confondre ferait désigner le build courant comme source d'un constat
+  // issu d'un build antérieur. Aucune URL n'est construite ici : tout vient
+  // de GET /api/source-evidence/* (voir api.service.ts).
+  projectEvidence: ProjectSourceEvidence | null = null;
+  reportEvidence: IncidentSourceEvidence | null = null;
+  // État du CHARGEMENT, jamais confondu avec la disponibilité d'une preuve :
+  // une requête en échec affichait auparavant « Source non disponible », ce
+  // qui affirmait une absence qu'on n'avait pas constatée (§17).
+  projectEvidenceState: EvidenceLoadState = 'loading';
+  reportEvidenceState: EvidenceLoadState = 'loading';
   allReports: any[] = [];
+  allReportsTotal: number | null = null;
+  historyPage = 1;
+  historyHasNext = false;
+  historyLoading = false;
+  incidentsLoading = false;
+  private reportSelection = 0;
+  private reportDetails = new Map<string, any>();
   latestReport: any = null;
   loading = true;
   loadError = false;
   readonly tabMap: Record<string,string> = {
     jenkins: 'jenkins', sonar: 'sonarqube',
-    security: 'securite'
+    // R49 — destination propre a Docker. Sans cette entree, onGoToTab()
+    // resolvait `undefined` et setActiveTab() retombait sur 'rapport'.
+    docker: 'docker',
+    security: 'securite',
+    // The overview's "Déploiement" stage opens the platform's own deployment
+    // section, never Jenkins.
+    deploiement: 'deploiement'
   };
-  readonly VALID_TABS = ['rapport', 'jenkins', 'sonarqube', 'docker', 'securite', 'incidents', 'config'];
+  // 'deploiement' is the platform's OWN deployment-governance section. It is
+  // deliberately distinct from 'jenkins' (CI/CD build evidence): Jenkins is a
+  // build source, never the deployment UI. Every project gets both tabs; only
+  // the DATA behind them differs.
+  readonly VALID_TABS = ['rapport', 'jenkins', 'sonarqube', 'docker', 'securite', 'deploiement', 'incidents', 'config'];
   activeTab = 'rapport';
   securityFilter: 'all' | 'trivy' | 'owasp' | 'zap' = 'all';
   manualTasks: any[] = [];
+  manualTasksLoading = false;
+  manualSummaryLoaded = false;
+  reportsLoading = true;
   manualSummary = { todo: 0, doneByUser: 0, stillDetected: 0, verified: 0, total: 0 };
   manualStatusFilter = 'ALL';
   manualSeverityFilter = 'ALL';
@@ -89,15 +196,9 @@ export class ProjectDetailComponent implements OnInit {
   deploymentConfigured = false;
   deploymentTarget: any = null;
   convergenceCycles: any[] = [];
+  convergenceLoading = true;
   deployReasons: string[] = [];
   deployReadyLoading = true;
-  deploying = false;
-  deployImageTag = 'latest';
-  deploySuccessInfo: { state: string; health: string } | null = null;
-  deployErrorMessage: string | null = null;
-  deployConfirmationOpen = false;
-  private deploymentRequestId: string | null = null;
-
   allCves(ed: any): any[] {
     return [ ...(ed?.trivy?.cves || []), ...(ed?.owasp?.cves || []) ];
   }
@@ -106,8 +207,7 @@ export class ProjectDetailComponent implements OnInit {
   // absence de status (legacy) = donnée de confiance, status présent et
   // différent de 'COMPLETED' = scanner non exécuté. Garder synchronisée.
   isScannerMissing(block: any): boolean {
-    const status = block?.status;
-    return !!status && status !== 'COMPLETED';
+    return !scannerHasResult(block);
   }
   devGuide(_ed: any): any {
     return this.rp?.developerGuide ?? null;
@@ -116,8 +216,8 @@ export class ProjectDetailComponent implements OnInit {
   checkedTasks = 0;
 
   // Score affiché dans le header (du dernier rapport)
-  lastScore = 100;
-  lastRisk = 'low';
+  lastScore: number | null = null;
+  lastRisk = 'UNKNOWN';
 
   // true si trivy/owasp/zap/sonar n'a pas tourné sur le dernier rapport
   // (même périmètre que calculateSecurityScore côté backend, Étape 1).
@@ -130,7 +230,7 @@ export class ProjectDetailComponent implements OnInit {
   // true si le cas est complet (scanIncomplete=false) MAIS qu'aucun report
   // ne correspond (historique ancien, sans build.number) : "—" neutre,
   // jamais un palier fabriqué en repli.
-  scoreUnavailable = false;
+  scoreUnavailable = true;
 
   // Jenkins builds
   jenkinsBuilds: any[] = [];
@@ -158,6 +258,101 @@ export class ProjectDetailComponent implements OnInit {
   selectedCveTaskIds = new Set<string>();
   launchingCveBatch = false;
   cveBatchError: string | null = null;
+
+  // Retour visuel + rafraîchissement automatique pendant un lot en cours
+  // (tâches Trivy/OWASP au statut DISPATCHING) — sans ceci, un lot lancé
+  // n'était visible qu'au moment du lancement : l'utilisateur ne voyait
+  // plus rien bouger pendant les ~10 min d'un run réel et pouvait croire à
+  // un échec. Un seul point de vérité (syncBatchPolling(), appelé à chaque
+  // rechargement de manualTasks) démarre/arrête le polling ET couvre le cas
+  // d'un rechargement de page pendant qu'un lot tourne déjà côté serveur.
+  batchPolling = false;
+  batchPollTimedOut = false;
+  private batchPollTimer: ReturnType<typeof setInterval> | null = null;
+  private batchPollElapsedMs = 0;
+  private readonly BATCH_POLL_INTERVAL_MS = 8000;
+  // Un run réel dure ~10 min ; plafond volontairement large (20 min) pour
+  // ne jamais couper un traitement légitime encore en cours, mais borné
+  // pour ne jamais poller indéfiniment si un run échoue sans jamais
+  // ressortir de DISPATCHING côté serveur.
+  private readonly BATCH_POLL_MAX_MS = 20 * 60 * 1000;
+
+  retryPendingIds: ReadonlySet<string> = new Set();
+  securityLifecycleSummary() {
+    const rows = [...this.securityRows('TRIVY'), ...this.securityRows('OWASP')];
+    return summarizeSecurityRemediation(rows, row => this.manualTasks.find(t => t.id === row.findingTaskId),
+      () => ({selectable:false,reason:''}));
+  }
+  securityRows(source: 'TRIVY' | 'OWASP'): SecurityFindingRow[] {
+    const raw = this.ed?.[source.toLowerCase()]?.cves || [];
+    const rows = raw.map((r: Record<string, string>) => ({ ...r,
+      id:r['id'] || r['VulnerabilityID'] || r['cve'] || r['name'] || '',
+      pkg:r['pkg'] || r['PkgName'] || r['package'] || r['fileName'] || '', source }));
+    try { return mergeSecurityFindings(rows, this.manualTasks, source); }
+    catch { return []; } // Table displays blocking identity error; never approximate.
+  }
+  hasSecurityRows(source: 'TRIVY' | 'OWASP'): boolean {
+    return !!this.ed?.[source.toLowerCase()]?.cves?.length || this.manualTasks.some(t => t.source === source);
+  }
+  dispatchingCount(): number { return this.securityLifecycleSummary().dispatching; }
+  failedRetryableCount(): number { return this.securityLifecycleSummary().failedRetryable; }
+  candidateReadyCount(): number { return this.securityLifecycleSummary().candidateReady; }
+  retrySecurityFinding(task: SecurityRemediationTask): void {
+    if (!this.canOperate || this.retryPendingIds.has(task.id)) return;
+    const current = this.manualTasks.find(t => t.id === task.id);
+    if (!current || getSecurityRemediationPresentation(current, {selectable:false,reason:''}).retryAllowed !== true) return;
+    this.retryPendingIds = new Set([...this.retryPendingIds, task.id]);
+    const release = () => { const next = new Set(this.retryPendingIds); next.delete(task.id); this.retryPendingIds = next; };
+    this.api.retrySecurityFindingRemediation(task.id, current.securityFindingRemediation?.attemptId).subscribe({
+      next: () => { this.loadManualRemediation(release); },
+      error: (error: {status?: number}) => {
+        this.toast.error('Relance refusée', error.status === 409
+          ? 'L’état de la tentative a changé ou la relance n’est plus autorisée. Les données sont actualisées.'
+          : 'Impossible de relancer la correction. Actualisez les données avant de réessayer.');
+        this.loadManualRemediation(release);
+      },
+    });
+  }
+  correctSecurityFinding(taskId: string): void {
+    const row = [...this.securityRows('TRIVY'), ...this.securityRows('OWASP')].find(r => r.findingTaskId === taskId);
+    const task = this.manualTasks.find(t => t.id === taskId);
+    if (!row || !task || !getSecurityRemediationPresentation(task, this.canSelectCveTask(task,row), row).selectable) return;
+    if (this.launchingCveBatch) return;
+    this.selectedCveTaskIds = new Set([taskId]);
+    this.launchCveBatch();
+  }
+
+  private syncBatchPolling(): void {
+    if (this.dispatchingCount() > 0) {
+      this.batchPollTimedOut = false;
+      this.startBatchPolling();
+    } else {
+      this.stopBatchPolling();
+    }
+  }
+
+  private startBatchPolling(): void {
+    if (this.batchPollTimer) return;
+    this.batchPolling = true;
+    this.batchPollElapsedMs = 0;
+    this.batchPollTimer = setInterval(() => {
+      this.batchPollElapsedMs += this.BATCH_POLL_INTERVAL_MS;
+      if (this.batchPollElapsedMs >= this.BATCH_POLL_MAX_MS) {
+        this.stopBatchPolling();
+        this.batchPollTimedOut = true;
+        return;
+      }
+      this.loadManualRemediation();
+    }, this.BATCH_POLL_INTERVAL_MS);
+  }
+
+  private stopBatchPolling(): void {
+    if (this.batchPollTimer) {
+      clearInterval(this.batchPollTimer);
+      this.batchPollTimer = null;
+    }
+    this.batchPolling = false;
+  }
 
   // Correction manuelle (section 3, colonne droite) — recommandations réparties par priorité
   manualHigh: { text: string; high: boolean }[] = [];
@@ -267,6 +462,38 @@ export class ProjectDetailComponent implements OnInit {
   }
 
   findingId(finding: any): string { return String(finding?.id || finding?.key || ''); }
+  /**
+   * Couverture autoritaire, source unique.
+   *
+   * Elle vient du rapport de couverture du build (`tests.coverage`), que la
+   * bibliotheque partagee remplit depuis le rapport JaCoCo. Le bloc Sonar
+   * expose aussi un champ `coverage`, mais WF1 le lit sur la reponse de l'API
+   * /issues qui ne le porte pas : il vaut 0 par construction et ne doit pas
+   * etre affiche. La vue d'ensemble lit deja cette meme source.
+   *
+   * R47 -- une etape de tests SKIPPED/UNKNOWN ecrit `coverage: 0` sans avoir
+   * rien mesure : testStageCoverage() ne retient donc un chiffre que pour une
+   * etape reellement executee, et laisse `null` sinon.
+   */
+  authoritativeCoverage(): number | null {
+    return testStageCoverage(this.ed?.tests);
+  }
+  /**
+   * Constats d'une analyse anterieure retenus par un scanner non execute.
+   *
+   * Ils ne comptent pas pour ce build (les compteurs restent indisponibles),
+   * mais les cacher perdrait de l'information vraie. L'ecran les annonce.
+   */
+  staleScannerNotice(block: any): string | null {
+    const n = scannerStaleFindingCount(block);
+    if (n === null) return null;
+    return `${n} constat${n > 1 ? 's' : ''} d'une analyse antérieure, non rattaché${n > 1 ? 's' : ''} à ce build`;
+  }
+  hasStaleScannerFindings(block: any): boolean { return scannerHasStaleFindings(block); }
+
+  /** Motif d'absence, quand l'etape de tests n'a rien mesure. */
+  coverageState(): string { return testStageCoverageState(this.ed?.tests); }
+
   isAutoFixEligible(finding: any): boolean { return finding?.remediationType === 'AUTO_FIX_ELIGIBLE'; }
   activeFixRequest(): any { return this.latestReport?.metadata?.fixRequest || null; }
   prValidationRequest(): any { return this.latestReport?.metadata?.prValidationRequest || null; }
@@ -665,14 +892,37 @@ export class ProjectDetailComponent implements OnInit {
   // reflète le choix dans l'URL (?tab=xxx) sans recharger la page, pour que
   // l'onglet actif survive à un F5. replaceUrl:true pour ne pas polluer
   // l'historique/bouton retour à chaque clic d'onglet.
+  /**
+   * Onglets déjà ouverts au moins une fois pendant cette visite.
+   *
+   * Sert à un seul onglet, et pour une raison mesurée : la vue Déploiement
+   * attend une vérification de l'artefact auprès du registre Azure, qui
+   * prend 10 à 12 s (deux vérifications distantes de l'artefact ; la
+   * cause exacte de leur coût n'est pas établie, voir le rapport de gel).
+   * Avec un `*ngIf` seul, le composant est détruit à chaque changement
+   * d'onglet et **repaie ces 12 s à chaque retour**. En le gardant monté
+   * une fois ouvert, le second passage est immédiat.
+   *
+   * Ce n'est pas une mise en cache de la décision de gouvernance : le
+   * composant conserve simplement le résultat qu'il a déjà obtenu, comme
+   * s'il était resté affiché. Le bouton « Réévaluer » reste la façon de
+   * redemander une décision fraîche au serveur, et le serveur reste seul à
+   * la calculer. Le premier affichage, lui, n'est jamais anticipé : rien
+   * n'est demandé à Azure tant que l'onglet n'a pas été ouvert.
+   */
+  visitedTabs = new Set<string>(['rapport']);
+
   setActiveTab(tab: string) {
+    const previousTab = this.activeTab;
     this.activeTab = this.VALID_TABS.includes(tab) ? tab : 'rapport';
+    this.visitedTabs.add(this.activeTab);
     this.router.navigate([], {
       relativeTo: this.route,
       queryParams: { tab: this.activeTab },
       queryParamsHandling: 'merge',
       replaceUrl: true,
     });
+    if (this.project && this.activeTab !== previousTab) this.loadActiveTabData();
   }
 
   onGoToTab(event: string) {
@@ -731,14 +981,20 @@ export class ProjectDetailComponent implements OnInit {
   setSecurityFilter(scanner: 'all' | 'trivy' | 'owasp' | 'zap'): void {
     this.securityFilter = scanner;
   }
-  securityFindingsCount(scanner: 'all' | 'trivy' | 'owasp' | 'zap'): number {
-    const trivy = this.ed?.trivy?.cves?.length || 0;
-    const owasp = this.ed?.owasp?.cves?.length || 0;
-    const zap = this.ed?.zap?.alerts?.length || 0;
-    if (scanner === 'trivy') return trivy;
-    if (scanner === 'owasp') return owasp;
-    if (scanner === 'zap') return zap;
-    return trivy + owasp + zap;
+  securityFindingsCount(scanner: 'all' | 'trivy' | 'owasp' | 'zap'): number | null {
+    const count = (key: 'trivy' | 'owasp' | 'zap'): number | null => {
+      const block = this.ed?.[key];
+      const rows = key === 'zap' ? block?.alerts : block?.cves;
+      if (scannerHasResult(block) && Array.isArray(rows)) return rows.length;
+      if (key !== 'zap') {
+        const historical = (this.manualTasks || []).filter(t => t.source === key.toUpperCase());
+        if (historical.length) return historical.length;
+      }
+      return null;
+    };
+    if (scanner !== 'all') return count(scanner);
+    const counts = [count('trivy'), count('owasp'), count('zap')];
+    return counts.every(x => x !== null) ? counts.reduce<number>((sum, n) => sum + n!, 0) : null;
   }
   // Vrai quand ce scanner a bien tourné (donnée fiable) mais n'a produit
   // aucun finding -- distinct de isScannerMissing (scanner non exécuté),
@@ -754,20 +1010,95 @@ export class ProjectDetailComponent implements OnInit {
     this.loadProject();
   }
 
+  // The router reuses this component when only :id changes (route component
+  // input binding), so navigating project A -> B updates `id` WITHOUT
+  // re-running ngOnInit. Without this hook the whole page would keep showing
+  // A's data under B's URL. Every per-project collection is cleared first so
+  // no value from the previous project can survive into the new one, not even
+  // transiently while the new requests are in flight.
+  ngOnChanges(changes: SimpleChanges) {
+    if (changes['id'] && !changes['id'].firstChange) {
+      this.resetProjectScopedState();
+      this.loadProject();
+    }
+  }
+
+  private resetProjectScopedState() {
+    this.projectScopeReset$.next();
+    this.stopBatchPolling();
+    this.latestReport = null;
+    this.rp = {};
+    this.ed = {};
+    this.judge = { decision: null, confidence: null };
+    this.lastScore = null;
+    this.lastRisk = 'UNKNOWN';
+    this.scoreUnavailable = true;
+    this.scanIncomplete = false;
+    this.missingScanners = [];
+    this.sonarLive = null;
+    this.sonarLiveLoading = false;
+    this.imageProvenance = null;
+    this.imageProvenanceLoading = false;
+    this.jenkinsLive = false;
+    this.jenkinsLoading = false;
+    this.jenkinsMessage = null;
+    this.buildReliability = null;
+    this.selectedSonarFinding = null;
+    this.selectedSonarIds = new Set();
+    this.selectedCveTaskIds = new Set();
+    this.batchConfirmationOpen = false;
+    this.securityFilter = 'all';
+    this.devTasks = [];
+    this.checkedTasks = 0;
+    this.project = null;
+    this.projectEvidence = null;
+    this.reportEvidence = null;
+    this.projectEvidenceState = 'loading';
+    this.reportEvidenceState = 'loading';
+    this.incidents = [];
+    this.allReports = [];
+    this.allReportsTotal = null;
+    this.historyPage = 1;
+    this.historyHasNext = false;
+    this.historyLoading = false;
+    this.incidentsLoading = false;
+    this.showAllHistory = false;
+    this.reportDetails.clear();
+    this.reportSelection++;
+    this.allReportsRaw = [];
+    this.jenkinsBuilds = [];
+    this.manualTasks = [];
+    this.manualTasksLoading = false;
+    this.manualSummaryLoaded = false;
+    this.reportsLoading = true;
+    this.manualSummary = { todo: 0, doneByUser: 0, stillDetected: 0, verified: 0, total: 0 };
+    this.deployReadiness = null;
+    this.deployReady = false;
+    this.deploymentConfigured = false;
+    this.deploymentTarget = null;
+    this.deployReasons = [];
+    this.convergenceCycles = [];
+    this.convergenceLoading = true;
+    this.dataErrors = {};
+  }
+
+  ngOnDestroy() {
+    this.projectScopeReset$.next();
+    this.projectScopeReset$.complete();
+    this.stopBatchPolling();
+  }
+
   loadProject() {
     this.loading = true;
     this.loadError = false;
-    this.api.getProject(this.id).subscribe({
+    this.api.getProject(this.id).pipe(takeUntil(this.projectScopeReset$)).subscribe({
       next: p => {
         this.project = p;
         this.loading = false;
-        this.loadIncidents();
+        this.loadSourceEvidence();
         this.loadReports();
-        this.loadJenkinsBuilds();
         this.loadJudgeStatus();
-        this.loadDeployReadiness();
-        this.loadConvergence();
-        this.loadManualRemediation();
+        this.loadActiveTabData();
       },
       error: () => {
         this.toast.error('Erreur', 'Projet introuvable');
@@ -777,13 +1108,349 @@ export class ProjectDetailComponent implements OnInit {
     });
   }
 
-  loadManualRemediation() {
+  // Shared report/header evidence remains project-scoped. Feature reads run
+  // only while their tab is open; re-entry revalidates rather than using a
+  // global cache (especially readiness, current tasks and live Jenkins).
+  private loadActiveTabData() {
+    if (this.activeTab === 'jenkins') this.loadJenkinsBuilds();
+    if (this.activeTab === 'sonarqube') this.loadSonarMetrics();
+    if (this.activeTab === 'docker') this.loadImageProvenance();
+    if (['rapport', 'securite', 'deploiement', 'config'].includes(this.activeTab)) this.loadDeployReadiness();
+    if (this.activeTab === 'securite') {
+      this.loadConvergence();
+      this.loadManualRemediation();
+    }
+  }
+
+  // ── Sources & preuves ───────────────────────────────────────────────
+  // Une table de preuve absente n'est jamais une erreur bloquante : la vue
+  // affiche alors « Source non disponible », ce qui est l'état honnête.
+  loadSourceEvidence() {
+    this.projectEvidenceState = 'loading';
+    this.api.getProjectSourceEvidence(this.id).pipe(takeUntil(this.projectScopeReset$)).subscribe({
+      next: view => {
+        this.projectEvidenceState = 'ready';
+        // Garde d'isolation : une réponse qui ne porte pas CE projet est
+        // rejetée plutôt qu'affichée (réponse tardive après changement de
+        // projet). Un lien de preuve d'un autre projet serait un faux.
+        this.projectEvidence = view?.projectId === this.id
+          ? normalizeEvidenceView(view)
+          : null;
+      },
+      // Panne de transport : on le DIT, au lieu de prétendre qu'aucune
+      // preuve n'existe. L'utilisateur peut réessayer.
+      error: () => { this.projectEvidence = null; this.projectEvidenceState = 'error'; },
+    });
+  }
+
+  loadReportEvidence(reportId: string) {
+    this.reportEvidence = null;
+    this.reportEvidenceState = 'loading';
+    if (!reportId) { this.reportEvidenceState = 'ready'; return; }
+    this.api.getIncidentSourceEvidence(reportId).pipe(takeUntil(this.projectScopeReset$)).subscribe({
+      next: view => {
+        this.reportEvidenceState = 'ready';
+        this.reportEvidence = view?.projectId === this.id && view?.incidentId === reportId
+          ? normalizeEvidenceView(view)
+          : null;
+      },
+      error: () => { this.reportEvidence = null; this.reportEvidenceState = 'error'; },
+    });
+  }
+
+  /**
+   * Preuve de l'ANALYSE affichée, avec repli sur la preuve de PROJET quand
+   * l'emplacement n'a pas de portée build (job Jenkins, dépôt, cible Azure).
+   * Le repli ne va jamais dans l'autre sens : un emplacement de build ne
+   * prend jamais la valeur du dernier build connu du projet.
+   */
+  evidence(slot: string): SourceEvidence | null {
+    return this.reportEvidence?.slots?.[slot] || this.projectEvidence?.slots?.[slot] || null;
+  }
+
+  /**
+   * Table de preuve FUSIONNÉE pour les blocs d'onglet : la preuve du projet
+   * sert de base, celle de l'analyse sélectionnée la surcharge.
+   *
+   * Un seul alias est appliqué, et il est explicite : les onglets demandent
+   * « le build affiché ». Quand une analyse est sélectionnée, c'est SON build
+   * (JENKINS_BUILD) ; sinon, le dernier build connu du projet
+   * (JENKINS_LATEST_BUILD). Les deux emplacements restent distincts dans le
+   * contrat parce qu'ils n'affirment pas la même chose — l'alias n'existe que
+   * pour le rendu, et ne va jamais dans l'autre sens.
+   */
+  allEvidenceSlots(): Record<string, SourceEvidence> {
+    const project = this.projectEvidence?.slots || {};
+    const report = this.reportEvidence?.slots || {};
+    const merged: Record<string, SourceEvidence> = { ...project, ...report };
+    if (!report['JENKINS_BUILD']) {
+      if (project['JENKINS_LATEST_BUILD']) merged['JENKINS_BUILD'] = project['JENKINS_LATEST_BUILD'];
+      if (project['JENKINS_LATEST_BUILD_LOGS']) merged['JENKINS_BUILD_LOGS'] = project['JENKINS_LATEST_BUILD_LOGS'];
+    }
+    return merged;
+  }
+
+  // Regroupements d'affichage par onglet. C'est de la PRÉSENTATION (quel bloc
+  // montre quoi, dans quel ordre) ; les URL et la disponibilité viennent
+  // toujours du backend. Les clés sont les emplacements du contrat.
+  jenkinsEvidenceSections(): EvidenceSection[] {
+    return [
+      { id: 'job', title: 'Job et build', slots: ['JENKINS_JOB', 'JENKINS_BUILD', 'JENKINS_BUILD_LOGS'] },
+      { id: 'code', title: 'Code analysé', slots: ['GIT_REPOSITORY', 'GIT_COMMIT'] },
+    ];
+  }
+
+  dockerEvidenceSections(): EvidenceSection[] {
+    return [
+      { id: 'image', title: 'Image publiée', slots: ['PUBLISHED_IMAGE', 'IMAGE_DIGEST'] },
+      { id: 'source', title: 'Source de l’image', slots: ['DOCKERFILE', 'GIT_COMMIT', 'JENKINS_BUILD'] },
+      { id: 'registry', title: 'Registre et cible', slots: ['ACR_REGISTRY', 'AZURE_TARGET', 'AZURE_RESOURCE_GROUP'] },
+    ];
+  }
+
+  sonarEvidenceSections(): EvidenceSection[] {
+    return [
+      { id: 'sonar', title: 'Analyse SonarQube', slots: ['SONAR_PROJECT'] },
+      { id: 'origin', title: 'Build et commit analysés', slots: ['JENKINS_BUILD', 'GIT_COMMIT'] },
+    ];
+  }
+
+  securityEvidenceSections(): EvidenceSection[] {
+    return [
+      { id: 'reports', title: 'Rapports de scanner', slots: ['TRIVY_REPORT', 'OWASP_REPORT', 'ZAP_REPORT'] },
+      { id: 'dast', title: 'Cible analysée (DAST)', slots: ['ZAP_TARGET'] },
+      { id: 'sast', title: 'Analyse statique', slots: ['SONAR_PROJECT'] },
+      { id: 'origin', title: 'Build et commit analysés', slots: ['JENKINS_BUILD', 'GIT_COMMIT'] },
+    ];
+  }
+
+  deploymentEvidenceSections(): EvidenceSection[] {
+    return [
+      { id: 'target', title: 'Cible de déploiement', slots: ['AZURE_TARGET', 'AZURE_RESOURCE_GROUP'] },
+      { id: 'artifact', title: 'Artefact déployable', slots: ['PUBLISHED_IMAGE', 'IMAGE_DIGEST', 'ACR_REGISTRY'] },
+      { id: 'provenance', title: 'Provenance', slots: ['GIT_COMMIT', 'JENKINS_BUILD'] },
+    ];
+  }
+
+  reportEvidenceSections(): EvidenceSection[] {
+    return this.reportEvidence?.sections || [];
+  }
+
+  /**
+   * Identité factuelle de l'analyse dont on montre la provenance. Le build et
+   * le commit sont nommés explicitement pour qu'il soit impossible de
+   * confondre la provenance affichée avec celle d'une autre analyse de
+   * l'historique.
+   */
+  reportProvenanceNote(): string {
+    const build = this.reportEvidence?.buildNumber;
+    const commit = this.reportEvidence?.commitSha;
+    const parts: string[] = [];
+    parts.push(build != null ? `Build #${build}` : 'Build non enregistré');
+    parts.push(commit ? `commit ${commit.slice(0, 7)}` : 'commit source non enregistré');
+    return parts.join(' — ');
+  }
+
+  /**
+   * État à afficher pour un bloc qui lit la table FUSIONNÉE. Une panne est
+   * signalée dès qu'une des deux lectures a échoué ; un chargement en cours
+   * ne devient jamais « vide ».
+   */
+  evidenceState(): EvidenceLoadState {
+    if (this.projectEvidenceState === 'error' || this.reportEvidenceState === 'error') return 'error';
+    if (this.projectEvidenceState === 'loading' || this.reportEvidenceState === 'loading') return 'loading';
+    return 'ready';
+  }
+
+  /** Relance les DEUX lectures de preuve après un échec. */
+  retrySourceEvidence() {
+    this.loadSourceEvidence();
+    if (this.latestReport?.id) this.loadReportEvidence(this.latestReport.id);
+    else this.reportEvidenceState = 'ready';
+  }
+
+  /** Preuve strictement de portée PROJET (jamais celle d'un build). */
+  projectEvidenceSlot(slot: string): SourceEvidence | null {
+    return this.projectEvidence?.slots?.[slot] || null;
+  }
+
+  /** Emplacements d'un constat Sonar précis — issue exacte, règle, fichier. */
+  sonarIssueEvidence(finding: any): Record<string, SourceEvidence> | null {
+    const id = String(finding?.id || finding?.key || '').trim();
+    if (!id) return null;
+    return this.reportEvidence?.sonarIssues?.find(i => i.issueId === id)?.slots || null;
+  }
+
+  /** Chaîne de preuve d'une correction automatique (constat → PR). */
+  remediationEvidence(taskId: string | null | undefined) {
+    const id = String(taskId || '').trim();
+    if (!id) return null;
+    return this.reportEvidence?.remediations?.find(r => r.taskId === id) || null;
+  }
+
+  // ── Image Docker du build (R49) ──────────────────────────────────────
+  // Provenance d'image : repository / tag / digest / commit, servis par le
+  // contrat de gouvernance deja en place. Le digest est l'identite IMMUABLE de
+  // l'image, contrairement au tag : il est donc prefere pour la provenance, et
+  // reste `null` tant que la provenance n'est pas verifiee -- jamais substitue
+  // par le tag.
+  imageProvenance: any = null;
+  imageProvenanceLoading = false;
+  loadImageProvenance() {
+    if (this.imageProvenanceLoading) return;
+    this.imageProvenanceLoading = true;
+    delete this.dataErrors['imageProvenance'];
+    this.api.getGovernancePreview(this.id).pipe(takeUntil(this.projectScopeReset$)).subscribe({
+      next: (g: any) => {
+        this.imageProvenanceLoading = false;
+        // Garde de portee projet, comme pour le detail d'analyse : une reponse
+        // qui ne porte pas CE projet n'est jamais affichee.
+        this.imageProvenance = (g && (!g.projectId || g.projectId === this.id)) ? g : null;
+      },
+      error: () => {
+        this.imageProvenanceLoading = false;
+        this.imageProvenance = null;
+        this.dataErrors['imageProvenance'] = 'Provenance de l’image indisponible.';
+      },
+    });
+  }
+
+  // ── Lectures Docker, toutes derivees de sources autoritaires ──
+  dockerImageRef(): string | null { return dockerImageRef(this.ed?.docker); }
+  dockerImageState(): string { return dockerImageState(this.ed?.docker); }
+  dockerRepository(): string | null {
+    // L'artefact verifie fait foi sur le repository ; a defaut, la reference
+    // produite par le build. Jamais une construction a partir du nom du projet.
+    return this.imageProvenance?.artifact?.repository || dockerImageParts(this.ed?.docker).repository;
+  }
+  dockerTag(): string | null {
+    return this.imageProvenance?.artifact?.tag || dockerImageParts(this.ed?.docker).tag;
+  }
+  dockerDigest(): string | null {
+    const d = this.imageProvenance?.artifact?.digest;
+    return typeof d === 'string' && d.trim() ? d : null;
+  }
+  dockerRegistry(): string | null {
+    const r = this.imageProvenance?.artifact?.registry || this.deploymentTarget?.registry;
+    return typeof r === 'string' && r.trim() ? r : null;
+  }
+  dockerProvenanceVerified(): boolean | null {
+    const v = this.imageProvenance?.artifact?.provenanceVerified;
+    return typeof v === 'boolean' ? v : null;
+  }
+  dockerPushState(): string { return dockerPushState(this.ed?.docker); }
+  dockerProvenanceState(): string { return dockerProvenanceState(this.ed?.docker); }
+  /** Reference publiee telle que le registre l'a confirmee, jamais deduite. */
+  dockerPublishedReference(): string | null {
+    const r = String(this.ed?.docker?.published_reference ?? '').trim();
+    return r ? r : null;
+  }
+  dockerBuildStatus(): string | null {
+    const s = String(this.ed?.docker?.build_status ?? '').trim();
+    return s ? s : null;
+  }
+  /** Commit source du build : la preuve d'identite, jamais devinee. */
+  dockerCommitSha(): string | null {
+    const fromReport = this.latestReport?.metadata?.sourceCommitSha;
+    const fromIdentity = this.imageProvenance?.buildIdentity?.commitSha;
+    for (const c of [fromReport, fromIdentity]) {
+      if (typeof c === 'string' && /^[0-9a-f]{7,40}$/i.test(c.trim())) return c.trim();
+    }
+    return null;
+  }
+  /** Jenkins livre ce numero en nombre ou en chaine selon le type de job. */
+  dockerBuildNumber(): number | null { return sourceInteger(this.ed?.build?.number ?? null); }
+  // dockerJenkinsBuildUrl() a été retiré : la preuve Jenkins de la vue Docker
+  // vient désormais de l'emplacement JENKINS_BUILD du contrat de preuve
+  // (voir dockerEvidenceSections()). L'ancien helper publiait l'URL
+  // enregistrée TELLE QUELLE, y compris l'IP d'hôte périmée qu'elle porte
+  // souvent — un lien cliquable qui n'arrivait nulle part.
+  /**
+   * « Prete pour deploiement » n'est PAS « deployee ».
+   * Une image prete a une identite verifiee et une cible configuree ; une image
+   * deployee exige une tentative de deploiement reussie, que cette vue ne
+   * constate pas. Elle ne l'affirme donc jamais.
+   */
+  dockerDeploymentRelation(): string {
+    if (!this.deploymentConfigured) return 'Non configuré';
+    return this.dockerProvenanceVerified() === true ? 'Image prête pour déploiement' : 'Identité d’image non vérifiée';
+  }
+  dockerPorts(): string | null {
+    const ports = this.deploymentTarget?.ports;
+    return Array.isArray(ports) && ports.length ? ports.map(String).join(', ') : null;
+  }
+  dockerHealthCheck(): string | null {
+    const hc = this.deploymentTarget?.healthCheck;
+    if (!hc || (!hc.path && !hc.port)) return null;
+    return `${hc.port ? ':' + hc.port : ''}${hc.path || ''}` || null;
+  }
+
+  // ── Mesures Sonar courantes (R48) ────────────────────────────────────
+  // L'instantane du build et l'etat courant de Sonar sont deux verites
+  // differentes : un build de la semaine derniere n'est pas l'analyse de ce
+  // matin. On ne les fusionne donc jamais -- l'ecran les presente cote a cote,
+  // chacun date et etiquete. Le backend fournit deja available/reason, donc la
+  // vue ne devine rien : elle affiche le motif qu'on lui donne.
+  sonarLive: any = null;
+  sonarLiveLoading = false;
+  loadSonarMetrics() {
+    if (this.sonarLiveLoading) return;
+    this.sonarLiveLoading = true;
+    delete this.dataErrors['sonarLive'];
+    this.api.getSonarMetrics(this.id).pipe(takeUntil(this.projectScopeReset$)).subscribe({
+      next: (m: any) => { this.sonarLiveLoading = false; this.sonarLive = m || null; },
+      error: () => {
+        this.sonarLiveLoading = false;
+        this.sonarLive = null;
+        this.dataErrors['sonarLive'] = 'Impossible de contacter SonarQube via le backend.';
+      },
+    });
+  }
+  /** Motif d'indisponibilite, tel que le backend le qualifie -- jamais devine. */
+  sonarLiveState(): string {
+    if (this.sonarLiveLoading) return 'Chargement…';
+    if (this.dataErrors['sonarLive']) return 'Indisponible';
+    if (!this.sonarLive) return 'Non disponible';
+    if (this.sonarLive.available === true) return '';
+    return ({
+      SONAR_NOT_CONFIGURED: 'Non configuré',
+      SONAR_TOKEN_UNAVAILABLE: 'Identifiant SonarQube non approvisionné',
+      SONAR_PROJECT_NOT_FOUND: 'Projet inconnu de SonarQube',
+      SONAR_API_ERROR: 'Erreur SonarQube',
+    } as Record<string, string>)[String(this.sonarLive.reason || '')]
+      || (String(this.sonarLive.reason || '').startsWith('SONAR_API_STATUS_')
+            ? `SonarQube a répondu ${String(this.sonarLive.reason).replace('SONAR_API_STATUS_', 'HTTP ')}`
+            : 'Non disponible');
+  }
+  /** Une mesure absente reste absente : aucune substitution par 0. */
+  sonarLiveMetric(field: string): number | null {
+    return this.sonarLive?.available === true ? availableNumber(this.sonarLive[field]) : null;
+  }
+  sonarLiveText(field: string): string | null {
+    if (this.sonarLive?.available !== true) return null;
+    const v = this.sonarLive[field];
+    return typeof v === 'string' && v.trim() ? v : null;
+  }
+
+  loadManualRemediation(onLoaded?: () => void) {
+    this.manualTasksLoading = true;
     delete this.dataErrors['tasks'];
     // includeV18=true: additive `v1_8Decision` field per task, read-only
     // display (cve-table.component.ts's own v1_8Presentation()) -- see
     // api.service.ts's own header comment on this parameter.
-    this.api.getManualRemediationTasks(this.id, true).subscribe({ next: tasks => this.manualTasks = tasks || [], error: () => { this.manualTasks = []; this.dataErrors['tasks'] = 'Impossible de charger les tâches de correction. Actualisez la page pour réessayer.'; } });
-    this.api.getManualRemediationSummary(this.id).subscribe({ next: summary => this.manualSummary = summary, error: () => { this.dataErrors['summary'] = 'Impossible de charger le résumé des corrections.'; } });
+    this.api.getManualRemediationTasks(this.id, true).pipe(takeUntil(this.projectScopeReset$)).subscribe({
+      next: tasks => { this.manualTasksLoading = false; this.manualTasks = tasks || []; this.syncBatchPolling(); onLoaded?.(); },
+      error: () => {
+        this.manualTasksLoading = false;
+        // Pendant un polling actif, une erreur transitoire ne doit pas
+        // effacer les tâches déjà connues -- sinon les badges "en cours"
+        // disparaîtraient à tort. Seul le tout premier chargement part de [].
+        if (!this.manualTasks.length) this.manualTasks = [];
+        onLoaded?.();
+        this.dataErrors['tasks'] = 'Impossible de charger les tâches de correction. Actualisez la page pour réessayer.';
+      },
+    });
+    this.api.getManualRemediationSummary(this.id).pipe(takeUntil(this.projectScopeReset$)).subscribe({ next: summary => { this.manualSummary = summary; this.manualSummaryLoaded = true; }, error: () => { this.manualSummaryLoaded = false; this.dataErrors['summary'] = 'Impossible de charger le résumé des corrections.'; } });
   }
 
   completeManualTask(event: { task: any; note?: string }) {
@@ -802,21 +1469,48 @@ export class ProjectDetailComponent implements OnInit {
 
   loadIncidents() {
     delete this.dataErrors['incidents'];
-    this.api.getIncidents({ projectId: this.id, size: 20 }).subscribe({next: (r: any) => { this.incidents = r.content || r; }, error: () => { this.dataErrors['incidents'] = 'Impossible de charger les incidents du projet.'; }});
+    this.api.getIncidents({ projectId: this.id, size: 20 }).pipe(takeUntil(this.projectScopeReset$)).subscribe({next: (r: any) => { this.incidents = r.content || r; }, error: () => { this.dataErrors['incidents'] = 'Impossible de charger les incidents du projet.'; }});
   }
 
   loadReports() {
+    this.reportsLoading = true;
+    this.incidentsLoading = true;
+    this.reportDetails.clear();
+    this.reportSelection++;
     delete this.dataErrors['decisions'];
-    this.api.getDecisions({ projectId: this.id }).subscribe({
-      next: (r: any) => {
-        const list: any[] = Array.isArray(r) ? r : [];
-        this.allReports = list
-          .filter(x => x.aiAnalysis)
-          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-        if (this.allReports.length > 0) this.selectReport(this.allReports[0]);
-      },
-      error: () => { this.dataErrors['decisions'] = 'Impossible de charger les analyses du projet.'; }
-    });
+    delete this.dataErrors['incidents'];
+    this.api.getIncidentSummaries({ projectId: this.id, page: 1, pageSize: 20 })
+      .pipe(takeUntil(this.projectScopeReset$)).subscribe({
+        next: (r: any) => { this.incidentsLoading = false; this.incidents = r.items; },
+        error: () => { this.incidentsLoading = false; this.dataErrors['incidents'] = 'Impossible de charger les incidents du projet.'; }
+      });
+    this.loadHistory(true);
+  }
+
+  loadHistory(reset = false) {
+    if (this.historyLoading && !reset) return;
+    this.historyLoading = true;
+    delete this.dataErrors['decisions'];
+    const page = reset ? 1 : this.historyPage + 1;
+    this.api.getIncidentSummaries({ projectId: this.id, page, pageSize: 20, analysisOnly: true })
+      .pipe(takeUntil(this.projectScopeReset$)).subscribe({
+        next: (r: any) => {
+          this.historyLoading = false;
+          this.historyPage = r.page;
+          this.historyHasNext = r.hasNext;
+          this.allReportsTotal = r.total;
+          this.allReports = reset ? r.items : [...this.allReports, ...r.items];
+          if (reset) {
+            this.reportsLoading = false;
+            if (r.items.length) this.selectReport(r.items[0]);
+          }
+        },
+        error: () => {
+          this.historyLoading = false;
+          this.reportsLoading = false;
+          this.dataErrors['decisions'] = 'Impossible de charger les analyses du projet.';
+        }
+      });
   }
 
   // Dernier Report réel (colonnes judgeDecision/judgeConfidence) — sert le
@@ -825,9 +1519,9 @@ export class ProjectDetailComponent implements OnInit {
   // lui-même (qui reste sur /incidents, allReports/rp inchangés).
   loadJudgeStatus() {
     delete this.dataErrors['reports'];
-    this.api.getProjectReports({ projectId: this.id }).subscribe({
-      next: (list: any[]) => {
-        this.allReportsRaw = Array.isArray(list) ? list : [];
+    this.api.getReportSummaries({ projectId: this.id, page: 1, pageSize: 100 }).pipe(takeUntil(this.projectScopeReset$)).subscribe({
+      next: (result: any) => {
+        this.allReportsRaw = result.items;
         const latest = this.allReportsRaw.length > 0 ? this.allReportsRaw[0] : null;
         this.judge = {
           decision: latest?.judgeDecision ?? null,
@@ -852,14 +1546,16 @@ export class ProjectDetailComponent implements OnInit {
     const buildNum = incident?.buildNumber;
     if (buildNum === null || buildNum === undefined || !this.allReportsRaw.length) return null;
     return this.allReportsRaw.find(rep => {
-      const repBuildNum = rep?.rawData?.enrichedData?.build?.number;
+      const repBuildNum = rep?.buildNumber ?? rep?.rawData?.enrichedData?.build?.number;
       return repBuildNum !== null && repBuildNum !== undefined && Number(repBuildNum) === Number(buildNum);
     }) ?? null;
   }
 
   loadDeployReadiness() {
     this.deployReadyLoading = true;
-    this.api.getDeployReadiness(this.id).subscribe({
+    this.deployReadiness = null;
+    this.deployReady = false;
+    this.api.getDeployReadiness(this.id).pipe(takeUntil(this.projectScopeReset$)).subscribe({
       next: (r: any) => {
         this.deployReadiness = r;
         this.deployReady = !!r?.ready;
@@ -881,9 +1577,10 @@ export class ProjectDetailComponent implements OnInit {
 
   loadConvergence() {
     delete this.dataErrors['convergence'];
-    this.api.getConvergence(this.id).subscribe({
-      next: (r: any) => { this.convergenceCycles = Array.isArray(r?.cycles) ? r.cycles : []; },
-      error: () => { this.convergenceCycles = []; this.dataErrors['convergence'] = 'Impossible de charger les cycles de validation.'; },
+    this.convergenceLoading = true;
+    this.api.getConvergence(this.id).pipe(takeUntil(this.projectScopeReset$)).subscribe({
+      next: (r: any) => { this.convergenceCycles = Array.isArray(r?.cycles) ? r.cycles : []; this.convergenceLoading = false; },
+      error: () => { this.convergenceCycles = []; this.dataErrors['convergence'] = 'Impossible de charger les cycles de validation.'; this.convergenceLoading = false; },
     });
   }
 
@@ -891,66 +1588,14 @@ export class ProjectDetailComponent implements OnInit {
     return ['PASSED', 'FAILED', 'WARNING', 'RUNNING', 'NOT_RUN', 'NOT_REACHED'].includes(status) ? status.toLowerCase() : 'not-run';
   }
 
-  requestDeployConfirmation() {
-    if (!this.canOperate || !this.deployReady || !this.deploymentConfigured || this.deploying) return;
-    this.deploymentRequestId = globalThis.crypto?.randomUUID?.() || `deploy-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-    this.deployConfirmationOpen = true;
-  }
-
-  cancelDeployConfirmation() {
-    if (this.deploying) return;
-    this.deployConfirmationOpen = false;
-    this.deploymentRequestId = null;
-  }
-
-  // Le backend re-vérifie isReadyToDeploy à l'intérieur même de /deploy —
-  // ce clic ne fait que proposer l'action, jamais ne la garantit. Si l'état
-  // a changé entre le chargement de la page et le clic (409 NOT_READY_TO_DEPLOY),
-  // on réaligne l'affichage sur le verdict du backend, qui reste seul juge.
-  deployToAzure() {
-    if (!this.deployReady || !this.deploymentConfigured || this.deploying || !this.project?.id || !this.deploymentRequestId) return;
-    this.deploying = true;
-    this.deploySuccessInfo = null;
-    this.deployErrorMessage = null;
-    this.api.deployToAzure(this.project.id, this.deployImageTag || 'latest', this.deploymentRequestId, true).subscribe({
-      next: (r: any) => {
-        this.deploying = false;
-        this.deployConfirmationOpen = false;
-        if (r?.success) {
-          this.deploySuccessInfo = { state: presentationLabel(r.state), health: r.healthOk ? 'Disponible' : 'Indisponible' };
-          this.toast.success('Déploiement réussi', `Conteneur ${presentationLabel(r.state)} — application ${r.healthOk ? 'disponible' : 'indisponible'}`);
-        } else {
-          const msg = `Déploiement échoué côté agent (état: ${r?.state || 'inconnu'}).`;
-          this.deployErrorMessage = msg;
-          this.toast.error('Déploiement échoué', msg);
-        }
-      },
-      error: (err: any) => {
-        this.deploying = false;
-        const body = err?.error;
-        if (err.status === 409 && body?.error === 'NOT_READY_TO_DEPLOY') {
-          this.deployReady = false;
-          this.deployReasons = body.reasons || [];
-          this.toast.error('Non prêt à déployer', "L'état a changé depuis le chargement de la page — le backend a refusé.");
-        } else if (err.status === 409 && body?.error === 'AZURE_SESSION_EXPIRED') {
-          const msg = "Session Azure expirée sur l'hôte — exécuter `az login`, puis réessayer.";
-          this.deployErrorMessage = msg;
-          this.toast.error('Session Azure expirée', msg);
-        } else {
-          const msg = userHttpError(err, 'Le déploiement a échoué. Consultez son rapport avant de réessayer.');
-          this.deployErrorMessage = msg;
-          this.toast.error('Erreur', msg);
-        }
-      },
-    });
-  }
-
   loadJenkinsBuilds() {
+    this.jenkinsLoading = true;
     // Pas de garde côté front sur jenkinsJobName : le backend est la seule
     // source de vérité sur "configuré ou pas" (getJenkinsStatus), y compris
     // pour le message exact à afficher — jamais deviné côté client.
-    this.api.getJenkins(this.id).subscribe({
+    this.api.getJenkins(this.id).pipe(takeUntil(this.projectScopeReset$)).subscribe({
       next: (d: any) => {
+        this.jenkinsLoading = false;
         this.jenkinsBuilds = d?.builds || [];
         // Même source que le dashboard (getJenkinsStatus) — null si _liveData
         // est faux (non configuré/erreur/timeout — plus aucun mock possible),
@@ -959,12 +1604,44 @@ export class ProjectDetailComponent implements OnInit {
         this.buildReliability = { rate: d?.buildSuccessRate ?? null, sampleSize: d?.sampleSize ?? 0 };
         this.jenkinsMessage = d?._liveData ? null : (d?.message || 'Données Jenkins indisponibles. Vérifiez sa configuration.');
       },
-      error: () => { this.jenkinsLive = false; this.buildReliability = null; this.jenkinsBuilds = []; this.jenkinsMessage = 'Impossible de contacter le backend'; }
+      error: () => { this.jenkinsLoading = false; this.jenkinsLive = false; this.buildReliability = null; this.jenkinsBuilds = []; this.jenkinsMessage = 'Impossible de contacter le backend'; }
     });
   }
 
   selectReport(r: any) {
+    if (!r.summaryOnly) { this.applyReport(r); return; }
+    const cached = this.reportDetails.get(r.id);
+    const selection = ++this.reportSelection;
+    if (cached) { this.reportsLoading = false; delete this.dataErrors['reportDetail']; this.applyReport(cached); return; }
+    this.reportsLoading = true;
+    this.latestReport = null;
+    this.ed = {};
+    this.rp = {};
+    this.lastScore = null;
+    this.scoreUnavailable = true;
+    delete this.dataErrors['reportDetail'];
+    this.api.getIncident(r.id).pipe(takeUntil(this.projectScopeReset$)).subscribe({
+      next: (detail: any) => {
+        if (selection !== this.reportSelection) return;
+        this.reportsLoading = false;
+        if (!detail || detail.projectId !== this.id || detail.id !== r.id) {
+          this.dataErrors['reportDetail'] = 'Impossible de charger le détail de cette analyse.';
+          return;
+        }
+        this.reportDetails.set(r.id, detail);
+        this.applyReport(detail);
+      },
+      error: () => {
+        if (selection !== this.reportSelection) return;
+        this.reportsLoading = false;
+        this.dataErrors['reportDetail'] = 'Impossible de charger le détail de cette analyse.';
+      }
+    });
+  }
+
+  private applyReport(r: any) {
     this.latestReport = r;
+    this.loadReportEvidence(r?.id);
     this.rp = this.parseReport(r.aiAnalysis);
     // Charger enrichedData
     this.ed = (r.metadata?.enrichedData) ?? (r.rawData?.enrichedData) ?? {};
@@ -1092,7 +1769,7 @@ export class ProjectDetailComponent implements OnInit {
         job:              json.job   || 'Non disponible',
         status:           json.status || null,
         decision:         json.decision || 'NOTIFY_ONLY',
-        confidence:       (json.confidenceScore || 0) + '%',
+        confidence:       typeof json.confidenceScore === 'number' ? json.confidenceScore + '%' : null,
         errors:           this.fmt(json.errorsSummary),
         cicdIssues:       this.fmt(json.cicdIssues),
         securityIssues:   this.fmt(json.securityIssues),
@@ -1151,15 +1828,17 @@ export class ProjectDetailComponent implements OnInit {
   }
 
   copyReport() {
+    if (!navigator.clipboard?.writeText) { this.toast.error('Copie indisponible', 'Utilisez un navigateur autorisant le presse-papiers.'); return; }
     navigator.clipboard.writeText(this.latestReport?.aiAnalysis || this.latestReport?.aiSummary || '').then(() => {
       this.toast.success('Copié', 'Rapport copié dans le presse-papiers');
-    });
+    }).catch(() => this.toast.error('Copie impossible', 'Le navigateur a refusé l’accès au presse-papiers.'));
   }
 
   copyText(text: string) {
+    if (!navigator.clipboard?.writeText) { this.toast.error('Copie indisponible', 'Utilisez un navigateur autorisant le presse-papiers.'); return; }
     navigator.clipboard.writeText(text || '').then(() => {
       this.toast.success('Copié', 'Commande copiée dans le presse-papiers');
-    });
+    }).catch(() => this.toast.error('Copie impossible', 'Le navigateur a refusé l’accès au presse-papiers.'));
   }
 
   countIssues(severity: 'BLOCKER' | 'CRITICAL' | 'MAJOR' | 'BUG'): number {
@@ -1180,13 +1859,12 @@ export class ProjectDetailComponent implements OnInit {
     const parts = this.splitItems(this.rp.agentActions);
     const keywords: Record<string, string[]> = {
       root:        ['root cause', 'cause racine', 'root-cause'],
-      security:    ['security risk', 'risque sécurité', 'risque de sécurité', 'security'],
+      security:    ['security risk agent:', 'security agent:', 'agent de sécurité', 'risque sécurité', 'risque de sécurité'],
       remediation: ['remediation', 'remédiation', 'correction']
     };
     const found = parts.find(p => keywords[kind].some(k => p.toLowerCase().includes(k)));
     if (found) return found;
-    const idx = kind === 'root' ? 0 : kind === 'security' ? 1 : 2;
-    return parts[idx] || '';
+    return ''; // An unmatched agent cannot inherit another agent's narrative.
   }
 
   getInfoRows() {
@@ -1213,7 +1891,7 @@ export class ProjectDetailComponent implements OnInit {
   }
 
   getDecisionColor(d: string): string {
-    if (d === 'FIX_PROPOSED' || d === 'AUTO_FIX') return '#1D9E75';
+    if (d === 'FIX_PROPOSED' || d === 'AUTO_FIX') return 'var(--accent-blue)';
     if (d === 'BLOCK')       return '#E24B4A';
     if (d === 'NOTIFY_ONLY') return '#888780';
     return '#888780';
@@ -1230,7 +1908,7 @@ export class ProjectDetailComponent implements OnInit {
     if (l === 'CRITICAL') return 'var(--accent-red)';
     if (l === 'HIGH')     return 'var(--accent-orange)';
     if (l === 'MEDIUM')   return '#f59e0b';
-    return 'var(--accent-green)';
+    return l === 'LOW' ? 'var(--accent-green)' : 'var(--text-muted)';
   }
 
   getPriColor(p: string): string {

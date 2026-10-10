@@ -1,4 +1,5 @@
-    <div class="app-shell">
+    <a class="skip-link" href="#main-content">Aller au contenu</a>
+    <div class="app-shell" (keydown.escape)="closeMobileNav()">
       <aside class="sidebar" [class.mobile-open]="mobileNavOpen" [ngStyle]="sidebarRiskStyle">
         <div class="sb-logo">
           <div class="logo-mark">V</div>
@@ -7,27 +8,28 @@
             <div class="logo-sub">Vermeg · PFE 2026</div>
           </div>
         </div>
-        <nav class="sb-nav">
+        <nav class="sb-nav" id="platform-navigation" aria-label="Navigation principale">
           <div class="nav-section">Plateforme</div>
-          <a class="nav-item" routerLink="/dashboard" routerLinkActive="active" (click)="closeMobileNav()"><i class="ti ti-layout-dashboard"></i> Tableau de bord</a>
-          <a class="nav-item" routerLink="/projects" routerLinkActive="active" (click)="closeMobileNav()"><i class="ti ti-folder"></i> Projets</a>
-          <a class="nav-item" routerLink="/analysis" routerLinkActive="active" (click)="closeMobileNav()"><i class="ti ti-robot"></i> Agents IA</a>
+          <a class="nav-item" routerLink="/dashboard" routerLinkActive="active" ariaCurrentWhenActive="page" (click)="closeMobileNav()"><i class="ti ti-layout-dashboard" aria-hidden="true"></i> Tableau de bord</a>
+          <a class="nav-item" routerLink="/projects" routerLinkActive="active" ariaCurrentWhenActive="page" (click)="closeMobileNav()"><i class="ti ti-folder" aria-hidden="true"></i> Projets</a>
+          <a class="nav-item" routerLink="/analysis" routerLinkActive="active" ariaCurrentWhenActive="page" (click)="closeMobileNav()"><i class="ti ti-robot" aria-hidden="true"></i> Agents IA</a>
           <div class="nav-section">CI/CD & Sécurité</div>
-          <a class="nav-item" routerLink="/security" routerLinkActive="active" (click)="closeMobileNav()"><i class="ti ti-bug"></i> Trivy / OWASP</a>
+          <a class="nav-item" routerLink="/security" routerLinkActive="active" ariaCurrentWhenActive="page" (click)="closeMobileNav()"><i class="ti ti-bug" aria-hidden="true"></i> Trivy / OWASP</a>
+          <a class="nav-item" routerLink="/incidents" routerLinkActive="active" ariaCurrentWhenActive="page" (click)="closeMobileNav()"><i class="ti ti-alert-triangle" aria-hidden="true"></i> Incidents</a>
           <div class="nav-section">Analyse</div>
-          <a class="nav-item" routerLink="/prediction" routerLinkActive="active" (click)="closeMobileNav()"><i class="ti ti-gauge"></i> Indicateurs de risque</a>
+          <a class="nav-item" routerLink="/prediction" routerLinkActive="active" ariaCurrentWhenActive="page" (click)="closeMobileNav()"><i class="ti ti-gauge" aria-hidden="true"></i> Indicateurs de risque</a>
           <div class="nav-section">Système</div>
-          <a class="nav-item" routerLink="/settings" routerLinkActive="active" (click)="closeMobileNav()"><i class="ti ti-settings"></i> Paramètres</a>
-          <a class="nav-item" routerLink="/admin" routerLinkActive="active" (click)="closeMobileNav()" *ngIf="isAdmin"><i class="ti ti-shield"></i> Admin</a>
+          <a class="nav-item" routerLink="/settings" routerLinkActive="active" ariaCurrentWhenActive="page" (click)="closeMobileNav()"><i class="ti ti-settings" aria-hidden="true"></i> Paramètres</a>
+          <a class="nav-item" routerLink="/admin" routerLinkActive="active" ariaCurrentWhenActive="page" (click)="closeMobileNav()" *ngIf="isAdmin"><i class="ti ti-shield" aria-hidden="true"></i> Admin</a>
         </nav>
         <div class="sb-footer">
           <div class="user-row">
             <div class="user-av">{{userInitials}}</div>
             <div class="user-info">
-              <div class="user-name">{{currentUser?.username}}</div>
+              <div class="user-name">{{currentUser?.name}}</div>
               <div class="user-role">{{currentUser?.role | presentationLabel}}</div>
             </div>
-            <button class="logout-btn" (click)="logout()"><i class="ti ti-logout"></i></button>
+            <button aria-label="Se déconnecter" class="logout-btn" (click)="logout()"><i class="ti ti-logout" aria-hidden="true"></i></button>
           </div>
         </div>
       </aside>
@@ -35,8 +37,8 @@
 
       <div class="main-content">
         <header class="topbar">
-          <button class="mobile-menu-btn" type="button" (click)="mobileNavOpen = !mobileNavOpen" aria-label="Ouvrir la navigation">
-            <i class="ti ti-menu-2"></i>
+          <button class="mobile-menu-btn" type="button" (click)="mobileNavOpen = !mobileNavOpen" [attr.aria-expanded]="mobileNavOpen" aria-controls="platform-navigation" [attr.aria-label]="mobileNavOpen ? 'Fermer la navigation' : 'Ouvrir la navigation'">
+            <i class="ti ti-menu-2" aria-hidden="true"></i>
           </button>
           <!-- Vermeg logo -->
           <div class="vermeg-logo">
@@ -49,15 +51,16 @@
 
             <!-- Theme toggle -->
             <button class="theme-btn" (click)="themeService.toggleTheme()"
+                    [attr.aria-label]="themeService.theme() === 'light' ? 'Passer en mode sombre' : 'Passer en mode clair'"
                     [title]="themeService.theme() === 'light' ? 'Passer en mode sombre' : 'Passer en mode clair'">
-              <i class="ti ti-moon" *ngIf="themeService.theme() === 'light'"></i>
-              <i class="ti ti-sun"  *ngIf="themeService.theme() === 'dark'"></i>
+              <i class="ti ti-moon" aria-hidden="true" *ngIf="themeService.theme() === 'light'"></i>
+              <i class="ti ti-sun" aria-hidden="true" *ngIf="themeService.theme() === 'dark'"></i>
             </button>
 
             <div class="uav">{{userInitials}}</div>
           </div>
         </header>
-        <div class="page-wrap"><router-outlet></router-outlet></div>
+        <main class="page-wrap" id="main-content" tabindex="-1"><router-outlet></router-outlet></main>
       </div>
     </div>
     <app-chat-widget></app-chat-widget>

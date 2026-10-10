@@ -1,11 +1,19 @@
+import { Subject, takeUntil } from 'rxjs';
+import { scannerMetric } from '../../shared/data-truth';
 import { PresentationTextPipe } from '../../shared/presentation-label.pipe';
-import { presentationLabel } from '../../shared/status-labels';
+import { SourceEvidenceLinkComponent } from '../../shared/source-evidence/source-evidence-link.component';
+import { SourceEvidenceListComponent } from '../../shared/source-evidence/source-evidence-list.component';
+import { StatusChipComponent } from '../../shared/status-chip/status-chip.component';
+import { ZoneLabelComponent } from '../../shared/zone-label/zone-label.component';
+import { EvidenceSection, FindingEvidence, IncidentSourceEvidence, SourceEvidence, normalizeEvidenceView, EvidenceLoadState } from '../../shared/source-evidence/source-evidence.types';
+import { presentationLabel, fixRequestStatusLabel } from '../../shared/status-labels';
 import { sortPipelineStages } from '../../shared/pipeline-stage-presentation';
-import { Component, OnInit, OnDestroy, Input } from '@angular/core';
+import { Component, OnInit, OnDestroy, OnChanges, SimpleChanges, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { ApiService } from '../../core/services/api.service';
 import { ToastService } from '../../core/services/toast.service';
+import { AuthService } from '../../core/services/auth.service';
 import { DeveloperGuideTabComponent } from './developer-guide/developer-guide-tab.component';
 import { DeveloperGuide } from './developer-guide/developer-guide.model';
 import { classify, remediationModeForPhase } from './jenkins-known-fixes';
@@ -28,11 +36,13 @@ import { userHttpError } from '../../core/http-error-message';
 @Component({
   selector: 'app-incident-detail',
   standalone: true,
-  imports: [PresentationTextPipe, CommonModule, RouterModule, DeveloperGuideTabComponent, ProjectOverviewComponent, RemediationCardComponent, StageStatusLabelPipe, PresentationLabelPipe, FrenchDatePipe],
+  imports: [PresentationTextPipe, CommonModule, RouterModule, DeveloperGuideTabComponent, ProjectOverviewComponent, RemediationCardComponent, StageStatusLabelPipe, PresentationLabelPipe, FrenchDatePipe, SourceEvidenceLinkComponent, SourceEvidenceListComponent, StatusChipComponent, ZoneLabelComponent],
   templateUrl: './incident-detail.component.html',
   styleUrls: ['./incident-detail.component.scss'],
 })
-export class IncidentDetailComponent implements OnInit, OnDestroy {
+export class IncidentDetailComponent implements OnInit, OnDestroy, OnChanges {
+  scannerMetric = scannerMetric;
+  private readonly incidentScopeReset$ = new Subject<void>();
   @Input() id!: string;
 
   incident:    any  = null;
@@ -76,6 +86,30 @@ export class IncidentDetailComponent implements OnInit, OnDestroy {
   private pollAttempts = 0;
   private readonly POLL_INTERVAL_MS = 4000;
   private readonly POLL_MAX_ATTEMPTS = 22; // ~90s — les 2 exécutions réelles observées ont pris 14s et 23s
+  // Statuts fixRequest.status qui mettent fin au polling "génération de PR" —
+  // au-delà de prUrl seul (audit stuck-UX 2026-10-04) : un FIX_FAILED ne doit
+  // jamais attendre les 88s du plafond, et REJECTED/VALIDATING/VALIDATED/
+  // COMPLETED n'ont plus de sens à faire patienter sur ce spinner générique.
+  private readonly TERMINAL_FIX_STATUSES = ['CANCELLED', 'PR_CREATED', 'FIX_FAILED', 'REJECTED', 'VALIDATING', 'VALIDATED', 'COMPLETED'];
+  // Seuil de dispatch "potentiellement bloqué" — MIROIR du défaut backend
+  // (incidents.service.ts: WF2_STALE_DISPATCH_MS, 30 min par défaut). Ce
+  // n'est pas une nouvelle règle : juste l'affichage du même seuil déjà
+  // appliqué côté serveur par reconcile-stale-dispatch. Si un opérateur
+  // surcharge WF2_STALE_DISPATCH_MS côté backend, ce seuil frontend peut
+  // diverger — limite connue d'un correctif frontend-only (voir audit).
+  readonly STALE_DISPATCH_THRESHOLD_MS = 30 * 60 * 1000;
+  reconcileBusy = false;
+  reconcileError: string | null = null;
+
+  // ── Sources & preuves (§12) ────────────────────────────────────────
+  // Provenance de CET incident : build d'origine, commit, rapports de
+  // scanner, image publiée, PR, exécution n8n, et la chaîne de preuve de
+  // chaque correction automatique. Servie par GET /api/source-evidence/
+  // incident/:id ; aucune URL n'est construite dans ce composant.
+  sourceEvidence: IncidentSourceEvidence | null = null;
+  // Chargement vs disponibilité : une requête en échec n'est pas une absence
+  // de preuve, et ne doit jamais s'afficher comme telle (§17).
+  sourceEvidenceState: EvidenceLoadState = 'loading';
 
   // ── Tabs (mis à jour dans load()) ──
   tabs: any[] = [];
@@ -108,18 +142,27 @@ export class IncidentDetailComponent implements OnInit, OnDestroy {
 
     const idx = isTerminal ? 2 : ORDER.indexOf(s);
 
+    // §10/§11/§26 — chaque étape dit en français CE QUI s'est passé, et le
+    // sous-titre garde l'identifiant de workflow en second rang (§5 : le
+    // libellé humain est primaire, la valeur technique reste consultable).
+    //
+    // « Fix proposé » devient « Correction proposée » : ce n'est pas
+    // seulement du franglais, c'est la frontière que §11 interdit de
+    // brouiller — une proposition de l'IA n'est pas une correction
+    // vérifiée, et l'étape suivante s'appelle donc explicitement
+    // « Validation déterministe ».
     this.lifecycleSteps = [
-      { label: 'Détecté',     sub: 'WF1',   done: idx >= 0, active: idx === 0 },
-      { label: 'Analysé',     sub: 'WF1',   done: idx >= 2, active: idx === 1 || idx === 2 },
+      { label: 'Détecté',  sub: 'Détection automatique · WF1', done: idx >= 0, active: idx === 0 },
+      { label: 'Analysé',  sub: 'Analyse IA · WF1',            done: idx >= 2, active: idx === 1 || idx === 2 },
       {
-        label: isTerminal ? 'Bloqué' : 'Fix proposé',
-        sub: isTerminal ? 'judge' : 'WF2',
+        label: isTerminal ? 'Bloqué' : 'Correction proposée',
+        sub: isTerminal ? 'Décision de gouvernance' : 'Proposition IA · WF2',
         done: isTerminal ? false : idx >= 3,
         active: isTerminal ? true : idx === 3,
         terminal: isTerminal,
       },
-      { label: 'Validé',      sub: 'WF3',   done: !isTerminal && idx >= 5, active: !isTerminal && (idx === 4 || idx === 5) },
-      { label: 'Résolu',      sub: 'merge', done: !isTerminal && idx >= 6, active: !isTerminal && idx === 6 },
+      { label: 'Validé',  sub: 'Validation déterministe · WF3', done: !isTerminal && idx >= 5, active: !isTerminal && (idx === 4 || idx === 5) },
+      { label: 'Résolu',  sub: 'Correction fusionnée',          done: !isTerminal && idx >= 6, active: !isTerminal && idx === 6 },
     ];
   }
 
@@ -131,7 +174,20 @@ export class IncidentDetailComponent implements OnInit, OnDestroy {
     private toast: ToastService,
     private route: ActivatedRoute,
     private router: Router,
+    public auth: AuthService,
   ) {}
+
+  /**
+   * Un opérateur peut intervenir sur cet incident (§7).
+   *
+   * Sert UNIQUEMENT à étiqueter la nature d'une zone (information ou
+   * action) : l'autorisation réelle de chaque bouton reste décidée par sa
+   * propre garde, et in fine par le backend. Une étiquette ne doit jamais
+   * devenir le contrôle d'accès.
+   */
+  get canOperate(): boolean {
+    return ['admin', 'developer'].includes(String(this.auth.currentUser?.role || '').toLowerCase());
+  }
 
   goBack(): void {
     const projectId = this.incident?.projectId;
@@ -499,23 +555,104 @@ export class IncidentDetailComponent implements OnInit, OnDestroy {
     this.load();
   }
 
+  ngOnChanges(changes: SimpleChanges) {
+    if (!changes['id'] || changes['id'].firstChange) return;
+    this.incidentScopeReset$.next();
+    this.stopPrPolling();
+    this.incident = null;
+    this.reports = [];
+    this.aiAnalysis = null;
+    this.developerGuide = null;
+    this.enrichedData = null;
+    this.validation = null;
+    this.decision = null;
+    this.sourceEvidence = null;
+    this.sourceEvidenceState = 'loading';
+    this.tabs = [];
+    this.prValidationRequest = null;
+    this.prGenerationState = 'idle';
+    this.approvalError = null;
+    this.reconcileError = null;
+    this.activeTab = 'analysis';
+    this.load();
+  }
+
+  /**
+   * Table de preuve de l'incident. Une absence n'est jamais bloquante : la
+   * vue affiche « Source non disponible », qui est l'état honnête.
+   */
+  loadSourceEvidence() {
+    this.sourceEvidenceState = 'loading';
+    this.api.getIncidentSourceEvidence(this.id).pipe(takeUntil(this.incidentScopeReset$)).subscribe({
+      next: view => {
+        this.sourceEvidenceState = 'ready';
+        // Garde d'isolation : une réponse qui ne porte pas CET incident est
+        // rejetée (réponse tardive après navigation), jamais affichée.
+        this.sourceEvidence = view?.incidentId === this.id
+          ? normalizeEvidenceView(view)
+          : null;
+      },
+      error: () => { this.sourceEvidence = null; this.sourceEvidenceState = 'error'; },
+    });
+  }
+
+  evidence(slot: string): SourceEvidence | null {
+    return this.sourceEvidence?.slots?.[slot] || null;
+  }
+
+  evidenceSlots(): Record<string, SourceEvidence> | null {
+    return this.sourceEvidence?.slots || null;
+  }
+
+  /** Sections de provenance servies par le backend, dans son ordre. */
+  evidenceSections(): EvidenceSection[] {
+    return this.sourceEvidence?.sections || [];
+  }
+
+  /** Sections restreintes à la validation post-PR, pour l'onglet Validation. */
+  validationEvidenceSections(): EvidenceSection[] {
+    return this.evidenceSections().filter(section => section.id === 'validation' || section.id === 'fix');
+  }
+
+  findingEvidence(): FindingEvidence[] | null {
+    return this.sourceEvidence?.findings || null;
+  }
+
+  /** Chaîne de preuve d'une correction automatique (constat → PR). */
+  remediationEvidence(taskId: string | null | undefined) {
+    const id = String(taskId || '').trim();
+    if (!id) return null;
+    return this.sourceEvidence?.remediations?.find(r => r.taskId === id) || null;
+  }
+
+  /** Identité factuelle de la provenance affichée — jamais implicite. */
+  provenanceNote(): string {
+    const build = this.sourceEvidence?.buildNumber;
+    const commit = this.sourceEvidence?.commitSha;
+    return [
+      build != null ? `Build #${build}` : 'Build non enregistré',
+      commit ? `commit ${commit.slice(0, 7)}` : 'commit source non enregistré',
+    ].join(' — ');
+  }
+
   load() {
     this.loadError = '';
     this.loading = true;
-    this.api.getIncident(this.id).subscribe({
+    this.loadSourceEvidence();
+    this.api.getIncident(this.id).pipe(takeUntil(this.incidentScopeReset$)).subscribe({
       next: (inc: any) => {
         this.incident     = inc;
         // Rapports agents depuis metadata (rootCause, security, remediation)
         const meta = inc.metadata || {};
         this.reports = [
           meta.rootCause && Object.keys(meta.rootCause).length > 0
-            ? { agentType: 'ROOT_CAUSE', analysis: meta.rootCause.rootCause || meta.rootCause.analysisSummary || '', confidence: meta.rootCause.confidence || 0 }
+            ? { agentType: 'ROOT_CAUSE', analysis: meta.rootCause.rootCause || meta.rootCause.analysisSummary || '', confidence: meta.rootCause.confidence ?? null }
             : null,
           meta.security && Object.keys(meta.security).length > 0
-            ? { agentType: 'SECURITY', analysis: meta.security.securitySummary || '', confidence: meta.security.confidence || 0 }
+            ? { agentType: 'SECURITY', analysis: meta.security.securitySummary || '', confidence: meta.security.confidence ?? null }
             : null,
           meta.remediation && Object.keys(meta.remediation).length > 0
-            ? { agentType: 'REMEDIATION', analysis: meta.remediation.fixDescription || (meta.remediation.fixSteps || []).join('\n') || '', confidence: meta.remediation.confidence || 0 }
+            ? { agentType: 'REMEDIATION', analysis: meta.remediation.fixDescription || (meta.remediation.fixSteps || []).join('\n') || '', confidence: meta.remediation.confidence ?? null }
             : null,
         ].filter(r => r !== null);
         this.decision     = inc.decision || null;
@@ -545,16 +682,43 @@ export class IncidentDetailComponent implements OnInit, OnDestroy {
         this.loading = false;
         // Si validé, ouvrir directement l'onglet validation — sauf si un onglet a été demandé explicitement via l'URL
         if (!this.requestedTab && this.validation) this.activeTab = 'validation';
+        this.restoreInProgressStateFromServer();
       },
       error: () => { this.loadError = 'Impossible de charger cet incident. Vérifiez son existence puis réessayez.'; this.toast.error('Erreur', this.loadError); this.loading = false; }
     });
+  }
+
+  // GOAL 2 — un rechargement de page ne doit JAMAIS retomber sur un état
+  // "idle" silencieux alors que le backend dit encore FIX_STARTING/
+  // DISPATCHED : on réévalue systématiquement depuis metadata.fixRequest.
+  // status (source de vérité serveur), jamais depuis la seule mémoire du
+  // composant. Idempotent : startPrPolling()/stopPrPolling() peuvent être
+  // appelés plusieurs fois sans effet de bord (stopPrPolling() est toujours
+  // appelé en premier par startPrPolling()).
+  private restoreInProgressStateFromServer(): void {
+    if (this.incident?.prUrl && this.fixRequestStatus() !== 'CANCEL_REQUESTED') { this.prGenerationState = 'idle'; return; }
+    if (this.isFixInProgress() || this.fixRequestStatus() === 'CANCEL_REQUESTED') {
+      if (this.prGenerationState !== 'polling') this.startPrPolling();
+      return;
+    }
+    // Statut déjà terminal (FIX_FAILED/REJECTED/VALIDATING/VALIDATED/COMPLETED)
+    // ou absent : aucun polling génération-PR n'a plus de raison de tourner.
+    this.stopPrPolling();
+    this.prGenerationState = 'idle';
   }
 
   approveFix(findingIds?: string[] | string) {
     if (this.approvalBusy) return;
     this.approvalBusy = true;
     this.approvalError = null;
-    const request = Array.isArray(findingIds)
+    const fix = this.fixRequest();
+    const requestedIds = Array.isArray(findingIds) ? findingIds
+      : typeof findingIds === 'string' ? [findingIds] : fix?.findingIds;
+    const sameSelection = Array.isArray(requestedIds) && Array.isArray(fix?.findingIds)
+      && JSON.stringify([...requestedIds].sort()) === JSON.stringify([...fix.findingIds].sort());
+    const request = fix?.status === 'CANCELLED' && fix.retryEligible === true && sameSelection
+      ? this.api.retryFixBatch(this.id)
+      : Array.isArray(findingIds)
       ? this.api.approveFixBatch(this.id, findingIds)
       : this.api.approveFix(this.id, findingIds);
     request.subscribe({
@@ -765,10 +929,17 @@ export class IncidentDetailComponent implements OnInit, OnDestroy {
     this.prGenerationState = 'polling';
     this.pollHandle = setInterval(() => {
       this.pollAttempts++;
-      this.api.getIncident(this.id).subscribe({
+      this.api.getIncident(this.id).pipe(takeUntil(this.incidentScopeReset$)).subscribe({
         next: (inc: any) => {
-          if (inc.prUrl) {
-            this.incident = inc;
+          // GOAL 1 — piloté par metadata.fixRequest.status, pas seulement
+          // prUrl : un FIX_FAILED (ou REJECTED/VALIDATING/VALIDATED/COMPLETED)
+          // arrête le polling IMMÉDIATEMENT, jamais après les 88s du plafond.
+          const status = inc?.metadata?.fixRequest?.status;
+          const terminal = (status !== 'CANCEL_REQUESTED' && !!inc?.prUrl) || this.TERMINAL_FIX_STATUSES.includes(status);
+          // Garde le statut visible à jour PENDANT le polling (pas seulement
+          // au tick final) : l'utilisateur voit l'état réel, pas un spinner figé.
+          this.incident = inc;
+          if (terminal) {
             this.prGenerationState = 'idle';
             this.stopPrPolling();
             this.load(); // resynchronise timeline/tabs avec le nouvel état complet
@@ -795,6 +966,8 @@ export class IncidentDetailComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
+    this.incidentScopeReset$.next();
+    this.incidentScopeReset$.complete();
     this.stopPrPolling();
   }
 
@@ -810,8 +983,120 @@ export class IncidentDetailComponent implements OnInit, OnDestroy {
   // est déjà en cours. FIX_FAILED / REJECTED sans PR restent permis.
   newCorrectionBlocked(): boolean {
     if (this.hasRealPr()) return true;
-    return ['APPROVAL_REQUESTED', 'FIX_STARTING', 'DISPATCHED', 'PR_CREATED', 'VALIDATING']
+    return ['APPROVAL_REQUESTED', 'FIX_STARTING', 'DISPATCHED', 'PR_CREATED', 'VALIDATING', 'CANCEL_REQUESTED']
       .includes(this.incident?.metadata?.fixRequest?.status);
+  }
+
+  // ── Visibilité du cycle de vie WF2 (GOALS 1-5, audit stuck-UX 2026-10-04) ──
+  // Tout est dérivé de metadata.fixRequest.status à CHAQUE lecture — jamais
+  // d'état local qui pourrait désynchroniser l'affichage de la vérité serveur.
+  fixRequest(): any { return this.incident?.metadata?.fixRequest || null; }
+  fixRequestStatus(): string | null { return this.fixRequest()?.status || null; }
+  fixRequestStatusLabel(): string { return fixRequestStatusLabel(this.fixRequestStatus()); }
+
+  isFixInProgress(): boolean {
+    return ['FIX_STARTING', 'DISPATCHED'].includes(this.fixRequestStatus() || '');
+  }
+  cancelBusy = false;
+  cancelError: string | null = null;
+
+  canCancelFix(): boolean {
+    const fix = this.fixRequest();
+    return fix?.workflow === 'WF2' && !!fix.requestId && fix.sideEffectsStarted !== true
+      && ['FIX_STARTING', 'DISPATCHED', 'CANCEL_REQUESTED'].includes(fix.status);
+  }
+
+  cancelFix(): void {
+    if (this.cancelBusy || !this.canCancelFix() || this.fixRequestStatus() === 'CANCEL_REQUESTED') return;
+    if (!globalThis.confirm("Voulez-vous annuler cette correction ?\nLa correction sera arrêtée si elle n'a pas encore commencé à écrire sur GitHub.")) return;
+    this.cancelBusy = true;
+    this.cancelError = null;
+    this.api.cancelFixRequest(this.id, this.fixRequest().requestId).subscribe({
+      next: (result: any) => {
+        this.cancelBusy = false;
+        if (result.error) this.cancelError = 'Impossible de confirmer l’arrêt. La demande d’annulation reste en cours.';
+        this.load();
+      },
+      error: (err: any) => {
+        this.cancelBusy = false;
+        this.cancelError = err?.status === 409 && err?.error?.code === 'CANCELLATION_TOO_LATE'
+          ? 'La correction a déjà commencé à écrire sur GitHub et ne peut plus être annulée automatiquement.'
+          : 'Impossible de demander l’annulation. Réessayez.';
+        this.load();
+      },
+    });
+  }
+
+  isFixValidatingStage(): boolean { return this.fixRequestStatus() === 'VALIDATING'; }
+  isFixFailedStage(): boolean { return this.fixRequestStatus() === 'FIX_FAILED'; }
+  isFixRejectedStage(): boolean { return this.fixRequestStatus() === 'REJECTED'; }
+  isFixTerminalSuccessStage(): boolean {
+    return ['VALIDATED', 'COMPLETED'].includes(this.fixRequestStatus() || '');
+  }
+
+  // GOAL 4 — n'expose QUE les deux champs plats, déjà bornés côté backend
+  // pour l'affichage humain (lastError ≤500 car., lastErrorCode ≤80 car.,
+  // voir incidents.service.ts saveWorkflowBatchStatus/reconcileStaleDispatch).
+  // Ne lit JAMAIS verificationEvidence, attempts[], ni aucun payload brut —
+  // aucun risque d'exposer un secret, un token ou une pile d'appels n8n.
+  fixFailureDetails(): { message: string; code: string | null } | null {
+    const fix = this.fixRequest();
+    if (!fix?.lastError) return null;
+    return { message: String(fix.lastError), code: fix.lastErrorCode ? String(fix.lastErrorCode) : null };
+  }
+
+  // GOAL 5 — "semble bloqué" réutilise le SEUIL existant côté backend
+  // (WF2_STALE_DISPATCH_MS, reconcile-stale-dispatch) ; aucun heartbeat
+  // inventé ici, juste dispatchedAt déjà persisté sur la tentative active.
+  private dispatchedAtMs(): number | null {
+    const fix = this.fixRequest();
+    if (!fix) return null;
+    const attempts = Array.isArray(fix.attempts) ? fix.attempts : [];
+    const last = attempts[attempts.length - 1];
+    const raw = last?.dispatchedAt || fix.dispatchedAt || last?.authorizedAt;
+    if (!raw) return null;
+    const ms = Date.parse(raw);
+    return Number.isFinite(ms) ? ms : null;
+  }
+  looksStuck(): boolean {
+    if (!this.isFixInProgress()) return false;
+    const dispatchedAt = this.dispatchedAtMs();
+    if (dispatchedAt === null) return false;
+    return Date.now() - dispatchedAt >= this.STALE_DISPATCH_THRESHOLD_MS;
+  }
+  // Admin-only : ce bouton n'arrête PAS n8n (voir audit) — il ne fait
+  // qu'acter, côté backend, l'abandon d'un dispatch qui a dépassé le seuil
+  // existant. Jamais appelé automatiquement.
+  canReconcileStaleDispatch(): boolean {
+    return !!this.auth.isAdmin && this.looksStuck();
+  }
+  reconcileStaleDispatch(): void {
+    if (this.reconcileBusy || !this.canReconcileStaleDispatch()) return;
+    const fix = this.fixRequest();
+    const attemptCount = Number(fix?.attemptCount);
+    if (!fix?.requestId || !fix?.batchId || !Number.isInteger(attemptCount)) return;
+    if (!globalThis.confirm(
+      'Cette action marque la correction bloquée comme échouée côté plateforme.\n'
+      + 'Elle ne provoque PAS l’arrêt d’une exécution n8n en cours : si WF2 est '
+      + 'encore réellement actif, il peut continuer à écrire sur GitHub.\n'
+      + 'Continuer ?',
+    )) return;
+    this.reconcileBusy = true;
+    this.reconcileError = null;
+    this.api.reconcileStaleDispatch(this.id, fix.requestId, { batchId: fix.batchId, attemptCount }).subscribe({
+      next: () => {
+        this.reconcileBusy = false;
+        this.toast.success('Correction marquée comme échouée.');
+        this.stopPrPolling();
+        this.prGenerationState = 'idle';
+        this.load();
+      },
+      error: (err: any) => {
+        this.reconcileBusy = false;
+        this.reconcileError = userHttpError(err, 'Impossible de marquer cette correction comme échouée.');
+        this.toast.error('Erreur', this.reconcileError || 'Impossible de marquer cette correction comme échouée.');
+      },
+    });
   }
   // Verdict per-finding AUTORITAIRE (WF3) — jamais un statut global. Ordre :
   // validation.derived.findings[].verdict puis findingResults[].result.

@@ -1,8 +1,8 @@
-<div *ngIf="loadError" role="alert" class="card">{{loadError}} <button (click)="load()">Réessayer</button></div>
+<div *ngIf="loadError" role="alert" class="card">{{loadError}} <button type="button" class="btn btn-secondary btn-sm" (click)="load()">Réessayer</button></div>
     <div class="page-container">
       <div class="page-header">
         <button class="btn btn-back" (click)="goBack()">← Retour</button>
-        <h1 class="page-title" style="margin-top:8px;">// détail de l’incident</h1>
+        <h1 class="page-title" style="margin-top:8px;">Détail de l’incident</h1>
       </div>
 
       <div *ngIf="loading" class="loading-overlay"><div class="spinner"></div><span>Chargement...</span></div>
@@ -37,19 +37,55 @@
               <!-- Résultat WF2 (génération) — distinct de validation.prUrl (WF3, onglet
                    Validation PR) : ceci reflète la génération, pas la validation post-PR. -->
               <div *ngIf="incident.prUrl" style="margin-top:10px;">
-                <a [href]="incident.prUrl" target="_blank"
-                   style="color:var(--accent-blue);text-decoration:none;font-family:var(--font-mono);font-size:12px;">
-                  🔧 Voir la PR de correction générée ↗
-                </a>
+                <app-source-evidence-link [item]="evidence('FIX_PULL_REQUEST')" [showProvider]="false" [showReason]="false" [state]="sourceEvidenceState"></app-source-evidence-link>
               </div>
-              <div *ngIf="!incident.prUrl && prGenerationState === 'polling'"
+              <!-- Bandeau de statut fixRequest — piloté par metadata.fixRequest.status
+                   (vérité serveur, restaurée à chaque chargement), pas seulement par
+                   le polling local prGenerationState. Voir audit stuck-UX 2026-10-04. -->
+              <div *ngIf="!incident.prUrl && isFixInProgress()"
                    style="margin-top:10px;font-size:12px;color:var(--text-muted);display:flex;align-items:center;gap:6px;">
                 <span class="spinner" style="width:12px;height:12px;border-width:1.5px;"></span>
-                Génération de la PR en cours...
+                {{fixRequestStatusLabel()}}...
               </div>
-              <div *ngIf="!incident.prUrl && prGenerationState === 'timeout'"
+              <div *ngIf="!incident.prUrl && isFixValidatingStage()"
+                   style="margin-top:10px;font-size:12px;color:var(--accent-blue);">
+                ⏳ {{fixRequestStatusLabel()}}
+              </div>
+              <div *ngIf="isFixFailedStage()"
+                   style="margin-top:10px;padding:10px;border-radius:6px;background:var(--accent-red-bg, rgba(220,53,69,0.08));color:var(--accent-red);font-size:12px;">
+                ❌ {{fixRequestStatusLabel()}}
+                <div *ngIf="fixFailureDetails()" style="margin-top:4px;color:var(--text-muted);">
+                  {{fixFailureDetails()?.message}}
+                </div>
+              </div>
+              <div *ngIf="isFixRejectedStage()" style="margin-top:10px;font-size:12px;color:var(--text-muted);">
+                {{fixRequestStatusLabel()}}
+              </div>
+              <div *ngIf="!incident.prUrl && prGenerationState === 'timeout' && !isFixFailedStage()"
                    style="margin-top:10px;font-size:12px;color:var(--accent-orange);">
                 ⚠️ La génération n’a pas abouti (vérifiez le dépôt GitHub et les problèmes SonarQube bloquants).
+              </div>
+              <div *ngIf="canCancelFix()" style="margin-top:10px;">
+                <button class="btn btn-secondary btn-sm"
+                        [disabled]="cancelBusy || fixRequestStatus() === 'CANCEL_REQUESTED'"
+                        (click)="cancelFix()">
+                  {{cancelBusy || fixRequestStatus() === 'CANCEL_REQUESTED' ? 'Annulation en cours...' : 'Annuler la correction'}}
+                </button>
+              </div>
+              <div *ngIf="fixRequestStatus() === 'CANCELLED'" style="margin-top:10px;">{{fixRequestStatusLabel()}}</div>
+              <div *ngIf="cancelError" role="alert" style="margin-top:6px;color:var(--accent-red);">{{cancelError}}</div>
+              <!-- GOAL 5 — dispatch potentiellement bloqué (seuil EXISTANT côté
+                   backend, reconcile-stale-dispatch). N'arrête jamais n8n : voir
+                   la confirmation affichée avant l'appel (reconcileStaleDispatch()). -->
+              <div *ngIf="looksStuck()"
+                   style="margin-top:10px;padding:10px;border-radius:6px;background:var(--accent-orange-bg, rgba(245,158,11,0.08));color:var(--accent-orange);font-size:12px;">
+                ⚠️ Cette correction semble bloquée.
+                <div *ngIf="auth.isAdmin" style="margin-top:8px;">
+                  <button class="btn btn-secondary btn-sm" [disabled]="reconcileBusy" (click)="reconcileStaleDispatch()">
+                    {{reconcileBusy ? 'Marquage…' : 'Marquer la correction bloquée comme échouée'}}
+                  </button>
+                  <div *ngIf="reconcileError" style="margin-top:6px;color:var(--accent-red);">{{reconcileError}}</div>
+                </div>
               </div>
             </div>
             <div style="display:flex;gap:8px;flex-shrink:0;">
@@ -65,14 +101,14 @@
                       class="btn btn-success btn-sm" [disabled]="prValidationBusy || correctiveBusy || isCorrectiveInFlight()" (click)="requestPrValidation()">
                 {{prValidationBusy ? 'Validation en attente…' : (prValidationRequest?.status === 'FAILED' ? 'Réessayer la validation' : 'Valider la Pull Request')}}
               </button>
-              <span *ngIf="prValidationRequest?.status === 'REQUESTED' || prValidationRequest?.status === 'QUEUED'"
-                    class="badge medium">Validation en attente</span>
-              <span *ngIf="prValidationRequest?.status === 'RUNNING'" class="badge info">Validation en cours</span>
-              <span *ngIf="prValidationRequest?.status === 'COMPLETED'" class="badge info">Validation terminée</span>
-              <span *ngIf="prValidationRequest?.status === 'FAILED'" class="badge high">Validation échouée</span>
+              <app-status-chip *ngIf="prValidationRequest?.status === 'REQUESTED' || prValidationRequest?.status === 'QUEUED'"
+                               status="QUEUED" labelOverride="Validation en attente"></app-status-chip>
+              <app-status-chip *ngIf="prValidationRequest?.status === 'RUNNING'" status="RUNNING" labelOverride="Validation en cours"></app-status-chip>
+              <app-status-chip *ngIf="prValidationRequest?.status === 'COMPLETED'" status="COMPLETED" labelOverride="Validation terminée"></app-status-chip>
+              <app-status-chip *ngIf="prValidationRequest?.status === 'FAILED'" status="FAILED" labelOverride="Validation échouée"></app-status-chip>
               <!-- BRIQUE 5 — état "Correction supplémentaire en cours", distinct de la
                    génération initiale. Aucune action concurrente possible pendant ce temps. -->
-              <span *ngIf="isCorrectiveInFlight()" class="badge medium">Correction supplémentaire en cours</span>
+              <app-status-chip *ngIf="isCorrectiveInFlight()" status="RUNNING" labelOverride="Correction supplémentaire en cours"></app-status-chip>
             </div>
             <div *ngIf="prValidationTargetStale" style="margin-top:10px;padding:10px;border-radius:6px;background:var(--accent-red-bg, rgba(220,53,69,0.08));color:var(--accent-red);font-size:13px;">
               La Pull Request a changé depuis la demande de correction initiale (un nouveau commit de remédiation approuvé a été détecté). Actualisez la cible de validation avant de réessayer.
@@ -127,6 +163,22 @@
 
         <!-- ══ ONGLET : ANALYSE IA (WF1) ══ -->
         <div *ngIf="activeTab === 'analysis'">
+          <app-zone-label kind="information"
+            note="Constats des scanners, décision de gouvernance et preuves d’origine. Lecture seule."></app-zone-label>
+
+          <!-- ══ PROVENANCE (§12) ══
+               Permet de remonter de l'écran jusqu'à la preuve : détecté par
+               quel scanner, sur quel build, à quel commit, dans quel rapport.
+               Les étapes restent SÉPARÉES (constat / correction / validation /
+               image / déploiement) : ce ne sont pas les mêmes faits, et une
+               « source » unique les mélangerait. -->
+          <app-source-evidence-list style="display:block;margin-bottom:16px;"
+            title="Provenance et preuves"
+            [note]="provenanceNote()"
+            [sections]="evidenceSections()"
+            [slots]="evidenceSlots()"
+            [state]="sourceEvidenceState" (retry)="loadSourceEvidence()">
+          </app-source-evidence-list>
 
           <!-- Rail de phases (Couche 1, Build→Tests→SAST→SCA→Conteneur→DAST→Déploiement) —
                réutilise tel quel app-project-overview (déjà écrit pour l'onglet "Rapport IA"
@@ -179,6 +231,7 @@
                 [issues]="jenkinsIssues()"
                 [advice]="classification.solution"
                 [actionLabel]="jenkinsActionLabel()"
+                [sources]="[evidence('JENKINS_BUILD'), evidence('JENKINS_BUILD_LOGS')]"
                 [correcting]="jenkinsCorrecting()"
                 (correct)="onJenkinsCorrect()">
               </app-remediation-card>
@@ -196,6 +249,7 @@
               <app-remediation-card
                 phaseLabel="Conteneur (Trivy)"
                 [mode]="trivyMode()"
+                [sources]="[evidence('TRIVY_REPORT'), evidence('JENKINS_BUILD')]"
                 [issues]="trivyIssues()">
               </app-remediation-card>
             </div>
@@ -209,6 +263,7 @@
               <app-remediation-card
                 phaseLabel="Dépendances (OWASP)"
                 [mode]="owaspMode()"
+                [sources]="[evidence('OWASP_REPORT'), evidence('JENKINS_BUILD')]"
                 [issues]="owaspIssues()">
               </app-remediation-card>
             </div>
@@ -222,6 +277,7 @@
               <app-remediation-card
                 phaseLabel="DAST (ZAP)"
                 [mode]="zapMode()"
+                [sources]="[evidence('ZAP_REPORT'), evidence('ZAP_TARGET'), evidence('JENKINS_BUILD')]"
                 [issues]="zapIssues()">
               </app-remediation-card>
             </div>
@@ -235,6 +291,7 @@
               <app-remediation-card
                 phaseLabel="🔍 SonarQube"
                 [mode]="sonarMode()"
+                [sources]="[evidence('SONAR_PROJECT'), evidence('JENKINS_BUILD')]"
                 [issues]="sonarIssues()"
                 advice="Examinez la correction proposée. GitHub ne sera modifié qu'après votre clic explicite."
                 actionLabel="Proposer une correction"
@@ -320,11 +377,11 @@
                 <div style="font-size:10px;color:var(--text-muted);font-family:var(--font-mono);margin-bottom:8px;">SONARQUBE</div>
                 <div style="display:flex;gap:12px;">
                   <div style="text-align:center;">
-                    <div style="font-size:18px;font-weight:700;color:var(--accent-red);">{{enrichedData.sonar?.vulnerabilities || 0}}</div>
+                    <div style="font-size:18px;font-weight:700;color:var(--accent-red);">{{scannerMetric(enrichedData.sonar, 'vulnerabilities') ?? 'Non disponible'}}</div>
                     <div style="font-size:9px;color:var(--text-muted);">VULNÉRABILITÉS</div>
                   </div>
                   <div style="text-align:center;">
-                    <div style="font-size:18px;font-weight:700;color:var(--accent-orange);">{{enrichedData.sonar?.code_smells || 0}}</div>
+                    <div style="font-size:18px;font-weight:700;color:var(--accent-orange);">{{scannerMetric(enrichedData.sonar, 'code_smells') ?? 'Non disponible'}}</div>
                     <div style="font-size:9px;color:var(--text-muted);">PROBLÈMES DE MAINTENABILITÉ</div>
                   </div>
                 </div>
@@ -338,11 +395,11 @@
                 <div style="font-size:10px;color:var(--text-muted);font-family:var(--font-mono);margin-bottom:8px;">TRIVY (IMAGE)</div>
                 <div style="display:flex;gap:12px;">
                   <div style="text-align:center;">
-                    <div style="font-size:18px;font-weight:700;color:var(--accent-red);">{{enrichedData.trivy?.critical || 0}}</div>
+                    <div style="font-size:18px;font-weight:700;color:var(--accent-red);">{{scannerMetric(enrichedData.trivy, 'critical') ?? 'Non disponible'}}</div>
                     <div style="font-size:9px;color:var(--text-muted);">CRITIQUE</div>
                   </div>
                   <div style="text-align:center;">
-                    <div style="font-size:18px;font-weight:700;color:var(--accent-orange);">{{enrichedData.trivy?.high || 0}}</div>
+                    <div style="font-size:18px;font-weight:700;color:var(--accent-orange);">{{scannerMetric(enrichedData.trivy, 'high') ?? 'Non disponible'}}</div>
                     <div style="font-size:9px;color:var(--text-muted);">ÉLEVÉ</div>
                   </div>
                 </div>
@@ -356,11 +413,11 @@
                 <div style="font-size:10px;color:var(--text-muted);font-family:var(--font-mono);margin-bottom:8px;">OWASP DC</div>
                 <div style="display:flex;gap:12px;">
                   <div style="text-align:center;">
-                    <div style="font-size:18px;font-weight:700;color:var(--accent-red);">{{enrichedData.owasp?.critical || 0}}</div>
+                    <div style="font-size:18px;font-weight:700;color:var(--accent-red);">{{scannerMetric(enrichedData.owasp, 'critical') ?? 'Non disponible'}}</div>
                     <div style="font-size:9px;color:var(--text-muted);">CRITIQUE</div>
                   </div>
                   <div style="text-align:center;">
-                    <div style="font-size:18px;font-weight:700;color:var(--accent-orange);">{{enrichedData.owasp?.high || 0}}</div>
+                    <div style="font-size:18px;font-weight:700;color:var(--accent-orange);">{{scannerMetric(enrichedData.owasp, 'high') ?? 'Non disponible'}}</div>
                     <div style="font-size:9px;color:var(--text-muted);">ÉLEVÉ</div>
                   </div>
                 </div>
@@ -374,11 +431,11 @@
                 <div style="font-size:10px;color:var(--text-muted);font-family:var(--font-mono);margin-bottom:8px;">ZAP (DAST)</div>
                 <div style="display:flex;gap:12px;">
                   <div style="text-align:center;">
-                    <div style="font-size:18px;font-weight:700;color:var(--accent-red);">{{enrichedData.zap?.alerts_high || 0}}</div>
+                    <div style="font-size:18px;font-weight:700;color:var(--accent-red);">{{scannerMetric(enrichedData.zap, 'alerts_high') ?? 'Non disponible'}}</div>
                     <div style="font-size:9px;color:var(--text-muted);">ÉLEVÉ</div>
                   </div>
                   <div style="text-align:center;">
-                    <div style="font-size:18px;font-weight:700;color:var(--accent-orange);">{{enrichedData.zap?.alerts_medium || 0}}</div>
+                    <div style="font-size:18px;font-weight:700;color:var(--accent-orange);">{{scannerMetric(enrichedData.zap, 'alerts_medium') ?? 'Non disponible'}}</div>
                     <div style="font-size:9px;color:var(--text-muted);">MOYEN</div>
                   </div>
                 </div>
@@ -421,7 +478,7 @@
                            [style.background]="getAgentColor(r.agentType)"></div>
                     </div>
                     <span style="font-size:10px;color:var(--text-muted);font-family:var(--font-mono);">
-                      {{((r.confidence||0)*100)|number:'1.0-0'}}%
+                      {{r.confidence == null ? 'Non disponible' : ((r.confidence * 100 | number:'1.0-0') + '%')}}
                     </span>
                   </div>
                 </div>
@@ -433,6 +490,10 @@
 
         <!-- ══ ONGLET : VALIDATION WF3 ══ -->
         <div *ngIf="activeTab === 'validation'">
+          <app-zone-label [kind]="canOperate ? 'action' : 'information'"
+            [note]="canOperate
+              ? 'Verdict de la validation post-Pull Request, et relance de cette validation quand elle est permise.'
+              : 'Verdict de la validation post-Pull Request. Lecture seule.'"></app-zone-label>
 
           <!-- Pas encore validé -->
           <div *ngIf="!validation" class="card" style="text-align:center;padding:40px;border:1px dashed var(--border);">
@@ -598,17 +659,27 @@
               <div style="display:grid;grid-template-columns:auto 1fr;gap:6px 16px;align-items:center;">
                 <div style="font-size:10px;color:var(--text-muted);font-family:var(--font-mono);">NUMÉRO</div>
                 <div style="font-size:12px;color:var(--text-primary);">
-                  <a [href]="validation.prUrl" target="_blank"
-                     style="color:var(--accent-blue);text-decoration:none;">#{{validation.prNumber}}</a>
+                  <app-source-evidence-link [item]="evidence('VALIDATION_PULL_REQUEST')" variant="inline" [showProvider]="false" [showReason]="false" [state]="sourceEvidenceState"></app-source-evidence-link>
                 </div>
                 <div style="font-size:10px;color:var(--text-muted);font-family:var(--font-mono);">BRANCHE</div>
                 <div style="font-size:11px;color:var(--text-secondary);font-family:var(--font-mono);">{{validation.prBranch}}</div>
-                <div style="font-size:10px;color:var(--text-muted);font-family:var(--font-mono);">URL</div>
+                <!-- Le COMMIT validé est l'identité de ce qui a été analysé —
+                     distinct du commit du constat d'origine. -->
+                <div style="font-size:10px;color:var(--text-muted);font-family:var(--font-mono);">COMMIT VALIDÉ</div>
                 <div style="font-size:11px;">
-                  <a [href]="validation.prUrl" target="_blank"
-                     style="color:var(--accent-blue);text-decoration:none;font-family:var(--font-mono);">
-                    {{validation.prUrl}}
-                  </a>
+                  <app-source-evidence-link [item]="evidence('VALIDATION_COMMIT')" variant="inline" [showProvider]="false" [showReason]="false" [state]="sourceEvidenceState"></app-source-evidence-link>
+                </div>
+                <div style="font-size:10px;color:var(--text-muted);font-family:var(--font-mono);">BUILD</div>
+                <div style="font-size:11px;">
+                  <app-source-evidence-link [item]="evidence('VALIDATION_BUILD')" variant="inline" [showProvider]="false" [showReason]="false" [state]="sourceEvidenceState"></app-source-evidence-link>
+                </div>
+                <div style="font-size:10px;color:var(--text-muted);font-family:var(--font-mono);">JOURNAL</div>
+                <div style="font-size:11px;">
+                  <app-source-evidence-link [item]="evidence('VALIDATION_LOGS')" variant="inline" [showProvider]="false" [showReason]="false" [state]="sourceEvidenceState"></app-source-evidence-link>
+                </div>
+                <div style="font-size:10px;color:var(--text-muted);font-family:var(--font-mono);">ANALYSE SONAR</div>
+                <div style="font-size:11px;">
+                  <app-source-evidence-link [item]="evidence('SONAR_PROJECT')" variant="inline" [showProvider]="false" [showReason]="false" [state]="sourceEvidenceState"></app-source-evidence-link>
                 </div>
               </div>
             </div>
@@ -618,6 +689,8 @@
 
         <!-- ══ ONGLET : DONNÉES BRUTES ══ -->
         <div *ngIf="activeTab === 'raw'" class="card">
+          <app-zone-label kind="information"
+            note="Charge utile brute enregistrée pour cet incident, telle quelle. Lecture seule."></app-zone-label>
           <div class="card-header">
             <span class="card-title">Données brutes</span>
           </div>
@@ -626,6 +699,8 @@
 
         <!-- ══ ONGLET : GUIDE DE CORRECTION ══ -->
         <div *ngIf="activeTab === 'guide'">
+          <app-zone-label kind="information"
+            note="Marche à suivre pour corriger, à appliquer dans le dépôt. Aucune action n’est déclenchée ici."></app-zone-label>
           <app-developer-guide-tab [guide]="developerGuide"></app-developer-guide-tab>
         </div>
 

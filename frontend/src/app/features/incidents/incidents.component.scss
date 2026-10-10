@@ -1,16 +1,17 @@
-    .source-tag {
-      font-size: 10px;
-      font-family: var(--font-mono);
-      color: var(--text-muted);
-      background: var(--bg-tertiary);
-      border: 1px solid var(--border);
-      padding: 2px 7px;
-      border-radius: var(--radius-sm);
-    }
+/* §10 — le titre de l'incident est l'information principale de la ligne ;
+   l'identifiant technique reste sous lui, en retrait, copiable (§20/§21). */
+.inc-problem { max-width: 320px; }
+.inc-title {
+  color: var(--text-primary);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
-    /* Absence de sévérité connue — gris neutre, jamais une couleur de
-       gravité (même principe que l'état INDETERMINE du score). */
-    .badge.severity-unknown {
-      background: var(--bg-tertiary);
-      color: var(--text-muted);
-    }
+/* §23 — en dessous de 768 px, la colonne « Problème » cesse d'imposer une
+   largeur fixe : le tableau défile dans son conteneur plutôt que d'étirer
+   la page. */
+@media (max-width: 768px) {
+  .inc-problem { max-width: 200px; }
+}

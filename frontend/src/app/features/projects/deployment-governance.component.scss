@@ -1,0 +1,158 @@
+.dg-box { margin-top: 10px; padding: 16px; border: 1px solid var(--border-color, #30363d); border-radius: 8px; }
+.dg-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.dg-loading, .dg-error { color: var(--text-secondary, #8b949e); }
+.dg-error { color: var(--accent-red, #f85149); }
+.dg-stale { color: var(--accent-orange, #d29922); font-weight: 600; margin: 6px 0 12px; }
+
+.dg-identity { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px 16px; margin: 10px 0 16px; font-size: 13px; }
+.dg-identity div { display: flex; flex-direction: column; gap: 2px; }
+.dg-identity dt { color: var(--text-secondary, #8b949e); font-size: 11px; text-transform: uppercase; }
+.dg-identity dd { margin: 0; word-break: break-all; cursor: help; }
+
+.dg-state { margin-top: 12px; }
+.dg-state h4 { margin: 0 0 8px; }
+
+.dg-ready h4 { color: var(--accent-green, #3fb950); }
+.dg-conditional h4 { color: var(--accent-orange, #d29922); }
+.dg-critical h4 { color: var(--accent-red, #f85149); }
+.dg-impossible h4 { color: var(--text-secondary, #8b949e); }
+
+.dg-restricted { font-weight: 600; }
+.dg-impossible-note { color: var(--text-secondary, #8b949e); }
+
+.dg-warnings, .dg-failed-controls { margin: 0 0 10px; padding-left: 20px; }
+.dg-failed-controls li { color: var(--accent-red, #f85149); }
+
+.dg-modal { margin-top: 12px; padding: 14px; border: 1px solid var(--border-color, #30363d); border-radius: 6px; display: flex; flex-direction: column; gap: 10px; }
+.dg-critical-modal { border-color: var(--accent-red, #f85149); }
+.dg-critical-warning { font-weight: 600; }
+.dg-modal label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+.dg-ack-label { flex-direction: row !important; align-items: flex-start; gap: 8px; }
+.dg-modal textarea, .dg-modal input[type="text"] { width: 100%; box-sizing: border-box; }
+.dg-modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
+.dg-authorize-error { color: var(--accent-red, #f85149); }
+
+.dg-authorization { margin-top: 10px; font-size: 13px; color: var(--text-secondary, #8b949e); }
+.dg-authorization small { display: block; margin-top: 2px; }
+.dg-deploy-result { margin-top: 12px; padding: 10px; border-radius: 6px; }
+.dg-deploy-result p { margin: 0 0 6px; }
+.dg-success { background: rgba(63, 185, 80, 0.12); }
+.dg-error { background: rgba(248, 81, 73, 0.12); }
+
+/* ── Visually-hidden text: keeps icon-only affordances announced (§17). ── */
+.dg-sr { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+.dg-subtitle { margin: 0 0 12px; font-size: 12px; color: var(--text-secondary, #8b949e); }
+.dg-sub { margin: 16px 0 8px; font-size: 13px; text-transform: uppercase; letter-spacing: .03em; color: var(--text-secondary, #8b949e); }
+
+/* ── §15 loading skeleton ── */
+.dg-skeleton { display: flex; flex-direction: column; gap: 10px; }
+.dg-skel-line { height: 12px; border-radius: 4px; background: linear-gradient(90deg, rgba(139,148,158,.12) 25%, rgba(139,148,158,.22) 37%, rgba(139,148,158,.12) 63%); background-size: 400% 100%; animation: dg-shimmer 1.4s ease infinite; }
+.dg-skel-lg { height: 44px; }
+.dg-skel-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
+@keyframes dg-shimmer { 0% { background-position: 100% 50%; } 100% { background-position: 0 50%; } }
+@media (prefers-reduced-motion: reduce) { .dg-skel-line { animation: none; } }
+
+/* ── §15 governance unavailable ── */
+.dg-error-panel { padding: 12px; border-radius: 6px; background: rgba(248, 81, 73, 0.1); border: 1px solid var(--accent-red, #f85149); }
+.dg-error-panel p { margin: 0 0 6px; }
+.dg-error-note { font-size: 12px; color: var(--text-secondary, #8b949e); }
+
+/* ── §7 deployment capability card — the section always renders this,
+   whether or not a deployment target is configured. ── */
+.dg-capability-card { display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px; margin-bottom: 10px; border-radius: 8px; border: 1px solid var(--border-color, #30363d); border-left-width: 4px; }
+.dg-cap-icon { font-size: 18px; line-height: 1.2; flex: 0 0 auto; }
+.dg-cap-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.dg-cap-label { font-size: 14px; }
+.dg-cap-detail { font-size: 12px; color: var(--text-secondary, #8b949e); }
+.dg-cap-code { font-size: 10px; letter-spacing: .04em; color: var(--text-secondary, #8b949e); opacity: .8; }
+.dg-cap-configured   { border-left-color: var(--accent-green, #3fb950); background: rgba(63, 185, 80, 0.06); }
+.dg-cap-unconfigured { border-left-color: var(--text-secondary, #8b949e); background: rgba(139, 148, 158, 0.06); }
+.dg-cap-invalid      { border-left-color: var(--accent-red, #f85149); background: rgba(248, 81, 73, 0.06); }
+.dg-cap-unavailable  { border-left-color: var(--accent-orange, #d29922); background: rgba(210, 153, 34, 0.06); }
+.dg-cap-impossible   { border-left-color: var(--text-secondary, #8b949e); background: rgba(139, 148, 158, 0.06); }
+
+/* ── CI/CD build evidence link — visually a link-out, never an action
+   button, so Jenkins can never be mistaken for the deploy control. ── */
+.dg-cicd-evidence { margin: 0 0 12px; display: flex; flex-direction: column; gap: 2px; font-size: 13px; }
+.dg-cicd-evidence a { color: var(--accent-blue, #58a6ff); text-decoration: none; }
+.dg-cicd-evidence a:hover, .dg-cicd-evidence a:focus-visible { text-decoration: underline; }
+.dg-cicd-evidence small { font-size: 11px; color: var(--text-secondary, #8b949e); }
+
+.dg-unconfigured { margin-top: 12px; }
+
+/* ── §4 status card — icon + text, colour is only reinforcement ── */
+.dg-status-card { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 8px; border: 1px solid var(--border-color, #30363d); border-left-width: 4px; }
+.dg-status-icon { font-size: 22px; line-height: 1; flex: 0 0 auto; }
+.dg-status-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.dg-status-label { font-size: 15px; }
+.dg-status-code { font-size: 11px; color: var(--text-secondary, #8b949e); }
+.dg-tone-ready { border-left-color: var(--accent-green, #3fb950); background: rgba(63, 185, 80, 0.08); }
+.dg-tone-conditional { border-left-color: var(--accent-orange, #d29922); background: rgba(210, 153, 34, 0.08); }
+.dg-tone-critical { border-left-color: var(--accent-red, #f85149); background: rgba(248, 81, 73, 0.08); }
+.dg-tone-impossible { border-left-color: var(--text-secondary, #8b949e); background: rgba(139, 148, 158, 0.08); }
+
+/* ── §5 control list ── */
+.dg-controls { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.dg-control { display: flex; gap: 12px; align-items: flex-start; padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border-color, #30363d); font-size: 13px; }
+.dg-ctrl-status { display: flex; align-items: center; gap: 6px; flex: 0 0 120px; }
+.dg-ctrl-icon { font-size: 13px; }
+.dg-ctrl-status-text { font-size: 11px; text-transform: uppercase; letter-spacing: .03em; }
+.dg-ctrl-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.dg-ctrl-name { font-size: 13px; }
+.dg-ctrl-explanation, .dg-ctrl-blocking { font-size: 11px; color: var(--text-secondary, #8b949e); word-break: break-word; }
+.dg-ctrl-blocking { font-weight: 600; }
+.dg-ctrl-PASS .dg-ctrl-status-text { color: var(--accent-green, #3fb950); }
+.dg-ctrl-FAIL .dg-ctrl-status-text { color: var(--accent-red, #f85149); }
+.dg-ctrl-WARNING .dg-ctrl-status-text { color: var(--accent-orange, #d29922); }
+.dg-ctrl-NOT_RUN .dg-ctrl-status-text, .dg-ctrl-UNKNOWN .dg-ctrl-status-text { color: var(--text-secondary, #8b949e); }
+.dg-controls-toggle { margin-top: 8px; }
+.dg-reasons { margin-top: 4px; }
+
+/* ── §7/§8 form affordances ── */
+.dg-modal-intro { margin: 0; font-size: 12px; color: var(--text-secondary, #8b949e); }
+.dg-hint { font-size: 11px; color: var(--text-secondary, #8b949e); }
+.dg-phrase { display: inline-block; margin-top: 2px; font-family: monospace; letter-spacing: .04em; }
+.dg-disabled-reason { margin: 0; font-size: 12px; color: var(--accent-orange, #d29922); }
+
+/* ── §9 ── */
+.dg-impossible-sub { font-size: 12px; color: var(--text-secondary, #8b949e); }
+
+/* ── §11 progress ── */
+.dg-progress { margin-top: 12px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 13px; }
+.dg-phase { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--border-color, #30363d); }
+.dg-phase-DEPLOYED { border-color: var(--accent-green, #3fb950); color: var(--accent-green, #3fb950); }
+.dg-phase-FAILED { border-color: var(--accent-red, #f85149); color: var(--accent-red, #f85149); }
+.dg-phase-code { font-size: 10px; opacity: .75; }
+
+/* ── §12/§13 evidence ── */
+.dg-evidence { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 6px 16px; margin: 6px 0 0; font-size: 12px; }
+.dg-evidence div { display: flex; flex-direction: column; gap: 1px; }
+.dg-evidence dt { color: var(--text-secondary, #8b949e); font-size: 10px; text-transform: uppercase; }
+.dg-evidence dd { margin: 0; word-break: break-all; }
+
+.dg-history-deferred { margin: 16px 0 0; font-size: 12px; color: var(--text-secondary, #8b949e); }
+
+/* ── §16 narrower screens: stack the control rows, never clip content ── */
+@media (max-width: 640px) {
+  .dg-box { padding: 12px; }
+  .dg-header { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .dg-identity, .dg-evidence { grid-template-columns: 1fr; }
+  .dg-control { flex-direction: column; gap: 4px; }
+  .dg-ctrl-status { flex-basis: auto; }
+  .dg-modal-actions { flex-direction: column-reverse; }
+  .dg-modal-actions .btn { width: 100%; }
+}
+
+/* §18 — explication de l'attente : lisible sans dominer le squelette. */
+.dg-wait {
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  border-left: 3px solid var(--accent-blue);
+  background: var(--accent-blue-bg);
+  border-radius: 0 6px 6px 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+.dg-wait strong { display: block; color: var(--text-primary); margin-bottom: 3px; }

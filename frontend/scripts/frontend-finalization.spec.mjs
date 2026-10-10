@@ -7,7 +7,7 @@ const root = new URL('../src/app/', import.meta.url);
 const angular = { Component: () => v => v, Pipe: () => v => v, Input: () => () => {}, Output: () => () => {}, EventEmitter: class {}, signal: value => { const f = () => value; f.set = v => value = v; return f; }, computed: f => f };
 function load(path) {
   const exports = {};
-  vm.runInNewContext(ts.transpileModule(readFileSync(new URL(path, root), 'utf8'), {compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,experimentalDecorators:true}}).outputText, {exports, console, Intl, Date, require: name => name === '@angular/core' ? angular : name === '@angular/common/http' ? {HttpErrorResponse:class{}} : name.startsWith('.') ? load(new URL(name+'.ts', new URL(path, root)).href) : {}});
+  vm.runInNewContext(ts.transpileModule(readFileSync(new URL(path, root), 'utf8'), {compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,experimentalDecorators:true}}).outputText, {exports, console, Intl, Date, TextEncoder, require: name => name === '@angular/core' ? angular : name === '@angular/common/http' ? {HttpErrorResponse:class{}} : name.startsWith('.') ? load(new URL(name+'.ts', new URL(path, root)).href) : {}});
   return exports;
 }
 const {CveTableComponent} = load('features/projects/cve-table.component.ts');
@@ -25,25 +25,25 @@ for (const source of ['TRIVY','OWASP']) {
   table.selectionRule=(task,c)=>eligibility.canSelectCveTask(task,true,c);
   // CVE-4 has no reliable target in either source.
   table.cves=table.normalized().map(c=>({...c,fixedVersion:c.id==='CVE-4'?'':c.fixedVersion}));
-  for(const [filter,count] of [['ALL',9],['AUTO_FIX_AVAILABLE',1],['MANUAL_REVIEW',5],['IN_PROGRESS',2],['CLOSED',1]]){
+  for(const [filter,count] of [['ALL',9],['AVAILABLE',1],['MANUAL',6],['IN_PROGRESS',1],['PROPOSED',1],['CLOSED',0]]){
     table.owaspRemediationFilter.set(filter);assert.equal(table.filtered().length,count,`${source} ${filter}`);
   }
   assert.equal(table.owaspRemediationSummary().autoFixAvailable,1);
   table.tasks[0].securityFindingRemediation={status:'CLOSED'};
-  assert.equal(table.owaspRemediationSummary().closed,2);assert.equal(table.owaspRemediationSummary().autoFixAvailable,0);
-  table.owaspRemediationFilter.set('AUTO_FIX_AVAILABLE');assert.equal(table.filtered().length,0);
+  assert.equal(table.owaspRemediationSummary().verifiedFixed,0);assert.equal(table.owaspRemediationSummary().autoFixAvailable,0);
+  table.owaspRemediationFilter.set('AVAILABLE');assert.equal(table.filtered().length,0);
   for(const state of blocked){const pres=getV1_8Presentation({state},'1');assert.ok(!pres.label.includes(state));assert.ok(pres.reason.length>40);}
   table.tasks[0].securityFindingRemediation=null;
   table.tasks[0].v1_8Decision={state:'VALIDATED_RECOMMENDED',sandboxValidated:true,targetCveClosed:true,recommendedVersion:'2'};
-  assert.equal(table.filtered().length,1);assert.equal(table.owaspPresentation(table.normalized()[0]).label,'Correction validée');
+  assert.equal(table.filtered().length,1);assert.equal(table.owaspPresentation(table.normalized()[0]).label,'Correction automatique disponible');
   assert.equal(table.v18Count('VALIDATED'),1);
   table.owaspRemediationFilter.set('ALL');table.v18Filter.set('BLOCKED');assert.equal(table.filtered().length,2);
   table.v18Filter.set('ALL'); table.owaspRemediationFilter.set('CLOSED');
   table.tasks[0].v1_8Decision = null; table.tasks[0].status = 'VERIFIED'; table.tasks[0].scannerStatus = 'NOT_DETECTED';
-  assert.equal(table.filtered().length, 2, 'scanner-confirmed manual correction is closed too');
+  assert.equal(table.filtered().length, 1, 'only scanner-confirmed correction is fixed');
   table.tasks[0].status = 'TODO'; table.tasks[0].scannerStatus = 'DETECTED';
   table.cves = table.normalized().map(c => ({...c, fixedVersion: c.id === 'CVE-0' ? '2, 3' : c.fixedVersion}));
-  table.owaspRemediationFilter.set('AUTO_FIX_AVAILABLE'); assert.equal(table.filtered().length, 0, 'multiple Trivy target versions are not automatically available');
+  table.owaspRemediationFilter.set('AVAILABLE'); assert.equal(table.filtered().length, 0, 'multiple Trivy target versions are not automatically available');
   console.log(`${source}: five filters, counts, V1.8 blockers and validation PASS`);
 }
 const ids=['zap','trivy','deploy','sonar','tests','build','owasp','docker','future'];
@@ -71,7 +71,10 @@ console.log('Ordering, owner versions, French errors, dates and product names PA
 assert.equal(presentationText('Corriger l’étape Tests: SKIPPED'), 'Corriger l’étape Tests: Non exécuté');
 assert.equal(getV1_8Presentation({state:'FUTURE_INTERNAL_ENUM'},'1').label,'Intervention manuelle requise');
 
-assert.ok(template.indexOf('orderedStages()') < template.indexOf('Déploiement final — Azure'), 'final Azure deployment is presented after security gates');
+// Phase 2B.3 — the legacy inline "Déploiement final — Azure" box was
+// replaced by <app-deployment-governance> (see deployment-governance.component.ts);
+// the ordering invariant itself (deploy section after security gates) still holds.
+assert.ok(template.indexOf('orderedStages()') < template.indexOf('<app-deployment-governance'), 'final Azure deployment is presented after security gates');
 
 assert.equal(presentationText('OWASP Dependency-Check'), 'OWASP Dependency-Check');
 assert.equal(presentationLabel('NOT_ATTEMPTED'), 'Non tenté');

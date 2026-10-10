@@ -219,7 +219,7 @@ export function diagnoseSonar(enrichedData: any, ctx?: IncidentContext): PhaseDi
   if (gate === 'ERROR' || gate === 'FAILED') {
     return {
       phase: 'SonarQube', green: false, actor: 'agent', confidence: 'confirmé',
-      message: `Quality gate SonarQube en échec (${gate}) — ${s?.vulnerabilities || 0} vulnérabilité(s), ${s?.bugs || 0} bug(s), ${s?.code_smells || 0} code smell(s) réels détectés. `
+      message: `Quality gate SonarQube en échec (${gate}) — ${s?.vulnerabilities ?? 'Non disponible'} vulnérabilité(s), ${s?.bugs ?? 'Non disponible'} bug(s), ${s?.code_smells ?? 'Non disponible'} code smell(s) réels détectés. `
         + `ACTION (agent) : corrigez via WF2 (carte SonarQube).`,
     };
   }
@@ -238,7 +238,7 @@ export function diagnoseSonar(enrichedData: any, ctx?: IncidentContext): PhaseDi
   if ((s?.issues?.length || 0) > 0 || (s?.bugs || 0) + (s?.vulnerabilities || 0) + (s?.code_smells || 0) > 0) {
     return {
       phase: 'SonarQube', green: false, actor: 'humain', confidence: 'confirmé',
-      message: `SonarQube a bien analysé le code (${s.issues?.length || 0} issue(s) réelle(s) détectée(s)) mais l'appel quality gate n'a renvoyé aucun statut exploitable (${gate || 'absent'}). `
+      message: `SonarQube a bien analysé le code (${s.issues?.length ?? 'Non disponible'} issue(s) réelle(s) détectée(s)) mais l'appel quality gate n'a renvoyé aucun statut exploitable (${gate || 'absent'}). `
         + `Le scan fonctionne, c'est l'appel gate spécifiquement qui échoue (dette connue : "Text must not be null"). `
         + `ACTION (vous) : vérifiez la configuration du quality gate dans SonarQube pour ce projet.`,
     };
@@ -277,7 +277,7 @@ export function diagnoseDocker(enrichedData: any): PhaseDiagnostic {
   const build = String(d?.build_status || '').toUpperCase();
   const push = String(d?.push_status || '').toUpperCase();
   if (build === 'SUCCESS' && (push === 'SUCCESS' || !push)) {
-    return { phase: 'Docker', green: true, actor: null, confidence: 'confirmé', message: 'Build (et push) de l\'image Docker réussi.' };
+    return { phase: 'Docker', green: true, actor: null, confidence: 'confirmé', message: push === 'SUCCESS' ? 'Construction et publication de l’image Docker réussies.' : 'Construction de l’image Docker réussie ; publication non confirmée.' };
   }
   if (['FAILURE', 'FAILED'].includes(build)) {
     return { phase: 'Docker', green: false, actor: 'agent', confidence: 'confirmé', message: `Build de l'image Docker en échec. ACTION (agent) : corrigez via WF5.` };

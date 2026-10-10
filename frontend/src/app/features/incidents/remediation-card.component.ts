@@ -1,6 +1,8 @@
 import { Component, EventEmitter, Input, Output, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { PresentationLabelPipe } from '../../shared/presentation-label.pipe';
+import { SourceEvidenceLinkComponent } from '../../shared/source-evidence/source-evidence-link.component';
+import { SourceEvidence } from '../../shared/source-evidence/source-evidence.types';
 
 // ─────────────────────────────────────────────────────────────────────────
 //  Composant de remédiation unifié — Couche 2.
@@ -47,7 +49,7 @@ export interface RemediationIssue {
 @Component({
   selector: 'app-remediation-card',
   standalone: true,
-  imports: [CommonModule, PresentationLabelPipe],
+  imports: [CommonModule, PresentationLabelPipe, SourceEvidenceLinkComponent],
   template: `
     <div class="card rc-card">
       <div class="card-header" style="margin-bottom:12px;">
@@ -112,6 +114,16 @@ export interface RemediationIssue {
         <a *ngIf="prUrl" class="rc-pr-link" [href]="prUrl" target="_blank" rel="noopener noreferrer">{{ prLabel || 'Voir la Pull Request' }}</a>
       </p>
 
+      <!-- Sources de la phase — d'où viennent ces constats : le rapport de
+           scanner qui les a produits et le build qui l'a exécuté. Affichées
+           seulement quand elles existent réellement. -->
+      <div *ngIf="presentSources().length" class="rc-sources">
+        <span class="rc-sources-label">Sources</span>
+        <app-source-evidence-link *ngFor="let src of presentSources()"
+          [item]="src" variant="inline" [showProvider]="false" [showReason]="false">
+        </app-source-evidence-link>
+      </div>
+
       <!-- Bouton d'action — modes auto-fix uniquement, jamais quand verrouillé -->
       <button *ngIf="mode === 'auto-fix-selective' && !locked" class="jo-btn"
               [disabled]="correcting || (issues.length > 0 && selected.size === 0)"
@@ -137,6 +149,8 @@ export interface RemediationIssue {
     .rc-advice { font-size: 12px; color: var(--accent-green); line-height: 1.6; margin: 8px 0; }
     .rc-recap { font-size: 12px; margin: 12px 0 8px; }
     .rc-note { font-size: 11px; color: var(--text-secondary); font-style: italic; margin: 10px 0; }
+    .rc-sources { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; margin: 10px 0; }
+    .rc-sources-label { font-size: 9px; letter-spacing: .05em; text-transform: uppercase; font-family: var(--font-mono); color: var(--text-muted); }
     .rc-guard { font-size: 11px; color: var(--text-secondary); }
     .rc-validated .rc-detail { color: var(--accent-green); }
     .rc-check-validated { accent-color: var(--accent-green); }
@@ -186,6 +200,16 @@ export class RemediationCardComponent implements OnChanges {
   @Input() prUrl: string | null = null;
   @Input() prLabel = '';
   @Input() mergeReady = false;
+
+  // Sources de la phase : le rapport de scanner qui a produit ces constats et
+  // le build qui l'a exécuté. Dérivées par le backend (GET /api/source-
+  // evidence/*) ; ce composant ne construit aucune URL. Vide = rien n'est
+  // affiché, jamais un lien vers l'accueil d'un outil en guise de preuve.
+  @Input() sources: (SourceEvidence | null)[] = [];
+
+  presentSources(): SourceEvidence[] {
+    return (this.sources || []).filter((s): s is SourceEvidence => !!s && s.availability !== 'UNAVAILABLE');
+  }
   @Output() correct = new EventEmitter<Set<string>>();
 
   selected = new Set<string>();

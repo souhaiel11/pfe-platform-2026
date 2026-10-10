@@ -35,13 +35,10 @@ const { wf6ProposedPr, wf6StillOpenInBatch } = sharedExports;
 // logique dupliquée/divergente) -- même discipline que
 // finding-presentation.spec.mjs pour ProjectDetailComponent.
 const componentSource = read('../src/app/features/projects/cve-table.component.ts');
-assert.match(componentSource, /import\s*\{\s*wf6ProposedPr as wf6ProposedPrShared,\s*wf6StillOpenInBatch as wf6StillOpenInBatchShared\s*\}\s*from\s*'\.\.\/\.\.\/shared\/wf6-remediation-badge'/,
-  'cve-table.component.ts must import the shared module, not reimplement the badge logic');
-assert.match(componentSource, /wf6ProposedPr\(task: any\)[\s\S]{0,80}?return wf6ProposedPrShared\(task\?\.securityFindingRemediation\);/,
-  'wf6ProposedPr(task) must delegate to the shared module');
-assert.match(componentSource, /wf6StillOpenInBatch\(task: any\)[\s\S]{0,80}?return wf6StillOpenInBatchShared\(task\?\.securityFindingRemediation\);/,
-  'wf6StillOpenInBatch(task) must delegate to the shared module');
-console.log('cve-table.component.ts genuinely delegates to wf6-remediation-badge.ts: PASS');
+assert.match(componentSource, /owaspPresentation\(c\)\?\.prUrl as prUrl/, 'PR details use the shared presentation for every state');
+assert.match(componentSource, /PR associée/, 'PR link is a neutral decoration');
+assert.doesNotMatch(componentSource, /wf6ProposedPr\(task/, 'row category must not use the legacy PR badge helper');
+assert.match(componentSource, /wf6StillOpenInBatch\(task: any\)[\s\S]{0,80}?return wf6StillOpenInBatchShared\(task\?\.securityFindingRemediation\);/, 'the existing STILL_OPEN evidence helper remains shared');
 
 // ── Cas réels observés (manual_remediation_tasks, 2026-09-29) ──────────
 
@@ -70,12 +67,13 @@ for (const [label, fixture, expectedPrNumber] of [
   ['PR #39 CVE B (TEST 2, batch N=2, CLOSED)', PR39_BATCH_N2_CVE_B, 39],
 ]) {
   const badge = wf6ProposedPr(fixture);
+  if (fixture.status === 'CLOSED') { assert.equal(badge, null, `${label}: historical closure is not proposed`); continue; }
   assert.ok(badge, `${label}: badge must be shown`);
   assert.equal(badge.prNumber, expectedPrNumber, `${label}: prNumber`);
   assert.equal(badge.prUrl, fixture.prUrl, `${label}: prUrl`);
   assert.equal(wf6StillOpenInBatch(fixture), false, `${label}: must not be flagged STILL_OPEN`);
 }
-console.log('wf6ProposedPr) real observed PR #37/#38/#39 rows -- badge shown, both vocabularies: PASS');
+console.log('wf6ProposedPr) real observed PR #37/#38/#39 rows -- badge shown, only current CANDIDATE_READY: PASS');
 
 // ── Cas limites ─────────────────────────────────────────────────────
 assert.equal(wf6ProposedPr(null), null, 'absent securityFindingRemediation -> no badge, no crash');

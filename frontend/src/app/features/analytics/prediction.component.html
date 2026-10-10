@@ -1,27 +1,65 @@
-    <div class="page">
-      <div class="page-header">
-        <div class="page-icon" style="background:var(--accent-blue-bg)"><i class="ti ti-gauge" style="color:var(--accent-blue)"></i></div>
-        <div><h2>Indicateurs de risque</h2><div class="page-sub">Score par règles explicites — dérivé des vraies données (CVE, builds, incidents, SonarQube)</div></div>
-      </div>
+<div class="page">
+  <div class="page-header">
+    <div class="page-icon" style="background:var(--accent-blue-bg)"><i class="ti ti-gauge" aria-hidden="true" style="color:var(--accent-blue)"></i></div>
+    <div>
+      <h2>Indicateurs de risque</h2>
+      <div class="page-sub">Score par règles explicites, dérivé des données réelles : CVE, builds, incidents, SonarQube.</div>
+    </div>
+  </div>
 
-      <p *ngIf="loading" role="status">Chargement des indicateurs…</p>
-      <div *ngIf="loadError" role="alert">{{loadError}} <button (click)="load()">Réessayer</button></div>
-      <div class="empty" *ngIf="!loading && !loadError && !projects.length">Aucun projet à afficher.</div>
+  <app-zone-label kind="information"
+    note="Score de risque par projet, recalculé à chaque consultation. Lecture seule."></app-zone-label>
 
-      <div class="risk-card" *ngFor="let p of projects">
-        <div class="risk-head">
-          <div class="risk-name">{{p.projectName}}</div>
-          <div class="risk-badge" [class]="p.levelClass">{{p.level}} — {{p.score}}</div>
-        </div>
+  <!-- §18 — le chargement NOMME ce qu'il attend. Cette lecture agrège les
+       scanners, les incidents et l'état Jenkins de chaque projet : quand une
+       adresse Jenkins ne répond pas, elle attend le délai de garde du
+       serveur. Laisser tourner un spinner muet pendant ce temps donne
+       l'impression d'une interface figée ; dire ce qui est attendu donne au
+       développeur de quoi comprendre, et éventuellement corriger la cause. -->
+  <div class="card" *ngIf="loading">
+    <div class="loading-overlay" role="status"><div class="spinner"></div><span>Calcul des indicateurs…</span></div>
+    <p class="load-note">Le serveur agrège les résultats de scan, les incidents et l’état Jenkins de chaque projet. Un projet dont l’adresse Jenkins ne répond pas allonge cette lecture jusqu’à son délai de garde.</p>
+  </div>
 
-        <div class="risk-rules" *ngIf="p.rules.length; else noRule">
-          <div class="rule-row" *ngFor="let r of p.rules">
-            <span class="rule-label">{{r.label}}</span>
-            <span class="rule-points">+{{r.points}}</span>
-          </div>
-        </div>
-        <ng-template #noRule>
-          <div class="rule-row rule-none">Aucune règle déclenchée — projet sain sur les critères suivis.</div>
-        </ng-template>
+  <!-- §17 — un échec de requête n'est pas « aucun projet à risque ». -->
+  <div class="card" *ngIf="!loading && loadError" role="alert">
+    <div class="empty-state">
+      <div class="empty-icon"><i class="ti ti-plug-connected-x" aria-hidden="true"></i></div>
+      <div class="empty-title">Impossible de charger les indicateurs</div>
+      <div class="empty-sub">{{loadError}}</div>
+      <button class="btn btn-secondary btn-sm" style="margin-top:14px;" (click)="load()">Réessayer</button>
+    </div>
+  </div>
+
+  <!-- §16 — un état vide dit ce qui est vide. -->
+  <div class="card" *ngIf="!loading && !loadError && !projects.length">
+    <div class="empty-state">
+      <div class="empty-icon"><i class="ti ti-gauge" aria-hidden="true"></i></div>
+      <div class="empty-title">Aucun indicateur calculé</div>
+      <div class="empty-sub">Aucun projet surveillé ne dispose encore des données nécessaires au calcul du risque.</div>
+    </div>
+  </div>
+
+  <div class="risk-card" *ngFor="let p of projects">
+    <div class="risk-head">
+      <!-- §25 — le nom mène au projet : la page d'indicateurs n'est pas un
+           cul-de-sac de navigation. -->
+      <a class="risk-name" [routerLink]="['/projects', p.projectId]">{{p.projectName}}</a>
+      <!-- §24 — glyphe + libellé + chiffre : jamais la couleur seule. -->
+      <div class="risk-badge" [class]="p.levelClass">
+        <span aria-hidden="true">{{riskGlyph(p.levelClass)}}</span>
+        {{p.level}} · {{p.score}}/100
       </div>
     </div>
+
+    <div class="risk-rules" *ngIf="p.rules.length; else noRule">
+      <div class="rule-row" *ngFor="let r of p.rules">
+        <span class="rule-label">{{r.label | presentationText}}</span>
+        <span class="rule-points" [attr.aria-label]="r.points + ' points de risque'">+{{r.points}}</span>
+      </div>
+    </div>
+    <ng-template #noRule>
+      <div class="rule-row rule-none">Aucune règle déclenchée dans les données disponibles. Cela ne prouve pas que tous les contrôles ont été exécutés.</div>
+    </ng-template>
+  </div>
+</div>

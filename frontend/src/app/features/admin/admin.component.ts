@@ -6,11 +6,12 @@ import { ApiService } from '../../core/services/api.service';
 import { ToastService } from '../../core/services/toast.service';
 import { FrenchDatePipe } from '../../shared/french-date.pipe';
 import { PresentationLabelPipe } from '../../shared/presentation-label.pipe';
+import { ZoneLabelComponent } from '../../shared/zone-label/zone-label.component';
 
 @Component({
   selector: 'app-admin',
   standalone: true,
-  imports: [CommonModule, FormsModule, FrenchDatePipe, PresentationLabelPipe],
+  imports: [CommonModule, FormsModule, FrenchDatePipe, PresentationLabelPipe, ZoneLabelComponent],
   templateUrl: './admin.component.html',
   styleUrls: ['./admin.component.scss'],
 })
@@ -19,6 +20,7 @@ export class AdminComponent implements OnInit {
   loadError = '';
   loading   = false;
   showModal = false;
+  saving = false;
   // Valeurs alignées sur l'enum backend réel (user.entity.ts::UserRole,
   // minuscules) — plus 'USER'/'ADMIN' qui ne correspondaient à rien.
   newUser   = { name: '', email: '', password: '', role: 'developer' };
@@ -37,8 +39,11 @@ export class AdminComponent implements OnInit {
   }
 
   createUser() {
+    if (this.saving || !this.newUser.name.trim() || !this.newUser.email.trim() || !this.newUser.password) return;
+    this.saving = true;
     this.api.createUser(this.newUser).subscribe({
       next: () => {
+        this.saving = false;
         this.toast.success('Utilisateur créé', this.newUser.name);
         this.showModal = false;
         this.newUser = { name: '', email: '', password: '', role: 'developer' };
@@ -46,7 +51,7 @@ export class AdminComponent implements OnInit {
       },
       // Remonte le vrai message backend (ex. rôle invalide, 400 explicite)
       // plutôt qu'un message générique qui masquerait la raison réelle.
-      error: (err: any) => this.toast.error('Erreur', userHttpError(err, 'Impossible de créer l’utilisateur. Vérifiez les champs puis réessayez.'))
+      error: (err: any) => { this.saving = false; this.toast.error('Erreur', userHttpError(err, 'Impossible de créer l’utilisateur. Vérifiez les champs puis réessayez.')); }
     });
   }
 

@@ -1,5 +1,6 @@
+import { sharedDependency } from './security-lifecycle-test-loader.mjs';
 // "Corrections disponibles" filter + installed/target version display fix —
-// loads the REAL cve-table.component.ts/owasp-remediation-presentation.ts
+// loads the REAL cve-table.component.ts/security-remediation-presentation.ts
 // (never a re-implementation), same discipline as the sibling *.spec.mjs
 // files in this directory.
 //
@@ -30,15 +31,15 @@ function load(path, dependencies = {}) {
   const exports = {};
   vm.runInNewContext(ts.transpileModule(read(path), { compilerOptions: {
     module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, experimentalDecorators: true,
-  } }).outputText, { exports, require: name => dependencies[name] || (name === '@angular/core' ? angular : {}), console });
+  } }).outputText, { exports, require: name => dependencies[name] || sharedDependency(name) || (name === '@angular/core' ? angular : {}), console });
   return exports;
 }
 
 const eligibility = load('../src/app/shared/cve-selection-eligibility.ts');
-const owaspPres = load('../src/app/shared/owasp-remediation-presentation.ts', { './cve-selection-eligibility': eligibility, './v1-8-compatibility-presentation': load('../src/app/shared/v1-8-compatibility-presentation.ts', { './status-labels': load('../src/app/shared/status-labels.ts') }) });
+const owaspPres = load('../src/app/shared/security-remediation-presentation.ts', { './cve-selection-eligibility': eligibility, './v1-8-compatibility-presentation': load('../src/app/shared/v1-8-compatibility-presentation.ts', { './status-labels': load('../src/app/shared/status-labels.ts') }) });
 const { CveTableComponent } = load('../src/app/features/projects/cve-table.component.ts', {
   '../../shared/cve-selection-eligibility': eligibility,
-  '../../shared/owasp-remediation-presentation': owaspPres,
+  '../../shared/security-remediation-presentation': owaspPres,
 });
 
 function makeTable(source, cves, tasks) {
@@ -55,7 +56,8 @@ const liveCves = JSON.parse(read('../src/app/shared/fixtures/owasp-149-live-cves
 const liveTasks = JSON.parse(read('../src/app/shared/fixtures/owasp-149-live-tasks.json')).tasks;
 const table = makeTable('OWASP', liveCves, liveTasks);
 const rows = table.normalized();
-assert.equal(rows.length, 146);
+assert.equal(rows.length, 155);
+assert.equal(rows.filter(r => r.historical).length, 9);
 
 // 1. AUTO_FIX_AVAILABLE + fixedVersion=1.31 -> displays 1.31
 {
@@ -97,7 +99,7 @@ console.log('3. fixedVersionSource=TRIVY_CORRELATED -> targetSource="Trivy": PAS
 
 // 4/5. "Corrections disponibles" filter -> only AUTO_FIX_AVAILABLE, 12 rows
 {
-  table.owaspRemediationFilter.set('AUTO_FIX_AVAILABLE');
+  table.owaspRemediationFilter.set('AVAILABLE');
   const filteredRows = table.filtered();
   assert.equal(filteredRows.length, 12, 'live report #149 -> filter returns 12 rows');
   for (const c of filteredRows) {
@@ -108,7 +110,7 @@ console.log('4/5. "Corrections disponibles" filter -> exactly 12 rows, all AUTO_
 
 // 6. all 12 filtered rows -> selectable=true
 {
-  table.owaspRemediationFilter.set('AUTO_FIX_AVAILABLE');
+  table.owaspRemediationFilter.set('AVAILABLE');
   const filteredRows = table.filtered();
   for (const c of filteredRows) {
     assert.equal(table.selectionEligibility(c).selectable, true, `row ${c.id} under "Corrections disponibles" must be selectable`);
@@ -121,13 +123,18 @@ console.log('6. all 12 filtered rows are selectable: PASS');
   table.owaspRemediationFilter.set('ALL');
   const snakeClosed = rows.find(c => c.id === 'CVE-2022-25857');
   const op = table.owaspPresentation(snakeClosed);
-  assert.equal(op.state, 'CLOSED');
+  assert.equal(op.state, 'VERIFICATION_REQUIRED');
+  assert.equal(op.label, 'Correction à vérifier');
+  table.owaspRemediationFilter.set('PROPOSED');
+  assert.ok(!table.filtered().some(c => c.id === snakeClosed.id && c.pkg === snakeClosed.pkg), 'historical CLOSED must not be proposed');
+  table.owaspRemediationFilter.set('MANUAL');
+  assert.ok(table.filtered().some(c => c.id === snakeClosed.id && c.pkg === snakeClosed.pkg), 'historical CLOSED belongs to manual verification');
   assert.equal(op.targetVersion, '1.31');
   assert.equal(op.installedVersion, '1.29');
   assert.equal(op.targetSource, 'Trivy');
   assert.equal(op.selectable, false);
 
-  table.owaspRemediationFilter.set('AUTO_FIX_AVAILABLE');
+  table.owaspRemediationFilter.set('AVAILABLE');
   const filteredIds = table.filtered().map(c => c.id);
   assert.ok(!filteredIds.includes('CVE-2022-25857'), 'CLOSED snakeyaml must NOT appear in "Corrections disponibles"');
 }
@@ -137,9 +144,9 @@ console.log('7. CLOSED CVE-2022-25857: target 1.31 still shown, excluded from "C
 {
   const multi = rows.find(c => table.owaspPresentation(c)?.state === 'MANUAL_REVIEW_MULTIPLE_TARGETS');
   assert.ok(multi, 'sanity: at least one MULTIPLE_CANDIDATES row exists');
-  table.owaspRemediationFilter.set('AUTO_FIX_AVAILABLE');
+  table.owaspRemediationFilter.set('AVAILABLE');
   assert.ok(!table.filtered().some(c => c.id === multi.id && c.pkg === multi.pkg), 'MULTIPLE_CANDIDATES row must not appear under "Corrections disponibles"');
-  table.owaspRemediationFilter.set('MANUAL_REVIEW');
+  table.owaspRemediationFilter.set('MANUAL');
   assert.ok(table.filtered().some(c => c.id === multi.id && c.pkg === multi.pkg), 'MULTIPLE_CANDIDATES row must appear under "Intervention manuelle"');
 }
 console.log('8. MULTIPLE_CANDIDATES rows excluded from "Corrections disponibles", included in "Intervention manuelle": PASS');
@@ -148,7 +155,7 @@ console.log('8. MULTIPLE_CANDIDATES rows excluded from "Corrections disponibles"
 {
   const noMatch = rows.find(c => table.owaspPresentation(c)?.state === 'MANUAL_REVIEW_NO_TARGET');
   assert.ok(noMatch, 'sanity: at least one NO_TRIVY_MATCH row exists');
-  table.owaspRemediationFilter.set('AUTO_FIX_AVAILABLE');
+  table.owaspRemediationFilter.set('AVAILABLE');
   assert.ok(!table.filtered().some(c => c.id === noMatch.id && c.pkg === noMatch.pkg), 'NO_TRIVY_MATCH row must not appear under "Corrections disponibles"');
 }
 console.log('9. NO_TRIVY_MATCH rows excluded from "Corrections disponibles": PASS');
@@ -156,6 +163,6 @@ console.log('9. NO_TRIVY_MATCH rows excluded from "Corrections disponibles": PAS
 // Trivy now uses the same state presentation and filters.
 const trivy = makeTable('TRIVY', [{ id: 'CVE-1', pkg: 'a:b', installedVersion: '1', fixedVersion: '2' }], [{ id: 't', source: 'TRIVY', findingSnapshot: { component: 'a:b', ruleOrCve: 'CVE-1', currentVersion: '1', fixedVersion: '2' } }]);
 assert.equal(trivy.owaspPresentation(trivy.normalized()[0]).state, 'AUTO_FIX_AVAILABLE');
-trivy.owaspRemediationFilter.set('MANUAL_REVIEW');
+trivy.owaspRemediationFilter.set('MANUAL');
 assert.equal(trivy.filtered().length, 0);
 console.log('OWASP regression and shared Trivy presentation: PASS');

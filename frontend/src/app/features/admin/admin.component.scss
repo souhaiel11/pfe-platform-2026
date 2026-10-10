@@ -27,7 +27,9 @@
       border: 1px solid var(--border);
       border-radius: var(--radius-lg);
       padding: 24px;
-      width: 400px;
+      /* §23 — une largeur fixe de 400 px débordait d'un écran de 390 px :
+         la boîte s'adapte désormais à la fenêtre. */
+      width: min(400px, calc(100vw - 32px));
     }
 
     .modal-header {

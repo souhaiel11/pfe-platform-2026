@@ -1,6 +1,7 @@
+import { sharedDependency } from './security-lifecycle-test-loader.mjs';
 // taskFor() OWASP source-aware matching fix — loads the REAL
 // cve-table.component.ts (never a re-implementation), same discipline as
-// cve-selection-eligibility.spec.mjs / owasp-remediation-presentation.spec.mjs.
+// cve-selection-eligibility.spec.mjs / security-remediation-presentation.spec.mjs.
 //
 // Root cause fixed: cve.pkg (raw Dependency-Check identity, e.g. a jar
 // filename) was compared against findingSnapshot.component (a Maven
@@ -30,15 +31,15 @@ function load(path, dependencies = {}) {
   const exports = {};
   vm.runInNewContext(ts.transpileModule(read(path), { compilerOptions: {
     module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, experimentalDecorators: true,
-  } }).outputText, { exports, require: name => dependencies[name] || (name === '@angular/core' ? angular : {}), console });
+  } }).outputText, { exports, require: name => dependencies[name] || sharedDependency(name) || (name === '@angular/core' ? angular : {}), console });
   return exports;
 }
 
 const eligibility = load('../src/app/shared/cve-selection-eligibility.ts');
-const owaspPres = load('../src/app/shared/owasp-remediation-presentation.ts', { './cve-selection-eligibility': eligibility, './v1-8-compatibility-presentation': load('../src/app/shared/v1-8-compatibility-presentation.ts', { './status-labels': load('../src/app/shared/status-labels.ts') }) });
+const owaspPres = load('../src/app/shared/security-remediation-presentation.ts', { './cve-selection-eligibility': eligibility, './v1-8-compatibility-presentation': load('../src/app/shared/v1-8-compatibility-presentation.ts', { './status-labels': load('../src/app/shared/status-labels.ts') }) });
 const { CveTableComponent } = load('../src/app/features/projects/cve-table.component.ts', {
   '../../shared/cve-selection-eligibility': eligibility,
-  '../../shared/owasp-remediation-presentation': owaspPres,
+  '../../shared/security-remediation-presentation': owaspPres,
 });
 
 function makeTable(source, cves, tasks) {
@@ -112,11 +113,10 @@ console.log('5. Trivy behavior unchanged: PASS');
   const task = owaspTask({}, { legacyPackage: undefined });
   delete task.findingSnapshot.legacyPackage;
   const table = makeTable('OWASP', [owaspCve], [task]);
-  const row = table.normalized()[0];
-  assert.equal(table.taskFor(row), undefined, 'must never fall back to findingSnapshot.component for OWASP');
-  assert.equal(table.owaspPresentation(row).state, 'NO_TASK');
+  assert.equal(table.normalized().length, 0);
+  assert.match(table.identityError, /Identité exacte/);
 }
-console.log('6. missing legacyPackage -> fail closed, no fallback to component, "Non suivi": PASS');
+console.log('6. missing legacyPackage and fingerprint -> identity error, actions blocked: PASS');
 
 // 7. report #149 (real live data, read-only from Postgres) -> 146/146 unique matches, 0 ambiguous
 {
@@ -124,10 +124,12 @@ console.log('6. missing legacyPackage -> fail closed, no fallback to component, 
   const fixTasks = JSON.parse(read('../src/app/shared/fixtures/owasp-149-live-tasks.json')).tasks;
   const table = makeTable('OWASP', fixCves, fixTasks);
   const rows = table.normalized();
-  assert.equal(rows.length, 146, 'OWASP_TOTAL');
+  assert.equal(rows.length, 155, 'merged OWASP total');
+  const currentRows = rows.filter(r => !r.historical);
+  assert.equal(currentRows.length, 146);
   const matchedTaskIds = new Set();
   let unmatched = 0, ambiguous = 0;
-  for (const c of rows) {
+  for (const c of currentRows) {
     const pkg = String(c.pkg ?? '').trim();
     const candidates = fixTasks.filter(t => t.source === 'OWASP'
       && String(t.findingSnapshot?.ruleOrCve).toLowerCase() === c.id.toLowerCase()
@@ -142,7 +144,7 @@ console.log('6. missing legacyPackage -> fail closed, no fallback to component, 
   assert.equal(ambiguous, 0, 'OWASP_AMBIGUOUS must be 0');
   assert.equal(matchedTaskIds.size, 146, 'OWASP_MATCHED must be 146');
 }
-console.log('7. report #149 live data (146 real OWASP rows) -> 146/146 unique matches, 0 unmatched, 0 ambiguous: PASS');
+console.log('7. report #149 fixture (146 current + 9 historical) -> 146/146 current unique matches, 0 unmatched, 0 ambiguous: PASS');
 
 // 8. CVE-2022-25857 (real known case) -> CLOSED / Trivy / PR #40
 {
@@ -153,13 +155,13 @@ console.log('7. report #149 live data (146 real OWASP rows) -> 146/146 unique ma
   const task = table.taskFor(row);
   assert.equal(task?.id, '306e8b84-90fe-4344-8fd6-5c38fcabcf40');
   const p = table.owaspPresentation(row);
-  assert.equal(p.state, 'CLOSED');
-  assert.equal(p.label, 'Vulnérabilité corrigée');
+  assert.equal(p.state, 'VERIFICATION_REQUIRED');
+  assert.equal(p.label, 'Correction à vérifier');
   assert.equal(p.targetVersion, '1.31');
   assert.equal(p.targetSource, 'Trivy');
   assert.equal(p.prNumber, 40);
   assert.equal(p.selectable, false);
 }
-console.log('8. CVE-2022-25857 real known case -> CLOSED, 1.29->1.31, source Trivy, PR #40, not selectable: PASS');
+console.log('8. CVE-2022-25857 real known case -> proposed candidate, 1.29->1.31, source Trivy, PR #40, not selectable: PASS');
 
 console.log('owasp-task-matching.spec.mjs: ALL CHECKS PASS');

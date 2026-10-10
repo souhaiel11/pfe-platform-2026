@@ -12,12 +12,18 @@ import { AuthService } from '../../core/services/auth.service';
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, FormsModule],
   templateUrl: './project-form.component.html',
+  styleUrls: ['./project-form.component.scss'],
 })
 export class ProjectFormComponent implements OnInit {
   form!: FormGroup;
   isEdit      = false;
   projectId   = '';
   loading     = false;
+  // Séparé de `loading` (réservé à save()) : loadProject() ne doit jamais
+  // faire afficher le libellé « Sauvegarde… » du bouton pendant un simple
+  // chargement -- les deux opérations ne se chevauchent jamais, mais
+  // partager le même flag mélangeait leurs libellés.
+  projectLoading = false;
   validating  = false;
   saveSuccess = false;
   saveError   = '';
@@ -34,10 +40,13 @@ export class ProjectFormComponent implements OnInit {
   jenkinsCredMessage = '';
   jenkinsCredSuccess = false;
 
+  // §6 — mêmes icônes que le reste de la plateforme (police « ti »), pas des
+  // émojis dont le rendu change d'un système à l'autre.
   sections = [
-    { id: 'general',       label: 'Général',      icon: '📋' },
-    { id: 'cicd',          label: 'CI/CD',         icon: '⚙️' },
-    { id: 'sonarqube',     label: 'SonarQube',     icon: '🔍' },
+    { id: 'general',       label: 'Général',   icon: 'ti-file-description' },
+    { id: 'cicd',          label: 'CI/CD',     icon: 'ti-git-branch' },
+    { id: 'sonarqube',     label: 'SonarQube', icon: 'ti-search' },
+    { id: 'sources',       label: 'Sources',   icon: 'ti-link' },
   ];
 
   constructor(
@@ -74,24 +83,34 @@ export class ProjectFormComponent implements OnInit {
       githubRepo:     ['', [Validators.required, Validators.pattern(/^[\w-]+\/[\w.-]+$/)]],
       // SonarQube
       sonarqubeUrl:   [''],
+      sonarqubePublicUrl: [''],
       sonarqubeKey:   [''],
+      // Sources / preuves — chemins RÉELS des rapports produits par le
+      // pipeline de ce projet, et chemin du Dockerfile. Vides, l'UI affiche
+      // « Source non disponible » pour ces preuves : jamais un chemin
+      // supposé par convention d'outil (tous les projets ne sont pas Maven).
+      trivyReportPath: ['', [Validators.pattern(/^(?:https?:\/\/[^\s<>"']+|(?!.*\.\.)[A-Za-z0-9_.\/@-]+)$/)]],
+      owaspReportPath: ['', [Validators.pattern(/^(?:https?:\/\/[^\s<>"']+|(?!.*\.\.)[A-Za-z0-9_.\/@-]+)$/)]],
+      zapReportPath:   ['', [Validators.pattern(/^(?:https?:\/\/[^\s<>"']+|(?!.*\.\.)[A-Za-z0-9_.\/@-]+)$/)]],
+      dockerfilePath:  ['', [Validators.pattern(/^(?!.*\.\.)[A-Za-z0-9_.\/-]+$/)]],
     });
   }
 
   private loadProject() {
-    this.loading = true;
+    this.projectLoading = true;
     this.api.getProject(this.projectId).subscribe({
       next: (p: any) => {
         this.form.patchValue(p);
         this.jenkinsCredentialConfigured = !!p.jenkinsCredentialConfigured;
         this.form.markAsPristine();
-        this.loading = false;
+        this.projectLoading = false;
       },
-      error: () => { this.saveError = 'Impossible de charger la configuration du projet. Actualisez la page pour réessayer.'; this.loading = false; }
+      error: () => { this.saveError = 'Impossible de charger la configuration du projet. Actualisez la page pour réessayer.'; this.projectLoading = false; }
     });
   }
 
   save() {
+    if (this.loading || this.projectLoading) return;
     if (this.form.invalid) { this.form.markAllAsTouched(); return; }
     this.loading = true;
     this.saveError = '';
@@ -160,6 +179,6 @@ export class ProjectFormComponent implements OnInit {
   setSection(id: string) { this.activeSection = id; }
   get f()             { return this.form.controls; }
   isInvalid(field: string) { const c = this.form.get(field); return !!(c?.invalid && (c.dirty || c.touched)); }
-  getValidIcon(key: string)  { if (!this.validationResult?.results?.[key]) return ''; return this.validationResult.results[key].valid ? '✅' : '❌'; }
+  getValidIcon(key: string)  { if (!this.validationResult?.results?.[key]) return ''; return this.validationResult.results[key].valid ? '✓' : '✕'; }
   getValidMsg(key: string)   { return this.validationResult?.results?.[key]?.message || ''; }
 }

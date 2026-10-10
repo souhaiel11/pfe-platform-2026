@@ -1,0 +1,321 @@
+{
+  "tasks": [
+    {
+      "id": "phase4c-task-0",
+      "source": "OWASP",
+      "ruleOrCve": "CVE-REGRESSION-0",
+      "status": "TODO",
+      "scannerStatus": "DETECTED",
+      "findingSnapshot": {
+        "ruleOrCve": "CVE-REGRESSION-0",
+        "component": "org.example:dependency-0",
+        "legacyPackage": "org.example:dependency-0",
+        "currentVersion": "1",
+        "fixedVersion": "2"
+      },
+      "securityFindingRemediation": {
+        "status": "CANDIDATE_READY",
+        "prUrl": "https://github.com/example/project/pull/1",
+        "prNumber": 1,
+        "attempts": [
+          {
+            "status": "CLOSED",
+            "attemptNumber": 1,
+            "prUrl": "https://github.com/example/project/pull/1"
+          }
+        ]
+      }
+    },
+    {
+      "id": "phase4c-task-1",
+      "source": "TRIVY",
+      "ruleOrCve": "CVE-REGRESSION-1",
+      "status": "TODO",
+      "scannerStatus": "DETECTED",
+      "findingSnapshot": {
+        "ruleOrCve": "CVE-REGRESSION-1",
+        "component": "org.example:dependency-1",
+        "legacyPackage": "org.example:dependency-1",
+        "currentVersion": "1",
+        "fixedVersion": "2"
+      },
+      "securityFindingRemediation": {
+        "status": "CLOSED",
+        "prUrl": "https://github.com/example/project/pull/2",
+        "prNumber": 2,
+        "attempts": [
+          {
+            "status": "CLOSED",
+            "attemptNumber": 1,
+            "prUrl": "https://github.com/example/project/pull/2"
+          }
+        ]
+      }
+    },
+    {
+      "id": "phase4c-task-2",
+      "source": "TRIVY",
+      "ruleOrCve": "CVE-REGRESSION-2",
+      "status": "TODO",
+      "scannerStatus": "DETECTED",
+      "findingSnapshot": {
+        "ruleOrCve": "CVE-REGRESSION-2",
+        "component": "org.example:dependency-2",
+        "legacyPackage": "org.example:dependency-2",
+        "currentVersion": "1",
+        "fixedVersion": "2"
+      },
+      "securityFindingRemediation": {
+        "status": "CLOSED",
+        "prUrl": "https://github.com/example/project/pull/3",
+        "prNumber": 3,
+        "attempts": [
+          {
+            "status": "CLOSED",
+            "attemptNumber": 1,
+            "prUrl": "https://github.com/example/project/pull/3"
+          }
+        ]
+      }
+    },
+    {
+      "id": "phase4c-task-3",
+      "source": "TRIVY",
+      "ruleOrCve": "CVE-REGRESSION-3",
+      "status": "TODO",
+      "scannerStatus": "DETECTED",
+      "findingSnapshot": {
+        "ruleOrCve": "CVE-REGRESSION-3",
+        "component": "org.example:dependency-3",
+        "legacyPackage": "org.example:dependency-3",
+        "currentVersion": "1",
+        "fixedVersion": "2"
+      },
+      "securityFindingRemediation": {
+        "status": "CLOSED",
+        "prUrl": "https://github.com/example/project/pull/4",
+        "prNumber": 4,
+        "attempts": [
+          {
+            "status": "CLOSED",
+            "attemptNumber": 1,
+            "prUrl": "https://github.com/example/project/pull/4"
+          }
+        ]
+      }
+    },
+    {
+      "id": "phase4c-task-4",
+      "source": "TRIVY",
+      "ruleOrCve": "CVE-REGRESSION-4",
+      "status": "TODO",
+      "scannerStatus": "DETECTED",
+      "findingSnapshot": {
+        "ruleOrCve": "CVE-REGRESSION-4",
+        "component": "org.example:dependency-4",
+        "legacyPackage": "org.example:dependency-4",
+        "currentVersion": "1",
+        "fixedVersion": "2"
+      },
+      "securityFindingRemediation": {
+        "status": "CLOSED",
+        "prUrl": "https://github.com/example/project/pull/5",
+        "prNumber": 5,
+        "attempts": [
+          {
+            "status": "CLOSED",
+            "attemptNumber": 1,
+            "prUrl": "https://github.com/example/project/pull/5"
+          }
+        ]
+      }
+    },
+    {
+      "id": "phase4c-task-5",
+      "source": "TRIVY",
+      "ruleOrCve": "CVE-REGRESSION-5",
+      "status": "TODO",
+      "scannerStatus": "DETECTED",
+      "findingSnapshot": {
+        "ruleOrCve": "CVE-REGRESSION-5",
+        "component": "org.example:dependency-5",
+        "legacyPackage": "org.example:dependency-5",
+        "currentVersion": "1",
+        "fixedVersion": "2"
+      },
+      "securityFindingRemediation": {
+        "status": "CLOSED",
+        "prUrl": "https://github.com/example/project/pull/6",
+        "prNumber": 6,
+        "attempts": [
+          {
+            "status": "CLOSED",
+            "attemptNumber": 1,
+            "prUrl": "https://github.com/example/project/pull/6"
+          }
+        ]
+      }
+    },
+    {
+      "id": "phase4c-task-6",
+      "source": "TRIVY",
+      "ruleOrCve": "CVE-REGRESSION-6",
+      "status": "TODO",
+      "scannerStatus": "DETECTED",
+      "findingSnapshot": {
+        "ruleOrCve": "CVE-REGRESSION-6",
+        "component": "org.example:dependency-6",
+        "legacyPackage": "org.example:dependency-6",
+        "currentVersion": "1",
+        "fixedVersion": "2"
+      },
+      "securityFindingRemediation": {
+        "status": "CLOSED",
+        "prUrl": "https://github.com/example/project/pull/7",
+        "prNumber": 7,
+        "attempts": [
+          {
+            "status": "CLOSED",
+            "attemptNumber": 1,
+            "prUrl": "https://github.com/example/project/pull/7"
+          }
+        ]
+      }
+    },
+    {
+      "id": "phase4c-task-7",
+      "source": "TRIVY",
+      "ruleOrCve": "CVE-REGRESSION-7",
+      "status": "TODO",
+      "scannerStatus": "DETECTED",
+      "findingSnapshot": {
+        "ruleOrCve": "CVE-REGRESSION-7",
+        "component": "org.example:dependency-7",
+        "legacyPackage": "org.example:dependency-7",
+        "currentVersion": "1",
+        "fixedVersion": "2"
+      },
+      "securityFindingRemediation": {
+        "status": "CLOSED",
+        "prUrl": "https://github.com/example/project/pull/8",
+        "prNumber": 8,
+        "attempts": [
+          {
+            "status": "CLOSED",
+            "attemptNumber": 1,
+            "prUrl": "https://github.com/example/project/pull/8"
+          }
+        ]
+      }
+    },
+    {
+      "id": "phase4c-task-8",
+      "source": "TRIVY",
+      "ruleOrCve": "CVE-REGRESSION-8",
+      "status": "TODO",
+      "scannerStatus": "DETECTED",
+      "findingSnapshot": {
+        "ruleOrCve": "CVE-REGRESSION-8",
+        "component": "org.example:dependency-8",
+        "legacyPackage": "org.example:dependency-8",
+        "currentVersion": "1",
+        "fixedVersion": "2"
+      },
+      "securityFindingRemediation": {
+        "status": "CLOSED",
+        "prUrl": "https://github.com/example/project/pull/9",
+        "prNumber": 9,
+        "attempts": [
+          {
+            "status": "CLOSED",
+            "attemptNumber": 1,
+            "prUrl": "https://github.com/example/project/pull/9"
+          }
+        ]
+      }
+    },
+    {
+      "id": "phase4c-task-9",
+      "source": "TRIVY",
+      "ruleOrCve": "CVE-REGRESSION-9",
+      "status": "TODO",
+      "scannerStatus": "DETECTED",
+      "findingSnapshot": {
+        "ruleOrCve": "CVE-REGRESSION-9",
+        "component": "org.example:dependency-9",
+        "legacyPackage": "org.example:dependency-9",
+        "currentVersion": "1",
+        "fixedVersion": "2"
+      },
+      "securityFindingRemediation": {
+        "status": "CLOSED",
+        "prUrl": "https://github.com/example/project/pull/10",
+        "prNumber": 10,
+        "attempts": [
+          {
+            "status": "CLOSED",
+            "attemptNumber": 1,
+            "prUrl": "https://github.com/example/project/pull/10"
+          }
+        ]
+      }
+    },
+    {
+      "id": "phase4c-task-10",
+      "source": "TRIVY",
+      "ruleOrCve": "CVE-REGRESSION-10",
+      "status": "TODO",
+      "scannerStatus": "DETECTED",
+      "findingSnapshot": {
+        "ruleOrCve": "CVE-REGRESSION-10",
+        "component": "org.example:dependency-10",
+        "legacyPackage": "org.example:dependency-10",
+        "currentVersion": "1",
+        "fixedVersion": "2"
+      },
+      "securityFindingRemediation": {
+        "status": "CLOSED",
+        "prUrl": "https://github.com/example/project/pull/11",
+        "prNumber": 11,
+        "attempts": [
+          {
+            "status": "CLOSED",
+            "attemptNumber": 1,
+            "prUrl": "https://github.com/example/project/pull/11"
+          }
+        ]
+      }
+    },
+    {
+      "id": "phase4c-task-11",
+      "source": "OWASP",
+      "ruleOrCve": "CVE-REGRESSION-11",
+      "status": "TODO",
+      "scannerStatus": "DETECTED",
+      "findingSnapshot": {
+        "ruleOrCve": "CVE-REGRESSION-11",
+        "component": "org.example:dependency-11",
+        "legacyPackage": "org.example:dependency-11",
+        "currentVersion": "1",
+        "fixedVersion": "2"
+      },
+      "securityFindingRemediation": {
+        "status": "CLOSED",
+        "prUrl": "https://github.com/example/project/pull/12",
+        "prNumber": 12,
+        "attempts": [
+          {
+            "status": "CLOSED",
+            "attemptNumber": 1,
+            "prUrl": "https://github.com/example/project/pull/12"
+          }
+        ]
+      }
+    }
+  ],
+  "expected": {
+    "candidateReady": 1,
+    "manualRequired": 11,
+    "total": 12
+  }
+}

@@ -129,7 +129,7 @@ import { PresentationLabelPipe } from '../../shared/presentation-label.pipe';
                      (click)="$event.stopPropagation()" (change)="toggleSelection(i.id)"
                      [attr.aria-label]="'Retenir ' + i.id" />
               <span class="sev" [attr.data-sev]="sevKey(i.severity)">{{ i.severity | presentationLabel }}</span>
-              <span class="jo-cat mono">{{ i.category }}</span>
+              <span class="jo-cat mono">{{ i.category | presentationLabel }}</span>
               <strong class="jo-issue-title">{{ i.title }}</strong>
               <span class="jo-confirm-badge" *ngIf="i.needsConfirmation">À CONFIRMER</span>
               <span class="jo-chevron">▸</span>
@@ -161,7 +161,7 @@ import { PresentationLabelPipe } from '../../shared/presentation-label.pipe';
             <span class="eyebrow">Appliquer ces changements</span>
             <p class="jo-sub" style="margin:0">
               « Valider » régénère le Jenkinsfile selon votre sélection et ouvre une Pull Request sur le dépôt —
-              rien n'est poussé sur <code class="mono">{{ baseBranch }}</code> directement. Vous relisez et fusionnez depuis GitHub.
+              rien n'est poussé sur <code class="mono">{{ baseBranch || 'Branche à renseigner' }}</code> directement. Vous relisez et fusionnez depuis GitHub.
             </p>
             <div class="jo-repo-fields" *ngIf="!owner || !repo">
               <label>Branche cible de la PR <input class="jo-repo-in" placeholder="Branche cible" [value]="baseBranch" (input)="baseBranch = $any($event.target).value" /></label>
@@ -196,7 +196,7 @@ import { PresentationLabelPipe } from '../../shared/presentation-label.pipe';
             <strong>Pull Request créée</strong>
             <p class="jo-sub" style="margin:2px 0 0">Branche <code class="mono">{{ pr.branch }}</code> — relisez et fusionnez depuis GitHub.</p>
           </div>
-          <a class="jo-btn" [href]="pr.prUrl" target="_blank" rel="noopener" *ngIf="pr.prUrl">Ouvrir la PR ↗</a>
+          <a class="jo-btn" [href]="pr.prUrl" target="_blank" rel="noopener noreferrer" *ngIf="pr.prUrl">Ouvrir la PR ↗</a>
         </div>
       </section>
 
@@ -499,9 +499,10 @@ export class JenkinsfileOptimizerComponent implements OnInit, OnDestroy {
           this.error.set(`Bloqué : ${latest.reason || 'raison inconnue'}${latest.detail ? ' — ' + latest.detail : ''}`);
         }
       },
-      // Échec silencieux : on retombe sur l'état neutre habituel, comme si
-      // aucun historique n'existait — ne bloque jamais l'usage normal.
-      error: () => this.checkingHistory.set(false),
+      error: () => {
+        this.checkingHistory.set(false);
+        this.error.set("Impossible de charger l'historique des analyses Jenkinsfile.");
+      },
     });
   }
 
@@ -566,7 +567,7 @@ export class JenkinsfileOptimizerComponent implements OnInit, OnDestroy {
   // tel quel vers le backend (violation du contrat "repo en nom seul").
   private effOwner(): string { return (this.ownerInput() || this.owner || '').trim(); }
   private effRepo(): string { return (this.repoInput() || this.repo || '').trim(); }
-  canApply(): boolean { return !!this.effOwner() && !!this.effRepo(); }
+  canApply(): boolean { return !!this.effOwner() && !!this.effRepo() && !!this.baseBranch.trim(); }
 
   // WF4 v4 : asynchrone comme optimize() — POST /apply ne déclenche que le
   // workflow n8n (Apply Agent, vrai appel LLM) et renvoie un applyId

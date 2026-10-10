@@ -113,7 +113,7 @@ import { PresentationLabelPipe } from '../../shared/presentation-label.pipe';
               <p *ngIf="byStatus(ar, 'REFUSÉ').length"><strong>⛔ Non appliqué :</strong> {{ joinReasons(byStatus(ar, 'REFUSÉ')) }}</p>
             </div>
           </div>
-          <a class="do-btn" [href]="ar.prUrl" target="_blank" rel="noopener">Ouvrir la PR ↗</a>
+          <a class="do-btn" [href]="ar.prUrl" target="_blank" rel="noopener noreferrer">Ouvrir la PR ↗</a>
         </div>
         <div class="do-rejected" *ngSwitchCase="false">
           <strong>⚠ Contrôle automatique : correction rejetée, aucune PR créée.</strong>
