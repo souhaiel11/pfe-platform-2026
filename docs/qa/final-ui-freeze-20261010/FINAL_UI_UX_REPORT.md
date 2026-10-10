@@ -1,9 +1,10 @@
 # Gel UI/UX final — rapport
 
 **Date :** 2026-10-10
-**Statut :** `A — PRACTICAL_IMPLEMENTATION_REMAINS_FROZEN` · implémentation
-pratique **GELÉE** (gel §9 · journal post-gel §10 · latence de gouvernance
-Azure §11)
+**Statut :** `A — PRACTICAL_IMPLEMENTATION_IMMUTABLY_FROZEN`
+**Point de gel :** `a9f551ad1e91917c3ae4fc0676b98fc848a29c73`
+**Tag :** `pfe-practical-freeze-2026-10-10`
+(gel §9 · journal post-gel §10 · latence de gouvernance Azure §11)
 **Branche :** `theme-vermeg-reconciled`
 **Portée :** finition UI/UX uniquement. Aucune modification d'algorithme de
 remédiation, de WF1/WF2/WF3/WF6, du comportement Jenkins ni de la logique de
@@ -567,12 +568,26 @@ main** — un verdict A hérité ne couvre pas un rendu que personne n'a revu.
 ## 9 — Gel de l'implémentation pratique
 
 ```
-PRACTICAL_IMPLEMENTATION = FROZEN
-FROZEN_AT                = 2026-10-10
-FROZEN_COMMIT_BASE       = theme-vermeg-reconciled
-FROZEN_ARTEFACT          = frontend/dist/devsecops-frontend/browser
-                           (servi par pfe-frontend sur :4200)
+PRACTICAL_IMPLEMENTATION      = FROZEN
+FROZEN_AT                     = 2026-10-10
+IMPLEMENTATION_FREEZE_COMMIT  = a9f551ad1e91917c3ae4fc0676b98fc848a29c73
+FREEZE_TAG                    = pfe-practical-freeze-2026-10-10
+FROZEN_BRANCH                 = theme-vermeg-reconciled
+FROZEN_ARTEFACT               = frontend/dist/devsecops-frontend/browser
+                                (servi par pfe-frontend sur :4200)
 ```
+
+**Portée exacte du point de gel, à ne pas surinterpréter.** Le commit
+`a9f551ad1e91` contient le frontend, ses tests et cette
+documentation — et **aucun code backend**. Les 126 fichiers backend modifiés
+dans l'arbre de travail en ont été volontairement exclus : ils n'ont pas
+traversé les portes de qualification de §7.3, et le backend en service
+provient d'une autre lignée (image `local/pfe-backend-reconciled:r98`,
+divergente de cette branche de 141 fichiers, cf. P1-C).
+
+Ce point de gel est donc la référence de l'**implémentation pratique de
+l'interface**, pas une base de référence de toute la plateforme. Reconstruire
+le backend depuis ce commit serait une régression, pas une restauration.
 
 ### Ce que le gel interdit
 
