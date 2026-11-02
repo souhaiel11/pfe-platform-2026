@@ -1,0 +1,12 @@
+   1 package com.pfe.devsecops.dto;
+   2 
+   3 import lombok.AllArgsConstructor;
+   4 import lombok.Data;
+   5 
+   6 @Data
+   7 @AllArgsConstructor
+   8 public class LoginResponse {
+   9     private String token;
+  10     private String username;
+  11     private String role;
+  12 }

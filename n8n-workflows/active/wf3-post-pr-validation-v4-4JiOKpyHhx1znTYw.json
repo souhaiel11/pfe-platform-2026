@@ -1,0 +1,437 @@
+[
+  {
+    "name": "WF3 - Post-PR Validation v4",
+    "nodes": [
+      {
+        "parameters": {
+          "workflowInputs": {
+            "values": [
+              {
+                "name": "payload"
+              }
+            ]
+          }
+        },
+        "type": "n8n-nodes-base.executeWorkflowTrigger",
+        "typeVersion": 1.1,
+        "position": [
+          -1728,
+          128
+        ],
+        "id": "4200503d-a782-49a2-973a-8d8fac526508",
+        "name": "WF3 Trigger"
+      },
+      {
+        "parameters": {
+          "jsCode": "let input=$input.first().json;if(input.payload)input=typeof input.payload==='string'?JSON.parse(input.payload):input.payload;if(input.body)input=input.body;\nconst required=[\"validationRequestId\",\"projectId\",\"incidentId\",\"fixRequestId\",\"batchId\",\"batchKey\",\"attemptCount\",\"repository\",\"prNumber\",\"prHeadBranch\",\"expectedPrHeadSha\",\"checkoutSha\",\"jenkinsJob\",\"prValidationJob\",\"jenkinsBuildNumber\",\"jenkinsBuildUrl\",\"jenkinsStatus\",\"ceTaskId\",\"analysisId\",\"requiredStages\",\"sonarAnalysisMode\"];const missing=required.filter(k=>input[k]===undefined||input[k]===null||input[k]===''||(k==='requiredStages'&&!Array.isArray(input[k])));if(missing.length)throw new Error('INVALID_VALIDATION_CONTRACT:'+missing.join(','));\nconst validModes=[\"COMMUNITY_EXACT_SHA\",\"DEVELOPER_NATIVE_PR\"];if(!validModes.includes(input.sonarAnalysisMode))throw new Error('INVALID_SONAR_ANALYSIS_MODE:'+input.sonarAnalysisMode);\nif(input.sonarAnalysisMode==='COMMUNITY_EXACT_SHA'){const communityRequired=[\"baseSonarProjectKey\",\"validationSonarProjectKey\"];const communityMissing=communityRequired.filter(k=>input[k]===undefined||input[k]===null||input[k]==='');if(communityMissing.length)throw new Error('INVALID_VALIDATION_CONTRACT:'+communityMissing.join(','));}\nconst fullSha=v=>/^[a-f0-9]{40}$/i.test(String(v||''));if(!fullSha(input.expectedPrHeadSha)||!fullSha(input.checkoutSha)||String(input.expectedPrHeadSha).toLowerCase()!==String(input.checkoutSha).toLowerCase())throw new Error('PR_HEAD_SHA_MISMATCH');\nconst repository=String(input.repository).replace(/^https?:\\/\\/github\\.com\\//,'').replace(/\\.git$/,'').toLowerCase();if(repository.split('/').length!==2)throw new Error('INVALID_REPOSITORY');\nreturn [{json:{...input,repository,prNumber:Number(input.prNumber),attemptCount:Number(input.attemptCount),buildNumber:Number(input.jenkinsBuildNumber),buildUrl:String(input.jenkinsBuildUrl),jenkinsStatus:String(input.jenkinsStatus).toUpperCase(),expectedPrHeadSha:String(input.expectedPrHeadSha).toLowerCase(),checkoutSha:String(input.checkoutSha).toLowerCase(),requiredStages:input.requiredStages}}];"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          -1488,
+          128
+        ],
+        "id": "2c269fb4-a7f8-48c2-b789-1b2fb5e73278",
+        "name": "Extract Validation Context"
+      },
+      {
+        "parameters": {
+          "url": "=http://sonarqube:9000/api/qualitygates/project_status?analysisId={{ $('Extract Validation Context').first().json.analysisId || '__CORRELATION_MISSING__' }}",
+          "authentication": "predefinedCredentialType",
+          "nodeCredentialType": "httpHeaderAuth",
+          "options": {
+            "timeout": 15000
+          }
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          -1008,
+          128
+        ],
+        "id": "d01c0218-7f24-47ba-88ef-fd72ef3f7e48",
+        "name": "Get SonarQube PR Quality Gate",
+        "retryOnFail": true,
+        "maxTries": 5,
+        "waitBetweenTries": 10000,
+        "onError": "continueRegularOutput",
+        "credentials": {
+          "httpHeaderAuth": {
+            "id": "r60SonarDirectCred1",
+            "name": "sonar-direct-token"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "SELECT i.id, i.\"projectId\", i.\"prUrl\", i.\"jenkinsJobName\", i.\"buildNumber\", i.metadata, p.\"sonarqubeKey\"\nFROM incidents i JOIN projects p ON p.id=i.\"projectId\"\nWHERE i.id = '{{ $(\"Extract Validation Context\").first().json.incidentId }}'\nAND i.\"projectId\" = '{{ $(\"Extract Validation Context\").first().json.projectId }}'\nAND lower(regexp_replace(p.\"githubRepo\", '^(https?://github.com/)?|[.]git$', '', 'g')) = '{{ $(\"Extract Validation Context\").first().json.repository }}'\nAND i.\"prUrl\" LIKE '%/' || '{{ $(\"Extract Validation Context\").first().json.repository }}' || '/pull/' || '{{ $(\"Extract Validation Context\").first().json.prNumber }}'\nAND i.metadata->'fixRequest'->>'requestId' = '{{ $(\"Extract Validation Context\").first().json.fixRequestId }}'\nAND i.metadata->'fixRequest'->>'batchId' = '{{ $(\"Extract Validation Context\").first().json.batchId }}'\nAND COALESCE(i.metadata->'fixRequest'->>'batchKey',i.metadata->'fixRequest'->>'batchId') = '{{ $(\"Extract Validation Context\").first().json.batchKey }}'\nAND (i.metadata->'fixRequest'->>'attemptCount')::int = {{ $(\"Extract Validation Context\").first().json.attemptCount }}\nAND i.metadata->'prValidationRequest'->>'validationRequestId' = '{{ $(\"Extract Validation Context\").first().json.validationRequestId }}'\nAND lower(i.metadata->'prValidationRequest'->>'expectedPrHeadSha') = '{{ $(\"Extract Validation Context\").first().json.expectedPrHeadSha }}'\nLIMIT 1;",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.4,
+        "position": [
+          -768,
+          128
+        ],
+        "id": "ecac5010-71af-40cd-bbda-c92b7005e9e1",
+        "name": "Get Incident From DB",
+        "credentials": {
+          "postgres": {
+            "id": "QbldelWaygwFqFUL",
+            "name": "Postgres account"
+          }
+        },
+        "onError": "continueRegularOutput"
+      },
+      {
+        "parameters": {
+          "jsCode": "const ctx=$('Extract Validation Context').first().json;let incident={};try{incident=$('Get Incident From DB').first().json||{}}catch{};let sonar={};try{sonar=$('Get SonarQube PR Quality Gate').first().json||{}}catch{};let findingSearch={};try{findingSearch=$('Collect Target Finding Evidence').first().json||{}}catch{};let candidateSnapshot={};try{candidateSnapshot=$('Consolidate Full Candidate Sonar Snapshot').first().json||{}}catch{};const prepared=$('Prepare Approved Finding Validation').first().json;\nconst analysisMode=ctx.sonarAnalysisMode;const analysisLabel=analysisMode==='COMMUNITY_EXACT_SHA'?'Sonar Community exact-SHA validation':'Sonar native PR analysis';\nconst sonarCorrelationVerified=!!ctx.ceTaskId&&!!ctx.analysisId&&!!sonar.projectStatus;const sonarStatus=sonarCorrelationVerified?String(sonar.projectStatus.status||'UNAVAILABLE').toUpperCase():'CORRELATION_PENDING';const requiredNames=['build','tests','sonar'];const missingStage=requiredNames.filter(name=>!ctx.requiredStages.some(s=>s.stage===name&&s.required===true));const requiredFailures=ctx.requiredStages.filter(s=>s.required!==false&&s.status!=='PASSED'&&!(s.status==='WARNING'&&!s.blocking));\nconst targetShaVerified=/^[a-f0-9]{40}$/i.test(String(ctx.checkoutSha||''))&&String(ctx.expectedPrHeadSha).toLowerCase()===String(ctx.checkoutSha).toLowerCase()&&String(findingSearch.candidateSha||'').toLowerCase()===String(ctx.checkoutSha).toLowerCase()&&findingSearch.analysisId===ctx.analysisId;const searchAvailable=Array.isArray(findingSearch.issues)&&findingSearch.targetEvidenceComplete===true&&targetShaVerified&&sonarCorrelationVerified;const normalizeFile=value=>String(value||'').replace(/^[^:]+:/,'').replace(/^\\/+/, '');const openIssues=searchAvailable?findingSearch.issues:[];\n// R67 -- a matching rule/file/line issue alone is NOT enough to prove a\n// finding still exists: Sonar keeps CLOSED/FIXED issues in a reused\n// validation project's history (proven live on PR-24 build #6, issue\n// 19a6499c... status=CLOSED resolution=FIXED was wrongly read as \"remains\n// open\"). Single source of truth for \"is this issue still a live problem\",\n// grounded in this Sonar instance's real payload (both the legacy\n// status/resolution pair and the newer simplified issueStatus field are\n// present and mutually consistent here). resolution set => never active,\n// regardless of status. No usable status field at all => fail closed\n// (treat as still active -- never silently grant VALID without positive\n// proof of resolution).\n// Unknown or conflicting lifecycle evidence cannot establish absence.\nconst issueState=issue=>{const status=String(issue.status||'').toUpperCase();const modern=String(issue.issueStatus||'').toUpperCase();const resolution=String(issue.resolution||'').toUpperCase();const live=['OPEN','CONFIRMED','REOPENED'];const closed=['CLOSED','RESOLVED'];const resolved=['FIXED','FALSE-POSITIVE','FALSE_POSITIVE','WONTFIX','WONT_FIX','REMOVED'];if(resolution&&!resolved.includes(resolution))return'UNKNOWN';if(resolution)return'INACTIVE';if(status&&![...live,...closed].includes(status))return'UNKNOWN';if(modern&&!['OPEN','CONFIRMED','FIXED','FALSE_POSITIVE','ACCEPTED'].includes(modern))return'UNKNOWN';const legacy=status?(live.includes(status)?'ACTIVE':'INACTIVE'):null;const current=modern?(['OPEN','CONFIRMED'].includes(modern)?'ACTIVE':'INACTIVE'):null;if(legacy&&current&&legacy!==current)return'UNKNOWN';return legacy||current||'UNKNOWN';};\nconst qgConditions=sonarCorrelationVerified&&Array.isArray(sonar.projectStatus.conditions)?sonar.projectStatus.conditions.map(c=>({metric:c.metricKey,status:c.status,actualValue:c.actualValue,threshold:c.errorThreshold,comparator:c.comparator})):[];const qgPeriod=sonarCorrelationVerified?(sonar.projectStatus.period||null):null;const findingResults=prepared.findings.map(f=>{if(!searchAvailable)return{findingId:String(f.findingId),rule:f.rule,result:'INCONCLUSIVE',evidence:'TARGET_EVIDENCE_INCOMPLETE',technicalReason:targetShaVerified?'TARGET_EVIDENCE_INCOMPLETE':'TARGET_SHA_CORRELATION_MISMATCH'};if(!f.rule||!normalizeFile(f.file))return{findingId:String(f.findingId),rule:f.rule,result:'INCONCLUSIVE',evidence:'TARGET_IDENTITY_INCOMPLETE'};const matches=openIssues.filter(issue=>String(issue.rule||'')===String(f.rule||'')&&normalizeFile(issue.component).endsWith(normalizeFile(f.file))&&(!f.line||!issue.line||Number(issue.line)===Number(f.line)));const match=matches.find(issue=>issueState(issue)==='ACTIVE');if(match)return{findingId:String(f.findingId),rule:f.rule,result:'INVALID',evidence:analysisLabel+' issue '+String(match.key||match.rule)+' remains open'};if(matches.some(issue=>issueState(issue)==='UNKNOWN'))return{findingId:String(f.findingId),rule:f.rule,result:'INCONCLUSIVE',evidence:'TARGET_ISSUE_STATE_UNKNOWN'};return{findingId:String(f.findingId),rule:f.rule,result:'VALID',evidence:analysisLabel+' '+ctx.analysisId+' at '+ctx.checkoutSha+': approved finding absent'};});\nconst everyFindingValid=findingResults.length===prepared.findingIds.length&&findingResults.every(r=>r.result==='VALID');const shaVerified=ctx.expectedPrHeadSha===ctx.checkoutSha;const correlationVerified=!!incident?.id&&incident.id===ctx.incidentId&&sonarCorrelationVerified&&shaVerified;const passed=ctx.jenkinsStatus==='SUCCESS'&&sonarStatus==='OK'&&correlationVerified&&!missingStage.length&&!requiredFailures.length&&Number(ctx.unresolvedBlockingCount||0)===0&&everyFindingValid;const anyInvalid=findingResults.some(r=>r.result==='INVALID');\nreturn [{json:{...ctx,findingResults,targetEvidenceComplete:searchAvailable,targetEvidenceError:searchAvailable?null:'TARGET_EVIDENCE_INCOMPLETE',targetEvidenceDetail:findingSearch.targetEvidenceDetail??null,sonarQualityGateConditions:qgConditions,sonarQualityGatePeriod:qgPeriod,validationStatus:passed?'VALIDATED':anyInvalid?'INVALID':'INCONCLUSIVE',passed,sonarStatus,sonarAnalysisMode:analysisMode,sonarCorrelationVerified,correlationVerified,finalStateVerified:shaVerified,requiredStagesStatus:(!missingStage.length&&!requiredFailures.length)?'PASSED':'FAILED',candidateFindingsSnapshot:Array.isArray(candidateSnapshot.candidateFindingsSnapshot)?candidateSnapshot.candidateFindingsSnapshot:[],candidateSnapshotComplete:candidateSnapshot.candidateSnapshotComplete===true,candidateSnapshotError:candidateSnapshot.candidateSnapshotError??null,failureReasons:[ctx.jenkinsStatus!=='SUCCESS'?'Jenkins='+ctx.jenkinsStatus:null,sonarStatus!=='OK'?'Sonar='+sonarStatus:null,!shaVerified?'PR HEAD mismatch':null,!correlationVerified?'Correlation unverified':null,!everyFindingValid?'Approved finding validation incomplete':null,...missingStage.map(s=>'Required stage missing='+s),...requiredFailures.map(s=>s.stage+'='+s.status)].filter(Boolean),timestamp:new Date().toISOString()}}];"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          -528,
+          128
+        ],
+        "id": "38d6151c-6ca8-413d-9cd1-7fea15405da4",
+        "name": "Consolidate Validation Result"
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "=http://backend:3001/api/incidents/{{ $('Consolidate Validation Result').first().json.incidentId }}/validation",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "name": "X-Internal-Secret",
+                "value": "={{ $env.N8N_INTERNAL_SECRET }}"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify($('Consolidate Validation Result').first().json) }}",
+          "options": {
+            "timeout": 15000
+          }
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          272,
+          0
+        ],
+        "id": "0b96257e-f9f4-442e-bf95-ba69a550585c",
+        "name": "Persist Correlated Validation",
+        "onError": "continueRegularOutput"
+      },
+      {
+        "id": "wf3-prepare-approved-findings",
+        "name": "Prepare Approved Finding Validation",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          -640,
+          0
+        ],
+        "parameters": {
+          "jsCode": "const incident=$input.first().json||{};let metadata=incident.metadata||{};if(typeof metadata==='string')metadata=JSON.parse(metadata);const fix=metadata.fixRequest||{};const findings=Array.isArray(fix.findings)?fix.findings:[];const findingIds=Array.isArray(fix.findingIds)?fix.findingIds.map(String):[];if(!findingIds.length||findings.length!==findingIds.length)throw new Error('APPROVED_FINDING_BATCH_UNAVAILABLE');\nconst ctx=$('Extract Validation Context').first().json;const mode=ctx.sonarAnalysisMode;const pr=ctx.prNumber;\nlet projectKey;let url;\nif(mode==='COMMUNITY_EXACT_SHA'){\n  projectKey=String(ctx.validationSonarProjectKey||'');if(!projectKey)throw new Error('SONAR_VALIDATION_PROJECT_KEY_UNAVAILABLE');\n  const rules=[...new Set(findings.map(f=>f.rule).filter(Boolean))];\n  // R67 -- resolved=false reduces historical noise (a long-lived, reused\n  // validation project keeps CLOSED/FIXED issues in its history, proven live\n  // on PR-24 build #6). Query-level filtering alone is never trusted --\n  // Consolidate Validation Result still defensively checks issue status.\n  url='http://sonarqube:9000/api/issues/search?componentKeys='+encodeURIComponent(projectKey)+'&resolved=false&rules='+encodeURIComponent(rules.join(','))+'&ps=500';\n}else{\n  projectKey=String(incident.sonarqubeKey||'');if(!projectKey)throw new Error('SONAR_PROJECT_KEY_UNAVAILABLE');\n  const rules=[...new Set(findings.map(f=>f.rule).filter(Boolean))];\n  url='http://sonarqube:9000/api/issues/search?componentKeys='+encodeURIComponent(projectKey)+'&pullRequest='+encodeURIComponent(pr)+'&resolved=false&rules='+encodeURIComponent(rules.join(','))+'&ps=500';\n}\nreturn [{json:{url,findings,findingIds,candidateSha:ctx.checkoutSha,analysisId:ctx.analysisId,sonarAnalysisMode:mode,validationSonarProjectKey:projectKey}}];"
+        }
+      },
+      {
+        "id": "wf3-get-approved-findings",
+        "name": "Get SonarQube Approved Findings",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          -416,
+          0
+        ],
+        "onError": "continueErrorOutput",
+        "parameters": {
+          "url": "={{ $json.url }}",
+          "authentication": "predefinedCredentialType",
+          "nodeCredentialType": "httpHeaderAuth",
+          "options": {
+            "timeout": 15000,
+            "response": {
+              "response": {
+                "responseFormat": "json"
+              }
+            },
+            "pagination": {
+              "pagination": {
+                "paginationMode": "updateAParameterInEachRequest",
+                "parameters": {
+                  "parameters": [
+                    {
+                      "type": "qs",
+                      "name": "p",
+                      "value": "={{ $pageCount + 1 }}"
+                    }
+                  ]
+                },
+                "paginationCompleteWhen": "other",
+                "completeExpression": "={{ !Array.isArray($response.body?.issues) || !Number.isSafeInteger($response.body?.total ?? $response.body?.paging?.total) || ($response.body.total ?? $response.body.paging.total) < 0 || $response.body.issues.length < 500 || ($pageCount + 1) * 500 >= ($response.body.total ?? $response.body.paging.total) }}",
+                "limitPagesFetched": true,
+                "maxRequests": 40,
+                "requestInterval": 0
+              }
+            }
+          },
+          "sendQuery": true,
+          "queryParameters": {
+            "parameters": [
+              {
+                "name": "p",
+                "value": "1"
+              }
+            ]
+          }
+        },
+        "credentials": {
+          "httpHeaderAuth": {
+            "id": "r60SonarDirectCred1",
+            "name": "sonar-direct-token"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "url": "http://sonarqube:9000/api/issues/search",
+          "authentication": "predefinedCredentialType",
+          "nodeCredentialType": "httpHeaderAuth",
+          "options": {
+            "timeout": 15000,
+            "response": {
+              "response": {
+                "responseFormat": "json"
+              }
+            },
+            "pagination": {
+              "pagination": {
+                "paginationMode": "updateAParameterInEachRequest",
+                "parameters": {
+                  "parameters": [
+                    {
+                      "type": "qs",
+                      "name": "p",
+                      "value": "={{ $pageCount + 1 }}"
+                    }
+                  ]
+                },
+                "paginationCompleteWhen": "other",
+                "completeExpression": "={{ !Array.isArray($response.body?.issues) || !Number.isSafeInteger($response.body?.total ?? $response.body?.paging?.total) || ($response.body.total ?? $response.body.paging.total) < 0 || $response.body.issues.length < 500 || ($pageCount + 1) * 500 >= ($response.body.total ?? $response.body.paging.total) }}",
+                "limitPagesFetched": true,
+                "maxRequests": 40,
+                "requestInterval": 0
+              }
+            }
+          },
+          "sendQuery": true,
+          "queryParameters": {
+            "parameters": [
+              {
+                "name": "componentKeys",
+                "value": "={{ $('Extract Validation Context').first().json.validationSonarProjectKey }}"
+              },
+              {
+                "name": "resolved",
+                "value": "false"
+              },
+              {
+                "name": "ps",
+                "value": "500"
+              },
+              {
+                "name": "p",
+                "value": "1"
+              }
+            ]
+          }
+        },
+        "id": "wf3-get-full-candidate-snapshot",
+        "name": "Get Full Candidate Sonar Snapshot",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          -416,
+          160
+        ],
+        "credentials": {
+          "httpHeaderAuth": {
+            "id": "r60SonarDirectCred1",
+            "name": "sonar-direct-token"
+          }
+        },
+        "onError": "continueErrorOutput"
+      },
+      {
+        "parameters": {
+          "jsCode": "const ctx = $('Extract Validation Context').first().json;\nconst PAGE_SIZE = 500;\nconst MAX_PAGES = 40;\nconst pages = $input.all().map(item => item.json || {});\nconst safeError = (value) => {\n  if (!value || typeof value !== 'object') return null;\n  const statusCode = value.statusCode ?? value.httpCode ?? value.response?.statusCode;\n  const code = typeof value.code === 'string' ? value.code.replace(/[^A-Z0-9_.-]/gi, '').slice(0,80) : undefined;\n  const name = typeof value.name === 'string' ? value.name.replace(/[^A-Z0-9_.-]/gi, '').slice(0,80) : undefined;\n  const message = typeof value.message === 'string'\n    ? value.message.replace(/authorization|bearer\\s+\\S+|token[=:]\\s*\\S+/ig, '[redacted]').replace(/https?:\\/\\/[^\\s]+/g, '[url]').slice(0,200)\n    : undefined;\n  return Object.fromEntries(Object.entries({name,code,statusCode,message}).filter(([,v]) => v !== undefined && v !== null));\n};\nlet error = null;\nlet total = null;\nlet collectedCount = 0;\nconst issues = [];\nif (!pages.length) error = 'FETCH_FAILED_PAGE_1';\nif (pages.length > MAX_PAGES) error = 'PAGE_LIMIT_EXCEEDED';\nfor (let index = 0; !error && index < pages.length; index++) {\n  const page = pages[index] || {};\n  if (page.error) {\n    const detail = safeError(page.error);\n    error = 'FETCH_FAILED_PAGE_' + (index + 1) + (detail && Object.keys(detail).length ? ':' + JSON.stringify(detail) : '');\n    break;\n  }\n  if (!Array.isArray(page.issues)) { error = 'MALFORMED_RESPONSE_PAGE_' + (index + 1); break; }\n  const reportedTotal = page.total ?? page.paging?.total;\n  const pageIndex = page.paging?.pageIndex ?? page.p;\n  const pageSize = page.paging?.pageSize ?? page.ps;\n  if (!Number.isSafeInteger(reportedTotal) || reportedTotal < 0 || !Number.isSafeInteger(pageIndex) || pageIndex !== index + 1 || pageSize !== PAGE_SIZE) {\n    error = 'PAGING_METADATA_INVALID_PAGE_' + (index + 1); break;\n  }\n  if (total !== null && reportedTotal !== total) { error = 'PAGING_TOTAL_INCONSISTENT_PAGE_' + (index + 1); break; }\n  total = reportedTotal;\n  const expected = Math.min(PAGE_SIZE, Math.max(0, total - index * PAGE_SIZE));\n  if (page.issues.length !== expected || (index > 0 && expected === 0)) { error = 'PAGE_LENGTH_INVALID_PAGE_' + (index + 1); break; }\n  issues.push(...page.issues);\n  collectedCount += page.issues.length;\n}\nconst expectedPages = total === null ? null : Math.max(1, Math.ceil(total / PAGE_SIZE));\nif (!error && (total === null || collectedCount !== total || pages.length !== expectedPages)) error = pages.length >= MAX_PAGES ? 'PAGE_LIMIT_EXCEEDED' : 'PAGES_INCOMPLETE';\nconst complete = !error && total !== null && collectedCount === total && pages.length === expectedPages;\nreturn [{json:{candidateFindingsSnapshot:issues,candidateSnapshotComplete:complete,candidateSnapshotError:complete?null:error,candidateSha:ctx.checkoutSha??null,total,collectedCount,pageSize:PAGE_SIZE}}];"
+        },
+        "id": "wf3-consolidate-full-candidate-snapshot",
+        "name": "Consolidate Full Candidate Sonar Snapshot",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          -200,
+          160
+        ]
+      },
+      {
+        "parameters": {
+          "jsCode": "// Target-search evidence only. The independent full candidate snapshot is\n// never used to infer an approved finding verdict.\nconst ctx = $('Extract Validation Context').first().json;\nconst prepared = $('Prepare Approved Finding Validation').first().json;\nconst pages = $input.all().map(item => item.json);\nconst PAGE_SIZE = 500;\nconst MAX_PAGES = 40;\nconst sha = value => /^[a-f0-9]{40}$/i.test(String(value || '')) ? String(value).toLowerCase() : null;\nconst candidateSha = sha(ctx.checkoutSha);\nconst issues = [];\nconst keys = new Set();\nlet total = null;\nlet error = null;\nif (!candidateSha || candidateSha !== sha(ctx.expectedPrHeadSha)\n    || candidateSha !== sha(prepared.candidateSha)\n    || !ctx.analysisId || prepared.analysisId !== ctx.analysisId) error = 'TARGET_SHA_CORRELATION_MISMATCH';\nif (!pages.length || pages.length > MAX_PAGES) error ||= 'TARGET_PAGE_COUNT_INVALID';\nconst integer = value => typeof value === 'number' && Number.isSafeInteger(value) && value >= 0;\nfor (let index = 0; !error && index < pages.length; index++) {\n  const page = pages[index];\n  if (!page || page.error || !Array.isArray(page.issues)) { error = 'TARGET_PAGE_UNAVAILABLE'; break; }\n  const reportedTotal = page.total ?? page.paging?.total;\n  const pageIndex = page.paging?.pageIndex ?? page.p;\n  const pageSize = page.paging?.pageSize ?? page.ps;\n  if (!integer(reportedTotal) || !integer(pageIndex) || pageIndex !== index + 1\n      || pageSize !== PAGE_SIZE\n      || (page.total !== undefined && page.paging?.total !== undefined && page.total !== page.paging.total)\n      || (page.p !== undefined && page.paging?.pageIndex !== undefined && page.p !== page.paging.pageIndex)\n      || (page.ps !== undefined && page.paging?.pageSize !== undefined && page.ps !== page.paging.pageSize)\n      || (total !== null && reportedTotal !== total)) { error = 'TARGET_PAGING_METADATA_INVALID'; break; }\n  total = reportedTotal;\n  const expectedLength = Math.min(PAGE_SIZE, Math.max(0, total - index * PAGE_SIZE));\n  if (page.issues.length !== expectedLength || (index > 0 && expectedLength === 0)) { error = 'TARGET_PAGE_LENGTH_INVALID'; break; }\n  for (const issue of page.issues) {\n    if (!issue || typeof issue.key !== 'string' || !issue.key\n        || typeof issue.rule !== 'string' || !issue.rule\n        || typeof issue.component !== 'string' || !issue.component\n        || (issue.line != null && (!integer(issue.line) || issue.line === 0))) { error = 'TARGET_ISSUE_MALFORMED'; break; }\n    // Overlapping/repeated pages cannot count twice toward Sonar's total.\n    // Fail closed even if the duplicate values happen to be identical.\n    if (keys.has(issue.key)) { error = 'TARGET_DUPLICATE_ISSUE'; break; }\n    keys.add(issue.key);\n    issues.push(issue);\n  }\n}\nconst complete = !error && total !== null && keys.size === total;\nif (!complete && !error) error = pages.length >= MAX_PAGES ? 'TARGET_PAGE_BOUND_EXHAUSTED' : 'TARGET_PAGES_MISSING';\nreturn [{ json: {\n  issues, targetEvidenceComplete: complete,\n  targetEvidenceError: complete ? null : 'TARGET_EVIDENCE_INCOMPLETE',\n  targetEvidenceDetail: error, targetEvidenceTotal: total,\n  targetEvidencePages: pages.length, candidateSha, analysisId: ctx.analysisId ?? null,\n} }];\n"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          440,
+          500
+        ],
+        "id": "wf3-collect-target-evidence",
+        "name": "Collect Target Finding Evidence"
+      }
+    ],
+    "connections": {
+      "WF3 Trigger": {
+        "main": [
+          [
+            {
+              "node": "Extract Validation Context",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Extract Validation Context": {
+        "main": [
+          [
+            {
+              "node": "Get SonarQube PR Quality Gate",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Get SonarQube PR Quality Gate": {
+        "main": [
+          [
+            {
+              "node": "Get Incident From DB",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Get Incident From DB": {
+        "main": [
+          [
+            {
+              "node": "Prepare Approved Finding Validation",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Consolidate Validation Result": {
+        "main": [
+          [
+            {
+              "node": "Persist Correlated Validation",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Prepare Approved Finding Validation": {
+        "main": [
+          [
+            {
+              "node": "Get SonarQube Approved Findings",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Get SonarQube Approved Findings": {
+        "main": [
+          [
+            {
+              "node": "Collect Target Finding Evidence",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Collect Target Finding Evidence",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Get Full Candidate Sonar Snapshot": {
+        "main": [
+          [
+            {
+              "node": "Consolidate Full Candidate Sonar Snapshot",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Consolidate Full Candidate Sonar Snapshot",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Collect Target Finding Evidence": {
+        "main": [
+          [
+            {
+              "node": "Get Full Candidate Sonar Snapshot",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Consolidate Full Candidate Sonar Snapshot": {
+        "main": [
+          [
+            {
+              "node": "Consolidate Validation Result",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "active": true,
+    "settings": {
+      "executionOrder": "v1",
+      "binaryMode": "separate"
+    },
+    "id": "4JiOKpyHhx1znTYw",
+    "meta": {},
+    "pinData": {}
+  }
+]

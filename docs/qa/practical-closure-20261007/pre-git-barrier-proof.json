@@ -1,0 +1,14 @@
+{
+  "versionId": "0470ab42-713a-4097-a9a7-72c8f00bacde",
+  "workflowHash": "d46bbcf266436d7d75b1c3af8800a9f6715930680986ae62b4fa493a125e684a",
+  "writers": [
+    "Create Missing Branch",
+    "Write File To Branch",
+    "Create Pull Request",
+    "Close Drifted Created PR"
+  ],
+  "gate": "={{ Boolean($json.body?.status === \"CANDIDATE_READY\") }}",
+  "allGitWritersAfterBarrier": true,
+  "stopEnvelopeCannotReachGitWriters": true,
+  "workflowModified": false
+}

@@ -1,0 +1,18 @@
+{
+  "executionId": 2038,
+  "note": "Real historical WF2 execution (attempt 13, batch 833de3d1...) -- files[].sourceContent proof, R81.2 audit",
+  "files": [
+    {
+      "path": "src/main/java/com/pfe/devsecops/dto/TaskDTO.java",
+      "operation": "MODIFY",
+      "sourceContentLength": 2689,
+      "sourceContentSample": "package com.pfe.devsecops.dto;\n\nimport java.time.LocalDateTime;\n\n/**\n * Persistence-decoupled representation of a task used at the HTTP boundary.\n *\n * <p>This type intentionally contains no persisten"
+    },
+    {
+      "path": "src/main/java/com/pfe/devsecops/service/TaskService.java",
+      "operation": "MODIFY",
+      "sourceContentLength": 12210,
+      "sourceContentSample": "package com.pfe.devsecops.service;\n\nimport com.pfe.devsecops.dto.TaskDTO;\nimport com.pfe.devsecops.model.Task;\nimport com.pfe.devsecops.model.User;\nimport com.pfe.devsecops.repository.TaskRepository;\n"
+    }
+  ]
+}

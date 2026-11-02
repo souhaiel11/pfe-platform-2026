@@ -1,0 +1,17 @@
+/* §10 — le titre de l'incident est l'information principale de la ligne ;
+   l'identifiant technique reste sous lui, en retrait, copiable (§20/§21). */
+.inc-problem { max-width: 320px; }
+.inc-title {
+  color: var(--text-primary);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* §23 — en dessous de 768 px, la colonne « Problème » cesse d'imposer une
+   largeur fixe : le tableau défile dans son conteneur plutôt que d'étirer
+   la page. */
+@media (max-width: 768px) {
+  .inc-problem { max-width: 200px; }
+}

@@ -1,0 +1,95 @@
+<!-- Présente l’administration. -->
+<div *ngIf="loadError" role="alert" class="card">{{loadError}} <button type="button" class="btn btn-secondary btn-sm" (click)="load()">Réessayer</button></div>
+    <div class="page-container">
+      <div class="page-header" style="display:flex;align-items:center;justify-content:space-between;">
+        <div>
+          <h1 class="page-title">Administration</h1>
+          <p class="page-subtitle">Gestion des utilisateurs de la plateforme</p>
+        </div>
+        <button class="btn btn-primary" (click)="showModal = true">+ Nouvel utilisateur</button>
+      </div>
+
+      <app-zone-label kind="action"
+        note="Gestion des comptes : création et suppression d’utilisateurs."></app-zone-label>
+
+      <div *ngIf="loading" class="loading-overlay" role="status"><div class="spinner"></div><span>Chargement des utilisateurs…</span></div>
+
+      <div class="card" style="padding:0;overflow:hidden;" *ngIf="!loading && !loadError">
+        <!-- §23 — le tableau défile dans son conteneur, jamais la page. -->
+        <div class="table-scroll">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Utilisateur</th>
+              <th>Courriel</th>
+              <th>Rôle</th>
+              <th>Créé le</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngIf="users.length === 0">
+              <td colspan="5" style="text-align:center;padding:40px;color:var(--text-faint);">Aucun utilisateur</td>
+            </tr>
+            <tr *ngFor="let u of users">
+              <td>
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <div class="user-av">{{u.name?.substring(0,2).toUpperCase() || '—'}}</div>
+                  <span style="font-weight:500;color:var(--text-primary);">{{u.name || 'Non renseigné'}}</span>
+                </div>
+              </td>
+              <td>{{u.email || 'Non renseigné'}}</td>
+              <td>
+                <span class="badge" [class]="u.role === 'admin' ? 'high' : 'info'">{{u.role | presentationLabel}}</span>
+              </td>
+              <td style="font-family:var(--font-mono);font-size:11px;">
+                {{u.createdAt | frenchDate:false}}
+              </td>
+              <td>
+                <button class="btn btn-danger btn-sm" (click)="deleteUser(u)"
+                        [disabled]="u.role === 'admin'">
+                  Supprimer
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        </div>
+      </div>
+
+      <!-- Create modal -->
+      <div class="modal-overlay" *ngIf="showModal" (click)="showModal=false">
+        <div class="modal" (click)="$event.stopPropagation()">
+          <div class="modal-header">
+            <span class="card-title">Nouvel utilisateur</span>
+            <button class="btn btn-secondary btn-sm" (click)="showModal=false">✕</button>
+          </div>
+          <div class="form-group">
+            <label for="admin-name" class="form-label">Nom d'utilisateur *</label>
+            <input class="form-control" id="admin-name" [(ngModel)]="newUser.name" placeholder="nom" />
+          </div>
+          <div class="form-group">
+            <label for="admin-email" class="form-label">Courriel *</label>
+            <input class="form-control" id="admin-email" [(ngModel)]="newUser.email" type="email" placeholder="user@vermeg.com" />
+          </div>
+          <div class="form-group">
+            <label for="admin-password" class="form-label">Mot de passe *</label>
+            <input class="form-control" id="admin-password" [(ngModel)]="newUser.password" type="password" placeholder="••••••••" />
+          </div>
+          <div class="form-group">
+            <label for="admin-role" class="form-label">Rôle</label>
+            <select class="form-control" id="admin-role" [(ngModel)]="newUser.role">
+              <option value="developer">Développeur</option>
+              <option value="admin">Administrateur</option>
+            </select>
+          </div>
+          <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:20px;">
+            <button class="btn btn-secondary" (click)="showModal=false">Annuler</button>
+            <button class="btn btn-primary" (click)="createUser()"
+                    [disabled]="saving || !newUser.name || !newUser.email || !newUser.password">
+              Créer
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>

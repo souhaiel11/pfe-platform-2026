@@ -1,0 +1,927 @@
+{
+  "scannerEvidence": {
+    "TRIVY": {
+      "mode": "TRIVY_IMAGE_ARCHIVE",
+      "sourceDigest": "97926d67652ff58e77501cc66b6adc56390fb84699ba3c766bc8cbe0e1518722",
+      "artifactDigest": "4c3d9a9ec0da1576e4d33d698dc5ff3a69e4f3ab20066b29eeb37617c6d0fdbf",
+      "reportDigest": "b7f46272e03707c425c599aea891b1ac1eec66b936c6a097ff476aee3b7234a3",
+      "buildPassed": true,
+      "scannerVersion": "Version: 0.72.0",
+      "report": {
+        "SchemaVersion": 2,
+        "Trivy": {
+          "Version": "0.72.0"
+        },
+        "ReportID": "01a11706-2a3d-74ab-8d8c-a0e5691a4787",
+        "CreatedAt": "2026-10-07T15:40:42.429307108Z",
+        "ArtifactID": "sha256:5afe1eab893008848ab0f21a6b81c66934ca9a33f59055db633925b40bc26902",
+        "ArtifactName": "/tmp/security-closure-uLKfe2/image.tar",
+        "ArtifactType": "container_image",
+        "Metadata": {
+          "Size": 2612736,
+          "ImageID": "sha256:4012c3932397f4142519a64d3ec94bceb46ef5f49bc585f956650a92fa92b580",
+          "DiffIDs": [
+            "sha256:5d6903770beaf8a5af3cb565bd2700cc2d37a28a8796039decea3df7e5415b1f"
+          ],
+          "RepoTags": [
+            "localhost/security-closure:security-closure-ulkfe2"
+          ],
+          "Reference": "localhost/security-closure:security-closure-ulkfe2",
+          "ImageConfig": {
+            "architecture": "amd64",
+            "created": "2026-10-07T15:40:41.058258297Z",
+            "history": [
+              {
+                "created": "2026-10-07T15:40:40.952076761Z",
+                "created_by": "/bin/sh -c #(nop) COPY dir:573f195ddbef003cfd0d324ca857c2d8d12a9ae0ea17bf8215a97a489d156d9b in /app/dependencies/ ",
+                "empty_layer": true
+              },
+              {
+                "created": "2026-10-07T15:40:41.070825954Z",
+                "created_by": "/bin/sh -c #(nop) COPY file:7d032f4bda71f7be64645cc8f15a8ed01496ae0f3dede2c4e8e84cbcb7b42342 in /app/fixture.jar "
+              }
+            ],
+            "os": "linux",
+            "rootfs": {
+              "type": "layers",
+              "diff_ids": [
+                "sha256:5d6903770beaf8a5af3cb565bd2700cc2d37a28a8796039decea3df7e5415b1f"
+              ]
+            },
+            "config": {
+              "Env": [
+                "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+              ],
+              "Labels": {
+                "io.buildah.version": "1.28.2"
+              }
+            }
+          },
+          "Layers": [
+            {
+              "Size": 2612736,
+              "DiffID": "sha256:5d6903770beaf8a5af3cb565bd2700cc2d37a28a8796039decea3df7e5415b1f"
+            }
+          ]
+        },
+        "Results": [
+          {
+            "Target": "Java",
+            "Class": "lang-pkgs",
+            "Type": "jar",
+            "Packages": [
+              {
+                "Name": "com.h2database:h2",
+                "Identifier": {
+                  "PURL": "pkg:maven/com.h2database/h2@2.2.220",
+                  "UID": "78b3150744760dd"
+                },
+                "Version": "2.2.220",
+                "Layer": {
+                  "DiffID": "sha256:5d6903770beaf8a5af3cb565bd2700cc2d37a28a8796039decea3df7e5415b1f"
+                },
+                "FilePath": "app/dependencies/h2-2.2.220.jar",
+                "AnalyzedBy": "jar"
+              },
+              {
+                "Name": "operator.fixture:retry-e2e-h2",
+                "Identifier": {
+                  "PURL": "pkg:maven/operator.fixture/retry-e2e-h2@1.0.0",
+                  "UID": "876ef1f39cc255b3"
+                },
+                "Version": "1.0.0",
+                "Layer": {
+                  "DiffID": "sha256:5d6903770beaf8a5af3cb565bd2700cc2d37a28a8796039decea3df7e5415b1f"
+                },
+                "FilePath": "app/fixture.jar",
+                "AnalyzedBy": "jar"
+              }
+            ]
+          }
+        ]
+      },
+      "timings": {
+        "PODMAN_PREFLIGHT": 56,
+        "TRIVY_PREFLIGHT": 55,
+        "PODMAN_BASE_IMAGE_PULL": 2354,
+        "IMAGE_BUILD": 9811,
+        "IMAGE_SAVE": 63,
+        "TRIVY_SCAN": 771,
+        "IMAGE_EXISTS": 24,
+        "IMAGE_CLEANUP": 51,
+        "TOTAL_ARTIFACT_DURATION_MS": 13220
+      },
+      "owasp": {
+        "scanner": "OWASP",
+        "scannerVersion": "12.2.2",
+        "sourceDigest": "97926d67652ff58e77501cc66b6adc56390fb84699ba3c766bc8cbe0e1518722",
+        "reportDigest": "0361e4da78719d53e51fcc5b3f3d0b981bfb060148d9c151d23a70e909dd7c4d",
+        "targetCves": [
+          "CVE-2022-45868"
+        ],
+        "targetFindingRemoved": true,
+        "report": {
+          "reportSchema": "1.1",
+          "scanInfo": {
+            "engineVersion": "12.2.2",
+            "dataSource": [
+              {
+                "name": "NVD API Last Checked",
+                "timestamp": "2026-07-10T14:42:24Z"
+              },
+              {
+                "name": "NVD API Last Modified",
+                "timestamp": "2026-07-10T14:41:16Z"
+              }
+            ]
+          },
+          "projectInfo": {
+            "name": "artifact-rescan",
+            "groupID": "security.validation",
+            "artifactID": "artifact-rescan",
+            "version": "1",
+            "reportDate": "2026-10-07T15:40:48.639713620Z",
+            "credits": {
+              "NVD": "This product uses the NVD API but is not endorsed or certified by the NVD. This report contains data retrieved from the National Vulnerability Database: https://nvd.nist.gov",
+              "CISA": "This report may contain data retrieved from the CISA Known Exploited Vulnerability Catalog: https://www.cisa.gov/known-exploited-vulnerabilities-catalog",
+              "NPM": "This report may contain data retrieved from the Github Advisory Database (via NPM Audit API): https://github.com/advisories/",
+              "RETIREJS": "This report may contain data retrieved from the RetireJS community: https://retirejs.github.io/retire.js/",
+              "OSSINDEX": "This report may contain data retrieved from the Sonatype Guide OSS Index API: https://www.sonatype.com/products/sonatype-guide/oss-index-users"
+            }
+          },
+          "dependencies": [
+            {
+              "isVirtual": false,
+              "fileName": "h2-2.2.220.jar",
+              "filePath": "/var/pfe-remediation-workspaces/practical-source-qualification/practical-source-qualification/isolated-13af977f/attempt-1/step-1/target/runtime/h2-2.2.220.jar",
+              "md5": "2e94b69256b1656d29ed23f6b4f894b1",
+              "sha1": "afd532e4f29d309ae053e57c853916551c777807",
+              "sha256": "978ab863018d3f965e38880571c36293ea8b10a8086194159c4d5d20b50f0a57",
+              "license": "https://h2database.com/html/license.html",
+              "projectReferences": [
+                "artifact-rescan"
+              ],
+              "evidenceCollected": {
+                "vendorEvidence": [
+                  {
+                    "type": "vendor",
+                    "confidence": "HIGH",
+                    "source": "file",
+                    "name": "name",
+                    "value": "h2"
+                  },
+                  {
+                    "type": "vendor",
+                    "confidence": "LOW",
+                    "source": "jar",
+                    "name": "package name",
+                    "value": "h2"
+                  },
+                  {
+                    "type": "vendor",
+                    "confidence": "MEDIUM",
+                    "source": "Manifest",
+                    "name": "automatic-module-name",
+                    "value": "com.h2database"
+                  },
+                  {
+                    "type": "vendor",
+                    "confidence": "LOW",
+                    "source": "Manifest",
+                    "name": "bundle-category",
+                    "value": "jdbc"
+                  },
+                  {
+                    "type": "vendor",
+                    "confidence": "MEDIUM",
+                    "source": "Manifest",
+                    "name": "bundle-symbolicname",
+                    "value": "com.h2database"
+                  },
+                  {
+                    "type": "vendor",
+                    "confidence": "LOW",
+                    "source": "Manifest",
+                    "name": "implementation-url",
+                    "value": "https://h2database.com"
+                  },
+                  {
+                    "type": "vendor",
+                    "confidence": "LOW",
+                    "source": "Manifest",
+                    "name": "multi-release",
+                    "value": "true"
+                  },
+                  {
+                    "type": "vendor",
+                    "confidence": "LOW",
+                    "source": "Manifest",
+                    "name": "provide-capability",
+                    "value": "osgi.service;objectClass:List=org.osgi.service.jdbc.DataSourceFactory"
+                  }
+                ],
+                "productEvidence": [
+                  {
+                    "type": "product",
+                    "confidence": "HIGH",
+                    "source": "file",
+                    "name": "name",
+                    "value": "h2"
+                  },
+                  {
+                    "type": "product",
+                    "confidence": "HIGHEST",
+                    "source": "jar",
+                    "name": "package name",
+                    "value": "database"
+                  },
+                  {
+                    "type": "product",
+                    "confidence": "HIGHEST",
+                    "source": "jar",
+                    "name": "package name",
+                    "value": "engine"
+                  },
+                  {
+                    "type": "product",
+                    "confidence": "HIGHEST",
+                    "source": "jar",
+                    "name": "package name",
+                    "value": "h2"
+                  },
+                  {
+                    "type": "product",
+                    "confidence": "HIGHEST",
+                    "source": "jar",
+                    "name": "package name",
+                    "value": "jdbc"
+                  },
+                  {
+                    "type": "product",
+                    "confidence": "HIGHEST",
+                    "source": "jar",
+                    "name": "package name",
+                    "value": "org"
+                  },
+                  {
+                    "type": "product",
+                    "confidence": "HIGHEST",
+                    "source": "jar",
+                    "name": "package name",
+                    "value": "service"
+                  },
+                  {
+                    "type": "product",
+                    "confidence": "MEDIUM",
+                    "source": "Manifest",
+                    "name": "automatic-module-name",
+                    "value": "com.h2database"
+                  },
+                  {
+                    "type": "product",
+                    "confidence": "LOW",
+                    "source": "Manifest",
+                    "name": "bundle-category",
+                    "value": "jdbc"
+                  },
+                  {
+                    "type": "product",
+                    "confidence": "MEDIUM",
+                    "source": "Manifest",
+                    "name": "Bundle-Name",
+                    "value": "H2 Database Engine"
+                  },
+                  {
+                    "type": "product",
+                    "confidence": "MEDIUM",
+                    "source": "Manifest",
+                    "name": "bundle-symbolicname",
+                    "value": "com.h2database"
+                  },
+                  {
+                    "type": "product",
+                    "confidence": "HIGH",
+                    "source": "Manifest",
+                    "name": "Implementation-Title",
+                    "value": "H2 Database Engine"
+                  },
+                  {
+                    "type": "product",
+                    "confidence": "LOW",
+                    "source": "Manifest",
+                    "name": "implementation-url",
+                    "value": "https://h2database.com"
+                  },
+                  {
+                    "type": "product",
+                    "confidence": "LOW",
+                    "source": "Manifest",
+                    "name": "multi-release",
+                    "value": "true"
+                  },
+                  {
+                    "type": "product",
+                    "confidence": "LOW",
+                    "source": "Manifest",
+                    "name": "provide-capability",
+                    "value": "osgi.service;objectClass:List=org.osgi.service.jdbc.DataSourceFactory"
+                  }
+                ],
+                "versionEvidence": [
+                  {
+                    "type": "version",
+                    "confidence": "HIGH",
+                    "source": "file",
+                    "name": "version",
+                    "value": "2.2.220"
+                  },
+                  {
+                    "type": "version",
+                    "confidence": "HIGH",
+                    "source": "Manifest",
+                    "name": "Implementation-Version",
+                    "value": "2.2.220"
+                  }
+                ]
+              },
+              "vulnerabilityIds": [
+                {
+                  "id": "cpe:2.3:a:h2database:h2:2.2.220:*:*:*:*:*:*:*",
+                  "confidence": "HIGH",
+                  "url": "https://nvd.nist.gov/vuln/search#/nvd/home?sortOrder=3&sortDirection=2&cpeFilterMode=applicability&resultType=records&cpeName=cpe%3A2.3%3Aa%3Ah2database%3Ah2%3A2.2.220%3A%2A%3A%2A%3A%2A%3A%2A%3A%2A%3A%2A%3A%2A"
+                }
+              ]
+            },
+            {
+              "isVirtual": false,
+              "fileName": "retry-e2e-h2-1.0.0.jar",
+              "filePath": "/var/pfe-remediation-workspaces/practical-source-qualification/practical-source-qualification/isolated-13af977f/attempt-1/step-1/target/retry-e2e-h2-1.0.0.jar",
+              "md5": "d10c615d9cca3f24ead5745361e2dbfb",
+              "sha1": "af0a00d7f819a677a83fdbe821da49443bf83f5e",
+              "sha256": "120db8174cefa25ead487801155037daa64e69ce75dae5e50faeee52b595dbfe",
+              "projectReferences": [
+                "artifact-rescan"
+              ],
+              "evidenceCollected": {
+                "vendorEvidence": [
+                  {
+                    "type": "vendor",
+                    "confidence": "HIGH",
+                    "source": "file",
+                    "name": "name",
+                    "value": "retry-e2e-h2"
+                  },
+                  {
+                    "type": "vendor",
+                    "confidence": "HIGHEST",
+                    "source": "jar",
+                    "name": "package name",
+                    "value": "fixture"
+                  },
+                  {
+                    "type": "vendor",
+                    "confidence": "LOW",
+                    "source": "Manifest",
+                    "name": "build-jdk-spec",
+                    "value": "17"
+                  },
+                  {
+                    "type": "vendor",
+                    "confidence": "LOW",
+                    "source": "pom",
+                    "name": "artifactid",
+                    "value": "retry-e2e-h2"
+                  },
+                  {
+                    "type": "vendor",
+                    "confidence": "HIGHEST",
+                    "source": "pom",
+                    "name": "groupid",
+                    "value": "operator.fixture"
+                  }
+                ],
+                "productEvidence": [
+                  {
+                    "type": "product",
+                    "confidence": "HIGH",
+                    "source": "file",
+                    "name": "name",
+                    "value": "retry-e2e-h2"
+                  },
+                  {
+                    "type": "product",
+                    "confidence": "HIGHEST",
+                    "source": "jar",
+                    "name": "package name",
+                    "value": "fixture"
+                  },
+                  {
+                    "type": "product",
+                    "confidence": "LOW",
+                    "source": "Manifest",
+                    "name": "build-jdk-spec",
+                    "value": "17"
+                  },
+                  {
+                    "type": "product",
+                    "confidence": "HIGHEST",
+                    "source": "pom",
+                    "name": "artifactid",
+                    "value": "retry-e2e-h2"
+                  },
+                  {
+                    "type": "product",
+                    "confidence": "HIGHEST",
+                    "source": "pom",
+                    "name": "groupid",
+                    "value": "operator.fixture"
+                  }
+                ],
+                "versionEvidence": [
+                  {
+                    "type": "version",
+                    "confidence": "HIGH",
+                    "source": "file",
+                    "name": "version",
+                    "value": "1.0.0"
+                  },
+                  {
+                    "type": "version",
+                    "confidence": "HIGHEST",
+                    "source": "pom",
+                    "name": "version",
+                    "value": "1.0.0"
+                  }
+                ]
+              },
+              "packages": [
+                {
+                  "id": "pkg:maven/operator.fixture/retry-e2e-h2@1.0.0",
+                  "confidence": "HIGH"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "OWASP": {
+      "scanner": "OWASP",
+      "scannerVersion": "12.2.2",
+      "sourceDigest": "97926d67652ff58e77501cc66b6adc56390fb84699ba3c766bc8cbe0e1518722",
+      "reportDigest": "0361e4da78719d53e51fcc5b3f3d0b981bfb060148d9c151d23a70e909dd7c4d",
+      "targetCves": [
+        "CVE-2022-45868"
+      ],
+      "targetFindingRemoved": true,
+      "report": {
+        "reportSchema": "1.1",
+        "scanInfo": {
+          "engineVersion": "12.2.2",
+          "dataSource": [
+            {
+              "name": "NVD API Last Checked",
+              "timestamp": "2026-07-10T14:42:24Z"
+            },
+            {
+              "name": "NVD API Last Modified",
+              "timestamp": "2026-07-10T14:41:16Z"
+            }
+          ]
+        },
+        "projectInfo": {
+          "name": "artifact-rescan",
+          "groupID": "security.validation",
+          "artifactID": "artifact-rescan",
+          "version": "1",
+          "reportDate": "2026-10-07T15:40:48.639713620Z",
+          "credits": {
+            "NVD": "This product uses the NVD API but is not endorsed or certified by the NVD. This report contains data retrieved from the National Vulnerability Database: https://nvd.nist.gov",
+            "CISA": "This report may contain data retrieved from the CISA Known Exploited Vulnerability Catalog: https://www.cisa.gov/known-exploited-vulnerabilities-catalog",
+            "NPM": "This report may contain data retrieved from the Github Advisory Database (via NPM Audit API): https://github.com/advisories/",
+            "RETIREJS": "This report may contain data retrieved from the RetireJS community: https://retirejs.github.io/retire.js/",
+            "OSSINDEX": "This report may contain data retrieved from the Sonatype Guide OSS Index API: https://www.sonatype.com/products/sonatype-guide/oss-index-users"
+          }
+        },
+        "dependencies": [
+          {
+            "isVirtual": false,
+            "fileName": "h2-2.2.220.jar",
+            "filePath": "/var/pfe-remediation-workspaces/practical-source-qualification/practical-source-qualification/isolated-13af977f/attempt-1/step-1/target/runtime/h2-2.2.220.jar",
+            "md5": "2e94b69256b1656d29ed23f6b4f894b1",
+            "sha1": "afd532e4f29d309ae053e57c853916551c777807",
+            "sha256": "978ab863018d3f965e38880571c36293ea8b10a8086194159c4d5d20b50f0a57",
+            "license": "https://h2database.com/html/license.html",
+            "projectReferences": [
+              "artifact-rescan"
+            ],
+            "evidenceCollected": {
+              "vendorEvidence": [
+                {
+                  "type": "vendor",
+                  "confidence": "HIGH",
+                  "source": "file",
+                  "name": "name",
+                  "value": "h2"
+                },
+                {
+                  "type": "vendor",
+                  "confidence": "LOW",
+                  "source": "jar",
+                  "name": "package name",
+                  "value": "h2"
+                },
+                {
+                  "type": "vendor",
+                  "confidence": "MEDIUM",
+                  "source": "Manifest",
+                  "name": "automatic-module-name",
+                  "value": "com.h2database"
+                },
+                {
+                  "type": "vendor",
+                  "confidence": "LOW",
+                  "source": "Manifest",
+                  "name": "bundle-category",
+                  "value": "jdbc"
+                },
+                {
+                  "type": "vendor",
+                  "confidence": "MEDIUM",
+                  "source": "Manifest",
+                  "name": "bundle-symbolicname",
+                  "value": "com.h2database"
+                },
+                {
+                  "type": "vendor",
+                  "confidence": "LOW",
+                  "source": "Manifest",
+                  "name": "implementation-url",
+                  "value": "https://h2database.com"
+                },
+                {
+                  "type": "vendor",
+                  "confidence": "LOW",
+                  "source": "Manifest",
+                  "name": "multi-release",
+                  "value": "true"
+                },
+                {
+                  "type": "vendor",
+                  "confidence": "LOW",
+                  "source": "Manifest",
+                  "name": "provide-capability",
+                  "value": "osgi.service;objectClass:List=org.osgi.service.jdbc.DataSourceFactory"
+                }
+              ],
+              "productEvidence": [
+                {
+                  "type": "product",
+                  "confidence": "HIGH",
+                  "source": "file",
+                  "name": "name",
+                  "value": "h2"
+                },
+                {
+                  "type": "product",
+                  "confidence": "HIGHEST",
+                  "source": "jar",
+                  "name": "package name",
+                  "value": "database"
+                },
+                {
+                  "type": "product",
+                  "confidence": "HIGHEST",
+                  "source": "jar",
+                  "name": "package name",
+                  "value": "engine"
+                },
+                {
+                  "type": "product",
+                  "confidence": "HIGHEST",
+                  "source": "jar",
+                  "name": "package name",
+                  "value": "h2"
+                },
+                {
+                  "type": "product",
+                  "confidence": "HIGHEST",
+                  "source": "jar",
+                  "name": "package name",
+                  "value": "jdbc"
+                },
+                {
+                  "type": "product",
+                  "confidence": "HIGHEST",
+                  "source": "jar",
+                  "name": "package name",
+                  "value": "org"
+                },
+                {
+                  "type": "product",
+                  "confidence": "HIGHEST",
+                  "source": "jar",
+                  "name": "package name",
+                  "value": "service"
+                },
+                {
+                  "type": "product",
+                  "confidence": "MEDIUM",
+                  "source": "Manifest",
+                  "name": "automatic-module-name",
+                  "value": "com.h2database"
+                },
+                {
+                  "type": "product",
+                  "confidence": "LOW",
+                  "source": "Manifest",
+                  "name": "bundle-category",
+                  "value": "jdbc"
+                },
+                {
+                  "type": "product",
+                  "confidence": "MEDIUM",
+                  "source": "Manifest",
+                  "name": "Bundle-Name",
+                  "value": "H2 Database Engine"
+                },
+                {
+                  "type": "product",
+                  "confidence": "MEDIUM",
+                  "source": "Manifest",
+                  "name": "bundle-symbolicname",
+                  "value": "com.h2database"
+                },
+                {
+                  "type": "product",
+                  "confidence": "HIGH",
+                  "source": "Manifest",
+                  "name": "Implementation-Title",
+                  "value": "H2 Database Engine"
+                },
+                {
+                  "type": "product",
+                  "confidence": "LOW",
+                  "source": "Manifest",
+                  "name": "implementation-url",
+                  "value": "https://h2database.com"
+                },
+                {
+                  "type": "product",
+                  "confidence": "LOW",
+                  "source": "Manifest",
+                  "name": "multi-release",
+                  "value": "true"
+                },
+                {
+                  "type": "product",
+                  "confidence": "LOW",
+                  "source": "Manifest",
+                  "name": "provide-capability",
+                  "value": "osgi.service;objectClass:List=org.osgi.service.jdbc.DataSourceFactory"
+                }
+              ],
+              "versionEvidence": [
+                {
+                  "type": "version",
+                  "confidence": "HIGH",
+                  "source": "file",
+                  "name": "version",
+                  "value": "2.2.220"
+                },
+                {
+                  "type": "version",
+                  "confidence": "HIGH",
+                  "source": "Manifest",
+                  "name": "Implementation-Version",
+                  "value": "2.2.220"
+                }
+              ]
+            },
+            "vulnerabilityIds": [
+              {
+                "id": "cpe:2.3:a:h2database:h2:2.2.220:*:*:*:*:*:*:*",
+                "confidence": "HIGH",
+                "url": "https://nvd.nist.gov/vuln/search#/nvd/home?sortOrder=3&sortDirection=2&cpeFilterMode=applicability&resultType=records&cpeName=cpe%3A2.3%3Aa%3Ah2database%3Ah2%3A2.2.220%3A%2A%3A%2A%3A%2A%3A%2A%3A%2A%3A%2A%3A%2A"
+              }
+            ]
+          },
+          {
+            "isVirtual": false,
+            "fileName": "retry-e2e-h2-1.0.0.jar",
+            "filePath": "/var/pfe-remediation-workspaces/practical-source-qualification/practical-source-qualification/isolated-13af977f/attempt-1/step-1/target/retry-e2e-h2-1.0.0.jar",
+            "md5": "d10c615d9cca3f24ead5745361e2dbfb",
+            "sha1": "af0a00d7f819a677a83fdbe821da49443bf83f5e",
+            "sha256": "120db8174cefa25ead487801155037daa64e69ce75dae5e50faeee52b595dbfe",
+            "projectReferences": [
+              "artifact-rescan"
+            ],
+            "evidenceCollected": {
+              "vendorEvidence": [
+                {
+                  "type": "vendor",
+                  "confidence": "HIGH",
+                  "source": "file",
+                  "name": "name",
+                  "value": "retry-e2e-h2"
+                },
+                {
+                  "type": "vendor",
+                  "confidence": "HIGHEST",
+                  "source": "jar",
+                  "name": "package name",
+                  "value": "fixture"
+                },
+                {
+                  "type": "vendor",
+                  "confidence": "LOW",
+                  "source": "Manifest",
+                  "name": "build-jdk-spec",
+                  "value": "17"
+                },
+                {
+                  "type": "vendor",
+                  "confidence": "LOW",
+                  "source": "pom",
+                  "name": "artifactid",
+                  "value": "retry-e2e-h2"
+                },
+                {
+                  "type": "vendor",
+                  "confidence": "HIGHEST",
+                  "source": "pom",
+                  "name": "groupid",
+                  "value": "operator.fixture"
+                }
+              ],
+              "productEvidence": [
+                {
+                  "type": "product",
+                  "confidence": "HIGH",
+                  "source": "file",
+                  "name": "name",
+                  "value": "retry-e2e-h2"
+                },
+                {
+                  "type": "product",
+                  "confidence": "HIGHEST",
+                  "source": "jar",
+                  "name": "package name",
+                  "value": "fixture"
+                },
+                {
+                  "type": "product",
+                  "confidence": "LOW",
+                  "source": "Manifest",
+                  "name": "build-jdk-spec",
+                  "value": "17"
+                },
+                {
+                  "type": "product",
+                  "confidence": "HIGHEST",
+                  "source": "pom",
+                  "name": "artifactid",
+                  "value": "retry-e2e-h2"
+                },
+                {
+                  "type": "product",
+                  "confidence": "HIGHEST",
+                  "source": "pom",
+                  "name": "groupid",
+                  "value": "operator.fixture"
+                }
+              ],
+              "versionEvidence": [
+                {
+                  "type": "version",
+                  "confidence": "HIGH",
+                  "source": "file",
+                  "name": "version",
+                  "value": "1.0.0"
+                },
+                {
+                  "type": "version",
+                  "confidence": "HIGHEST",
+                  "source": "pom",
+                  "name": "version",
+                  "value": "1.0.0"
+                }
+              ]
+            },
+            "packages": [
+              {
+                "id": "pkg:maven/operator.fixture/retry-e2e-h2@1.0.0",
+                "confidence": "HIGH"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "status": "CANDIDATE_READY",
+  "reason": "DETERMINISTIC_BATCH_CANDIDATE_READY",
+  "findings": [
+    {
+      "findingIdentity": "qualified-fixture-finding",
+      "cveId": "CVE-2022-45868",
+      "status": "CLOSED",
+      "reason": "TARGET_CVE_CLOSED",
+      "patchEvidence": {
+        "provenanceKind": "DIRECT_EXPLICIT",
+        "oldVersion": "2.1.212",
+        "targetVersion": "2.2.220",
+        "controllingFile": "pom.xml",
+        "controllingElement": "<version>2.1.212</version>",
+        "controllingProperty": null
+      }
+    }
+  ],
+  "decisions": [
+    {
+      "findingIdentity": "qualified-fixture-finding",
+      "evaluatedSha": "13af977f770f78d47462b5ccbe856de9c0a4f077",
+      "provenance": {
+        "ecosystem": "MAVEN",
+        "kind": "DIRECT_EXPLICIT",
+        "package": "com.h2database:h2",
+        "installedVersion": "2.1.212",
+        "controllingFile": "pom.xml",
+        "controllingElement": "<version>2.1.212</version>",
+        "controllingProperty": null,
+        "groundedSha": "13af977f770f78d47462b5ccbe856de9c0a4f077",
+        "evidence": "<dependency><groupId>com.h2database</groupId><artifactId>h2</artifactId><version>2.1.212</version></dependency> found directly in <dependencies> of pom.xml."
+      },
+      "fixedVersions": [
+        "2.2.220"
+      ],
+      "selectedTargetVersion": "2.2.220",
+      "remediationType": "AUTO_FIX_ELIGIBLE",
+      "reason": "DIRECT_EXPLICIT:SELECTED",
+      "remediationScope": {
+        "kind": "SINGLE_CONTROL",
+        "targetCve": "CVE-2022-45868",
+        "evaluatedSha": "13af977f770f78d47462b5ccbe856de9c0a4f077",
+        "controllingFile": "pom.xml",
+        "originalBlobSha": "3450aa8be2a3c173ea5d2ddf8eefc2116dd26635",
+        "affectedPackages": [
+          {
+            "package": "com.h2database:h2",
+            "installedVersion": "2.1.212",
+            "targetVersion": "2.2.220"
+          }
+        ],
+        "controls": [
+          {
+            "kind": "DEPENDENCY_VERSION",
+            "key": "com.h2database:h2",
+            "start": 463,
+            "end": 470,
+            "oldVersion": "2.1.212",
+            "targetVersion": "2.2.220"
+          }
+        ]
+      }
+    }
+  ],
+  "candidateIdentity": "d98ff79d7b722d646c1bb65dd2ee5e1ed5f17f9f3a2024a4ec25b63b1357657b",
+  "candidateManifest": {
+    "candidateId": "sec-batch-isolated-13af977f",
+    "requestId": "practical-source-qualification",
+    "batchId": "isolated-13af977f",
+    "candidateAttempt": 1,
+    "repository": "souhaiel11/remediation-retry-e2e-fixture",
+    "candidateBaseSha": "13af977f770f78d47462b5ccbe856de9c0a4f077",
+    "files": [
+      {
+        "path": "pom.xml",
+        "operation": "MODIFY",
+        "content": "<project xmlns=\"http://maven.apache.org/POM/4.0.0\"><modelVersion>4.0.0</modelVersion><groupId>operator.fixture</groupId><artifactId>retry-e2e-h2</artifactId><version>1.0.0</version><properties><maven.compiler.source>8</maven.compiler.source><maven.compiler.target>8</maven.compiler.target><project.build.sourceEncoding>UTF-8</project.build.sourceEncoding></properties><dependencies><dependency><groupId>com.h2database</groupId><artifactId>h2</artifactId><version>2.2.220</version></dependency></dependencies><build><plugins><plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-clean-plugin</artifactId><version>3.2.0</version></plugin><plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-resources-plugin</artifactId><version>3.2.0</version></plugin><plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-compiler-plugin</artifactId><version>3.10.1</version><dependencies><dependency><groupId>junit</groupId><artifactId>junit</artifactId><version>3.8.2</version></dependency></dependencies><executions><execution><id>default-testCompile</id><configuration><compilerArgs><arg>-classpath</arg><arg>${project.build.outputDirectory}:${settings.localRepository}/junit/junit/3.8.2/junit-3.8.2.jar</arg></compilerArgs></configuration></execution></executions></plugin><plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-surefire-plugin</artifactId><version>2.22.2</version><dependencies><dependency><groupId>org.apache.maven.surefire</groupId><artifactId>surefire-junit3</artifactId><version>2.22.2</version></dependency></dependencies><configuration><additionalClasspathElements><additionalClasspathElement>${settings.localRepository}/junit/junit/3.8.2/junit-3.8.2.jar</additionalClasspathElement></additionalClasspathElements></configuration></plugin><plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-jar-plugin</artifactId><version>3.2.2</version></plugin><plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-dependency-plugin</artifactId><version>3.3.0</version><executions><execution><id>runtime-artifact</id><phase>package</phase><goals><goal>copy-dependencies</goal></goals><configuration><includeScope>runtime</includeScope><outputDirectory>${project.build.directory}/runtime</outputDirectory></configuration></execution></executions></plugin></plugins></build></project>\n",
+        "contentSha256": "9b13da50953616bb703d024fc39ef8a0d307aed9b8ed8b2f5fa030eb8748e36e",
+        "sourceContent": "<project xmlns=\"http://maven.apache.org/POM/4.0.0\"><modelVersion>4.0.0</modelVersion><groupId>operator.fixture</groupId><artifactId>retry-e2e-h2</artifactId><version>1.0.0</version><properties><maven.compiler.source>8</maven.compiler.source><maven.compiler.target>8</maven.compiler.target><project.build.sourceEncoding>UTF-8</project.build.sourceEncoding></properties><dependencies><dependency><groupId>com.h2database</groupId><artifactId>h2</artifactId><version>2.1.212</version></dependency></dependencies><build><plugins><plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-clean-plugin</artifactId><version>3.2.0</version></plugin><plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-resources-plugin</artifactId><version>3.2.0</version></plugin><plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-compiler-plugin</artifactId><version>3.10.1</version><dependencies><dependency><groupId>junit</groupId><artifactId>junit</artifactId><version>3.8.2</version></dependency></dependencies><executions><execution><id>default-testCompile</id><configuration><compilerArgs><arg>-classpath</arg><arg>${project.build.outputDirectory}:${settings.localRepository}/junit/junit/3.8.2/junit-3.8.2.jar</arg></compilerArgs></configuration></execution></executions></plugin><plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-surefire-plugin</artifactId><version>2.22.2</version><dependencies><dependency><groupId>org.apache.maven.surefire</groupId><artifactId>surefire-junit3</artifactId><version>2.22.2</version></dependency></dependencies><configuration><additionalClasspathElements><additionalClasspathElement>${settings.localRepository}/junit/junit/3.8.2/junit-3.8.2.jar</additionalClasspathElement></additionalClasspathElements></configuration></plugin><plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-jar-plugin</artifactId><version>3.2.2</version></plugin><plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-dependency-plugin</artifactId><version>3.3.0</version><executions><execution><id>runtime-artifact</id><phase>package</phase><goals><goal>copy-dependencies</goal></goals><configuration><includeScope>runtime</includeScope><outputDirectory>${project.build.directory}/runtime</outputDirectory></configuration></execution></executions></plugin></plugins></build></project>\n",
+        "originalBlobSha": "3450aa8be2a3c173ea5d2ddf8eefc2116dd26635"
+      }
+    ],
+    "candidateDigest": "e900f7c14ec07244e67f6d8456c39fab2e779356f67199a38aff038882f3c05a"
+  },
+  "guardResult": null,
+  "applicationTests": {
+    "executed": true,
+    "passed": true,
+    "total": 1,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "durationMs": 6388,
+    "evidenceTail": "\u001b[0m[INFO] Scanning for projects...\n[INFO] \n[INFO] -------------------< operator.fixture:retry-e2e-h2 >--------------------\n[INFO] Building retry-e2e-h2 1.0.0\n[INFO] --------------------------------[ jar ]---------------------------------\n[INFO] Downloading from central: https://repo.maven.apache.org/maven2/com/h2database/h2/2.2.220/h2-2.2.220.jar\n[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/com/h2database/h2/2.2.220/h2-2.2.220.jar (2.6 MB at 1.4 MB/s)\n[INFO] \n[INFO] --- maven-clean-plugin:3.2.0:clean (default-clean) @ retry-e2e-h2 ---\n[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/codehaus/plexus/plexus-utils/1.1/plexus-utils-1.1.jar\n[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/codehaus/plexus/plexus-utils/1.1/plexus-utils-1.1.jar (169 kB at 694 kB/s)\n[INFO] \n[INFO] --- maven-resources-plugin:3.2.0:resources (default-resources) @ retry-e2e-h2 ---\n[INFO] Using 'UTF-8' encoding to copy filtered resources.\n[INFO] Using 'UTF-8' encoding to copy filtered properties files.\n[INFO] skip non existing resourceDirectory /var/pfe-remediation-workspaces/practical-source-qualification/practical-source-qualification/isolated-13af977f/attempt-1/step-1/src/main/resources\n[INFO] \n[INFO] --- maven-compiler-plugin:3.10.1:compile (default-compile) @ retry-e2e-h2 ---\n[INFO] Downloading from central: https://repo.maven.apache.org/maven2/junit/junit/3.8.2/junit-3.8.2.pom\n[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/junit/junit/3.8.2/junit-3.8.2.pom (747 B at 3.7 kB/s)\n[INFO] Downloading from central: https://repo.maven.apache.org/maven2/junit/junit/3.8.2/junit-3.8.2.jar\n[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/junit/junit/3.8.2/junit-3.8.2.jar (121 kB at 511 kB/s)\n[INFO] Changes detected - recompiling the module!\n[INFO] Compiling 1 source file to /var/pfe-remediation-workspaces/practical-source-qualification/practical-source-qualification/isolated-13af977f/attempt-1/step-1/target/classes\n[INFO] \n[INFO] --- maven-resources-plugin:3.2.0:testResources (default-testResources) @ retry-e2e-h2 ---\n[INFO] Using 'UTF-8' encoding to copy filtered resources.\n[INFO] Using 'UTF-8' encoding to copy filtered properties files.\n[INFO] skip non existing resourceDirectory /var/pfe-remediation-workspaces/practical-source-qualification/practical-source-qualification/isolated-13af977f/attempt-1/step-1/src/test/resources\n[INFO] \n[INFO] --- maven-compiler-plugin:3.10.1:testCompile (default-testCompile) @ retry-e2e-h2 ---\n[INFO] Changes detected - recompiling the module!\n[INFO] Compiling 1 source file to /var/pfe-remediation-workspaces/practical-source-qualification/practical-source-qualification/isolated-13af977f/attempt-1/step-1/target/test-classes\n[INFO] \n[INFO] --- maven-surefire-plugin:2.22.2:test (default-test) @ retry-e2e-h2 ---\n[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/apache/maven/surefire/surefire-junit3/2.22.2/surefire-junit3-2.22.2.pom\n[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/apache/maven/surefire/surefire-junit3/2.22.2/surefire-junit3-2.22.2.pom (2.5 kB at 16 kB/s)\n[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/apache/maven/surefire/surefire-providers/2.22.2/surefire-providers-2.22.2.pom\n[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/apache/maven/surefire/surefire-providers/2.22.2/surefire-providers-2.22.2.pom (2.5 kB at 17 kB/s)\n[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/apache/maven/surefire/surefire-junit3/2.22.2/surefire-junit3-2.22.2.jar\n[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/apache/maven/surefire/surefire-junit3/2.22.2/surefire-junit3-2.22.2.jar (27 kB at 158 kB/s)\n[INFO] \n[INFO] -------------------------------------------------------\n[INFO]  T E S T S\n[INFO] -------------------------------------------------------\n[INFO] Running fixture.SmokeTest\n[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.199 s - in fixture.SmokeTest\n[INFO] \n[INFO] Results:\n[INFO] \n[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0\n[INFO] \n[INFO] \n[INFO] --- maven-jar-plugin:3.2.2:jar (default-jar) @ retry-e2e-h2 ---\n[INFO] Building jar: /var/pfe-remediation-workspaces/practical-source-qualification/practical-source-qualification/isolated-13af977f/attempt-1/step-1/target/retry-e2e-h2-1.0.0.jar\n[INFO] \n[INFO] --- maven-dependency-plugin:3.3.0:copy-dependencies (runtime-artifact) @ retry-e2e-h2 ---\n[INFO] Copying h2-2.2.220.jar to /var/pfe-remediation-workspaces/practical-source-qualification/practical-source-qualification/isolated-13af977f/attempt-1/step-1/target/runtime/h2-2.2.220.jar\n[INFO] ------------------------------------------------------------------------\n[INFO] BUILD SUCCESS\n[INFO] ------------------------------------------------------------------------\n[INFO] Total time:  5.611 s\n[INFO] Finished at: 2026-10-07T15:40:29Z\n[INFO] ------------------------------------------------------------------------\n\u001b[0m\n"
+  },
+  "executionTimings": {
+    "GROUNDING_DURATION_MS": 66675,
+    "ARTIFACT_VALIDATION_DURATION_MS": 33376,
+    "MAVEN_RESOLUTION_DURATION_MS": 17215,
+    "PATCH_GENERATION_DURATION_MS": 1,
+    "BUILD_AND_TEST_DURATION_MS": 6388,
+    "CLEANUP_DURATION_MS": 5,
+    "TOTAL_WORKER_DURATION_MS": 123703
+  }
+}

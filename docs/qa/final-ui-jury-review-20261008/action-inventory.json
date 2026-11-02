@@ -1,0 +1,2101 @@
+[
+  {
+    "component": "frontend/src/app/shared/not-found.component.ts",
+    "label": "Retour au tableau de bord",
+    "handler": "",
+    "navigation": "/dashboard",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/shared/layout/layout.component.ts",
+    "label": "Tableau de bord",
+    "handler": "closeMobileNav()",
+    "navigation": "/dashboard",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/shared/layout/layout.component.ts",
+    "label": "Projets",
+    "handler": "closeMobileNav()",
+    "navigation": "/projects",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/shared/layout/layout.component.ts",
+    "label": "Agents IA",
+    "handler": "closeMobileNav()",
+    "navigation": "/analysis",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/shared/layout/layout.component.ts",
+    "label": "Trivy / OWASP",
+    "handler": "closeMobileNav()",
+    "navigation": "/security",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/shared/layout/layout.component.ts",
+    "label": "Incidents",
+    "handler": "closeMobileNav()",
+    "navigation": "/incidents",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/shared/layout/layout.component.ts",
+    "label": "Indicateurs de risque",
+    "handler": "closeMobileNav()",
+    "navigation": "/prediction",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/shared/layout/layout.component.ts",
+    "label": "Paramètres",
+    "handler": "closeMobileNav()",
+    "navigation": "/settings",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/shared/layout/layout.component.ts",
+    "label": "Admin",
+    "handler": "closeMobileNav()",
+    "navigation": "/admin",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/shared/layout/layout.component.ts",
+    "label": "",
+    "handler": "logout()",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/shared/layout/layout.component.ts",
+    "label": "",
+    "handler": "closeMobileNav()",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/shared/layout/layout.component.ts",
+    "label": "",
+    "handler": "mobileNavOpen = !mobileNavOpen",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/shared/layout/layout.component.ts",
+    "label": "",
+    "handler": "themeService.toggleTheme()",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/shared/chat-widget/chat-widget.component.ts",
+    "label": "↺",
+    "handler": "clearChat()",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/shared/chat-widget/chat-widget.component.ts",
+    "label": "✕",
+    "handler": "close()",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/shared/chat-widget/chat-widget.component.ts",
+    "label": "{{s}}",
+    "handler": "send(s)",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/shared/chat-widget/chat-widget.component.ts",
+    "label": "▶",
+    "handler": "send()",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "!inputText.trim() || loading",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/shared/chat-widget/chat-widget.component.ts",
+    "label": "💬 \n         ✕",
+    "handler": "toggle()",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/settings/settings.component.ts",
+    "label": "Réessayer",
+    "handler": "loadProjects()",
+    "navigation": "",
+    "apiMethods": [
+      "getProjects"
+    ],
+    "endpoints": [
+      [
+        "get",
+        "`${this.base}/projects`); }"
+      ]
+    ],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/settings/settings.component.ts",
+    "label": "Réessayer",
+    "handler": "selectProject()",
+    "navigation": "",
+    "apiMethods": [
+      "getProject"
+    ],
+    "endpoints": [
+      [
+        "get",
+        "`${this.base}/projects/${id}`); }"
+      ]
+    ],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/settings/settings.component.ts",
+    "label": "{{section.label}}",
+    "handler": "setSettingsSection(section.id)",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/settings/settings.component.ts",
+    "label": "Réessayer",
+    "handler": "loadCapabilities()",
+    "navigation": "",
+    "apiMethods": [
+      "getPlatformCapabilities"
+    ],
+    "endpoints": [
+      [
+        "get",
+        "`${this.base}/dashboard/capabilities`); }"
+      ]
+    ],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/settings/settings.component.ts",
+    "label": "{{readinessState === 'ERROR' ? 'Réessayer' : 'Actualiser'}}",
+    "handler": "loadDeployReadiness()",
+    "navigation": "",
+    "apiMethods": [
+      "getDeployReadiness"
+    ],
+    "endpoints": [
+      [
+        "get",
+        "`${this.base}/azure-deploy/ready/${projectId}`); }"
+      ]
+    ],
+    "disabledExpression": "readinessState === 'LOADING'",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/settings/settings.component.ts",
+    "label": "{{projectSaving ? 'Enregistrement…' : 'Enregistrer'}}",
+    "handler": "saveProject()",
+    "navigation": "",
+    "apiMethods": [
+      "updateProject"
+    ],
+    "endpoints": [
+      [
+        "put",
+        "`${this.base}/projects/${id}`, data); }"
+      ]
+    ],
+    "disabledExpression": "!projectDirty || projectInvalid || projectSaving || projectTesting || credentialSaving",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/settings/settings.component.ts",
+    "label": "Annuler",
+    "handler": "cancelProject()",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "!projectDirty || projectSaving || projectTesting || credentialSaving",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/settings/settings.component.ts",
+    "label": "{{credentialSaving ? 'Vérification…' : 'Enregistrer les identifiants'}}",
+    "handler": "replaceJenkinsCredential()",
+    "navigation": "",
+    "apiMethods": [
+      "updateJenkinsCredentials"
+    ],
+    "endpoints": [
+      [
+        "put",
+        "`${this.base}/projects/${id}/jenkins-credentials`, { username, token });"
+      ]
+    ],
+    "disabledExpression": "!credentialUsername.trim() || !credentialToken.trim() || credentialSaving || projectDirty || projectSaving || projectTesting",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/settings/settings.component.ts",
+    "label": "Annuler",
+    "handler": "credentialUsername = ''; credentialToken = ''",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "credentialSaving || (!credentialUsername && !credentialToken)",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/settings/settings.component.ts",
+    "label": "Réessayer",
+    "handler": "loadCapabilities()",
+    "navigation": "",
+    "apiMethods": [
+      "getPlatformCapabilities"
+    ],
+    "endpoints": [
+      [
+        "get",
+        "`${this.base}/dashboard/capabilities`); }"
+      ]
+    ],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/settings/settings.component.ts",
+    "label": "{{projectTesting ? 'Vérification…' : 'Tester la connexion'}}",
+    "handler": "testProject()",
+    "navigation": "",
+    "apiMethods": [
+      "validateProject"
+    ],
+    "endpoints": [
+      [
+        "post",
+        "`${this.base}/projects/${id}/validate`, {}); }"
+      ]
+    ],
+    "disabledExpression": "projectDirty || projectSaving || projectTesting || credentialSaving",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/settings/settings.component.ts",
+    "label": "Réessayer",
+    "handler": "loadIntegrations()",
+    "navigation": "",
+    "apiMethods": [
+      "getIntegrations"
+    ],
+    "endpoints": [
+      [
+        "get",
+        "`${this.base}/integrations`); }"
+      ]
+    ],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/settings/settings.component.ts",
+    "label": "⚡ Tester la connexion \n                     ↻ \n                      Test en cours…",
+    "handler": "testTool(tool)",
+    "navigation": "",
+    "apiMethods": [
+      "testIntegration",
+      "getIntegration"
+    ],
+    "endpoints": [
+      [
+        "post",
+        "`${this.base}/integrations/${id}/test`, {}); }"
+      ],
+      [
+        "get",
+        "`${this.base}/integrations/${id}`); }"
+      ]
+    ],
+    "disabledExpression": "!canEdit || !tool.editable || tool.testing || tool.saving || toolDirty(tool) || toolInvalid(tool)",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/settings/settings.component.ts",
+    "label": "Enregistrer \n                     ↻ \n                      Sauvegarde…",
+    "handler": "saveTool(tool)",
+    "navigation": "",
+    "apiMethods": [
+      "updateIntegration",
+      "createIntegration"
+    ],
+    "endpoints": [
+      [
+        "put",
+        "`${this.base}/integrations/${id}`, data); }"
+      ],
+      [
+        "post",
+        "`${this.base}/integrations`, data); }"
+      ]
+    ],
+    "disabledExpression": "!canEdit || !tool.editable || tool.saving || tool.testing || !toolDirty(tool) || toolInvalid(tool)",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/settings/settings.component.ts",
+    "label": "Annuler",
+    "handler": "cancelTool(tool)",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "!toolDirty(tool) || tool.saving || tool.testing",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/settings/settings.component.ts",
+    "label": "Réessayer",
+    "handler": "loadCapabilities()",
+    "navigation": "",
+    "apiMethods": [
+      "getPlatformCapabilities"
+    ],
+    "endpoints": [
+      [
+        "get",
+        "`${this.base}/dashboard/capabilities`); }"
+      ]
+    ],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/auth/login.component.ts",
+    "label": "Se connecter →",
+    "handler": "login()",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "loading",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/admin/admin.component.ts",
+    "label": "Réessayer",
+    "handler": "load()",
+    "navigation": "",
+    "apiMethods": [
+      "getUsers"
+    ],
+    "endpoints": [
+      [
+        "get",
+        "`${this.base}/auth/users`); }"
+      ]
+    ],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/admin/admin.component.ts",
+    "label": "+ Nouvel utilisateur",
+    "handler": "showModal = true",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/admin/admin.component.ts",
+    "label": "Supprimer",
+    "handler": "deleteUser(u)",
+    "navigation": "",
+    "apiMethods": [
+      "deleteUser"
+    ],
+    "endpoints": [
+      [
+        "delete",
+        "`${this.base}/auth/users/${id}`); }"
+      ]
+    ],
+    "disabledExpression": "u.role === 'admin'",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/admin/admin.component.ts",
+    "label": "✕",
+    "handler": "showModal=false",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/admin/admin.component.ts",
+    "label": "Annuler",
+    "handler": "showModal=false",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/admin/admin.component.ts",
+    "label": "Créer",
+    "handler": "createUser()",
+    "navigation": "",
+    "apiMethods": [
+      "createUser"
+    ],
+    "endpoints": [
+      [
+        "post",
+        "`${this.base}/auth/register`, data); }"
+      ]
+    ],
+    "disabledExpression": "saving || !newUser.name || !newUser.email || !newUser.password",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/analysis/analysis.component.ts",
+    "label": "Réessayer",
+    "handler": "load()",
+    "navigation": "",
+    "apiMethods": [
+      "getDecisions"
+    ],
+    "endpoints": [
+      [
+        "get",
+        "`${this.base}/incidents`, { params: p });"
+      ]
+    ],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/analysis/analysis.component.ts",
+    "label": "{{ r.decision | presentationLabel }}\n               \n               \n                 {{ r.title || 'Rapport sans titre' }} \n                 {{ r.projectName || 'Projet non disponible' }} · {{ r.securityLevel | presentationLabel }} · confiance {{ r.confidence ?? 'Non disponible' }}{{r.confidence != null ? ' %' : ''}} \n               \n               \n                {{ r.createdAt | frenchDate }}\n               \n               →",
+    "handler": "",
+    "navigation": "['/incidents', r.id]",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/incidents/remediation-card.component.ts",
+    "label": "{{ prLabel || 'Voir la Pull Request' }}",
+    "handler": "",
+    "navigation": "prUrl",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/incidents/remediation-card.component.ts",
+    "label": "{{ prLabel || 'Voir la Pull Request' }}",
+    "handler": "",
+    "navigation": "prUrl",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/incidents/remediation-card.component.ts",
+    "label": "{{ correcting ? 'Lancement…' : actionLabel }}",
+    "handler": "emitCorrect()",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "correcting || (issues.length > 0 && selected.size === 0)",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/incidents/remediation-card.component.ts",
+    "label": "{{ correcting ? 'Lancement…' : actionLabel }}",
+    "handler": "emitCorrect()",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "correcting",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/incidents/incidents.component.ts",
+    "label": "Réessayer",
+    "handler": "load()",
+    "navigation": "",
+    "apiMethods": [
+      "getIncidents"
+    ],
+    "endpoints": [
+      [
+        "get",
+        "`${this.base}/incidents`, { params: p });"
+      ]
+    ],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/incidents/incidents.component.ts",
+    "label": "↺ Réinitialiser",
+    "handler": "resetFilters()",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/incidents/incidents.component.ts",
+    "label": "Voir le détail →",
+    "handler": "",
+    "navigation": "['/incidents', inc.id]",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "label": "Réessayer",
+    "handler": "load()",
+    "navigation": "",
+    "apiMethods": [
+      "getIncident"
+    ],
+    "endpoints": [
+      [
+        "get",
+        "`${this.base}/incidents/${id}`); }"
+      ]
+    ],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "label": "← Retour",
+    "handler": "goBack()",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "label": "🔧 Voir la PR de correction générée ↗",
+    "handler": "",
+    "navigation": "incident.prUrl",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "label": "{{cancelBusy || fixRequestStatus() === 'CANCEL_REQUESTED' ? 'Annulation en cours...' : 'Annuler la correction'}}",
+    "handler": "cancelFix()",
+    "navigation": "",
+    "apiMethods": [
+      "cancelFixRequest"
+    ],
+    "endpoints": [
+      [
+        "post",
+        "`${this.base}/incidents/${id}/remediation/${encodeURIComponent(requestId)}/cancel`, body);"
+      ]
+    ],
+    "disabledExpression": "cancelBusy || fixRequestStatus() === 'CANCEL_REQUESTED'",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "label": "{{reconcileBusy ? 'Marquage…' : 'Marquer la correction bloquée comme échouée'}}",
+    "handler": "reconcileStaleDispatch()",
+    "navigation": "",
+    "apiMethods": [
+      "reconcileStaleDispatch"
+    ],
+    "endpoints": [
+      [
+        "post",
+        "`${this.base}/incidents/${id}/remediation/${requestId}/reconcile-stale-dispatch`, body);"
+      ]
+    ],
+    "disabledExpression": "reconcileBusy",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "label": "{{approvalBusy ? 'Démarrage…' : 'Créer la Pull Request'}}",
+    "handler": "approveFix()",
+    "navigation": "",
+    "apiMethods": [
+      "retryFixBatch",
+      "approveFixBatch",
+      "approveFix"
+    ],
+    "endpoints": [
+      [
+        "post",
+        "`${this.base}/incidents/${id}/retry`, {}); }"
+      ],
+      [
+        "post",
+        "`${this.base}/incidents/${id}/approve`, { findingIds }); }"
+      ],
+      [
+        "post",
+        "`${this.base}/incidents/${id}/approve`, findingId ? { findingId } : {}); }"
+      ]
+    ],
+    "disabledExpression": "approvalBusy",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "label": "✕ Refuser / corriger manuellement",
+    "handler": "rejectFix()",
+    "navigation": "",
+    "apiMethods": [
+      "rejectFix"
+    ],
+    "endpoints": [
+      [
+        "post",
+        "`${this.base}/incidents/${id}/reject`, {}); }"
+      ]
+    ],
+    "disabledExpression": "approvalBusy",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "label": "{{prValidationBusy ? 'Validation en attente…' : (prValidationRequest?.status === 'FAILED' ? 'Réessayer la validation' : 'Valider la Pull Request')}}",
+    "handler": "requestPrValidation()",
+    "navigation": "",
+    "apiMethods": [
+      "requestPrValidation"
+    ],
+    "endpoints": [
+      [
+        "post",
+        "`${this.base}/incidents/${id}/pr-validation`, {}); }"
+      ]
+    ],
+    "disabledExpression": "prValidationBusy || correctiveBusy || isCorrectiveInFlight()",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "label": "{{refreshValidationTargetBusy ? 'Actualisation…' : 'Actualiser la cible'}}",
+    "handler": "refreshValidationTarget()",
+    "navigation": "",
+    "apiMethods": [
+      "refreshPrValidationTarget"
+    ],
+    "endpoints": [
+      [
+        "post",
+        "`${this.base}/incidents/${id}/pr-validation/refresh-target`, {}); }"
+      ]
+    ],
+    "disabledExpression": "refreshValidationTargetBusy",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "label": "{{tab.label}}",
+    "handler": "activeTab = tab.id",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "label": "{{ batchPrLabel() }} ↗",
+    "handler": "",
+    "navigation": "batchPrUrl()",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "label": "{{ correctiveBusy ? 'Autorisation…' : 'Corriger et revalider' }}",
+    "handler": "correctAndRevalidate()",
+    "navigation": "",
+    "apiMethods": [
+      "correctAndRevalidate"
+    ],
+    "endpoints": [
+      [
+        "post",
+        "`${this.base}/incidents/${id}/correct-and-revalidate`, {}); }"
+      ]
+    ],
+    "disabledExpression": "correctiveBusy || prValidationBusy",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "label": "#{{validation.prNumber}}",
+    "handler": "",
+    "navigation": "validation.prUrl",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "label": "{{validation.prUrl}}",
+    "handler": "",
+    "navigation": "validation.prUrl",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/incidents/developer-guide/developer-guide-tab.component.ts",
+    "label": "{{ id }}",
+    "handler": "scrollTo(id)",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/incidents/developer-guide/developer-guide-tab.component.ts",
+    "label": "{{ id }}",
+    "handler": "scrollTo(id)",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/incidents/developer-guide/developer-guide-tab.component.ts",
+    "label": "Copier",
+    "handler": "copy(issue.verification)",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/dashboard/dashboard.component.ts",
+    "label": "",
+    "handler": "toggleNotif()",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/dashboard/dashboard.component.ts",
+    "label": "",
+    "handler": "toggleNotif()",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/dashboard/dashboard.component.ts",
+    "label": "{{p.initials}} \n               \n                 {{p.name}} \n                 {{p.tech}} \n               \n             \n             \n                0\" [class.green]=\"p.incidents === 0\">\n                {{p.incidents}} incident{{p.incidents > 1 ? 's' : ''}}\n               \n             \n             \n                Jenkins  {{buildLabel(p.buildStatus)}}  · Build #{{p.buildNumber}}   \n                Plateforme  {{platformLabel(p)}}  \n                Déploiement  {{p.readiness ? (p.readiness.ready ? 'Prêt' : 'Non prêt') : 'Vérification…'}}  \n                Risque  {{riskLabel(p)}}  \n             \n             \n                \n             \n             \n               Score de sécurité \n               \n                {{p.health !== null ? p.health + '%' : 'indisponible'}}\n               \n             \n             \n               {{p.lastUpdate}} \n               \n                Score de sécurité : {{p.riskScore !== null ? p.riskScore + '/100' : 'indisponible'}}",
+    "handler": "",
+    "navigation": "['/projects', p.id]",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/analytics/prediction.component.ts",
+    "label": "Réessayer",
+    "handler": "load()",
+    "navigation": "",
+    "apiMethods": [
+      "getRiskIndicators"
+    ],
+    "endpoints": [
+      [
+        "get",
+        "`${this.base}/dashboard/risk-indicators`); }"
+      ]
+    ],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/tools/security.component.ts",
+    "label": "Réessayer",
+    "handler": "load()",
+    "navigation": "",
+    "apiMethods": [
+      "getSecurityGlobal"
+    ],
+    "endpoints": [
+      [
+        "get",
+        "`${this.base}/dashboard/security-global`); }"
+      ]
+    ],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/deployment-governance.component.ts",
+    "label": "↻  Réévaluer",
+    "handler": "reevaluate()",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "previewLoading",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/deployment-governance.component.ts",
+    "label": "Réessayer",
+    "handler": "reevaluate()",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/deployment-governance.component.ts",
+    "label": "🔧  Voir le pipeline Jenkins ↗",
+    "handler": "",
+    "navigation": "jenkinsPipelineUrl",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/deployment-governance.component.ts",
+    "label": "{{controlsExpanded ? 'Masquer les contrôles' : 'Voir tous les contrôles (' + controlRows.length + ')'}}",
+    "handler": "toggleControls()",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/deployment-governance.component.ts",
+    "label": "{{authorizing || deploying ? 'Déploiement en cours…' : 'Déployer sur Azure'}}",
+    "handler": "submitNormalAuthorization()",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "authorizing || deploying",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/deployment-governance.component.ts",
+    "label": "Autoriser et déployer",
+    "handler": "openConditionalForm()",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/deployment-governance.component.ts",
+    "label": "Annuler",
+    "handler": "cancelConditionalForm()",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "authorizing",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/deployment-governance.component.ts",
+    "label": "{{authorizing ? 'Autorisation…' : 'Autoriser et déployer'}}",
+    "handler": "submitConditionalAuthorization()",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "!conditionalFormValid || authorizing || deploying",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/deployment-governance.component.ts",
+    "label": "Forcer le déploiement",
+    "handler": "openCriticalForm()",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/deployment-governance.component.ts",
+    "label": "Annuler",
+    "handler": "cancelCriticalForm()",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "authorizing",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/deployment-governance.component.ts",
+    "label": "{{authorizing ? 'Autorisation…' : 'Forcer le déploiement'}}",
+    "handler": "submitCriticalAuthorization()",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "!criticalFormValid || authorizing || deploying",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/deployment-governance.component.ts",
+    "label": "Réessayer (même autorisation, même requête)",
+    "handler": "retryAmbiguousDeploy()",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "deploying",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/dockerfile-optimizer.component.ts",
+    "label": "{{ loading() ? 'Analyse en cours…' : 'Analyser le Dockerfile' }}",
+    "handler": "analyze()",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "loading() || !canAnalyze()",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/dockerfile-optimizer.component.ts",
+    "label": "Nouvelle analyse",
+    "handler": "reset()",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/dockerfile-optimizer.component.ts",
+    "label": "{{ applying() ? 'Correction en cours…' : 'Corriger et créer une PR' }}",
+    "handler": "apply(r)",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "applying() || !(r.issues || []).length",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/dockerfile-optimizer.component.ts",
+    "label": "Ouvrir la PR ↗",
+    "handler": "",
+    "navigation": "ar.prUrl",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/project-overview.component.ts",
+    "label": "{{p.label}}",
+    "handler": "p.tab && goToTab.emit(p.tab)",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/project-overview.component.ts",
+    "label": "{{ t.count ?? '—' }} \n           {{ t.name }} \n           {{ t.detail }}",
+    "handler": "goToTab.emit(t.tab)",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/project-overview.component.ts",
+    "label": "Ouvrir le guide de correction",
+    "handler": "goToTab.emit('guide')",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/project-overview.component.ts",
+    "label": "Voir les {{ issueCount() }} recommandations détaillées",
+    "handler": "goToTab.emit('guide')",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/projects.component.ts",
+    "label": "Réessayer",
+    "handler": "load()",
+    "navigation": "",
+    "apiMethods": [
+      "getProjects",
+      "getSecurityGlobal"
+    ],
+    "endpoints": [
+      [
+        "get",
+        "`${this.base}/projects`); }"
+      ],
+      [
+        "get",
+        "`${this.base}/dashboard/security-global`); }"
+      ]
+    ],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/projects.component.ts",
+    "label": "+ Nouveau projet",
+    "handler": "goToNewProject()",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/projects.component.ts",
+    "label": "Voir →",
+    "handler": "",
+    "navigation": "['/projects', p.id]",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/projects.component.ts",
+    "label": "✕",
+    "handler": "confirmDelete(p)",
+    "navigation": "",
+    "apiMethods": [
+      "deleteProject"
+    ],
+    "endpoints": [
+      [
+        "delete",
+        "`${this.base}/projects/${id}`); }"
+      ]
+    ],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/project-form.component.ts",
+    "label": "← Retour",
+    "handler": "goBack()",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/project-form.component.ts",
+    "label": "{{ validating ? '⏳ Vérification...' : '🔍 Vérifier la config' }}",
+    "handler": "validateProject()",
+    "navigation": "",
+    "apiMethods": [
+      "validateProject"
+    ],
+    "endpoints": [
+      [
+        "post",
+        "`${this.base}/projects/${id}/validate`, {}); }"
+      ]
+    ],
+    "disabledExpression": "!projectId || validating",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/project-form.component.ts",
+    "label": "{{ loading ? '⏳ Sauvegarde...' : '💾 Sauvegarder' }}",
+    "handler": "save()",
+    "navigation": "",
+    "apiMethods": [
+      "updateProject",
+      "createProject"
+    ],
+    "endpoints": [
+      [
+        "put",
+        "`${this.base}/projects/${id}`, data); }"
+      ],
+      [
+        "post",
+        "`${this.base}/projects`, data); }"
+      ]
+    ],
+    "disabledExpression": "loading || projectLoading",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/project-form.component.ts",
+    "label": "{{ s.icon }} {{ s.label }}",
+    "handler": "setSection(s.id)",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/project-form.component.ts",
+    "label": "{{ jenkinsCredBusy ? 'Vérification…' : 'Enregistrer les identifiants' }}",
+    "handler": "saveJenkinsCredentials()",
+    "navigation": "",
+    "apiMethods": [
+      "updateJenkinsCredentials"
+    ],
+    "endpoints": [
+      [
+        "put",
+        "`${this.base}/projects/${id}/jenkins-credentials`, { username, token });"
+      ]
+    ],
+    "disabledExpression": "jenkinsCredBusy || !jenkinsCredUsername || !jenkinsCredToken",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/project-form.component.ts",
+    "label": "Annuler",
+    "handler": "goBack()",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/project-form.component.ts",
+    "label": "{{ validating ? '⏳' : '🔍 Vérifier' }}",
+    "handler": "validateProject()",
+    "navigation": "",
+    "apiMethods": [
+      "validateProject"
+    ],
+    "endpoints": [
+      [
+        "post",
+        "`${this.base}/projects/${id}/validate`, {}); }"
+      ]
+    ],
+    "disabledExpression": "!projectId || validating",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/project-form.component.ts",
+    "label": "{{ loading ? '⏳' : '💾 Sauvegarder' }}",
+    "handler": "save()",
+    "navigation": "",
+    "apiMethods": [
+      "updateProject",
+      "createProject"
+    ],
+    "endpoints": [
+      [
+        "put",
+        "`${this.base}/projects/${id}`, data); }"
+      ],
+      [
+        "post",
+        "`${this.base}/projects`, data); }"
+      ]
+    ],
+    "disabledExpression": "loading || projectLoading",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "label": "Réessayer",
+    "handler": "loadProject()",
+    "navigation": "",
+    "apiMethods": [
+      "getProject"
+    ],
+    "endpoints": [
+      [
+        "get",
+        "`${this.base}/projects/${id}`); }"
+      ]
+    ],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "label": "← Retour aux projets",
+    "handler": "goBack()",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "label": "Rapport IA  {{allReports.length}}",
+    "handler": "setActiveTab('rapport')",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "label": "Jenkins",
+    "handler": "setActiveTab('jenkins')",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "label": "SonarQube",
+    "handler": "setActiveTab('sonarqube')",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "label": "Docker",
+    "handler": "setActiveTab('docker')",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "label": "Sécurité",
+    "handler": "selectTab('securite')",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "label": "Déploiement",
+    "handler": "setActiveTab('deploiement')",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "label": "Incidents  {{incidents.length}}",
+    "handler": "setActiveTab('incidents')",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "label": "Config",
+    "handler": "setActiveTab('config')",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "label": "{{showAllHistory ? 'Réduire l’historique' : 'Voir tout l’historique (' + allReports.length + ')'}}",
+    "handler": "showAllHistory = !showAllHistory",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "label": "📋 Copier le rapport",
+    "handler": "copyReport()",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "label": "{{ buildTriggering ? '⏳ Déclenchement…' : '🔄 Déclencher un build' }}",
+    "handler": "triggerBuild()",
+    "navigation": "",
+    "apiMethods": [
+      "triggerBuild"
+    ],
+    "endpoints": [
+      [
+        "post",
+        "`${this.base}/incidents/${projectId}/trigger-build`, {}); }"
+      ]
+    ],
+    "disabledExpression": "buildTriggering",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "label": "🔗 Ouvrir Jenkins",
+    "handler": "",
+    "navigation": "jenkinsLink",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "label": "📋 Voir les logs",
+    "handler": "",
+    "navigation": "buildUrl(ed.build?.url)",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "label": "→",
+    "handler": "",
+    "navigation": "buildUrl(b.url)",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "label": "Voir la Pull Request",
+    "handler": "",
+    "navigation": "prUrl",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "label": "{{prValidationBusy ? 'Validation en attente…' : (prValidationRequest()?.status === 'FAILED' ? 'Réessayer la validation' : 'Valider la Pull Request')}}",
+    "handler": "requestPrValidation()",
+    "navigation": "",
+    "apiMethods": [
+      "requestPrValidation"
+    ],
+    "endpoints": [
+      [
+        "post",
+        "`${this.base}/incidents/${id}/pr-validation`, {}); }"
+      ]
+    ],
+    "disabledExpression": "prValidationBusy",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "label": "Voir le détail de la validation →",
+    "handler": "",
+    "navigation": "['/incidents', latestReport?.id]",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "label": "{{refreshValidationTargetBusy ? 'Actualisation…' : 'Actualiser la cible'}}",
+    "handler": "refreshValidationTarget()",
+    "navigation": "",
+    "apiMethods": [
+      "refreshPrValidationTarget"
+    ],
+    "endpoints": [
+      [
+        "post",
+        "`${this.base}/incidents/${id}/pr-validation/refresh-target`, {}); }"
+      ]
+    ],
+    "disabledExpression": "refreshValidationTargetBusy",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "label": "Réessayer les mêmes erreurs",
+    "handler": "retryFailedFix()",
+    "navigation": "",
+    "apiMethods": [
+      "retryFixBatch"
+    ],
+    "endpoints": [
+      [
+        "post",
+        "`${this.base}/incidents/${id}/retry`, {}); }"
+      ]
+    ],
+    "disabledExpression": "approving",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "label": "Modifier la sélection",
+    "handler": "startModifySelection()",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "approving",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "label": "Annuler la modification",
+    "handler": "cancelModifySelection()",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "approving",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "label": "{{allEligibleFilteredSelected() ? 'Désélectionner la vue' : 'Sélectionner les problèmes éligibles de cette vue'}}",
+    "handler": "toggleFilteredSelection()",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "!eligibleFilteredFindings().length",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "label": "{{batchPrNumber() ? 'PR #' + batchPrNumber() : 'Voir la Pull Request'}}",
+    "handler": "$event.stopPropagation()",
+    "navigation": "batchPrUrl()",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "label": "×",
+    "handler": "closeSonarFinding()",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "label": "{{batchPrNumber() ? 'PR #' + batchPrNumber() : 'Voir la Pull Request'}}",
+    "handler": "",
+    "navigation": "batchPrUrl()",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "label": "{{isSelected(selectedSonarFinding) ? 'Retirer de la sélection' : 'Ajouter à la sélection'}}",
+    "handler": "toggleFindingSelection(selectedSonarFinding)",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "label": "{{modifyingFailedSelection ? 'Annuler' : 'Effacer la sélection'}}",
+    "handler": "modifyingFailedSelection ? cancelModifySelection() : clearSonarSelection()",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "label": "{{modifyingFailedSelection ? 'Lancer une nouvelle correction' : 'Proposer une correction'}}",
+    "handler": "openBatchConfirmation()",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "!selectedSonarIds.size || failedSelectionUnchanged()",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "label": "×",
+    "handler": "closeBatchConfirmation()",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "label": "Annuler",
+    "handler": "closeBatchConfirmation()",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "approving",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "label": "{{approving ? 'Demande en cours…' : (modifyingFailedSelection ? 'Lancer la nouvelle correction' : 'Confirmer la demande')}}",
+    "handler": "confirmSonarCorrection()",
+    "navigation": "",
+    "apiMethods": [
+      "approveFixBatch"
+    ],
+    "endpoints": [
+      [
+        "post",
+        "`${this.base}/incidents/${id}/approve`, { findingIds }); }"
+      ]
+    ],
+    "disabledExpression": "approving",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "label": "🔗 Ouvrir SonarQube",
+    "handler": "",
+    "navigation": "sonarLink",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "label": "📋 Voir toutes les issues",
+    "handler": "",
+    "navigation": "sonarIssuesLink",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "label": "Tous  {{securityFindingsCount('all') ?? '—'}}",
+    "handler": "setSecurityFilter('all')",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "label": "Trivy  {{securityFindingsCount('trivy') ?? '—'}}",
+    "handler": "setSecurityFilter('trivy')",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "label": "OWASP  {{securityFindingsCount('owasp') ?? '—'}}",
+    "handler": "setSecurityFilter('owasp')",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "label": "ZAP  {{securityFindingsCount('zap') ?? '—'}}",
+    "handler": "setSecurityFilter('zap')",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "label": "✕ Tout afficher",
+    "handler": "securityFilter = 'all'",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "label": "{{ launchingCveBatch ? 'Lancement…' : (selectedCveCount() ? ('Corriger ' + selectedCveCount() + (selectedCveCount() > 1 ? ' vulnérabilités' : ' vulnérabilité')) : 'Sélectionnez des vulnérabilités à corriger') }}",
+    "handler": "launchCveBatch()",
+    "navigation": "",
+    "apiMethods": [
+      "launchSecurityRemediationBatch"
+    ],
+    "endpoints": [
+      [
+        "post",
+        "`${this.base}/manual-remediation/launch-batch`, { projectId, findingTaskIds });"
+      ]
+    ],
+    "disabledExpression": "!selectedCveCount() || cveBatchOverCap() || launchingCveBatch",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "label": "Effacer la sélection",
+    "handler": "clearCveSelection()",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "launchingCveBatch",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "label": "→",
+    "handler": "",
+    "navigation": "['/incidents', i.id]",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "label": "Modifier le projet",
+    "handler": "editProject()",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "label": "Réessayer",
+    "handler": "loadProject()",
+    "navigation": "",
+    "apiMethods": [
+      "getProject"
+    ],
+    "endpoints": [
+      [
+        "get",
+        "`${this.base}/projects/${id}`); }"
+      ]
+    ],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/cve-table.component.ts",
+    "label": "{{ tab.label }} ({{ tabCount(summary, tab.key) }})",
+    "handler": "owaspRemediationFilter.set(tab.key)",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/cve-table.component.ts",
+    "label": "Toutes ({{ v18Count('ALL') }})",
+    "handler": "v18Filter.set('ALL')",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/cve-table.component.ts",
+    "label": "Validées par V1.8 ({{ v18Count('VALIDATED') }})",
+    "handler": "v18Filter.set('VALIDATED')",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/cve-table.component.ts",
+    "label": "Bloquées par compatibilité ({{ v18Count('BLOCKED') }})",
+    "handler": "v18Filter.set('BLOCKED')",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/cve-table.component.ts",
+    "label": "Migration majeure requise ({{ v18Count('MAJOR_UPGRADE') }})",
+    "handler": "v18Filter.set('MAJOR_UPGRADE')",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/cve-table.component.ts",
+    "label": "Échec de validation ({{ v18Count('VALIDATION_FAILED') }})",
+    "handler": "v18Filter.set('VALIDATION_FAILED')",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/cve-table.component.ts",
+    "label": "Corriger",
+    "handler": "$event.stopPropagation(); correctTask.emit(taskFor(c).id)",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "selectionBusy",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/cve-table.component.ts",
+    "label": "{{ retryPendingIds.has(taskFor(c).id) ? 'Relance en cours…' : 'Réessayer' }}",
+    "handler": "$event.stopPropagation(); requestRetry(c)",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "retryPendingIds.has(taskFor(c).id)",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/cve-table.component.ts",
+    "label": "Voir le détail",
+    "handler": "$event.stopPropagation(); toggle(c.id + c.pkg)",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/cve-table.component.ts",
+    "label": "Fiche officielle ({{ c.id.startsWith('GHSA') ? 'GitHub Advisory' : 'NVD' }}) ↗",
+    "handler": "",
+    "navigation": "c.primaryUrl || nvdUrl(c.id)",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/cve-table.component.ts",
+    "label": "Voir la PR ↗",
+    "handler": "",
+    "navigation": "prUrl",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/cve-table.component.ts",
+    "label": "☐ Marquer comme traité",
+    "handler": "$event.stopPropagation(); openConfirmation(task, c)",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/cve-table.component.ts",
+    "label": "Rouvrir la tâche",
+    "handler": "$event.stopPropagation(); reopenTask.emit(task)",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/cve-table.component.ts",
+    "label": "Annuler",
+    "handler": "cancelConfirmation()",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/cve-table.component.ts",
+    "label": "Confirmer",
+    "handler": "confirmCompletion()",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/zap-table.component.ts",
+    "label": "☐ Marquer comme traité",
+    "handler": "$event.stopPropagation(); openConfirmation(task, a)",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/zap-table.component.ts",
+    "label": "Rouvrir la tâche",
+    "handler": "$event.stopPropagation(); reopenTask.emit(task)",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/zap-table.component.ts",
+    "label": "Annuler",
+    "handler": "cancelConfirmation()",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/zap-table.component.ts",
+    "label": "Confirmer",
+    "handler": "confirmCompletion()",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/jenkinsfile-optimizer.component.ts",
+    "label": "Importer depuis Git",
+    "handler": "mode.set('git')",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/jenkinsfile-optimizer.component.ts",
+    "label": "Coller manuellement",
+    "handler": "mode.set('paste')",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/jenkinsfile-optimizer.component.ts",
+    "label": "{{ fetching() ? 'Récupération…' : 'Récupérer depuis Git' }}",
+    "handler": "fetchFromGit()",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "fetching() || !canFetch()",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/jenkinsfile-optimizer.component.ts",
+    "label": "Coller manuellement",
+    "handler": "mode.set('paste')",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/jenkinsfile-optimizer.component.ts",
+    "label": "{{ loading() ? 'Analyse en cours…' : 'Analyser et optimiser' }}",
+    "handler": "analyze()",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "loading() || source().trim().length < 30",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/jenkinsfile-optimizer.component.ts",
+    "label": "Nouvelle analyse",
+    "handler": "reset()",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/jenkinsfile-optimizer.component.ts",
+    "label": "Rejeter",
+    "handler": "reject()",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "applying()",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/jenkinsfile-optimizer.component.ts",
+    "label": "{{ applying() ? 'Création de la PR…' : 'Valider → créer la PR' }}",
+    "handler": "apply(r)",
+    "navigation": "",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "applying() || !canApply() || !sourceAvailable() || selectedIssueIds().size === 0",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  },
+  {
+    "component": "frontend/src/app/features/projects/jenkinsfile-optimizer.component.ts",
+    "label": "Ouvrir la PR ↗",
+    "handler": "",
+    "navigation": "pr.prUrl",
+    "apiMethods": [],
+    "endpoints": [],
+    "disabledExpression": "",
+    "validation": "source wiring reviewed; destructive actions not executed"
+  }
+]

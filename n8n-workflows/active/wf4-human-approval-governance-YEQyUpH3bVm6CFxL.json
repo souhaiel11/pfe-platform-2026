@@ -1,0 +1,335 @@
+{
+  "name": "WF4 - Human Approval & Governance",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "approvalData"
+            }
+          ]
+        }
+      },
+      "id": "6216a3ef-eb82-47fb-ad2b-09fd839ebfa1",
+      "name": "WF4 Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -1344,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first();\nconst incidentId = item.json.incidentId;\nconst repository = item.json.repository;\nconst prNumber = item.json.prNumber;\nconst final_summary = item.json.final_summary;\nconst final_risk_level = item.json.final_risk_level;\nconst selected_action = item.json.selected_action;\nconst confidence_score = item.json.confidence_score;\nconst files_touched = item.json.files_touched;\n\nreturn [{\n  json: {\n    incidentId,\n    repository,\n    prNumber,\n    final_summary,\n    final_risk_level,\n    selected_action,\n    confidence_score,\n    files_touched,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "999dd355-cf6c-4312-a281-71b029f87d92",
+      "name": "Prepare Approval Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1120,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.BACKEND_BASE_URL }}/api/approvals",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "86d0977d-69fa-4228-809a-edcabe520652",
+      "name": "Save Approval Request to Backend",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -896,
+        96
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $env.APPROVAL_EMAIL }}",
+        "subject": "=Approval Required: AI Remediation {{ $json.incidentId }}",
+        "message": "=<h2>AI Remediation Approval Request</h2>\n\n<p><strong>Incident ID:</strong> {{ $json.incidentId }}</p>\n<p><strong>Repository:</strong> {{ $json.repository }}</p>\n<p><strong>Pull Request:</strong> #{{ $json.prNumber }}</p>\n<p><strong>Risk Level:</strong> {{ $json.final_risk_level }}</p>\n<p><strong>Confidence Score:</strong> {{ $json.confidence_score }}</p>\n\n<h3>Summary</h3>\n<p>{{ $json.final_summary }}</p>\n\n<h3>Selected Action</h3>\n<p>{{ $json.selected_action }}</p>\n\n<h3>Files Touched</h3>\n<p>{{ $json.files_touched }}</p>\n\n<hr>\n<p><strong>Please review and approve or reject this remediation.</strong></p>\n<p>Click the approval link sent separately or respond via the approval system.</p>",
+        "options": {
+          "bccList": "",
+          "ccList": ""
+        }
+      },
+      "id": "49fb8955-cbce-4cd1-bbb8-09432bcae995",
+      "name": "Send Approval Request",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        -672,
+        96
+      ],
+      "webhookId": "d7c9abc3-0233-47f2-aaf6-126c968313c4",
+      "disabled": true,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "resume": "webhook",
+        "options": {}
+      },
+      "id": "21327be0-d3d0-4be2-9f8a-b68d6c9745e5",
+      "name": "Wait For Approval Callback",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        -448,
+        96
+      ],
+      "webhookId": "414bc764-d17a-41cc-8e9f-2f945d0eeb65"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "id-1",
+              "leftValue": "={{ $json.decision }}",
+              "rightValue": "approved",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "c00ad620-18c5-4ed1-8f0b-b45d129663e1",
+      "name": "Approved?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -224,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.BACKEND_BASE_URL }}/api/approvals",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { incidentId: $('Prepare Approval Payload').item.json.incidentId, decision: 'approved', timestamp: new Date().toISOString(), approver: $json.approver || 'unknown' } }}",
+        "options": {}
+      },
+      "id": "84eaf874-31a0-4637-861e-ff1d39b17d53",
+      "name": "Save Approval to Backend",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        128,
+        -96
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ $env.BACKEND_BASE_URL }}/api/incidents/{{ $('Prepare Approval Payload').item.json.incidentId }}/status",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { status: 'approved_for_merge', timestamp: new Date().toISOString() } }}",
+        "options": {}
+      },
+      "id": "f99ce783-8be6-4d07-ac58-c63281aa8362",
+      "name": "Update Status - Approved For Merge",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        352,
+        -96
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.BACKEND_BASE_URL }}/api/approvals",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { incidentId: $('Prepare Approval Payload').item.json.incidentId, decision: 'rejected', timestamp: new Date().toISOString(), approver: $json.approver || 'unknown', reason: $json.reason || 'Manual review required' } }}",
+        "options": {}
+      },
+      "id": "7064aac0-72d3-4cfc-a883-8ac249a3f0e4",
+      "name": "Save Rejection to Backend",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        16,
+        208
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.github.com/repos/{{ $('Prepare Approval Payload').item.json.repository }}/issues/{{ $('Prepare Approval Payload').item.json.prNumber }}/comments",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { body: '⚠️ **AI Remediation Rejected - Manual Review Required**\\n\\nThe proposed AI remediation for this incident has been rejected and requires manual review.\\n\\n**Incident ID:** ' + $('Prepare Approval Payload').item.json.incidentId + '\\n**Risk Level:** ' + $('Prepare Approval Payload').item.json.final_risk_level + '\\nPlease review the changes manually before proceeding.' } }}",
+        "options": {}
+      },
+      "id": "4fc37ebc-9d62-41f7-80b2-3f2a0a975083",
+      "name": "Comment PR - Manual Review Required",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        240,
+        208
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ $env.BACKEND_BASE_URL }}/api/incidents/{{ $('Prepare Approval Payload').item.json.incidentId }}/status",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { status: 'manual_review_required', timestamp: new Date().toISOString() } }}",
+        "options": {}
+      },
+      "id": "189436a1-3568-4c8c-bf00-1e25b53fb6a7",
+      "name": "Update Status - Manual Review Required",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        464,
+        208
+      ],
+      "onError": "continueErrorOutput"
+    }
+  ],
+  "connections": {
+    "WF4 Trigger": {
+      "main": [
+        [
+          {
+            "node": "Prepare Approval Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Approval Payload": {
+      "main": [
+        [
+          {
+            "node": "Save Approval Request to Backend",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Approval Request to Backend": {
+      "main": [
+        [
+          {
+            "node": "Send Approval Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Approval Request": {
+      "main": [
+        [
+          {
+            "node": "Wait For Approval Callback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait For Approval Callback": {
+      "main": [
+        [
+          {
+            "node": "Approved?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Approved?": {
+      "main": [
+        [
+          {
+            "node": "Save Approval to Backend",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Save Rejection to Backend",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Approval to Backend": {
+      "main": [
+        [
+          {
+            "node": "Update Status - Approved For Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Rejection to Backend": {
+      "main": [
+        [
+          {
+            "node": "Comment PR - Manual Review Required",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Comment PR - Manual Review Required": {
+      "main": [
+        [
+          {
+            "node": "Update Status - Manual Review Required",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "id": "YEQyUpH3bVm6CFxL",
+  "meta": {}
+}

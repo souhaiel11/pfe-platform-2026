@@ -1,0 +1,16 @@
+{
+  "argv": [
+    "az",
+    "container",
+    "exec",
+    "-g",
+    "rg-pfe-devsecops",
+    "-n",
+    "aci-pfe-app-test-healthy-canary",
+    "--exec-command",
+    "wget -q -O - http://localhost:8080/api/auth/health"
+  ],
+  "exitCode": 0,
+  "stdout": "OK",
+  "stderr": ""
+}

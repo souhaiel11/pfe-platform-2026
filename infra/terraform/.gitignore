@@ -1,0 +1,28 @@
+# State Terraform - JAMAIS dans git (peut contenir des secrets/credentials
+# en clair, ex: mots de passe admin ACR)
+*.tfstate
+*.tfstate.*
+
+# Répertoire local du provider téléchargé
+**/.terraform/*
+
+# Fichiers de variables susceptibles de contenir des données sensibles
+*.tfvars
+*.tfvars.json
+
+# Logs de crash Terraform
+crash.log
+crash.*.log
+
+# Fichiers d'override locaux
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Plans sauvegardés (peuvent contenir des valeurs sensibles en clair)
+*.tfplan
+
+# Config CLI locale
+.terraformrc
+terraform.rc

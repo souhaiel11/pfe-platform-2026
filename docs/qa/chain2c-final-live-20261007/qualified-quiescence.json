@@ -1,0 +1,9 @@
+{
+  "checkedAt": "2026-10-07T11:18:10.145Z",
+  "activeRemediationDispatches": 0,
+  "activeWF6Executions": [],
+  "activeWorkerJobs": 0,
+  "activeGitWriters": 0,
+  "evidenceReference": "docs/qa/chain2c-final-live-20261007/quiescence-observations.json",
+  "quiescent": true
+}

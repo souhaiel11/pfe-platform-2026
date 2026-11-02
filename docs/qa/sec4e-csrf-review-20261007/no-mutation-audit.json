@@ -1,0 +1,16 @@
+{
+  "candidateCommitUnchanged": true,
+  "candidateWorktreeClean": true,
+  "candidateSourceAndTestsChanged": false,
+  "newCommitCreated": false,
+  "hotspotRecordUnchanged": true,
+  "hotspotStatus": "TO_REVIEW",
+  "qualityGateEvaluationUnchanged": true,
+  "primaryWorkspaceUnchangedExceptSec4eEvidence": true,
+  "githubPush": false,
+  "prCreated": false,
+  "jenkinsRemoteBuild": false,
+  "acrPush": false,
+  "azureChanged": false,
+  "disposableRuntimeStopped": true
+}

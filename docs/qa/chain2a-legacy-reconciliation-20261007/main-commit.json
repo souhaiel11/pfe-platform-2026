@@ -1,0 +1,113 @@
+{
+  "sha": "393816c250f73d907eb5a2dd43b2ec2288c7abcb",
+  "node_id": "C_kwDOSVuMS9oAKDM5MzgxNmMyNTBmNzNkOTA3ZWI1YTJkZDQzYjJlYzIyODhjN2FiY2I",
+  "commit": {
+    "author": {
+      "name": "souhaiel11",
+      "email": "souhaiel.amri@esprit.tn",
+      "date": "2026-10-06T16:06:18Z"
+    },
+    "committer": {
+      "name": "souhaiel11",
+      "email": "souhaiel.amri@esprit.tn",
+      "date": "2026-10-06T16:06:18Z"
+    },
+    "message": "fix(runtime): close malformed task repository query",
+    "tree": {
+      "sha": "2d81cd7724ec6e740cacf6aa938f3c2bdbe2ec0d",
+      "url": "https://api.github.com/repos/souhaiel11/pfe-app-test/git/trees/2d81cd7724ec6e740cacf6aa938f3c2bdbe2ec0d"
+    },
+    "url": "https://api.github.com/repos/souhaiel11/pfe-app-test/git/commits/393816c250f73d907eb5a2dd43b2ec2288c7abcb",
+    "comment_count": 0,
+    "verification": {
+      "verified": false,
+      "reason": "unsigned",
+      "signature": null,
+      "payload": null,
+      "verified_at": null
+    }
+  },
+  "url": "https://api.github.com/repos/souhaiel11/pfe-app-test/commits/393816c250f73d907eb5a2dd43b2ec2288c7abcb",
+  "html_url": "https://github.com/souhaiel11/pfe-app-test/commit/393816c250f73d907eb5a2dd43b2ec2288c7abcb",
+  "comments_url": "https://api.github.com/repos/souhaiel11/pfe-app-test/commits/393816c250f73d907eb5a2dd43b2ec2288c7abcb/comments",
+  "author": {
+    "login": "souhaiel11",
+    "id": 131708236,
+    "node_id": "U_kgDOB9m1TA",
+    "avatar_url": "https://avatars.githubusercontent.com/u/131708236?v=4",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/souhaiel11",
+    "html_url": "https://github.com/souhaiel11",
+    "followers_url": "https://api.github.com/users/souhaiel11/followers",
+    "following_url": "https://api.github.com/users/souhaiel11/following{/other_user}",
+    "gists_url": "https://api.github.com/users/souhaiel11/gists{/gist_id}",
+    "starred_url": "https://api.github.com/users/souhaiel11/starred{/owner}{/repo}",
+    "subscriptions_url": "https://api.github.com/users/souhaiel11/subscriptions",
+    "organizations_url": "https://api.github.com/users/souhaiel11/orgs",
+    "repos_url": "https://api.github.com/users/souhaiel11/repos",
+    "events_url": "https://api.github.com/users/souhaiel11/events{/privacy}",
+    "received_events_url": "https://api.github.com/users/souhaiel11/received_events",
+    "type": "User",
+    "user_view_type": "public",
+    "site_admin": false
+  },
+  "committer": {
+    "login": "souhaiel11",
+    "id": 131708236,
+    "node_id": "U_kgDOB9m1TA",
+    "avatar_url": "https://avatars.githubusercontent.com/u/131708236?v=4",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/souhaiel11",
+    "html_url": "https://github.com/souhaiel11",
+    "followers_url": "https://api.github.com/users/souhaiel11/followers",
+    "following_url": "https://api.github.com/users/souhaiel11/following{/other_user}",
+    "gists_url": "https://api.github.com/users/souhaiel11/gists{/gist_id}",
+    "starred_url": "https://api.github.com/users/souhaiel11/starred{/owner}{/repo}",
+    "subscriptions_url": "https://api.github.com/users/souhaiel11/subscriptions",
+    "organizations_url": "https://api.github.com/users/souhaiel11/orgs",
+    "repos_url": "https://api.github.com/users/souhaiel11/repos",
+    "events_url": "https://api.github.com/users/souhaiel11/events{/privacy}",
+    "received_events_url": "https://api.github.com/users/souhaiel11/received_events",
+    "type": "User",
+    "user_view_type": "public",
+    "site_admin": false
+  },
+  "parents": [
+    {
+      "sha": "7ae0f954f99628b69ce9b42f42c1e2acc8568d99",
+      "url": "https://api.github.com/repos/souhaiel11/pfe-app-test/commits/7ae0f954f99628b69ce9b42f42c1e2acc8568d99",
+      "html_url": "https://github.com/souhaiel11/pfe-app-test/commit/7ae0f954f99628b69ce9b42f42c1e2acc8568d99"
+    }
+  ],
+  "stats": {
+    "total": 21,
+    "additions": 20,
+    "deletions": 1
+  },
+  "files": [
+    {
+      "sha": "c85e34b9cf06d2e158075cf564d60a74cc29a282",
+      "filename": "src/main/java/com/pfe/devsecops/repository/TaskRepository.java",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 1,
+      "changes": 2,
+      "blob_url": "https://github.com/souhaiel11/pfe-app-test/blob/393816c250f73d907eb5a2dd43b2ec2288c7abcb/src%2Fmain%2Fjava%2Fcom%2Fpfe%2Fdevsecops%2Frepository%2FTaskRepository.java",
+      "raw_url": "https://github.com/souhaiel11/pfe-app-test/raw/393816c250f73d907eb5a2dd43b2ec2288c7abcb/src%2Fmain%2Fjava%2Fcom%2Fpfe%2Fdevsecops%2Frepository%2FTaskRepository.java",
+      "contents_url": "https://api.github.com/repos/souhaiel11/pfe-app-test/contents/src%2Fmain%2Fjava%2Fcom%2Fpfe%2Fdevsecops%2Frepository%2FTaskRepository.java?ref=393816c250f73d907eb5a2dd43b2ec2288c7abcb",
+      "patch": "@@ -16,7 +16,7 @@ public interface TaskRepository extends JpaRepository<Task, Long> {\n \n     // VULNERABILITY S1 \u2014 SQL Injection CRITICAL\n     // Concat\u00e9nation directe du param\u00e8tre dans la requ\u00eate native\n-    @Query(value = \"SELECT * FROM tasks WHERE title = '\" + \"' OR '1'='1\", nativeQuery = true)\n+    @Query(value = \"SELECT * FROM tasks WHERE title = '\" + \"' OR '1'='1'\", nativeQuery = true)\n     List<Task> findByTitleUnsafe(String title);\n \n     // Version encore plus explicite pour SonarQube"
+    },
+    {
+      "sha": "42035d1b6034dd80edfafc99f9a6edec26517a88",
+      "filename": "src/test/java/com/pfe/devsecops/repository/TaskRepositoryInitializationTest.java",
+      "status": "added",
+      "additions": 19,
+      "deletions": 0,
+      "changes": 19,
+      "blob_url": "https://github.com/souhaiel11/pfe-app-test/blob/393816c250f73d907eb5a2dd43b2ec2288c7abcb/src%2Ftest%2Fjava%2Fcom%2Fpfe%2Fdevsecops%2Frepository%2FTaskRepositoryInitializationTest.java",
+      "raw_url": "https://github.com/souhaiel11/pfe-app-test/raw/393816c250f73d907eb5a2dd43b2ec2288c7abcb/src%2Ftest%2Fjava%2Fcom%2Fpfe%2Fdevsecops%2Frepository%2FTaskRepositoryInitializationTest.java",
+      "contents_url": "https://api.github.com/repos/souhaiel11/pfe-app-test/contents/src%2Ftest%2Fjava%2Fcom%2Fpfe%2Fdevsecops%2Frepository%2FTaskRepositoryInitializationTest.java?ref=393816c250f73d907eb5a2dd43b2ec2288c7abcb",
+      "patch": "@@ -0,0 +1,19 @@\n+package com.pfe.devsecops.repository;\n+\n+import org.junit.jupiter.api.Test;\n+import org.springframework.beans.factory.annotation.Autowired;\n+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;\n+\n+import static org.junit.jupiter.api.Assertions.assertNotNull;\n+\n+@DataJpaTest\n+class TaskRepositoryInitializationTest {\n+\n+    @Autowired\n+    private TaskRepository taskRepository;\n+\n+    @Test\n+    void repositoryInitializesWithDeclaredQueries() {\n+        assertNotNull(taskRepository);\n+    }\n+}"
+    }
+  ]
+}

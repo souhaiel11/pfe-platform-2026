@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "src/**/*.ts",
+    "../backend/src/candidate-verification/candidate-verification.types.ts",
+    "../backend/src/candidate-verification/candidate-digest.ts",
+    "../backend/src/context/scope-lock.service.ts"
+  ],
+  "exclude": [
+    "src/**/*.spec.ts",
+    "src/**/*.test.ts",
+    "src/dependency-compatibility-validation-adapter.ts",
+    "src/v1_8_phase2_live_proof_snakeyaml.ts",
+    "src/v1_8_phase3_live_run_direct.ts",
+    "src/v1_8_phase3_live_run_owner.ts"
+  ]
+}

@@ -1,0 +1,297 @@
+[
+  {
+    "component": "frontend/src/app/app.component.ts",
+    "apiMethods": [],
+    "directHttp": [],
+    "templateFiles": []
+  },
+  {
+    "component": "frontend/src/app/shared/not-found.component.ts",
+    "apiMethods": [],
+    "directHttp": [],
+    "templateFiles": [
+      "frontend/src/app/shared/not-found.component.ts"
+    ]
+  },
+  {
+    "component": "frontend/src/app/shared/layout/layout.component.ts",
+    "apiMethods": [],
+    "directHttp": [],
+    "templateFiles": [
+      "frontend/src/app/shared/layout/layout.component.html"
+    ]
+  },
+  {
+    "component": "frontend/src/app/shared/chat-widget/chat-markdown.component.ts",
+    "apiMethods": [],
+    "directHttp": [],
+    "templateFiles": []
+  },
+  {
+    "component": "frontend/src/app/shared/chat-widget/chat-widget.component.ts",
+    "apiMethods": [],
+    "directHttp": [],
+    "templateFiles": [
+      "frontend/src/app/shared/chat-widget/chat-widget.component.html"
+    ]
+  },
+  {
+    "component": "frontend/src/app/shared/toast/toast.component.ts",
+    "apiMethods": [],
+    "directHttp": [],
+    "templateFiles": []
+  },
+  {
+    "component": "frontend/src/app/features/settings/settings.component.ts",
+    "apiMethods": [
+      "createIntegration",
+      "getDeployReadiness",
+      "getIntegration",
+      "getIntegrations",
+      "getPlatformCapabilities",
+      "getProject",
+      "getProjects",
+      "testIntegration",
+      "updateIntegration",
+      "updateJenkinsCredentials",
+      "updateProject",
+      "validateProject"
+    ],
+    "directHttp": [],
+    "templateFiles": [
+      "frontend/src/app/features/settings/settings.component.html"
+    ]
+  },
+  {
+    "component": "frontend/src/app/features/auth/login.component.ts",
+    "apiMethods": [],
+    "directHttp": [],
+    "templateFiles": [
+      "frontend/src/app/features/auth/login.component.ts"
+    ]
+  },
+  {
+    "component": "frontend/src/app/features/admin/admin.component.ts",
+    "apiMethods": [
+      "createUser",
+      "deleteUser",
+      "getUsers"
+    ],
+    "directHttp": [],
+    "templateFiles": [
+      "frontend/src/app/features/admin/admin.component.html"
+    ]
+  },
+  {
+    "component": "frontend/src/app/features/analysis/analysis.component.ts",
+    "apiMethods": [
+      "getDecisions"
+    ],
+    "directHttp": [],
+    "templateFiles": [
+      "frontend/src/app/features/analysis/analysis.component.html"
+    ]
+  },
+  {
+    "component": "frontend/src/app/features/incidents/remediation-card.component.ts",
+    "apiMethods": [],
+    "directHttp": [],
+    "templateFiles": [
+      "frontend/src/app/features/incidents/remediation-card.component.ts"
+    ]
+  },
+  {
+    "component": "frontend/src/app/features/incidents/incidents.component.ts",
+    "apiMethods": [
+      "getIncidents"
+    ],
+    "directHttp": [],
+    "templateFiles": [
+      "frontend/src/app/features/incidents/incidents.component.html"
+    ]
+  },
+  {
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "apiMethods": [
+      "approveFix",
+      "approveFixBatch",
+      "cancelFixRequest",
+      "correctAndRevalidate",
+      "fetchJenkinsfile",
+      "getIncident",
+      "getProject",
+      "optimizeDockerfile",
+      "optimizeJenkinsfile",
+      "reconcileStaleDispatch",
+      "refreshPrValidationTarget",
+      "rejectFix",
+      "requestPrValidation",
+      "retryFixBatch"
+    ],
+    "directHttp": [],
+    "templateFiles": [
+      "frontend/src/app/features/incidents/incident-detail.component.html"
+    ]
+  },
+  {
+    "component": "frontend/src/app/features/incidents/developer-guide/developer-guide-tab.component.ts",
+    "apiMethods": [],
+    "directHttp": [],
+    "templateFiles": [
+      "frontend/src/app/features/incidents/developer-guide/developer-guide-tab.component.ts"
+    ]
+  },
+  {
+    "component": "frontend/src/app/features/dashboard/dashboard.component.ts",
+    "apiMethods": [
+      "getDeployReadiness",
+      "getIncidents",
+      "getJenkinsGlobal",
+      "getProjects",
+      "getSecurityGlobal"
+    ],
+    "directHttp": [],
+    "templateFiles": [
+      "frontend/src/app/features/dashboard/dashboard.component.html"
+    ]
+  },
+  {
+    "component": "frontend/src/app/features/analytics/prediction.component.ts",
+    "apiMethods": [
+      "getRiskIndicators"
+    ],
+    "directHttp": [],
+    "templateFiles": [
+      "frontend/src/app/features/analytics/prediction.component.html"
+    ]
+  },
+  {
+    "component": "frontend/src/app/features/tools/security.component.ts",
+    "apiMethods": [
+      "getSecurityGlobal"
+    ],
+    "directHttp": [],
+    "templateFiles": [
+      "frontend/src/app/features/tools/security.component.ts"
+    ]
+  },
+  {
+    "component": "frontend/src/app/features/projects/deployment-governance.component.ts",
+    "apiMethods": [
+      "authorizeDeployment",
+      "deployGoverned",
+      "getGovernancePreview"
+    ],
+    "directHttp": [],
+    "templateFiles": [
+      "frontend/src/app/features/projects/deployment-governance.component.html"
+    ]
+  },
+  {
+    "component": "frontend/src/app/features/projects/dockerfile-optimizer.component.ts",
+    "apiMethods": [],
+    "directHttp": [
+      "post",
+      "post",
+      "get",
+      "post"
+    ],
+    "templateFiles": [
+      "frontend/src/app/features/projects/dockerfile-optimizer.component.ts"
+    ]
+  },
+  {
+    "component": "frontend/src/app/features/projects/project-overview.component.ts",
+    "apiMethods": [],
+    "directHttp": [],
+    "templateFiles": [
+      "frontend/src/app/features/projects/project-overview.component.ts"
+    ]
+  },
+  {
+    "component": "frontend/src/app/features/projects/projects.component.ts",
+    "apiMethods": [
+      "deleteProject",
+      "getProjects",
+      "getSecurityGlobal"
+    ],
+    "directHttp": [],
+    "templateFiles": [
+      "frontend/src/app/features/projects/projects.component.html"
+    ]
+  },
+  {
+    "component": "frontend/src/app/features/projects/project-form.component.ts",
+    "apiMethods": [
+      "createProject",
+      "getProject",
+      "updateJenkinsCredentials",
+      "updateProject",
+      "validateProject"
+    ],
+    "directHttp": [],
+    "templateFiles": [
+      "frontend/src/app/features/projects/project-form.component.html"
+    ]
+  },
+  {
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "apiMethods": [
+      "approveFix",
+      "approveFixBatch",
+      "completeManualRemediation",
+      "getConvergence",
+      "getDecisions",
+      "getDeployReadiness",
+      "getIncidents",
+      "getJenkins",
+      "getManualRemediationSummary",
+      "getManualRemediationTasks",
+      "getProject",
+      "getProjectReports",
+      "launchSecurityRemediationBatch",
+      "refreshPrValidationTarget",
+      "rejectFix",
+      "reopenManualRemediation",
+      "requestPrValidation",
+      "retryFixBatch",
+      "retrySecurityFindingRemediation",
+      "triggerBuild"
+    ],
+    "directHttp": [],
+    "templateFiles": [
+      "frontend/src/app/features/projects/project-detail.component.html"
+    ]
+  },
+  {
+    "component": "frontend/src/app/features/projects/cve-table.component.ts",
+    "apiMethods": [],
+    "directHttp": [],
+    "templateFiles": [
+      "frontend/src/app/features/projects/cve-table.component.ts"
+    ]
+  },
+  {
+    "component": "frontend/src/app/features/projects/zap-table.component.ts",
+    "apiMethods": [],
+    "directHttp": [],
+    "templateFiles": [
+      "frontend/src/app/features/projects/zap-table.component.ts"
+    ]
+  },
+  {
+    "component": "frontend/src/app/features/projects/jenkinsfile-optimizer.component.ts",
+    "apiMethods": [],
+    "directHttp": [
+      "get",
+      "post",
+      "post",
+      "get",
+      "post",
+      "get"
+    ],
+    "templateFiles": [
+      "frontend/src/app/features/projects/jenkinsfile-optimizer.component.ts"
+    ]
+  }
+]

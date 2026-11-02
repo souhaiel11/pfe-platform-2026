@@ -1,0 +1,509 @@
+[
+ {
+  "file": "backend/src/candidate-verification/candidate-base-sha.spec.ts",
+  "exitCode": 0,
+  "skipped": false,
+  "tail": ""
+ },
+ {
+  "file": "backend/src/candidate-verification/candidate-digest.spec.ts",
+  "exitCode": 0,
+  "skipped": false,
+  "tail": ""
+ },
+ {
+  "file": "backend/src/candidate-verification/candidate-verification.controller.spec.ts",
+  "exitCode": 0,
+  "skipped": false,
+  "tail": ""
+ },
+ {
+  "file": "backend/src/candidate-verification/candidate-verification.service.spec.ts",
+  "exitCode": 0,
+  "skipped": false,
+  "tail": ""
+ },
+ {
+  "file": "backend/src/candidate-verification/generated-comment-guard.spec.ts",
+  "exitCode": 0,
+  "skipped": false,
+  "tail": ""
+ },
+ {
+  "file": "backend/src/candidate-verification/remote-head-drift.spec.ts",
+  "exitCode": 0,
+  "skipped": false,
+  "tail": ""
+ },
+ {
+  "file": "backend/src/candidate-verification/transport-dispatcher.integration.spec.ts",
+  "exitCode": 0,
+  "skipped": false,
+  "tail": ""
+ },
+ {
+  "file": "backend/src/candidate-verification/verification-evidence.spec.ts",
+  "exitCode": 0,
+  "skipped": false,
+  "tail": ""
+ },
+ {
+  "file": "backend/src/candidate-verification/write-guard.spec.ts",
+  "exitCode": 0,
+  "skipped": false,
+  "tail": ""
+ },
+ {
+  "file": "backend/src/dependency-compatibility/candidate-existence-checker.spec.ts",
+  "exitCode": 0,
+  "skipped": false,
+  "tail": ""
+ },
+ {
+  "file": "backend/src/dependency-compatibility/candidate-version-policy.spec.ts",
+  "exitCode": 0,
+  "skipped": false,
+  "tail": ""
+ },
+ {
+  "file": "backend/src/dependency-compatibility/dependency-compatibility-decision.spec.ts",
+  "exitCode": 0,
+  "skipped": false,
+  "tail": ""
+ },
+ {
+  "file": "backend/src/dependency-compatibility/dependency-control-profile-resolver.spec.ts",
+  "exitCode": 0,
+  "skipped": false,
+  "tail": ""
+ },
+ {
+  "file": "backend/src/dependency-compatibility/maven-qualifier-comparator.spec.ts",
+  "exitCode": 0,
+  "skipped": false,
+  "tail": ""
+ },
+ {
+  "file": "backend/src/dependency-compatibility/owner-discovery-trial.spec.ts",
+  "exitCode": 0,
+  "skipped": false,
+  "tail": ""
+ },
+ {
+  "file": "backend/src/dependency-compatibility/owner-pom-edit.spec.ts",
+  "exitCode": 0,
+  "skipped": false,
+  "tail": ""
+ },
+ {
+  "file": "backend/src/dependency-compatibility/owner-version-discovery.spec.ts",
+  "exitCode": 0,
+  "skipped": false,
+  "tail": ""
+ },
+ {
+  "file": "backend/src/dependency-compatibility/report-149-offline-analysis.spec.ts",
+  "exitCode": 0,
+  "skipped": false,
+  "tail": ""
+ },
+ {
+  "file": "backend/src/dependency-compatibility/security-candidate-collector.spec.ts",
+  "exitCode": 0,
+  "skipped": false,
+  "tail": ""
+ },
+ {
+  "file": "backend/src/dependency-compatibility/unified-report-149.spec.ts",
+  "exitCode": 0,
+  "skipped": false,
+  "tail": ""
+ },
+ {
+  "file": "backend/src/dependency-compatibility/v1_8-compatibility-decision.spec.ts",
+  "exitCode": 0,
+  "skipped": false,
+  "tail": ""
+ },
+ {
+  "file": "backend/src/dependency-compatibility/v1_8-remediation-plan-payload.spec.ts",
+  "exitCode": 0,
+  "skipped": false,
+  "tail": ""
+ },
+ {
+  "file": "backend/src/dependency-compatibility/v1_8-security-remediation-gate.spec.ts",
+  "exitCode": 0,
+  "skipped": false,
+  "tail": ""
+ },
+ {
+  "file": "backend/src/manual-remediation/finding-task-id-enrichment.spec.ts",
+  "exitCode": 0,
+  "skipped": false,
+  "tail": ""
+ },
+ {
+  "file": "backend/src/manual-remediation/manual-remediation.service.batch.spec.ts",
+  "exitCode": 0,
+  "skipped": false,
+  "tail": ""
+ },
+ {
+  "file": "backend/src/manual-remediation/manual-remediation.service.finding-task-ids.spec.ts",
+  "exitCode": 0,
+  "skipped": false,
+  "tail": ""
+ },
+ {
+  "file": "backend/src/manual-remediation/manual-remediation.service.spec.ts",
+  "exitCode": 0,
+  "skipped": false,
+  "tail": ""
+ },
+ {
+  "file": "backend/src/manual-remediation/manual-remediation.service.v1-8-decision.spec.ts",
+  "exitCode": 0,
+  "skipped": false,
+  "tail": ""
+ },
+ {
+  "file": "backend/src/manual-remediation/manual-remediation.service.v1-8-enforcement.spec.ts",
+  "exitCode": 0,
+  "skipped": false,
+  "tail": ""
+ },
+ {
+  "file": "backend/src/manual-remediation/manual-remediation.service.v1-8-fixedversion-override.spec.ts",
+  "exitCode": 0,
+  "skipped": false,
+  "tail": ""
+ },
+ {
+  "file": "backend/src/manual-remediation/manual-remediation.service.wf6-result.spec.ts",
+  "exitCode": 0,
+  "skipped": false,
+  "tail": ""
+ },
+ {
+  "file": "backend/src/manual-remediation/owasp-enrichment.spec.ts",
+  "exitCode": 0,
+  "skipped": false,
+  "tail": ""
+ },
+ {
+  "file": "backend/src/manual-remediation/owasp-resync-safety.spec.ts",
+  "exitCode": 0,
+  "skipped": false,
+  "tail": ""
+ },
+ {
+  "file": "backend/src/manual-remediation/owasp-trivy-fixed-version-correlation.integration.spec.ts",
+  "exitCode": 0,
+  "skipped": false,
+  "tail": ""
+ },
+ {
+  "file": "backend/src/manual-remediation/owasp-trivy-fixed-version-correlation.spec.ts",
+  "exitCode": 0,
+  "skipped": false,
+  "tail": ""
+ },
+ {
+  "file": "backend/src/manual-remediation/reconcile-stale-wf6-dispatch.spec.ts",
+  "exitCode": 0,
+  "skipped": false,
+  "tail": ""
+ },
+ {
+  "file": "backend/src/manual-remediation/remediation-target-reservation.spec.ts",
+  "exitCode": 0,
+  "skipped": false,
+  "tail": ""
+ },
+ {
+  "file": "backend/src/manual-remediation/security-remediation-bridge.spec.ts",
+  "exitCode": 0,
+  "skipped": false,
+  "tail": ""
+ },
+ {
+  "file": "backend/src/manual-remediation/security-remediation-lifecycle.spec.ts",
+  "exitCode": 0,
+  "skipped": false,
+  "tail": ""
+ },
+ {
+  "file": "backend/src/manual-remediation/trusted-remediation-target.spec.ts",
+  "exitCode": "MISSING",
+  "skipped": false
+ },
+ {
+  "file": "backend/src/security-remediation/fixed-version-normalizer.spec.ts",
+  "exitCode": 0,
+  "skipped": false,
+  "tail": ""
+ },
+ {
+  "file": "backend/src/security-remediation/maven-dependency-resolution-check.spec.ts",
+  "exitCode": 0,
+  "skipped": false,
+  "tail": ""
+ },
+ {
+  "file": "backend/src/security-remediation/maven-parent-patch-writer.spec.ts",
+  "exitCode": 0,
+  "skipped": false,
+  "tail": ""
+ },
+ {
+  "file": "backend/src/security-remediation/maven-provenance-resolver.spec.ts",
+  "exitCode": 0,
+  "skipped": false,
+  "tail": ""
+ },
+ {
+  "file": "backend/src/security-remediation/maven-remediation-scope.spec.ts",
+  "exitCode": 0,
+  "skipped": false,
+  "tail": ""
+ },
+ {
+  "file": "backend/src/security-remediation/maven-security-patch-writer-batch.spec.ts",
+  "exitCode": 0,
+  "skipped": false,
+  "tail": ""
+ },
+ {
+  "file": "backend/src/security-remediation/maven-security-patch-writer.spec.ts",
+  "exitCode": 0,
+  "skipped": false,
+  "tail": ""
+ },
+ {
+  "file": "backend/src/security-remediation/parent-version-effective-model-check.spec.ts",
+  "exitCode": 0,
+  "skipped": false,
+  "tail": ""
+ },
+ {
+  "file": "backend/src/security-remediation/retry-e2e-harness.spec.ts",
+  "exitCode": 0,
+  "skipped": false,
+  "tail": ""
+ },
+ {
+  "file": "backend/src/security-remediation/scoped-e2e-dispatch.spec.ts",
+  "exitCode": "MISSING",
+  "skipped": false
+ },
+ {
+  "file": "backend/src/security-remediation/security-branch-name.spec.ts",
+  "exitCode": 0,
+  "skipped": false,
+  "tail": ""
+ },
+ {
+  "file": "backend/src/security-remediation/security-candidate-identity.spec.ts",
+  "exitCode": 0,
+  "skipped": false,
+  "tail": ""
+ },
+ {
+  "file": "backend/src/security-remediation/security-eligibility-classifier.spec.ts",
+  "exitCode": 0,
+  "skipped": false,
+  "tail": ""
+ },
+ {
+  "file": "backend/src/security-remediation/security-finding-resolver.service.spec.ts",
+  "exitCode": 0,
+  "skipped": false,
+  "tail": ""
+ },
+ {
+  "file": "backend/src/security-remediation/security-patch-guard.spec.ts",
+  "exitCode": 0,
+  "skipped": false,
+  "tail": ""
+ },
+ {
+  "file": "backend/src/security-remediation/security-remediation-batch-closure.spec.ts",
+  "exitCode": 0,
+  "skipped": false,
+  "tail": ""
+ },
+ {
+  "file": "backend/src/security-remediation/security-remediation-batch-git-metadata.spec.ts",
+  "exitCode": 0,
+  "skipped": false,
+  "tail": ""
+ },
+ {
+  "file": "backend/src/security-remediation/security-remediation-evaluate.dto.spec.ts",
+  "exitCode": 0,
+  "skipped": false,
+  "tail": ""
+ },
+ {
+  "file": "backend/src/security-remediation/security-remediation-git-metadata.spec.ts",
+  "exitCode": 0,
+  "skipped": false,
+  "tail": ""
+ },
+ {
+  "file": "backend/src/security-remediation/security-remediation-revalidate-batch.dto.spec.ts",
+  "exitCode": 0,
+  "skipped": false,
+  "tail": ""
+ },
+ {
+  "file": "backend/src/security-remediation/security-remediation-revalidate.dto.spec.ts",
+  "exitCode": 0,
+  "skipped": false,
+  "tail": ""
+ },
+ {
+  "file": "backend/src/security-remediation/security-remediation.controller.batch.spec.ts",
+  "exitCode": 0,
+  "skipped": false,
+  "tail": ""
+ },
+ {
+  "file": "backend/src/security-remediation/security-remediation.controller.spec.ts",
+  "exitCode": 0,
+  "skipped": false,
+  "tail": ""
+ },
+ {
+  "file": "backend/src/security-remediation/target-reservation-entrypoints.spec.ts",
+  "exitCode": 0,
+  "skipped": false,
+  "tail": ""
+ },
+ {
+  "file": "backend/src/security-remediation/version-selection-policy.spec.ts",
+  "exitCode": 0,
+  "skipped": false,
+  "tail": ""
+ },
+ {
+  "file": "backend/src/security-remediation/wf6-batch-remediation-result.dto.spec.ts",
+  "exitCode": 0,
+  "skipped": false,
+  "tail": ""
+ },
+ {
+  "file": "backend/src/security-remediation/wf6-remediation-result.dto.spec.ts",
+  "exitCode": 0,
+  "skipped": false,
+  "tail": ""
+ },
+ {
+  "file": "builder-scanner/src/artifact-failure-logging.spec.ts",
+  "exitCode": "SKIP_DOCKER",
+  "skipped": true
+ },
+ {
+  "file": "builder-scanner/src/base-image-pull-retry.spec.ts",
+  "exitCode": "SKIP_DOCKER",
+  "skipped": true
+ },
+ {
+  "file": "builder-scanner/src/internal-auth.spec.ts",
+  "exitCode": "SKIP_DOCKER",
+  "skipped": true
+ },
+ {
+  "file": "builder-scanner/src/orphan-validation-extended.spec.ts",
+  "exitCode": "SKIP_DOCKER",
+  "skipped": true
+ },
+ {
+  "file": "builder-scanner/src/parse-base-images.spec.ts",
+  "exitCode": "SKIP_DOCKER",
+  "skipped": true
+ },
+ {
+  "file": "builder-scanner/src/podman-storage-config.spec.ts",
+  "exitCode": "SKIP_DOCKER",
+  "skipped": true
+ },
+ {
+  "file": "builder-scanner/src/podman-storage-runtime.spec.ts",
+  "exitCode": "SKIP_DOCKER",
+  "skipped": true
+ },
+ {
+  "file": "builder-scanner/src/scratch-base-image.spec.ts",
+  "exitCode": "SKIP_DOCKER",
+  "skipped": true
+ },
+ {
+  "file": "builder-scanner/src/security-artifact-validator-orphan-sweep.spec.ts",
+  "exitCode": "SKIP_DOCKER",
+  "skipped": true
+ },
+ {
+  "file": "builder-scanner/src/security-artifact-validator-real-termination.spec.ts",
+  "exitCode": "SKIP_DOCKER",
+  "skipped": true
+ },
+ {
+  "file": "builder-scanner/src/security-artifact-validator.spec.ts",
+  "exitCode": "SKIP_DOCKER",
+  "skipped": true
+ },
+ {
+  "file": "builder-scanner/src/server.spec.ts",
+  "exitCode": "SKIP_DOCKER",
+  "skipped": true
+ },
+ {
+  "file": "builder-scanner/src/trivy-readiness.spec.ts",
+  "exitCode": "SKIP_DOCKER",
+  "skipped": true
+ },
+ {
+  "file": "candidate-verifier/src/candidate-materializer.service.spec.ts",
+  "exitCode": 0,
+  "skipped": false,
+  "tail": ""
+ },
+ {
+  "file": "candidate-verifier/src/candidate-sha-evidence.spec.ts",
+  "exitCode": 0,
+  "skipped": false,
+  "tail": ""
+ },
+ {
+  "file": "candidate-verifier/src/candidate-verification-executor.repo-budget.spec.ts",
+  "exitCode": 0,
+  "skipped": false,
+  "tail": ""
+ },
+ {
+  "file": "candidate-verifier/src/candidate-verification-executor.spec.ts",
+  "exitCode": 0,
+  "skipped": false,
+  "tail": ""
+ },
+ {
+  "file": "candidate-verifier/src/candidate-verification-timeout.spec.ts",
+  "exitCode": 0,
+  "skipped": false,
+  "tail": ""
+ },
+ {
+  "file": "candidate-verifier/src/remote-builder-artifact-validator-budget.spec.ts",
+  "exitCode": 0,
+  "skipped": false,
+  "tail": ""
+ },
+ {
+  "file": "candidate-verifier/src/remote-builder-artifact-validator.spec.ts",
+  "exitCode": 0,
+  "skipped": false,
+  "tail": ""
+ }
+]

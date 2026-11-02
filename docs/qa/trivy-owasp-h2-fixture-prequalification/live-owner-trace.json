@@ -1,0 +1,270 @@
+{
+  "profile": {
+    "groupId": "com.h2database",
+    "artifactId": "h2",
+    "installedVersion": "2.1.212",
+    "javaVersion": "11",
+    "springBootVersion": "2.7.0",
+    "evidence": [
+      "Direct child of the project in `mvn dependency:tree` (\"+- com.h2database:h2:jar:2.1.212:runtime\") with no explicit <version> in pom.xml — version is resolved from a BOM/parent, not locally controllable.",
+      "<parent>org.springframework.boot:spring-boot-starter-parent:2.7.0</parent> declared in pom.xml.",
+      "<properties><java.version>11</java.version></properties> declared in pom.xml.",
+      "No local <dependencyManagement> entry or imported BOM for com.h2database:h2; this pom declares <parent>org.springframework.boot:spring-boot-starter-parent:2.7.0</parent> -- attributed to the parent's own (transitively imported) dependency management."
+    ],
+    "dependencyKind": "DIRECT",
+    "versionControl": "PARENT",
+    "managementOwner": "org.springframework.boot:spring-boot-starter-parent",
+    "managementOwnerVersion": "2.7.0",
+    "bomGroupId": null,
+    "bomArtifactId": null,
+    "bomVersion": null,
+    "parentGroupId": "org.springframework.boot",
+    "parentArtifactId": "spring-boot-starter-parent",
+    "parentVersion": "2.7.0",
+    "declarationPom": null,
+    "propertyName": null
+  },
+  "candidates": [
+    {
+      "version": "2.2.220",
+      "source": "TRIVY",
+      "cve": "CVE-2022-45868",
+      "evidenceType": "STRUCTURED_FIXED_VERSION",
+      "rawEvidence": "2.2.220"
+    }
+  ],
+  "plans": {
+    "manualReviewReason": null,
+    "plans": [
+      {
+        "vulnerableDependency": "com.h2database:h2",
+        "securityCandidate": {
+          "version": "2.2.220",
+          "source": "TRIVY",
+          "cve": "CVE-2022-45868",
+          "evidenceType": "STRUCTURED_FIXED_VERSION",
+          "rawEvidence": "2.2.220"
+        },
+        "editType": "PARENT_VERSION",
+        "editCoordinate": "org.springframework.boot:spring-boot-starter-parent",
+        "editProperty": null,
+        "fromVersion": "2.7.0",
+        "toVersion": null,
+        "expectedResolvedDependencyVersion": null,
+        "requiresSandboxDiscovery": true,
+        "versionPolicy": {
+          "state": "UNKNOWN",
+          "currentVersion": "2.7.0",
+          "candidateVersion": "(undiscovered)",
+          "reason": "Owner (BOM/parent) target version not yet discovered -- requires a real sandbox trial before any version-safety claim can be made; never assumed safe."
+        },
+        "requiresMajorUpgrade": false,
+        "requiresDeveloperReview": true,
+        "automationEligible": false,
+        "evidence": [
+          "Direct child of the project in `mvn dependency:tree` (\"+- com.h2database:h2:jar:2.1.212:runtime\") with no explicit <version> in pom.xml — version is resolved from a BOM/parent, not locally controllable.",
+          "<parent>org.springframework.boot:spring-boot-starter-parent:2.7.0</parent> declared in pom.xml.",
+          "<properties><java.version>11</java.version></properties> declared in pom.xml.",
+          "No local <dependencyManagement> entry or imported BOM for com.h2database:h2; this pom declares <parent>org.springframework.boot:spring-boot-starter-parent:2.7.0</parent> -- attributed to the parent's own (transitively imported) dependency management.",
+          "com.h2database:h2's version is owned by parent org.springframework.boot:spring-boot-starter-parent:2.7.0 -- WRONG PLAN would edit com.h2database:h2 directly; PREFERRED PLAN bumps the parent and verifies (via a real sandbox dependency:tree re-check) which com.h2database:h2 version it then resolves to before trusting it against CVE-2022-45868's target 2.2.220.",
+          "Version policy: UNKNOWN (Owner (BOM/parent) target version not yet discovered -- requires a real sandbox trial before any version-safety claim can be made; never assumed safe.)"
+        ]
+      }
+    ]
+  },
+  "discovery": {
+    "latestOverall": {
+      "version": "4.2.0-M2",
+      "policy": {
+        "state": "CROSS_MAJOR",
+        "currentVersion": "2.7.0",
+        "candidateVersion": "4.2.0-M2",
+        "reason": "CROSS_MAJOR_ONLY: major 2 -> 4 -- production's own version-selection-policy.ts never crosses a major version automatically."
+      }
+    },
+    "sameMajorCandidates": [
+      {
+        "version": "2.7.18",
+        "policy": {
+          "state": "SAFE_SAME_LINE",
+          "currentVersion": "2.7.0",
+          "candidateVersion": "2.7.18",
+          "reason": "Same major.minor line (2.7) -- smallest possible safe step."
+        }
+      },
+      {
+        "version": "2.7.17",
+        "policy": {
+          "state": "SAFE_SAME_LINE",
+          "currentVersion": "2.7.0",
+          "candidateVersion": "2.7.17",
+          "reason": "Same major.minor line (2.7) -- smallest possible safe step."
+        }
+      },
+      {
+        "version": "2.7.16",
+        "policy": {
+          "state": "SAFE_SAME_LINE",
+          "currentVersion": "2.7.0",
+          "candidateVersion": "2.7.16",
+          "reason": "Same major.minor line (2.7) -- smallest possible safe step."
+        }
+      },
+      {
+        "version": "2.7.15",
+        "policy": {
+          "state": "SAFE_SAME_LINE",
+          "currentVersion": "2.7.0",
+          "candidateVersion": "2.7.15",
+          "reason": "Same major.minor line (2.7) -- smallest possible safe step."
+        }
+      },
+      {
+        "version": "2.7.14",
+        "policy": {
+          "state": "SAFE_SAME_LINE",
+          "currentVersion": "2.7.0",
+          "candidateVersion": "2.7.14",
+          "reason": "Same major.minor line (2.7) -- smallest possible safe step."
+        }
+      }
+    ],
+    "crossMajorEvidence": [
+      {
+        "version": "4.2.0-M2",
+        "policy": {
+          "state": "CROSS_MAJOR",
+          "currentVersion": "2.7.0",
+          "candidateVersion": "4.2.0-M2",
+          "reason": "CROSS_MAJOR_ONLY: major 2 -> 4 -- production's own version-selection-policy.ts never crosses a major version automatically."
+        }
+      },
+      {
+        "version": "4.2.0-M1",
+        "policy": {
+          "state": "CROSS_MAJOR",
+          "currentVersion": "2.7.0",
+          "candidateVersion": "4.2.0-M1",
+          "reason": "CROSS_MAJOR_ONLY: major 2 -> 4 -- production's own version-selection-policy.ts never crosses a major version automatically."
+        }
+      }
+    ]
+  },
+  "trials": [
+    {
+      "candidate": "2.7.18",
+      "source": "/home/souhaiel/pfe-2026/platform/backend/src/dependency-compatibility/fixtures/spring-boot-starter-parent.maven-metadata-central.xml",
+      "policy": {
+        "state": "SAFE_SAME_LINE",
+        "currentVersion": "2.7.0",
+        "candidateVersion": "2.7.18",
+        "reason": "Same major.minor line (2.7) -- smallest possible safe step."
+      },
+      "trial": {
+        "ownerFromVersion": "2.7.0",
+        "ownerToVersion": "2.7.18",
+        "resolvedVulnerableVersion": "2.1.214",
+        "status": "RESOLVED",
+        "treeText": "com.pfe:pfe-app-test:jar:1.0.0\n+- org.springframework.boot:spring-boot-starter-web:jar:2.7.18:compile\n|  +- org.springframework.boot:spring-boot-starter:jar:2.7.18:compile\n|  |  +- org.springframework.boot:spring-boot:jar:2.7.18:compile\n|  |  +- org.springframework.boot:spring-boot-autoconfigure:jar:2.7.18:compile\n|  |  +- org.springframework.boot:spring-boot-starter-logging:jar:2.7.18:compile\n|  |  |  +- org.apache.logging.log4j:log4j-to-slf4j:jar:2.17.2:compile\n|  |  |  |  \\- org.apache.logging.log4j:log4j-api:jar:2.17.2:compile\n|  |  |  \\- org.slf4j:jul-to-slf4j:jar:1.7.36:compile\n|  |  \\- jakarta.annotation:jakarta.annotation-api:jar:1.3.5:compile\n|  +- org.springframework.boot:spring-boot-starter-json:jar:2.7.18:compile\n|  |  +- com.fasterxml.jackson.datatype:jackson-datatype-jdk8:jar:2.13.5:compile\n|  |  +- com.fasterxml.jackson.datatype:jackson-datatype-jsr310:jar:2.13.5:compile\n|  |  \\- com.fasterxml.jackson.module:jackson-module-parameter-names:jar:2.13.5:compile\n|  +- org.springframework.boot:spring-boot-starter-tomcat:jar:2.7.18:compile\n|  |  +- org.apache.tomcat.embed:tomcat-embed-core:jar:9.0.83:compile\n|  |  \\- org.apache.tomcat.embed:tomcat-embed-websocket:jar:9.0.83:compile\n|  +- org.springframework:spring-web:jar:5.3.31:compile\n|  \\- org.springframework:spring-webmvc:jar:5.3.31:compile\n+- org.springframework.security:spring-security-core:jar:5.6.4:compile\n|  +- org.springframework.security:spring-security-crypto:jar:5.7.11:compile\n|  +- org.springframework:spring-aop:jar:5.3.31:compile\n|  +- org.springframework:spring-beans:jar:5.3.31:compile\n|  +- org.springframework:spring-context:jar:5.3.31:compile\n|  +- org.springframework:spring-core:jar:5.3.31:compile\n|  |  \\- org.springframework:spring-jcl:jar:5.3.31:compile\n|  \\- org.springframework:spring-expression:jar:5.3.31:compile\n+- org.springframework.boot:spring-boot-starter-security:jar:2.7.18:compile\n|  +- org.springframework.security:spring-security-config:jar:5.7.11:compile\n|  \\- org.springframework.security:spring-security-web:jar:5.7.11:compile\n+- org.springframework.boot:spring-boot-starter-data-jpa:jar:2.7.18:compile\n|  +- org.springframework.boot:spring-boot-starter-aop:jar:2.7.18:compile\n|  |  \\- org.aspectj:aspectjweaver:jar:1.9.7:compile\n|  +- org.springframework.boot:spring-boot-starter-jdbc:jar:2.7.18:compile\n|  |  +- com.zaxxer:HikariCP:jar:4.0.3:compile\n|  |  \\- org.springframework:spring-jdbc:jar:5.3.31:compile\n|  +- jakarta.transaction:jakarta.transaction-api:jar:1.3.3:compile\n|  +- jakarta.persistence:jakarta.persistence-api:jar:2.2.3:compile\n|  +- org.hibernate:hibernate-core:jar:5.6.15.Final:compile\n|  |  +- org.jboss.logging:jboss-logging:jar:3.4.3.Final:compile\n|  |  +- net.bytebuddy:byte-buddy:jar:1.12.23:compile\n|  |  +- antlr:antlr:jar:2.7.7:compile\n|  |  +- org.jboss:jandex:jar:2.4.2.Final:compile\n|  |  +- com.fasterxml:classmate:jar:1.5.1:compile\n|  |  +- org.hibernate.common:hibernate-commons-annotations:jar:5.1.2.Final:compile\n|  |  \\- org.glassfish.jaxb:jaxb-runtime:jar:2.3.9:compile\n|  |     +- org.glassfish.jaxb:txw2:jar:2.3.9:compile\n|  |     +- com.sun.istack:istack-commons-runtime:jar:3.0.12:compile\n|  |     \\- com.sun.activation:jakarta.activation:jar:1.2.2:runtime\n|  +- org.springframework.data:spring-data-jpa:jar:2.7.18:compile\n|  |  +- org.springframework.data:spring-data-commons:jar:2.7.18:compile\n|  |  +- org.springframework:spring-orm:jar:5.3.31:compile\n|  |  \\- org.springframework:spring-tx:jar:5.3.31:compile\n|  \\- org.springframework:spring-aspects:jar:5.3.31:compile\n+- com.h2database:h2:jar:2.1.214:runtime\n+- ch.qos.logback:logback-classic:jar:1.2.11:compile\n|  +- ch.qos.logback:logback-core:jar:1.2.11:compile\n|  \\- org.slf4j:slf4j-api:jar:1.7.36:compile\n+- org.yaml:snakeyaml:jar:1.29:compile\n+- io.jsonwebtoken:jjwt:jar:0.9.1:compile\n|  \\- com.fasterxml.jackson.core:jackson-databind:jar:2.13.5:compile\n|     +- com.fasterxml.jackson.core:jackson-annotations:jar:2.13.5:compile\n|     \\- com.fasterxml.jackson.core:jackson-core:jar:2.13.5:compile\n+- org.projectlombok:lombok:jar:1.18.32:compile\n+- org.springframework.boot:spring-boot-starter-validation:jar:2.7.18:compile\n|  +- org.apache.tomcat.embed:tomcat-embed-el:jar:9.0.83:compile\n|  \\- org.hibernate.validator:hibernate-validator:jar:6.2.5.Final:compile\n|     \\- jakarta.validation:jakarta.validation-api:jar:2.0.2:compile\n+- org.springframework.boot:spring-boot-starter-test:jar:2.7.18:test\n|  +- org.springframework.boot:spring-boot-test:jar:2.7.18:test\n|  +- org.springframework.boot:spring-boot-test-autoconfigure:jar:2.7.18:test\n|  +- com.jayway.jsonpath:json-path:jar:2.7.0:test\n|  |  \\- net.minidev:json-smart:jar:2.4.11:test\n|  |     \\- net.minidev:accessors-smart:jar:2.4.11:test\n|  |        \\- org.ow2.asm:asm:jar:9.3:test\n|  +- jakarta.xml.bind:jakarta.xml.bind-api:jar:2.3.3:compile\n|  |  \\- jakarta.activation:jakarta.activation-api:jar:1.2.2:compile\n|  +- org.assertj:assertj-core:jar:3.22.0:test\n|  +- org.hamcrest:hamcrest:jar:2.2:test\n|  +- org.junit.jupiter:junit-jupiter:jar:5.8.2:test\n|  |  +- org.junit.jupiter:junit-jupiter-api:jar:5.8.2:test\n|  |  |  +- org.opentest4j:opentest4j:jar:1.2.0:test\n|  |  |  +- org.junit.platform:junit-platform-commons:jar:1.8.2:test\n|  |  |  \\- org.apiguardian:apiguardian-api:jar:1.1.2:test\n|  |  +- org.junit.jupiter:junit-jupiter-params:jar:5.8.2:test\n|  |  \\- org.junit.jupiter:junit-jupiter-engine:jar:5.8.2:test\n|  |     \\- org.junit.platform:junit-platform-engine:jar:1.8.2:test\n|  +- org.mockito:mockito-core:jar:4.5.1:test\n|  |  +- net.bytebuddy:byte-buddy-agent:jar:1.12.23:test\n|  |  \\- org.objenesis:objenesis:jar:3.2:test\n|  +- org.mockito:mockito-junit-jupiter:jar:4.5.1:test\n|  +- org.skyscreamer:jsonassert:jar:1.5.1:test\n|  |  \\- com.vaadin.external.google:android-json:jar:0.0.20131108.vaadin1:test\n|  +- org.springframework:spring-test:jar:5.3.31:test\n|  \\- org.xmlunit:xmlunit-core:jar:2.9.1:test\n\\- org.springframework.security:spring-security-test:jar:5.6.4:test\n",
+        "evidence": [
+          "Real mvn dependency:tree after bumping org.springframework.boot:spring-boot-starter-parent to 2.7.18: com.h2database:h2 resolves to 2.1.214. This proves resolution only -- NOT security closure (Phase 7); that requires a real rescan."
+        ]
+      },
+      "comparison": -1,
+      "accepted": false,
+      "reason": "RESOLVED_DEPENDENCY_BELOW_SECURITY_TARGET"
+    },
+    {
+      "candidate": "2.7.17",
+      "source": "/home/souhaiel/pfe-2026/platform/backend/src/dependency-compatibility/fixtures/spring-boot-starter-parent.maven-metadata-central.xml",
+      "policy": {
+        "state": "SAFE_SAME_LINE",
+        "currentVersion": "2.7.0",
+        "candidateVersion": "2.7.17",
+        "reason": "Same major.minor line (2.7) -- smallest possible safe step."
+      },
+      "trial": {
+        "ownerFromVersion": "2.7.0",
+        "ownerToVersion": "2.7.17",
+        "resolvedVulnerableVersion": "2.1.214",
+        "status": "RESOLVED",
+        "treeText": "com.pfe:pfe-app-test:jar:1.0.0\n+- org.springframework.boot:spring-boot-starter-web:jar:2.7.17:compile\n|  +- org.springframework.boot:spring-boot-starter:jar:2.7.17:compile\n|  |  +- org.springframework.boot:spring-boot:jar:2.7.17:compile\n|  |  +- org.springframework.boot:spring-boot-autoconfigure:jar:2.7.17:compile\n|  |  +- org.springframework.boot:spring-boot-starter-logging:jar:2.7.17:compile\n|  |  |  +- org.apache.logging.log4j:log4j-to-slf4j:jar:2.17.2:compile\n|  |  |  |  \\- org.apache.logging.log4j:log4j-api:jar:2.17.2:compile\n|  |  |  \\- org.slf4j:jul-to-slf4j:jar:1.7.36:compile\n|  |  \\- jakarta.annotation:jakarta.annotation-api:jar:1.3.5:compile\n|  +- org.springframework.boot:spring-boot-starter-json:jar:2.7.17:compile\n|  |  +- com.fasterxml.jackson.datatype:jackson-datatype-jdk8:jar:2.13.5:compile\n|  |  +- com.fasterxml.jackson.datatype:jackson-datatype-jsr310:jar:2.13.5:compile\n|  |  \\- com.fasterxml.jackson.module:jackson-module-parameter-names:jar:2.13.5:compile\n|  +- org.springframework.boot:spring-boot-starter-tomcat:jar:2.7.17:compile\n|  |  +- org.apache.tomcat.embed:tomcat-embed-core:jar:9.0.82:compile\n|  |  \\- org.apache.tomcat.embed:tomcat-embed-websocket:jar:9.0.82:compile\n|  +- org.springframework:spring-web:jar:5.3.30:compile\n|  \\- org.springframework:spring-webmvc:jar:5.3.30:compile\n+- org.springframework.security:spring-security-core:jar:5.6.4:compile\n|  +- org.springframework.security:spring-security-crypto:jar:5.7.11:compile\n|  +- org.springframework:spring-aop:jar:5.3.30:compile\n|  +- org.springframework:spring-beans:jar:5.3.30:compile\n|  +- org.springframework:spring-context:jar:5.3.30:compile\n|  +- org.springframework:spring-core:jar:5.3.30:compile\n|  |  \\- org.springframework:spring-jcl:jar:5.3.30:compile\n|  \\- org.springframework:spring-expression:jar:5.3.30:compile\n+- org.springframework.boot:spring-boot-starter-security:jar:2.7.17:compile\n|  +- org.springframework.security:spring-security-config:jar:5.7.11:compile\n|  \\- org.springframework.security:spring-security-web:jar:5.7.11:compile\n+- org.springframework.boot:spring-boot-starter-data-jpa:jar:2.7.17:compile\n|  +- org.springframework.boot:spring-boot-starter-aop:jar:2.7.17:compile\n|  |  \\- org.aspectj:aspectjweaver:jar:1.9.7:compile\n|  +- org.springframework.boot:spring-boot-starter-jdbc:jar:2.7.17:compile\n|  |  +- com.zaxxer:HikariCP:jar:4.0.3:compile\n|  |  \\- org.springframework:spring-jdbc:jar:5.3.30:compile\n|  +- jakarta.transaction:jakarta.transaction-api:jar:1.3.3:compile\n|  +- jakarta.persistence:jakarta.persistence-api:jar:2.2.3:compile\n|  +- org.hibernate:hibernate-core:jar:5.6.15.Final:compile\n|  |  +- org.jboss.logging:jboss-logging:jar:3.4.3.Final:compile\n|  |  +- net.bytebuddy:byte-buddy:jar:1.12.23:compile\n|  |  +- antlr:antlr:jar:2.7.7:compile\n|  |  +- org.jboss:jandex:jar:2.4.2.Final:compile\n|  |  +- com.fasterxml:classmate:jar:1.5.1:compile\n|  |  +- org.hibernate.common:hibernate-commons-annotations:jar:5.1.2.Final:compile\n|  |  \\- org.glassfish.jaxb:jaxb-runtime:jar:2.3.8:compile\n|  |     +- org.glassfish.jaxb:txw2:jar:2.3.8:compile\n|  |     +- com.sun.istack:istack-commons-runtime:jar:3.0.12:compile\n|  |     \\- com.sun.activation:jakarta.activation:jar:1.2.2:runtime\n|  +- org.springframework.data:spring-data-jpa:jar:2.7.17:compile\n|  |  +- org.springframework.data:spring-data-commons:jar:2.7.17:compile\n|  |  +- org.springframework:spring-orm:jar:5.3.30:compile\n|  |  \\- org.springframework:spring-tx:jar:5.3.30:compile\n|  \\- org.springframework:spring-aspects:jar:5.3.30:compile\n+- com.h2database:h2:jar:2.1.214:runtime\n+- ch.qos.logback:logback-classic:jar:1.2.11:compile\n|  +- ch.qos.logback:logback-core:jar:1.2.11:compile\n|  \\- org.slf4j:slf4j-api:jar:1.7.36:compile\n+- org.yaml:snakeyaml:jar:1.29:compile\n+- io.jsonwebtoken:jjwt:jar:0.9.1:compile\n|  \\- com.fasterxml.jackson.core:jackson-databind:jar:2.13.5:compile\n|     +- com.fasterxml.jackson.core:jackson-annotations:jar:2.13.5:compile\n|     \\- com.fasterxml.jackson.core:jackson-core:jar:2.13.5:compile\n+- org.projectlombok:lombok:jar:1.18.32:compile\n+- org.springframework.boot:spring-boot-starter-validation:jar:2.7.17:compile\n|  +- org.apache.tomcat.embed:tomcat-embed-el:jar:9.0.82:compile\n|  \\- org.hibernate.validator:hibernate-validator:jar:6.2.5.Final:compile\n|     \\- jakarta.validation:jakarta.validation-api:jar:2.0.2:compile\n+- org.springframework.boot:spring-boot-starter-test:jar:2.7.17:test\n|  +- org.springframework.boot:spring-boot-test:jar:2.7.17:test\n|  +- org.springframework.boot:spring-boot-test-autoconfigure:jar:2.7.17:test\n|  +- com.jayway.jsonpath:json-path:jar:2.7.0:test\n|  |  \\- net.minidev:json-smart:jar:2.4.11:test\n|  |     \\- net.minidev:accessors-smart:jar:2.4.11:test\n|  |        \\- org.ow2.asm:asm:jar:9.3:test\n|  +- jakarta.xml.bind:jakarta.xml.bind-api:jar:2.3.3:compile\n|  |  \\- jakarta.activation:jakarta.activation-api:jar:1.2.2:compile\n|  +- org.assertj:assertj-core:jar:3.22.0:test\n|  +- org.hamcrest:hamcrest:jar:2.2:test\n|  +- org.junit.jupiter:junit-jupiter:jar:5.8.2:test\n|  |  +- org.junit.jupiter:junit-jupiter-api:jar:5.8.2:test\n|  |  |  +- org.opentest4j:opentest4j:jar:1.2.0:test\n|  |  |  +- org.junit.platform:junit-platform-commons:jar:1.8.2:test\n|  |  |  \\- org.apiguardian:apiguardian-api:jar:1.1.2:test\n|  |  +- org.junit.jupiter:junit-jupiter-params:jar:5.8.2:test\n|  |  \\- org.junit.jupiter:junit-jupiter-engine:jar:5.8.2:test\n|  |     \\- org.junit.platform:junit-platform-engine:jar:1.8.2:test\n|  +- org.mockito:mockito-core:jar:4.5.1:test\n|  |  +- net.bytebuddy:byte-buddy-agent:jar:1.12.23:test\n|  |  \\- org.objenesis:objenesis:jar:3.2:test\n|  +- org.mockito:mockito-junit-jupiter:jar:4.5.1:test\n|  +- org.skyscreamer:jsonassert:jar:1.5.1:test\n|  |  \\- com.vaadin.external.google:android-json:jar:0.0.20131108.vaadin1:test\n|  +- org.springframework:spring-test:jar:5.3.30:test\n|  \\- org.xmlunit:xmlunit-core:jar:2.9.1:test\n\\- org.springframework.security:spring-security-test:jar:5.6.4:test\n",
+        "evidence": [
+          "Real mvn dependency:tree after bumping org.springframework.boot:spring-boot-starter-parent to 2.7.17: com.h2database:h2 resolves to 2.1.214. This proves resolution only -- NOT security closure (Phase 7); that requires a real rescan."
+        ]
+      },
+      "comparison": -1,
+      "accepted": false,
+      "reason": "RESOLVED_DEPENDENCY_BELOW_SECURITY_TARGET"
+    },
+    {
+      "candidate": "2.7.16",
+      "source": "/home/souhaiel/pfe-2026/platform/backend/src/dependency-compatibility/fixtures/spring-boot-starter-parent.maven-metadata-central.xml",
+      "policy": {
+        "state": "SAFE_SAME_LINE",
+        "currentVersion": "2.7.0",
+        "candidateVersion": "2.7.16",
+        "reason": "Same major.minor line (2.7) -- smallest possible safe step."
+      },
+      "trial": {
+        "ownerFromVersion": "2.7.0",
+        "ownerToVersion": "2.7.16",
+        "resolvedVulnerableVersion": "2.1.214",
+        "status": "RESOLVED",
+        "treeText": "com.pfe:pfe-app-test:jar:1.0.0\n+- org.springframework.boot:spring-boot-starter-web:jar:2.7.16:compile\n|  +- org.springframework.boot:spring-boot-starter:jar:2.7.16:compile\n|  |  +- org.springframework.boot:spring-boot:jar:2.7.16:compile\n|  |  +- org.springframework.boot:spring-boot-autoconfigure:jar:2.7.16:compile\n|  |  +- org.springframework.boot:spring-boot-starter-logging:jar:2.7.16:compile\n|  |  |  +- org.apache.logging.log4j:log4j-to-slf4j:jar:2.17.2:compile\n|  |  |  |  \\- org.apache.logging.log4j:log4j-api:jar:2.17.2:compile\n|  |  |  \\- org.slf4j:jul-to-slf4j:jar:1.7.36:compile\n|  |  \\- jakarta.annotation:jakarta.annotation-api:jar:1.3.5:compile\n|  +- org.springframework.boot:spring-boot-starter-json:jar:2.7.16:compile\n|  |  +- com.fasterxml.jackson.datatype:jackson-datatype-jdk8:jar:2.13.5:compile\n|  |  +- com.fasterxml.jackson.datatype:jackson-datatype-jsr310:jar:2.13.5:compile\n|  |  \\- com.fasterxml.jackson.module:jackson-module-parameter-names:jar:2.13.5:compile\n|  +- org.springframework.boot:spring-boot-starter-tomcat:jar:2.7.16:compile\n|  |  +- org.apache.tomcat.embed:tomcat-embed-core:jar:9.0.80:compile\n|  |  \\- org.apache.tomcat.embed:tomcat-embed-websocket:jar:9.0.80:compile\n|  +- org.springframework:spring-web:jar:5.3.30:compile\n|  \\- org.springframework:spring-webmvc:jar:5.3.30:compile\n+- org.springframework.security:spring-security-core:jar:5.6.4:compile\n|  +- org.springframework.security:spring-security-crypto:jar:5.7.11:compile\n|  +- org.springframework:spring-aop:jar:5.3.30:compile\n|  +- org.springframework:spring-beans:jar:5.3.30:compile\n|  +- org.springframework:spring-context:jar:5.3.30:compile\n|  +- org.springframework:spring-core:jar:5.3.30:compile\n|  |  \\- org.springframework:spring-jcl:jar:5.3.30:compile\n|  \\- org.springframework:spring-expression:jar:5.3.30:compile\n+- org.springframework.boot:spring-boot-starter-security:jar:2.7.16:compile\n|  +- org.springframework.security:spring-security-config:jar:5.7.11:compile\n|  \\- org.springframework.security:spring-security-web:jar:5.7.11:compile\n+- org.springframework.boot:spring-boot-starter-data-jpa:jar:2.7.16:compile\n|  +- org.springframework.boot:spring-boot-starter-aop:jar:2.7.16:compile\n|  |  \\- org.aspectj:aspectjweaver:jar:1.9.7:compile\n|  +- org.springframework.boot:spring-boot-starter-jdbc:jar:2.7.16:compile\n|  |  +- com.zaxxer:HikariCP:jar:4.0.3:compile\n|  |  \\- org.springframework:spring-jdbc:jar:5.3.30:compile\n|  +- jakarta.transaction:jakarta.transaction-api:jar:1.3.3:compile\n|  +- jakarta.persistence:jakarta.persistence-api:jar:2.2.3:compile\n|  +- org.hibernate:hibernate-core:jar:5.6.15.Final:compile\n|  |  +- org.jboss.logging:jboss-logging:jar:3.4.3.Final:compile\n|  |  +- net.bytebuddy:byte-buddy:jar:1.12.23:compile\n|  |  +- antlr:antlr:jar:2.7.7:compile\n|  |  +- org.jboss:jandex:jar:2.4.2.Final:compile\n|  |  +- com.fasterxml:classmate:jar:1.5.1:compile\n|  |  +- org.hibernate.common:hibernate-commons-annotations:jar:5.1.2.Final:compile\n|  |  \\- org.glassfish.jaxb:jaxb-runtime:jar:2.3.8:compile\n|  |     +- org.glassfish.jaxb:txw2:jar:2.3.8:compile\n|  |     +- com.sun.istack:istack-commons-runtime:jar:3.0.12:compile\n|  |     \\- com.sun.activation:jakarta.activation:jar:1.2.2:runtime\n|  +- org.springframework.data:spring-data-jpa:jar:2.7.16:compile\n|  |  +- org.springframework.data:spring-data-commons:jar:2.7.16:compile\n|  |  +- org.springframework:spring-orm:jar:5.3.30:compile\n|  |  \\- org.springframework:spring-tx:jar:5.3.30:compile\n|  \\- org.springframework:spring-aspects:jar:5.3.30:compile\n+- com.h2database:h2:jar:2.1.214:runtime\n+- ch.qos.logback:logback-classic:jar:1.2.11:compile\n|  +- ch.qos.logback:logback-core:jar:1.2.11:compile\n|  \\- org.slf4j:slf4j-api:jar:1.7.36:compile\n+- org.yaml:snakeyaml:jar:1.29:compile\n+- io.jsonwebtoken:jjwt:jar:0.9.1:compile\n|  \\- com.fasterxml.jackson.core:jackson-databind:jar:2.13.5:compile\n|     +- com.fasterxml.jackson.core:jackson-annotations:jar:2.13.5:compile\n|     \\- com.fasterxml.jackson.core:jackson-core:jar:2.13.5:compile\n+- org.projectlombok:lombok:jar:1.18.32:compile\n+- org.springframework.boot:spring-boot-starter-validation:jar:2.7.16:compile\n|  +- org.apache.tomcat.embed:tomcat-embed-el:jar:9.0.80:compile\n|  \\- org.hibernate.validator:hibernate-validator:jar:6.2.5.Final:compile\n|     \\- jakarta.validation:jakarta.validation-api:jar:2.0.2:compile\n+- org.springframework.boot:spring-boot-starter-test:jar:2.7.16:test\n|  +- org.springframework.boot:spring-boot-test:jar:2.7.16:test\n|  +- org.springframework.boot:spring-boot-test-autoconfigure:jar:2.7.16:test\n|  +- com.jayway.jsonpath:json-path:jar:2.7.0:test\n|  |  \\- net.minidev:json-smart:jar:2.4.11:test\n|  |     \\- net.minidev:accessors-smart:jar:2.4.11:test\n|  |        \\- org.ow2.asm:asm:jar:9.3:test\n|  +- jakarta.xml.bind:jakarta.xml.bind-api:jar:2.3.3:compile\n|  |  \\- jakarta.activation:jakarta.activation-api:jar:1.2.2:compile\n|  +- org.assertj:assertj-core:jar:3.22.0:test\n|  +- org.hamcrest:hamcrest:jar:2.2:test\n|  +- org.junit.jupiter:junit-jupiter:jar:5.8.2:test\n|  |  +- org.junit.jupiter:junit-jupiter-api:jar:5.8.2:test\n|  |  |  +- org.opentest4j:opentest4j:jar:1.2.0:test\n|  |  |  +- org.junit.platform:junit-platform-commons:jar:1.8.2:test\n|  |  |  \\- org.apiguardian:apiguardian-api:jar:1.1.2:test\n|  |  +- org.junit.jupiter:junit-jupiter-params:jar:5.8.2:test\n|  |  \\- org.junit.jupiter:junit-jupiter-engine:jar:5.8.2:test\n|  |     \\- org.junit.platform:junit-platform-engine:jar:1.8.2:test\n|  +- org.mockito:mockito-core:jar:4.5.1:test\n|  |  +- net.bytebuddy:byte-buddy-agent:jar:1.12.23:test\n|  |  \\- org.objenesis:objenesis:jar:3.2:test\n|  +- org.mockito:mockito-junit-jupiter:jar:4.5.1:test\n|  +- org.skyscreamer:jsonassert:jar:1.5.1:test\n|  |  \\- com.vaadin.external.google:android-json:jar:0.0.20131108.vaadin1:test\n|  +- org.springframework:spring-test:jar:5.3.30:test\n|  \\- org.xmlunit:xmlunit-core:jar:2.9.1:test\n\\- org.springframework.security:spring-security-test:jar:5.6.4:test\n",
+        "evidence": [
+          "Real mvn dependency:tree after bumping org.springframework.boot:spring-boot-starter-parent to 2.7.16: com.h2database:h2 resolves to 2.1.214. This proves resolution only -- NOT security closure (Phase 7); that requires a real rescan."
+        ]
+      },
+      "comparison": -1,
+      "accepted": false,
+      "reason": "RESOLVED_DEPENDENCY_BELOW_SECURITY_TARGET"
+    },
+    {
+      "candidate": "2.7.15",
+      "source": "/home/souhaiel/pfe-2026/platform/backend/src/dependency-compatibility/fixtures/spring-boot-starter-parent.maven-metadata-central.xml",
+      "policy": {
+        "state": "SAFE_SAME_LINE",
+        "currentVersion": "2.7.0",
+        "candidateVersion": "2.7.15",
+        "reason": "Same major.minor line (2.7) -- smallest possible safe step."
+      },
+      "trial": {
+        "ownerFromVersion": "2.7.0",
+        "ownerToVersion": "2.7.15",
+        "resolvedVulnerableVersion": "2.1.214",
+        "status": "RESOLVED",
+        "treeText": "com.pfe:pfe-app-test:jar:1.0.0\n+- org.springframework.boot:spring-boot-starter-web:jar:2.7.15:compile\n|  +- org.springframework.boot:spring-boot-starter:jar:2.7.15:compile\n|  |  +- org.springframework.boot:spring-boot:jar:2.7.15:compile\n|  |  +- org.springframework.boot:spring-boot-autoconfigure:jar:2.7.15:compile\n|  |  +- org.springframework.boot:spring-boot-starter-logging:jar:2.7.15:compile\n|  |  |  +- org.apache.logging.log4j:log4j-to-slf4j:jar:2.17.2:compile\n|  |  |  |  \\- org.apache.logging.log4j:log4j-api:jar:2.17.2:compile\n|  |  |  \\- org.slf4j:jul-to-slf4j:jar:1.7.36:compile\n|  |  \\- jakarta.annotation:jakarta.annotation-api:jar:1.3.5:compile\n|  +- org.springframework.boot:spring-boot-starter-json:jar:2.7.15:compile\n|  |  +- com.fasterxml.jackson.datatype:jackson-datatype-jdk8:jar:2.13.5:compile\n|  |  +- com.fasterxml.jackson.datatype:jackson-datatype-jsr310:jar:2.13.5:compile\n|  |  \\- com.fasterxml.jackson.module:jackson-module-parameter-names:jar:2.13.5:compile\n|  +- org.springframework.boot:spring-boot-starter-tomcat:jar:2.7.15:compile\n|  |  +- org.apache.tomcat.embed:tomcat-embed-core:jar:9.0.79:compile\n|  |  \\- org.apache.tomcat.embed:tomcat-embed-websocket:jar:9.0.79:compile\n|  +- org.springframework:spring-web:jar:5.3.29:compile\n|  \\- org.springframework:spring-webmvc:jar:5.3.29:compile\n+- org.springframework.security:spring-security-core:jar:5.6.4:compile\n|  +- org.springframework.security:spring-security-crypto:jar:5.7.10:compile\n|  +- org.springframework:spring-aop:jar:5.3.29:compile\n|  +- org.springframework:spring-beans:jar:5.3.29:compile\n|  +- org.springframework:spring-context:jar:5.3.29:compile\n|  +- org.springframework:spring-core:jar:5.3.29:compile\n|  |  \\- org.springframework:spring-jcl:jar:5.3.29:compile\n|  \\- org.springframework:spring-expression:jar:5.3.29:compile\n+- org.springframework.boot:spring-boot-starter-security:jar:2.7.15:compile\n|  +- org.springframework.security:spring-security-config:jar:5.7.10:compile\n|  \\- org.springframework.security:spring-security-web:jar:5.7.10:compile\n+- org.springframework.boot:spring-boot-starter-data-jpa:jar:2.7.15:compile\n|  +- org.springframework.boot:spring-boot-starter-aop:jar:2.7.15:compile\n|  |  \\- org.aspectj:aspectjweaver:jar:1.9.7:compile\n|  +- org.springframework.boot:spring-boot-starter-jdbc:jar:2.7.15:compile\n|  |  +- com.zaxxer:HikariCP:jar:4.0.3:compile\n|  |  \\- org.springframework:spring-jdbc:jar:5.3.29:compile\n|  +- jakarta.transaction:jakarta.transaction-api:jar:1.3.3:compile\n|  +- jakarta.persistence:jakarta.persistence-api:jar:2.2.3:compile\n|  +- org.hibernate:hibernate-core:jar:5.6.15.Final:compile\n|  |  +- org.jboss.logging:jboss-logging:jar:3.4.3.Final:compile\n|  |  +- net.bytebuddy:byte-buddy:jar:1.12.23:compile\n|  |  +- antlr:antlr:jar:2.7.7:compile\n|  |  +- org.jboss:jandex:jar:2.4.2.Final:compile\n|  |  +- com.fasterxml:classmate:jar:1.5.1:compile\n|  |  +- org.hibernate.common:hibernate-commons-annotations:jar:5.1.2.Final:compile\n|  |  \\- org.glassfish.jaxb:jaxb-runtime:jar:2.3.8:compile\n|  |     +- org.glassfish.jaxb:txw2:jar:2.3.8:compile\n|  |     +- com.sun.istack:istack-commons-runtime:jar:3.0.12:compile\n|  |     \\- com.sun.activation:jakarta.activation:jar:1.2.2:runtime\n|  +- org.springframework.data:spring-data-jpa:jar:2.7.15:compile\n|  |  +- org.springframework.data:spring-data-commons:jar:2.7.15:compile\n|  |  +- org.springframework:spring-orm:jar:5.3.29:compile\n|  |  \\- org.springframework:spring-tx:jar:5.3.29:compile\n|  \\- org.springframework:spring-aspects:jar:5.3.29:compile\n+- com.h2database:h2:jar:2.1.214:runtime\n+- ch.qos.logback:logback-classic:jar:1.2.11:compile\n|  +- ch.qos.logback:logback-core:jar:1.2.11:compile\n|  \\- org.slf4j:slf4j-api:jar:1.7.36:compile\n+- org.yaml:snakeyaml:jar:1.29:compile\n+- io.jsonwebtoken:jjwt:jar:0.9.1:compile\n|  \\- com.fasterxml.jackson.core:jackson-databind:jar:2.13.5:compile\n|     +- com.fasterxml.jackson.core:jackson-annotations:jar:2.13.5:compile\n|     \\- com.fasterxml.jackson.core:jackson-core:jar:2.13.5:compile\n+- org.projectlombok:lombok:jar:1.18.32:compile\n+- org.springframework.boot:spring-boot-starter-validation:jar:2.7.15:compile\n|  +- org.apache.tomcat.embed:tomcat-embed-el:jar:9.0.79:compile\n|  \\- org.hibernate.validator:hibernate-validator:jar:6.2.5.Final:compile\n|     \\- jakarta.validation:jakarta.validation-api:jar:2.0.2:compile\n+- org.springframework.boot:spring-boot-starter-test:jar:2.7.15:test\n|  +- org.springframework.boot:spring-boot-test:jar:2.7.15:test\n|  +- org.springframework.boot:spring-boot-test-autoconfigure:jar:2.7.15:test\n|  +- com.jayway.jsonpath:json-path:jar:2.7.0:test\n|  |  \\- net.minidev:json-smart:jar:2.4.11:test\n|  |     \\- net.minidev:accessors-smart:jar:2.4.11:test\n|  |        \\- org.ow2.asm:asm:jar:9.3:test\n|  +- jakarta.xml.bind:jakarta.xml.bind-api:jar:2.3.3:compile\n|  |  \\- jakarta.activation:jakarta.activation-api:jar:1.2.2:compile\n|  +- org.assertj:assertj-core:jar:3.22.0:test\n|  +- org.hamcrest:hamcrest:jar:2.2:test\n|  +- org.junit.jupiter:junit-jupiter:jar:5.8.2:test\n|  |  +- org.junit.jupiter:junit-jupiter-api:jar:5.8.2:test\n|  |  |  +- org.opentest4j:opentest4j:jar:1.2.0:test\n|  |  |  +- org.junit.platform:junit-platform-commons:jar:1.8.2:test\n|  |  |  \\- org.apiguardian:apiguardian-api:jar:1.1.2:test\n|  |  +- org.junit.jupiter:junit-jupiter-params:jar:5.8.2:test\n|  |  \\- org.junit.jupiter:junit-jupiter-engine:jar:5.8.2:test\n|  |     \\- org.junit.platform:junit-platform-engine:jar:1.8.2:test\n|  +- org.mockito:mockito-core:jar:4.5.1:test\n|  |  +- net.bytebuddy:byte-buddy-agent:jar:1.12.23:test\n|  |  \\- org.objenesis:objenesis:jar:3.2:test\n|  +- org.mockito:mockito-junit-jupiter:jar:4.5.1:test\n|  +- org.skyscreamer:jsonassert:jar:1.5.1:test\n|  |  \\- com.vaadin.external.google:android-json:jar:0.0.20131108.vaadin1:test\n|  +- org.springframework:spring-test:jar:5.3.29:test\n|  \\- org.xmlunit:xmlunit-core:jar:2.9.1:test\n\\- org.springframework.security:spring-security-test:jar:5.6.4:test\n",
+        "evidence": [
+          "Real mvn dependency:tree after bumping org.springframework.boot:spring-boot-starter-parent to 2.7.15: com.h2database:h2 resolves to 2.1.214. This proves resolution only -- NOT security closure (Phase 7); that requires a real rescan."
+        ]
+      },
+      "comparison": -1,
+      "accepted": false,
+      "reason": "RESOLVED_DEPENDENCY_BELOW_SECURITY_TARGET"
+    },
+    {
+      "candidate": "2.7.14",
+      "source": "/home/souhaiel/pfe-2026/platform/backend/src/dependency-compatibility/fixtures/spring-boot-starter-parent.maven-metadata-central.xml",
+      "policy": {
+        "state": "SAFE_SAME_LINE",
+        "currentVersion": "2.7.0",
+        "candidateVersion": "2.7.14",
+        "reason": "Same major.minor line (2.7) -- smallest possible safe step."
+      },
+      "trial": {
+        "ownerFromVersion": "2.7.0",
+        "ownerToVersion": "2.7.14",
+        "resolvedVulnerableVersion": "2.1.214",
+        "status": "RESOLVED",
+        "treeText": "com.pfe:pfe-app-test:jar:1.0.0\n+- org.springframework.boot:spring-boot-starter-web:jar:2.7.14:compile\n|  +- org.springframework.boot:spring-boot-starter:jar:2.7.14:compile\n|  |  +- org.springframework.boot:spring-boot:jar:2.7.14:compile\n|  |  +- org.springframework.boot:spring-boot-autoconfigure:jar:2.7.14:compile\n|  |  +- org.springframework.boot:spring-boot-starter-logging:jar:2.7.14:compile\n|  |  |  +- org.apache.logging.log4j:log4j-to-slf4j:jar:2.17.2:compile\n|  |  |  |  \\- org.apache.logging.log4j:log4j-api:jar:2.17.2:compile\n|  |  |  \\- org.slf4j:jul-to-slf4j:jar:1.7.36:compile\n|  |  \\- jakarta.annotation:jakarta.annotation-api:jar:1.3.5:compile\n|  +- org.springframework.boot:spring-boot-starter-json:jar:2.7.14:compile\n|  |  +- com.fasterxml.jackson.datatype:jackson-datatype-jdk8:jar:2.13.5:compile\n|  |  +- com.fasterxml.jackson.datatype:jackson-datatype-jsr310:jar:2.13.5:compile\n|  |  \\- com.fasterxml.jackson.module:jackson-module-parameter-names:jar:2.13.5:compile\n|  +- org.springframework.boot:spring-boot-starter-tomcat:jar:2.7.14:compile\n|  |  +- org.apache.tomcat.embed:tomcat-embed-core:jar:9.0.78:compile\n|  |  \\- org.apache.tomcat.embed:tomcat-embed-websocket:jar:9.0.78:compile\n|  +- org.springframework:spring-web:jar:5.3.29:compile\n|  \\- org.springframework:spring-webmvc:jar:5.3.29:compile\n+- org.springframework.security:spring-security-core:jar:5.6.4:compile\n|  +- org.springframework.security:spring-security-crypto:jar:5.7.10:compile\n|  +- org.springframework:spring-aop:jar:5.3.29:compile\n|  +- org.springframework:spring-beans:jar:5.3.29:compile\n|  +- org.springframework:spring-context:jar:5.3.29:compile\n|  +- org.springframework:spring-core:jar:5.3.29:compile\n|  |  \\- org.springframework:spring-jcl:jar:5.3.29:compile\n|  \\- org.springframework:spring-expression:jar:5.3.29:compile\n+- org.springframework.boot:spring-boot-starter-security:jar:2.7.14:compile\n|  +- org.springframework.security:spring-security-config:jar:5.7.10:compile\n|  \\- org.springframework.security:spring-security-web:jar:5.7.10:compile\n+- org.springframework.boot:spring-boot-starter-data-jpa:jar:2.7.14:compile\n|  +- org.springframework.boot:spring-boot-starter-aop:jar:2.7.14:compile\n|  |  \\- org.aspectj:aspectjweaver:jar:1.9.7:compile\n|  +- org.springframework.boot:spring-boot-starter-jdbc:jar:2.7.14:compile\n|  |  +- com.zaxxer:HikariCP:jar:4.0.3:compile\n|  |  \\- org.springframework:spring-jdbc:jar:5.3.29:compile\n|  +- jakarta.transaction:jakarta.transaction-api:jar:1.3.3:compile\n|  +- jakarta.persistence:jakarta.persistence-api:jar:2.2.3:compile\n|  +- org.hibernate:hibernate-core:jar:5.6.15.Final:compile\n|  |  +- org.jboss.logging:jboss-logging:jar:3.4.3.Final:compile\n|  |  +- net.bytebuddy:byte-buddy:jar:1.12.23:compile\n|  |  +- antlr:antlr:jar:2.7.7:compile\n|  |  +- org.jboss:jandex:jar:2.4.2.Final:compile\n|  |  +- com.fasterxml:classmate:jar:1.5.1:compile\n|  |  +- org.hibernate.common:hibernate-commons-annotations:jar:5.1.2.Final:compile\n|  |  \\- org.glassfish.jaxb:jaxb-runtime:jar:2.3.8:compile\n|  |     +- org.glassfish.jaxb:txw2:jar:2.3.8:compile\n|  |     +- com.sun.istack:istack-commons-runtime:jar:3.0.12:compile\n|  |     \\- com.sun.activation:jakarta.activation:jar:1.2.2:runtime\n|  +- org.springframework.data:spring-data-jpa:jar:2.7.14:compile\n|  |  +- org.springframework.data:spring-data-commons:jar:2.7.14:compile\n|  |  +- org.springframework:spring-orm:jar:5.3.29:compile\n|  |  \\- org.springframework:spring-tx:jar:5.3.29:compile\n|  \\- org.springframework:spring-aspects:jar:5.3.29:compile\n+- com.h2database:h2:jar:2.1.214:runtime\n+- ch.qos.logback:logback-classic:jar:1.2.11:compile\n|  +- ch.qos.logback:logback-core:jar:1.2.11:compile\n|  \\- org.slf4j:slf4j-api:jar:1.7.36:compile\n+- org.yaml:snakeyaml:jar:1.29:compile\n+- io.jsonwebtoken:jjwt:jar:0.9.1:compile\n|  \\- com.fasterxml.jackson.core:jackson-databind:jar:2.13.5:compile\n|     +- com.fasterxml.jackson.core:jackson-annotations:jar:2.13.5:compile\n|     \\- com.fasterxml.jackson.core:jackson-core:jar:2.13.5:compile\n+- org.projectlombok:lombok:jar:1.18.32:compile\n+- org.springframework.boot:spring-boot-starter-validation:jar:2.7.14:compile\n|  +- org.apache.tomcat.embed:tomcat-embed-el:jar:9.0.78:compile\n|  \\- org.hibernate.validator:hibernate-validator:jar:6.2.5.Final:compile\n|     \\- jakarta.validation:jakarta.validation-api:jar:2.0.2:compile\n+- org.springframework.boot:spring-boot-starter-test:jar:2.7.14:test\n|  +- org.springframework.boot:spring-boot-test:jar:2.7.14:test\n|  +- org.springframework.boot:spring-boot-test-autoconfigure:jar:2.7.14:test\n|  +- com.jayway.jsonpath:json-path:jar:2.7.0:test\n|  |  \\- net.minidev:json-smart:jar:2.4.11:test\n|  |     \\- net.minidev:accessors-smart:jar:2.4.11:test\n|  |        \\- org.ow2.asm:asm:jar:9.3:test\n|  +- jakarta.xml.bind:jakarta.xml.bind-api:jar:2.3.3:compile\n|  |  \\- jakarta.activation:jakarta.activation-api:jar:1.2.2:compile\n|  +- org.assertj:assertj-core:jar:3.22.0:test\n|  +- org.hamcrest:hamcrest:jar:2.2:test\n|  +- org.junit.jupiter:junit-jupiter:jar:5.8.2:test\n|  |  +- org.junit.jupiter:junit-jupiter-api:jar:5.8.2:test\n|  |  |  +- org.opentest4j:opentest4j:jar:1.2.0:test\n|  |  |  +- org.junit.platform:junit-platform-commons:jar:1.8.2:test\n|  |  |  \\- org.apiguardian:apiguardian-api:jar:1.1.2:test\n|  |  +- org.junit.jupiter:junit-jupiter-params:jar:5.8.2:test\n|  |  \\- org.junit.jupiter:junit-jupiter-engine:jar:5.8.2:test\n|  |     \\- org.junit.platform:junit-platform-engine:jar:1.8.2:test\n|  +- org.mockito:mockito-core:jar:4.5.1:test\n|  |  +- net.bytebuddy:byte-buddy-agent:jar:1.12.23:test\n|  |  \\- org.objenesis:objenesis:jar:3.2:test\n|  +- org.mockito:mockito-junit-jupiter:jar:4.5.1:test\n|  +- org.skyscreamer:jsonassert:jar:1.5.1:test\n|  |  \\- com.vaadin.external.google:android-json:jar:0.0.20131108.vaadin1:test\n|  +- org.springframework:spring-test:jar:5.3.29:test\n|  \\- org.xmlunit:xmlunit-core:jar:2.9.1:test\n\\- org.springframework.security:spring-security-test:jar:5.6.4:test\n",
+        "evidence": [
+          "Real mvn dependency:tree after bumping org.springframework.boot:spring-boot-starter-parent to 2.7.14: com.h2database:h2 resolves to 2.1.214. This proves resolution only -- NOT security closure (Phase 7); that requires a real rescan."
+        ]
+      },
+      "comparison": -1,
+      "accepted": false,
+      "reason": "RESOLVED_DEPENDENCY_BELOW_SECURITY_TARGET"
+    }
+  ]
+}

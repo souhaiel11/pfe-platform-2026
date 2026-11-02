@@ -1,0 +1,60 @@
+{
+  "build1": {
+    "builder-scanner/src/internal-auth.js": "788be6dc57a0aed8cdd4356d8b73ed7582c7202ce06a180496dd48dd504bbe6f",
+    "builder-scanner/src/security-artifact-validator.js": "6a7bd59bd8695fdb4058dcf75d6b182b099db4765adb4763c75a462ade5bba6b",
+    "builder-scanner/src/internal-auth.js.map": "b2b6f9812332668f6e5883d54ef9e8a271a69dd7eb45c3dd5d4294f61c3919c5",
+    "builder-scanner/src/server.js.map": "d3cdd72cbce7db0b97163cf1826215f47c3a24763a38d6ad8ad84de6ea569a64",
+    "builder-scanner/src/security-artifact-validator.js.map": "342b836661da6f07820f5e36a2338f6269ced840d1a19e4d3425ab1e96f114b9",
+    "builder-scanner/src/trivy-readiness.js": "1243b60c9da7557ea57a365631da3f8f1c8cc3cb178cf7ad85ec906789fe0bd5",
+    "builder-scanner/src/trivy-readiness.js.map": "54e825728d30315836e83cd66b9fa26e46bcf4de5ea199b2a81567082cb7a4f8",
+    "builder-scanner/src/server.js": "5c412cf9acff4cc0481a5566180b959329effb8ebbf9db809c3e0ac36e365d22",
+    "backend/src/security-remediation/maven-remediation-scope.js": "052a9d490bf7096fcb7f9e61d96cde1ac89c43e7431ec763b1b393e4a12b205c",
+    "backend/src/security-remediation/security-artifact-scan.js": "63d023c51fa071d0e74cb07ca1e116de37eda20ddacb7abc6b6ef61ec2ca6807",
+    "backend/src/security-remediation/maven-remediation-scope.js.map": "dd5bdafa8c2816dcefdc16b8b44c4e5a40bf787cc3cb6bd8d5f840da73efdf60",
+    "backend/src/security-remediation/version-selection-policy.js": "760bb898a94ffef16a1979305417f9d63a36bc51d9f8b07746cecf05a2cd833a",
+    "backend/src/security-remediation/security-artifact-scan.js.map": "cf8cb0accbb74ac4c8323774343c2b54e8073e83d599d1becdf6697e5d5ebdce",
+    "backend/src/security-remediation/security-remediation-deadline-contract.js.map": "aa6a1b2a5ba809c808baaa075e4d7edbf372db2576a0e8567d658e9a3ed22d3a",
+    "backend/src/security-remediation/version-selection-policy.js.map": "130f33672fa6c60c22e871ec7ab0a961d2840f8f52a157b3f0d861c1a71e47a2",
+    "backend/src/security-remediation/security-remediation-deadline-contract.js": "a33775f4a760bf803deda80c624d247f4cc47213459c25ce1d541c7cf1c8606d",
+    "backend/src/candidate-verification/candidate-verification.types.js.map": "ea967f7c59c433886045685a6478ec908cfae89abc9d2591e78bc99ea2608fdf",
+    "backend/src/candidate-verification/candidate-digest.js": "0ab6af19ffe8e52628b6c447ffc66326a9a70d6c10b34a869e3775c9bd244939",
+    "backend/src/candidate-verification/candidate-verification.types.js": "bfb023add1907eb99059a279dd490d9ff02487726e34a8c0bee3dcc9500b058f",
+    "backend/src/candidate-verification/candidate-digest.js.map": "10d55f83e55475b224071857b49bb4a1f99a3491fee90e89c0e0ab9866b6a545"
+  },
+  "build2": {
+    "builder-scanner/src/internal-auth.js": "788be6dc57a0aed8cdd4356d8b73ed7582c7202ce06a180496dd48dd504bbe6f",
+    "builder-scanner/src/security-artifact-validator.js": "6a7bd59bd8695fdb4058dcf75d6b182b099db4765adb4763c75a462ade5bba6b",
+    "builder-scanner/src/internal-auth.js.map": "b2b6f9812332668f6e5883d54ef9e8a271a69dd7eb45c3dd5d4294f61c3919c5",
+    "builder-scanner/src/server.js.map": "d3cdd72cbce7db0b97163cf1826215f47c3a24763a38d6ad8ad84de6ea569a64",
+    "builder-scanner/src/security-artifact-validator.js.map": "342b836661da6f07820f5e36a2338f6269ced840d1a19e4d3425ab1e96f114b9",
+    "builder-scanner/src/trivy-readiness.js": "1243b60c9da7557ea57a365631da3f8f1c8cc3cb178cf7ad85ec906789fe0bd5",
+    "builder-scanner/src/trivy-readiness.js.map": "54e825728d30315836e83cd66b9fa26e46bcf4de5ea199b2a81567082cb7a4f8",
+    "builder-scanner/src/server.js": "5c412cf9acff4cc0481a5566180b959329effb8ebbf9db809c3e0ac36e365d22",
+    "backend/src/security-remediation/maven-remediation-scope.js": "052a9d490bf7096fcb7f9e61d96cde1ac89c43e7431ec763b1b393e4a12b205c",
+    "backend/src/security-remediation/security-artifact-scan.js": "63d023c51fa071d0e74cb07ca1e116de37eda20ddacb7abc6b6ef61ec2ca6807",
+    "backend/src/security-remediation/maven-remediation-scope.js.map": "dd5bdafa8c2816dcefdc16b8b44c4e5a40bf787cc3cb6bd8d5f840da73efdf60",
+    "backend/src/security-remediation/version-selection-policy.js": "760bb898a94ffef16a1979305417f9d63a36bc51d9f8b07746cecf05a2cd833a",
+    "backend/src/security-remediation/security-artifact-scan.js.map": "cf8cb0accbb74ac4c8323774343c2b54e8073e83d599d1becdf6697e5d5ebdce",
+    "backend/src/security-remediation/security-remediation-deadline-contract.js.map": "aa6a1b2a5ba809c808baaa075e4d7edbf372db2576a0e8567d658e9a3ed22d3a",
+    "backend/src/security-remediation/version-selection-policy.js.map": "130f33672fa6c60c22e871ec7ab0a961d2840f8f52a157b3f0d861c1a71e47a2",
+    "backend/src/security-remediation/security-remediation-deadline-contract.js": "a33775f4a760bf803deda80c624d247f4cc47213459c25ce1d541c7cf1c8606d",
+    "backend/src/candidate-verification/candidate-verification.types.js.map": "ea967f7c59c433886045685a6478ec908cfae89abc9d2591e78bc99ea2608fdf",
+    "backend/src/candidate-verification/candidate-digest.js": "0ab6af19ffe8e52628b6c447ffc66326a9a70d6c10b34a869e3775c9bd244939",
+    "backend/src/candidate-verification/candidate-verification.types.js": "bfb023add1907eb99059a279dd490d9ff02487726e34a8c0bee3dcc9500b058f",
+    "backend/src/candidate-verification/candidate-digest.js.map": "10d55f83e55475b224071857b49bb4a1f99a3491fee90e89c0e0ab9866b6a545"
+  },
+  "reproducible": true,
+  "changedExecutableFilesAgainstLive": [
+    "builder-scanner/src/security-artifact-validator.js"
+  ],
+  "sourceCommit": "9038f556d8e8e27eb31c1a31feeac5168e529908",
+  "ARTIFACT_HASH": "sha256:cb805ea8810587e2c041a96099f18f408b323cb0f7ca8d46fd574da93be2d13d",
+  "EXECUTABLE_RUNTIME_REPRODUCIBLE": true,
+  "ALL_RUNTIME_FILES_REPRODUCIBLE": true,
+  "OCI_IMAGE_ID_REPRODUCIBLE": false,
+  "images": [
+    "sha256:8581ec8d1cbd9332d3b9294bea63292f7880f54b4ae98aa394af8401b1613196",
+    "sha256:f3faf20eba589a58741576a50a055d5f2ad59470da32dda4a35e57eebbf75b77"
+  ],
+  "note": "Independent no-cache image builds have identical payload files but differ in filesystem layer metadata. Qualification follows the existing release contract: reproducible complete compiled runtime, exact pinned chosen image ID."
+}

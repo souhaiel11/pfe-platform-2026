@@ -1,0 +1,143 @@
+// Regroupe les traitements de OWASP Trivy fixed version corrélation.
+const MAVEN_PKG_RE = /^[A-Za-z0-9_.-]+:[A-Za-z0-9_.-]+$/;
+const EXACT_VERSION_RE = /^[A-Za-z0-9][A-Za-z0-9_.+-]*$/;
+
+export interface OwaspFixedVersionCorrelationKey {
+  cve: string;
+  pkg: string;
+  installedVersion: string;
+}
+
+export type FixedVersionFormat = 'SINGLE_EXACT_VERSION' | 'MULTIPLE_CANDIDATES' | 'RANGE_OR_UNSUPPORTED' | 'EMPTY';
+
+export type CorrelationQualification =
+  | { kind: 'NO_MATCH' }
+  | { kind: 'NO_TARGET'; matchCount: number }
+  | { kind: 'AMBIGUOUS'; matchCount: number; distinctValues: string[] }
+  | { kind: 'UNSUPPORTED_FORMAT'; matchCount: number; raw: string; format: FixedVersionFormat }
+  | { kind: 'SINGLE_EXACT'; matchCount: number; raw: string; fixedVersion: string };
+
+/** Normalise une valeur en chaîne de comparaison (texte vide si absente). */
+function normalizeKeyPart(value: unknown): string {
+  return String(value ?? '').trim();
+}
+
+/** Construit la clé de corrélation exacte CVE+paquet+version installée, utilisée pour indexer et retrouver l'évidence Trivy. */
+function canonicalKey(k: OwaspFixedVersionCorrelationKey): string {
+  return [normalizeKeyPart(k.cve).toUpperCase(), normalizeKeyPart(k.pkg), normalizeKeyPart(k.installedVersion)].join(' ');
+}
+
+/** Découpe une chaîne brute de versions corrigées Trivy sur les virgules, sans jamais en choisir une par défaut. */
+export function parseFixedVersionCandidates(raw: string | null | undefined): string[] {
+  const text = String(raw ?? '').trim();
+  if (!text) return [];
+  return text.split(',').map(part => part.trim()).filter(Boolean);
+}
+
+/** Classe une chaîne brute de version corrigée Trivy : vide, une seule version exacte, plusieurs candidats, ou un format non supporté (plage, etc.). */
+export function classifyFixedVersionFormat(raw: string | null | undefined): FixedVersionFormat {
+  const candidates = parseFixedVersionCandidates(raw);
+  if (candidates.length === 0) return 'EMPTY';
+  if (candidates.length > 1) return 'MULTIPLE_CANDIDATES';
+  return EXACT_VERSION_RE.test(candidates[0]) ? 'SINGLE_EXACT_VERSION' : 'RANGE_OR_UNSUPPORTED';
+}
+
+/** Construit Trivy Fixed version Index. */
+export function buildTrivyFixedVersionIndex(trivyCves: any[]): Map<string, CorrelationQualification> {
+  const rowsByKey = new Map<string, string[]>();
+  for (const t of Array.isArray(trivyCves) ? trivyCves : []) {
+    const cve = normalizeKeyPart(t?.id ?? t?.cve ?? t?.VulnerabilityID);
+    const pkg = normalizeKeyPart(t?.pkg ?? t?.PkgName ?? t?.package);
+    const installedVersion = normalizeKeyPart(t?.installedVersion ?? t?.InstalledVersion);
+    if (!cve || !MAVEN_PKG_RE.test(pkg) || !installedVersion) continue;
+    const key = canonicalKey({ cve, pkg, installedVersion });
+    const raw = t?.fixedVersion ?? t?.FixedVersion ?? null;
+    rowsByKey.set(key, [...(rowsByKey.get(key) || []), normalizeKeyPart(raw)]);
+  }
+
+  const index = new Map<string, CorrelationQualification>();
+  for (const [key, rawValues] of rowsByKey) {
+    const matchCount = rawValues.length;
+    const distinct = [...new Set(rawValues.filter(v => v.length > 0))];
+    if (distinct.length === 0) {
+      index.set(key, { kind: 'NO_TARGET', matchCount });
+      continue;
+    }
+    if (distinct.length > 1) {
+      index.set(key, { kind: 'AMBIGUOUS', matchCount, distinctValues: distinct });
+      continue;
+    }
+    const raw = distinct[0];
+    const format = classifyFixedVersionFormat(raw);
+    if (format === 'SINGLE_EXACT_VERSION') {
+      index.set(key, { kind: 'SINGLE_EXACT', matchCount, raw, fixedVersion: parseFixedVersionCandidates(raw)[0] });
+    } else {
+      index.set(key, { kind: 'UNSUPPORTED_FORMAT', matchCount, raw, format });
+    }
+  }
+  return index;
+}
+
+/** Qualifie la corrélation Trivy d'un finding OWASP ; refuse (NO_MATCH) toute clé sans identité Maven fiable. */
+export function qualifyOwaspFixedVersionCorrelation(
+  key: OwaspFixedVersionCorrelationKey,
+  trivyIndex: Map<string, CorrelationQualification>,
+): CorrelationQualification {
+  const cve = normalizeKeyPart(key.cve);
+  const pkg = normalizeKeyPart(key.pkg);
+  const installedVersion = normalizeKeyPart(key.installedVersion);
+  if (!cve || !MAVEN_PKG_RE.test(pkg) || !installedVersion) return { kind: 'NO_MATCH' };
+  return trivyIndex.get(canonicalKey({ cve, pkg, installedVersion })) ?? { kind: 'NO_MATCH' };
+}
+
+export type FixedVersionUnavailableReason = 'MULTIPLE_CANDIDATES' | 'NO_TRIVY_MATCH' | null;
+
+/** Traduit une qualification de corrélation en raison d'indisponibilité affichable côté UI (plusieurs candidats vs. aucune correspondance Trivy). */
+function unavailableReasonFor(correlation: CorrelationQualification): FixedVersionUnavailableReason {
+  switch (correlation.kind) {
+    case 'AMBIGUOUS':
+    case 'UNSUPPORTED_FORMAT':
+      return 'MULTIPLE_CANDIDATES';
+    case 'NO_MATCH':
+    case 'NO_TARGET':
+    default:
+      return 'NO_TRIVY_MATCH';
+  }
+}
+
+export interface ResolvedOwaspFixedVersion {
+  fixedVersion: string | null;
+  fixedVersionSource: 'TRIVY_CORRELATED' | null;
+  fixedVersionEvidence: { source: 'TRIVY'; match: 'CVE_MAVEN_INSTALLED_VERSION'; trivyFixedVersionRaw: string; trivyMatchCount: number } | null;
+  fixedVersionUnavailableReason: FixedVersionUnavailableReason;
+}
+
+/** Résout la version corrigée d'un finding OWASP en essayant dans l'ordre : sa propre valeur native, la valeur déjà persistée, puis une corrélation Trivy fraîche. */
+export function resolveOwaspFixedVersion(
+  nativeFixedVersion: string | null | undefined,
+  existingSnapshot: { fixedVersion?: string | null; fixedVersionSource?: string | null; fixedVersionEvidence?: any } | null | undefined,
+  correlation: CorrelationQualification,
+): ResolvedOwaspFixedVersion {
+  const native = String(nativeFixedVersion ?? '').trim();
+  if (native) {
+    return { fixedVersion: native, fixedVersionSource: null, fixedVersionEvidence: null, fixedVersionUnavailableReason: null };
+  }
+  const existing = String(existingSnapshot?.fixedVersion ?? '').trim();
+  if (existing) {
+    return {
+      fixedVersion: existing,
+      fixedVersionSource: existingSnapshot?.fixedVersionSource === 'TRIVY_CORRELATED' ? 'TRIVY_CORRELATED' : null,
+      fixedVersionEvidence: existingSnapshot?.fixedVersionSource === 'TRIVY_CORRELATED' ? (existingSnapshot?.fixedVersionEvidence ?? null) : null,
+      fixedVersionUnavailableReason: null,
+    };
+  }
+  if (correlation.kind === 'SINGLE_EXACT') {
+    return {
+      fixedVersion: correlation.fixedVersion,
+      fixedVersionSource: 'TRIVY_CORRELATED',
+      fixedVersionEvidence: { source: 'TRIVY', match: 'CVE_MAVEN_INSTALLED_VERSION', trivyFixedVersionRaw: correlation.raw, trivyMatchCount: correlation.matchCount },
+      fixedVersionUnavailableReason: null,
+    };
+  }
+  return { fixedVersion: null, fixedVersionSource: null, fixedVersionEvidence: null, fixedVersionUnavailableReason: unavailableReasonFor(correlation) };
+}

@@ -1,3 +1,4 @@
+# Construit l’image Node du backend et lance son code compilé.
 FROM node:20-alpine
 WORKDIR /app
 COPY package*.json ./

@@ -1,0 +1,130 @@
+{
+  "LEGACY_BRANCH_HISTORY_BACKUP_COMPLETE": "YES",
+  "LEGACY_BRANCH_HISTORY_VERIFIED": "YES",
+  "bundlePath": "/home/souhaiel/pfe-2026/platform/docs/qa/chain2c-final-live-20261007/history/legacy-seven-history.bundle",
+  "bundleSHA256": "eb6a2a0bcafe76fac4e25ee3eef702e2875d5d46b48873ec8b6b440bcfd965bb",
+  "bundleBytes": 116753,
+  "independentReconstruction": "/home/souhaiel/pfe-2026/platform/docs/qa/chain2c-final-live-20261007/history/independently-reconstructed.git",
+  "gitFsckExit": 0,
+  "branches": [
+    {
+      "prNumber": 36,
+      "branch": "security/fix/a37e178f7ce1-1ebe4cecc872",
+      "headSha": "4402e8977e4984f5ab759e0af0010901abd10a45",
+      "uniqueCommitsNotOnMain": [
+        "4402e8977e4984f5ab759e0af0010901abd10a45"
+      ],
+      "uniqueCommitCount": 1,
+      "patchFile": "pr36-unique.diff",
+      "patchSha256": "94ebb678ed3de6e42f76cca8ac3c128ada5b8210ef4742e59bf2c6aecd0c3822",
+      "repository": "souhaiel11/pfe-app-test",
+      "remoteURL": "https://github.com/souhaiel11/pfe-app-test.git",
+      "timestamp": "2026-10-07T11:13:45.858417+00:00",
+      "independentHeadObjectSHA1": "4402e8977e4984f5ab759e0af0010901abd10a45",
+      "reconstructedTree": "5bc242baebe6dc30c388266d279ae5cf6659f297",
+      "reconstructed": true
+    },
+    {
+      "prNumber": 37,
+      "branch": "security/fix/a37e178f7ce1-71531d5009b1",
+      "headSha": "a27fc820efdb96a53d92834b17546f128392a735",
+      "uniqueCommitsNotOnMain": [
+        "a27fc820efdb96a53d92834b17546f128392a735"
+      ],
+      "uniqueCommitCount": 1,
+      "patchFile": "pr37-unique.diff",
+      "patchSha256": "0a557c9159e8f3e45a99897162c2dfc2cf839bcbb7ea953c200aa2b4d81b5f9a",
+      "repository": "souhaiel11/pfe-app-test",
+      "remoteURL": "https://github.com/souhaiel11/pfe-app-test.git",
+      "timestamp": "2026-10-07T11:13:45.864073+00:00",
+      "independentHeadObjectSHA1": "a27fc820efdb96a53d92834b17546f128392a735",
+      "reconstructedTree": "a1b6dd52b029518aa9991389a3a003f5a0d0c60a",
+      "reconstructed": true
+    },
+    {
+      "prNumber": 38,
+      "branch": "security/fix/3f712ca3bae0-55df917c8f87",
+      "headSha": "1097ba035e6b2d88cd12f6af7cc1285e889f8aed",
+      "uniqueCommitsNotOnMain": [
+        "1097ba035e6b2d88cd12f6af7cc1285e889f8aed"
+      ],
+      "uniqueCommitCount": 1,
+      "patchFile": "pr38-unique.diff",
+      "patchSha256": "c03ce96b17d80ab2698dea73db9cd89bdef1c3e3426945b7648db92b2004b268",
+      "repository": "souhaiel11/pfe-app-test",
+      "remoteURL": "https://github.com/souhaiel11/pfe-app-test.git",
+      "timestamp": "2026-10-07T11:13:45.869722+00:00",
+      "independentHeadObjectSHA1": "1097ba035e6b2d88cd12f6af7cc1285e889f8aed",
+      "reconstructedTree": "be1af2bf4e06b9c80075b67fbf518f1cf1b51bee",
+      "reconstructed": true
+    },
+    {
+      "prNumber": 39,
+      "branch": "security/fix/e9302805d352-0b27c921d9ca",
+      "headSha": "cd3ab899af5ea1fca5cfa5b10f80348f8803430d",
+      "uniqueCommitsNotOnMain": [
+        "cd3ab899af5ea1fca5cfa5b10f80348f8803430d"
+      ],
+      "uniqueCommitCount": 1,
+      "patchFile": "pr39-unique.diff",
+      "patchSha256": "22479f54bb5dcd0e9d1af290105da01ebbbbd141cc92e223780a528302ba64d5",
+      "repository": "souhaiel11/pfe-app-test",
+      "remoteURL": "https://github.com/souhaiel11/pfe-app-test.git",
+      "timestamp": "2026-10-07T11:13:45.875406+00:00",
+      "independentHeadObjectSHA1": "cd3ab899af5ea1fca5cfa5b10f80348f8803430d",
+      "reconstructedTree": "beb98c5361a7127857ecdbf2cb00cc700c8a6f89",
+      "reconstructed": true
+    },
+    {
+      "prNumber": 40,
+      "branch": "security/fix/41a0eac4ecb4-022ff90775f4",
+      "headSha": "c5a3846d40f8358737d8d76085564fc5fb4edb4b",
+      "uniqueCommitsNotOnMain": [
+        "c5a3846d40f8358737d8d76085564fc5fb4edb4b"
+      ],
+      "uniqueCommitCount": 1,
+      "patchFile": "pr40-unique.diff",
+      "patchSha256": "c03ce96b17d80ab2698dea73db9cd89bdef1c3e3426945b7648db92b2004b268",
+      "repository": "souhaiel11/pfe-app-test",
+      "remoteURL": "https://github.com/souhaiel11/pfe-app-test.git",
+      "timestamp": "2026-10-07T11:13:45.881423+00:00",
+      "independentHeadObjectSHA1": "c5a3846d40f8358737d8d76085564fc5fb4edb4b",
+      "reconstructedTree": "be1af2bf4e06b9c80075b67fbf518f1cf1b51bee",
+      "reconstructed": true
+    },
+    {
+      "prNumber": 41,
+      "branch": "security/fix/5529fe26dcc4-a48178242bb4",
+      "headSha": "cb1432c97f601ef1ffbf436a3f3f9215bdaa03f9",
+      "uniqueCommitsNotOnMain": [
+        "cb1432c97f601ef1ffbf436a3f3f9215bdaa03f9"
+      ],
+      "uniqueCommitCount": 1,
+      "patchFile": "pr41-unique.diff",
+      "patchSha256": "b2ca89ef021fa2dc7883ddf21540edd3b0c4699c93c29e27a1b0f7d5913ee088",
+      "repository": "souhaiel11/pfe-app-test",
+      "remoteURL": "https://github.com/souhaiel11/pfe-app-test.git",
+      "timestamp": "2026-10-07T11:13:45.887180+00:00",
+      "independentHeadObjectSHA1": "cb1432c97f601ef1ffbf436a3f3f9215bdaa03f9",
+      "reconstructedTree": "3adead92d4cd0a5cbdfdeb8efddb6850b929434d",
+      "reconstructed": true
+    },
+    {
+      "prNumber": 42,
+      "branch": "security/fix/259beaee267e-3936026f7135",
+      "headSha": "7f57eec0f47b5b47c7320c65662348ec6b2404b4",
+      "uniqueCommitsNotOnMain": [
+        "7f57eec0f47b5b47c7320c65662348ec6b2404b4"
+      ],
+      "uniqueCommitCount": 1,
+      "patchFile": "pr42-unique.diff",
+      "patchSha256": "d676402e1d5a375d642d3e5b2c955c58db38f97560aa0bf8209ad2b054edb394",
+      "repository": "souhaiel11/pfe-app-test",
+      "remoteURL": "https://github.com/souhaiel11/pfe-app-test.git",
+      "timestamp": "2026-10-07T11:13:45.893551+00:00",
+      "independentHeadObjectSHA1": "7f57eec0f47b5b47c7320c65662348ec6b2404b4",
+      "reconstructedTree": "c9d1ee6856431dd5420a8372fff6e77ca718372d",
+      "reconstructed": true
+    }
+  ]
+}

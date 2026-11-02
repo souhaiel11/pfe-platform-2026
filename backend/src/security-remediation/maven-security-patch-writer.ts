@@ -1,0 +1,218 @@
+/** Écrit de façon déterministe (sans aucune IA) un patch de version XML/propriété sur un pom.xml, par une seule substitution ciblée à un offset exact, en refusant toute ambiguïté. */
+import { deriveMavenRemediationScope, applyMavenControls } from './maven-remediation-scope';
+import { CandidateFile } from '../candidate-verification/candidate-verification.types';
+import { computeContentSha256, computeGitBlobSha1 } from '../candidate-verification/candidate-digest';
+import { majorOf, parseVersion } from './version-selection-policy';
+import { SecurityPatchCandidate, SecurityPatchRequest } from './security-patch-request.types';
+
+export type SecurityPatchWriteFailureReason =
+  | 'COORDINATED_SCOPE_INVALID'
+  | 'UNSUPPORTED_PROVENANCE_KIND'
+  | 'MULTIPLE_CANDIDATE_DEPENDENCY_BLOCKS'
+  | 'MULTIPLE_CANDIDATE_PROPERTY_DECLARATIONS'
+  | 'CONTROLLING_DECLARATION_NOT_FOUND'
+  | 'OLD_VERSION_MISMATCH'
+  | 'CROSS_MAJOR_TARGET_REJECTED'
+  | 'TARGET_VERSION_INVALID'
+  | 'CONTROLLING_PROPERTY_MISSING';
+
+export type SecurityPatchWriteResult =
+  | { ok: true; candidate: SecurityPatchCandidate }
+  | { ok: false; reason: SecurityPatchWriteFailureReason; detail: string };
+
+/** Construit un résultat d'échec typé avec son détail explicatif. */
+function fail(reason: SecurityPatchWriteFailureReason, detail: string): SecurityPatchWriteResult {
+  return { ok: false, reason, detail };
+}
+
+/** Découpe une coordonnée Maven "groupId:artifactId" en ses deux parties, ou null si le format est invalide. */
+function splitCoordinate(pkg: string): { groupId: string; artifactId: string } | null {
+  const parts = String(pkg || '').trim().split(':');
+  if (parts.length !== 2 || !parts[0] || !parts[1]) return null;
+  return { groupId: parts[0], artifactId: parts[1] };
+}
+
+/** Localise la position exacte d'un texte capturé à l'intérieur de son match complet, pour spliccer sans décalage. */
+function groupOffsetWithin(fullMatchText: string, groupText: string, searchFrom: number): number {
+  const idx = fullMatchText.indexOf(groupText, searchFrom);
+  if (idx === -1) throw new Error('Internal error: capture group text not found within its own match.');
+  return idx;
+}
+
+interface DependencyBlockLocation {
+  groupId: string | null;
+  artifactId: string | null;
+  /** Bornes absolues [début,fin) de la seule VALEUR du <version>, ou null si ce bloc n'a pas de <version> littérale. */
+  versionValueRange: [number, number] | null;
+  versionValue: string | null;
+}
+
+/** Localise chaque bloc <dependency> de <dependencies> (jamais <dependencyManagement>), avec ses offsets absolus dans le texte complet. */
+function locateDependencyBlocks(pomXmlText: string): DependencyBlockLocation[] {
+  const openTag = '<dependencies>';
+  const closeTag = '</dependencies>';
+  const openIdx = pomXmlText.indexOf(openTag);
+  if (openIdx === -1) return [];
+  const closeIdx = pomXmlText.indexOf(closeTag, openIdx);
+  if (closeIdx === -1) return [];
+  const regionStart = openIdx + openTag.length;
+  const region = pomXmlText.slice(regionStart, closeIdx);
+
+  const blocks: DependencyBlockLocation[] = [];
+  const blockRe = /<dependency>[\s\S]*?<\/dependency>/g;
+  let m: RegExpExecArray | null;
+  while ((m = blockRe.exec(region))) {
+    const blockText = m[0];
+    const blockAbsoluteStart = regionStart + m.index;
+    const groupId = /<groupId>\s*([^<\s]+)\s*<\/groupId>/.exec(blockText)?.[1] ?? null;
+    const artifactId = /<artifactId>\s*([^<\s]+)\s*<\/artifactId>/.exec(blockText)?.[1] ?? null;
+    const versionRe = /<version>\s*([^<\s]+)\s*<\/version>/;
+    const vMatch = versionRe.exec(blockText);
+    let versionValueRange: [number, number] | null = null;
+    let versionValue: string | null = null;
+    if (vMatch) {
+      versionValue = vMatch[1];
+      const openTagEnd = vMatch.index + '<version>'.length;
+      const relStart = groupOffsetWithin(blockText, versionValue, openTagEnd);
+      versionValueRange = [blockAbsoluteStart + relStart, blockAbsoluteStart + relStart + versionValue.length];
+    }
+    blocks.push({ groupId, artifactId, versionValueRange, versionValue });
+  }
+  return blocks;
+}
+
+interface PropertyDeclarationLocation {
+  /** Bornes absolues [début,fin) de la seule valeur de la propriété. */
+  valueRange: [number, number];
+  value: string;
+}
+
+/** Localise chaque déclaration d'une propriété Maven donnée dans <properties>, avec ses offsets absolus. */
+function locatePropertyDeclarations(pomXmlText: string, propertyName: string): PropertyDeclarationLocation[] {
+  const openTag = '<properties>';
+  const closeTag = '</properties>';
+  const openIdx = pomXmlText.indexOf(openTag);
+  if (openIdx === -1) return [];
+  const closeIdx = pomXmlText.indexOf(closeTag, openIdx);
+  if (closeIdx === -1) return [];
+  const regionStart = openIdx + openTag.length;
+  const region = pomXmlText.slice(regionStart, closeIdx);
+
+  const escaped = propertyName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const propRe = new RegExp(`<${escaped}>\\s*([^<]*?)\\s*<\\/${escaped}>`, 'g');
+  const results: PropertyDeclarationLocation[] = [];
+  let m: RegExpExecArray | null;
+  while ((m = propRe.exec(region))) {
+    const value = m[1];
+    const openTagEnd = m.index + `<${propertyName}>`.length;
+    const relStart = groupOffsetWithin(region, value, openTagEnd);
+    results.push({ valueRange: [regionStart + relStart, regionStart + relStart + value.length], value });
+  }
+  return results;
+}
+
+/** Vérifie que l'ancienne et la nouvelle version appartiennent à la même version majeure, refuse sinon. */
+function checkSameMajor(oldVersion: string, targetVersion: string): SecurityPatchWriteFailureReason | null {
+  const oldParsed = parseVersion(oldVersion);
+  const targetParsed = parseVersion(targetVersion);
+  if (!oldParsed || !targetParsed) return 'TARGET_VERSION_INVALID';
+  if (majorOf(oldParsed) !== majorOf(targetParsed)) return 'CROSS_MAJOR_TARGET_REJECTED';
+  return null;
+}
+
+/** Remplace le contenu d'une plage de texte par une valeur de remplacement. */
+function spliceValue(text: string, range: [number, number], replacement: string): string {
+  return text.slice(0, range[0]) + replacement + text.slice(range[1]);
+}
+
+/** Construit l'objet CandidateFile final (chemin, contenu, empreintes) à partir du patch produit. */
+function buildCandidateFile(request: SecurityPatchRequest, content: string): CandidateFile {
+  const sourceContent = request.sourceContent;
+  return {
+    path: request.controllingFile,
+    operation: 'MODIFY',
+    content,
+    contentSha256: computeContentSha256(content),
+    sourceContent,
+    originalBlobSha: computeGitBlobSha1(sourceContent),
+  };
+}
+
+/** Écrit le patch de sécurité pour une provenance DIRECT_EXPLICIT ou PROPERTY_MANAGED uniquement — toute autre provenance est refusée sans tentative. */
+export function writeSecurityPatch(request: SecurityPatchRequest): SecurityPatchWriteResult {
+  if (request.ecosystem !== 'MAVEN') {
+    return fail('UNSUPPORTED_PROVENANCE_KIND', `Ecosystem "${request.ecosystem}" is not supported by this writer (Maven only).`);
+  }
+  const majorCheck = checkSameMajor(request.installedVersion, request.targetVersion);
+  if (majorCheck) {
+    return fail(majorCheck, `installedVersion="${request.installedVersion}" -> targetVersion="${request.targetVersion}" failed the same-major re-check (independent of the caller's own selection).`);
+  }
+
+  if (request.remediationScope) {
+    try {
+      if (!['DIRECT_EXPLICIT', 'PROPERTY_MANAGED'].includes(request.provenanceKind) || !request.scopeEvidence)
+        throw new Error('Unsupported or ungrounded scope.');
+      const scope = deriveMavenRemediationScope(request.sourceContent, request.package, request.targetVersion, request.controllingFile, request.scopeEvidence);
+      if (scope.affectedPackages.find(p => p.package === request.package)?.installedVersion !== request.installedVersion)
+        throw new Error('Installed version differs from independently grounded scope.');
+      if (scope.evaluatedSha !== request.evaluatedSha || JSON.stringify(scope) !== JSON.stringify(request.remediationScope))
+        throw new Error('Scope differs from complete fresh derivation.');
+      return { ok: true, candidate: {
+        file: buildCandidateFile(request, applyMavenControls(request.sourceContent, scope.controls)),
+        findingIdentity: request.findingIdentity, evaluatedSha: request.evaluatedSha,
+        provenanceKind: request.provenanceKind, oldVersion: request.installedVersion, targetVersion: request.targetVersion,
+      } };
+    } catch (e: any) { return fail('COORDINATED_SCOPE_INVALID', e.message); }
+  }
+
+  if (request.provenanceKind === 'DIRECT_EXPLICIT') {
+    const coordinate = splitCoordinate(request.package);
+    if (!coordinate) return fail('CONTROLLING_DECLARATION_NOT_FOUND', `"${request.package}" is not a groupId:artifactId coordinate.`);
+    const blocks = locateDependencyBlocks(request.sourceContent)
+      .filter(b => b.groupId === coordinate.groupId && b.artifactId === coordinate.artifactId);
+    if (blocks.length === 0) {
+      return fail('CONTROLLING_DECLARATION_NOT_FOUND', `No <dependency> for ${request.package} found in <dependencies> of ${request.controllingFile}.`);
+    }
+    if (blocks.length > 1) {
+      return fail('MULTIPLE_CANDIDATE_DEPENDENCY_BLOCKS', `${blocks.length} <dependency> blocks for ${request.package} found in ${request.controllingFile} -- ambiguous, refusing to guess which one.`);
+    }
+    const block = blocks[0];
+    if (!block.versionValueRange || block.versionValue === null) {
+      return fail('CONTROLLING_DECLARATION_NOT_FOUND', `<dependency> for ${request.package} has no literal <version> element -- not DIRECT_EXPLICIT.`);
+    }
+    if (block.versionValue !== request.installedVersion) {
+      return fail('OLD_VERSION_MISMATCH', `Grounded <version> is "${block.versionValue}", but the request claims installedVersion="${request.installedVersion}".`);
+    }
+    const content = spliceValue(request.sourceContent, block.versionValueRange, request.targetVersion);
+    const file = buildCandidateFile(request, content);
+    return {
+      ok: true,
+      candidate: { file, findingIdentity: request.findingIdentity, evaluatedSha: request.evaluatedSha, provenanceKind: 'DIRECT_EXPLICIT', oldVersion: request.installedVersion, targetVersion: request.targetVersion },
+    };
+  }
+
+  if (request.provenanceKind === 'PROPERTY_MANAGED') {
+    if (!request.controllingProperty) {
+      return fail('CONTROLLING_PROPERTY_MISSING', 'provenanceKind is PROPERTY_MANAGED but no controllingProperty was supplied.');
+    }
+    const declarations = locatePropertyDeclarations(request.sourceContent, request.controllingProperty);
+    if (declarations.length === 0) {
+      return fail('CONTROLLING_DECLARATION_NOT_FOUND', `Property "${request.controllingProperty}" not found in <properties> of ${request.controllingFile}.`);
+    }
+    if (declarations.length > 1) {
+      return fail('MULTIPLE_CANDIDATE_PROPERTY_DECLARATIONS', `${declarations.length} declarations of property "${request.controllingProperty}" found in ${request.controllingFile} -- ambiguous, refusing to guess which one.`);
+    }
+    const declaration = declarations[0];
+    if (declaration.value !== request.installedVersion) {
+      return fail('OLD_VERSION_MISMATCH', `Grounded property "${request.controllingProperty}" is "${declaration.value}", but the request claims installedVersion="${request.installedVersion}".`);
+    }
+    const content = spliceValue(request.sourceContent, declaration.valueRange, request.targetVersion);
+    const file = buildCandidateFile(request, content);
+    return {
+      ok: true,
+      candidate: { file, findingIdentity: request.findingIdentity, evaluatedSha: request.evaluatedSha, provenanceKind: 'PROPERTY_MANAGED', oldVersion: request.installedVersion, targetVersion: request.targetVersion },
+    };
+  }
+
+  return fail('UNSUPPORTED_PROVENANCE_KIND', `provenanceKind "${request.provenanceKind}" is never auto-fixable -- only DIRECT_EXPLICIT/PROPERTY_MANAGED are supported by this writer.`);
+}

@@ -1,0 +1,13 @@
+{
+  "authorizationCount": 0,
+  "attemptCount": 0,
+  "azureConfig": {
+    "region": "francecentral",
+    "provider": "azure-container-instances",
+    "registry": "acrpfedevsecops",
+    "targetName": "aci-pfe-app-test",
+    "resourceGroup": "rg-pfe-devsecops",
+    "imageRepository": "pfe-app-test"
+  },
+  "azureDeploymentState": null
+}

@@ -1,0 +1,922 @@
+{
+    "reportSchema": "1.1",
+    "scanInfo": {
+        "engineVersion": "12.2.2",
+        "dataSource": [
+{
+                "name": "NVD API Last Checked",
+                "timestamp": "2026-07-10T14:42:24Z"
+            }
+,{
+                "name": "NVD API Last Modified",
+                "timestamp": "2026-07-10T14:41:16Z"
+            }
+        ]
+
+
+    },
+    "projectInfo": {
+        "name": "retry-e2e-crypto",
+"groupID":"operator.fixture","artifactID":"retry-e2e-crypto","version":"1.0.0",        "reportDate": "2026-10-05T22:17:30.487907754Z",
+        "credits": {
+            "NVD": "This product uses the NVD API but is not endorsed or certified by the NVD. This report contains data retrieved from the National Vulnerability Database: https://nvd.nist.gov",
+            "CISA": "This report may contain data retrieved from the CISA Known Exploited Vulnerability Catalog: https://www.cisa.gov/known-exploited-vulnerabilities-catalog",
+            "NPM": "This report may contain data retrieved from the Github Advisory Database (via NPM Audit API): https://github.com/advisories/",
+            "RETIREJS": "This report may contain data retrieved from the RetireJS community: https://retirejs.github.io/retire.js/",
+            "OSSINDEX": "This report may contain data retrieved from the Sonatype Guide OSS Index API: https://www.sonatype.com/products/sonatype-guide/oss-index-users"
+        }
+    },
+    "dependencies": [
+{
+            "isVirtual": false,
+            "fileName": "spring-security-crypto-5.7.1.jar",
+            "filePath": "\/tmp\/remediation-fixture-lab\/m2\/org\/springframework\/security\/spring-security-crypto\/5.7.1\/spring-security-crypto-5.7.1.jar"
+,"md5": "3dfe1b7599fa5a5f8ecd65961f797862",
+            "sha1": "e036d3deb1b1fba2b9881613f0e43f69ccd23ece",
+            "sha256": "50cc7633685f8a97e9aae5390425aa52d35d324cd0ca93ff675b342cdd03b848","description": "Spring Security","license": "Apache License, Version 2.0: https:\/\/www.apache.org\/licenses\/LICENSE-2.0"            ,"projectReferences": [
+                "retry-e2e-crypto:compile"
+            ]
+            ,"includedBy": [
+                { "reference":"pkg:maven\/operator.fixture\/retry-e2e-crypto@1.0.0" }
+            ]
+            ,"evidenceCollected": {
+                "vendorEvidence": [
+{
+                            "type": "vendor",
+                            "confidence": "HIGH",
+                            "source": "file",
+                            "name": "name",
+                            "value": "spring-security-crypto"
+                        }
+,{
+                            "type": "vendor",
+                            "confidence": "HIGHEST",
+                            "source": "hint analyzer",
+                            "name": "vendor",
+                            "value": "pivotal software"
+                        }
+,{
+                            "type": "vendor",
+                            "confidence": "HIGHEST",
+                            "source": "hint analyzer",
+                            "name": "vendor",
+                            "value": "SpringSource"
+                        }
+,{
+                            "type": "vendor",
+                            "confidence": "HIGHEST",
+                            "source": "hint analyzer",
+                            "name": "vendor",
+                            "value": "vmware"
+                        }
+,{
+                            "type": "vendor",
+                            "confidence": "HIGHEST",
+                            "source": "jar",
+                            "name": "package name",
+                            "value": "crypto"
+                        }
+,{
+                            "type": "vendor",
+                            "confidence": "HIGHEST",
+                            "source": "jar",
+                            "name": "package name",
+                            "value": "security"
+                        }
+,{
+                            "type": "vendor",
+                            "confidence": "HIGHEST",
+                            "source": "jar",
+                            "name": "package name",
+                            "value": "springframework"
+                        }
+,{
+                            "type": "vendor",
+                            "confidence": "MEDIUM",
+                            "source": "Manifest",
+                            "name": "automatic-module-name",
+                            "value": "spring.security.crypto"
+                        }
+,{
+                            "type": "vendor",
+                            "confidence": "HIGHEST",
+                            "source": "pom",
+                            "name": "artifactid",
+                            "value": "spring-security-crypto"
+                        }
+,{
+                            "type": "vendor",
+                            "confidence": "LOW",
+                            "source": "pom",
+                            "name": "artifactid",
+                            "value": "spring-security-crypto"
+                        }
+,{
+                            "type": "vendor",
+                            "confidence": "LOW",
+                            "source": "pom",
+                            "name": "developer email",
+                            "value": "info@pivotal.io"
+                        }
+,{
+                            "type": "vendor",
+                            "confidence": "MEDIUM",
+                            "source": "pom",
+                            "name": "developer name",
+                            "value": "Pivotal"
+                        }
+,{
+                            "type": "vendor",
+                            "confidence": "MEDIUM",
+                            "source": "pom",
+                            "name": "developer org",
+                            "value": "Pivotal Software, Inc."
+                        }
+,{
+                            "type": "vendor",
+                            "confidence": "MEDIUM",
+                            "source": "pom",
+                            "name": "developer org URL",
+                            "value": "https:\/\/www.spring.io"
+                        }
+,{
+                            "type": "vendor",
+                            "confidence": "HIGHEST",
+                            "source": "pom",
+                            "name": "groupid",
+                            "value": "org.springframework.security"
+                        }
+,{
+                            "type": "vendor",
+                            "confidence": "HIGH",
+                            "source": "pom",
+                            "name": "name",
+                            "value": "spring-security-crypto"
+                        }
+,{
+                            "type": "vendor",
+                            "confidence": "HIGH",
+                            "source": "pom",
+                            "name": "organization name",
+                            "value": "Pivotal Software, Inc."
+                        }
+,{
+                            "type": "vendor",
+                            "confidence": "MEDIUM",
+                            "source": "pom",
+                            "name": "organization url",
+                            "value": "https:\/\/spring.io"
+                        }
+,{
+                            "type": "vendor",
+                            "confidence": "HIGHEST",
+                            "source": "pom",
+                            "name": "url",
+                            "value": "https:\/\/spring.io\/projects\/spring-security"
+                        }
+                ],
+                "productEvidence": [
+{
+                            "type": "product",
+                            "confidence": "HIGH",
+                            "source": "file",
+                            "name": "name",
+                            "value": "spring-security-crypto"
+                    }
+,{
+                            "type": "product",
+                            "confidence": "HIGHEST",
+                            "source": "jar",
+                            "name": "package name",
+                            "value": "crypto"
+                    }
+,{
+                            "type": "product",
+                            "confidence": "HIGHEST",
+                            "source": "jar",
+                            "name": "package name",
+                            "value": "security"
+                    }
+,{
+                            "type": "product",
+                            "confidence": "HIGHEST",
+                            "source": "jar",
+                            "name": "package name",
+                            "value": "springframework"
+                    }
+,{
+                            "type": "product",
+                            "confidence": "MEDIUM",
+                            "source": "Manifest",
+                            "name": "automatic-module-name",
+                            "value": "spring.security.crypto"
+                    }
+,{
+                            "type": "product",
+                            "confidence": "HIGH",
+                            "source": "Manifest",
+                            "name": "Implementation-Title",
+                            "value": "spring-security-crypto"
+                    }
+,{
+                            "type": "product",
+                            "confidence": "HIGHEST",
+                            "source": "pom",
+                            "name": "artifactid",
+                            "value": "spring-security-crypto"
+                    }
+,{
+                            "type": "product",
+                            "confidence": "LOW",
+                            "source": "pom",
+                            "name": "developer email",
+                            "value": "info@pivotal.io"
+                    }
+,{
+                            "type": "product",
+                            "confidence": "LOW",
+                            "source": "pom",
+                            "name": "developer name",
+                            "value": "Pivotal"
+                    }
+,{
+                            "type": "product",
+                            "confidence": "LOW",
+                            "source": "pom",
+                            "name": "developer org",
+                            "value": "Pivotal Software, Inc."
+                    }
+,{
+                            "type": "product",
+                            "confidence": "LOW",
+                            "source": "pom",
+                            "name": "developer org URL",
+                            "value": "https:\/\/www.spring.io"
+                    }
+,{
+                            "type": "product",
+                            "confidence": "HIGHEST",
+                            "source": "pom",
+                            "name": "groupid",
+                            "value": "org.springframework.security"
+                    }
+,{
+                            "type": "product",
+                            "confidence": "HIGH",
+                            "source": "pom",
+                            "name": "name",
+                            "value": "spring-security-crypto"
+                    }
+,{
+                            "type": "product",
+                            "confidence": "LOW",
+                            "source": "pom",
+                            "name": "organization name",
+                            "value": "Pivotal Software, Inc."
+                    }
+,{
+                            "type": "product",
+                            "confidence": "LOW",
+                            "source": "pom",
+                            "name": "organization url",
+                            "value": "https:\/\/spring.io"
+                    }
+,{
+                            "type": "product",
+                            "confidence": "MEDIUM",
+                            "source": "pom",
+                            "name": "url",
+                            "value": "https:\/\/spring.io\/projects\/spring-security"
+                    }
+                ],
+                "versionEvidence": [
+                    {
+                        "type": "version",
+                        "confidence": "HIGH",
+                        "source": "file",
+                        "name": "version",
+                        "value": "5.7.1"
+                    }
+,                    {
+                        "type": "version",
+                        "confidence": "HIGH",
+                        "source": "Manifest",
+                        "name": "Implementation-Version",
+                        "value": "5.7.1"
+                    }
+,                    {
+                        "type": "version",
+                        "confidence": "HIGHEST",
+                        "source": "pom",
+                        "name": "version",
+                        "value": "5.7.1"
+                    }
+                ]
+            }
+                ,"packages": [
+                    {
+                        "id": "pkg:maven\/org.springframework.security\/spring-security-crypto@5.7.1"
+,"confidence": "HIGH"                    }
+            ]                ,"vulnerabilityIds": [
+                {
+                    "id": "cpe:2.3:a:pivotal_software:spring_security:5.7.1:*:*:*:*:*:*:*"
+,"confidence": "HIGHEST","url": "https:\/\/nvd.nist.gov\/vuln\/search#\/nvd\/home?sortOrder=3&sortDirection=2&cpeFilterMode=applicability&resultType=records&cpeName=cpe%3A2.3%3Aa%3Apivotal_software%3Aspring_security%3A5.7.1%3A%2A%3A%2A%3A%2A%3A%2A%3A%2A%3A%2A%3A%2A"                }
+,                {
+                    "id": "cpe:2.3:a:vmware:spring_security:5.7.1:*:*:*:*:*:*:*"
+,"confidence": "HIGHEST","url": "https:\/\/nvd.nist.gov\/vuln\/search#\/nvd\/home?sortOrder=3&sortDirection=2&cpeFilterMode=applicability&resultType=records&cpeName=cpe%3A2.3%3Aa%3Avmware%3Aspring_security%3A5.7.1%3A%2A%3A%2A%3A%2A%3A%2A%3A%2A%3A%2A%3A%2A"                }
+            ]
+            ,"vulnerabilities": [
+ {
+                "source": "NVD",
+                "name": "CVE-2022-31692",
+                    "severity" : "CRITICAL",
+                    "cvssv3": {
+                        "baseScore": 9.8
+                        ,"attackVector": "NETWORK"
+                        ,"attackComplexity": "LOW"
+                        ,"privilegesRequired": "NONE"
+                        ,"userInteraction": "NONE"
+                        ,"scope": "UNCHANGED"
+                        ,"confidentialityImpact": "HIGH"
+                        ,"integrityImpact": "HIGH"
+                        ,"availabilityImpact": "HIGH"
+                        ,"baseSeverity": "CRITICAL"
+,"exploitabilityScore": "3.9","impactScore": "5.9","version": "3.1"                    },
+                    "cwes": [
+                        "CWE-639",                        "NVD-CWE-noinfo"                    ],
+                "description": "Spring Security, versions 5.7 prior to 5.7.5 and 5.6 prior to 5.6.9 could be susceptible to authorization rules bypass via forward or include dispatcher types. Specifically, an application is vulnerable when all of the following are true: The application expects that Spring Security applies security to forward and include dispatcher types. The application uses the AuthorizationFilter either manually or via the authorizeHttpRequests() method. The application configures the FilterChainProxy to apply to forward and\/or include requests (e.g. spring.security.filter.dispatcher-types = request, error, async, forward, include). The application may forward or include the request to a higher privilege-secured endpoint.The application configures Spring Security to apply to every dispatcher type via authorizeHttpRequests().shouldFilterAllDispatcherTypes(true)",
+                "notes": "",
+                "references": [
+ {
+                        "source": "af854a3a-2127-422b-91ae-364da2661108"
+,"url": "https:\/\/security.netapp.com\/advisory\/ntap-20221215-0010\/","name": "THIRD_PARTY_ADVISORY"                    }, {
+                        "source": "security@vmware.com"
+,"url": "https:\/\/tanzu.vmware.com\/security\/cve-2022-31692","name": "MITIGATION,VENDOR_ADVISORY"                    }, {
+                        "source": "af854a3a-2127-422b-91ae-364da2661108"
+,"url": "https:\/\/tanzu.vmware.com\/security\/cve-2022-31692","name": "MITIGATION,VENDOR_ADVISORY"                    }, {
+                        "source": "security@vmware.com"
+,"url": "https:\/\/security.netapp.com\/advisory\/ntap-20221215-0010\/","name": "THIRD_PARTY_ADVISORY"                    }                ],
+                "vulnerableSoftware": [
+ {
+                        "software": { 
+                            "id":"cpe:2.3:a:netapp:active_iq_unified_manager:-:*:*:*:*:vmware_vsphere:*:*"
+                        }
+                    }, {
+                        "software": { 
+                            "id":"cpe:2.3:a:netapp:active_iq_unified_manager:-:*:*:*:*:windows:*:*"
+                        }
+                    }, {
+                        "software": { 
+                            "id":"cpe:2.3:a:vmware:spring_security:*:*:*:*:*:*:*:*"
+,"versionStartIncluding":"5.6.0","versionEndExcluding":"5.6.9"                        }
+                    }, {
+                        "software": { 
+                            "id":"cpe:2.3:a:vmware:spring_security:*:*:*:*:*:*:*:*"
+,"vulnerabilityIdMatched":"true","versionStartIncluding":"5.7.0","versionEndExcluding":"5.7.5"                        }
+                    }                ]
+                }, {
+                "source": "NVD",
+                "name": "CVE-2023-34034",
+                    "severity" : "CRITICAL",
+                    "cvssv3": {
+                        "baseScore": 9.8
+                        ,"attackVector": "NETWORK"
+                        ,"attackComplexity": "LOW"
+                        ,"privilegesRequired": "NONE"
+                        ,"userInteraction": "NONE"
+                        ,"scope": "UNCHANGED"
+                        ,"confidentialityImpact": "HIGH"
+                        ,"integrityImpact": "HIGH"
+                        ,"availabilityImpact": "HIGH"
+                        ,"baseSeverity": "CRITICAL"
+,"exploitabilityScore": "3.9","impactScore": "5.9","version": "3.1"                    },
+                    "cwes": [
+                        "CWE-281",                        "NVD-CWE-noinfo"                    ],
+                "description": "Using \"**\" as a pattern in Spring Security configuration \nfor WebFlux creates a mismatch in pattern matching between Spring \nSecurity and Spring WebFlux, and the potential for a security bypass.\n\n",
+                "notes": "",
+                "references": [
+ {
+                        "source": "security@vmware.com"
+,"url": "https:\/\/security.netapp.com\/advisory\/ntap-20230814-0008\/"                    }, {
+                        "source": "af854a3a-2127-422b-91ae-364da2661108"
+,"url": "https:\/\/security.netapp.com\/advisory\/ntap-20230814-0008\/"                    }, {
+                        "source": "security@vmware.com"
+,"url": "https:\/\/spring.io\/security\/cve-2023-34034","name": "VENDOR_ADVISORY"                    }, {
+                        "source": "af854a3a-2127-422b-91ae-364da2661108"
+,"url": "https:\/\/spring.io\/security\/cve-2023-34034","name": "VENDOR_ADVISORY"                    }                ],
+                "vulnerableSoftware": [
+ {
+                        "software": { 
+                            "id":"cpe:2.3:a:vmware:spring_security:*:*:*:*:*:*:*:*"
+,"versionStartIncluding":"5.6.0","versionEndExcluding":"5.6.12"                        }
+                    }, {
+                        "software": { 
+                            "id":"cpe:2.3:a:vmware:spring_security:*:*:*:*:*:*:*:*"
+,"vulnerabilityIdMatched":"true","versionStartIncluding":"5.7.0","versionEndExcluding":"5.7.10"                        }
+                    }, {
+                        "software": { 
+                            "id":"cpe:2.3:a:vmware:spring_security:*:*:*:*:*:*:*:*"
+,"versionStartIncluding":"5.8.0","versionEndExcluding":"5.8.5"                        }
+                    }, {
+                        "software": { 
+                            "id":"cpe:2.3:a:vmware:spring_security:*:*:*:*:*:*:*:*"
+,"versionStartIncluding":"6.0.0","versionEndExcluding":"6.0.5"                        }
+                    }, {
+                        "software": { 
+                            "id":"cpe:2.3:a:vmware:spring_security:*:*:*:*:*:*:*:*"
+,"versionStartIncluding":"6.1.0","versionEndExcluding":"6.1.2"                        }
+                    }                ]
+                }, {
+                "source": "NVD",
+                "name": "CVE-2026-22732",
+                    "severity" : "CRITICAL",
+                    "cvssv3": {
+                        "baseScore": 9.1
+                        ,"attackVector": "NETWORK"
+                        ,"attackComplexity": "LOW"
+                        ,"privilegesRequired": "NONE"
+                        ,"userInteraction": "NONE"
+                        ,"scope": "UNCHANGED"
+                        ,"confidentialityImpact": "HIGH"
+                        ,"integrityImpact": "HIGH"
+                        ,"availabilityImpact": "NONE"
+                        ,"baseSeverity": "CRITICAL"
+,"exploitabilityScore": "3.9","impactScore": "5.2","version": "3.1"                    },
+                    "cwes": [
+                        "CWE-425"                    ],
+                "description": "When applications specify HTTP response headers for servlet applications using Spring Security, there is the possibility that the HTTP Headers will not be written.\u00A0\nThis issue affects Spring Security\u00A0Servlet applications using lazy (default) writing of HTTP Headers:\n\n: from 5.7.0 through 5.7.21, from 5.8.0 through 5.8.23, from 6.3.0 through 6.3.14, from 6.4.0 through 6.4.14, from 6.5.0 through 6.5.8, from 7.0.0 through 7.0.3.",
+                "notes": "",
+                "references": [
+ {
+                        "source": "security@vmware.com"
+,"url": "https:\/\/spring.io\/security\/cve-2026-22732","name": "EXPLOIT,VENDOR_ADVISORY"                    }                ],
+                "vulnerableSoftware": [
+ {
+                        "software": { 
+                            "id":"cpe:2.3:a:vmware:spring_security:*:*:*:*:*:*:*:*"
+,"vulnerabilityIdMatched":"true","versionEndExcluding":"5.7.22"                        }
+                    }, {
+                        "software": { 
+                            "id":"cpe:2.3:a:vmware:spring_security:*:*:*:*:*:*:*:*"
+,"versionStartIncluding":"5.8.0","versionEndExcluding":"5.8.24"                        }
+                    }, {
+                        "software": { 
+                            "id":"cpe:2.3:a:vmware:spring_security:*:*:*:*:*:*:*:*"
+,"versionStartIncluding":"6.3.0","versionEndExcluding":"6.3.15"                        }
+                    }, {
+                        "software": { 
+                            "id":"cpe:2.3:a:vmware:spring_security:*:*:*:*:*:*:*:*"
+,"versionStartIncluding":"6.4.0","versionEndExcluding":"6.4.15"                        }
+                    }, {
+                        "software": { 
+                            "id":"cpe:2.3:a:vmware:spring_security:*:*:*:*:*:*:*:*"
+,"versionStartIncluding":"6.5.0","versionEndExcluding":"6.5.9"                        }
+                    }, {
+                        "software": { 
+                            "id":"cpe:2.3:a:vmware:spring_security:*:*:*:*:*:*:*:*"
+,"versionStartIncluding":"7.0.0","versionEndExcluding":"7.0.4"                        }
+                    }                ]
+                }, {
+                "source": "NVD",
+                "name": "CVE-2022-31690",
+                    "severity" : "HIGH",
+                    "cvssv3": {
+                        "baseScore": 8.1
+                        ,"attackVector": "NETWORK"
+                        ,"attackComplexity": "HIGH"
+                        ,"privilegesRequired": "NONE"
+                        ,"userInteraction": "NONE"
+                        ,"scope": "UNCHANGED"
+                        ,"confidentialityImpact": "HIGH"
+                        ,"integrityImpact": "HIGH"
+                        ,"availabilityImpact": "HIGH"
+                        ,"baseSeverity": "HIGH"
+,"exploitabilityScore": "2.2","impactScore": "5.9","version": "3.1"                    },
+                    "cwes": [
+                        "NVD-CWE-noinfo"                    ],
+                "description": "Spring Security, versions 5.7 prior to 5.7.5, and 5.6 prior to 5.6.9, and older unsupported versions could be susceptible to a privilege escalation under certain conditions. A malicious user or attacker can modify a request initiated by the Client (via the browser) to the Authorization Server which can lead to a privilege escalation on the subsequent approval. This scenario can happen if the Authorization Server responds with an OAuth2 Access Token Response containing an empty scope list (per RFC 6749, Section 5.1) on the subsequent request to the token endpoint to obtain the access token.",
+                "notes": "",
+                "references": [
+ {
+                        "source": "af854a3a-2127-422b-91ae-364da2661108"
+,"url": "https:\/\/security.netapp.com\/advisory\/ntap-20221215-0010\/","name": "THIRD_PARTY_ADVISORY"                    }, {
+                        "source": "security@vmware.com"
+,"url": "https:\/\/tanzu.vmware.com\/security\/cve-2022-31690","name": "MITIGATION,VENDOR_ADVISORY"                    }, {
+                        "source": "af854a3a-2127-422b-91ae-364da2661108"
+,"url": "https:\/\/tanzu.vmware.com\/security\/cve-2022-31690","name": "MITIGATION,VENDOR_ADVISORY"                    }, {
+                        "source": "security@vmware.com"
+,"url": "https:\/\/security.netapp.com\/advisory\/ntap-20221215-0010\/","name": "THIRD_PARTY_ADVISORY"                    }                ],
+                "vulnerableSoftware": [
+ {
+                        "software": { 
+                            "id":"cpe:2.3:a:netapp:active_iq_unified_manager:-:*:*:*:*:vmware_vsphere:*:*"
+                        }
+                    }, {
+                        "software": { 
+                            "id":"cpe:2.3:a:netapp:active_iq_unified_manager:-:*:*:*:*:windows:*:*"
+                        }
+                    }, {
+                        "software": { 
+                            "id":"cpe:2.3:a:vmware:spring_security:*:*:*:*:*:*:*:*"
+,"versionStartIncluding":"5.6.0","versionEndExcluding":"5.6.9"                        }
+                    }, {
+                        "software": { 
+                            "id":"cpe:2.3:a:vmware:spring_security:*:*:*:*:*:*:*:*"
+,"vulnerabilityIdMatched":"true","versionStartIncluding":"5.7.0","versionEndExcluding":"5.7.5"                        }
+                    }                ]
+                }, {
+                "source": "NVD",
+                "name": "CVE-2026-47838",
+                    "severity" : "HIGH",
+                    "cvssv3": {
+                        "baseScore": 8.1
+                        ,"attackVector": "NETWORK"
+                        ,"attackComplexity": "LOW"
+                        ,"privilegesRequired": "LOW"
+                        ,"userInteraction": "NONE"
+                        ,"scope": "UNCHANGED"
+                        ,"confidentialityImpact": "HIGH"
+                        ,"integrityImpact": "HIGH"
+                        ,"availabilityImpact": "NONE"
+                        ,"baseSeverity": "HIGH"
+,"exploitabilityScore": "2.8","impactScore": "5.2","version": "3.1"                    },
+                    "cwes": [
+                        "CWE-287"                    ],
+                "description": "SubjectDnX509PrincipalExtractor does not correctly handle certain malformed X.509 certificate CN values, which can lead to reading the wrong value for the username. In a carefully crafted certificate, this can lead to an attacker impersonating another user.\n\nAffected versions:\nSpring Security 5.7.0 through 5.7.24; 5.8.0 through 5.8.26; 6.3.0 through 6.3.17; 6.4.0 through 6.4.17; 6.5.0 through 6.5.10.",
+                "notes": "",
+                "references": [
+ {
+                        "source": "security@vmware.com"
+,"url": "https:\/\/spring.io\/security\/cve-2026-47838","name": "VENDOR_ADVISORY"                    }                ],
+                "vulnerableSoftware": [
+ {
+                        "software": { 
+                            "id":"cpe:2.3:a:vmware:spring_security:*:*:*:*:*:*:*:*"
+,"vulnerabilityIdMatched":"true","versionEndExcluding":"5.7.25"                        }
+                    }, {
+                        "software": { 
+                            "id":"cpe:2.3:a:vmware:spring_security:*:*:*:*:*:*:*:*"
+,"versionStartIncluding":"5.8.0","versionEndExcluding":"5.8.27"                        }
+                    }, {
+                        "software": { 
+                            "id":"cpe:2.3:a:vmware:spring_security:*:*:*:*:*:*:*:*"
+,"versionStartIncluding":"6.3.0","versionEndExcluding":"6.3.18"                        }
+                    }, {
+                        "software": { 
+                            "id":"cpe:2.3:a:vmware:spring_security:*:*:*:*:*:*:*:*"
+,"versionStartIncluding":"6.4.0","versionEndExcluding":"6.4.18"                        }
+                    }, {
+                        "software": { 
+                            "id":"cpe:2.3:a:vmware:spring_security:*:*:*:*:*:*:*:*"
+,"versionStartIncluding":"6.5.0","versionEndExcluding":"6.5.11"                        }
+                    }                ]
+                }, {
+                "source": "NVD",
+                "name": "CVE-2026-40988",
+                    "severity" : "HIGH",
+                    "cvssv3": {
+                        "baseScore": 7.5
+                        ,"attackVector": "NETWORK"
+                        ,"attackComplexity": "LOW"
+                        ,"privilegesRequired": "NONE"
+                        ,"userInteraction": "NONE"
+                        ,"scope": "UNCHANGED"
+                        ,"confidentialityImpact": "NONE"
+                        ,"integrityImpact": "NONE"
+                        ,"availabilityImpact": "HIGH"
+                        ,"baseSeverity": "HIGH"
+,"exploitabilityScore": "3.9","impactScore": "3.6","version": "3.1"                    },
+                    "cwes": [
+                        "CWE-400"                    ],
+                "description": "An application using spring-security-saml2-service-provider and the REDIRECT binding for SAML 2.0 Login or Logout may be vulnerable to a denial of service by way of an unbounded writer that inflates the compressed SAML payload into memory.\n\nAffected versions:\nSpring Security 5.7.0 through 5.7.23; 5.8.0 through 5.8.25; 6.3.0 through 6.3.16; 6.4.0 through 6.4.16; 6.5.0 through 6.5.10; 7.0.0 through 7.0.5.",
+                "notes": "",
+                "references": [
+ {
+                        "source": "security@vmware.com"
+,"url": "https:\/\/spring.io\/security\/cve-2026-40988","name": "VENDOR_ADVISORY"                    }                ],
+                "vulnerableSoftware": [
+ {
+                        "software": { 
+                            "id":"cpe:2.3:a:vmware:spring_security:*:*:*:*:*:*:*:*"
+,"vulnerabilityIdMatched":"true","versionStartIncluding":"5.7.0","versionEndExcluding":"5.7.24"                        }
+                    }, {
+                        "software": { 
+                            "id":"cpe:2.3:a:vmware:spring_security:*:*:*:*:*:*:*:*"
+,"versionStartIncluding":"5.8.0","versionEndExcluding":"5.8.26"                        }
+                    }, {
+                        "software": { 
+                            "id":"cpe:2.3:a:vmware:spring_security:*:*:*:*:*:*:*:*"
+,"versionStartIncluding":"6.3.0","versionEndExcluding":"6.3.17"                        }
+                    }, {
+                        "software": { 
+                            "id":"cpe:2.3:a:vmware:spring_security:*:*:*:*:*:*:*:*"
+,"versionStartIncluding":"6.4.0","versionEndExcluding":"6.4.17"                        }
+                    }, {
+                        "software": { 
+                            "id":"cpe:2.3:a:vmware:spring_security:*:*:*:*:*:*:*:*"
+,"versionStartIncluding":"6.5.0","versionEndExcluding":"6.5.11"                        }
+                    }, {
+                        "software": { 
+                            "id":"cpe:2.3:a:vmware:spring_security:*:*:*:*:*:*:*:*"
+,"versionStartIncluding":"7.0.0","versionEndExcluding":"7.0.6"                        }
+                    }                ]
+                }, {
+                "source": "NVD",
+                "name": "CVE-2026-22748",
+                    "severity" : "MEDIUM",
+                    "cvssv3": {
+                        "baseScore": 6.5
+                        ,"attackVector": "NETWORK"
+                        ,"attackComplexity": "LOW"
+                        ,"privilegesRequired": "LOW"
+                        ,"userInteraction": "NONE"
+                        ,"scope": "UNCHANGED"
+                        ,"confidentialityImpact": "NONE"
+                        ,"integrityImpact": "HIGH"
+                        ,"availabilityImpact": "NONE"
+                        ,"baseSeverity": "MEDIUM"
+,"exploitabilityScore": "2.8","impactScore": "3.6","version": "3.1"                    },
+                    "cwes": [
+                        "CWE-20"                    ],
+                "description": "Vulnerability in Spring Spring Security. When an application configures JWT decoding with\u00A0NimbusJwtDecoder\u00A0 or\u00A0NimbusReactiveJwtDecoder, it must configure an\u00A0OAuth2TokenValidator<Jwt>\u00A0separately, for example by calling\u00A0setJwtValidator.This issue affects Spring Security: from 6.3.0 through 6.3.14, from 6.4.0 through 6.4.14, from 6.5.0 through 6.5.9, from 7.0.0 through 7.0.4.",
+                "notes": "",
+                "references": [
+ {
+                        "source": "security@vmware.com"
+,"url": "https:\/\/spring.io\/security\/cve-2026-22748","name": "VENDOR_ADVISORY"                    }                ],
+                "vulnerableSoftware": [
+ {
+                        "software": { 
+                            "id":"cpe:2.3:a:vmware:spring_security:*:*:*:*:*:*:*:*"
+,"vulnerabilityIdMatched":"true","versionEndExcluding":"6.3.15"                        }
+                    }, {
+                        "software": { 
+                            "id":"cpe:2.3:a:vmware:spring_security:*:*:*:*:*:*:*:*"
+,"versionStartIncluding":"6.4.0","versionEndExcluding":"6.4.15"                        }
+                    }, {
+                        "software": { 
+                            "id":"cpe:2.3:a:vmware:spring_security:*:*:*:*:*:*:*:*"
+,"versionStartIncluding":"6.5.0","versionEndExcluding":"6.5.10"                        }
+                    }, {
+                        "software": { 
+                            "id":"cpe:2.3:a:vmware:spring_security:*:*:*:*:*:*:*:*"
+,"versionStartIncluding":"7.0.0","versionEndExcluding":"7.0.5"                        }
+                    }                ]
+                }, {
+                "source": "NVD",
+                "name": "CVE-2023-20862",
+                    "severity" : "MEDIUM",
+                    "cvssv3": {
+                        "baseScore": 6.3
+                        ,"attackVector": "NETWORK"
+                        ,"attackComplexity": "LOW"
+                        ,"privilegesRequired": "LOW"
+                        ,"userInteraction": "NONE"
+                        ,"scope": "UNCHANGED"
+                        ,"confidentialityImpact": "LOW"
+                        ,"integrityImpact": "LOW"
+                        ,"availabilityImpact": "LOW"
+                        ,"baseSeverity": "MEDIUM"
+,"exploitabilityScore": "2.8","impactScore": "3.4","version": "3.1"                    },
+                    "cwes": [
+                        "CWE-459"                    ],
+                "description": "In Spring Security, versions 5.7.x prior to 5.7.8, versions 5.8.x prior to 5.8.3, and versions 6.0.x prior to 6.0.3, the logout support does not properly clean the security context if using serialized versions. Additionally, it is not possible to explicitly save an empty security context to the HttpSessionSecurityContextRepository. This vulnerability can keep users authenticated even after they performed logout. Users of affected versions should apply the following mitigation. 5.7.x users should upgrade to 5.7.8. 5.8.x users should upgrade to 5.8.3. 6.0.x users should upgrade to 6.0.3.",
+                "notes": "",
+                "references": [
+ {
+                        "source": "security@vmware.com"
+,"url": "https:\/\/spring.io\/security\/cve-2023-20862","name": "VENDOR_ADVISORY"                    }, {
+                        "source": "af854a3a-2127-422b-91ae-364da2661108"
+,"url": "https:\/\/spring.io\/security\/cve-2023-20862","name": "VENDOR_ADVISORY"                    }, {
+                        "source": "af854a3a-2127-422b-91ae-364da2661108"
+,"url": "https:\/\/security.netapp.com\/advisory\/ntap-20230526-0002\/","name": "THIRD_PARTY_ADVISORY"                    }, {
+                        "source": "security@vmware.com"
+,"url": "https:\/\/security.netapp.com\/advisory\/ntap-20230526-0002\/","name": "THIRD_PARTY_ADVISORY"                    }                ],
+                "vulnerableSoftware": [
+ {
+                        "software": { 
+                            "id":"cpe:2.3:a:netapp:active_iq_unified_manager:-:*:*:*:*:linux:*:*"
+                        }
+                    }, {
+                        "software": { 
+                            "id":"cpe:2.3:a:netapp:active_iq_unified_manager:-:*:*:*:*:vmware_vsphere:*:*"
+                        }
+                    }, {
+                        "software": { 
+                            "id":"cpe:2.3:a:netapp:active_iq_unified_manager:-:*:*:*:*:windows:*:*"
+                        }
+                    }, {
+                        "software": { 
+                            "id":"cpe:2.3:a:vmware:spring_security:*:*:*:*:*:*:*:*"
+,"vulnerabilityIdMatched":"true","versionStartIncluding":"5.7.0","versionEndExcluding":"5.7.8"                        }
+                    }, {
+                        "software": { 
+                            "id":"cpe:2.3:a:vmware:spring_security:*:*:*:*:*:*:*:*"
+,"versionStartIncluding":"5.8.0","versionEndExcluding":"5.8.3"                        }
+                    }, {
+                        "software": { 
+                            "id":"cpe:2.3:a:vmware:spring_security:*:*:*:*:*:*:*:*"
+,"versionStartIncluding":"6.0.0","versionEndExcluding":"6.0.3"                        }
+                    }                ]
+                }, {
+                "source": "NVD",
+                "name": "CVE-2026-41706",
+                    "severity" : "MEDIUM",
+                    "cvssv3": {
+                        "baseScore": 6.1
+                        ,"attackVector": "NETWORK"
+                        ,"attackComplexity": "LOW"
+                        ,"privilegesRequired": "NONE"
+                        ,"userInteraction": "REQUIRED"
+                        ,"scope": "CHANGED"
+                        ,"confidentialityImpact": "LOW"
+                        ,"integrityImpact": "LOW"
+                        ,"availabilityImpact": "NONE"
+                        ,"baseSeverity": "MEDIUM"
+,"exploitabilityScore": "2.8","impactScore": "2.7","version": "3.1"                    },
+                    "cwes": [
+                        "CWE-601"                    ],
+                "description": "Spring Security's CookieRequestCache and CookieServerRequestCache store the pre-authentication request URL in a browser cookie so that users can be redirected back to their intended destination after a successful login. In affected versions, the full absolute URL is stored in the cookie and is used without validation as the post-login redirect target.\n\nAffected versions:\nSpring Security 5.7.0 through 5.7.23; 5.8.0 through 5.8.25; 6.3.0 through 6.3.16; 6.4.0 through 6.4.16; 6.5.0 through 6.5.10; 7.0.0 through 7.0.5.",
+                "notes": "",
+                "references": [
+ {
+                        "source": "security@vmware.com"
+,"url": "https:\/\/spring.io\/security\/cve-2026-41706","name": "VENDOR_ADVISORY"                    }                ],
+                "vulnerableSoftware": [
+ {
+                        "software": { 
+                            "id":"cpe:2.3:a:vmware:spring_security:*:*:*:*:*:*:*:*"
+,"vulnerabilityIdMatched":"true","versionEndExcluding":"5.7.24"                        }
+                    }, {
+                        "software": { 
+                            "id":"cpe:2.3:a:vmware:spring_security:*:*:*:*:*:*:*:*"
+,"versionStartIncluding":"5.8.0","versionEndExcluding":"5.8.26"                        }
+                    }, {
+                        "software": { 
+                            "id":"cpe:2.3:a:vmware:spring_security:*:*:*:*:*:*:*:*"
+,"versionStartIncluding":"6.3.0","versionEndExcluding":"6.3.17"                        }
+                    }, {
+                        "software": { 
+                            "id":"cpe:2.3:a:vmware:spring_security:*:*:*:*:*:*:*:*"
+,"versionStartIncluding":"6.4.0","versionEndExcluding":"6.4.17"                        }
+                    }, {
+                        "software": { 
+                            "id":"cpe:2.3:a:vmware:spring_security:*:*:*:*:*:*:*:*"
+,"versionStartIncluding":"6.5.0","versionEndExcluding":"6.5.11"                        }
+                    }, {
+                        "software": { 
+                            "id":"cpe:2.3:a:vmware:spring_security:*:*:*:*:*:*:*:*"
+,"versionStartIncluding":"7.0.0","versionEndExcluding":"7.0.6"                        }
+                    }                ]
+                }, {
+                "source": "NVD",
+                "name": "CVE-2026-41003",
+                    "severity" : "MEDIUM",
+                    "cvssv3": {
+                        "baseScore": 5.4
+                        ,"attackVector": "NETWORK"
+                        ,"attackComplexity": "LOW"
+                        ,"privilegesRequired": "LOW"
+                        ,"userInteraction": "REQUIRED"
+                        ,"scope": "CHANGED"
+                        ,"confidentialityImpact": "LOW"
+                        ,"integrityImpact": "LOW"
+                        ,"availabilityImpact": "NONE"
+                        ,"baseSeverity": "MEDIUM"
+,"exploitabilityScore": "2.3","impactScore": "2.7","version": "3.1"                    },
+                    "cwes": [
+                        "CWE-79"                    ],
+                "description": "An attacker able to influence values in RelyingPartyRegistration may be able to run arbitrary code on HTML forms generated by Spring Security filters.\n\nAffected versions:\nSpring Security 5.7.0 through 5.7.23; 5.8.0 through 5.8.25; 6.3.0 through 6.3.16; 6.4.0 through 6.4.16; 6.5.0 through 6.5.10; 7.0.0 through 7.0.5.",
+                "notes": "",
+                "references": [
+ {
+                        "source": "security@vmware.com"
+,"url": "https:\/\/spring.io\/security\/cve-2026-41003","name": "VENDOR_ADVISORY"                    }                ],
+                "vulnerableSoftware": [
+ {
+                        "software": { 
+                            "id":"cpe:2.3:a:vmware:spring_security:*:*:*:*:*:*:*:*"
+,"vulnerabilityIdMatched":"true","versionStartIncluding":"5.7.0","versionEndExcluding":"5.7.24"                        }
+                    }, {
+                        "software": { 
+                            "id":"cpe:2.3:a:vmware:spring_security:*:*:*:*:*:*:*:*"
+,"versionStartIncluding":"5.8.0","versionEndExcluding":"5.8.26"                        }
+                    }, {
+                        "software": { 
+                            "id":"cpe:2.3:a:vmware:spring_security:*:*:*:*:*:*:*:*"
+,"versionStartIncluding":"6.3.0","versionEndExcluding":"6.3.17"                        }
+                    }, {
+                        "software": { 
+                            "id":"cpe:2.3:a:vmware:spring_security:*:*:*:*:*:*:*:*"
+,"versionStartIncluding":"6.4.0","versionEndExcluding":"6.4.17"                        }
+                    }, {
+                        "software": { 
+                            "id":"cpe:2.3:a:vmware:spring_security:*:*:*:*:*:*:*:*"
+,"versionStartIncluding":"6.5.0","versionEndExcluding":"6.5.11"                        }
+                    }, {
+                        "software": { 
+                            "id":"cpe:2.3:a:vmware:spring_security:*:*:*:*:*:*:*:*"
+,"versionStartIncluding":"7.0.0","versionEndExcluding":"7.0.6"                        }
+                    }                ]
+                }, {
+                "source": "NVD",
+                "name": "CVE-2026-41694",
+                    "severity" : "MEDIUM",
+                    "cvssv3": {
+                        "baseScore": 5.3
+                        ,"attackVector": "NETWORK"
+                        ,"attackComplexity": "LOW"
+                        ,"privilegesRequired": "NONE"
+                        ,"userInteraction": "NONE"
+                        ,"scope": "UNCHANGED"
+                        ,"confidentialityImpact": "LOW"
+                        ,"integrityImpact": "NONE"
+                        ,"availabilityImpact": "NONE"
+                        ,"baseSeverity": "MEDIUM"
+,"exploitabilityScore": "3.9","impactScore": "1.4","version": "3.1"                    },
+                    "cwes": [
+                        "CWE-347"                    ],
+                "description": "Since Spring Security SAML decrypts SAML Responses as well as elements of SAML LogoutRequests and LogoutResponses without requiring a valid signature, attackers may be able to craft these SAML payloads and use the Service Provider as a decryption oracle.\n\nAffected versions:\nSpring Security 5.7.0 through 5.7.23; 5.8.0 through 5.8.25; 6.3.0 through 6.3.16; 6.4.0 through 6.4.16; 6.5.0 through 6.5.10; 7.0.0 through 7.0.5.",
+                "notes": "",
+                "references": [
+ {
+                        "source": "security@vmware.com"
+,"url": "https:\/\/spring.io\/security\/cve-2026-41694","name": "VENDOR_ADVISORY"                    }                ],
+                "vulnerableSoftware": [
+ {
+                        "software": { 
+                            "id":"cpe:2.3:a:vmware:spring_security:*:*:*:*:*:*:*:*"
+,"vulnerabilityIdMatched":"true","versionStartIncluding":"5.7.0","versionEndExcluding":"5.7.24"                        }
+                    }, {
+                        "software": { 
+                            "id":"cpe:2.3:a:vmware:spring_security:*:*:*:*:*:*:*:*"
+,"versionStartIncluding":"5.8.0","versionEndExcluding":"5.8.26"                        }
+                    }, {
+                        "software": { 
+                            "id":"cpe:2.3:a:vmware:spring_security:*:*:*:*:*:*:*:*"
+,"versionStartIncluding":"6.3.0","versionEndExcluding":"6.3.17"                        }
+                    }, {
+                        "software": { 
+                            "id":"cpe:2.3:a:vmware:spring_security:*:*:*:*:*:*:*:*"
+,"versionStartIncluding":"6.4.0","versionEndExcluding":"6.4.17"                        }
+                    }, {
+                        "software": { 
+                            "id":"cpe:2.3:a:vmware:spring_security:*:*:*:*:*:*:*:*"
+,"versionStartIncluding":"6.5.0","versionEndExcluding":"6.5.11"                        }
+                    }, {
+                        "software": { 
+                            "id":"cpe:2.3:a:vmware:spring_security:*:*:*:*:*:*:*:*"
+,"versionStartIncluding":"7.0.0","versionEndExcluding":"7.0.6"                        }
+                    }                ]
+                }, {
+                "source": "NVD",
+                "name": "CVE-2026-22746",
+                    "severity" : "LOW",
+                    "cvssv3": {
+                        "baseScore": 3.7
+                        ,"attackVector": "NETWORK"
+                        ,"attackComplexity": "HIGH"
+                        ,"privilegesRequired": "NONE"
+                        ,"userInteraction": "NONE"
+                        ,"scope": "UNCHANGED"
+                        ,"confidentialityImpact": "LOW"
+                        ,"integrityImpact": "NONE"
+                        ,"availabilityImpact": "NONE"
+                        ,"baseSeverity": "LOW"
+,"exploitabilityScore": "2.2","impactScore": "1.4","version": "3.1"                    },
+                    "cwes": [
+                        "CWE-208"                    ],
+                "description": "Vulnerability in Spring Spring Security. If an application is using the\u00A0UserDetails#isEnabled,\u00A0#isAccountNonExpired, or\u00A0#isAccountNonLocked\u00A0user attributes, to enable, expire, or lock users, then\u00A0DaoAuthenticationProvider's timing attack defense can be bypassed for users who are disabled, expired, or locked.This issue affects Spring Security: from 5.7.0 through 5.7.22, from 5.8.0 through 5.8.24, from 6.3.0 through 6.3.15, from 6.5.0 through 6.5.9, from 7.0.0 through 7.0.4.",
+                "notes": "",
+                "references": [
+ {
+                        "source": "security@vmware.com"
+,"url": "https:\/\/spring.io\/security\/cve-2026-22746","name": "VENDOR_ADVISORY"                    }                ],
+                "vulnerableSoftware": [
+ {
+                        "software": { 
+                            "id":"cpe:2.3:a:vmware:spring_security:*:*:*:*:*:*:*:*"
+,"vulnerabilityIdMatched":"true","versionEndExcluding":"5.7.23"                        }
+                    }, {
+                        "software": { 
+                            "id":"cpe:2.3:a:vmware:spring_security:*:*:*:*:*:*:*:*"
+,"versionStartIncluding":"5.8.0","versionEndExcluding":"5.8.25"                        }
+                    }, {
+                        "software": { 
+                            "id":"cpe:2.3:a:vmware:spring_security:*:*:*:*:*:*:*:*"
+,"versionStartIncluding":"6.3.0","versionEndExcluding":"6.3.16"                        }
+                    }, {
+                        "software": { 
+                            "id":"cpe:2.3:a:vmware:spring_security:*:*:*:*:*:*:*:*"
+,"versionStartIncluding":"6.4.0","versionEndExcluding":"6.4.16"                        }
+                    }, {
+                        "software": { 
+                            "id":"cpe:2.3:a:vmware:spring_security:*:*:*:*:*:*:*:*"
+,"versionStartIncluding":"6.5.0","versionEndExcluding":"6.5.10"                        }
+                    }, {
+                        "software": { 
+                            "id":"cpe:2.3:a:vmware:spring_security:*:*:*:*:*:*:*:*"
+,"versionStartIncluding":"7.0.0","versionEndExcluding":"7.0.5"                        }
+                    }                ]
+                }            ]        }    ]
+}

@@ -1,0 +1,539 @@
+From c04ec8b69fd0fe97ce29eda9e97b7c61fb14d141 Mon Sep 17 00:00:00 2001
+From: souhaiel amri <131708236+souhaiel11@users.noreply.github.com>
+Date: Thu, 17 Sep 2026 10:20:47 +0100
+Subject: [PATCH 1/6] fix(security): candidate remediation for batch
+ 82ed71a860de1d8a58836b27de5d7bcf0e9f8c4f056996066d386c55c07f3c28
+
+---
+ .../devsecops/controller/TaskController.java  | 109 ++++++++++++++++--
+ 1 file changed, 101 insertions(+), 8 deletions(-)
+
+diff --git a/src/main/java/com/pfe/devsecops/controller/TaskController.java b/src/main/java/com/pfe/devsecops/controller/TaskController.java
+index 81619b1..24a17ce 100644
+--- a/src/main/java/com/pfe/devsecops/controller/TaskController.java
++++ b/src/main/java/com/pfe/devsecops/controller/TaskController.java
+@@ -1,11 +1,18 @@
+ package com.pfe.devsecops.controller;
+ 
++import com.pfe.devsecops.dto.TaskCreateDTO;
++import com.pfe.devsecops.dto.TaskDTO;
++import com.pfe.devsecops.dto.TaskStatusDTO;
++import com.pfe.devsecops.dto.TaskUpdateDTO;
+ import com.pfe.devsecops.model.Task;
++import com.pfe.devsecops.model.User;
++import com.pfe.devsecops.repository.UserRepository;
+ import com.pfe.devsecops.service.TaskService;
+ import org.springframework.beans.factory.annotation.Autowired;
+ import org.springframework.http.ResponseEntity;
+ import org.springframework.web.bind.annotation.*;
+ 
++import java.util.ArrayList;
+ import java.util.List;
+ 
+ @RestController
+@@ -15,29 +22,62 @@ public class TaskController {
+     @Autowired
+     private TaskService taskService;
+ 
++    @Autowired
++    private UserRepository userRepository;
++
+     @GetMapping
+-    public ResponseEntity<List<Task>> getAllTasks() {
+-        return ResponseEntity.ok(taskService.getAllTasks());
++    public ResponseEntity<List<TaskDTO>> getAllTasks() {
++        List<Task> tasks = taskService.getAllTasks();
++        List<TaskDTO> result = new ArrayList<>();
++        if (tasks != null) {
++            for (Task task : tasks) {
++                result.add(toDto(task));
++            }
++        }
++        return ResponseEntity.ok(result);
+     }
+ 
+     // VULNERABILITY Z4 — IDOR : pas de vérification ownership
+     // N'importe quel user authentifié peut voir la tâche de n'importe qui
+     // en changeant l'id dans l'URL
+     @GetMapping("/{id}")
+-    public ResponseEntity<Task> getTaskById(@PathVariable Long id) {
++    public ResponseEntity<TaskDTO> getTaskById(@PathVariable Long id) {
+         return taskService.getTaskById(id)
+-                .map(ResponseEntity::ok)
++                .map(task -> ResponseEntity.ok(toDto(task)))
+                 .orElse(ResponseEntity.notFound().build());
+     }
+ 
+     @PostMapping
+-    public ResponseEntity<Task> createTask(@RequestBody Task task) {
+-        return ResponseEntity.ok(taskService.createTask(task));
++    public ResponseEntity<TaskDTO> createTask(@RequestBody TaskCreateDTO taskCreateDTO) {
++        Task task = new Task();
++        task.setTitle(taskCreateDTO.getTitle());
++        task.setDescription(taskCreateDTO.getDescription());
++        if (taskCreateDTO.getStatus() != null) {
++            task.setStatus(toEntityStatus(taskCreateDTO.getStatus()));
++        }
++        task.setPriority(taskCreateDTO.getPriority());
++
++        Long userId = taskCreateDTO.getUserId();
++        if (userId != null) {
++            User user = userRepository.findById(userId)
++                    .orElseThrow(() -> new RuntimeException("User not found: " + userId));
++            task.setUser(user);
++        }
++
++        return ResponseEntity.ok(toDto(taskService.createTask(task)));
+     }
+ 
+     @PutMapping("/{id}")
+-    public ResponseEntity<Task> updateTask(@PathVariable Long id, @RequestBody Task task) {
+-        return ResponseEntity.ok(taskService.updateTask(id, task));
++    public ResponseEntity<TaskDTO> updateTask(@PathVariable Long id, @RequestBody TaskUpdateDTO taskUpdateDTO) {
++        // Volontairement pas de userId : l'association existante Task.user reste inchangée
++        Task task = new Task();
++        task.setTitle(taskUpdateDTO.getTitle());
++        task.setDescription(taskUpdateDTO.getDescription());
++        if (taskUpdateDTO.getStatus() != null) {
++            task.setStatus(toEntityStatus(taskUpdateDTO.getStatus()));
++        }
++        task.setPriority(taskUpdateDTO.getPriority());
++        return ResponseEntity.ok(toDto(taskService.updateTask(id, task)));
+     }
+ 
+     @DeleteMapping("/{id}")
+@@ -63,4 +103,57 @@ public ResponseEntity<String> processTask(@PathVariable Long id,
+                 .orElseThrow(() -> new RuntimeException("Task not found"));
+         return ResponseEntity.ok(taskService.processTaskWorkflow(task, action, role, urgent, bulk));
+     }
++
++    private TaskDTO toDto(Task task) {
++        if (task == null) {
++            return null;
++        }
++        TaskDTO dto = new TaskDTO();
++        dto.setId(task.getId());
++        dto.setTitle(task.getTitle());
++        dto.setDescription(task.getDescription());
++        dto.setStatus(toDtoStatus(task.getStatus()));
++        dto.setPriority(task.getPriority());
++        dto.setCreatedAt(task.getCreatedAt());
++        dto.setUpdatedAt(task.getUpdatedAt());
++        User user = task.getUser();
++        dto.setUserId(user == null ? null : user.getId());
++        return dto;
++    }
++
++    private TaskStatusDTO toDtoStatus(Task.TaskStatus status) {
++        if (status == null) {
++            return null;
++        }
++        switch (status) {
++            case TODO:
++                return TaskStatusDTO.TODO;
++            case IN_PROGRESS:
++                return TaskStatusDTO.IN_PROGRESS;
++            case DONE:
++                return TaskStatusDTO.DONE;
++            case CANCELLED:
++                return TaskStatusDTO.CANCELLED;
++            default:
++                throw new IllegalArgumentException("Unsupported task status: " + status);
++        }
++    }
++
++    private Task.TaskStatus toEntityStatus(TaskStatusDTO status) {
++        if (status == null) {
++            return null;
++        }
++        switch (status) {
++            case TODO:
++                return Task.TaskStatus.TODO;
++            case IN_PROGRESS:
++                return Task.TaskStatus.IN_PROGRESS;
++            case DONE:
++                return Task.TaskStatus.DONE;
++            case CANCELLED:
++                return Task.TaskStatus.CANCELLED;
++            default:
++                throw new IllegalArgumentException("Unsupported task status: " + status);
++        }
++    }
+ }
+
+From 97c45acc0291fa92ca427fafd0b6475e7a22926d Mon Sep 17 00:00:00 2001
+From: souhaiel amri <131708236+souhaiel11@users.noreply.github.com>
+Date: Thu, 17 Sep 2026 10:20:49 +0100
+Subject: [PATCH 2/6] fix(security): candidate remediation for batch
+ 82ed71a860de1d8a58836b27de5d7bcf0e9f8c4f056996066d386c55c07f3c28
+
+---
+ src/main/java/com/pfe/devsecops/service/TaskService.java | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/src/main/java/com/pfe/devsecops/service/TaskService.java b/src/main/java/com/pfe/devsecops/service/TaskService.java
+index 9309b45..2fcfa0e 100644
+--- a/src/main/java/com/pfe/devsecops/service/TaskService.java
++++ b/src/main/java/com/pfe/devsecops/service/TaskService.java
+@@ -73,6 +73,8 @@ public Task createTask(Task task) {
+         return taskRepository.save(task);
+     }
+ 
++    // Note: the existing Task.user association is intentionally left untouched here;
++    // an update never reassigns or clears the owning User.
+     public Task updateTask(Long id, Task updatedTask) {
+         Task existing = taskRepository.findById(id)
+                 .orElseThrow(() -> new RuntimeException("Task not found: " + id));
+
+From e5fa678182fcd8264dd95d81777ec02d69c5797b Mon Sep 17 00:00:00 2001
+From: souhaiel amri <131708236+souhaiel11@users.noreply.github.com>
+Date: Thu, 17 Sep 2026 10:20:51 +0100
+Subject: [PATCH 3/6] fix(security): candidate remediation for batch
+ 82ed71a860de1d8a58836b27de5d7bcf0e9f8c4f056996066d386c55c07f3c28
+
+---
+ .../java/com/pfe/devsecops/dto/TaskDTO.java   | 118 ++++++++++++++++++
+ 1 file changed, 118 insertions(+)
+ create mode 100644 src/main/java/com/pfe/devsecops/dto/TaskDTO.java
+
+diff --git a/src/main/java/com/pfe/devsecops/dto/TaskDTO.java b/src/main/java/com/pfe/devsecops/dto/TaskDTO.java
+new file mode 100644
+index 0000000..77ff6bb
+--- /dev/null
++++ b/src/main/java/com/pfe/devsecops/dto/TaskDTO.java
+@@ -0,0 +1,118 @@
++package com.pfe.devsecops.dto;
++
++import java.time.LocalDateTime;
++
++/**
++ * API-facing representation of a task.
++ * <p>
++ * This type is intentionally decoupled from the persistence layer: it does not
++ * import, reference or reuse any JPA entity class, nested entity type or
++ * persistence annotation. The task status is represented by the independent
++ * DTO-level enum {@link TaskStatusDTO} and the task owner is represented only
++ * by its identifier.
++ */
++public class TaskDTO {
++
++    private Long id;
++
++    private String title;
++
++    private String description;
++
++    private TaskStatusDTO status;
++
++    private Integer priority;
++
++    private LocalDateTime createdAt;
++
++    private LocalDateTime updatedAt;
++
++    /** Identifier of the owning user, or {@code null} when the task has no owner. */
++    private Long userId;
++
++    public TaskDTO() {
++        // default constructor for serialization frameworks
++    }
++
++    public TaskDTO(Long id,
++                   String title,
++                   String description,
++                   TaskStatusDTO status,
++                   Integer priority,
++                   LocalDateTime createdAt,
++                   LocalDateTime updatedAt,
++                   Long userId) {
++        this.id = id;
++        this.title = title;
++        this.description = description;
++        this.status = status;
++        this.priority = priority;
++        this.createdAt = createdAt;
++        this.updatedAt = updatedAt;
++        this.userId = userId;
++    }
++
++    public Long getId() {
++        return id;
++    }
++
++    public void setId(Long id) {
++        this.id = id;
++    }
++
++    public String getTitle() {
++        return title;
++    }
++
++    public void setTitle(String title) {
++        this.title = title;
++    }
++
++    public String getDescription() {
++        return description;
++    }
++
++    public void setDescription(String description) {
++        this.description = description;
++    }
++
++    public TaskStatusDTO getStatus() {
++        return status;
++    }
++
++    public void setStatus(TaskStatusDTO status) {
++        this.status = status;
++    }
++
++    public Integer getPriority() {
++        return priority;
++    }
++
++    public void setPriority(Integer priority) {
++        this.priority = priority;
++    }
++
++    public LocalDateTime getCreatedAt() {
++        return createdAt;
++    }
++
++    public void setCreatedAt(LocalDateTime createdAt) {
++        this.createdAt = createdAt;
++    }
++
++    public LocalDateTime getUpdatedAt() {
++        return updatedAt;
++    }
++
++    public void setUpdatedAt(LocalDateTime updatedAt) {
++        this.updatedAt = updatedAt;
++    }
++
++    public Long getUserId() {
++        return userId;
++    }
++
++    public void setUserId(Long userId) {
++        this.userId = userId;
++    }
++}
+
+From 3cd7db1f818f2fc7b1a0d52960bb7fd66cd3e903 Mon Sep 17 00:00:00 2001
+From: souhaiel amri <131708236+souhaiel11@users.noreply.github.com>
+Date: Thu, 17 Sep 2026 10:20:52 +0100
+Subject: [PATCH 4/6] fix(security): candidate remediation for batch
+ 82ed71a860de1d8a58836b27de5d7bcf0e9f8c4f056996066d386c55c07f3c28
+
+---
+ .../com/pfe/devsecops/dto/TaskCreateDTO.java  | 83 +++++++++++++++++++
+ 1 file changed, 83 insertions(+)
+ create mode 100644 src/main/java/com/pfe/devsecops/dto/TaskCreateDTO.java
+
+diff --git a/src/main/java/com/pfe/devsecops/dto/TaskCreateDTO.java b/src/main/java/com/pfe/devsecops/dto/TaskCreateDTO.java
+new file mode 100644
+index 0000000..155b92a
+--- /dev/null
++++ b/src/main/java/com/pfe/devsecops/dto/TaskCreateDTO.java
+@@ -0,0 +1,83 @@
++package com.pfe.devsecops.dto;
++
++/**
++ * API-facing request payload for task creation.
++ *
++ * <p>This type is intentionally independent from the persistence layer: it does not
++ * reference the JPA entity, its nested types or any persistence annotation. The task
++ * status is represented by the DTO-level {@link TaskStatusDTO} enum and the owning user
++ * is represented only by its identifier, which is resolved by the controller through the
++ * project's user repository before the entity is persisted.</p>
++ */
++public class TaskCreateDTO {
++
++    private String title;
++
++    private String description;
++
++    private TaskStatusDTO status;
++
++    private Integer priority;
++
++    /**
++     * Identifier of the owning user. May be {@code null}, in which case the created task
++     * is left without an owner, matching the existing nullable association semantics.
++     */
++    private Long userId;
++
++    public TaskCreateDTO() {
++        // Default constructor required for JSON deserialization.
++    }
++
++    public TaskCreateDTO(String title,
++                         String description,
++                         TaskStatusDTO status,
++                         Integer priority,
++                         Long userId) {
++        this.title = title;
++        this.description = description;
++        this.status = status;
++        this.priority = priority;
++        this.userId = userId;
++    }
++
++    public String getTitle() {
++        return title;
++    }
++
++    public void setTitle(String title) {
++        this.title = title;
++    }
++
++    public String getDescription() {
++        return description;
++    }
++
++    public void setDescription(String description) {
++        this.description = description;
++    }
++
++    public TaskStatusDTO getStatus() {
++        return status;
++    }
++
++    public void setStatus(TaskStatusDTO status) {
++        this.status = status;
++    }
++
++    public Integer getPriority() {
++        return priority;
++    }
++
++    public void setPriority(Integer priority) {
++        this.priority = priority;
++    }
++
++    public Long getUserId() {
++        return userId;
++    }
++
++    public void setUserId(Long userId) {
++        this.userId = userId;
++    }
++}
+
+From 43d2e07dc3ff2f2f1e1975cdf5d666eb94f784b9 Mon Sep 17 00:00:00 2001
+From: souhaiel amri <131708236+souhaiel11@users.noreply.github.com>
+Date: Thu, 17 Sep 2026 10:20:53 +0100
+Subject: [PATCH 5/6] fix(security): candidate remediation for batch
+ 82ed71a860de1d8a58836b27de5d7bcf0e9f8c4f056996066d386c55c07f3c28
+
+---
+ .../com/pfe/devsecops/dto/TaskUpdateDTO.java  | 63 +++++++++++++++++++
+ 1 file changed, 63 insertions(+)
+ create mode 100644 src/main/java/com/pfe/devsecops/dto/TaskUpdateDTO.java
+
+diff --git a/src/main/java/com/pfe/devsecops/dto/TaskUpdateDTO.java b/src/main/java/com/pfe/devsecops/dto/TaskUpdateDTO.java
+new file mode 100644
+index 0000000..7bd80b0
+--- /dev/null
++++ b/src/main/java/com/pfe/devsecops/dto/TaskUpdateDTO.java
+@@ -0,0 +1,63 @@
++package com.pfe.devsecops.dto;
++
++/**
++ * API-facing request payload for updating an existing task.
++ *
++ * <p>Intentionally decoupled from the persistence layer: it references no JPA
++ * entity, no nested entity type and no persistence annotations. The owning user
++ * is deliberately not exposed here, because the update operation leaves the
++ * existing task/user association untouched.</p>
++ */
++public class TaskUpdateDTO {
++
++    private String title;
++
++    private String description;
++
++    private TaskStatusDTO status;
++
++    private Integer priority;
++
++    public TaskUpdateDTO() {
++        // default constructor for deserialization
++    }
++
++    public TaskUpdateDTO(String title, String description, TaskStatusDTO status, Integer priority) {
++        this.title = title;
++        this.description = description;
++        this.status = status;
++        this.priority = priority;
++    }
++
++    public String getTitle() {
++        return title;
++    }
++
++    public void setTitle(String title) {
++        this.title = title;
++    }
++
++    public String getDescription() {
++        return description;
++    }
++
++    public void setDescription(String description) {
++        this.description = description;
++    }
++
++    public TaskStatusDTO getStatus() {
++        return status;
++    }
++
++    public void setStatus(TaskStatusDTO status) {
++        this.status = status;
++    }
++
++    public Integer getPriority() {
++        return priority;
++    }
++
++    public void setPriority(Integer priority) {
++        this.priority = priority;
++    }
++}
+
+From 9690613ecc5e87b33663ee8f82eea4f94d67bbfe Mon Sep 17 00:00:00 2001
+From: souhaiel amri <131708236+souhaiel11@users.noreply.github.com>
+Date: Thu, 17 Sep 2026 10:20:55 +0100
+Subject: [PATCH 6/6] fix(security): candidate remediation for batch
+ 82ed71a860de1d8a58836b27de5d7bcf0e9f8c4f056996066d386c55c07f3c28
+
+---
+ .../com/pfe/devsecops/dto/TaskStatusDTO.java    | 17 +++++++++++++++++
+ 1 file changed, 17 insertions(+)
+ create mode 100644 src/main/java/com/pfe/devsecops/dto/TaskStatusDTO.java
+
+diff --git a/src/main/java/com/pfe/devsecops/dto/TaskStatusDTO.java b/src/main/java/com/pfe/devsecops/dto/TaskStatusDTO.java
+new file mode 100644
+index 0000000..f8d577a
+--- /dev/null
++++ b/src/main/java/com/pfe/devsecops/dto/TaskStatusDTO.java
+@@ -0,0 +1,17 @@
++package com.pfe.devsecops.dto;
++
++/**
++ * API-facing representation of a task status.
++ *
++ * <p>This enum is intentionally independent from the persistence layer: it does not
++ * import, extend or reference the JPA entity or any nested persistence type. It
++ * mirrors every value of the persistent task status domain so that the public API
++ * contract keeps the same closed value domain (and therefore the same request
++ * deserialization/rejection behavior) as before.</p>
++ */
++public enum TaskStatusDTO {
++    TODO,
++    IN_PROGRESS,
++    DONE,
++    CANCELLED
++}

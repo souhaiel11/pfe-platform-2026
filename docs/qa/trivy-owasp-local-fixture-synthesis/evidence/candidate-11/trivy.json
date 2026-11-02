@@ -1,0 +1,135 @@
+{
+  "SchemaVersion": 2,
+  "Trivy": {
+    "Version": "0.72.0"
+  },
+  "ReportID": "01a10e24-9fe0-7de6-95bf-012ea9c14451",
+  "CreatedAt": "2026-10-06T00:17:23.680911954+02:00",
+  "ArtifactID": "sha256:c7dec771bb43410b1e501ace1acfe1d7b17fde026b39ac37cec887e64cff53b5",
+  "ArtifactName": "/tmp/remediation-fixture-candidate-11/image.tar",
+  "ArtifactType": "container_image",
+  "Metadata": {
+    "Size": 92160,
+    "ImageID": "sha256:e7443f3ff4916ae3fe7b64cf48807f1cbfb46e33533a0e74b0ad80a744cc15be",
+    "DiffIDs": [
+      "sha256:65e3b726bbff585105e0054b289f0ae8b6f4da57efcc4bc05f9d1db36a98c964"
+    ],
+    "RepoTags": [
+      "local-fixture:h2"
+    ],
+    "Reference": "local-fixture:h2",
+    "ImageConfig": {
+      "architecture": "amd64",
+      "created": "0001-01-01T00:00:00Z",
+      "os": "linux",
+      "rootfs": {
+        "type": "layers",
+        "diff_ids": [
+          "sha256:65e3b726bbff585105e0054b289f0ae8b6f4da57efcc4bc05f9d1db36a98c964"
+        ]
+      },
+      "config": {}
+    },
+    "Layers": [
+      {
+        "Size": 92160,
+        "DiffID": "sha256:65e3b726bbff585105e0054b289f0ae8b6f4da57efcc4bc05f9d1db36a98c964"
+      }
+    ]
+  },
+  "Results": [
+    {
+      "Target": "Java",
+      "Class": "lang-pkgs",
+      "Type": "jar",
+      "Packages": [
+        {
+          "Name": "operator.fixture:retry-e2e-crypto",
+          "Identifier": {
+            "PURL": "pkg:maven/operator.fixture/retry-e2e-crypto@1.0.0",
+            "UID": "5146f6f8e4fce182"
+          },
+          "Version": "1.0.0",
+          "Layer": {
+            "DiffID": "sha256:65e3b726bbff585105e0054b289f0ae8b6f4da57efcc4bc05f9d1db36a98c964"
+          },
+          "FilePath": "app/retry-e2e-crypto-1.0.0.jar",
+          "AnalyzedBy": "jar"
+        },
+        {
+          "Name": "org.springframework.security:spring-security-crypto",
+          "Identifier": {
+            "PURL": "pkg:maven/org.springframework.security/spring-security-crypto@5.7.1",
+            "UID": "ef43246549593f6"
+          },
+          "Version": "5.7.1",
+          "Layer": {
+            "DiffID": "sha256:65e3b726bbff585105e0054b289f0ae8b6f4da57efcc4bc05f9d1db36a98c964"
+          },
+          "FilePath": "app/dependencies/spring-security-crypto-5.7.1.jar",
+          "AnalyzedBy": "jar"
+        }
+      ],
+      "Vulnerabilities": [
+        {
+          "VulnerabilityID": "CVE-2025-22228",
+          "VendorIDs": [
+            "GHSA-mg83-c7gq-rv5c"
+          ],
+          "PkgName": "org.springframework.security:spring-security-crypto",
+          "PkgPath": "app/dependencies/spring-security-crypto-5.7.1.jar",
+          "PkgIdentifier": {
+            "PURL": "pkg:maven/org.springframework.security/spring-security-crypto@5.7.1",
+            "UID": "ef43246549593f6"
+          },
+          "InstalledVersion": "5.7.1",
+          "FixedVersion": "6.3.8, 6.4.4, 6.2.10, 6.1.14, 6.0.16, 5.8.18, 5.7.16",
+          "Status": "fixed",
+          "Layer": {
+            "DiffID": "sha256:65e3b726bbff585105e0054b289f0ae8b6f4da57efcc4bc05f9d1db36a98c964"
+          },
+          "SeveritySource": "ghsa",
+          "PrimaryURL": "https://avd.aquasec.com/nvd/cve-2025-22228",
+          "DataSource": {
+            "ID": "ghsa",
+            "Name": "GitHub Security Advisory Maven",
+            "URL": "https://github.com/advisories?query=type%3Areviewed+ecosystem%3Amaven"
+          },
+          "Fingerprint": "sha256:3e31d31d20eab84b4ad22ee60abd2edb702c1933691a2ee3d3e7ae7be47fe78d",
+          "Title": "spring-security-core: Spring Security BCryptPasswordEncoder does not enforce maximum password length",
+          "Description": "BCryptPasswordEncoder.matches(CharSequence,String) will incorrectly return true for passwords larger than 72 characters as long as the first 72 characters are the same.",
+          "Severity": "HIGH",
+          "CweIDs": [
+            "CWE-287"
+          ],
+          "VendorSeverity": {
+            "ghsa": 3,
+            "redhat": 3
+          },
+          "CVSS": {
+            "ghsa": {
+              "V3Vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:H/A:N",
+              "V3Score": 7.4
+            },
+            "redhat": {
+              "V3Vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:H/A:N",
+              "V3Score": 7.4
+            }
+          },
+          "References": [
+            "https://access.redhat.com/security/cve/CVE-2025-22228",
+            "https://github.com/spring-projects/spring-security",
+            "https://github.com/spring-projects/spring-security/commit/46f0dc6dfc8402cd556c598fdf2d31f9d46cdbf3",
+            "https://nvd.nist.gov/vuln/detail/CVE-2025-22228",
+            "https://security.netapp.com/advisory/ntap-20250425-0009",
+            "https://security.netapp.com/advisory/ntap-20250425-0009/",
+            "https://spring.io/security/cve-2025-22228",
+            "https://www.cve.org/CVERecord?id=CVE-2025-22228"
+          ],
+          "PublishedDate": "2025-03-20T06:15:23.087Z",
+          "LastModifiedDate": "2026-06-17T08:45:45.5Z"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,34 @@
+{
+  "sourceNodes": 188,
+  "targetNodes": 195,
+  "sourceFunctional": 182,
+  "targetFunctional": 189,
+  "added": [
+    "Execution May Continue?",
+    "Git Write Allowed?",
+    "Pre-Git Cancellation Gate",
+    "Register WF2 Execution",
+    "Restore Pre-Git Context",
+    "Restore Registered Intake",
+    "WF2 Cancellation Terminal"
+  ],
+  "removed": [],
+  "existingNodesChanged": [],
+  "credentialsChanged": 0,
+  "positionsChanged": 0,
+  "stickiesChanged": 0,
+  "changedExistingConnectionSources": [
+    "Adapt Webhook Payload",
+    "Remote Head Drift Passed?"
+  ],
+  "dominance": {
+    "Create Missing Branch": true,
+    "Update File in Branch": true,
+    "Create File in Branch": true,
+    "Create Pull Request1": true
+  },
+  "cancellationTerminalReachable": [
+    "WF2 Cancellation Terminal"
+  ],
+  "terminalIsolated": true
+}

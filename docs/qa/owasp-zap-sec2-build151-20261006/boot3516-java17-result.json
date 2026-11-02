@@ -1,0 +1,13 @@
+{
+  "case": {
+    "name": "boot3516-java17",
+    "parent": "3.5.16",
+    "java": "17",
+    "alignSecurity": true
+  },
+  "exitCode": 1,
+  "buildPass": false,
+  "testPass": false,
+  "descriptor": "/tmp/sec2-qualification/boot3516-java17/qualification.xml",
+  "originalPomUnchanged": true
+}

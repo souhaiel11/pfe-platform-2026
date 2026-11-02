@@ -1,0 +1,20 @@
+{
+  "PROPOSED_HUMAN_DECISION": "FIX_REQUIRED",
+  "implemented": false,
+  "mandatoryMinimalCorrection": {
+    "file": "src/main/resources/application.properties",
+    "line": 9,
+    "current": "spring.h2.console.enabled=true",
+    "proposed": "spring.h2.console.enabled=false",
+    "purpose": "Disable development SQL console by default, including prod profile"
+  },
+  "optionalDevelopmentOnlyOptIn": {
+    "file": "src/main/resources/application-dev.properties",
+    "proposed": [
+      "spring.h2.console.enabled=true",
+      "spring.h2.console.settings.web-allow-others=false"
+    ],
+    "requires": "Explicit dev-only profile; no production activation; subsequent human review and controlled regression checks"
+  },
+  "notProposed": "Enable CSRF globally for the bearer API without distinguishing browser/session routes"
+}

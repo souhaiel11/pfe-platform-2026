@@ -1,0 +1,47 @@
+/* Définit les styles de les prévisions. */
+    :host{display:block}
+    /* §2/§26 — la page suit la typographie de la plateforme ; seul le
+       chiffré reste en mono. min-height:100vh retiré : la page est déjà
+       rendue dans la coquille, qui gère le défilement. */
+    .page{padding:18px 20px;background:var(--bg-primary);color:var(--text-primary)}
+    .page-header{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+    .page-icon{width:40px;height:40px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px}
+    h2{font-size:16px;font-weight:700;margin:0}
+    .page-sub{font-size:10px;color:var(--text-secondary);margin-top:2px}
+
+    .card{background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:8px;padding:14px;margin-bottom:12px}
+    .card-title{display:flex;align-items:center;gap:5px;font-size:10px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px}
+
+    .rules-legend{display:flex;flex-wrap:wrap;gap:8px}
+    .rule-chip{font-size:10px;padding:5px 9px;background:var(--bg-tertiary);border-radius:5px;color:var(--text-secondary)}
+
+    .empty{font-size:11px;color:var(--text-secondary);padding:10px 0}
+
+    .risk-card{background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:8px;padding:14px;margin-bottom:10px}
+    .risk-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+    .risk-name{font-size:13px;font-weight:600}
+    .risk-badge{font-size:11px;font-weight:700;padding:4px 10px;border-radius:5px;font-family:var(--font-mono)}
+    .risk-badge.faible   { background: var(--accent-green-bg);  color: var(--accent-green); }
+    .risk-badge.modere   { background: var(--color-warning-bg); color: var(--color-warning); }
+    /* Variable de thème, pas une couleur en dur : l'ancienne valeur ne
+       suivait ni le thème clair ni le thème sombre. */
+    .risk-badge.eleve    { background: var(--accent-orange-bg); color: var(--accent-orange); }
+    .risk-badge.critique { background: var(--accent-red-bg);    color: var(--accent-red); }
+
+    .risk-rules{display:flex;flex-direction:column;gap:5px}
+    .rule-row{display:flex;align-items:center;justify-content:space-between;padding:6px 9px;background:var(--bg-tertiary);border-radius:5px;font-size:11px}
+    .rule-label{color:var(--text-primary)}
+    .rule-points{font-weight:700;color:var(--accent-orange)}
+    .rule-none{color:var(--text-secondary);justify-content:flex-start}
+
+    /* §25 — le nom du projet est un lien, et se voit comme tel. */
+    a.risk-name{color:var(--text-primary);text-decoration:none}
+    a.risk-name:hover{color:var(--accent-blue);text-decoration:underline}
+    a.risk-name:focus-visible{outline:2px solid var(--accent-blue);outline-offset:2px;border-radius:3px}
+    .risk-badge{display:inline-flex;align-items:center;gap:5px}
+    .risk-head{gap:12px;flex-wrap:wrap}
+
+    /* §18 — note de chargement : explique l'attente sans la masquer. */
+    .load-note{margin:10px 0 0;font-size:11px;color:var(--text-muted);text-align:center;line-height:1.5}
+
+.project-chart-button{border:0;background:transparent;color:var(--text-primary);cursor:pointer;padding:4px 0;text-align:left;font-family:inherit}.project-chart-button:hover{color:var(--accent-blue);text-decoration:underline}.project-chart-button:focus-visible{outline:2px solid var(--accent-blue);outline-offset:4px}.risk-card.selected{border-color:var(--accent-blue)}

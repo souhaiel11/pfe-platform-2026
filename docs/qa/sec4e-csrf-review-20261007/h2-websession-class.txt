@@ -1,0 +1,33 @@
+Compiled from "WebSession.java"
+class org.h2.server.web.WebSession {
+  private static final int MAX_HISTORY;
+  long lastAccess;
+  final java.util.HashMap<java.lang.String, java.lang.Object> map;
+  java.util.Locale locale;
+  java.sql.Statement executingStatement;
+  java.sql.ResultSet result;
+  private final org.h2.server.web.WebServer server;
+  private final java.util.ArrayList<java.lang.String> commandHistory;
+  private java.sql.Connection conn;
+  private java.sql.DatabaseMetaData meta;
+  private org.h2.bnf.context.DbContents contents;
+  private org.h2.bnf.Bnf bnf;
+  private boolean shutdownServerOnDisconnect;
+  org.h2.server.web.WebSession(org.h2.server.web.WebServer);
+  void put(java.lang.String, java.lang.Object);
+  java.lang.Object get(java.lang.String);
+  java.lang.Object remove(java.lang.String);
+  org.h2.bnf.Bnf getBnf();
+  void loadBnf();
+  java.lang.String getCommand(int);
+  void addCommand(java.lang.String);
+  java.util.ArrayList<java.lang.String> getCommandHistory();
+  java.util.HashMap<java.lang.String, java.lang.Object> getInfo();
+  void setConnection(java.sql.Connection) throws java.sql.SQLException;
+  java.sql.DatabaseMetaData getMetaData();
+  java.sql.Connection getConnection();
+  org.h2.bnf.context.DbContents getContents();
+  void setShutdownServerOnDisconnect();
+  boolean getShutdownServerOnDisconnect();
+  void close();
+}

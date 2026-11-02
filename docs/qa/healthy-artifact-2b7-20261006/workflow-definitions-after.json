@@ -1,0 +1,98 @@
+{
+  "vNOQiEgnXg9Zqn2q": {
+    "name": "WF1 - Incident Intake & Analysis v5.1",
+    "sha256": "b007e61f3dc193bc0ff304d178159b2d66f63e07b3176afa36537dd50dd34f7c"
+  },
+  "9adcV31eaIgJyMR0": {
+    "name": "WF2 - Git Patch & PR v4.1",
+    "sha256": "8174e2c701df2a1c09b60152e2c6070f3ae951fdb186be6ca4315a6cdd86447d"
+  },
+  "4JiOKpyHhx1znTYw": {
+    "name": "WF3 - Post-PR Validation v4",
+    "sha256": "d4c9b689eeea2d07c63a870e1fb69c481c7879292cbdcd67ae9bda8b221c7fef"
+  },
+  "6BVXqAsePEPAjiIQ": {
+    "name": "WF-Chat-V4",
+    "sha256": "c2472b4553d5fceb2ad483c997e7682abe97d47264292443d45c55adf1e6f414"
+  },
+  "x4oTJ4HbkC1R526b": {
+    "name": "WF4 - Jenkinsfile Optimizer v5",
+    "sha256": "8b308862f9b8d82954bc9b2c603cf914927f9fb503d8316e73234d76ae5f79a5"
+  },
+  "vWWrhwuXjcAxmO2B": {
+    "name": "WF2 - Git Patch & PR v2.5 FIXED",
+    "sha256": "852c99ea7955623f239f6cb60c35d10e439d3142f7c2825db62a2fbacdcbf6b7"
+  },
+  "b7SEqPJK3weGXziV": {
+    "name": "WF5 - Dockerfile Optimizer",
+    "sha256": "ff20e270c0df366941acb557f5ff5362643fab63257f3ee48669b02730d31dfe"
+  },
+  "DEBUGGhProbe0001": {
+    "name": "DEBUG-github-fetch-probe",
+    "sha256": "acdbabb18f450a0ee54c51a9ec9abe30a27ff53b40c103dd260b179f67af431d"
+  },
+  "PRCreateProbe0001": {
+    "name": "DEBUG-create-pr-only",
+    "sha256": "bfd84b60d5992e0db7bada7fa7a91e1f81a6528f107a2c98d8035dca93e1b884"
+  },
+  "r52SonarAuthProbeTemp": {
+    "name": "R52-SONAR-AUTH-PROBE-TEMP (safe to delete)",
+    "sha256": "c026e3f845d6758c73af9f1258a5f0635aec49af47dcd4724cb8c6875669b506"
+  },
+  "r54SonarSmokeProbeTemp": {
+    "name": "R54-SONAR-SMOKE-PROBE-TEMP (safe to delete)",
+    "sha256": "776eb0ce7f011488a1b7e895bd799d98aa319a86dcc1fc0a602d9a51ce2f629e"
+  },
+  "r57SonarProbeTemp": {
+    "name": "R57-SONAR-PROBE-TEMP (safe to delete)",
+    "sha256": "a8329bd5f0d3c45ec37f0a6e1663c1dab3f418b586f96d8eee6484e95db1fe4f"
+  },
+  "r58SonarProbeTemp": {
+    "name": "R58-SONAR-PROBE-TEMP (safe to delete)",
+    "sha256": "dfd969f535b3da94a8136f4e99465d141bf9624963648d65d4171e536b20b61e"
+  },
+  "r59SonarProbeTemp": {
+    "name": "R59-SONAR-PROBE-TEMP (safe to delete)",
+    "sha256": "45b90310ea87833464cfd218d3b958633701ca07aad3a1615d93124c73979e64"
+  },
+  "r60SonarProbeTemp": {
+    "name": "R60-SONAR-PROBE-TEMP (safe to delete)",
+    "sha256": "d3ae6d4a6b6cc31a687f041b76b210fd9cf7c65792c0e0114f496fc4acf691e2"
+  },
+  "e96d6ee1-0a6c-4779-9200-4e2dc87ef9f2": {
+    "name": "WF2 - Git Patch & PR v4.1 \u2014 R19.3O Post-Write Barrier Candidate",
+    "sha256": "ad56c527f3d614767e950047c54600dac6df53d30c2b7b50d4451ca37d63ead8"
+  },
+  "QvLjJGLX5V5mKXvX": {
+    "name": "WF2 - Git Patch & PR v4.1 \u2014 R19.3F Path Policy Fix Candidate",
+    "sha256": "261a82aa8961848226f20d0b147607623f85ed4f98e7c79cc8cd7c1178e3a868"
+  },
+  "WAiqNGhkGICvDh4A": {
+    "name": "WF2 - Git Patch & PR R22E TEST",
+    "sha256": "f775e90d42cebea965dbf3ce609bb361ccc801cbdc0c0a0cba73f235104d7748"
+  },
+  "u3eeMwTuhCsetfcS": {
+    "name": "WF2 - Git Patch & PR v5 CANONICAL (R22E + Brique 5)",
+    "sha256": "d16dd0c540f81fad675ddccf04ca112b50f84018832c6a70a2a8cd27210d1e73"
+  },
+  "RdYyfjVpOm2LxS95": {
+    "name": "WF6 \u2014 Security Remediation (Maven, V1.6 offline draft)",
+    "sha256": "4b0923d3b81ed786784ce21ea200025300eeec1fa69377c2286ad399f5dc68bf"
+  },
+  "AsSw576hITkPKsbR": {
+    "name": "WF6-V1.7-ACK-VALIDATION-INACTIVE",
+    "sha256": "c47bcc1914c4df201c08e816c12c100dbcd598c977fab34cc3e0d2e146fc4f47"
+  },
+  "OtiwddQrG21ZYo7t": {
+    "name": "WF6-V1.7-CALLBACK-COMPLETENESS-INACTIVE",
+    "sha256": "22fc3724a78ff6a8a7af1e67152d87b715ff06304cea20ff23015cd1714bf2da"
+  },
+  "DSwtkgWBK6qm2z8A": {
+    "name": "WF2 - Git Patch & PR v5 CANONICAL (R22E + Brique 5)",
+    "sha256": "c405793830299d0671e17f97cc02fa162123c4c2933e0de269b44bb3b8c26287"
+  },
+  "Yh2VkmFbnk4kUBuT": {
+    "name": "My workflow",
+    "sha256": "8e7ef9682909c459699850f02633f22831218f3a373e37c28e237c9aa6ec59b4"
+  }
+}

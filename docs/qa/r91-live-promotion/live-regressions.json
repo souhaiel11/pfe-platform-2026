@@ -1,0 +1,603 @@
+{
+  "results": [
+    {
+      "label": "r90",
+      "spec": "wf2-association-guard.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/r91-live-promotion/r90-wf2-association-guard.spec.mjs.log"
+    },
+    {
+      "label": "r90",
+      "spec": "wf2-canonical-final.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/r91-live-promotion/r90-wf2-canonical-final.spec.mjs.log"
+    },
+    {
+      "label": "r90",
+      "spec": "wf2-code-node-sandbox.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/r91-live-promotion/r90-wf2-code-node-sandbox.spec.mjs.log"
+    },
+    {
+      "label": "r90",
+      "spec": "wf2-corrective-same-pr.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/r91-live-promotion/r90-wf2-corrective-same-pr.spec.mjs.log"
+    },
+    {
+      "label": "r90",
+      "spec": "wf2-cross-file-compile-gate.spec.mjs",
+      "exitCode": 1,
+      "log": "docs/qa/r91-live-promotion/r90-wf2-cross-file-compile-gate.spec.mjs.log"
+    },
+    {
+      "label": "r90",
+      "spec": "wf2-cross-file-type-coherence.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/r91-live-promotion/r90-wf2-cross-file-type-coherence.spec.mjs.log"
+    },
+    {
+      "label": "r90",
+      "spec": "wf2-dto-entity-decoupling.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/r91-live-promotion/r90-wf2-dto-entity-decoupling.spec.mjs.log"
+    },
+    {
+      "label": "r90",
+      "spec": "wf2-dto-source-discovery.spec.mjs",
+      "exitCode": 1,
+      "log": "docs/qa/r91-live-promotion/r90-wf2-dto-source-discovery.spec.mjs.log"
+    },
+    {
+      "label": "r90",
+      "spec": "wf2-failure-evidence-forwarding.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/r91-live-promotion/r90-wf2-failure-evidence-forwarding.spec.mjs.log"
+    },
+    {
+      "label": "r90",
+      "spec": "wf2-failure-persistence-audit.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/r91-live-promotion/r90-wf2-failure-persistence-audit.spec.mjs.log"
+    },
+    {
+      "label": "r90",
+      "spec": "wf2-fix-h-semantic-policy.spec.mjs",
+      "exitCode": 1,
+      "log": "docs/qa/r91-live-promotion/r90-wf2-fix-h-semantic-policy.spec.mjs.log"
+    },
+    {
+      "label": "r90",
+      "spec": "wf2-multifile-candidate-review.spec.mjs",
+      "exitCode": 1,
+      "log": "docs/qa/r91-live-promotion/r90-wf2-multifile-candidate-review.spec.mjs.log"
+    },
+    {
+      "label": "r90",
+      "spec": "wf2-patch-token-budget.spec.mjs",
+      "exitCode": 1,
+      "log": "docs/qa/r91-live-promotion/r90-wf2-patch-token-budget.spec.mjs.log"
+    },
+    {
+      "label": "r90",
+      "spec": "wf2-patch-truncation.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/r91-live-promotion/r90-wf2-patch-truncation.spec.mjs.log"
+    },
+    {
+      "label": "r90",
+      "spec": "wf2-placeholder-marker-context.spec.mjs",
+      "exitCode": 1,
+      "log": "docs/qa/r91-live-promotion/r90-wf2-placeholder-marker-context.spec.mjs.log"
+    },
+    {
+      "label": "r90",
+      "spec": "wf2-plan-relationship-api-validation.spec.mjs",
+      "exitCode": 1,
+      "log": "docs/qa/r91-live-promotion/r90-wf2-plan-relationship-api-validation.spec.mjs.log"
+    },
+    {
+      "label": "r90",
+      "spec": "wf2-preflight-rawcast.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/r91-live-promotion/r90-wf2-preflight-rawcast.spec.mjs.log"
+    },
+    {
+      "label": "r90",
+      "spec": "wf2-preflight-scanner-suppression.spec.mjs",
+      "exitCode": 1,
+      "log": "docs/qa/r91-live-promotion/r90-wf2-preflight-scanner-suppression.spec.mjs.log"
+    },
+    {
+      "label": "r90",
+      "spec": "wf2-promotion-identity.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/r91-live-promotion/r90-wf2-promotion-identity.spec.mjs.log"
+    },
+    {
+      "label": "r90",
+      "spec": "wf2-r19-3-dynamic.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/r91-live-promotion/r90-wf2-r19-3-dynamic.spec.mjs.log"
+    },
+    {
+      "label": "r90",
+      "spec": "wf2-r19-3c.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/r91-live-promotion/r90-wf2-r19-3c.spec.mjs.log"
+    },
+    {
+      "label": "r90",
+      "spec": "wf2-r22e-two-pass.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/r91-live-promotion/r90-wf2-r22e-two-pass.spec.mjs.log"
+    },
+    {
+      "label": "r90",
+      "spec": "wf2-r22e2b-nonprod-safety.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/r91-live-promotion/r90-wf2-r22e2b-nonprod-safety.spec.mjs.log"
+    },
+    {
+      "label": "r90",
+      "spec": "wf2-r22e2g-llm-timeout.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/r91-live-promotion/r90-wf2-r22e2g-llm-timeout.spec.mjs.log"
+    },
+    {
+      "label": "r90",
+      "spec": "wf2-r70-corrective-target-grounding.spec.mjs",
+      "exitCode": 1,
+      "log": "docs/qa/r91-live-promotion/r90-wf2-r70-corrective-target-grounding.spec.mjs.log"
+    },
+    {
+      "label": "r90",
+      "spec": "wf2-r71-corrective-source-authority.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/r91-live-promotion/r90-wf2-r71-corrective-source-authority.spec.mjs.log"
+    },
+    {
+      "label": "r90",
+      "spec": "wf2-r72-planner-output-budget.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/r91-live-promotion/r90-wf2-r72-planner-output-budget.spec.mjs.log"
+    },
+    {
+      "label": "r90",
+      "spec": "wf2-r73-corrective-target-propagation.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/r91-live-promotion/r90-wf2-r73-corrective-target-propagation.spec.mjs.log"
+    },
+    {
+      "label": "r90",
+      "spec": "wf2-r74-corrective-issue-canonicalization.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/r91-live-promotion/r90-wf2-r74-corrective-issue-canonicalization.spec.mjs.log"
+    },
+    {
+      "label": "r90",
+      "spec": "wf2-r75-corrective-cardinality-invariant.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/r91-live-promotion/r90-wf2-r75-corrective-cardinality-invariant.spec.mjs.log"
+    },
+    {
+      "label": "r90",
+      "spec": "wf2-r75-corrective-closure.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/r91-live-promotion/r90-wf2-r75-corrective-closure.spec.mjs.log"
+    },
+    {
+      "label": "r90",
+      "spec": "wf2-r77-corrective-plan-canonicalization.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/r91-live-promotion/r90-wf2-r77-corrective-plan-canonicalization.spec.mjs.log"
+    },
+    {
+      "label": "r90",
+      "spec": "wf2-r78-final-branch-head.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/r91-live-promotion/r90-wf2-r78-final-branch-head.spec.mjs.log"
+    },
+    {
+      "label": "r90",
+      "spec": "wf2-r81-2-writer-prompt.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/r91-live-promotion/r90-wf2-r81-2-writer-prompt.spec.mjs.log"
+    },
+    {
+      "label": "r90",
+      "spec": "wf2-r81-3-trust-binding.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/r91-live-promotion/r90-wf2-r81-3-trust-binding.spec.mjs.log"
+    },
+    {
+      "label": "r90",
+      "spec": "wf2-r83-sticky-notes.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/r91-live-promotion/r90-wf2-r83-sticky-notes.spec.mjs.log"
+    },
+    {
+      "label": "r90",
+      "spec": "wf2-r85-sticky-zone-labels.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/r91-live-promotion/r90-wf2-r85-sticky-zone-labels.spec.mjs.log"
+    },
+    {
+      "label": "r90",
+      "spec": "wf2-r86-sticky-zone-consolidation.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/r91-live-promotion/r90-wf2-r86-sticky-zone-consolidation.spec.mjs.log"
+    },
+    {
+      "label": "r90",
+      "spec": "wf2-r87-llm-retry.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/r91-live-promotion/r90-wf2-r87-llm-retry.spec.mjs.log"
+    },
+    {
+      "label": "r90",
+      "spec": "wf2-r88-opus-retry-backoff.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/r91-live-promotion/r90-wf2-r88-opus-retry-backoff.spec.mjs.log"
+    },
+    {
+      "label": "r90",
+      "spec": "wf2-r89-mapping-required-filename-fix.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/r91-live-promotion/r90-wf2-r89-mapping-required-filename-fix.spec.mjs.log"
+    },
+    {
+      "label": "r90",
+      "spec": "wf2-relationship-source-grounding.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/r91-live-promotion/r90-wf2-relationship-source-grounding.spec.mjs.log"
+    },
+    {
+      "label": "r90",
+      "spec": "wf2-resilience.spec.mjs",
+      "exitCode": 1,
+      "log": "docs/qa/r91-live-promotion/r90-wf2-resilience.spec.mjs.log"
+    },
+    {
+      "label": "r90",
+      "spec": "wf2-source-api.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/r91-live-promotion/r90-wf2-source-api.spec.mjs.log"
+    },
+    {
+      "label": "r90",
+      "spec": "wf2-source-context-completeness.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/r91-live-promotion/r90-wf2-source-context-completeness.spec.mjs.log"
+    },
+    {
+      "label": "r90",
+      "spec": "wf2-source-provenance.spec.mjs",
+      "exitCode": 1,
+      "log": "docs/qa/r91-live-promotion/r90-wf2-source-provenance.spec.mjs.log"
+    },
+    {
+      "label": "r90",
+      "spec": "wf2-verification-evidence.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/r91-live-promotion/r90-wf2-verification-evidence.spec.mjs.log"
+    },
+    {
+      "label": "r90",
+      "spec": "wf2-wire-type-coherence-failure-envelope.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/r91-live-promotion/r90-wf2-wire-type-coherence-failure-envelope.spec.mjs.log"
+    },
+    {
+      "label": "live-r91",
+      "spec": "wf2-association-guard.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/r91-live-promotion/live-r91-wf2-association-guard.spec.mjs.log"
+    },
+    {
+      "label": "live-r91",
+      "spec": "wf2-canonical-final.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/r91-live-promotion/live-r91-wf2-canonical-final.spec.mjs.log"
+    },
+    {
+      "label": "live-r91",
+      "spec": "wf2-code-node-sandbox.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/r91-live-promotion/live-r91-wf2-code-node-sandbox.spec.mjs.log"
+    },
+    {
+      "label": "live-r91",
+      "spec": "wf2-corrective-same-pr.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/r91-live-promotion/live-r91-wf2-corrective-same-pr.spec.mjs.log"
+    },
+    {
+      "label": "live-r91",
+      "spec": "wf2-cross-file-compile-gate.spec.mjs",
+      "exitCode": 1,
+      "log": "docs/qa/r91-live-promotion/live-r91-wf2-cross-file-compile-gate.spec.mjs.log"
+    },
+    {
+      "label": "live-r91",
+      "spec": "wf2-cross-file-type-coherence.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/r91-live-promotion/live-r91-wf2-cross-file-type-coherence.spec.mjs.log"
+    },
+    {
+      "label": "live-r91",
+      "spec": "wf2-dto-entity-decoupling.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/r91-live-promotion/live-r91-wf2-dto-entity-decoupling.spec.mjs.log"
+    },
+    {
+      "label": "live-r91",
+      "spec": "wf2-dto-source-discovery.spec.mjs",
+      "exitCode": 1,
+      "log": "docs/qa/r91-live-promotion/live-r91-wf2-dto-source-discovery.spec.mjs.log"
+    },
+    {
+      "label": "live-r91",
+      "spec": "wf2-failure-evidence-forwarding.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/r91-live-promotion/live-r91-wf2-failure-evidence-forwarding.spec.mjs.log"
+    },
+    {
+      "label": "live-r91",
+      "spec": "wf2-failure-persistence-audit.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/r91-live-promotion/live-r91-wf2-failure-persistence-audit.spec.mjs.log"
+    },
+    {
+      "label": "live-r91",
+      "spec": "wf2-fix-h-semantic-policy.spec.mjs",
+      "exitCode": 1,
+      "log": "docs/qa/r91-live-promotion/live-r91-wf2-fix-h-semantic-policy.spec.mjs.log"
+    },
+    {
+      "label": "live-r91",
+      "spec": "wf2-multifile-candidate-review.spec.mjs",
+      "exitCode": 1,
+      "log": "docs/qa/r91-live-promotion/live-r91-wf2-multifile-candidate-review.spec.mjs.log"
+    },
+    {
+      "label": "live-r91",
+      "spec": "wf2-patch-token-budget.spec.mjs",
+      "exitCode": 1,
+      "log": "docs/qa/r91-live-promotion/live-r91-wf2-patch-token-budget.spec.mjs.log"
+    },
+    {
+      "label": "live-r91",
+      "spec": "wf2-patch-truncation.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/r91-live-promotion/live-r91-wf2-patch-truncation.spec.mjs.log"
+    },
+    {
+      "label": "live-r91",
+      "spec": "wf2-placeholder-marker-context.spec.mjs",
+      "exitCode": 1,
+      "log": "docs/qa/r91-live-promotion/live-r91-wf2-placeholder-marker-context.spec.mjs.log"
+    },
+    {
+      "label": "live-r91",
+      "spec": "wf2-plan-relationship-api-validation.spec.mjs",
+      "exitCode": 1,
+      "log": "docs/qa/r91-live-promotion/live-r91-wf2-plan-relationship-api-validation.spec.mjs.log"
+    },
+    {
+      "label": "live-r91",
+      "spec": "wf2-preflight-rawcast.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/r91-live-promotion/live-r91-wf2-preflight-rawcast.spec.mjs.log"
+    },
+    {
+      "label": "live-r91",
+      "spec": "wf2-preflight-scanner-suppression.spec.mjs",
+      "exitCode": 1,
+      "log": "docs/qa/r91-live-promotion/live-r91-wf2-preflight-scanner-suppression.spec.mjs.log"
+    },
+    {
+      "label": "live-r91",
+      "spec": "wf2-promotion-identity.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/r91-live-promotion/live-r91-wf2-promotion-identity.spec.mjs.log"
+    },
+    {
+      "label": "live-r91",
+      "spec": "wf2-r19-3-dynamic.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/r91-live-promotion/live-r91-wf2-r19-3-dynamic.spec.mjs.log"
+    },
+    {
+      "label": "live-r91",
+      "spec": "wf2-r19-3c.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/r91-live-promotion/live-r91-wf2-r19-3c.spec.mjs.log"
+    },
+    {
+      "label": "live-r91",
+      "spec": "wf2-r22e-two-pass.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/r91-live-promotion/live-r91-wf2-r22e-two-pass.spec.mjs.log"
+    },
+    {
+      "label": "live-r91",
+      "spec": "wf2-r22e2b-nonprod-safety.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/r91-live-promotion/live-r91-wf2-r22e2b-nonprod-safety.spec.mjs.log"
+    },
+    {
+      "label": "live-r91",
+      "spec": "wf2-r22e2g-llm-timeout.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/r91-live-promotion/live-r91-wf2-r22e2g-llm-timeout.spec.mjs.log"
+    },
+    {
+      "label": "live-r91",
+      "spec": "wf2-r70-corrective-target-grounding.spec.mjs",
+      "exitCode": 1,
+      "log": "docs/qa/r91-live-promotion/live-r91-wf2-r70-corrective-target-grounding.spec.mjs.log"
+    },
+    {
+      "label": "live-r91",
+      "spec": "wf2-r71-corrective-source-authority.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/r91-live-promotion/live-r91-wf2-r71-corrective-source-authority.spec.mjs.log"
+    },
+    {
+      "label": "live-r91",
+      "spec": "wf2-r72-planner-output-budget.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/r91-live-promotion/live-r91-wf2-r72-planner-output-budget.spec.mjs.log"
+    },
+    {
+      "label": "live-r91",
+      "spec": "wf2-r73-corrective-target-propagation.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/r91-live-promotion/live-r91-wf2-r73-corrective-target-propagation.spec.mjs.log"
+    },
+    {
+      "label": "live-r91",
+      "spec": "wf2-r74-corrective-issue-canonicalization.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/r91-live-promotion/live-r91-wf2-r74-corrective-issue-canonicalization.spec.mjs.log"
+    },
+    {
+      "label": "live-r91",
+      "spec": "wf2-r75-corrective-cardinality-invariant.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/r91-live-promotion/live-r91-wf2-r75-corrective-cardinality-invariant.spec.mjs.log"
+    },
+    {
+      "label": "live-r91",
+      "spec": "wf2-r75-corrective-closure.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/r91-live-promotion/live-r91-wf2-r75-corrective-closure.spec.mjs.log"
+    },
+    {
+      "label": "live-r91",
+      "spec": "wf2-r77-corrective-plan-canonicalization.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/r91-live-promotion/live-r91-wf2-r77-corrective-plan-canonicalization.spec.mjs.log"
+    },
+    {
+      "label": "live-r91",
+      "spec": "wf2-r78-final-branch-head.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/r91-live-promotion/live-r91-wf2-r78-final-branch-head.spec.mjs.log"
+    },
+    {
+      "label": "live-r91",
+      "spec": "wf2-r81-2-writer-prompt.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/r91-live-promotion/live-r91-wf2-r81-2-writer-prompt.spec.mjs.log"
+    },
+    {
+      "label": "live-r91",
+      "spec": "wf2-r81-3-trust-binding.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/r91-live-promotion/live-r91-wf2-r81-3-trust-binding.spec.mjs.log"
+    },
+    {
+      "label": "live-r91",
+      "spec": "wf2-r83-sticky-notes.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/r91-live-promotion/live-r91-wf2-r83-sticky-notes.spec.mjs.log"
+    },
+    {
+      "label": "live-r91",
+      "spec": "wf2-r85-sticky-zone-labels.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/r91-live-promotion/live-r91-wf2-r85-sticky-zone-labels.spec.mjs.log"
+    },
+    {
+      "label": "live-r91",
+      "spec": "wf2-r86-sticky-zone-consolidation.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/r91-live-promotion/live-r91-wf2-r86-sticky-zone-consolidation.spec.mjs.log"
+    },
+    {
+      "label": "live-r91",
+      "spec": "wf2-r87-llm-retry.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/r91-live-promotion/live-r91-wf2-r87-llm-retry.spec.mjs.log"
+    },
+    {
+      "label": "live-r91",
+      "spec": "wf2-r88-opus-retry-backoff.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/r91-live-promotion/live-r91-wf2-r88-opus-retry-backoff.spec.mjs.log"
+    },
+    {
+      "label": "live-r91",
+      "spec": "wf2-r89-mapping-required-filename-fix.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/r91-live-promotion/live-r91-wf2-r89-mapping-required-filename-fix.spec.mjs.log"
+    },
+    {
+      "label": "live-r91",
+      "spec": "wf2-relationship-source-grounding.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/r91-live-promotion/live-r91-wf2-relationship-source-grounding.spec.mjs.log"
+    },
+    {
+      "label": "live-r91",
+      "spec": "wf2-resilience.spec.mjs",
+      "exitCode": 1,
+      "log": "docs/qa/r91-live-promotion/live-r91-wf2-resilience.spec.mjs.log"
+    },
+    {
+      "label": "live-r91",
+      "spec": "wf2-source-api.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/r91-live-promotion/live-r91-wf2-source-api.spec.mjs.log"
+    },
+    {
+      "label": "live-r91",
+      "spec": "wf2-source-context-completeness.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/r91-live-promotion/live-r91-wf2-source-context-completeness.spec.mjs.log"
+    },
+    {
+      "label": "live-r91",
+      "spec": "wf2-source-provenance.spec.mjs",
+      "exitCode": 1,
+      "log": "docs/qa/r91-live-promotion/live-r91-wf2-source-provenance.spec.mjs.log"
+    },
+    {
+      "label": "live-r91",
+      "spec": "wf2-verification-evidence.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/r91-live-promotion/live-r91-wf2-verification-evidence.spec.mjs.log"
+    },
+    {
+      "label": "live-r91",
+      "spec": "wf2-wire-type-coherence-failure-envelope.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/r91-live-promotion/live-r91-wf2-wire-type-coherence-failure-envelope.spec.mjs.log"
+    },
+    {
+      "label": "live-r91",
+      "spec": "wf2-cancellation.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/r91-live-promotion/live-r91-wf2-cancellation.spec.mjs.log"
+    }
+  ],
+  "commonFailures": [
+    "wf2-cross-file-compile-gate.spec.mjs",
+    "wf2-dto-source-discovery.spec.mjs",
+    "wf2-fix-h-semantic-policy.spec.mjs",
+    "wf2-multifile-candidate-review.spec.mjs",
+    "wf2-patch-token-budget.spec.mjs",
+    "wf2-placeholder-marker-context.spec.mjs",
+    "wf2-plan-relationship-api-validation.spec.mjs",
+    "wf2-preflight-scanner-suppression.spec.mjs",
+    "wf2-r70-corrective-target-grounding.spec.mjs",
+    "wf2-resilience.spec.mjs",
+    "wf2-source-provenance.spec.mjs"
+  ],
+  "newRegressions": [],
+  "resolvedBaselineFailures": [],
+  "artifact": "/home/souhaiel/pfe-2026/platform/docs/qa/r91-live-promotion/WF2-R91-POST-RESTART-ACTIVE.json",
+  "scope": "48 comparable legacy specs, plus cancellation feature tested only against extracted live; legacy primary fixture rebound; historical hardener specs retain historical sources"
+}

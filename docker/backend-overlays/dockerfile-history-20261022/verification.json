@@ -1,0 +1,23 @@
+{
+  "image": "local/pfe-dockerfile-history:20261022",
+  "baseImage": "local/pfe-dockerfile-fetch:20261022",
+  "change": "GET /api/dockerfile/analyses plus restoration on component initialization",
+  "tests": {
+    "backendTypeCheck": "PASS",
+    "frontendProductionBuild": "PASS, existing SCSS budget warning",
+    "frontendRestoreStates": "PASS",
+    "realReportRestoration": "PASS",
+    "routeJwtGuard": "PASS",
+    "latestAnalysisExcludesApply": "PASS",
+    "projectIsolation": "PASS",
+    "unauthenticatedHttp": 401,
+    "realHistoryHttp": 200
+  },
+  "restoredReport": {
+    "jobId": "8a443756-e168-493f-a782-23d7ad9dad68",
+    "status": "done",
+    "score": 22,
+    "issueCount": 9,
+    "sourceCharacters": 4230
+  }
+}

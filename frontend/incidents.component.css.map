@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": ["incidents.component.ts"],
-  "sourcesContent": ["\n    .source-tag {\n      font-size: 10px;\n      font-family: var(--font-mono);\n      color: var(--text-muted);\n      background: var(--bg-tertiary);\n      border: 1px solid var(--border);\n      padding: 2px 7px;\n      border-radius: var(--radius-sm);\n    }\n  "],
-  "mappings": ";AACI,CAAA;AACE,aAAA;AACA,eAAA,IAAA;AACA,SAAA,IAAA;AACA,cAAA,IAAA;AACA,UAAA,IAAA,MAAA,IAAA;AACA,WAAA,IAAA;AACA,iBAAA,IAAA;;",
-  "names": []
-}

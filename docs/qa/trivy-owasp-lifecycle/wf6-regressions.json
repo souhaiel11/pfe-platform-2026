@@ -1,0 +1,68 @@
+[
+  {
+    "file": "wf6-revalidate-batch-fix-identity.spec.mjs",
+    "exit": 0,
+    "tests": null,
+    "summary": []
+  },
+  {
+    "file": "wf6-r95-evaluation-failed-callback-fix.spec.mjs",
+    "exit": 0,
+    "tests": 12,
+    "summary": [
+      "# pass 12",
+      "# fail 0"
+    ]
+  },
+  {
+    "file": "wf6-security-remediation.spec.mjs",
+    "exit": 0,
+    "tests": 127,
+    "summary": [
+      "# pass 127",
+      "# fail 0"
+    ]
+  },
+  {
+    "file": "wf6-pr36-guard.spec.mjs",
+    "exit": 0,
+    "tests": 9,
+    "summary": [
+      "# pass 9",
+      "# fail 0"
+    ]
+  },
+  {
+    "file": "wf6-callback-completeness.spec.mjs",
+    "exit": 0,
+    "tests": 8,
+    "summary": [
+      "# pass 8",
+      "# fail 0"
+    ]
+  },
+  {
+    "file": "wf6-multicve-promotion-identity.spec.mjs",
+    "exit": 0,
+    "tests": null,
+    "summary": []
+  },
+  {
+    "file": "wf6-n8n-compatibility.spec.mjs",
+    "exit": 0,
+    "tests": 14,
+    "summary": [
+      "# pass 14",
+      "# fail 0"
+    ]
+  },
+  {
+    "file": "wf6-ack-contract.spec.mjs",
+    "exit": 0,
+    "tests": 9,
+    "summary": [
+      "# pass 9",
+      "# fail 0"
+    ]
+  }
+]

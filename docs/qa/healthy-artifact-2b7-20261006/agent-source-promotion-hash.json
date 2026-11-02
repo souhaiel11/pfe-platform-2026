@@ -1,0 +1,5 @@
+{
+  "approvedSourceSha256": "43328bfc2711e357de6db1694838309cfb5a9b6c4dea6ac7c5b802c074049d57",
+  "healthOnlyDiff": "agent-health-only.diff",
+  "allowlistFileSha256": "190012e8932d0d62abf301ef1e75a05f37e5c8e7141adbf135b1050b0a1b5068"
+}

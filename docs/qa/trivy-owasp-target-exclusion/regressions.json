@@ -1,0 +1,282 @@
+[
+  {
+    "file": "backend/src/dependency-compatibility/v1_8-compatibility-decision.spec.ts",
+    "exitCode": 0,
+    "tests": null
+  },
+  {
+    "file": "backend/src/dependency-compatibility/v1_8-remediation-plan-payload.spec.ts",
+    "exitCode": 0,
+    "tests": null
+  },
+  {
+    "file": "backend/src/dependency-compatibility/v1_8-security-remediation-gate.spec.ts",
+    "exitCode": 0,
+    "tests": null
+  },
+  {
+    "file": "backend/src/manual-remediation/finding-task-id-enrichment.spec.ts",
+    "exitCode": 0,
+    "tests": null
+  },
+  {
+    "file": "backend/src/manual-remediation/manual-remediation.service.batch.spec.ts",
+    "exitCode": 0,
+    "tests": null
+  },
+  {
+    "file": "backend/src/manual-remediation/manual-remediation.service.finding-task-ids.spec.ts",
+    "exitCode": 0,
+    "tests": null
+  },
+  {
+    "file": "backend/src/manual-remediation/manual-remediation.service.spec.ts",
+    "exitCode": 0,
+    "tests": null
+  },
+  {
+    "file": "backend/src/manual-remediation/manual-remediation.service.v1-8-decision.spec.ts",
+    "exitCode": 0,
+    "tests": null
+  },
+  {
+    "file": "backend/src/manual-remediation/manual-remediation.service.v1-8-enforcement.spec.ts",
+    "exitCode": 0,
+    "tests": null
+  },
+  {
+    "file": "backend/src/manual-remediation/manual-remediation.service.v1-8-fixedversion-override.spec.ts",
+    "exitCode": 0,
+    "tests": null
+  },
+  {
+    "file": "backend/src/manual-remediation/manual-remediation.service.wf6-result.spec.ts",
+    "exitCode": 0,
+    "tests": null
+  },
+  {
+    "file": "backend/src/manual-remediation/owasp-enrichment.spec.ts",
+    "exitCode": 0,
+    "tests": null
+  },
+  {
+    "file": "backend/src/manual-remediation/owasp-resync-safety.spec.ts",
+    "exitCode": 0,
+    "tests": null
+  },
+  {
+    "file": "backend/src/manual-remediation/owasp-trivy-fixed-version-correlation.integration.spec.ts",
+    "exitCode": 0,
+    "tests": null
+  },
+  {
+    "file": "backend/src/manual-remediation/owasp-trivy-fixed-version-correlation.spec.ts",
+    "exitCode": 0,
+    "tests": null
+  },
+  {
+    "file": "backend/src/manual-remediation/reconcile-stale-wf6-dispatch.spec.ts",
+    "exitCode": 0,
+    "tests": null
+  },
+  {
+    "file": "backend/src/manual-remediation/remediation-target-reservation.spec.ts",
+    "exitCode": 0,
+    "tests": 4
+  },
+  {
+    "file": "backend/src/manual-remediation/security-remediation-bridge.spec.ts",
+    "exitCode": 0,
+    "tests": 36
+  },
+  {
+    "file": "backend/src/manual-remediation/security-remediation-lifecycle.spec.ts",
+    "exitCode": 0,
+    "tests": 44
+  },
+  {
+    "file": "backend/src/security-remediation/fixed-version-normalizer.spec.ts",
+    "exitCode": 0,
+    "tests": null
+  },
+  {
+    "file": "backend/src/security-remediation/maven-dependency-resolution-check.spec.ts",
+    "exitCode": 0,
+    "tests": null
+  },
+  {
+    "file": "backend/src/security-remediation/maven-parent-patch-writer.spec.ts",
+    "exitCode": 0,
+    "tests": null
+  },
+  {
+    "file": "backend/src/security-remediation/maven-provenance-resolver.spec.ts",
+    "exitCode": 0,
+    "tests": null
+  },
+  {
+    "file": "backend/src/security-remediation/maven-remediation-scope.spec.ts",
+    "exitCode": 0,
+    "tests": null
+  },
+  {
+    "file": "backend/src/security-remediation/maven-security-patch-writer-batch.spec.ts",
+    "exitCode": 0,
+    "tests": null
+  },
+  {
+    "file": "backend/src/security-remediation/maven-security-patch-writer.spec.ts",
+    "exitCode": 0,
+    "tests": null
+  },
+  {
+    "file": "backend/src/security-remediation/parent-version-effective-model-check.spec.ts",
+    "exitCode": 0,
+    "tests": null
+  },
+  {
+    "file": "backend/src/security-remediation/retry-e2e-harness.spec.ts",
+    "exitCode": 0,
+    "tests": 30
+  },
+  {
+    "file": "backend/src/security-remediation/security-branch-name.spec.ts",
+    "exitCode": 0,
+    "tests": null
+  },
+  {
+    "file": "backend/src/security-remediation/security-candidate-identity.spec.ts",
+    "exitCode": 0,
+    "tests": null
+  },
+  {
+    "file": "backend/src/security-remediation/security-eligibility-classifier.spec.ts",
+    "exitCode": 0,
+    "tests": null
+  },
+  {
+    "file": "backend/src/security-remediation/security-finding-resolver.service.spec.ts",
+    "exitCode": 0,
+    "tests": null
+  },
+  {
+    "file": "backend/src/security-remediation/security-patch-guard.spec.ts",
+    "exitCode": 0,
+    "tests": null
+  },
+  {
+    "file": "backend/src/security-remediation/security-remediation-batch-closure.spec.ts",
+    "exitCode": 0,
+    "tests": null
+  },
+  {
+    "file": "backend/src/security-remediation/security-remediation-batch-git-metadata.spec.ts",
+    "exitCode": 0,
+    "tests": null
+  },
+  {
+    "file": "backend/src/security-remediation/security-remediation-evaluate.dto.spec.ts",
+    "exitCode": 0,
+    "tests": null
+  },
+  {
+    "file": "backend/src/security-remediation/security-remediation-git-metadata.spec.ts",
+    "exitCode": 0,
+    "tests": null
+  },
+  {
+    "file": "backend/src/security-remediation/security-remediation-revalidate-batch.dto.spec.ts",
+    "exitCode": 0,
+    "tests": null
+  },
+  {
+    "file": "backend/src/security-remediation/security-remediation-revalidate.dto.spec.ts",
+    "exitCode": 0,
+    "tests": null
+  },
+  {
+    "file": "backend/src/security-remediation/security-remediation.controller.batch.spec.ts",
+    "exitCode": 0,
+    "tests": null
+  },
+  {
+    "file": "backend/src/security-remediation/security-remediation.controller.spec.ts",
+    "exitCode": 0,
+    "tests": null
+  },
+  {
+    "file": "backend/src/security-remediation/target-reservation-entrypoints.spec.ts",
+    "exitCode": 0,
+    "tests": 4
+  },
+  {
+    "file": "backend/src/security-remediation/version-selection-policy.spec.ts",
+    "exitCode": 0,
+    "tests": null
+  },
+  {
+    "file": "backend/src/security-remediation/wf6-batch-remediation-result.dto.spec.ts",
+    "exitCode": 0,
+    "tests": null
+  },
+  {
+    "file": "backend/src/security-remediation/wf6-remediation-result.dto.spec.ts",
+    "exitCode": 0,
+    "tests": null
+  },
+  {
+    "file": "n8n-workflows/scripts/wf6-ack-contract.spec.mjs",
+    "exitCode": 0,
+    "tests": 9
+  },
+  {
+    "file": "n8n-workflows/scripts/wf6-attempt-lifecycle.spec.mjs",
+    "exitCode": 0,
+    "tests": 12
+  },
+  {
+    "file": "n8n-workflows/scripts/wf6-callback-completeness.spec.mjs",
+    "exitCode": 0,
+    "tests": 8
+  },
+  {
+    "file": "n8n-workflows/scripts/wf6-multicve-promotion-identity.spec.mjs",
+    "exitCode": 0,
+    "tests": null
+  },
+  {
+    "file": "n8n-workflows/scripts/wf6-n8n-compatibility.spec.mjs",
+    "exitCode": 0,
+    "tests": 14
+  },
+  {
+    "file": "n8n-workflows/scripts/wf6-pr36-guard.spec.mjs",
+    "exitCode": 0,
+    "tests": 9
+  },
+  {
+    "file": "n8n-workflows/scripts/wf6-r95-evaluation-failed-callback-fix.spec.mjs",
+    "exitCode": 0,
+    "tests": 12
+  },
+  {
+    "file": "n8n-workflows/scripts/wf6-retry-e2e-harness.spec.mjs",
+    "exitCode": 0,
+    "tests": 9
+  },
+  {
+    "file": "n8n-workflows/scripts/wf6-revalidate-batch-fix-identity.spec.mjs",
+    "exitCode": 0,
+    "tests": null
+  },
+  {
+    "file": "n8n-workflows/scripts/wf6-security-remediation.spec.mjs",
+    "exitCode": 0,
+    "tests": 127
+  },
+  {
+    "file": "backend/src/incidents/remediation-batch.spec.ts",
+    "exitCode": 0,
+    "tests": null
+  }
+]

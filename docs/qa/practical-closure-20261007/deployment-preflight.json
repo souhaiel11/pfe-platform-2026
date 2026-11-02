@@ -1,0 +1,14 @@
+{
+  "flags": {
+    "dispatch": "false",
+    "harness": "false"
+  },
+  "counts": {
+    "plans": 0,
+    "reservations": 0,
+    "writers": 0
+  },
+  "component": "candidate-verifier",
+  "image": "sha256:947ceacfa1633f8b36889a77bb7040d2abce90d51c5972c3fd12a41f45d6a244",
+  "sourceCommit": "62dd93fed2b519b1b7f8a63ae92e95158df5e91a"
+}

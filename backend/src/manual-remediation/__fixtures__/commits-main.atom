@@ -1,0 +1,348 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xmlns:media="http://search.yahoo.com/mrss/" xml:lang="en-US">
+  <id>tag:github.com,2008:/souhaiel11/projet-validation-vermeg/commits/main</id>
+  <link type="text/html" rel="alternate" href="https://github.com/souhaiel11/projet-validation-vermeg/commits/main"/>
+  <link type="application/atom+xml" rel="self" href="https://github.com/souhaiel11/projet-validation-vermeg/commits/main.atom"/>
+  <title>Recent Commits to projet-validation-vermeg:main</title>
+  <updated>2026-10-27T16:42:32Z</updated>
+  <entry>
+    <id>tag:github.com,2008:Grit::Commit/1d73b80923954a0eeb5874a8e6b710211f6bc564</id>
+    <link type="text/html" rel="alternate" href="https://github.com/souhaiel11/projet-validation-vermeg/commit/1d73b80923954a0eeb5874a8e6b710211f6bc564"/>
+    <title>
+        Merge pull request #35 from souhaiel11/security/fix/a5b42d5e8366-70dd…
+    </title>
+    <updated>2026-10-27T16:42:32Z</updated>
+    <media:thumbnail height="30" width="30" url="https://avatars.githubusercontent.com/u/131708236?s=30&amp;v=4"/>
+    <author>
+      <name>souhaiel11</name>
+      <uri>https://github.com/souhaiel11</uri>
+    </author>
+    <content type="html">
+      &lt;pre style=&#39;white-space:pre-wrap;width:81ex&#39;&gt;Merge pull request #35 from souhaiel11/security/fix/a5b42d5e8366-70dde66ac5c5
+
+fix(security): remediate 2 dependency versions&lt;/pre&gt;
+    </content>
+  </entry>
+  <entry>
+    <id>tag:github.com,2008:Grit::Commit/91c8829086200b8db2f2c5b421d36da9fe52c8b3</id>
+    <link type="text/html" rel="alternate" href="https://github.com/souhaiel11/projet-validation-vermeg/commit/91c8829086200b8db2f2c5b421d36da9fe52c8b3"/>
+    <title>
+        fix(security): remediate 2 dependency versions
+    </title>
+    <updated>2026-10-27T16:40:25Z</updated>
+    <media:thumbnail height="30" width="30" url="https://avatars.githubusercontent.com/u/131708236?s=30&amp;v=4"/>
+    <author>
+      <name>souhaiel11</name>
+      <uri>https://github.com/souhaiel11</uri>
+    </author>
+    <content type="html">
+      &lt;pre style=&#39;white-space:pre-wrap;width:81ex&#39;&gt;fix(security): remediate 2 dependency versions&lt;/pre&gt;
+    </content>
+  </entry>
+  <entry>
+    <id>tag:github.com,2008:Grit::Commit/d06f3bb2ebc87300aca9cb8554fa3a97b45baf4d</id>
+    <link type="text/html" rel="alternate" href="https://github.com/souhaiel11/projet-validation-vermeg/commit/d06f3bb2ebc87300aca9cb8554fa3a97b45baf4d"/>
+    <title>
+        Merge pull request #34 from souhaiel11/security/fix/3a6f9f0361a1-3012…
+    </title>
+    <updated>2026-10-27T16:36:37Z</updated>
+    <media:thumbnail height="30" width="30" url="https://avatars.githubusercontent.com/u/131708236?s=30&amp;v=4"/>
+    <author>
+      <name>souhaiel11</name>
+      <uri>https://github.com/souhaiel11</uri>
+    </author>
+    <content type="html">
+      &lt;pre style=&#39;white-space:pre-wrap;width:81ex&#39;&gt;Merge pull request #34 from souhaiel11/security/fix/3a6f9f0361a1-3012792e7522
+
+fix(security): remediate 2 dependency versions&lt;/pre&gt;
+    </content>
+  </entry>
+  <entry>
+    <id>tag:github.com,2008:Grit::Commit/1f5cbaeede3945690177655908788c6d8e35a365</id>
+    <link type="text/html" rel="alternate" href="https://github.com/souhaiel11/projet-validation-vermeg/commit/1f5cbaeede3945690177655908788c6d8e35a365"/>
+    <title>
+        fix(security): remediate 2 dependency versions
+    </title>
+    <updated>2026-10-27T16:33:55Z</updated>
+    <media:thumbnail height="30" width="30" url="https://avatars.githubusercontent.com/u/131708236?s=30&amp;v=4"/>
+    <author>
+      <name>souhaiel11</name>
+      <uri>https://github.com/souhaiel11</uri>
+    </author>
+    <content type="html">
+      &lt;pre style=&#39;white-space:pre-wrap;width:81ex&#39;&gt;fix(security): remediate 2 dependency versions&lt;/pre&gt;
+    </content>
+  </entry>
+  <entry>
+    <id>tag:github.com,2008:Grit::Commit/300a5c2e8f870d8151c3be8c4a60079153bf7e1d</id>
+    <link type="text/html" rel="alternate" href="https://github.com/souhaiel11/projet-validation-vermeg/commit/300a5c2e8f870d8151c3be8c4a60079153bf7e1d"/>
+    <title>
+        Revert h2 and gson dependency versions
+    </title>
+    <updated>2026-10-27T16:26:58Z</updated>
+    <media:thumbnail height="30" width="30" url="https://avatars.githubusercontent.com/u/131708236?s=30&amp;v=4"/>
+    <author>
+      <name>souhaiel11</name>
+      <uri>https://github.com/souhaiel11</uri>
+    </author>
+    <content type="html">
+      &lt;pre style=&#39;white-space:pre-wrap;width:81ex&#39;&gt;Revert h2 and gson dependency versions
+
+Reverted versions of h2 and gson dependencies due to vulnerabilities.&lt;/pre&gt;
+    </content>
+  </entry>
+  <entry>
+    <id>tag:github.com,2008:Grit::Commit/49b55810588e7e7a34f1344cfb878edf1c27a1f5</id>
+    <link type="text/html" rel="alternate" href="https://github.com/souhaiel11/projet-validation-vermeg/commit/49b55810588e7e7a34f1344cfb878edf1c27a1f5"/>
+    <title>
+        Merge pull request #33 from souhaiel11/security/fix/3a6f9f0361a1-0cd7…
+    </title>
+    <updated>2026-10-27T16:18:40Z</updated>
+    <media:thumbnail height="30" width="30" url="https://avatars.githubusercontent.com/u/131708236?s=30&amp;v=4"/>
+    <author>
+      <name>souhaiel11</name>
+      <uri>https://github.com/souhaiel11</uri>
+    </author>
+    <content type="html">
+      &lt;pre style=&#39;white-space:pre-wrap;width:81ex&#39;&gt;Merge pull request #33 from souhaiel11/security/fix/3a6f9f0361a1-0cd72e6c0b98
+
+fix(security): remediate 2 dependency versions&lt;/pre&gt;
+    </content>
+  </entry>
+  <entry>
+    <id>tag:github.com,2008:Grit::Commit/89ff1ac77b764f45371da032b66697f8c5e33231</id>
+    <link type="text/html" rel="alternate" href="https://github.com/souhaiel11/projet-validation-vermeg/commit/89ff1ac77b764f45371da032b66697f8c5e33231"/>
+    <title>
+        fix(security): remediate 2 dependency versions
+    </title>
+    <updated>2026-10-27T16:16:09Z</updated>
+    <media:thumbnail height="30" width="30" url="https://avatars.githubusercontent.com/u/131708236?s=30&amp;v=4"/>
+    <author>
+      <name>souhaiel11</name>
+      <uri>https://github.com/souhaiel11</uri>
+    </author>
+    <content type="html">
+      &lt;pre style=&#39;white-space:pre-wrap;width:81ex&#39;&gt;fix(security): remediate 2 dependency versions&lt;/pre&gt;
+    </content>
+  </entry>
+  <entry>
+    <id>tag:github.com,2008:Grit::Commit/466318cefd965491378ed99ac8214147489e672a</id>
+    <link type="text/html" rel="alternate" href="https://github.com/souhaiel11/projet-validation-vermeg/commit/466318cefd965491378ed99ac8214147489e672a"/>
+    <title>
+        Update pom.xml
+    </title>
+    <updated>2026-10-27T15:53:08Z</updated>
+    <media:thumbnail height="30" width="30" url="https://avatars.githubusercontent.com/u/131708236?s=30&amp;v=4"/>
+    <author>
+      <name>souhaiel11</name>
+      <uri>https://github.com/souhaiel11</uri>
+    </author>
+    <content type="html">
+      &lt;pre style=&#39;white-space:pre-wrap;width:81ex&#39;&gt;Update pom.xml&lt;/pre&gt;
+    </content>
+  </entry>
+  <entry>
+    <id>tag:github.com,2008:Grit::Commit/17a43b7614a8935132f17ebe1d6b18579b5beb2b</id>
+    <link type="text/html" rel="alternate" href="https://github.com/souhaiel11/projet-validation-vermeg/commit/17a43b7614a8935132f17ebe1d6b18579b5beb2b"/>
+    <title>
+        Merge pull request #32 from souhaiel11/security/fix/3a6f9f0361a1-bfe6…
+    </title>
+    <updated>2026-10-27T15:29:24Z</updated>
+    <media:thumbnail height="30" width="30" url="https://avatars.githubusercontent.com/u/131708236?s=30&amp;v=4"/>
+    <author>
+      <name>souhaiel11</name>
+      <uri>https://github.com/souhaiel11</uri>
+    </author>
+    <content type="html">
+      &lt;pre style=&#39;white-space:pre-wrap;width:81ex&#39;&gt;Merge pull request #32 from souhaiel11/security/fix/3a6f9f0361a1-bfe69fc377a7
+
+fix(security): remediate 2 dependency versions&lt;/pre&gt;
+    </content>
+  </entry>
+  <entry>
+    <id>tag:github.com,2008:Grit::Commit/b61478545cb85c8f4d5d2f0141a6220762a72503</id>
+    <link type="text/html" rel="alternate" href="https://github.com/souhaiel11/projet-validation-vermeg/commit/b61478545cb85c8f4d5d2f0141a6220762a72503"/>
+    <title>
+        fix(security): remediate 2 dependency versions
+    </title>
+    <updated>2026-10-27T15:26:54Z</updated>
+    <media:thumbnail height="30" width="30" url="https://avatars.githubusercontent.com/u/131708236?s=30&amp;v=4"/>
+    <author>
+      <name>souhaiel11</name>
+      <uri>https://github.com/souhaiel11</uri>
+    </author>
+    <content type="html">
+      &lt;pre style=&#39;white-space:pre-wrap;width:81ex&#39;&gt;fix(security): remediate 2 dependency versions&lt;/pre&gt;
+    </content>
+  </entry>
+  <entry>
+    <id>tag:github.com,2008:Grit::Commit/734e16ec533e219d0c3717097fe1822f522aba48</id>
+    <link type="text/html" rel="alternate" href="https://github.com/souhaiel11/projet-validation-vermeg/commit/734e16ec533e219d0c3717097fe1822f522aba48"/>
+    <title>
+        Update pom.xml
+    </title>
+    <updated>2026-10-27T12:47:56Z</updated>
+    <media:thumbnail height="30" width="30" url="https://avatars.githubusercontent.com/u/131708236?s=30&amp;v=4"/>
+    <author>
+      <name>souhaiel11</name>
+      <uri>https://github.com/souhaiel11</uri>
+    </author>
+    <content type="html">
+      &lt;pre style=&#39;white-space:pre-wrap;width:81ex&#39;&gt;Update pom.xml&lt;/pre&gt;
+    </content>
+  </entry>
+  <entry>
+    <id>tag:github.com,2008:Grit::Commit/c869a24b1f76a2129197aeee4f7f39dd03ba6828</id>
+    <link type="text/html" rel="alternate" href="https://github.com/souhaiel11/projet-validation-vermeg/commit/c869a24b1f76a2129197aeee4f7f39dd03ba6828"/>
+    <title>
+        Merge pull request #31 from souhaiel11/security/fix/3a6f9f0361a1-71f3…
+    </title>
+    <updated>2026-10-27T12:36:35Z</updated>
+    <media:thumbnail height="30" width="30" url="https://avatars.githubusercontent.com/u/131708236?s=30&amp;v=4"/>
+    <author>
+      <name>souhaiel11</name>
+      <uri>https://github.com/souhaiel11</uri>
+    </author>
+    <content type="html">
+      &lt;pre style=&#39;white-space:pre-wrap;width:81ex&#39;&gt;Merge pull request #31 from souhaiel11/security/fix/3a6f9f0361a1-71f3b7291216
+
+fix(security): remediate 2 dependency versions&lt;/pre&gt;
+    </content>
+  </entry>
+  <entry>
+    <id>tag:github.com,2008:Grit::Commit/4b27b2554932b91e90dfeffb75447af7a31ce534</id>
+    <link type="text/html" rel="alternate" href="https://github.com/souhaiel11/projet-validation-vermeg/commit/4b27b2554932b91e90dfeffb75447af7a31ce534"/>
+    <title>
+        fix(security): remediate 2 dependency versions
+    </title>
+    <updated>2026-10-27T12:22:49Z</updated>
+    <media:thumbnail height="30" width="30" url="https://avatars.githubusercontent.com/u/131708236?s=30&amp;v=4"/>
+    <author>
+      <name>souhaiel11</name>
+      <uri>https://github.com/souhaiel11</uri>
+    </author>
+    <content type="html">
+      &lt;pre style=&#39;white-space:pre-wrap;width:81ex&#39;&gt;fix(security): remediate 2 dependency versions&lt;/pre&gt;
+    </content>
+  </entry>
+  <entry>
+    <id>tag:github.com,2008:Grit::Commit/243fd4690eeed675359186d25382e1f2222736c6</id>
+    <link type="text/html" rel="alternate" href="https://github.com/souhaiel11/projet-validation-vermeg/commit/243fd4690eeed675359186d25382e1f2222736c6"/>
+    <title>
+        Merge pull request #30 from souhaiel11/fix/pfe-ad7cfe48-a7fb-4651-ac3…
+    </title>
+    <updated>2026-10-27T11:05:16Z</updated>
+    <media:thumbnail height="30" width="30" url="https://avatars.githubusercontent.com/u/131708236?s=30&amp;v=4"/>
+    <author>
+      <name>souhaiel11</name>
+      <uri>https://github.com/souhaiel11</uri>
+    </author>
+    <content type="html">
+      &lt;pre style=&#39;white-space:pre-wrap;width:81ex&#39;&gt;Merge pull request #30 from souhaiel11/fix/pfe-ad7cfe48-a7fb-4651-ac3d-67586f7e2638-78fb1905-5aa2-4226-852b-426020743b92
+
+Correction des problèmes Sonar approuvés&lt;/pre&gt;
+    </content>
+  </entry>
+  <entry>
+    <id>tag:github.com,2008:Grit::Commit/63ebcf8af24470583070ed15afcc036b6ce3faf2</id>
+    <link type="text/html" rel="alternate" href="https://github.com/souhaiel11/projet-validation-vermeg/commit/63ebcf8af24470583070ed15afcc036b6ce3faf2"/>
+    <title>
+        fix(security): candidate remediation for batch 150252151c88d5cfe24ec5…
+    </title>
+    <updated>2026-10-27T11:04:33Z</updated>
+    <media:thumbnail height="30" width="30" url="https://avatars.githubusercontent.com/u/131708236?s=30&amp;v=4"/>
+    <author>
+      <name>souhaiel11</name>
+      <uri>https://github.com/souhaiel11</uri>
+    </author>
+    <content type="html">
+      &lt;pre style=&#39;white-space:pre-wrap;width:81ex&#39;&gt;fix(security): candidate remediation for batch 150252151c88d5cfe24ec5a2d67dc8e03474afbc57516384890c605cbbd239c5&lt;/pre&gt;
+    </content>
+  </entry>
+  <entry>
+    <id>tag:github.com,2008:Grit::Commit/7edf41830126e910f7226f6a49374c110baf1547</id>
+    <link type="text/html" rel="alternate" href="https://github.com/souhaiel11/projet-validation-vermeg/commit/7edf41830126e910f7226f6a49374c110baf1547"/>
+    <title>
+        Merge pull request #29 from souhaiel11/fix/pfe-ad7cfe48-a7fb-4651-ac3…
+    </title>
+    <updated>2026-10-27T11:03:00Z</updated>
+    <media:thumbnail height="30" width="30" url="https://avatars.githubusercontent.com/u/131708236?s=30&amp;v=4"/>
+    <author>
+      <name>souhaiel11</name>
+      <uri>https://github.com/souhaiel11</uri>
+    </author>
+    <content type="html">
+      &lt;pre style=&#39;white-space:pre-wrap;width:81ex&#39;&gt;Merge pull request #29 from souhaiel11/fix/pfe-ad7cfe48-a7fb-4651-ac3d-67586f7e2638-03b180a2-4eb5-4299-8ed8-f644e1116307
+
+Correction des problèmes Sonar approuvés&lt;/pre&gt;
+    </content>
+  </entry>
+  <entry>
+    <id>tag:github.com,2008:Grit::Commit/194ea422d16a04abdffc0835f0236e71f6ed32d7</id>
+    <link type="text/html" rel="alternate" href="https://github.com/souhaiel11/projet-validation-vermeg/commit/194ea422d16a04abdffc0835f0236e71f6ed32d7"/>
+    <title>
+        fix(security): candidate remediation for batch c7b8a6d2d1c38786cbf702…
+    </title>
+    <updated>2026-10-27T11:01:48Z</updated>
+    <media:thumbnail height="30" width="30" url="https://avatars.githubusercontent.com/u/131708236?s=30&amp;v=4"/>
+    <author>
+      <name>souhaiel11</name>
+      <uri>https://github.com/souhaiel11</uri>
+    </author>
+    <content type="html">
+      &lt;pre style=&#39;white-space:pre-wrap;width:81ex&#39;&gt;fix(security): candidate remediation for batch c7b8a6d2d1c38786cbf7029d048c6c3c538652b9cb0f2f7551a07bfc910d3ea5&lt;/pre&gt;
+    </content>
+  </entry>
+  <entry>
+    <id>tag:github.com,2008:Grit::Commit/303c86ebd0b859cec8dd2c398d40808662c469c1</id>
+    <link type="text/html" rel="alternate" href="https://github.com/souhaiel11/projet-validation-vermeg/commit/303c86ebd0b859cec8dd2c398d40808662c469c1"/>
+    <title>
+        Merge pull request #28 from souhaiel11/fix/pfe-ad7cfe48-a7fb-4651-ac3…
+    </title>
+    <updated>2026-10-27T10:21:05Z</updated>
+    <media:thumbnail height="30" width="30" url="https://avatars.githubusercontent.com/u/131708236?s=30&amp;v=4"/>
+    <author>
+      <name>souhaiel11</name>
+      <uri>https://github.com/souhaiel11</uri>
+    </author>
+    <content type="html">
+      &lt;pre style=&#39;white-space:pre-wrap;width:81ex&#39;&gt;Merge pull request #28 from souhaiel11/fix/pfe-ad7cfe48-a7fb-4651-ac3d-67586f7e2638-7858ec4e-9670-4469-bcaa-9e576573d697
+
+Correction des problèmes Sonar approuvés&lt;/pre&gt;
+    </content>
+  </entry>
+  <entry>
+    <id>tag:github.com,2008:Grit::Commit/a5a05fac47f6e20fd82b4d80fcb292fd00fb1fed</id>
+    <link type="text/html" rel="alternate" href="https://github.com/souhaiel11/projet-validation-vermeg/commit/a5a05fac47f6e20fd82b4d80fcb292fd00fb1fed"/>
+    <title>
+        fix(security): candidate remediation for batch c7b8a6d2d1c38786cbf702…
+    </title>
+    <updated>2026-10-27T10:19:53Z</updated>
+    <media:thumbnail height="30" width="30" url="https://avatars.githubusercontent.com/u/131708236?s=30&amp;v=4"/>
+    <author>
+      <name>souhaiel11</name>
+      <uri>https://github.com/souhaiel11</uri>
+    </author>
+    <content type="html">
+      &lt;pre style=&#39;white-space:pre-wrap;width:81ex&#39;&gt;fix(security): candidate remediation for batch c7b8a6d2d1c38786cbf7029d048c6c3c538652b9cb0f2f7551a07bfc910d3ea5&lt;/pre&gt;
+    </content>
+  </entry>
+  <entry>
+    <id>tag:github.com,2008:Grit::Commit/7a7f73c60711b5360cc4440b54407c399dc3f6a5</id>
+    <link type="text/html" rel="alternate" href="https://github.com/souhaiel11/projet-validation-vermeg/commit/7a7f73c60711b5360cc4440b54407c399dc3f6a5"/>
+    <title>
+        Merge pull request #27 from souhaiel11/ci/dockerfile-remediation-2026…
+    </title>
+    <updated>2026-10-27T10:00:20Z</updated>
+    <media:thumbnail height="30" width="30" url="https://avatars.githubusercontent.com/u/131708236?s=30&amp;v=4"/>
+    <author>
+      <name>souhaiel11</name>
+      <uri>https://github.com/souhaiel11</uri>
+    </author>
+    <content type="html">
+      &lt;pre style=&#39;white-space:pre-wrap;width:81ex&#39;&gt;Merge pull request #27 from souhaiel11/ci/dockerfile-remediation-2026-10-27T10-00-08
+
+🤖 Remédiation Dockerfile (agent IA, gate validé)&lt;/pre&gt;
+    </content>
+  </entry>
+</feed>

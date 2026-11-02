@@ -1,3 +1,4 @@
+// Modèle de données de l'ancien cycle de vie "bug" (legacy, remplacé par incidents/security-remediation).
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne } from 'typeorm';
 import { Project } from '../projects/project.entity';
 

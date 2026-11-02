@@ -1,0 +1,30 @@
+{
+  "request": {
+    "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+    "requestId": "technical-healthy-canary-2b7",
+    "imageTag": "151",
+    "artifactDigest": "sha256:6dc3cdba69592a91a5a1569978bcfca74d4080597a769ab368ed585ba397bcf5",
+    "target": {
+      "provider": "azure-container-instances",
+      "resourceGroup": "rg-pfe-devsecops",
+      "registry": "acrpfedevsecops",
+      "targetName": "aci-pfe-app-test-healthy-canary",
+      "imageRepository": "pfe-app-test",
+      "cpu": "1",
+      "memoryInGb": "1",
+      "ports": [
+        "8080"
+      ],
+      "healthCheck": {
+        "path": "/api/auth/health",
+        "port": "8080",
+        "client": "sh",
+        "expectedBody": "OK"
+      }
+    }
+  },
+  "status": 400,
+  "body": {
+    "error": "INVALID_HEALTH_CHECK"
+  }
+}

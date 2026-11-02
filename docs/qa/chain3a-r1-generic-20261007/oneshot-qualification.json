@@ -1,0 +1,267 @@
+{
+  "scope": "NETWORK_NONE_DISPOSABLE_ONLY",
+  "reusedService": true,
+  "checks": {
+    "defaultDryRunZeroChanges": true,
+    "explicitDryRunZeroChanges": true,
+    "remoteFailClosed": true,
+    "staleAndWrongReceiptRejected": true,
+    "explicitFreezeAndOptInRequired": true,
+    "applyCannotOmitHashConfirmation": true,
+    "exactManifestRequired": true,
+    "findingIdentityDriftRejected": true,
+    "extraTaskRejected": true,
+    "missingTaskRejected": true,
+    "corruptedModernFailsClosed": true,
+    "groupRollbackAfterEarlierWrite": true,
+    "apply14Tasks8GroupsZeroClaims": true,
+    "historyCountersExecutionReferencesAndMicrosecondsPreserved": true,
+    "secondRunIdempotent": true,
+    "twoIndependentProcessesSafe": true,
+    "real4GGuardPass": true,
+    "futureEligibilityEvaluableWithoutMutation": true,
+    "singleWriterSiblingBlockedBeforeAttempt": true
+  },
+  "runs": [
+    {
+      "code": 0,
+      "pid": 14,
+      "audit": "/audit/run-1.json",
+      "mode": "DRY_RUN"
+    },
+    {
+      "code": 0,
+      "pid": 21,
+      "audit": "/audit/run-2.json",
+      "mode": "DRY_RUN"
+    },
+    {
+      "code": 1,
+      "pid": 28,
+      "audit": "/audit/run-3.json",
+      "mode": "APPLY",
+      "error": {
+        "name": "ConflictException",
+        "reason": "LEGACY_REMOTE_WRITER_NOT_SETTLED"
+      }
+    },
+    {
+      "code": 1,
+      "pid": 35,
+      "audit": "/audit/run-4.json",
+      "mode": "APPLY",
+      "error": {
+        "name": "ConflictException",
+        "reason": "LEGACY_REMOTE_REFERENCE_MISSING_DRIFTED_OR_AMBIGUOUS"
+      }
+    },
+    {
+      "code": 1,
+      "pid": 42,
+      "audit": "/audit/run-5.json",
+      "mode": "APPLY",
+      "error": {
+        "name": "ConflictException",
+        "reason": "LEGACY_REVIEWED_REMOTE_INVENTORY_DRIFTED"
+      }
+    },
+    {
+      "code": 1,
+      "pid": 49,
+      "audit": "/audit/run-6.json",
+      "mode": "APPLY",
+      "error": {
+        "name": "ConflictException",
+        "reason": "LEGACY_REMOTE_WRITER_NOT_SETTLED"
+      }
+    },
+    {
+      "code": 1,
+      "pid": 56,
+      "audit": "/audit/run-7.json",
+      "mode": "APPLY",
+      "error": {
+        "name": "ConflictException",
+        "reason": "LEGACY_REMOTE_WRITER_NOT_QUIESCENT"
+      }
+    },
+    {
+      "code": 1,
+      "pid": 63,
+      "audit": "/audit/run-8.json",
+      "mode": "APPLY",
+      "error": {
+        "name": "ServiceUnavailableException",
+        "reason": "LEGACY_REMOTE_SETTLEMENT_UNVERIFIABLE"
+      }
+    },
+    {
+      "code": 1,
+      "pid": 70,
+      "audit": "/audit/run-9.json",
+      "mode": "APPLY",
+      "error": {
+        "name": "ConflictException",
+        "reason": "LEGACY_OPERATOR_SETTLEMENT_RECEIPT_INVALID"
+      }
+    },
+    {
+      "code": 1,
+      "pid": 77,
+      "audit": "/audit/run-10.json",
+      "mode": "APPLY",
+      "error": {
+        "name": "ConflictException",
+        "reason": "LEGACY_OPERATOR_SETTLEMENT_RECEIPT_INVALID"
+      }
+    },
+    {
+      "code": 1,
+      "pid": 84,
+      "audit": "/audit/run-11.json"
+    },
+    {
+      "code": 1,
+      "pid": 91,
+      "audit": "/audit/run-12.json"
+    },
+    {
+      "code": 1,
+      "pid": 98,
+      "audit": "/audit/run-13.json"
+    },
+    {
+      "code": 1,
+      "pid": 105,
+      "audit": "/audit/run-14.json",
+      "mode": "APPLY",
+      "error": {
+        "name": "AssertionError",
+        "code": "ERR_ASSERTION",
+        "reason": "RUNNER_VALIDATION_OR_DATABASE_FAILURE"
+      }
+    },
+    {
+      "code": 1,
+      "pid": 112,
+      "audit": "/audit/run-15.json",
+      "mode": "APPLY",
+      "error": {
+        "name": "ConflictException",
+        "reason": "LEGACY_OPERATOR_SETTLEMENT_RECEIPT_INVALID"
+      }
+    },
+    {
+      "code": 1,
+      "pid": 119,
+      "audit": "/audit/run-16.json"
+    },
+    {
+      "code": 1,
+      "pid": 126,
+      "audit": "/audit/run-17.json"
+    },
+    {
+      "code": 1,
+      "pid": 133,
+      "audit": "/audit/run-18.json",
+      "mode": "APPLY",
+      "error": {
+        "name": "AssertionError",
+        "code": "ERR_ASSERTION",
+        "reason": "RUNNER_VALIDATION_OR_DATABASE_FAILURE"
+      }
+    },
+    {
+      "code": 1,
+      "pid": 140,
+      "audit": "/audit/run-19.json",
+      "mode": "APPLY",
+      "error": {
+        "name": "AssertionError",
+        "code": "ERR_ASSERTION",
+        "reason": "RUNNER_VALIDATION_OR_DATABASE_FAILURE"
+      }
+    },
+    {
+      "code": 1,
+      "pid": 147,
+      "audit": "/audit/run-20.json",
+      "mode": "APPLY",
+      "error": {
+        "name": "AssertionError",
+        "code": "ERR_ASSERTION",
+        "reason": "RUNNER_VALIDATION_OR_DATABASE_FAILURE"
+      }
+    },
+    {
+      "code": 1,
+      "pid": 154,
+      "audit": "/audit/run-21.json",
+      "mode": "APPLY",
+      "error": {
+        "name": "ConflictException",
+        "reason": "LEGACY_ROW_NOT_AUDITED_OR_CORRUPTED"
+      }
+    },
+    {
+      "code": 1,
+      "pid": 161,
+      "audit": "/audit/run-22.json",
+      "mode": "APPLY",
+      "error": {
+        "name": "QueryFailedError",
+        "code": "P0001",
+        "reason": "RUNNER_VALIDATION_OR_DATABASE_FAILURE"
+      }
+    },
+    {
+      "code": 0,
+      "pid": 168,
+      "audit": "/audit/run-23.json",
+      "mode": "APPLY"
+    },
+    {
+      "code": 0,
+      "pid": 175,
+      "audit": "/audit/run-24.json",
+      "mode": "APPLY"
+    },
+    {
+      "code": 0,
+      "pid": 183,
+      "audit": "/audit/run-26.json",
+      "mode": "APPLY"
+    },
+    {
+      "code": 0,
+      "pid": 182,
+      "audit": "/audit/run-25.json",
+      "mode": "APPLY"
+    }
+  ],
+  "race": [
+    {
+      "pid": 182,
+      "connectionPid": 489,
+      "committedRows": 0
+    },
+    {
+      "pid": 183,
+      "connectionPid": 488,
+      "committedRows": 14
+    }
+  ],
+  "reconciliation": {
+    "tasks": 14,
+    "groups": 8,
+    "activeClaims": 0,
+    "activeWriters": 0,
+    "findingsFixed": 0,
+    "findingsVerified": 0,
+    "newAttempts": 0,
+    "counterChanges": 0
+  },
+  "singleWriterSeparateFromReconciliationCheckpoint": true,
+  "pass": true
+}

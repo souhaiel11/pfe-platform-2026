@@ -1,0 +1,313 @@
+{
+  "id": "6BVXqAsePEPAjiIQ",
+  "name": "WF-Chat-V4",
+  "active": true,
+  "versionId": "f3a3c2c4-cd48-4ed9-83a4-765566d4c089",
+  "activeVersionId": "f3a3c2c4-cd48-4ed9-83a4-765566d4c089",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "chat-agent",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -416,
+        112
+      ],
+      "id": "a6efcf2c-4179-4a68-add3-b670e4c53113",
+      "name": "Webhook",
+      "webhookId": "647a91e6-4991-4c08-a7bf-437b32bfaab0"
+    },
+    {
+      "parameters": {
+        "jsCode": "const question = $('Fetch Context').first().json.question;\nconst rawHistory = $('Fetch Context').first().json.history;\nconst history = Array.isArray(rawHistory) ? rawHistory.filter(h => h && (h.role === 'user' || h.role === 'assistant') && typeof h.content === 'string').slice(-5) : [];\n\n// Récupère tous les incidents\nlet incidents = [];\ntry {\n  incidents = $('Get Incidents').all().map(i => i.json);\n} catch(e) { incidents = []; }\n\n// Résumé compact pour Claude\nconst summary = incidents.slice(0, 20).map(i => ({\n  ref: i.incidentRef,\n  project: i.projectName,\n  source: i.source,\n  status: i.status,\n  severity: i.severity,\n  title: i.title,\n  created: i.createdAt\n}));\n\n// Formater l'historique\nconst historyText = history.length > 0\n  ? '\\nHISTORIQUE DE LA CONVERSATION :\\n' + history.slice(-5).map(h => \n      `${h.role === 'user' ? 'Utilisateur' : 'Assistant'}: ${h.content.substring(0, 200)}`\n    ).join('\\n') + '\\n'\n  : '';\n\nconst prompt = `Tu es un assistant DevSecOps expert intégré dans la plateforme Vermeg.\nTu as accès aux données réelles de la plateforme.\n${historyText}\nDONNÉES DE LA PLATEFORME :\n${JSON.stringify(summary, null, 2).substring(0, 4000)}\n\nINSTRUCTIONS :\n- Vérifier les projets disponibles avant chaque réponse\n- Réponds toujours en français\n- Si on te demande un projet spécifique, filtre les données correspondantes\n- Sois précis, utilise les données réelles\n- Réponse claire et correcte\n- Si tu ne trouves pas de données → dis-le clairement\n- Pour les questions de suivi, utilise l'historique ci-dessus\n\nQUESTION : ${question}`;\n\nreturn [{ json: { prompt, question, history } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        144,
+        304
+      ],
+      "id": "32c2a8f2-f072-48b4-8ce1-d569b6aa6ad2",
+      "name": "Build Prompt",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "url": "={{ 'http://backend:3001/api/incidents?size=20' + ($json.projectId ? '&projectId=' + encodeURIComponent($json.projectId) : '') }}",
+        "options": {},
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Internal-Secret",
+              "value": "={{ $env.N8N_INTERNAL_SECRET }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        0,
+        0
+      ],
+      "id": "d8d0e026-a741-496b-a304-4b057e308fc6",
+      "name": "Get Incidents",
+      "alwaysOutputData": true,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first()?.json?.body;\nif (!body || typeof body.question !== 'string' || !body.question.trim()) {\n  throw new Error('CHAT_INVALID_REQUEST');\n}\nconst history = Array.isArray(body.history)\n  ? body.history.filter(h => h && (h.role === 'user' || h.role === 'assistant') && typeof h.content === 'string').slice(-5)\n  : [];\nreturn [{ json: {\n  question: body.question.trim(),\n  ...(typeof body.projectId === 'string' && body.projectId.trim() ? { projectId: body.projectId.trim() } : {}),\n  history,\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -224,
+        288
+      ],
+      "id": "60a88cea-cc42-412d-94e3-205546027f8c",
+      "name": "Fetch Context",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json.claudeBody }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        448,
+        0
+      ],
+      "id": "585672a9-5545-4981-ab55-2f9a583a4a6d",
+      "name": "Get Incidents1",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "Ee9vVedmz84oXg5W",
+          "name": "Claude API"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first()?.json;\nif (!response || !Array.isArray(response.content) || response.content.length === 0) {\n  throw new Error('CHAT_INVALID_PROVIDER_RESPONSE');\n}\nconst textBlocks = response.content.filter(block => block && block.type === 'text');\nif (textBlocks.length === 0 || textBlocks.some(block => typeof block.text !== 'string' || !block.text.trim())) {\n  throw new Error('CHAT_INVALID_PROVIDER_RESPONSE');\n}\nconst answer = textBlocks.map(block => block.text.trim()).join('\\n');\nreturn [{ json: { ok: true, answer } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        304
+      ],
+      "id": "af1b54d3-8c7d-4d29-a09f-b411c5b79493",
+      "name": "Parse Response",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseCode": "={{ $json.ok === true ? 200 : 502 }}"
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        912,
+        96
+      ],
+      "id": "22e7781d-0c40-401c-b684-20902c83299e",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "const prompt = $input.first().json.prompt;\n\nconst body = JSON.stringify({\n  model: \"claude-opus-4-5\",\n  max_tokens: 1024,\n  messages: [\n    {\n      role: \"user\",\n      content: prompt\n    }\n  ]\n});\n\nreturn [{ json: { claudeBody: body } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        288,
+        304
+      ],
+      "id": "e07d4acb-5c0f-4b85-b337-5475f73cfa0b",
+      "name": "Prepare Claude Body",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "ae8121ca-f6a3-4354-8e43-4931b596d3f7",
+      "name": "Chat Error Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        560
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "return [{ json: {\n  ok: false,\n  answer: null,\n  error: { code: 'CHAT_WORKFLOW_ERROR', message: 'Unable to process the chat request.' },\n} }];"
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Fetch Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Incidents": {
+      "main": [
+        [
+          {
+            "node": "Build Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Chat Error Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Context": {
+      "main": [
+        [
+          {
+            "node": "Get Incidents",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Chat Error Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Prompt": {
+      "main": [
+        [
+          {
+            "node": "Prepare Claude Body",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Chat Error Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Incidents1": {
+      "main": [
+        [
+          {
+            "node": "Parse Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Chat Error Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Response": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Chat Error Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Claude Body": {
+      "main": [
+        [
+          {
+            "node": "Get Incidents1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Chat Error Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chat Error Response": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  }
+}

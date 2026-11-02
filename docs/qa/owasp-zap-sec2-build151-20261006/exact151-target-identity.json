@@ -1,0 +1,14 @@
+{
+  "imageReference": "acrpfedevsecops.azurecr.io/pfe-app-test@sha256:6dc3cdba69592a91a5a1569978bcfca74d4080597a769ab368ed585ba397bcf5",
+  "repoDigests": [
+    "acrpfedevsecops.azurecr.io/pfe-app-test@sha256:6dc3cdba69592a91a5a1569978bcfca74d4080597a769ab368ed585ba397bcf5"
+  ],
+  "imageId": "sha256:12aba29ceacaf1411a272df99c5376cdc0dfd9baa98de2bcd2f2c1a0c9256777",
+  "revision": "393816c250f73d907eb5a2dd43b2ec2288c7abcb",
+  "source": "https://github.com/souhaiel11/pfe-app-test.git",
+  "containerId": "00a9521dbcb0c2c51b06dfb91fbf06aae94e56e0dd52922ef1b1c320f1b29ec1",
+  "healthStatus": 200,
+  "healthBody": "OK",
+  "healthyBeforeZap": true,
+  "publishedPorts": {}
+}

@@ -1,0 +1,131 @@
+<?xml version="1.1" encoding="UTF-8"?>
+<flow-definition plugin="workflow-job@1590.v49101d088542">
+  <actions>
+    <org.jenkinsci.plugins.pipeline.modeldefinition.actions.DeclarativeJobAction plugin="pipeline-model-definition@2.2291.v2934911987b_6"/>
+    <org.jenkinsci.plugins.pipeline.modeldefinition.actions.DeclarativeJobPropertyTrackerAction plugin="pipeline-model-definition@2.2291.v2934911987b_6">
+      <jobProperties/>
+      <triggers/>
+      <parameters/>
+      <options/>
+    </org.jenkinsci.plugins.pipeline.modeldefinition.actions.DeclarativeJobPropertyTrackerAction>
+  </actions>
+  <description></description>
+  <keepDependencies>false</keepDependencies>
+  <properties/>
+  <definition class="org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition" plugin="workflow-cps@4362.v9b_991749898e">
+    <script>pipeline {
+  agent any
+
+  stages {
+    stage(&apos;🔍 Watch Pipeline&apos;) {
+      steps {
+        script {
+          def jobName   = &apos;pfe-devsecops-pipeline&apos;
+          def stateFile = &apos;watcher_state.json&apos;
+
+          // ── Récupère le dernier build ──
+          def response = httpRequest(
+            url                : &quot;http://jenkins:8080/job/${jobName}/lastBuild/api/json&quot;,
+            httpMode           : &apos;GET&apos;,
+            validResponseCodes : &apos;100:599&apos;,
+            ignoreSslErrors    : true
+          )
+
+          if (response.status == 404 || !response.content.trim().startsWith(&apos;{&apos;)) {
+            echo &quot;⚠️ Job introuvable&quot;
+            return
+          }
+
+          def buildInfo  = parseBuild(response.content)
+          def isBuilding = buildInfo[0] as Boolean
+          def result     = buildInfo[1] as String
+          def number     = buildInfo[3] as Integer
+          def elapsed    = (System.currentTimeMillis() - (buildInfo[2] as Long)) / 1000 / 60
+
+          // ── Charge le dernier numéro stocké ──
+          def lastNumber = 0
+          if (fileExists(stateFile)) {
+            def stateInfo = parseState(readFile(stateFile).trim())
+            lastNumber    = stateInfo as Integer
+          }
+
+          echo &quot;Build actuel : #${number} | Stocké : #${lastNumber} | Result: ${result} | Building: ${isBuilding}&quot;
+
+          // ══════════════════════════════
+          // CONDITION UNIQUE
+          // ══════════════════════════════
+
+          // Numéro identique → rien à faire
+          if (number == lastNumber) {
+            echo &quot;✅ Pas de nouveau build — rien à faire&quot;
+            return
+          }
+
+          // Nouveau build détecté → sauvegarde dans tous les cas
+          writeFile file: stateFile, text: &quot;&quot;&quot;{&quot;lastBuildNumber&quot;:${number}}&quot;&quot;&quot;
+          echo &quot;💾 Nouveau build stocké : #${number}&quot;
+
+          // Nouveau build FAILURE → notifie n8n
+          if (!isBuilding &amp;&amp; result == &apos;FAILURE&apos;) {
+            echo &quot;❌ Build #${number} FAILURE — notification n8n&quot;
+            sendToN8n(jobName, number, elapsed, &apos;pipeline_failed&apos;)
+
+          // Nouveau build BLOQUÉ
+          } else if (isBuilding &amp;&amp; elapsed &gt; 15) {
+            echo &quot;🚨 Build #${number} BLOQUÉ — notification n8n&quot;
+            sendToN8n(jobName, number, elapsed, &apos;pipeline_blocked&apos;)
+
+          // Nouveau build SUCCESS ou en cours
+          } else {
+            echo &quot;✅ Build #${number} : ${result ?: &apos;EN COURS&apos;} — rien à faire&quot;
+          }
+        }
+      }
+    }
+  }
+}
+
+@NonCPS
+def parseBuild(String content) {
+  def build = new groovy.json.JsonSlurper().parseText(content)
+  return [
+    build.building,
+    build.result ?: &apos;IN_PROGRESS&apos;,
+    build.timestamp as Long,
+    build.number as Integer
+  ]
+}
+
+@NonCPS
+def parseState(String content) {
+  def state = new groovy.json.JsonSlurper().parseText(content)
+  return state.lastBuildNumber as Integer
+}
+
+def sendToN8n(jobName, number, elapsed, event) {
+  def payload = &quot;&quot;&quot;{
+    &quot;event&quot;: &quot;${event}&quot;,
+    &quot;job&quot;: &quot;${jobName}&quot;,
+    &quot;build_number&quot;: &quot;${number}&quot;,
+    &quot;build_url&quot;: &quot;http://jenkins:8080/job/${jobName}/${number}/&quot;,
+    &quot;logs_url&quot;: &quot;http://jenkins:8080/job/${jobName}/${number}/consoleText&quot;,
+    &quot;elapsed_minutes&quot;: ${elapsed.toInteger()},
+    &quot;severity&quot;: &quot;HIGH&quot;
+  }&quot;&quot;&quot;
+
+  httpRequest(
+    url                : &apos;http://172.31.172.61:5678/webhook/jenkins-event&apos;,
+    httpMode           : &apos;POST&apos;,
+    contentType        : &apos;APPLICATION_JSON&apos;,
+    requestBody        : payload,
+    customHeaders      : [[name: &apos;X-API-Key&apos;, value: &apos;devsecops-secret-2024&apos;]],
+    ignoreSslErrors    : true,
+    validResponseCodes : &apos;100:599&apos;
+  )
+  echo &quot;✅ n8n notifié : ${event}&quot;
+}</script>
+    <sandbox>true</sandbox>
+  </definition>
+  <triggers/>
+  <disabled>false</disabled>
+</flow-definition>

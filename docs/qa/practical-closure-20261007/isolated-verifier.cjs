@@ -1,0 +1,12 @@
+const root='/candidate-verifier/dist/candidate-verifier/src/';
+const {WorkspaceManager}=require(root+'workspace-manager.service'),{MavenBuildAdapter}=require(root+'maven-build-adapter'),{GroundedMavenProvenanceService}=require(root+'grounded-maven-provenance.service'),{SecurityFindingDecisionService}=require(root+'security-finding-decision.service'),{SecurityRemediationBatchOrchestratorService}=require(root+'security-remediation-batch-orchestrator.service');
+const cp=require('child_process'),fs=require('fs');
+const repoPath='/var/pfe-remediation-repos/practical-source-qualification';
+if(!fs.existsSync(repoPath))cp.execFileSync('git',['clone','--no-local','/seed',repoPath]);
+const repository='souhaiel11/remediation-retry-e2e-fixture',sha=cp.execFileSync('git',['rev-parse','HEAD'],{cwd:repoPath,encoding:'utf8'}).trim();
+const wm=new WorkspaceManager('/var/pfe-remediation-workspaces/practical-source-qualification'),cache={ensureRepo:()=>repoPath},maven=new MavenBuildAdapter();
+const decision=new SecurityFindingDecisionService(new GroundedMavenProvenanceService(wm,cache,maven));
+const result=new SecurityRemediationBatchOrchestratorService(decision,wm,cache,maven).orchestrate({repository,candidateBaseSha:sha,requestId:'practical-source-qualification',batchId:'isolated-'+sha.slice(0,8),candidateAttempt:1,findings:[{findingIdentity:'qualified-fixture-finding',cveId:'CVE-2022-45868',source:'TRIVY',package:'com.h2database:h2',expectedInstalledVersion:'2.1.212',fixedVersion:'2.2.220'}]});
+fs.writeFileSync('/evidence/isolated-verifier-result.json',JSON.stringify(result,null,2));
+console.log(JSON.stringify({status:result.status,reason:result.reason,tests:result.applicationTests,findings:result.findings,timings:result.executionTimings,owasp:result.scannerEvidence?.OWASP?.targetFindingRemoved}));
+if(result.status!=='CANDIDATE_READY'||!result.scannerEvidence?.OWASP?.targetFindingRemoved)process.exitCode=1;

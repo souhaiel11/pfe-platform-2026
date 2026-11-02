@@ -1,7 +1,9 @@
+// Décrit la table des projets : identité du dépôt et de la branche, configuration CI/analyses, paramètres et état Azure, relations avec incidents, rapports et bugs.
 import {
   Entity, PrimaryGeneratedColumn, Column,
   CreateDateColumn, UpdateDateColumn
 } from 'typeorm';
+import { encryptedTokenTransformer, githubTokenTransformer } from './token-crypto';
 
 export enum ProjectStatus {
   HEALTHY  = 'healthy',
@@ -22,6 +24,25 @@ export enum CicdTool {
   AZURE   = 'azure',
 }
 
+export interface AzureDeploymentConfig {
+  provider: 'azure-container-instances';
+  resourceGroup: string;
+  targetName: string;
+  registry: string;
+  imageRepository: string;
+  region?: string;
+  subscriptionRef?: string;
+  cpu?: string;
+  memoryInGb?: string;
+  ports?: string[];
+  healthCheck?: {
+    path: string;
+    port: string;
+    client: 'curl' | 'wget';
+    expectedBody: string;
+  };
+}
+
 @Entity('projects')
 export class Project {
   @PrimaryGeneratedColumn('uuid')
@@ -40,33 +61,81 @@ export class Project {
   @Column({ type: 'enum', enum: ProjectStatus, default: ProjectStatus.HEALTHY })
   status: ProjectStatus;
 
-  @Column({ type: 'float', default: 100 })
-  securityScore: number;
+  // default:100 s'applique seulement à la CRÉATION (avant tout report combined) ;
+  // nullable pour permettre null après un report combined incomplete=true
+  // (scanner requis sans résultat) — voir reports.service.ts::create. null
+  // signifie "non vérifié", jamais assimilé à 0 ou 100 par un consommateur.
+  @Column({ type: 'float', nullable: true, default: 100 })
+  securityScore: number | null;
 
   @Column({ default: true })
   isActive: boolean;
 
+  // Idempotence de la notification "prêt à déployer" (voir
+  // reports.service.ts:syncDeployReadyNotification) — persisté plutôt que
+  // recalculé à chaque écriture, pour ne créer la notif QUE sur la
+  // transition non-prêt->prêt. Remis à false dès que le projet régresse,
+  // pour permettre une re-notification au prochain passage au vert.
+  @Column({ default: false })
+  deployReadyNotified: boolean;
+
   @Column({ type: 'simple-array', nullable: true })
   tags: string[];
+
+  // Origine des données ('demo' pour les projets de démo seedés ; null pour les projets réels)
+  @Column({ nullable: true })
+  source: string;
 
   // ── CI/CD ─────────────────────────────────────────────────
   @Column({ type: 'enum', enum: CicdTool, default: CicdTool.JENKINS })
   cicdTool: CicdTool;
 
+  // DEPRECATED — historiquement utilisé à la fois pour les appels
+  // serveur-à-serveur ET les liens navigateur (URL surchargée : une IP
+  // Docker interne comme http://jenkins:8080 casse silencieusement le lien
+  // "Ouvrir Jenkins" en navigateur ; une URL publique comme
+  // http://localhost:8082 n'est pas résoluble depuis le backend en conteneur).
+  // Conservé uniquement comme repli pour les projets non migrés — voir
+  // jenkinsInternalUrl / jenkinsPublicUrl et common/jenkins-url.ts.
   @Column({ nullable: true })
   jenkinsUrl: string;
 
+  // URL Jenkins pour les appels serveur-à-serveur (backend → Jenkins :
+  // métadonnées, crumb, déclenchement, statut). Jamais utilisée pour un
+  // lien cliqué dans le navigateur. Voir resolveJenkinsInternalUrl().
+  @Column({ nullable: true })
+  jenkinsInternalUrl: string;
+
+  // URL Jenkins pour les liens affichés/cliqués dans le navigateur
+  // ("Ouvrir Jenkins", liens de build). Jamais utilisée pour un appel
+  // backend. Voir resolveJenkinsPublicUrl().
+  @Column({ nullable: true })
+  jenkinsPublicUrl: string;
+
+  // Identité du job — utilisée pour le lookup webhook/n8n
+  // (findByJobNameInternal, exact match), toujours la forme COURTE que
+  // Jenkins envoie dans son payload. Ne jamais y mettre un chemin multibranch.
   @Column({ nullable: true })
   jenkinsJobName: string;
 
+  // Chemin URL pour interroger le statut Jenkins (getJenkinsStatus) —
+  // distinct de jenkinsJobName. Nécessaire pour un job multibranch
+  // ("<dossier>/job/<branche>"), où l'identité du job (court, utilisée pour
+  // le lookup) diffère du chemin réel de l'API Jenkins. Vide = fallback sur
+  // jenkinsJobName (comportement inchangé pour un job non-multibranch).
   @Column({ nullable: true })
+  jenkinsJobPath: string;
+
+  // Chiffré au repos (AES-256-GCM, cf. token-crypto.ts).
+  @Column({ nullable: true, transformer: encryptedTokenTransformer })
   jenkinsToken: string;
 
   // ── GitHub ────────────────────────────────────────────────
   @Column({ nullable: true })
   githubRepo: string;
 
-  @Column({ nullable: true })
+  // Chiffré au repos (AES-256-GCM, cf. token-crypto.ts).
+  @Column({ nullable: true, transformer: githubTokenTransformer })
   githubToken: string;
 
   // ── SonarQube ─────────────────────────────────────────────
@@ -76,7 +145,8 @@ export class Project {
   @Column({ nullable: true })
   sonarqubeKey: string;
 
-  @Column({ nullable: true })
+  // Chiffré au repos (AES-256-GCM, cf. token-crypto.ts).
+  @Column({ nullable: true, transformer: encryptedTokenTransformer })
   sonarqubeToken: string;
 
   // ── Notifications ─────────────────────────────────────────
@@ -92,7 +162,8 @@ export class Project {
   @Column({ nullable: true })
   slackChannel: string;
 
-  @Column({ nullable: true })
+  // Chiffré au repos (AES-256-GCM, cf. token-crypto.ts).
+  @Column({ nullable: true, transformer: encryptedTokenTransformer })
   slackToken: string;
 
   // ── Validation status (calculé automatiquement) ───────────
@@ -101,6 +172,26 @@ export class Project {
     sonarqube?: { valid: boolean; message: string; checkedAt: string };
     jenkins?:   { valid: boolean; message: string; checkedAt: string };
   };
+
+  // Configuration de cible non sensible. Les credentials Azure restent
+  // exclusivement dans l'environnement de l'agent hôte.
+  @Column({ type: 'jsonb', nullable: true })
+  azureConfig: AzureDeploymentConfig | null;
+
+  // Ledger minimal et durable pour rendre POST /azure-deploy/deploy
+  // idempotent sans introduire de table parallèle.
+  @Column({ type: 'jsonb', nullable: true })
+  azureDeploymentState: {
+    requestId: string;
+    status: 'DISPATCHING' | 'DEPLOYED' | 'FAILED';
+    imageTag: string;
+    updatedAt: string;
+    result?: Record<string, any>;
+    attemptId?: string;
+    authorizationId?: string;
+    failureCode?: string | null;
+    failureReason?: string | null;
+  } | null;
 
   @CreateDateColumn()
   createdAt: Date;

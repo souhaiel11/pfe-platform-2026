@@ -1,0 +1,180 @@
+/* Définit les styles de le détail d’un incident. */
+.lifecycle-timeline {
+      display: flex;
+      align-items: flex-start;
+      gap: 0;
+      overflow-x: auto;
+      padding-bottom: 4px;
+    }
+    .lifecycle-step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-width: 90px;
+      position: relative;
+    }
+    .lifecycle-connector {
+      position: absolute;
+      top: 9px;
+      right: calc(50% + 9px);
+      width: calc(100% - 18px);
+      height: 2px;
+      transition: background 0.4s;
+    }
+    .lifecycle-dot {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      border: 2px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1;
+      transition: all 0.3s;
+      margin-bottom: 8px;
+      flex-shrink: 0;
+    }
+    .lifecycle-label {
+      text-align: center;
+      padding: 0 4px;
+    }
+
+    /* ── Onglets ── */
+    .tab-btn {
+      padding: 8px 16px;
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      color: var(--text-muted);
+      font-size: 12px;
+      cursor: pointer;
+      font-family: var(--font-mono);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+    .tab-btn:hover { color: var(--text-primary); }
+    .tab-btn.active {
+      color: var(--accent-blue);
+      border-bottom-color: var(--accent-blue);
+    }
+    .tab-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    /* ── Scanners ── */
+    .scanner-card { padding: 12px 14px; }
+    .scanner-status {
+      font-size: 10px;
+      font-family: var(--font-mono);
+      margin-top: 8px;
+      padding: 2px 6px;
+      border-radius: 3px;
+      display: inline-block;
+    }
+    .scanner-status.completed { color: var(--accent-green); background: var(--accent-green)11; }
+    .scanner-status.unknown   { color: var(--text-muted);   background: var(--border); }
+    .scanner-status.error     { color: var(--accent-red);   background: var(--accent-red)11; }
+
+    /* ── Agents ── */
+    .agent-badge {
+      width: 28px; height: 28px;
+      border-radius: var(--radius-sm);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; flex-shrink: 0;
+    }
+    .confidence-bar {
+      width: 60px; height: 3px;
+      background: var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+      div { height: 100%; border-radius: 2px; transition: width 0.8s ease; }
+    }
+    .report-content {
+      font-size: 12px;
+      color: var(--text-secondary);
+      line-height: 1.6;
+      white-space: pre-wrap;
+    }
+    .rc-detail, .report-content, code, a { overflow-wrap:anywhere; word-break:break-word; }
+    @media (max-width: 600px) {
+      .lifecycle-step { min-width:76px; }
+      .tab-btn { padding:8px 10px; }
+    }
+
+    /* ── Autres ── */
+    .decision-card { border-left: 3px solid var(--accent-orange); }
+
+    /* ── Guide de priorisation : barre + slots priorité/ensuite ── */
+    .progress-block { margin-bottom: 18px; }
+    .progress-head {
+      display: flex; align-items: baseline; justify-content: space-between;
+      margin-bottom: 6px;
+    }
+    .progress-label { font-size: 12px; font-weight: 600; color: var(--text-secondary); }
+    .progress-pct { font-size: 12px; font-weight: 700; font-family: var(--font-mono); color: var(--accent-green); }
+    .progress-bar {
+      height: 6px; border-radius: 3px; background: var(--border); overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%; border-radius: 3px; background: var(--accent-green);
+      transition: width 0.4s ease;
+    }
+
+    .phase-flow { display: flex; flex-direction: column; gap: 16px; margin-bottom: 16px; }
+    .phase-slot { display: block; }
+    .priority-slot {
+      position: relative;
+      border: 2px solid var(--accent-red);
+      border-radius: var(--radius-md, 10px);
+      padding: 2px;
+    }
+    .priority-tag {
+      display: inline-block; font-size: 10px; font-weight: 800; letter-spacing: .05em;
+      text-transform: uppercase; color: #fff; background: var(--accent-red);
+      border-radius: 4px 4px 0 0; padding: 4px 10px; margin: -2px -2px 0;
+    }
+    .later-slot { opacity: 0.55; filter: saturate(0.7); transition: opacity 0.15s ease; }
+    .later-slot:hover { opacity: 0.9; filter: none; }
+    .ensuite-heading {
+      font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+      letter-spacing: .12em; text-transform: uppercase; color: var(--text-muted);
+      margin: 4px 0 -6px;
+    }
+
+    /* ── Bloc C : verrou de déploiement ── */
+    .deploy-card.card { border-left: 3px solid var(--accent-red); }
+    .deploy-card.card.is-clean { border-left-color: var(--accent-green); }
+    .deploy-headline {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 13px; margin-bottom: 8px;
+    }
+    .deploy-locked .deploy-headline { color: var(--accent-red); }
+    .deploy-unlocked .deploy-headline { color: var(--accent-green); }
+    .deploy-icon { font-size: 14px; }
+    .deploy-list {
+      margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px;
+    }
+    .deploy-list li { font-size: 12px; color: var(--text-secondary); line-height: 1.5; }
+    .deploy-actor {
+      display: inline-block; font-size: 10px; font-weight: 700;
+      border-radius: 4px; padding: 1px 6px; margin-right: 6px;
+    }
+    .deploy-actor.agent { background: rgba(59,130,246,0.15); color: #3b82f6; }
+    .deploy-actor.vous  { background: rgba(249,115,22,0.15); color: #f97316; }
+    .deploy-note { font-size: 11px; color: var(--text-muted); margin: 8px 0 0; }
+    .code-block {
+      background: var(--bg-primary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 12px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-secondary);
+      overflow-x: auto;
+      white-space: pre-wrap;
+    }

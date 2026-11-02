@@ -1,0 +1,170 @@
+/* Définit les styles de la liste des projets. */
+.list-summary {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: 0 0 10px;
+  .attention { color: var(--color-warning); font-weight: 600; }
+}
+
+.partial-notice {
+  margin-bottom: 14px;
+  ul { margin: 6px 0 10px; padding-left: 18px; font-size: 12px; }
+}
+
+.projects-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--bg-secondary);
+}
+
+.project-card {
+  display: grid;
+  grid-template-columns: minmax(200px, 1fr) minmax(0, 2.2fr);
+  align-items: start;
+  gap: 18px 24px;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--border-color);
+  &:last-child { border-bottom: 0; }
+  &:hover, &:focus-within { background: var(--bg-tertiary); }
+}
+
+/* Repère non chromatique en plus de la bordure : un liseré seul ne dit rien
+   à qui ne distingue pas les couleurs (§24). La pastille « À traiter » reste
+   l'information portante. */
+.project-card.attention { box-shadow: inset 3px 0 0 var(--color-warning); }
+
+.pc-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; min-width: 0; }
+.pc-ident { min-width: 0; }
+
+.pc-name {
+  display: block;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  text-decoration: none;
+  overflow-wrap: anywhere;
+  &:hover { color: var(--accent-blue); text-decoration: underline; }
+  &:focus-visible { outline: 2px solid var(--accent-blue); outline-offset: 2px; border-radius: 3px; }
+}
+
+.pc-repo {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 8px;
+  margin-top: 4px; font-size: 11px; color: var(--text-muted);
+}
+.pc-repo-val { font-family: var(--font-mono); overflow-wrap: anywhere; }
+.pc-env {
+  font-size: 9px; text-transform: uppercase; letter-spacing: .06em;
+  padding: 1px 6px; border-radius: 3px;
+  background: var(--bg-tertiary); border: 1px solid var(--border-color); color: var(--text-secondary);
+}
+
+.pc-attention {
+  flex: 0 0 auto;
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 10px; font-weight: 700; letter-spacing: .03em;
+  padding: 2px 7px; border-radius: 999px;
+  color: var(--color-warning); background: var(--color-warning-bg);
+  border: 1px solid currentColor;
+}
+
+/* Les quatre faits, toujours dans le même ordre. */
+.pc-facts {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(120px, 1fr));
+  gap: 12px 18px;
+  margin: 0;
+}
+.pc-fact { min-width: 0; }
+.pc-fact dt {
+  display: flex; align-items: center;
+  font-size: 9px; text-transform: uppercase; letter-spacing: .06em;
+  color: var(--text-faint); font-family: var(--font-mono); margin-bottom: 5px;
+}
+.pc-fact dd {
+  margin: 0;
+  display: flex; align-items: center; flex-wrap: wrap; gap: 4px 8px;
+  font-size: 12px; color: var(--text-secondary);
+}
+
+.pc-build-num { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); }
+.pc-score { font-family: var(--font-mono); font-size: 15px; font-weight: 700; }
+.pc-incidents {
+  font-family: var(--font-mono); font-size: 15px; font-weight: 700; color: var(--text-muted);
+  &.some { color: var(--accent-red); }
+}
+.pc-note { font-size: 10px; color: var(--text-muted); overflow-wrap: anywhere; }
+
+.pc-foot {
+  grid-column: 1 / -1;
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding-top: 4px;
+}
+.pc-activity { font-size: 10px; color: var(--text-faint); }
+
+.pc-delete {
+  flex: 0 0 auto;
+  border: 1px solid var(--border-color); background: transparent;
+  color: var(--text-muted); border-radius: var(--radius-sm);
+  padding: 4px 8px; cursor: pointer; font-size: 12px; line-height: 1;
+  &:hover, &:focus-visible { color: var(--accent-red); border-color: var(--accent-red); }
+}
+
+/* §23 — 1024 px : les faits passent sur deux colonnes ; 768 px et moins :
+   l'identité et les faits s'empilent. Aucun débordement horizontal. */
+@media (max-width: 1150px) {
+  .project-card { grid-template-columns: minmax(0, 1fr); }
+  .pc-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 560px) {
+  .project-card { padding: 14px 12px; }
+  .pc-facts { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+}
+
+/* Portfolio sheets: the same measurements, set in the Atelier language. */
+.projects-grid { border-radius: 9px; box-shadow: var(--atelier-shadow); }
+.project-card { padding: 25px 24px; gap: 20px 28px; }
+.pc-name { font-size: 18px; font-weight: 500; letter-spacing: -.035em; }
+.pc-repo { margin-top: 8px; font-size: 10px; }
+.pc-facts { padding-top: 3px; }
+.pc-fact dt { font-size: 9px; letter-spacing: .08em; margin-bottom: 10px; }
+.pc-score, .pc-incidents { font: 500 22px var(--font-sans); letter-spacing: -.04em; }
+.pc-foot { padding-top: 14px; border-top: 1px dashed var(--border-color); }
+.pc-activity { font: 9px var(--font-mono); }
+.pc-attention { border-radius: 4px; padding: 4px 8px; }
+.pc-env { background: transparent; }
+@media (max-width: 720px) { .project-card { padding: 20px 18px; } }
+
+/* Numbered folios and folded corners make each row read as a working sheet. */
+.projects-grid { border: 0; border-radius: 0; overflow: visible; background: transparent; box-shadow: none; gap: 16px; }
+.project-card {
+  position: relative;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 2px 14px 2px 2px;
+  padding-left: 30px;
+  transition: border-color .18s, box-shadow .18s;
+  &:last-child { border-bottom: 1px solid var(--border-color); }
+  &:hover, &:focus-within { border-color: var(--atelier-copper); background: var(--bg-secondary); box-shadow: 0 5px 16px #00000006; }
+  &::after { content: ''; position: absolute; top: 0; right: 0; width: 13px; height: 13px; border-bottom: 1px solid var(--border-color); border-left: 1px solid var(--border-color); border-radius: 0 12px 0 0; background: var(--bg-primary); }
+}
+.pc-folio { display: flex; align-items: center; gap: 14px; margin-bottom: 13px; color: var(--atelier-copper); }
+.pc-folio span { font: 12px var(--font-mono); }
+.pc-folio svg { width: 52px; height: 22px; opacity: .65; }
+.pc-facts { align-self: center; }
+.pc-fact { border-left: 1px solid var(--border-color); padding-left: 15px; }
+.pc-fact dt { line-height: 1.6; }
+.pc-foot { border-top-style: solid; }
+.pc-name { line-height: 1.4; }
+@media (max-width: 1150px) {
+  .pc-facts { padding-top: 8px; }
+}
+@media (max-width: 560px) {
+  .project-card { padding: 20px 18px; }
+  .pc-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px 12px; }
+  .pc-fact { padding-left: 10px; }
+  .pc-attention { font-size: 9px; }
+}

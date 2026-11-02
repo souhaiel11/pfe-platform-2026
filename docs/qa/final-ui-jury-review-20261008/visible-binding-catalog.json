@@ -1,0 +1,5126 @@
+[
+  {
+    "id": 1,
+    "component": "frontend/src/app/shared/layout/layout.component.ts",
+    "template": "frontend/src/app/shared/layout/layout.component.html",
+    "line": 26,
+    "expression": "userInitials"
+  },
+  {
+    "id": 2,
+    "component": "frontend/src/app/shared/layout/layout.component.ts",
+    "template": "frontend/src/app/shared/layout/layout.component.html",
+    "line": 28,
+    "expression": "currentUser?.name"
+  },
+  {
+    "id": 3,
+    "component": "frontend/src/app/shared/layout/layout.component.ts",
+    "template": "frontend/src/app/shared/layout/layout.component.html",
+    "line": 29,
+    "expression": "currentUser?.role | presentationLabel"
+  },
+  {
+    "id": 4,
+    "component": "frontend/src/app/shared/layout/layout.component.ts",
+    "template": "frontend/src/app/shared/layout/layout.component.html",
+    "line": 47,
+    "expression": "pageTitle"
+  },
+  {
+    "id": 5,
+    "component": "frontend/src/app/shared/layout/layout.component.ts",
+    "template": "frontend/src/app/shared/layout/layout.component.html",
+    "line": 58,
+    "expression": "userInitials"
+  },
+  {
+    "id": 6,
+    "component": "frontend/src/app/shared/chat-widget/chat-widget.component.ts",
+    "template": "frontend/src/app/shared/chat-widget/chat-widget.component.html",
+    "line": 11,
+    "expression": "loading ? 'Réponse en cours…' : 'Discussion'"
+  },
+  {
+    "id": 7,
+    "component": "frontend/src/app/shared/chat-widget/chat-widget.component.ts",
+    "template": "frontend/src/app/shared/chat-widget/chat-widget.component.html",
+    "line": 27,
+    "expression": "msg.content"
+  },
+  {
+    "id": 8,
+    "component": "frontend/src/app/shared/chat-widget/chat-widget.component.ts",
+    "template": "frontend/src/app/shared/chat-widget/chat-widget.component.html",
+    "line": 29,
+    "expression": "msg.timestamp | date:'HH:mm'"
+  },
+  {
+    "id": 9,
+    "component": "frontend/src/app/shared/chat-widget/chat-widget.component.ts",
+    "template": "frontend/src/app/shared/chat-widget/chat-widget.component.html",
+    "line": 46,
+    "expression": "s"
+  },
+  {
+    "id": 10,
+    "component": "frontend/src/app/features/settings/settings.component.ts",
+    "template": "frontend/src/app/features/settings/settings.component.html",
+    "line": 15,
+    "expression": "item.name"
+  },
+  {
+    "id": 11,
+    "component": "frontend/src/app/features/settings/settings.component.ts",
+    "template": "frontend/src/app/features/settings/settings.component.html",
+    "line": 21,
+    "expression": "section.label"
+  },
+  {
+    "id": 12,
+    "component": "frontend/src/app/features/settings/settings.component.ts",
+    "template": "frontend/src/app/features/settings/settings.component.html",
+    "line": 28,
+    "expression": "generalSummary.project"
+  },
+  {
+    "id": 13,
+    "component": "frontend/src/app/features/settings/settings.component.ts",
+    "template": "frontend/src/app/features/settings/settings.component.html",
+    "line": 29,
+    "expression": "generalSummary.repository"
+  },
+  {
+    "id": 14,
+    "component": "frontend/src/app/features/settings/settings.component.ts",
+    "template": "frontend/src/app/features/settings/settings.component.html",
+    "line": 33,
+    "expression": "generalSummary.ci"
+  },
+  {
+    "id": 15,
+    "component": "frontend/src/app/features/settings/settings.component.ts",
+    "template": "frontend/src/app/features/settings/settings.component.html",
+    "line": 34,
+    "expression": "generalSummary.deployment"
+  },
+  {
+    "id": 16,
+    "component": "frontend/src/app/features/settings/settings.component.ts",
+    "template": "frontend/src/app/features/settings/settings.component.html",
+    "line": 40,
+    "expression": "generalSummary.mode"
+  },
+  {
+    "id": 17,
+    "component": "frontend/src/app/features/settings/settings.component.ts",
+    "template": "frontend/src/app/features/settings/settings.component.html",
+    "line": 41,
+    "expression": "generalSummary.editTypes.join(' · ') || 'Non disponible'"
+  },
+  {
+    "id": 18,
+    "component": "frontend/src/app/features/settings/settings.component.ts",
+    "template": "frontend/src/app/features/settings/settings.component.html",
+    "line": 47,
+    "expression": "activeSection === 'integrations' ? 'Connexions des intégrations' : 'Exécution et déploiement'"
+  },
+  {
+    "id": 19,
+    "component": "frontend/src/app/features/settings/settings.component.ts",
+    "template": "frontend/src/app/features/settings/settings.component.html",
+    "line": 51,
+    "expression": "project.id"
+  },
+  {
+    "id": 20,
+    "component": "frontend/src/app/features/settings/settings.component.ts",
+    "template": "frontend/src/app/features/settings/settings.component.html",
+    "line": 53,
+    "expression": "environmentLabel(project.environment)"
+  },
+  {
+    "id": 21,
+    "component": "frontend/src/app/features/settings/settings.component.ts",
+    "template": "frontend/src/app/features/settings/settings.component.html",
+    "line": 56,
+    "expression": "section.title === 'Projet / dépôt' ? 'GitHub' : section.title"
+  },
+  {
+    "id": 22,
+    "component": "frontend/src/app/features/settings/settings.component.ts",
+    "template": "frontend/src/app/features/settings/settings.component.html",
+    "line": 60,
+    "expression": "field.label"
+  },
+  {
+    "id": 23,
+    "component": "frontend/src/app/features/settings/settings.component.ts",
+    "template": "frontend/src/app/features/settings/settings.component.html",
+    "line": 65,
+    "expression": "configuredLabel(project.githubCredentialConfigured)"
+  },
+  {
+    "id": 24,
+    "component": "frontend/src/app/features/settings/settings.component.ts",
+    "template": "frontend/src/app/features/settings/settings.component.html",
+    "line": 67,
+    "expression": "jenkinsSummary.configuration"
+  },
+  {
+    "id": 25,
+    "component": "frontend/src/app/features/settings/settings.component.ts",
+    "template": "frontend/src/app/features/settings/settings.component.html",
+    "line": 68,
+    "expression": "configuredLabel(project.jenkinsCredentialConfigured)"
+  },
+  {
+    "id": 26,
+    "component": "frontend/src/app/features/settings/settings.component.ts",
+    "template": "frontend/src/app/features/settings/settings.component.html",
+    "line": 69,
+    "expression": "project.jenkinsUrl"
+  },
+  {
+    "id": 27,
+    "component": "frontend/src/app/features/settings/settings.component.ts",
+    "template": "frontend/src/app/features/settings/settings.component.html",
+    "line": 71,
+    "expression": "configuredLabel(project.sonarqubeCredentialConfigured)"
+  },
+  {
+    "id": 28,
+    "component": "frontend/src/app/features/settings/settings.component.ts",
+    "template": "frontend/src/app/features/settings/settings.component.html",
+    "line": 80,
+    "expression": "deploymentGateLabel()"
+  },
+  {
+    "id": 29,
+    "component": "frontend/src/app/features/settings/settings.component.ts",
+    "template": "frontend/src/app/features/settings/settings.component.html",
+    "line": 81,
+    "expression": "readinessState === 'ERROR' ? 'Réessayer' : 'Actualiser'"
+  },
+  {
+    "id": 30,
+    "component": "frontend/src/app/features/settings/settings.component.ts",
+    "template": "frontend/src/app/features/settings/settings.component.html",
+    "line": 85,
+    "expression": "projectSaving ? 'Enregistrement…' : 'Enregistrer'"
+  },
+  {
+    "id": 31,
+    "component": "frontend/src/app/features/settings/settings.component.ts",
+    "template": "frontend/src/app/features/settings/settings.component.html",
+    "line": 88,
+    "expression": "projectMessage"
+  },
+  {
+    "id": 32,
+    "component": "frontend/src/app/features/settings/settings.component.ts",
+    "template": "frontend/src/app/features/settings/settings.component.html",
+    "line": 96,
+    "expression": "credentialSaving ? 'Vérification…' : 'Enregistrer les identifiants'"
+  },
+  {
+    "id": 33,
+    "component": "frontend/src/app/features/settings/settings.component.ts",
+    "template": "frontend/src/app/features/settings/settings.component.html",
+    "line": 111,
+    "expression": "pipelineStageLabel(scanner.id)"
+  },
+  {
+    "id": 34,
+    "component": "frontend/src/app/features/settings/settings.component.ts",
+    "template": "frontend/src/app/features/settings/settings.component.html",
+    "line": 112,
+    "expression": "securityDescription(scanner.id)"
+  },
+  {
+    "id": 35,
+    "component": "frontend/src/app/features/settings/settings.component.ts",
+    "template": "frontend/src/app/features/settings/settings.component.html",
+    "line": 116,
+    "expression": "generalSummary.mode"
+  },
+  {
+    "id": 36,
+    "component": "frontend/src/app/features/settings/settings.component.ts",
+    "template": "frontend/src/app/features/settings/settings.component.html",
+    "line": 117,
+    "expression": "generalSummary.editTypes.join(' · ') || 'Non disponible'"
+  },
+  {
+    "id": 37,
+    "component": "frontend/src/app/features/settings/settings.component.ts",
+    "template": "frontend/src/app/features/settings/settings.component.html",
+    "line": 129,
+    "expression": "projectTesting ? 'Vérification…' : 'Tester la connexion'"
+  },
+  {
+    "id": 38,
+    "component": "frontend/src/app/features/settings/settings.component.ts",
+    "template": "frontend/src/app/features/settings/settings.component.html",
+    "line": 132,
+    "expression": "jenkinsSummary.configuration"
+  },
+  {
+    "id": 39,
+    "component": "frontend/src/app/features/settings/settings.component.ts",
+    "template": "frontend/src/app/features/settings/settings.component.html",
+    "line": 133,
+    "expression": "jenkinsSummary.connection"
+  },
+  {
+    "id": 40,
+    "component": "frontend/src/app/features/settings/settings.component.ts",
+    "template": "frontend/src/app/features/settings/settings.component.html",
+    "line": 134,
+    "expression": "jenkinsSummary.checkedAt ? (jenkinsSummary.checkedAt | frenchDate) : 'Non vérifiée'"
+  },
+  {
+    "id": 41,
+    "component": "frontend/src/app/features/settings/settings.component.ts",
+    "template": "frontend/src/app/features/settings/settings.component.html",
+    "line": 135,
+    "expression": "jenkinsSummary.job"
+  },
+  {
+    "id": 42,
+    "component": "frontend/src/app/features/settings/settings.component.ts",
+    "template": "frontend/src/app/features/settings/settings.component.html",
+    "line": 137,
+    "expression": "diagnosticLabel(project.validationStatus?.sonarqube)"
+  },
+  {
+    "id": 43,
+    "component": "frontend/src/app/features/settings/settings.component.ts",
+    "template": "frontend/src/app/features/settings/settings.component.html",
+    "line": 137,
+    "expression": "project.validationStatus.sonarqube.checkedAt | frenchDate"
+  },
+  {
+    "id": 44,
+    "component": "frontend/src/app/features/settings/settings.component.ts",
+    "template": "frontend/src/app/features/settings/settings.component.html",
+    "line": 153,
+    "expression": "tool.icon"
+  },
+  {
+    "id": 45,
+    "component": "frontend/src/app/features/settings/settings.component.ts",
+    "template": "frontend/src/app/features/settings/settings.component.html",
+    "line": 156,
+    "expression": "tool.name"
+  },
+  {
+    "id": 46,
+    "component": "frontend/src/app/features/settings/settings.component.ts",
+    "template": "frontend/src/app/features/settings/settings.component.html",
+    "line": 157,
+    "expression": "tool.description"
+  },
+  {
+    "id": 47,
+    "component": "frontend/src/app/features/settings/settings.component.ts",
+    "template": "frontend/src/app/features/settings/settings.component.html",
+    "line": 163,
+    "expression": "tool.status === 'connected' ? '●' : tool.status === 'error' ? '✕' : '○'"
+  },
+  {
+    "id": 48,
+    "component": "frontend/src/app/features/settings/settings.component.ts",
+    "template": "frontend/src/app/features/settings/settings.component.html",
+    "line": 164,
+    "expression": "integrationStatusLabel(tool)"
+  },
+  {
+    "id": 49,
+    "component": "frontend/src/app/features/settings/settings.component.ts",
+    "template": "frontend/src/app/features/settings/settings.component.html",
+    "line": 181,
+    "expression": "tool.tokenLabel"
+  },
+  {
+    "id": 50,
+    "component": "frontend/src/app/features/settings/settings.component.ts",
+    "template": "frontend/src/app/features/settings/settings.component.html",
+    "line": 205,
+    "expression": "entry.key"
+  },
+  {
+    "id": 51,
+    "component": "frontend/src/app/features/settings/settings.component.ts",
+    "template": "frontend/src/app/features/settings/settings.component.html",
+    "line": 206,
+    "expression": "entry.val"
+  },
+  {
+    "id": 52,
+    "component": "frontend/src/app/features/settings/settings.component.ts",
+    "template": "frontend/src/app/features/settings/settings.component.html",
+    "line": 210,
+    "expression": "tool.lastChecked | frenchDate"
+  },
+  {
+    "id": 53,
+    "component": "frontend/src/app/features/settings/settings.component.ts",
+    "template": "frontend/src/app/features/settings/settings.component.html",
+    "line": 248,
+    "expression": "pipelineStageLabel(scanner.id)"
+  },
+  {
+    "id": 54,
+    "component": "frontend/src/app/features/settings/settings.component.ts",
+    "template": "frontend/src/app/features/settings/settings.component.html",
+    "line": 249,
+    "expression": "scannerEvidenceLabel(scanner)"
+  },
+  {
+    "id": 55,
+    "component": "frontend/src/app/features/settings/settings.component.ts",
+    "template": "frontend/src/app/features/settings/settings.component.html",
+    "line": 249,
+    "expression": "scanner.projectsCompleted"
+  },
+  {
+    "id": 56,
+    "component": "frontend/src/app/features/settings/settings.component.ts",
+    "template": "frontend/src/app/features/settings/settings.component.html",
+    "line": 249,
+    "expression": "scanner.projectsReported"
+  },
+  {
+    "id": 57,
+    "component": "frontend/src/app/features/settings/settings.component.ts",
+    "template": "frontend/src/app/features/settings/settings.component.html",
+    "line": 249,
+    "expression": "scanner.lastObservedAt | frenchDate"
+  },
+  {
+    "id": 58,
+    "component": "frontend/src/app/features/auth/login.component.ts",
+    "template": "frontend/src/app/features/auth/login.component.ts",
+    "line": 11,
+    "expression": "f.icon"
+  },
+  {
+    "id": 59,
+    "component": "frontend/src/app/features/auth/login.component.ts",
+    "template": "frontend/src/app/features/auth/login.component.ts",
+    "line": 13,
+    "expression": "f.title"
+  },
+  {
+    "id": 60,
+    "component": "frontend/src/app/features/auth/login.component.ts",
+    "template": "frontend/src/app/features/auth/login.component.ts",
+    "line": 14,
+    "expression": "f.desc"
+  },
+  {
+    "id": 61,
+    "component": "frontend/src/app/features/auth/login.component.ts",
+    "template": "frontend/src/app/features/auth/login.component.ts",
+    "line": 41,
+    "expression": "error"
+  },
+  {
+    "id": 62,
+    "component": "frontend/src/app/features/admin/admin.component.ts",
+    "template": "frontend/src/app/features/admin/admin.component.html",
+    "line": 1,
+    "expression": "loadError"
+  },
+  {
+    "id": 63,
+    "component": "frontend/src/app/features/admin/admin.component.ts",
+    "template": "frontend/src/app/features/admin/admin.component.html",
+    "line": 31,
+    "expression": "u.name?.substring(0,2).toUpperCase() || '—'"
+  },
+  {
+    "id": 64,
+    "component": "frontend/src/app/features/admin/admin.component.ts",
+    "template": "frontend/src/app/features/admin/admin.component.html",
+    "line": 32,
+    "expression": "u.name || 'Non renseigné'"
+  },
+  {
+    "id": 65,
+    "component": "frontend/src/app/features/admin/admin.component.ts",
+    "template": "frontend/src/app/features/admin/admin.component.html",
+    "line": 35,
+    "expression": "u.email || 'Non renseigné'"
+  },
+  {
+    "id": 66,
+    "component": "frontend/src/app/features/admin/admin.component.ts",
+    "template": "frontend/src/app/features/admin/admin.component.html",
+    "line": 37,
+    "expression": "u.role | presentationLabel"
+  },
+  {
+    "id": 67,
+    "component": "frontend/src/app/features/admin/admin.component.ts",
+    "template": "frontend/src/app/features/admin/admin.component.html",
+    "line": 40,
+    "expression": "u.createdAt | frenchDate:false"
+  },
+  {
+    "id": 68,
+    "component": "frontend/src/app/features/analysis/analysis.component.ts",
+    "template": "frontend/src/app/features/analysis/analysis.component.html",
+    "line": 1,
+    "expression": "loadError"
+  },
+  {
+    "id": 69,
+    "component": "frontend/src/app/features/analysis/analysis.component.ts",
+    "template": "frontend/src/app/features/analysis/analysis.component.html",
+    "line": 17,
+    "expression": "stats.total"
+  },
+  {
+    "id": 70,
+    "component": "frontend/src/app/features/analysis/analysis.component.ts",
+    "template": "frontend/src/app/features/analysis/analysis.component.html",
+    "line": 24,
+    "expression": "stats.avgConfidence === null ? 'Non disponible' : stats.avgConfidence + '%'"
+  },
+  {
+    "id": 71,
+    "component": "frontend/src/app/features/analysis/analysis.component.ts",
+    "template": "frontend/src/app/features/analysis/analysis.component.html",
+    "line": 31,
+    "expression": "stats.autoFixablePct === null ? 'Non disponible' : stats.autoFixablePct + '%'"
+  },
+  {
+    "id": 72,
+    "component": "frontend/src/app/features/analysis/analysis.component.ts",
+    "template": "frontend/src/app/features/analysis/analysis.component.html",
+    "line": 38,
+    "expression": "stats.criticalCount"
+  },
+  {
+    "id": 73,
+    "component": "frontend/src/app/features/analysis/analysis.component.ts",
+    "template": "frontend/src/app/features/analysis/analysis.component.html",
+    "line": 54,
+    "expression": "d.label"
+  },
+  {
+    "id": 74,
+    "component": "frontend/src/app/features/analysis/analysis.component.ts",
+    "template": "frontend/src/app/features/analysis/analysis.component.html",
+    "line": 58,
+    "expression": "d.count"
+  },
+  {
+    "id": 75,
+    "component": "frontend/src/app/features/analysis/analysis.component.ts",
+    "template": "frontend/src/app/features/analysis/analysis.component.html",
+    "line": 71,
+    "expression": "s.label"
+  },
+  {
+    "id": 76,
+    "component": "frontend/src/app/features/analysis/analysis.component.ts",
+    "template": "frontend/src/app/features/analysis/analysis.component.html",
+    "line": 75,
+    "expression": "s.count"
+  },
+  {
+    "id": 77,
+    "component": "frontend/src/app/features/analysis/analysis.component.ts",
+    "template": "frontend/src/app/features/analysis/analysis.component.html",
+    "line": 88,
+    "expression": "recentReports.length"
+  },
+  {
+    "id": 78,
+    "component": "frontend/src/app/features/analysis/analysis.component.ts",
+    "template": "frontend/src/app/features/analysis/analysis.component.html",
+    "line": 101,
+    "expression": "r.decision | presentationLabel"
+  },
+  {
+    "id": 79,
+    "component": "frontend/src/app/features/analysis/analysis.component.ts",
+    "template": "frontend/src/app/features/analysis/analysis.component.html",
+    "line": 104,
+    "expression": "r.title || 'Rapport sans titre'"
+  },
+  {
+    "id": 80,
+    "component": "frontend/src/app/features/analysis/analysis.component.ts",
+    "template": "frontend/src/app/features/analysis/analysis.component.html",
+    "line": 105,
+    "expression": "r.projectName || 'Projet non disponible'"
+  },
+  {
+    "id": 81,
+    "component": "frontend/src/app/features/analysis/analysis.component.ts",
+    "template": "frontend/src/app/features/analysis/analysis.component.html",
+    "line": 105,
+    "expression": "r.securityLevel | presentationLabel"
+  },
+  {
+    "id": 82,
+    "component": "frontend/src/app/features/analysis/analysis.component.ts",
+    "template": "frontend/src/app/features/analysis/analysis.component.html",
+    "line": 105,
+    "expression": "r.confidence ?? 'Non disponible'"
+  },
+  {
+    "id": 83,
+    "component": "frontend/src/app/features/analysis/analysis.component.ts",
+    "template": "frontend/src/app/features/analysis/analysis.component.html",
+    "line": 105,
+    "expression": "r.confidence != null ? ' %' : ''"
+  },
+  {
+    "id": 84,
+    "component": "frontend/src/app/features/analysis/analysis.component.ts",
+    "template": "frontend/src/app/features/analysis/analysis.component.html",
+    "line": 108,
+    "expression": "r.createdAt | frenchDate"
+  },
+  {
+    "id": 85,
+    "component": "frontend/src/app/features/incidents/remediation-card.component.ts",
+    "template": "frontend/src/app/features/incidents/remediation-card.component.ts",
+    "line": 4,
+    "expression": "phaseLabel"
+  },
+  {
+    "id": 86,
+    "component": "frontend/src/app/features/incidents/remediation-card.component.ts",
+    "template": "frontend/src/app/features/incidents/remediation-card.component.ts",
+    "line": 16,
+    "expression": "i.severity | presentationLabel"
+  },
+  {
+    "id": 87,
+    "component": "frontend/src/app/features/incidents/remediation-card.component.ts",
+    "template": "frontend/src/app/features/incidents/remediation-card.component.ts",
+    "line": 17,
+    "expression": "i.title"
+  },
+  {
+    "id": 88,
+    "component": "frontend/src/app/features/incidents/remediation-card.component.ts",
+    "template": "frontend/src/app/features/incidents/remediation-card.component.ts",
+    "line": 18,
+    "expression": "mergeReady ? '✓ Correction validée' : '✓ Validée'"
+  },
+  {
+    "id": 89,
+    "component": "frontend/src/app/features/incidents/remediation-card.component.ts",
+    "template": "frontend/src/app/features/incidents/remediation-card.component.ts",
+    "line": 20,
+    "expression": "prLabel || 'Voir la Pull Request'"
+  },
+  {
+    "id": 90,
+    "component": "frontend/src/app/features/incidents/remediation-card.component.ts",
+    "template": "frontend/src/app/features/incidents/remediation-card.component.ts",
+    "line": 22,
+    "expression": "i.detail"
+  },
+  {
+    "id": 91,
+    "component": "frontend/src/app/features/incidents/remediation-card.component.ts",
+    "template": "frontend/src/app/features/incidents/remediation-card.component.ts",
+    "line": 24,
+    "expression": "i.stage | presentationLabel"
+  },
+  {
+    "id": 92,
+    "component": "frontend/src/app/features/incidents/remediation-card.component.ts",
+    "template": "frontend/src/app/features/incidents/remediation-card.component.ts",
+    "line": 25,
+    "expression": "i.source | presentationLabel"
+  },
+  {
+    "id": 93,
+    "component": "frontend/src/app/features/incidents/remediation-card.component.ts",
+    "template": "frontend/src/app/features/incidents/remediation-card.component.ts",
+    "line": 26,
+    "expression": "i.blocking ? 'Bloquant' : 'Non bloquant'"
+  },
+  {
+    "id": 94,
+    "component": "frontend/src/app/features/incidents/remediation-card.component.ts",
+    "template": "frontend/src/app/features/incidents/remediation-card.component.ts",
+    "line": 27,
+    "expression": "i.remediationType | presentationLabel"
+  },
+  {
+    "id": 95,
+    "component": "frontend/src/app/features/incidents/remediation-card.component.ts",
+    "template": "frontend/src/app/features/incidents/remediation-card.component.ts",
+    "line": 29,
+    "expression": "i.rootCause"
+  },
+  {
+    "id": 96,
+    "component": "frontend/src/app/features/incidents/remediation-card.component.ts",
+    "template": "frontend/src/app/features/incidents/remediation-card.component.ts",
+    "line": 30,
+    "expression": "i.impact"
+  },
+  {
+    "id": 97,
+    "component": "frontend/src/app/features/incidents/remediation-card.component.ts",
+    "template": "frontend/src/app/features/incidents/remediation-card.component.ts",
+    "line": 31,
+    "expression": "i.file"
+  },
+  {
+    "id": 98,
+    "component": "frontend/src/app/features/incidents/remediation-card.component.ts",
+    "template": "frontend/src/app/features/incidents/remediation-card.component.ts",
+    "line": 31,
+    "expression": "i.line"
+  },
+  {
+    "id": 99,
+    "component": "frontend/src/app/features/incidents/remediation-card.component.ts",
+    "template": "frontend/src/app/features/incidents/remediation-card.component.ts",
+    "line": 32,
+    "expression": "i.recommendation"
+  },
+  {
+    "id": 100,
+    "component": "frontend/src/app/features/incidents/remediation-card.component.ts",
+    "template": "frontend/src/app/features/incidents/remediation-card.component.ts",
+    "line": 38,
+    "expression": "advice"
+  },
+  {
+    "id": 101,
+    "component": "frontend/src/app/features/incidents/remediation-card.component.ts",
+    "template": "frontend/src/app/features/incidents/remediation-card.component.ts",
+    "line": 42,
+    "expression": "selected.size"
+  },
+  {
+    "id": 102,
+    "component": "frontend/src/app/features/incidents/remediation-card.component.ts",
+    "template": "frontend/src/app/features/incidents/remediation-card.component.ts",
+    "line": 42,
+    "expression": "issues.length"
+  },
+  {
+    "id": 103,
+    "component": "frontend/src/app/features/incidents/remediation-card.component.ts",
+    "template": "frontend/src/app/features/incidents/remediation-card.component.ts",
+    "line": 42,
+    "expression": "issues.length === 1 ? 'correction retenue' : 'corrections retenues'"
+  },
+  {
+    "id": 104,
+    "component": "frontend/src/app/features/incidents/remediation-card.component.ts",
+    "template": "frontend/src/app/features/incidents/remediation-card.component.ts",
+    "line": 61,
+    "expression": "lockedNote"
+  },
+  {
+    "id": 105,
+    "component": "frontend/src/app/features/incidents/remediation-card.component.ts",
+    "template": "frontend/src/app/features/incidents/remediation-card.component.ts",
+    "line": 62,
+    "expression": "prLabel || 'Voir la Pull Request'"
+  },
+  {
+    "id": 106,
+    "component": "frontend/src/app/features/incidents/remediation-card.component.ts",
+    "template": "frontend/src/app/features/incidents/remediation-card.component.ts",
+    "line": 69,
+    "expression": "correcting ? 'Lancement…' : actionLabel"
+  },
+  {
+    "id": 107,
+    "component": "frontend/src/app/features/incidents/remediation-card.component.ts",
+    "template": "frontend/src/app/features/incidents/remediation-card.component.ts",
+    "line": 73,
+    "expression": "correcting ? 'Lancement…' : actionLabel"
+  },
+  {
+    "id": 108,
+    "component": "frontend/src/app/features/incidents/incidents.component.ts",
+    "template": "frontend/src/app/features/incidents/incidents.component.html",
+    "line": 1,
+    "expression": "loadError"
+  },
+  {
+    "id": 109,
+    "component": "frontend/src/app/features/incidents/incidents.component.ts",
+    "template": "frontend/src/app/features/incidents/incidents.component.html",
+    "line": 9,
+    "expression": "total"
+  },
+  {
+    "id": 110,
+    "component": "frontend/src/app/features/incidents/incidents.component.ts",
+    "template": "frontend/src/app/features/incidents/incidents.component.html",
+    "line": 9,
+    "expression": "total >= size ? ' affichés (limite ' + size + ')' : ''"
+  },
+  {
+    "id": 111,
+    "component": "frontend/src/app/features/incidents/incidents.component.ts",
+    "template": "frontend/src/app/features/incidents/incidents.component.html",
+    "line": 58,
+    "expression": "inc.id?.substring(0,8)"
+  },
+  {
+    "id": 112,
+    "component": "frontend/src/app/features/incidents/incidents.component.ts",
+    "template": "frontend/src/app/features/incidents/incidents.component.html",
+    "line": 62,
+    "expression": "inc.title || 'Incident sans titre'"
+  },
+  {
+    "id": 113,
+    "component": "frontend/src/app/features/incidents/incidents.component.ts",
+    "template": "frontend/src/app/features/incidents/incidents.component.html",
+    "line": 65,
+    "expression": "inc.sourceType || inc.source || 'Non disponible'"
+  },
+  {
+    "id": 114,
+    "component": "frontend/src/app/features/incidents/incidents.component.ts",
+    "template": "frontend/src/app/features/incidents/incidents.component.html",
+    "line": 68,
+    "expression": "inc._severity | presentationLabel"
+  },
+  {
+    "id": 115,
+    "component": "frontend/src/app/features/incidents/incidents.component.ts",
+    "template": "frontend/src/app/features/incidents/incidents.component.html",
+    "line": 71,
+    "expression": "inc.status?.toLowerCase()"
+  },
+  {
+    "id": 116,
+    "component": "frontend/src/app/features/incidents/incidents.component.ts",
+    "template": "frontend/src/app/features/incidents/incidents.component.html",
+    "line": 71,
+    "expression": "inc.status | presentationLabel"
+  },
+  {
+    "id": 117,
+    "component": "frontend/src/app/features/incidents/incidents.component.ts",
+    "template": "frontend/src/app/features/incidents/incidents.component.html",
+    "line": 73,
+    "expression": "inc.createdAt | frenchDate"
+  },
+  {
+    "id": 118,
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "template": "frontend/src/app/features/incidents/incident-detail.component.html",
+    "line": 1,
+    "expression": "loadError"
+  },
+  {
+    "id": 119,
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "template": "frontend/src/app/features/incidents/incident-detail.component.html",
+    "line": 13,
+    "expression": "dominantStatusColor()"
+  },
+  {
+    "id": 120,
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "template": "frontend/src/app/features/incidents/incident-detail.component.html",
+    "line": 17,
+    "expression": "incident.id"
+  },
+  {
+    "id": 121,
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "template": "frontend/src/app/features/incidents/incident-detail.component.html",
+    "line": 20,
+    "expression": "incident.title"
+  },
+  {
+    "id": 122,
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "template": "frontend/src/app/features/incidents/incident-detail.component.html",
+    "line": 28,
+    "expression": "dominantStatusLabel()"
+  },
+  {
+    "id": 123,
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "template": "frontend/src/app/features/incidents/incident-detail.component.html",
+    "line": 31,
+    "expression": "incident.status | presentationLabel"
+  },
+  {
+    "id": 124,
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "template": "frontend/src/app/features/incidents/incident-detail.component.html",
+    "line": 32,
+    "expression": "aiAnalysis.securityLevel | presentationLabel"
+  },
+  {
+    "id": 125,
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "template": "frontend/src/app/features/incidents/incident-detail.component.html",
+    "line": 33,
+    "expression": "aiAnalysis.confidenceScore"
+  },
+  {
+    "id": 126,
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "template": "frontend/src/app/features/incidents/incident-detail.component.html",
+    "line": 34,
+    "expression": "incident.createdAt | frenchDate"
+  },
+  {
+    "id": 127,
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "template": "frontend/src/app/features/incidents/incident-detail.component.html",
+    "line": 51,
+    "expression": "fixRequestStatusLabel()"
+  },
+  {
+    "id": 128,
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "template": "frontend/src/app/features/incidents/incident-detail.component.html",
+    "line": 55,
+    "expression": "fixRequestStatusLabel()"
+  },
+  {
+    "id": 129,
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "template": "frontend/src/app/features/incidents/incident-detail.component.html",
+    "line": 59,
+    "expression": "fixRequestStatusLabel()"
+  },
+  {
+    "id": 130,
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "template": "frontend/src/app/features/incidents/incident-detail.component.html",
+    "line": 61,
+    "expression": "fixFailureDetails()?.message"
+  },
+  {
+    "id": 131,
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "template": "frontend/src/app/features/incidents/incident-detail.component.html",
+    "line": 65,
+    "expression": "fixRequestStatusLabel()"
+  },
+  {
+    "id": 132,
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "template": "frontend/src/app/features/incidents/incident-detail.component.html",
+    "line": 75,
+    "expression": "cancelBusy || fixRequestStatus() === 'CANCEL_REQUESTED' ? 'Annulation en cours...' : 'Annuler la correction'"
+  },
+  {
+    "id": 133,
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "template": "frontend/src/app/features/incidents/incident-detail.component.html",
+    "line": 78,
+    "expression": "fixRequestStatusLabel()"
+  },
+  {
+    "id": 134,
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "template": "frontend/src/app/features/incidents/incident-detail.component.html",
+    "line": 79,
+    "expression": "cancelError"
+  },
+  {
+    "id": 135,
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "template": "frontend/src/app/features/incidents/incident-detail.component.html",
+    "line": 88,
+    "expression": "reconcileBusy ? 'Marquage…' : 'Marquer la correction bloquée comme échouée'"
+  },
+  {
+    "id": 136,
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "template": "frontend/src/app/features/incidents/incident-detail.component.html",
+    "line": 90,
+    "expression": "reconcileError"
+  },
+  {
+    "id": 137,
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "template": "frontend/src/app/features/incidents/incident-detail.component.html",
+    "line": 97,
+    "expression": "approvalBusy ? 'Démarrage…' : 'Créer la Pull Request'"
+  },
+  {
+    "id": 138,
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "template": "frontend/src/app/features/incidents/incident-detail.component.html",
+    "line": 105,
+    "expression": "prValidationBusy ? 'Validation en attente…' : (prValidationRequest?.status === 'FAILED' ? 'Réessayer la validation' : 'Valider la Pull Request')"
+  },
+  {
+    "id": 139,
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "template": "frontend/src/app/features/incidents/incident-detail.component.html",
+    "line": 120,
+    "expression": "refreshValidationTargetBusy ? 'Actualisation…' : 'Actualiser la cible'"
+  },
+  {
+    "id": 140,
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "template": "frontend/src/app/features/incidents/incident-detail.component.html",
+    "line": 125,
+    "expression": "approvalError"
+  },
+  {
+    "id": 141,
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "template": "frontend/src/app/features/incidents/incident-detail.component.html",
+    "line": 149,
+    "expression": "step.label"
+  },
+  {
+    "id": 142,
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "template": "frontend/src/app/features/incidents/incident-detail.component.html",
+    "line": 151,
+    "expression": "step.sub"
+  },
+  {
+    "id": 143,
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "template": "frontend/src/app/features/incidents/incident-detail.component.html",
+    "line": 163,
+    "expression": "tab.label"
+  },
+  {
+    "id": 144,
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "template": "frontend/src/app/features/incidents/incident-detail.component.html",
+    "line": 191,
+    "expression": "progress().resolved"
+  },
+  {
+    "id": 145,
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "template": "frontend/src/app/features/incidents/incident-detail.component.html",
+    "line": 191,
+    "expression": "progress().total"
+  },
+  {
+    "id": 146,
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "template": "frontend/src/app/features/incidents/incident-detail.component.html",
+    "line": 191,
+    "expression": "progress().total === 1 ? 'phase résolue' : 'phases résolues'"
+  },
+  {
+    "id": 147,
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "template": "frontend/src/app/features/incidents/incident-detail.component.html",
+    "line": 192,
+    "expression": "progress().percent"
+  },
+  {
+    "id": 148,
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "template": "frontend/src/app/features/incidents/incident-detail.component.html",
+    "line": 312,
+    "expression": "deploymentLines().length"
+  },
+  {
+    "id": 149,
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "template": "frontend/src/app/features/incidents/incident-detail.component.html",
+    "line": 312,
+    "expression": "deploymentLines().length === 1 ? 'point à traiter' : 'points à traiter'"
+  },
+  {
+    "id": 150,
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "template": "frontend/src/app/features/incidents/incident-detail.component.html",
+    "line": 316,
+    "expression": "line.actor"
+  },
+  {
+    "id": 151,
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "template": "frontend/src/app/features/incidents/incident-detail.component.html",
+    "line": 317,
+    "expression": "line.phase"
+  },
+  {
+    "id": 152,
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "template": "frontend/src/app/features/incidents/incident-detail.component.html",
+    "line": 317,
+    "expression": "line.text | presentationText"
+  },
+  {
+    "id": 153,
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "template": "frontend/src/app/features/incidents/incident-detail.component.html",
+    "line": 329,
+    "expression": "nonBlockingSummary()"
+  },
+  {
+    "id": 154,
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "template": "frontend/src/app/features/incidents/incident-detail.component.html",
+    "line": 339,
+    "expression": "aiAnalysis.decision | presentationLabel"
+  },
+  {
+    "id": 155,
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "template": "frontend/src/app/features/incidents/incident-detail.component.html",
+    "line": 343,
+    "expression": "aiAnalysis.justification | presentationText"
+  },
+  {
+    "id": 156,
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "template": "frontend/src/app/features/incidents/incident-detail.component.html",
+    "line": 346,
+    "expression": "aiAnalysis.errorsSummary | presentationText"
+  },
+  {
+    "id": 157,
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "template": "frontend/src/app/features/incidents/incident-detail.component.html",
+    "line": 362,
+    "expression": "scannerMetric(enrichedData.sonar, 'vulnerabilities') ?? 'Non disponible'"
+  },
+  {
+    "id": 158,
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "template": "frontend/src/app/features/incidents/incident-detail.component.html",
+    "line": 366,
+    "expression": "scannerMetric(enrichedData.sonar, 'code_smells') ?? 'Non disponible'"
+  },
+  {
+    "id": 159,
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "template": "frontend/src/app/features/incidents/incident-detail.component.html",
+    "line": 371,
+    "expression": "enrichedData.sonar?.status | stageStatusLabel"
+  },
+  {
+    "id": 160,
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "template": "frontend/src/app/features/incidents/incident-detail.component.html",
+    "line": 380,
+    "expression": "scannerMetric(enrichedData.trivy, 'critical') ?? 'Non disponible'"
+  },
+  {
+    "id": 161,
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "template": "frontend/src/app/features/incidents/incident-detail.component.html",
+    "line": 384,
+    "expression": "scannerMetric(enrichedData.trivy, 'high') ?? 'Non disponible'"
+  },
+  {
+    "id": 162,
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "template": "frontend/src/app/features/incidents/incident-detail.component.html",
+    "line": 389,
+    "expression": "enrichedData.trivy?.status | stageStatusLabel"
+  },
+  {
+    "id": 163,
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "template": "frontend/src/app/features/incidents/incident-detail.component.html",
+    "line": 398,
+    "expression": "scannerMetric(enrichedData.owasp, 'critical') ?? 'Non disponible'"
+  },
+  {
+    "id": 164,
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "template": "frontend/src/app/features/incidents/incident-detail.component.html",
+    "line": 402,
+    "expression": "scannerMetric(enrichedData.owasp, 'high') ?? 'Non disponible'"
+  },
+  {
+    "id": 165,
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "template": "frontend/src/app/features/incidents/incident-detail.component.html",
+    "line": 407,
+    "expression": "enrichedData.owasp?.status | stageStatusLabel"
+  },
+  {
+    "id": 166,
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "template": "frontend/src/app/features/incidents/incident-detail.component.html",
+    "line": 416,
+    "expression": "scannerMetric(enrichedData.zap, 'alerts_high') ?? 'Non disponible'"
+  },
+  {
+    "id": 167,
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "template": "frontend/src/app/features/incidents/incident-detail.component.html",
+    "line": 420,
+    "expression": "scannerMetric(enrichedData.zap, 'alerts_medium') ?? 'Non disponible'"
+  },
+  {
+    "id": 168,
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "template": "frontend/src/app/features/incidents/incident-detail.component.html",
+    "line": 425,
+    "expression": "enrichedData.zap?.status | stageStatusLabel"
+  },
+  {
+    "id": 169,
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "template": "frontend/src/app/features/incidents/incident-detail.component.html",
+    "line": 438,
+    "expression": "aiAnalysis.developerActions | presentationText"
+  },
+  {
+    "id": 170,
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "template": "frontend/src/app/features/incidents/incident-detail.component.html",
+    "line": 453,
+    "expression": "getAgentIcon(r.agentType)"
+  },
+  {
+    "id": 171,
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "template": "frontend/src/app/features/incidents/incident-detail.component.html",
+    "line": 455,
+    "expression": "getAgentLabel(r.agentType)"
+  },
+  {
+    "id": 172,
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "template": "frontend/src/app/features/incidents/incident-detail.component.html",
+    "line": 463,
+    "expression": "r.confidence == null ? 'Non disponible' : ((r.confidence * 100 | number:'1.0-0') + '%')"
+  },
+  {
+    "id": 173,
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "template": "frontend/src/app/features/incidents/incident-detail.component.html",
+    "line": 467,
+    "expression": "r.analysis || r.content"
+  },
+  {
+    "id": 174,
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "template": "frontend/src/app/features/incidents/incident-detail.component.html",
+    "line": 495,
+    "expression": "mergeAuthMeta(ma.authorization).icon"
+  },
+  {
+    "id": 175,
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "template": "frontend/src/app/features/incidents/incident-detail.component.html",
+    "line": 498,
+    "expression": "isMergeReadySuccess() ? 'Correction réussie' : mergeAuthMeta(ma.authorization).title"
+  },
+  {
+    "id": 176,
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "template": "frontend/src/app/features/incidents/incident-detail.component.html",
+    "line": 502,
+    "expression": "batchPrLabel()"
+  },
+  {
+    "id": 177,
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "template": "frontend/src/app/features/incidents/incident-detail.component.html",
+    "line": 504,
+    "expression": "mergeAuthMeta(ma.authorization).subtitle"
+  },
+  {
+    "id": 178,
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "template": "frontend/src/app/features/incidents/incident-detail.component.html",
+    "line": 514,
+    "expression": "item"
+  },
+  {
+    "id": 179,
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "template": "frontend/src/app/features/incidents/incident-detail.component.html",
+    "line": 519,
+    "expression": "batchPrLabel()"
+  },
+  {
+    "id": 180,
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "template": "frontend/src/app/features/incidents/incident-detail.component.html",
+    "line": 529,
+    "expression": "preexistingFindingCountIfReliable()"
+  },
+  {
+    "id": 181,
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "template": "frontend/src/app/features/incidents/incident-detail.component.html",
+    "line": 537,
+    "expression": "mergeBlockingLabel(r)"
+  },
+  {
+    "id": 182,
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "template": "frontend/src/app/features/incidents/incident-detail.component.html",
+    "line": 544,
+    "expression": "correctiveBusy ? 'Autorisation…' : 'Corriger et revalider'"
+  },
+  {
+    "id": 183,
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "template": "frontend/src/app/features/incidents/incident-detail.component.html",
+    "line": 554,
+    "expression": "mergeBlockingLabel(r)"
+  },
+  {
+    "id": 184,
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "template": "frontend/src/app/features/incidents/incident-detail.component.html",
+    "line": 559,
+    "expression": "shortSha(ma.forSha)"
+  },
+  {
+    "id": 185,
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "template": "frontend/src/app/features/incidents/incident-detail.component.html",
+    "line": 560,
+    "expression": "ma.computedAt | frenchDate"
+  },
+  {
+    "id": 186,
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "template": "frontend/src/app/features/incidents/incident-detail.component.html",
+    "line": 586,
+    "expression": "r"
+  },
+  {
+    "id": 187,
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "template": "frontend/src/app/features/incidents/incident-detail.component.html",
+    "line": 589,
+    "expression": "validation.validatedAt | frenchDate"
+  },
+  {
+    "id": 188,
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "template": "frontend/src/app/features/incidents/incident-detail.component.html",
+    "line": 611,
+    "expression": "row.label"
+  },
+  {
+    "id": 189,
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "template": "frontend/src/app/features/incidents/incident-detail.component.html",
+    "line": 613,
+    "expression": "healthLabel(row.value)"
+  },
+  {
+    "id": 190,
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "template": "frontend/src/app/features/incidents/incident-detail.component.html",
+    "line": 619,
+    "expression": "ph.technicalFailure"
+  },
+  {
+    "id": 191,
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "template": "frontend/src/app/features/incidents/incident-detail.component.html",
+    "line": 628,
+    "expression": "a.message || advisoryLabel(a)"
+  },
+  {
+    "id": 192,
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "template": "frontend/src/app/features/incidents/incident-detail.component.html",
+    "line": 641,
+    "expression": "validation.prNumber"
+  },
+  {
+    "id": 193,
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "template": "frontend/src/app/features/incidents/incident-detail.component.html",
+    "line": 644,
+    "expression": "validation.prBranch"
+  },
+  {
+    "id": 194,
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "template": "frontend/src/app/features/incidents/incident-detail.component.html",
+    "line": 649,
+    "expression": "validation.prUrl"
+  },
+  {
+    "id": 195,
+    "component": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "template": "frontend/src/app/features/incidents/incident-detail.component.html",
+    "line": 663,
+    "expression": "incident | json"
+  },
+  {
+    "id": 196,
+    "component": "frontend/src/app/features/incidents/developer-guide/developer-guide-tab.component.ts",
+    "template": "frontend/src/app/features/incidents/developer-guide/developer-guide-tab.component.ts",
+    "line": 9,
+    "expression": "guide.issues.length"
+  },
+  {
+    "id": 197,
+    "component": "frontend/src/app/features/incidents/developer-guide/developer-guide-tab.component.ts",
+    "template": "frontend/src/app/features/incidents/developer-guide/developer-guide-tab.component.ts",
+    "line": 9,
+    "expression": "guide.issues.length === 1 ? 'problème' : 'problèmes'"
+  },
+  {
+    "id": 198,
+    "component": "frontend/src/app/features/incidents/developer-guide/developer-guide-tab.component.ts",
+    "template": "frontend/src/app/features/incidents/developer-guide/developer-guide-tab.component.ts",
+    "line": 10,
+    "expression": "guide.totalEstimatedMinutes"
+  },
+  {
+    "id": 199,
+    "component": "frontend/src/app/features/incidents/developer-guide/developer-guide-tab.component.ts",
+    "template": "frontend/src/app/features/incidents/developer-guide/developer-guide-tab.component.ts",
+    "line": 11,
+    "expression": "(guide.confidence * 100) | number:'1.0-0'"
+  },
+  {
+    "id": 200,
+    "component": "frontend/src/app/features/incidents/developer-guide/developer-guide-tab.component.ts",
+    "template": "frontend/src/app/features/incidents/developer-guide/developer-guide-tab.component.ts",
+    "line": 14,
+    "expression": "summaryLabel(guide.summaryForDeveloper)"
+  },
+  {
+    "id": 201,
+    "component": "frontend/src/app/features/incidents/developer-guide/developer-guide-tab.component.ts",
+    "template": "frontend/src/app/features/incidents/developer-guide/developer-guide-tab.component.ts",
+    "line": 18,
+    "expression": "id"
+  },
+  {
+    "id": 202,
+    "component": "frontend/src/app/features/incidents/developer-guide/developer-guide-tab.component.ts",
+    "template": "frontend/src/app/features/incidents/developer-guide/developer-guide-tab.component.ts",
+    "line": 23,
+    "expression": "id"
+  },
+  {
+    "id": 203,
+    "component": "frontend/src/app/features/incidents/developer-guide/developer-guide-tab.component.ts",
+    "template": "frontend/src/app/features/incidents/developer-guide/developer-guide-tab.component.ts",
+    "line": 24,
+    "expression": "titleOf(id)"
+  },
+  {
+    "id": 204,
+    "component": "frontend/src/app/features/incidents/developer-guide/developer-guide-tab.component.ts",
+    "template": "frontend/src/app/features/incidents/developer-guide/developer-guide-tab.component.ts",
+    "line": 35,
+    "expression": "issue.priority"
+  },
+  {
+    "id": 205,
+    "component": "frontend/src/app/features/incidents/developer-guide/developer-guide-tab.component.ts",
+    "template": "frontend/src/app/features/incidents/developer-guide/developer-guide-tab.component.ts",
+    "line": 36,
+    "expression": "issue.severity | presentationLabel"
+  },
+  {
+    "id": 206,
+    "component": "frontend/src/app/features/incidents/developer-guide/developer-guide-tab.component.ts",
+    "template": "frontend/src/app/features/incidents/developer-guide/developer-guide-tab.component.ts",
+    "line": 37,
+    "expression": "issue.source"
+  },
+  {
+    "id": 207,
+    "component": "frontend/src/app/features/incidents/developer-guide/developer-guide-tab.component.ts",
+    "template": "frontend/src/app/features/incidents/developer-guide/developer-guide-tab.component.ts",
+    "line": 39,
+    "expression": "issue.title"
+  },
+  {
+    "id": 208,
+    "component": "frontend/src/app/features/incidents/developer-guide/developer-guide-tab.component.ts",
+    "template": "frontend/src/app/features/incidents/developer-guide/developer-guide-tab.component.ts",
+    "line": 41,
+    "expression": "issue.file"
+  },
+  {
+    "id": 209,
+    "component": "frontend/src/app/features/incidents/developer-guide/developer-guide-tab.component.ts",
+    "template": "frontend/src/app/features/incidents/developer-guide/developer-guide-tab.component.ts",
+    "line": 41,
+    "expression": "issue.line"
+  },
+  {
+    "id": 210,
+    "component": "frontend/src/app/features/incidents/developer-guide/developer-guide-tab.component.ts",
+    "template": "frontend/src/app/features/incidents/developer-guide/developer-guide-tab.component.ts",
+    "line": 44,
+    "expression": "issue.estimatedEffortMinutes"
+  },
+  {
+    "id": 211,
+    "component": "frontend/src/app/features/incidents/developer-guide/developer-guide-tab.component.ts",
+    "template": "frontend/src/app/features/incidents/developer-guide/developer-guide-tab.component.ts",
+    "line": 45,
+    "expression": "isOpen(issue.id) ? '▾' : '▸'"
+  },
+  {
+    "id": 212,
+    "component": "frontend/src/app/features/incidents/developer-guide/developer-guide-tab.component.ts",
+    "template": "frontend/src/app/features/incidents/developer-guide/developer-guide-tab.component.ts",
+    "line": 49,
+    "expression": "issue.rule"
+  },
+  {
+    "id": 213,
+    "component": "frontend/src/app/features/incidents/developer-guide/developer-guide-tab.component.ts",
+    "template": "frontend/src/app/features/incidents/developer-guide/developer-guide-tab.component.ts",
+    "line": 53,
+    "expression": "issue.problem"
+  },
+  {
+    "id": 214,
+    "component": "frontend/src/app/features/incidents/developer-guide/developer-guide-tab.component.ts",
+    "template": "frontend/src/app/features/incidents/developer-guide/developer-guide-tab.component.ts",
+    "line": 58,
+    "expression": "issue.whyItMatters"
+  },
+  {
+    "id": 215,
+    "component": "frontend/src/app/features/incidents/developer-guide/developer-guide-tab.component.ts",
+    "template": "frontend/src/app/features/incidents/developer-guide/developer-guide-tab.component.ts",
+    "line": 64,
+    "expression": "step"
+  },
+  {
+    "id": 216,
+    "component": "frontend/src/app/features/incidents/developer-guide/developer-guide-tab.component.ts",
+    "template": "frontend/src/app/features/incidents/developer-guide/developer-guide-tab.component.ts",
+    "line": 73,
+    "expression": "codeOf(issue)?.before"
+  },
+  {
+    "id": 217,
+    "component": "frontend/src/app/features/incidents/developer-guide/developer-guide-tab.component.ts",
+    "template": "frontend/src/app/features/incidents/developer-guide/developer-guide-tab.component.ts",
+    "line": 77,
+    "expression": "codeOf(issue)?.after"
+  },
+  {
+    "id": 218,
+    "component": "frontend/src/app/features/incidents/developer-guide/developer-guide-tab.component.ts",
+    "template": "frontend/src/app/features/incidents/developer-guide/developer-guide-tab.component.ts",
+    "line": 84,
+    "expression": "issue.verification"
+  },
+  {
+    "id": 219,
+    "component": "frontend/src/app/features/incidents/developer-guide/developer-guide-tab.component.ts",
+    "template": "frontend/src/app/features/incidents/developer-guide/developer-guide-tab.component.ts",
+    "line": 106,
+    "expression": "summaryLabel(guide?.summaryForDeveloper)"
+  },
+  {
+    "id": 220,
+    "component": "frontend/src/app/features/incidents/developer-guide/developer-guide-tab.component.ts",
+    "template": "frontend/src/app/features/incidents/developer-guide/developer-guide-tab.component.ts",
+    "line": 112,
+    "expression": "fallbackText(item.title)"
+  },
+  {
+    "id": 221,
+    "component": "frontend/src/app/features/incidents/developer-guide/developer-guide-tab.component.ts",
+    "template": "frontend/src/app/features/incidents/developer-guide/developer-guide-tab.component.ts",
+    "line": 113,
+    "expression": "fallbackText(item.detail)"
+  },
+  {
+    "id": 222,
+    "component": "frontend/src/app/features/incidents/developer-guide/developer-guide-tab.component.ts",
+    "template": "frontend/src/app/features/incidents/developer-guide/developer-guide-tab.component.ts",
+    "line": 115,
+    "expression": "item.owner | presentationLabel"
+  },
+  {
+    "id": 223,
+    "component": "frontend/src/app/features/incidents/developer-guide/developer-guide-tab.component.ts",
+    "template": "frontend/src/app/features/incidents/developer-guide/developer-guide-tab.component.ts",
+    "line": 116,
+    "expression": "item.route"
+  },
+  {
+    "id": 224,
+    "component": "frontend/src/app/features/incidents/developer-guide/developer-guide-tab.component.ts",
+    "template": "frontend/src/app/features/incidents/developer-guide/developer-guide-tab.component.ts",
+    "line": 124,
+    "expression": "w"
+  },
+  {
+    "id": 225,
+    "component": "frontend/src/app/features/dashboard/dashboard.component.ts",
+    "template": "frontend/src/app/features/dashboard/dashboard.component.html",
+    "line": 1,
+    "expression": "error.value"
+  },
+  {
+    "id": 226,
+    "component": "frontend/src/app/features/dashboard/dashboard.component.ts",
+    "template": "frontend/src/app/features/dashboard/dashboard.component.html",
+    "line": 39,
+    "expression": "n.title"
+  },
+  {
+    "id": 227,
+    "component": "frontend/src/app/features/dashboard/dashboard.component.ts",
+    "template": "frontend/src/app/features/dashboard/dashboard.component.html",
+    "line": 40,
+    "expression": "n.meta"
+  },
+  {
+    "id": 228,
+    "component": "frontend/src/app/features/dashboard/dashboard.component.ts",
+    "template": "frontend/src/app/features/dashboard/dashboard.component.html",
+    "line": 61,
+    "expression": "securitySummary.totalProjects"
+  },
+  {
+    "id": 229,
+    "component": "frontend/src/app/features/dashboard/dashboard.component.ts",
+    "template": "frontend/src/app/features/dashboard/dashboard.component.html",
+    "line": 61,
+    "expression": "securitySummary.totalProjects === 1 ? 'projet' : 'projets'"
+  },
+  {
+    "id": 230,
+    "component": "frontend/src/app/features/dashboard/dashboard.component.ts",
+    "template": "frontend/src/app/features/dashboard/dashboard.component.html",
+    "line": 67,
+    "expression": "securitySummary.totalCriticalCves ?? 'Non disponible'"
+  },
+  {
+    "id": 231,
+    "component": "frontend/src/app/features/dashboard/dashboard.component.ts",
+    "template": "frontend/src/app/features/dashboard/dashboard.component.html",
+    "line": 71,
+    "expression": "securitySummary.totalHighCves ?? 'Non disponible'"
+  },
+  {
+    "id": 232,
+    "component": "frontend/src/app/features/dashboard/dashboard.component.ts",
+    "template": "frontend/src/app/features/dashboard/dashboard.component.html",
+    "line": 76,
+    "expression": "securitySummary.avgSecurityScore"
+  },
+  {
+    "id": 233,
+    "component": "frontend/src/app/features/dashboard/dashboard.component.ts",
+    "template": "frontend/src/app/features/dashboard/dashboard.component.html",
+    "line": 100,
+    "expression": "p.initials"
+  },
+  {
+    "id": 234,
+    "component": "frontend/src/app/features/dashboard/dashboard.component.ts",
+    "template": "frontend/src/app/features/dashboard/dashboard.component.html",
+    "line": 102,
+    "expression": "p.name"
+  },
+  {
+    "id": 235,
+    "component": "frontend/src/app/features/dashboard/dashboard.component.ts",
+    "template": "frontend/src/app/features/dashboard/dashboard.component.html",
+    "line": 103,
+    "expression": "p.tech"
+  },
+  {
+    "id": 236,
+    "component": "frontend/src/app/features/dashboard/dashboard.component.ts",
+    "template": "frontend/src/app/features/dashboard/dashboard.component.html",
+    "line": 109,
+    "expression": "p.riskScore !== null ? p.riskScore : '—'"
+  },
+  {
+    "id": 237,
+    "component": "frontend/src/app/features/dashboard/dashboard.component.ts",
+    "template": "frontend/src/app/features/dashboard/dashboard.component.html",
+    "line": 122,
+    "expression": "projects.length"
+  },
+  {
+    "id": 238,
+    "component": "frontend/src/app/features/dashboard/dashboard.component.ts",
+    "template": "frontend/src/app/features/dashboard/dashboard.component.html",
+    "line": 135,
+    "expression": "p.initials"
+  },
+  {
+    "id": 239,
+    "component": "frontend/src/app/features/dashboard/dashboard.component.ts",
+    "template": "frontend/src/app/features/dashboard/dashboard.component.html",
+    "line": 137,
+    "expression": "p.name"
+  },
+  {
+    "id": 240,
+    "component": "frontend/src/app/features/dashboard/dashboard.component.ts",
+    "template": "frontend/src/app/features/dashboard/dashboard.component.html",
+    "line": 138,
+    "expression": "p.tech"
+  },
+  {
+    "id": 241,
+    "component": "frontend/src/app/features/dashboard/dashboard.component.ts",
+    "template": "frontend/src/app/features/dashboard/dashboard.component.html",
+    "line": 143,
+    "expression": "p.incidents"
+  },
+  {
+    "id": 242,
+    "component": "frontend/src/app/features/dashboard/dashboard.component.ts",
+    "template": "frontend/src/app/features/dashboard/dashboard.component.html",
+    "line": 143,
+    "expression": "p.incidents > 1 ? 's' : ''"
+  },
+  {
+    "id": 243,
+    "component": "frontend/src/app/features/dashboard/dashboard.component.ts",
+    "template": "frontend/src/app/features/dashboard/dashboard.component.html",
+    "line": 147,
+    "expression": "buildLabel(p.buildStatus)"
+  },
+  {
+    "id": 244,
+    "component": "frontend/src/app/features/dashboard/dashboard.component.ts",
+    "template": "frontend/src/app/features/dashboard/dashboard.component.html",
+    "line": 147,
+    "expression": "p.buildNumber"
+  },
+  {
+    "id": 245,
+    "component": "frontend/src/app/features/dashboard/dashboard.component.ts",
+    "template": "frontend/src/app/features/dashboard/dashboard.component.html",
+    "line": 148,
+    "expression": "platformLabel(p)"
+  },
+  {
+    "id": 246,
+    "component": "frontend/src/app/features/dashboard/dashboard.component.ts",
+    "template": "frontend/src/app/features/dashboard/dashboard.component.html",
+    "line": 149,
+    "expression": "p.readiness ? (p.readiness.ready ? 'Prêt' : 'Non prêt') : 'Vérification…'"
+  },
+  {
+    "id": 247,
+    "component": "frontend/src/app/features/dashboard/dashboard.component.ts",
+    "template": "frontend/src/app/features/dashboard/dashboard.component.html",
+    "line": 150,
+    "expression": "riskLabel(p)"
+  },
+  {
+    "id": 248,
+    "component": "frontend/src/app/features/dashboard/dashboard.component.ts",
+    "template": "frontend/src/app/features/dashboard/dashboard.component.html",
+    "line": 158,
+    "expression": "p.health !== null ? p.health + '%' : 'indisponible'"
+  },
+  {
+    "id": 249,
+    "component": "frontend/src/app/features/dashboard/dashboard.component.ts",
+    "template": "frontend/src/app/features/dashboard/dashboard.component.html",
+    "line": 162,
+    "expression": "p.lastUpdate"
+  },
+  {
+    "id": 250,
+    "component": "frontend/src/app/features/dashboard/dashboard.component.ts",
+    "template": "frontend/src/app/features/dashboard/dashboard.component.html",
+    "line": 164,
+    "expression": "p.riskScore !== null ? p.riskScore + '/100' : 'indisponible'"
+  },
+  {
+    "id": 251,
+    "component": "frontend/src/app/features/dashboard/dashboard.component.ts",
+    "template": "frontend/src/app/features/dashboard/dashboard.component.html",
+    "line": 183,
+    "expression": "buildReliability!.rate"
+  },
+  {
+    "id": 252,
+    "component": "frontend/src/app/features/dashboard/dashboard.component.ts",
+    "template": "frontend/src/app/features/dashboard/dashboard.component.html",
+    "line": 185,
+    "expression": "buildReliability!.sampleSize"
+  },
+  {
+    "id": 253,
+    "component": "frontend/src/app/features/dashboard/dashboard.component.ts",
+    "template": "frontend/src/app/features/dashboard/dashboard.component.html",
+    "line": 185,
+    "expression": "buildReliability!.sampleSize! > 1 ? 's' : ''"
+  },
+  {
+    "id": 254,
+    "component": "frontend/src/app/features/dashboard/dashboard.component.ts",
+    "template": "frontend/src/app/features/dashboard/dashboard.component.html",
+    "line": 205,
+    "expression": "a.title"
+  },
+  {
+    "id": 255,
+    "component": "frontend/src/app/features/dashboard/dashboard.component.ts",
+    "template": "frontend/src/app/features/dashboard/dashboard.component.html",
+    "line": 206,
+    "expression": "a.meta"
+  },
+  {
+    "id": 256,
+    "component": "frontend/src/app/features/analytics/prediction.component.ts",
+    "template": "frontend/src/app/features/analytics/prediction.component.html",
+    "line": 8,
+    "expression": "loadError"
+  },
+  {
+    "id": 257,
+    "component": "frontend/src/app/features/analytics/prediction.component.ts",
+    "template": "frontend/src/app/features/analytics/prediction.component.html",
+    "line": 13,
+    "expression": "p.projectName"
+  },
+  {
+    "id": 258,
+    "component": "frontend/src/app/features/analytics/prediction.component.ts",
+    "template": "frontend/src/app/features/analytics/prediction.component.html",
+    "line": 14,
+    "expression": "p.level"
+  },
+  {
+    "id": 259,
+    "component": "frontend/src/app/features/analytics/prediction.component.ts",
+    "template": "frontend/src/app/features/analytics/prediction.component.html",
+    "line": 14,
+    "expression": "p.score"
+  },
+  {
+    "id": 260,
+    "component": "frontend/src/app/features/analytics/prediction.component.ts",
+    "template": "frontend/src/app/features/analytics/prediction.component.html",
+    "line": 19,
+    "expression": "r.label"
+  },
+  {
+    "id": 261,
+    "component": "frontend/src/app/features/analytics/prediction.component.ts",
+    "template": "frontend/src/app/features/analytics/prediction.component.html",
+    "line": 20,
+    "expression": "r.points"
+  },
+  {
+    "id": 262,
+    "component": "frontend/src/app/features/tools/security.component.ts",
+    "template": "frontend/src/app/features/tools/security.component.ts",
+    "line": 9,
+    "expression": "loadError"
+  },
+  {
+    "id": 263,
+    "component": "frontend/src/app/features/tools/security.component.ts",
+    "template": "frontend/src/app/features/tools/security.component.ts",
+    "line": 11,
+    "expression": "summary.totalCriticalCves ?? 'Non disponible'"
+  },
+  {
+    "id": 264,
+    "component": "frontend/src/app/features/tools/security.component.ts",
+    "template": "frontend/src/app/features/tools/security.component.ts",
+    "line": 12,
+    "expression": "summary.totalHighCves ?? 'Non disponible'"
+  },
+  {
+    "id": 265,
+    "component": "frontend/src/app/features/tools/security.component.ts",
+    "template": "frontend/src/app/features/tools/security.component.ts",
+    "line": 14,
+    "expression": "summary.zapHighAlerts ?? 'Non disponible'"
+  },
+  {
+    "id": 266,
+    "component": "frontend/src/app/features/tools/security.component.ts",
+    "template": "frontend/src/app/features/tools/security.component.ts",
+    "line": 15,
+    "expression": "summary.zapMediumAlerts ?? 'Non disponible'"
+  },
+  {
+    "id": 267,
+    "component": "frontend/src/app/features/tools/security.component.ts",
+    "template": "frontend/src/app/features/tools/security.component.ts",
+    "line": 16,
+    "expression": "summary.avgSecurityScore ?? '—'"
+  },
+  {
+    "id": 268,
+    "component": "frontend/src/app/features/tools/security.component.ts",
+    "template": "frontend/src/app/features/tools/security.component.ts",
+    "line": 39,
+    "expression": "p.projectName"
+  },
+  {
+    "id": 269,
+    "component": "frontend/src/app/features/tools/security.component.ts",
+    "template": "frontend/src/app/features/tools/security.component.ts",
+    "line": 40,
+    "expression": "p.incomplete ? 'non vérifié' : p.securityScore"
+  },
+  {
+    "id": 270,
+    "component": "frontend/src/app/features/tools/security.component.ts",
+    "template": "frontend/src/app/features/tools/security.component.ts",
+    "line": 41,
+    "expression": "p.incomplete ? 'Non disponible' : p.criticalCves"
+  },
+  {
+    "id": 271,
+    "component": "frontend/src/app/features/tools/security.component.ts",
+    "template": "frontend/src/app/features/tools/security.component.ts",
+    "line": 42,
+    "expression": "p.incomplete ? 'Non disponible' : p.highCves"
+  },
+  {
+    "id": 272,
+    "component": "frontend/src/app/features/tools/security.component.ts",
+    "template": "frontend/src/app/features/tools/security.component.ts",
+    "line": 43,
+    "expression": "p.trivy.critical"
+  },
+  {
+    "id": 273,
+    "component": "frontend/src/app/features/tools/security.component.ts",
+    "template": "frontend/src/app/features/tools/security.component.ts",
+    "line": 43,
+    "expression": "p.trivy.high"
+  },
+  {
+    "id": 274,
+    "component": "frontend/src/app/features/tools/security.component.ts",
+    "template": "frontend/src/app/features/tools/security.component.ts",
+    "line": 44,
+    "expression": "p.owasp.critical"
+  },
+  {
+    "id": 275,
+    "component": "frontend/src/app/features/tools/security.component.ts",
+    "template": "frontend/src/app/features/tools/security.component.ts",
+    "line": 44,
+    "expression": "p.owasp.high"
+  },
+  {
+    "id": 276,
+    "component": "frontend/src/app/features/tools/security.component.ts",
+    "template": "frontend/src/app/features/tools/security.component.ts",
+    "line": 45,
+    "expression": "p.zap.high"
+  },
+  {
+    "id": 277,
+    "component": "frontend/src/app/features/tools/security.component.ts",
+    "template": "frontend/src/app/features/tools/security.component.ts",
+    "line": 45,
+    "expression": "p.zap.medium"
+  },
+  {
+    "id": 278,
+    "component": "frontend/src/app/features/tools/security.component.ts",
+    "template": "frontend/src/app/features/tools/security.component.ts",
+    "line": 52,
+    "expression": "projectsWithoutData.join(', ')"
+  },
+  {
+    "id": 279,
+    "component": "frontend/src/app/features/projects/deployment-governance.component.ts",
+    "template": "frontend/src/app/features/projects/deployment-governance.component.html",
+    "line": 20,
+    "expression": "previewError"
+  },
+  {
+    "id": 280,
+    "component": "frontend/src/app/features/projects/deployment-governance.component.ts",
+    "template": "frontend/src/app/features/projects/deployment-governance.component.html",
+    "line": 27,
+    "expression": "staleNotice"
+  },
+  {
+    "id": 281,
+    "component": "frontend/src/app/features/projects/deployment-governance.component.ts",
+    "template": "frontend/src/app/features/projects/deployment-governance.component.html",
+    "line": 32,
+    "expression": "capabilityInfo.icon"
+  },
+  {
+    "id": 282,
+    "component": "frontend/src/app/features/projects/deployment-governance.component.ts",
+    "template": "frontend/src/app/features/projects/deployment-governance.component.html",
+    "line": 34,
+    "expression": "capabilityInfo.label"
+  },
+  {
+    "id": 283,
+    "component": "frontend/src/app/features/projects/deployment-governance.component.ts",
+    "template": "frontend/src/app/features/projects/deployment-governance.component.html",
+    "line": 35,
+    "expression": "capabilityInfo.detail"
+  },
+  {
+    "id": 284,
+    "component": "frontend/src/app/features/projects/deployment-governance.component.ts",
+    "template": "frontend/src/app/features/projects/deployment-governance.component.html",
+    "line": 42,
+    "expression": "decisionPresentation.icon"
+  },
+  {
+    "id": 285,
+    "component": "frontend/src/app/features/projects/deployment-governance.component.ts",
+    "template": "frontend/src/app/features/projects/deployment-governance.component.html",
+    "line": 44,
+    "expression": "decisionPresentation.label"
+  },
+  {
+    "id": 286,
+    "component": "frontend/src/app/features/projects/deployment-governance.component.ts",
+    "template": "frontend/src/app/features/projects/deployment-governance.component.html",
+    "line": 51,
+    "expression": "orNotAvailable(projectName)"
+  },
+  {
+    "id": 287,
+    "component": "frontend/src/app/features/projects/deployment-governance.component.ts",
+    "template": "frontend/src/app/features/projects/deployment-governance.component.html",
+    "line": 52,
+    "expression": "orNotAvailable(preview.environment.name)"
+  },
+  {
+    "id": 288,
+    "component": "frontend/src/app/features/projects/deployment-governance.component.ts",
+    "template": "frontend/src/app/features/projects/deployment-governance.component.html",
+    "line": 53,
+    "expression": "preview.mainBuildNumber ? '#' + preview.mainBuildNumber : 'Non disponible'"
+  },
+  {
+    "id": 289,
+    "component": "frontend/src/app/features/projects/deployment-governance.component.ts",
+    "template": "frontend/src/app/features/projects/deployment-governance.component.html",
+    "line": 54,
+    "expression": "shortSha(preview.buildIdentity.commitSha)"
+  },
+  {
+    "id": 290,
+    "component": "frontend/src/app/features/projects/deployment-governance.component.ts",
+    "template": "frontend/src/app/features/projects/deployment-governance.component.html",
+    "line": 55,
+    "expression": "orNotAvailable(preview.artifact.tag)"
+  },
+  {
+    "id": 291,
+    "component": "frontend/src/app/features/projects/deployment-governance.component.ts",
+    "template": "frontend/src/app/features/projects/deployment-governance.component.html",
+    "line": 56,
+    "expression": "shortDigest(preview.artifact.digest)"
+  },
+  {
+    "id": 292,
+    "component": "frontend/src/app/features/projects/deployment-governance.component.ts",
+    "template": "frontend/src/app/features/projects/deployment-governance.component.html",
+    "line": 57,
+    "expression": "orNotAvailable(preview.artifact.registry)"
+  },
+  {
+    "id": 293,
+    "component": "frontend/src/app/features/projects/deployment-governance.component.ts",
+    "template": "frontend/src/app/features/projects/deployment-governance.component.html",
+    "line": 58,
+    "expression": "orNotAvailable(preview.artifact.repository)"
+  },
+  {
+    "id": 294,
+    "component": "frontend/src/app/features/projects/deployment-governance.component.ts",
+    "template": "frontend/src/app/features/projects/deployment-governance.component.html",
+    "line": 59,
+    "expression": "orNotAvailable(preview.environment.targetName || deploymentTarget?.targetName)"
+  },
+  {
+    "id": 295,
+    "component": "frontend/src/app/features/projects/deployment-governance.component.ts",
+    "template": "frontend/src/app/features/projects/deployment-governance.component.html",
+    "line": 60,
+    "expression": "orNotAvailable(preview.environment.resourceGroup || deploymentTarget?.resourceGroup)"
+  },
+  {
+    "id": 296,
+    "component": "frontend/src/app/features/projects/deployment-governance.component.ts",
+    "template": "frontend/src/app/features/projects/deployment-governance.component.html",
+    "line": 61,
+    "expression": "orNotAvailable(preview.environment.region || deploymentTarget?.region)"
+  },
+  {
+    "id": 297,
+    "component": "frontend/src/app/features/projects/deployment-governance.component.ts",
+    "template": "frontend/src/app/features/projects/deployment-governance.component.html",
+    "line": 62,
+    "expression": "orNotAvailable(deploymentTarget?.provider)"
+  },
+  {
+    "id": 298,
+    "component": "frontend/src/app/features/projects/deployment-governance.component.ts",
+    "template": "frontend/src/app/features/projects/deployment-governance.component.html",
+    "line": 63,
+    "expression": "healthTargetLabel"
+  },
+  {
+    "id": 299,
+    "component": "frontend/src/app/features/projects/deployment-governance.component.ts",
+    "template": "frontend/src/app/features/projects/deployment-governance.component.html",
+    "line": 80,
+    "expression": "c.status === 'PASS' ? '✅' : c.status === 'FAIL' ? '❌' : c.status === 'WARNING' ? '⚠️' : c.status === 'NOT_RUN' ? '○' : '?'"
+  },
+  {
+    "id": 300,
+    "component": "frontend/src/app/features/projects/deployment-governance.component.ts",
+    "template": "frontend/src/app/features/projects/deployment-governance.component.html",
+    "line": 83,
+    "expression": "controlStatusLabels[c.status]"
+  },
+  {
+    "id": 301,
+    "component": "frontend/src/app/features/projects/deployment-governance.component.ts",
+    "template": "frontend/src/app/features/projects/deployment-governance.component.html",
+    "line": 86,
+    "expression": "c.name"
+  },
+  {
+    "id": 302,
+    "component": "frontend/src/app/features/projects/deployment-governance.component.ts",
+    "template": "frontend/src/app/features/projects/deployment-governance.component.html",
+    "line": 87,
+    "expression": "c.explanation"
+  },
+  {
+    "id": 303,
+    "component": "frontend/src/app/features/projects/deployment-governance.component.ts",
+    "template": "frontend/src/app/features/projects/deployment-governance.component.html",
+    "line": 88,
+    "expression": "c.blocking ? 'Bloquant' : 'Non bloquant'"
+  },
+  {
+    "id": 304,
+    "component": "frontend/src/app/features/projects/deployment-governance.component.ts",
+    "template": "frontend/src/app/features/projects/deployment-governance.component.html",
+    "line": 94,
+    "expression": "controlsExpanded ? 'Masquer les contrôles' : 'Voir tous les contrôles (' + controlRows.length + ')'"
+  },
+  {
+    "id": 305,
+    "component": "frontend/src/app/features/projects/deployment-governance.component.ts",
+    "template": "frontend/src/app/features/projects/deployment-governance.component.html",
+    "line": 102,
+    "expression": "reason"
+  },
+  {
+    "id": 306,
+    "component": "frontend/src/app/features/projects/deployment-governance.component.ts",
+    "template": "frontend/src/app/features/projects/deployment-governance.component.html",
+    "line": 108,
+    "expression": "w"
+  },
+  {
+    "id": 307,
+    "component": "frontend/src/app/features/projects/deployment-governance.component.ts",
+    "template": "frontend/src/app/features/projects/deployment-governance.component.html",
+    "line": 119,
+    "expression": "authorizing || deploying ? 'Déploiement en cours…' : 'Déployer sur Azure'"
+  },
+  {
+    "id": 308,
+    "component": "frontend/src/app/features/projects/deployment-governance.component.ts",
+    "template": "frontend/src/app/features/projects/deployment-governance.component.html",
+    "line": 147,
+    "expression": "authorizeError"
+  },
+  {
+    "id": 309,
+    "component": "frontend/src/app/features/projects/deployment-governance.component.ts",
+    "template": "frontend/src/app/features/projects/deployment-governance.component.html",
+    "line": 149,
+    "expression": "conditionalDisabledReason"
+  },
+  {
+    "id": 310,
+    "component": "frontend/src/app/features/projects/deployment-governance.component.ts",
+    "template": "frontend/src/app/features/projects/deployment-governance.component.html",
+    "line": 157,
+    "expression": "authorizing ? 'Autorisation…' : 'Autoriser et déployer'"
+  },
+  {
+    "id": 311,
+    "component": "frontend/src/app/features/projects/deployment-governance.component.ts",
+    "template": "frontend/src/app/features/projects/deployment-governance.component.html",
+    "line": 206,
+    "expression": "criticalOverridePhrase"
+  },
+  {
+    "id": 312,
+    "component": "frontend/src/app/features/projects/deployment-governance.component.ts",
+    "template": "frontend/src/app/features/projects/deployment-governance.component.html",
+    "line": 212,
+    "expression": "authorizeError"
+  },
+  {
+    "id": 313,
+    "component": "frontend/src/app/features/projects/deployment-governance.component.ts",
+    "template": "frontend/src/app/features/projects/deployment-governance.component.html",
+    "line": 214,
+    "expression": "criticalDisabledReason"
+  },
+  {
+    "id": 314,
+    "component": "frontend/src/app/features/projects/deployment-governance.component.ts",
+    "template": "frontend/src/app/features/projects/deployment-governance.component.html",
+    "line": 222,
+    "expression": "authorizing ? 'Autorisation…' : 'Forcer le déploiement'"
+  },
+  {
+    "id": 315,
+    "component": "frontend/src/app/features/projects/deployment-governance.component.ts",
+    "template": "frontend/src/app/features/projects/deployment-governance.component.html",
+    "line": 231,
+    "expression": "nonOverridableNotice"
+  },
+  {
+    "id": 316,
+    "component": "frontend/src/app/features/projects/deployment-governance.component.ts",
+    "template": "frontend/src/app/features/projects/deployment-governance.component.html",
+    "line": 239,
+    "expression": "capabilityInfo.detail"
+  },
+  {
+    "id": 317,
+    "component": "frontend/src/app/features/projects/deployment-governance.component.ts",
+    "template": "frontend/src/app/features/projects/deployment-governance.component.html",
+    "line": 250,
+    "expression": "authorization.authorizationId"
+  },
+  {
+    "id": 318,
+    "component": "frontend/src/app/features/projects/deployment-governance.component.ts",
+    "template": "frontend/src/app/features/projects/deployment-governance.component.html",
+    "line": 250,
+    "expression": "authorization.governanceClass"
+  },
+  {
+    "id": 319,
+    "component": "frontend/src/app/features/projects/deployment-governance.component.ts",
+    "template": "frontend/src/app/features/projects/deployment-governance.component.html",
+    "line": 251,
+    "expression": "authorization.expiresAt | date:'short'"
+  },
+  {
+    "id": 320,
+    "component": "frontend/src/app/features/projects/deployment-governance.component.ts",
+    "template": "frontend/src/app/features/projects/deployment-governance.component.html",
+    "line": 260,
+    "expression": "deployPhase === 'DEPLOYED' ? '✅' : deployPhase === 'FAILED' ? '❌' : '⏳'"
+  },
+  {
+    "id": 321,
+    "component": "frontend/src/app/features/projects/deployment-governance.component.ts",
+    "template": "frontend/src/app/features/projects/deployment-governance.component.html",
+    "line": 263,
+    "expression": "deployPhase === 'AUTHORISING' ? 'Autorisation en cours' :\n          deployPhase === 'AUTHORIZED' ? 'Autorisé' :\n          deployPhase === 'DISPATCHING' ? 'Déploiement en cours' :\n          deployPhase === 'DEPLOYED' ? 'Déployé' : 'Échoué'"
+  },
+  {
+    "id": 322,
+    "component": "frontend/src/app/features/projects/deployment-governance.component.ts",
+    "template": "frontend/src/app/features/projects/deployment-governance.component.html",
+    "line": 269,
+    "expression": "deployPhase"
+  },
+  {
+    "id": 323,
+    "component": "frontend/src/app/features/projects/deployment-governance.component.ts",
+    "template": "frontend/src/app/features/projects/deployment-governance.component.html",
+    "line": 275,
+    "expression": "deploySuccessInfo.state"
+  },
+  {
+    "id": 324,
+    "component": "frontend/src/app/features/projects/deployment-governance.component.ts",
+    "template": "frontend/src/app/features/projects/deployment-governance.component.html",
+    "line": 275,
+    "expression": "deploySuccessInfo.health"
+  },
+  {
+    "id": 325,
+    "component": "frontend/src/app/features/projects/deployment-governance.component.ts",
+    "template": "frontend/src/app/features/projects/deployment-governance.component.html",
+    "line": 277,
+    "expression": "orNotAvailable(deploySuccessInfo.authorizationId)"
+  },
+  {
+    "id": 326,
+    "component": "frontend/src/app/features/projects/deployment-governance.component.ts",
+    "template": "frontend/src/app/features/projects/deployment-governance.component.html",
+    "line": 278,
+    "expression": "shortDigest(deploySuccessInfo.artifactDigest)"
+  },
+  {
+    "id": 327,
+    "component": "frontend/src/app/features/projects/deployment-governance.component.ts",
+    "template": "frontend/src/app/features/projects/deployment-governance.component.html",
+    "line": 279,
+    "expression": "deployAttemptId"
+  },
+  {
+    "id": 328,
+    "component": "frontend/src/app/features/projects/deployment-governance.component.ts",
+    "template": "frontend/src/app/features/projects/deployment-governance.component.html",
+    "line": 285,
+    "expression": "deployErrorMessage"
+  },
+  {
+    "id": 329,
+    "component": "frontend/src/app/features/projects/deployment-governance.component.ts",
+    "template": "frontend/src/app/features/projects/deployment-governance.component.html",
+    "line": 287,
+    "expression": "deployErrorCode"
+  },
+  {
+    "id": 330,
+    "component": "frontend/src/app/features/projects/deployment-governance.component.ts",
+    "template": "frontend/src/app/features/projects/deployment-governance.component.html",
+    "line": 288,
+    "expression": "deployAttemptId"
+  },
+  {
+    "id": 331,
+    "component": "frontend/src/app/features/projects/deployment-governance.component.ts",
+    "template": "frontend/src/app/features/projects/deployment-governance.component.html",
+    "line": 289,
+    "expression": "deployRequestId"
+  },
+  {
+    "id": 332,
+    "component": "frontend/src/app/features/projects/deployment-governance.component.ts",
+    "template": "frontend/src/app/features/projects/deployment-governance.component.html",
+    "line": 290,
+    "expression": "authorizationConsumed ? 'Oui — une nouvelle autorisation est requise' : 'Non'"
+  },
+  {
+    "id": 333,
+    "component": "frontend/src/app/features/projects/dockerfile-optimizer.component.ts",
+    "template": "frontend/src/app/features/projects/dockerfile-optimizer.component.ts",
+    "line": 18,
+    "expression": "loading() ? 'Analyse en cours…' : 'Analyser le Dockerfile'"
+  },
+  {
+    "id": 334,
+    "component": "frontend/src/app/features/projects/dockerfile-optimizer.component.ts",
+    "template": "frontend/src/app/features/projects/dockerfile-optimizer.component.ts",
+    "line": 21,
+    "expression": "error()"
+  },
+  {
+    "id": 335,
+    "component": "frontend/src/app/features/projects/dockerfile-optimizer.component.ts",
+    "template": "frontend/src/app/features/projects/dockerfile-optimizer.component.ts",
+    "line": 32,
+    "expression": "r.score"
+  },
+  {
+    "id": 336,
+    "component": "frontend/src/app/features/projects/dockerfile-optimizer.component.ts",
+    "template": "frontend/src/app/features/projects/dockerfile-optimizer.component.ts",
+    "line": 37,
+    "expression": "r.summary"
+  },
+  {
+    "id": 337,
+    "component": "frontend/src/app/features/projects/dockerfile-optimizer.component.ts",
+    "template": "frontend/src/app/features/projects/dockerfile-optimizer.component.ts",
+    "line": 44,
+    "expression": "g.label"
+  },
+  {
+    "id": 338,
+    "component": "frontend/src/app/features/projects/dockerfile-optimizer.component.ts",
+    "template": "frontend/src/app/features/projects/dockerfile-optimizer.component.ts",
+    "line": 44,
+    "expression": "g.items.length"
+  },
+  {
+    "id": 339,
+    "component": "frontend/src/app/features/projects/dockerfile-optimizer.component.ts",
+    "template": "frontend/src/app/features/projects/dockerfile-optimizer.component.ts",
+    "line": 48,
+    "expression": "i.severity | presentationLabel"
+  },
+  {
+    "id": 340,
+    "component": "frontend/src/app/features/projects/dockerfile-optimizer.component.ts",
+    "template": "frontend/src/app/features/projects/dockerfile-optimizer.component.ts",
+    "line": 50,
+    "expression": "i.category"
+  },
+  {
+    "id": 341,
+    "component": "frontend/src/app/features/projects/dockerfile-optimizer.component.ts",
+    "template": "frontend/src/app/features/projects/dockerfile-optimizer.component.ts",
+    "line": 52,
+    "expression": "i.description"
+  },
+  {
+    "id": 342,
+    "component": "frontend/src/app/features/projects/dockerfile-optimizer.component.ts",
+    "template": "frontend/src/app/features/projects/dockerfile-optimizer.component.ts",
+    "line": 53,
+    "expression": "i.suggestion"
+  },
+  {
+    "id": 343,
+    "component": "frontend/src/app/features/projects/dockerfile-optimizer.component.ts",
+    "template": "frontend/src/app/features/projects/dockerfile-optimizer.component.ts",
+    "line": 68,
+    "expression": "applying() ? 'Correction en cours…' : 'Corriger et créer une PR'"
+  },
+  {
+    "id": 344,
+    "component": "frontend/src/app/features/projects/dockerfile-optimizer.component.ts",
+    "template": "frontend/src/app/features/projects/dockerfile-optimizer.component.ts",
+    "line": 75,
+    "expression": "applyError()"
+  },
+  {
+    "id": 345,
+    "component": "frontend/src/app/features/projects/dockerfile-optimizer.component.ts",
+    "template": "frontend/src/app/features/projects/dockerfile-optimizer.component.ts",
+    "line": 84,
+    "expression": "ar.branch"
+  },
+  {
+    "id": 346,
+    "component": "frontend/src/app/features/projects/dockerfile-optimizer.component.ts",
+    "template": "frontend/src/app/features/projects/dockerfile-optimizer.component.ts",
+    "line": 86,
+    "expression": "joinReasons(byStatus(ar, 'SÛR'))"
+  },
+  {
+    "id": 347,
+    "component": "frontend/src/app/features/projects/dockerfile-optimizer.component.ts",
+    "template": "frontend/src/app/features/projects/dockerfile-optimizer.component.ts",
+    "line": 87,
+    "expression": "joinReasons(byStatus(ar, 'INFÉRÉ'))"
+  },
+  {
+    "id": 348,
+    "component": "frontend/src/app/features/projects/dockerfile-optimizer.component.ts",
+    "template": "frontend/src/app/features/projects/dockerfile-optimizer.component.ts",
+    "line": 88,
+    "expression": "joinReasons(byStatus(ar, 'REFUSÉ'))"
+  },
+  {
+    "id": 349,
+    "component": "frontend/src/app/features/projects/dockerfile-optimizer.component.ts",
+    "template": "frontend/src/app/features/projects/dockerfile-optimizer.component.ts",
+    "line": 95,
+    "expression": "ar.message"
+  },
+  {
+    "id": 350,
+    "component": "frontend/src/app/features/projects/dockerfile-optimizer.component.ts",
+    "template": "frontend/src/app/features/projects/dockerfile-optimizer.component.ts",
+    "line": 97,
+    "expression": "v.family"
+  },
+  {
+    "id": 351,
+    "component": "frontend/src/app/features/projects/dockerfile-optimizer.component.ts",
+    "template": "frontend/src/app/features/projects/dockerfile-optimizer.component.ts",
+    "line": 97,
+    "expression": "v.message"
+  },
+  {
+    "id": 352,
+    "component": "frontend/src/app/features/projects/project-overview.component.ts",
+    "template": "frontend/src/app/features/projects/project-overview.component.ts",
+    "line": 6,
+    "expression": "!readiness() ? 'État du déploiement indisponible' : (readiness()?.ready ? 'Déploiement prêt' : 'Déploiement non prêt')"
+  },
+  {
+    "id": 353,
+    "component": "frontend/src/app/features/projects/project-overview.component.ts",
+    "template": "frontend/src/app/features/projects/project-overview.component.ts",
+    "line": 7,
+    "expression": "readinessAction()"
+  },
+  {
+    "id": 354,
+    "component": "frontend/src/app/features/projects/project-overview.component.ts",
+    "template": "frontend/src/app/features/projects/project-overview.component.ts",
+    "line": 9,
+    "expression": "p.label"
+  },
+  {
+    "id": 355,
+    "component": "frontend/src/app/features/projects/project-overview.component.ts",
+    "template": "frontend/src/app/features/projects/project-overview.component.ts",
+    "line": 25,
+    "expression": "s.label"
+  },
+  {
+    "id": 356,
+    "component": "frontend/src/app/features/projects/project-overview.component.ts",
+    "template": "frontend/src/app/features/projects/project-overview.component.ts",
+    "line": 26,
+    "expression": "s.detail"
+  },
+  {
+    "id": 357,
+    "component": "frontend/src/app/features/projects/project-overview.component.ts",
+    "template": "frontend/src/app/features/projects/project-overview.component.ts",
+    "line": 27,
+    "expression": "s.source"
+  },
+  {
+    "id": 358,
+    "component": "frontend/src/app/features/projects/project-overview.component.ts",
+    "template": "frontend/src/app/features/projects/project-overview.component.ts",
+    "line": 40,
+    "expression": "t.count ?? '—'"
+  },
+  {
+    "id": 359,
+    "component": "frontend/src/app/features/projects/project-overview.component.ts",
+    "template": "frontend/src/app/features/projects/project-overview.component.ts",
+    "line": 41,
+    "expression": "t.name"
+  },
+  {
+    "id": 360,
+    "component": "frontend/src/app/features/projects/project-overview.component.ts",
+    "template": "frontend/src/app/features/projects/project-overview.component.ts",
+    "line": 42,
+    "expression": "t.detail"
+  },
+  {
+    "id": 361,
+    "component": "frontend/src/app/features/projects/project-overview.component.ts",
+    "template": "frontend/src/app/features/projects/project-overview.component.ts",
+    "line": 55,
+    "expression": "hasGuide() ? autoCount() : 'Non disponible'"
+  },
+  {
+    "id": 362,
+    "component": "frontend/src/app/features/projects/project-overview.component.ts",
+    "template": "frontend/src/app/features/projects/project-overview.component.ts",
+    "line": 60,
+    "expression": "hasGuide() ? manualCount() : 'Non disponible'"
+  },
+  {
+    "id": 363,
+    "component": "frontend/src/app/features/projects/project-overview.component.ts",
+    "template": "frontend/src/app/features/projects/project-overview.component.ts",
+    "line": 68,
+    "expression": "totalEffort()"
+  },
+  {
+    "id": 364,
+    "component": "frontend/src/app/features/projects/project-overview.component.ts",
+    "template": "frontend/src/app/features/projects/project-overview.component.ts",
+    "line": 79,
+    "expression": "i + 1"
+  },
+  {
+    "id": 365,
+    "component": "frontend/src/app/features/projects/project-overview.component.ts",
+    "template": "frontend/src/app/features/projects/project-overview.component.ts",
+    "line": 79,
+    "expression": "p.label"
+  },
+  {
+    "id": 366,
+    "component": "frontend/src/app/features/projects/project-overview.component.ts",
+    "template": "frontend/src/app/features/projects/project-overview.component.ts",
+    "line": 85,
+    "expression": "a.priority"
+  },
+  {
+    "id": 367,
+    "component": "frontend/src/app/features/projects/project-overview.component.ts",
+    "template": "frontend/src/app/features/projects/project-overview.component.ts",
+    "line": 88,
+    "expression": "a.severity | presentationLabel"
+  },
+  {
+    "id": 368,
+    "component": "frontend/src/app/features/projects/project-overview.component.ts",
+    "template": "frontend/src/app/features/projects/project-overview.component.ts",
+    "line": 89,
+    "expression": "a.title"
+  },
+  {
+    "id": 369,
+    "component": "frontend/src/app/features/projects/project-overview.component.ts",
+    "template": "frontend/src/app/features/projects/project-overview.component.ts",
+    "line": 91,
+    "expression": "a.resolution === 'AUTO' ? 'agent' : 'manuel'"
+  },
+  {
+    "id": 370,
+    "component": "frontend/src/app/features/projects/project-overview.component.ts",
+    "template": "frontend/src/app/features/projects/project-overview.component.ts",
+    "line": 94,
+    "expression": "a.file"
+  },
+  {
+    "id": 371,
+    "component": "frontend/src/app/features/projects/project-overview.component.ts",
+    "template": "frontend/src/app/features/projects/project-overview.component.ts",
+    "line": 94,
+    "expression": "a.line"
+  },
+  {
+    "id": 372,
+    "component": "frontend/src/app/features/projects/project-overview.component.ts",
+    "template": "frontend/src/app/features/projects/project-overview.component.ts",
+    "line": 96,
+    "expression": "a.estimatedEffortMinutes"
+  },
+  {
+    "id": 373,
+    "component": "frontend/src/app/features/projects/project-overview.component.ts",
+    "template": "frontend/src/app/features/projects/project-overview.component.ts",
+    "line": 99,
+    "expression": "issueCount()"
+  },
+  {
+    "id": 374,
+    "component": "frontend/src/app/features/projects/projects.component.ts",
+    "template": "frontend/src/app/features/projects/projects.component.html",
+    "line": 1,
+    "expression": "loadError"
+  },
+  {
+    "id": 375,
+    "component": "frontend/src/app/features/projects/projects.component.ts",
+    "template": "frontend/src/app/features/projects/projects.component.html",
+    "line": 24,
+    "expression": "p.name?.substring(0,2).toUpperCase()"
+  },
+  {
+    "id": 376,
+    "component": "frontend/src/app/features/projects/projects.component.ts",
+    "template": "frontend/src/app/features/projects/projects.component.html",
+    "line": 27,
+    "expression": "p.name"
+  },
+  {
+    "id": 377,
+    "component": "frontend/src/app/features/projects/projects.component.ts",
+    "template": "frontend/src/app/features/projects/projects.component.html",
+    "line": 28,
+    "expression": "p.id?.substring(0,8)"
+  },
+  {
+    "id": 378,
+    "component": "frontend/src/app/features/projects/projects.component.ts",
+    "template": "frontend/src/app/features/projects/projects.component.html",
+    "line": 32,
+    "expression": "p.securityScore !== null ? (p.securityScore | number:'1.0-0') + '%' : 'indisponible'"
+  },
+  {
+    "id": 379,
+    "component": "frontend/src/app/features/projects/projects.component.ts",
+    "template": "frontend/src/app/features/projects/projects.component.html",
+    "line": 38,
+    "expression": "p.openIncidents ?? 'Non disponible'"
+  },
+  {
+    "id": 380,
+    "component": "frontend/src/app/features/projects/projects.component.ts",
+    "template": "frontend/src/app/features/projects/projects.component.html",
+    "line": 42,
+    "expression": "p.analyzingIncidents ?? 'Non disponible'"
+  },
+  {
+    "id": 381,
+    "component": "frontend/src/app/features/projects/projects.component.ts",
+    "template": "frontend/src/app/features/projects/projects.component.html",
+    "line": 46,
+    "expression": "p.resolvedIncidents ?? 'Non disponible'"
+  },
+  {
+    "id": 382,
+    "component": "frontend/src/app/features/projects/projects.component.ts",
+    "template": "frontend/src/app/features/projects/projects.component.html",
+    "line": 60,
+    "expression": "p.createdAt | frenchDate:false"
+  },
+  {
+    "id": 383,
+    "component": "frontend/src/app/features/projects/project-form.component.ts",
+    "template": "frontend/src/app/features/projects/project-form.component.html",
+    "line": 6,
+    "expression": "isEdit ? '✏️ Modifier le projet' : '➕ Nouveau projet'"
+  },
+  {
+    "id": 384,
+    "component": "frontend/src/app/features/projects/project-form.component.ts",
+    "template": "frontend/src/app/features/projects/project-form.component.html",
+    "line": 9,
+    "expression": "validating ? '⏳ Vérification...' : '🔍 Vérifier la config'"
+  },
+  {
+    "id": 385,
+    "component": "frontend/src/app/features/projects/project-form.component.ts",
+    "template": "frontend/src/app/features/projects/project-form.component.html",
+    "line": 12,
+    "expression": "loading ? '⏳ Sauvegarde...' : '💾 Sauvegarder'"
+  },
+  {
+    "id": 386,
+    "component": "frontend/src/app/features/projects/project-form.component.ts",
+    "template": "frontend/src/app/features/projects/project-form.component.html",
+    "line": 19,
+    "expression": "saveError"
+  },
+  {
+    "id": 387,
+    "component": "frontend/src/app/features/projects/project-form.component.ts",
+    "template": "frontend/src/app/features/projects/project-form.component.html",
+    "line": 24,
+    "expression": "validationResult.overallValid ? '✅ Configuration valide' : '⚠️ Problèmes détectés'"
+  },
+  {
+    "id": 388,
+    "component": "frontend/src/app/features/projects/project-form.component.ts",
+    "template": "frontend/src/app/features/projects/project-form.component.html",
+    "line": 28,
+    "expression": "getValidIcon('jenkins')"
+  },
+  {
+    "id": 389,
+    "component": "frontend/src/app/features/projects/project-form.component.ts",
+    "template": "frontend/src/app/features/projects/project-form.component.html",
+    "line": 30,
+    "expression": "getValidMsg('jenkins')"
+  },
+  {
+    "id": 390,
+    "component": "frontend/src/app/features/projects/project-form.component.ts",
+    "template": "frontend/src/app/features/projects/project-form.component.html",
+    "line": 33,
+    "expression": "getValidIcon('sonarqube')"
+  },
+  {
+    "id": 391,
+    "component": "frontend/src/app/features/projects/project-form.component.ts",
+    "template": "frontend/src/app/features/projects/project-form.component.html",
+    "line": 35,
+    "expression": "getValidMsg('sonarqube')"
+  },
+  {
+    "id": 392,
+    "component": "frontend/src/app/features/projects/project-form.component.ts",
+    "template": "frontend/src/app/features/projects/project-form.component.html",
+    "line": 45,
+    "expression": "s.icon"
+  },
+  {
+    "id": 393,
+    "component": "frontend/src/app/features/projects/project-form.component.ts",
+    "template": "frontend/src/app/features/projects/project-form.component.html",
+    "line": 45,
+    "expression": "s.label"
+  },
+  {
+    "id": 394,
+    "component": "frontend/src/app/features/projects/project-form.component.ts",
+    "template": "frontend/src/app/features/projects/project-form.component.html",
+    "line": 125,
+    "expression": "jenkinsCredBusy ? 'Vérification…' : 'Enregistrer les identifiants'"
+  },
+  {
+    "id": 395,
+    "component": "frontend/src/app/features/projects/project-form.component.ts",
+    "template": "frontend/src/app/features/projects/project-form.component.html",
+    "line": 127,
+    "expression": "jenkinsCredMessage"
+  },
+  {
+    "id": 396,
+    "component": "frontend/src/app/features/projects/project-form.component.ts",
+    "template": "frontend/src/app/features/projects/project-form.component.html",
+    "line": 154,
+    "expression": "getValidIcon('sonarqube')"
+  },
+  {
+    "id": 397,
+    "component": "frontend/src/app/features/projects/project-form.component.ts",
+    "template": "frontend/src/app/features/projects/project-form.component.html",
+    "line": 154,
+    "expression": "getValidMsg('sonarqube')"
+  },
+  {
+    "id": 398,
+    "component": "frontend/src/app/features/projects/project-form.component.ts",
+    "template": "frontend/src/app/features/projects/project-form.component.html",
+    "line": 164,
+    "expression": "validating ? '⏳' : '🔍 Vérifier'"
+  },
+  {
+    "id": 399,
+    "component": "frontend/src/app/features/projects/project-form.component.ts",
+    "template": "frontend/src/app/features/projects/project-form.component.html",
+    "line": 167,
+    "expression": "loading ? '⏳' : '💾 Sauvegarder'"
+  },
+  {
+    "id": 400,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 3,
+    "expression": "error.value"
+  },
+  {
+    "id": 401,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 12,
+    "expression": "project.name?.substring(0,2)?.toUpperCase()"
+  },
+  {
+    "id": 402,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 15,
+    "expression": "project.name"
+  },
+  {
+    "id": 403,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 17,
+    "expression": "project.environment || 'Environnement non configuré'"
+  },
+  {
+    "id": 404,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 19,
+    "expression": "project.githubRepo || 'Dépôt non configuré'"
+  },
+  {
+    "id": 405,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 21,
+    "expression": "project.jenkinsJobName || 'Job Jenkins non configuré'"
+  },
+  {
+    "id": 406,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 28,
+    "expression": "scanIncomplete ? '?' : ((scoreUnavailable || !hasValidScore()) ? '—' : lastScore)"
+  },
+  {
+    "id": 407,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 34,
+    "expression": "scanIncomplete ? 'Indéterminé' : (scoreUnavailable ? 'Non disponible' : riskLevelLabel(lastRisk))"
+  },
+  {
+    "id": 408,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 42,
+    "expression": "allReports.length"
+  },
+  {
+    "id": 409,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 60,
+    "expression": "incidents.length"
+  },
+  {
+    "id": 410,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 83,
+    "expression": "rp.build || 'Non disponible'"
+  },
+  {
+    "id": 411,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 83,
+    "expression": "latestReport.createdAt | frenchDate"
+  },
+  {
+    "id": 412,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 85,
+    "expression": "rp.job || 'Non disponible'"
+  },
+  {
+    "id": 413,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 85,
+    "expression": "rp.status | stageStatusLabel"
+  },
+  {
+    "id": 414,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 89,
+    "expression": "decisionLabel(rp.decision)"
+  },
+  {
+    "id": 415,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 92,
+    "expression": "rp.confidence || 'Non disponible'"
+  },
+  {
+    "id": 416,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 95,
+    "expression": "(rp.security || 'UNKNOWN') | presentationLabel"
+  },
+  {
+    "id": 417,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 111,
+    "expression": "rp.justification | presentationText"
+  },
+  {
+    "id": 418,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 118,
+    "expression": "getAgentText('root') || 'Non disponible'"
+  },
+  {
+    "id": 419,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 122,
+    "expression": "getAgentText('security') || 'Non disponible'"
+  },
+  {
+    "id": 420,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 126,
+    "expression": "getAgentText('remediation') || 'Non disponible'"
+  },
+  {
+    "id": 421,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 129,
+    "expression": "rp.warning"
+  },
+  {
+    "id": 422,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 140,
+    "expression": "parseReport(r.aiAnalysis).build ? 'Build #' + parseReport(r.aiAnalysis).build : 'Build non disponible'"
+  },
+  {
+    "id": 423,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 141,
+    "expression": "r.createdAt | frenchDate"
+  },
+  {
+    "id": 424,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 142,
+    "expression": "decisionLabel(parseReport(r.aiAnalysis).decision)"
+  },
+  {
+    "id": 425,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 143,
+    "expression": "historyScoreLabel(r.securityScore)"
+  },
+  {
+    "id": 426,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 146,
+    "expression": "showAllHistory ? 'Réduire l’historique' : 'Voir tout l’historique (' + allReports.length + ')'"
+  },
+  {
+    "id": 427,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 169,
+    "expression": "ed.build.number ? '#' + ed.build.number : 'Non disponible'"
+  },
+  {
+    "id": 428,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 170,
+    "expression": "ed.build.status | stageStatusLabel"
+  },
+  {
+    "id": 429,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 175,
+    "expression": "ed.tests?.total ?? 'Non disponible'"
+  },
+  {
+    "id": 430,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 177,
+    "expression": "ed.tests?.failures ?? 'Non disponible'"
+  },
+  {
+    "id": 431,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 181,
+    "expression": "ed.tests?.coverage == null ? 'Non disponible' : ed.tests.coverage + '%'"
+  },
+  {
+    "id": 432,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 186,
+    "expression": "ed.docker?.build_status ? (ed.docker.build_status | presentationLabel) : 'Non disponible'"
+  },
+  {
+    "id": 433,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 188,
+    "expression": "ed.docker?.image_tag || 'Image non disponible'"
+  },
+  {
+    "id": 434,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 193,
+    "expression": "ed.deploy?.status | presentationLabel"
+  },
+  {
+    "id": 435,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 195,
+    "expression": "ed.deploy?.namespace || 'Espace de noms non disponible'"
+  },
+  {
+    "id": 436,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 200,
+    "expression": "ed.docker?.push_status ? (ed.docker.push_status | presentationLabel) : 'Non disponible'"
+  },
+  {
+    "id": 437,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 212,
+    "expression": "buildReliability!.rate"
+  },
+  {
+    "id": 438,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 215,
+    "expression": "buildReliability!.sampleSize"
+  },
+  {
+    "id": 439,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 215,
+    "expression": "buildReliability!.sampleSize! > 1 ? 's' : ''"
+  },
+  {
+    "id": 440,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 220,
+    "expression": "jenkinsMessage || 'Non disponible'"
+  },
+  {
+    "id": 441,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 230,
+    "expression": "item | presentationText"
+  },
+  {
+    "id": 442,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 238,
+    "expression": "buildTriggering ? '⏳ Déclenchement…' : '🔄 Déclencher un build'"
+  },
+  {
+    "id": 443,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 254,
+    "expression": "b.number"
+  },
+  {
+    "id": 444,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 255,
+    "expression": "(b.result || 'RUNNING') | presentationLabel"
+  },
+  {
+    "id": 445,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 256,
+    "expression": "frenchDuration(b.duration)"
+  },
+  {
+    "id": 446,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 257,
+    "expression": "b.timestamp | frenchDate"
+  },
+  {
+    "id": 447,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 268,
+    "expression": "jenkinsMessage | presentationText"
+  },
+  {
+    "id": 448,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 299,
+    "expression": "qualityGatePresentation(ed.sonar).label"
+  },
+  {
+    "id": 449,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 303,
+    "expression": "scannerMetric(ed.sonar, 'bugs') ?? 'Non disponible'"
+  },
+  {
+    "id": 450,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 306,
+    "expression": "scannerMetric(ed.sonar, 'vulnerabilities') ?? 'Non disponible'"
+  },
+  {
+    "id": 451,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 309,
+    "expression": "scannerMetric(ed.sonar, 'code_smells') ?? 'Non disponible'"
+  },
+  {
+    "id": 452,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 312,
+    "expression": "ed.sonar.coverage == null ? 'Non disponible' : ed.sonar.coverage + '%'"
+  },
+  {
+    "id": 453,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 316,
+    "expression": "(ed.sonar.status | stageStatusLabel) || 'Non disponible'"
+  },
+  {
+    "id": 454,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 329,
+    "expression": "batchPrNumber()"
+  },
+  {
+    "id": 455,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 344,
+    "expression": "activeFixRequest()?.prNumber"
+  },
+  {
+    "id": 456,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 344,
+    "expression": "activeFixRequest()?.status === 'VALIDATED' ? ' validée' : ' créée'"
+  },
+  {
+    "id": 457,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 348,
+    "expression": "prValidationBusy ? 'Validation en attente…' : (prValidationRequest()?.status === 'FAILED' ? 'Réessayer la validation' : 'Valider la Pull Request')"
+  },
+  {
+    "id": 458,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 354,
+    "expression": "ma.label"
+  },
+  {
+    "id": 459,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 362,
+    "expression": "prValidationRequest()?.result === 'INCONCLUSIVE' ? 'Validation non concluante' : 'Validation échouée'"
+  },
+  {
+    "id": 460,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 376,
+    "expression": "refreshValidationTargetBusy ? 'Actualisation…' : 'Actualiser la cible'"
+  },
+  {
+    "id": 461,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 391,
+    "expression": "batchPrNumber()"
+  },
+  {
+    "id": 462,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 403,
+    "expression": "ed.sonar.issues.length"
+  },
+  {
+    "id": 463,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 403,
+    "expression": "ed.sonar.issues.length === 1 ? 'problème détecté' : 'problèmes détectés'"
+  },
+  {
+    "id": 464,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 406,
+    "expression": "activeFixRequest()?.attemptCount || 1"
+  },
+  {
+    "id": 465,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 411,
+    "expression": "evidence.processedFindingCount ?? 'Non disponible'"
+  },
+  {
+    "id": 466,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 411,
+    "expression": "evidence.approvedFindingCount || requestFindingIds().length"
+  },
+  {
+    "id": 467,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 412,
+    "expression": "evidence.missingFile"
+  },
+  {
+    "id": 468,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 417,
+    "expression": "activeFixRequest()?.workflowExecutionId"
+  },
+  {
+    "id": 469,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 418,
+    "expression": "activeFixRequest()?.failedNode"
+  },
+  {
+    "id": 470,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 427,
+    "expression": "(pfr.findingIds || []).length"
+  },
+  {
+    "id": 471,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 427,
+    "expression": "(pfr.findingIds||[]).length > 1 ? 's' : ''"
+  },
+  {
+    "id": 472,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 428,
+    "expression": "pfr.attemptCount || (pfr.attempts||[]).length || 1"
+  },
+  {
+    "id": 473,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 428,
+    "expression": "(pfr.attemptCount || 1) > 1 ? 's' : ''"
+  },
+  {
+    "id": 474,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 442,
+    "expression": "owner | presentationLabel"
+  },
+  {
+    "id": 475,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 446,
+    "expression": "ed.sonar.issues.length"
+  },
+  {
+    "id": 476,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 446,
+    "expression": "ed.sonar.issues.length === 1 ? 'problème au total' : 'problèmes au total'"
+  },
+  {
+    "id": 477,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 446,
+    "expression": "sonarFindings().length"
+  },
+  {
+    "id": 478,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 446,
+    "expression": "sonarFindings().length === 1 ? 'affiché' : 'affichés'"
+  },
+  {
+    "id": 479,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 457,
+    "expression": "allEligibleFilteredSelected() ? 'Désélectionner la vue' : 'Sélectionner les problèmes éligibles de cette vue'"
+  },
+  {
+    "id": 480,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 480,
+    "expression": "issue.severity | presentationLabel"
+  },
+  {
+    "id": 481,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 481,
+    "expression": "issue.rule || issue.ruleKey || 'Non disponible'"
+  },
+  {
+    "id": 482,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 483,
+    "expression": "sonarFindingSummary(issue)"
+  },
+  {
+    "id": 483,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 484,
+    "expression": "issue.message"
+  },
+  {
+    "id": 484,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 487,
+    "expression": "issue.file || issue.component || 'Non disponible'"
+  },
+  {
+    "id": 485,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 488,
+    "expression": "issue.line || '-'"
+  },
+  {
+    "id": 486,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 492,
+    "expression": "batchPrNumber()"
+  },
+  {
+    "id": 487,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 498,
+    "expression": "findingCellStatus(issue)"
+  },
+  {
+    "id": 488,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 502,
+    "expression": "batchPrNumber() ? 'PR #' + batchPrNumber() : 'Voir la Pull Request'"
+  },
+  {
+    "id": 489,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 517,
+    "expression": "findingValue(selectedSonarFinding.rule || selectedSonarFinding.ruleKey)"
+  },
+  {
+    "id": 490,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 521,
+    "expression": "selectedSonarFinding.severity | presentationLabel"
+  },
+  {
+    "id": 491,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 521,
+    "expression": "findingValue(selectedSonarFinding.rule || selectedSonarFinding.ruleKey)"
+  },
+  {
+    "id": 492,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 521,
+    "expression": "selectedSonarFinding.type || selectedSonarFinding.category | presentationLabel"
+  },
+  {
+    "id": 493,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 521,
+    "expression": "selectedSonarFinding.source || selectedSonarFinding.stage | presentationLabel"
+  },
+  {
+    "id": 494,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 522,
+    "expression": "findingValue(selectedSonarFinding.file || selectedSonarFinding.component)"
+  },
+  {
+    "id": 495,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 522,
+    "expression": "selectedSonarFinding.line"
+  },
+  {
+    "id": 496,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 523,
+    "expression": "sonarFindingSummary(selectedSonarFinding)"
+  },
+  {
+    "id": 497,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 524,
+    "expression": "findingWhyImportant(selectedSonarFinding)"
+  },
+  {
+    "id": 498,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 525,
+    "expression": "findingEvidence(selectedSonarFinding)"
+  },
+  {
+    "id": 499,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 526,
+    "expression": "findingRecommendationLabel(selectedSonarFinding)"
+  },
+  {
+    "id": 500,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 526,
+    "expression": "findingActionLabel(selectedSonarFinding)"
+  },
+  {
+    "id": 501,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 526,
+    "expression": "findingResponsibleLabel(selectedSonarFinding)"
+  },
+  {
+    "id": 502,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 526,
+    "expression": "findingEligibilityLabel(selectedSonarFinding)"
+  },
+  {
+    "id": 503,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 526,
+    "expression": "findingVerdict(selectedSonarFinding) === 'VALID' ? 'Validée — problème corrigé' : (findingVerdict(selectedSonarFinding) === 'INVALID' ? 'Non corrigée' : 'Non concluante')"
+  },
+  {
+    "id": 504,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 527,
+    "expression": "project?.name || 'Non disponible'"
+  },
+  {
+    "id": 505,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 527,
+    "expression": "latestReport?.buildNumber ? '#' + latestReport.buildNumber : 'Non disponible'"
+  },
+  {
+    "id": 506,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 527,
+    "expression": "findingValue(selectedSonarFinding.id || selectedSonarFinding.key)"
+  },
+  {
+    "id": 507,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 527,
+    "expression": "batchPrNumber() ? 'PR #' + batchPrNumber() : 'Voir la Pull Request'"
+  },
+  {
+    "id": 508,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 530,
+    "expression": "isSelected(selectedSonarFinding) ? 'Retirer de la sélection' : 'Ajouter à la sélection'"
+  },
+  {
+    "id": 509,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 532,
+    "expression": "findingRequestState(selectedSonarFinding)"
+  },
+  {
+    "id": 510,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 533,
+    "expression": "findingActionLabel(selectedSonarFinding)"
+  },
+  {
+    "id": 511,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 539,
+    "expression": "selectedSonarIds.size"
+  },
+  {
+    "id": 512,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 539,
+    "expression": "selectedSonarIds.size > 1 ? 's' : ''"
+  },
+  {
+    "id": 513,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 539,
+    "expression": "selectedSonarIds.size > 1 ? 's' : ''"
+  },
+  {
+    "id": 514,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 542,
+    "expression": "modifyingFailedSelection ? 'Annuler' : 'Effacer la sélection'"
+  },
+  {
+    "id": 515,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 542,
+    "expression": "modifyingFailedSelection ? 'Lancer une nouvelle correction' : 'Proposer une correction'"
+  },
+  {
+    "id": 516,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 547,
+    "expression": "modifyingFailedSelection ? 'Lancer une nouvelle correction' : 'Proposer une correction'"
+  },
+  {
+    "id": 517,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 548,
+    "expression": "modifyingFailedSelection ? 'Une nouvelle demande de correction distincte de la tentative précédente sera créée pour les problèmes sélectionnés.' : 'La plateforme préparera une seule proposition de correction pour les problèmes sélectionnés.'"
+  },
+  {
+    "id": 518,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 549,
+    "expression": "finding.severity | presentationLabel"
+  },
+  {
+    "id": 519,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 549,
+    "expression": "finding.rule || finding.ruleKey || 'Règle non disponible'"
+  },
+  {
+    "id": 520,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 549,
+    "expression": "findingFileName(finding)"
+  },
+  {
+    "id": 521,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 549,
+    "expression": "finding.line"
+  },
+  {
+    "id": 522,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 549,
+    "expression": "sonarFindingSummary(finding)"
+  },
+  {
+    "id": 523,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 549,
+    "expression": "finding.message"
+  },
+  {
+    "id": 524,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 550,
+    "expression": "approving ? 'Demande en cours…' : (modifyingFailedSelection ? 'Lancer la nouvelle correction' : 'Confirmer la demande')"
+  },
+  {
+    "id": 525,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 557,
+    "expression": "sonarAiAnalysis"
+  },
+  {
+    "id": 526,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 584,
+    "expression": "scannerMetric(ed.trivy, 'critical') ?? 'Non disponible'"
+  },
+  {
+    "id": 527,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 584,
+    "expression": "scannerMetric(ed.trivy, 'critical') === 1 ? 'critique' : 'critiques'"
+  },
+  {
+    "id": 528,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 586,
+    "expression": "scannerMetric(ed.trivy, 'high') ?? 'Non disponible'"
+  },
+  {
+    "id": 529,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 586,
+    "expression": "scannerMetric(ed.trivy, 'high') === 1 ? 'élevée' : 'élevées'"
+  },
+  {
+    "id": 530,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 586,
+    "expression": "scannerMetric(ed.trivy, 'cves_count') ?? 'Non disponible'"
+  },
+  {
+    "id": 531,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 590,
+    "expression": "scannerState(ed.trivy)"
+  },
+  {
+    "id": 532,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 597,
+    "expression": "scannerMetric(ed.owasp, 'critical') ?? 'Non disponible'"
+  },
+  {
+    "id": 533,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 597,
+    "expression": "scannerMetric(ed.owasp, 'critical') === 1 ? 'critique' : 'critiques'"
+  },
+  {
+    "id": 534,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 599,
+    "expression": "scannerMetric(ed.owasp, 'high') ?? 'Non disponible'"
+  },
+  {
+    "id": 535,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 599,
+    "expression": "scannerMetric(ed.owasp, 'high') === 1 ? 'élevée' : 'élevées'"
+  },
+  {
+    "id": 536,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 599,
+    "expression": "scannerMetric(ed.owasp, 'cves_count') ?? 'Non disponible'"
+  },
+  {
+    "id": 537,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 603,
+    "expression": "scannerState(ed.owasp)"
+  },
+  {
+    "id": 538,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 610,
+    "expression": "scannerMetric(ed.zap, 'alerts_high') ?? 'Non disponible'"
+  },
+  {
+    "id": 539,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 610,
+    "expression": "scannerMetric(ed.zap, 'alerts_high') === 1 ? 'élevée' : 'élevées'"
+  },
+  {
+    "id": 540,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 612,
+    "expression": "scannerMetric(ed.zap, 'alerts_medium') ?? 'Non disponible'"
+  },
+  {
+    "id": 541,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 612,
+    "expression": "scannerMetric(ed.zap, 'alerts_medium') === 1 ? 'moyenne' : 'moyennes'"
+  },
+  {
+    "id": 542,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 612,
+    "expression": "scannerMetric(ed.zap, 'alerts_count') ?? 'Non disponible'"
+  },
+  {
+    "id": 543,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 616,
+    "expression": "scannerState(ed.zap)"
+  },
+  {
+    "id": 544,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 628,
+    "expression": "deployReadyLoading ? '…' : (deployReady ? 'PRÊT À DÉPLOYER' : (judge.decision === 'BLOCK' ? 'BLOQUÉ' : 'EN ATTENTE'))"
+  },
+  {
+    "id": 545,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 631,
+    "expression": "deployReadyLoading ? 'Vérification…' : (deployReady ? (judge.confidence !== null ? 'Confiance ' + judge.confidence + '%' : 'Décision de gouvernance indéterminée') : readinessReasonLabel(deployReasons[0]))"
+  },
+  {
+    "id": 546,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 640,
+    "expression": "manualSummary.todo"
+  },
+  {
+    "id": 547,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 641,
+    "expression": "manualSummary.doneByUser"
+  },
+  {
+    "id": 548,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 642,
+    "expression": "manualSummary.stillDetected"
+  },
+  {
+    "id": 549,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 643,
+    "expression": "manualSummary.verified"
+  },
+  {
+    "id": 550,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 650,
+    "expression": "securityFindingsCount('all') ?? '—'"
+  },
+  {
+    "id": 551,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 651,
+    "expression": "securityFindingsCount('trivy') ?? '—'"
+  },
+  {
+    "id": 552,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 652,
+    "expression": "securityFindingsCount('owasp') ?? '—'"
+  },
+  {
+    "id": 553,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 653,
+    "expression": "securityFindingsCount('zap') ?? '—'"
+  },
+  {
+    "id": 554,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 656,
+    "expression": "securityFilterLabel()"
+  },
+  {
+    "id": 555,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 665,
+    "expression": "dispatchingCount()"
+  },
+  {
+    "id": 556,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 677,
+    "expression": "launchingCveBatch ? 'Lancement…' : (selectedCveCount() ? ('Corriger ' + selectedCveCount() + (selectedCveCount() > 1 ? ' vulnérabilités' : ' vulnérabilité')) : 'Sélectionnez des vulnérabilités à corriger')"
+  },
+  {
+    "id": 557,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 680,
+    "expression": "selectedCveCount()"
+  },
+  {
+    "id": 558,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 680,
+    "expression": "selectedCveCount() > 1 ? 's' : ''"
+  },
+  {
+    "id": 559,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 682,
+    "expression": "selectedCveCount() - 8"
+  },
+  {
+    "id": 560,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 683,
+    "expression": "cveBatchError"
+  },
+  {
+    "id": 561,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 686,
+    "expression": "failedRetryableCount()"
+  },
+  {
+    "id": 562,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 687,
+    "expression": "candidateReadyCount()"
+  },
+  {
+    "id": 563,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 693,
+    "expression": "ed.docker?.image_tag || 'inconnue'"
+  },
+  {
+    "id": 564,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 696,
+    "expression": "ed.trivy.critical"
+  },
+  {
+    "id": 565,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 697,
+    "expression": "ed.trivy.high"
+  },
+  {
+    "id": 566,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 704,
+    "expression": "scannerState(ed.trivy)"
+  },
+  {
+    "id": 567,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 719,
+    "expression": "ed.owasp.critical"
+  },
+  {
+    "id": 568,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 720,
+    "expression": "ed.owasp.high"
+  },
+  {
+    "id": 569,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 727,
+    "expression": "scannerState(ed.owasp)"
+  },
+  {
+    "id": 570,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 739,
+    "expression": "ed.zap?.target_url || 'inconnue'"
+  },
+  {
+    "id": 571,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 742,
+    "expression": "ed.zap.alerts_high"
+  },
+  {
+    "id": 572,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 743,
+    "expression": "ed.zap.alerts_medium"
+  },
+  {
+    "id": 573,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 765,
+    "expression": "item | presentationText"
+  },
+  {
+    "id": 574,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 773,
+    "expression": "(deployReadiness?.status || 'NOT_READY') | presentationLabel"
+  },
+  {
+    "id": 575,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 776,
+    "expression": "deployReadiness?.currentBuild ? '#' + deployReadiness.currentBuild : 'Non disponible'"
+  },
+  {
+    "id": 576,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 777,
+    "expression": "deployReadiness?.validatedBuild ? '#' + deployReadiness.validatedBuild : 'Non disponible'"
+  },
+  {
+    "id": 577,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 778,
+    "expression": "deployReadiness?.unresolvedBlockingCount ?? 'Non disponible'"
+  },
+  {
+    "id": 578,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 779,
+    "expression": "deploymentConfigured ? 'Configuré' : 'Non configuré'"
+  },
+  {
+    "id": 579,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 786,
+    "expression": "pipelineStageLabel(stage.stage)"
+  },
+  {
+    "id": 580,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 786,
+    "expression": "stage.status | stageStatusLabel"
+  },
+  {
+    "id": 581,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 787,
+    "expression": "stage.status | stageStatusLabel"
+  },
+  {
+    "id": 582,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 787,
+    "expression": "stage.blocking ? 'Cette étape bloque le déploiement. Consultez son rapport.' : 'Consultez le rapport de cette étape pour les détails.'"
+  },
+  {
+    "id": 583,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 788,
+    "expression": "stage.source || 'Plateforme'"
+  },
+  {
+    "id": 584,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 788,
+    "expression": "stage.findingCount ?? 'Non disponible'"
+  },
+  {
+    "id": 585,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 788,
+    "expression": "stage.blocking ? 'oui' : 'non'"
+  },
+  {
+    "id": 586,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 788,
+    "expression": "stage.required ? 'oui' : 'non'"
+  },
+  {
+    "id": 587,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 792,
+    "expression": "readinessReasonLabel(deployReadiness?.recommendedNextAction || deployReasons[0])"
+  },
+  {
+    "id": 588,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 802,
+    "expression": "cycle.buildNumber ? 'Build #' + cycle.buildNumber : 'Build non disponible'"
+  },
+  {
+    "id": 589,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 803,
+    "expression": "(cycle.status || 'UNVERIFIED') | presentationLabel"
+  },
+  {
+    "id": 590,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 804,
+    "expression": "cycle.blockingCount ?? 'Non disponible'"
+  },
+  {
+    "id": 591,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 804,
+    "expression": "(cycle.blockingCount ?? 'Non disponible') === 1 ? 'blocage' : 'blocages'"
+  },
+  {
+    "id": 592,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 804,
+    "expression": "cycle.prNumber ? '#' + cycle.prNumber : 'non disponible'"
+  },
+  {
+    "id": 593,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 804,
+    "expression": "cycle.correlationVerified ? 'Corrélation vérifiée' : 'Non vérifié'"
+  },
+  {
+    "id": 594,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 852,
+    "expression": "i.title"
+  },
+  {
+    "id": 595,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 853,
+    "expression": "i.status | presentationLabel"
+  },
+  {
+    "id": 596,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 854,
+    "expression": "i.source"
+  },
+  {
+    "id": 597,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 855,
+    "expression": "i.createdAt | frenchDate"
+  },
+  {
+    "id": 598,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 868,
+    "expression": "row.name"
+  },
+  {
+    "id": 599,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 868,
+    "expression": "row.ok ? '✓' : '⚠'"
+  },
+  {
+    "id": 600,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 868,
+    "expression": "row.state"
+  },
+  {
+    "id": 601,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 870,
+    "expression": "project?.name || 'Non disponible'"
+  },
+  {
+    "id": 602,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 870,
+    "expression": "project?.environment || 'Non disponible'"
+  },
+  {
+    "id": 603,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 870,
+    "expression": "project?.description || 'Non disponible'"
+  },
+  {
+    "id": 604,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 871,
+    "expression": "project?.githubRepo || 'Non configuré'"
+  },
+  {
+    "id": 605,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 871,
+    "expression": "repositoryUrl(project?.githubRepo) || 'Non configuré'"
+  },
+  {
+    "id": 606,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 871,
+    "expression": "reportedBranch() || 'Non disponible'"
+  },
+  {
+    "id": 607,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 872,
+    "expression": "project?.cicdTool || 'Non configuré'"
+  },
+  {
+    "id": 608,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 872,
+    "expression": "project?.jenkinsJobName || 'Non configuré'"
+  },
+  {
+    "id": 609,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 872,
+    "expression": "jenkinsConnectionState()"
+  },
+  {
+    "id": 610,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 873,
+    "expression": "project?.sonarqubeKey || 'Non configuré'"
+  },
+  {
+    "id": 611,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 873,
+    "expression": "ed?.sonar?.quality_gate === 'OK' ? 'Réussi' : (ed?.sonar?.quality_gate ? 'Échec' : 'Non disponible')"
+  },
+  {
+    "id": 612,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 873,
+    "expression": "ed?.zap?.target_url || 'Non configuré'"
+  },
+  {
+    "id": 613,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 874,
+    "expression": "configStageStatus('tests') | stageStatusLabel"
+  },
+  {
+    "id": 614,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 875,
+    "expression": "deploymentConfigured ? 'Configuré' : 'Non configuré'"
+  },
+  {
+    "id": 615,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 875,
+    "expression": "deploymentTarget?.targetName || 'Non disponible'"
+  },
+  {
+    "id": 616,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 875,
+    "expression": "deployReady ? 'Prêt' : 'Non prêt'"
+  },
+  {
+    "id": 617,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 877,
+    "expression": "project?.id || 'Non disponible'"
+  },
+  {
+    "id": 618,
+    "component": "frontend/src/app/features/projects/project-detail.component.ts",
+    "template": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 877,
+    "expression": "project?.createdAt | frenchDate:false"
+  },
+  {
+    "id": 619,
+    "component": "frontend/src/app/features/projects/cve-table.component.ts",
+    "template": "frontend/src/app/features/projects/cve-table.component.ts",
+    "line": 2,
+    "expression": "identityError"
+  },
+  {
+    "id": 620,
+    "component": "frontend/src/app/features/projects/cve-table.component.ts",
+    "template": "frontend/src/app/features/projects/cve-table.component.ts",
+    "line": 6,
+    "expression": "source === 'OWASP' ? 'OWASP Dependency-Check' : 'Trivy'"
+  },
+  {
+    "id": 621,
+    "component": "frontend/src/app/features/projects/cve-table.component.ts",
+    "template": "frontend/src/app/features/projects/cve-table.component.ts",
+    "line": 6,
+    "expression": "summary.total"
+  },
+  {
+    "id": 622,
+    "component": "frontend/src/app/features/projects/cve-table.component.ts",
+    "template": "frontend/src/app/features/projects/cve-table.component.ts",
+    "line": 6,
+    "expression": "summary.total === 1 ? '' : 's'"
+  },
+  {
+    "id": 623,
+    "component": "frontend/src/app/features/projects/cve-table.component.ts",
+    "template": "frontend/src/app/features/projects/cve-table.component.ts",
+    "line": 6,
+    "expression": "summary.total === 1 ? '' : 's'"
+  },
+  {
+    "id": 624,
+    "component": "frontend/src/app/features/projects/cve-table.component.ts",
+    "template": "frontend/src/app/features/projects/cve-table.component.ts",
+    "line": 10,
+    "expression": "tab.label"
+  },
+  {
+    "id": 625,
+    "component": "frontend/src/app/features/projects/cve-table.component.ts",
+    "template": "frontend/src/app/features/projects/cve-table.component.ts",
+    "line": 10,
+    "expression": "tabCount(summary, tab.key)"
+  },
+  {
+    "id": 626,
+    "component": "frontend/src/app/features/projects/cve-table.component.ts",
+    "template": "frontend/src/app/features/projects/cve-table.component.ts",
+    "line": 18,
+    "expression": "v18Count('ALL')"
+  },
+  {
+    "id": 627,
+    "component": "frontend/src/app/features/projects/cve-table.component.ts",
+    "template": "frontend/src/app/features/projects/cve-table.component.ts",
+    "line": 19,
+    "expression": "v18Count('VALIDATED')"
+  },
+  {
+    "id": 628,
+    "component": "frontend/src/app/features/projects/cve-table.component.ts",
+    "template": "frontend/src/app/features/projects/cve-table.component.ts",
+    "line": 20,
+    "expression": "v18Count('BLOCKED')"
+  },
+  {
+    "id": 629,
+    "component": "frontend/src/app/features/projects/cve-table.component.ts",
+    "template": "frontend/src/app/features/projects/cve-table.component.ts",
+    "line": 21,
+    "expression": "v18Count('MAJOR_UPGRADE')"
+  },
+  {
+    "id": 630,
+    "component": "frontend/src/app/features/projects/cve-table.component.ts",
+    "template": "frontend/src/app/features/projects/cve-table.component.ts",
+    "line": 22,
+    "expression": "v18Count('VALIDATION_FAILED')"
+  },
+  {
+    "id": 631,
+    "component": "frontend/src/app/features/projects/cve-table.component.ts",
+    "template": "frontend/src/app/features/projects/cve-table.component.ts",
+    "line": 31,
+    "expression": "countBy('CRITICAL')"
+  },
+  {
+    "id": 632,
+    "component": "frontend/src/app/features/projects/cve-table.component.ts",
+    "template": "frontend/src/app/features/projects/cve-table.component.ts",
+    "line": 31,
+    "expression": "countBy('CRITICAL') === 1 ? 'critique' : 'critiques'"
+  },
+  {
+    "id": 633,
+    "component": "frontend/src/app/features/projects/cve-table.component.ts",
+    "template": "frontend/src/app/features/projects/cve-table.component.ts",
+    "line": 32,
+    "expression": "countBy('HIGH')"
+  },
+  {
+    "id": 634,
+    "component": "frontend/src/app/features/projects/cve-table.component.ts",
+    "template": "frontend/src/app/features/projects/cve-table.component.ts",
+    "line": 32,
+    "expression": "countBy('HIGH') === 1 ? 'élevée' : 'élevées'"
+  },
+  {
+    "id": 635,
+    "component": "frontend/src/app/features/projects/cve-table.component.ts",
+    "template": "frontend/src/app/features/projects/cve-table.component.ts",
+    "line": 33,
+    "expression": "countBy('MEDIUM')"
+  },
+  {
+    "id": 636,
+    "component": "frontend/src/app/features/projects/cve-table.component.ts",
+    "template": "frontend/src/app/features/projects/cve-table.component.ts",
+    "line": 33,
+    "expression": "countBy('MEDIUM') === 1 ? 'moyenne' : 'moyennes'"
+  },
+  {
+    "id": 637,
+    "component": "frontend/src/app/features/projects/cve-table.component.ts",
+    "template": "frontend/src/app/features/projects/cve-table.component.ts",
+    "line": 61,
+    "expression": "owaspPresentation(c)?.label || selectionEligibility(c).reason"
+  },
+  {
+    "id": 638,
+    "component": "frontend/src/app/features/projects/cve-table.component.ts",
+    "template": "frontend/src/app/features/projects/cve-table.component.ts",
+    "line": 63,
+    "expression": "isOpen(c.id + c.pkg) ? '▾' : '▸'"
+  },
+  {
+    "id": 639,
+    "component": "frontend/src/app/features/projects/cve-table.component.ts",
+    "template": "frontend/src/app/features/projects/cve-table.component.ts",
+    "line": 64,
+    "expression": "c.id"
+  },
+  {
+    "id": 640,
+    "component": "frontend/src/app/features/projects/cve-table.component.ts",
+    "template": "frontend/src/app/features/projects/cve-table.component.ts",
+    "line": 64,
+    "expression": "c.source"
+  },
+  {
+    "id": 641,
+    "component": "frontend/src/app/features/projects/cve-table.component.ts",
+    "template": "frontend/src/app/features/projects/cve-table.component.ts",
+    "line": 65,
+    "expression": "c.severity | presentationLabel"
+  },
+  {
+    "id": 642,
+    "component": "frontend/src/app/features/projects/cve-table.component.ts",
+    "template": "frontend/src/app/features/projects/cve-table.component.ts",
+    "line": 66,
+    "expression": "c.cvss != null ? frenchNumber(c.cvss) : 'Non disponible'"
+  },
+  {
+    "id": 643,
+    "component": "frontend/src/app/features/projects/cve-table.component.ts",
+    "template": "frontend/src/app/features/projects/cve-table.component.ts",
+    "line": 67,
+    "expression": "componentLabel(c)"
+  },
+  {
+    "id": 644,
+    "component": "frontend/src/app/features/projects/cve-table.component.ts",
+    "template": "frontend/src/app/features/projects/cve-table.component.ts",
+    "line": 67,
+    "expression": "v1_8Presentation(c)?.managedBy"
+  },
+  {
+    "id": 645,
+    "component": "frontend/src/app/features/projects/cve-table.component.ts",
+    "template": "frontend/src/app/features/projects/cve-table.component.ts",
+    "line": 68,
+    "expression": "c.historical ? 'Non disponible pour le scan actuel' : (owaspPresentation(c)?.installedVersion || c.installedVersion || 'Version non disponible')"
+  },
+  {
+    "id": 646,
+    "component": "frontend/src/app/features/projects/cve-table.component.ts",
+    "template": "frontend/src/app/features/projects/cve-table.component.ts",
+    "line": 71,
+    "expression": "op.targetVersion"
+  },
+  {
+    "id": 647,
+    "component": "frontend/src/app/features/projects/cve-table.component.ts",
+    "template": "frontend/src/app/features/projects/cve-table.component.ts",
+    "line": 71,
+    "expression": "op.targetSource"
+  },
+  {
+    "id": 648,
+    "component": "frontend/src/app/features/projects/cve-table.component.ts",
+    "template": "frontend/src/app/features/projects/cve-table.component.ts",
+    "line": 72,
+    "expression": "op.label"
+  },
+  {
+    "id": 649,
+    "component": "frontend/src/app/features/projects/cve-table.component.ts",
+    "template": "frontend/src/app/features/projects/cve-table.component.ts",
+    "line": 75,
+    "expression": "fixedVersionFor(c)"
+  },
+  {
+    "id": 650,
+    "component": "frontend/src/app/features/projects/cve-table.component.ts",
+    "template": "frontend/src/app/features/projects/cve-table.component.ts",
+    "line": 79,
+    "expression": "owaspPresentation(c)?.targetVersion ? (taskFor(c)?.v1_8Decision?.sandboxValidated ? 'Validation V1.8' : (owaspPresentation(c)?.targetSource || 'Non déterminée')) : 'Non déterminée'"
+  },
+  {
+    "id": 651,
+    "component": "frontend/src/app/features/projects/cve-table.component.ts",
+    "template": "frontend/src/app/features/projects/cve-table.component.ts",
+    "line": 80,
+    "expression": "owaspPresentation(c)?.label"
+  },
+  {
+    "id": 652,
+    "component": "frontend/src/app/features/projects/cve-table.component.ts",
+    "template": "frontend/src/app/features/projects/cve-table.component.ts",
+    "line": 82,
+    "expression": "owaspPresentation(c)?.attemptNumber"
+  },
+  {
+    "id": 653,
+    "component": "frontend/src/app/features/projects/cve-table.component.ts",
+    "template": "frontend/src/app/features/projects/cve-table.component.ts",
+    "line": 83,
+    "expression": "owaspPresentation(c)?.explanation"
+  },
+  {
+    "id": 654,
+    "component": "frontend/src/app/features/projects/cve-table.component.ts",
+    "template": "frontend/src/app/features/projects/cve-table.component.ts",
+    "line": 87,
+    "expression": "retryPendingIds.has(taskFor(c).id) ? 'Relance en cours…' : 'Réessayer'"
+  },
+  {
+    "id": 655,
+    "component": "frontend/src/app/features/projects/cve-table.component.ts",
+    "template": "frontend/src/app/features/projects/cve-table.component.ts",
+    "line": 99,
+    "expression": "c.description || c.title || 'Aucune description fournie par le scanner. Consultez la base officielle ci-dessous.'"
+  },
+  {
+    "id": 656,
+    "component": "frontend/src/app/features/projects/cve-table.component.ts",
+    "template": "frontend/src/app/features/projects/cve-table.component.ts",
+    "line": 105,
+    "expression": "step"
+  },
+  {
+    "id": 657,
+    "component": "frontend/src/app/features/projects/cve-table.component.ts",
+    "template": "frontend/src/app/features/projects/cve-table.component.ts",
+    "line": 112,
+    "expression": "g.problem"
+  },
+  {
+    "id": 658,
+    "component": "frontend/src/app/features/projects/cve-table.component.ts",
+    "template": "frontend/src/app/features/projects/cve-table.component.ts",
+    "line": 114,
+    "expression": "s"
+  },
+  {
+    "id": 659,
+    "component": "frontend/src/app/features/projects/cve-table.component.ts",
+    "template": "frontend/src/app/features/projects/cve-table.component.ts",
+    "line": 117,
+    "expression": "g.verification"
+  },
+  {
+    "id": 660,
+    "component": "frontend/src/app/features/projects/cve-table.component.ts",
+    "template": "frontend/src/app/features/projects/cve-table.component.ts",
+    "line": 122,
+    "expression": "c.id.startsWith('GHSA') ? 'GitHub Advisory' : 'NVD'"
+  },
+  {
+    "id": 661,
+    "component": "frontend/src/app/features/projects/cve-table.component.ts",
+    "template": "frontend/src/app/features/projects/cve-table.component.ts",
+    "line": 126,
+    "expression": "code"
+  },
+  {
+    "id": 662,
+    "component": "frontend/src/app/features/projects/cve-table.component.ts",
+    "template": "frontend/src/app/features/projects/cve-table.component.ts",
+    "line": 130,
+    "expression": "attempt.attemptNumber || attempt.attempt"
+  },
+  {
+    "id": 663,
+    "component": "frontend/src/app/features/projects/cve-table.component.ts",
+    "template": "frontend/src/app/features/projects/cve-table.component.ts",
+    "line": 130,
+    "expression": "attemptLabel(attempt.status)"
+  },
+  {
+    "id": 664,
+    "component": "frontend/src/app/features/projects/cve-table.component.ts",
+    "template": "frontend/src/app/features/projects/cve-table.component.ts",
+    "line": 131,
+    "expression": "(attempt.startedAt || attempt.at) | frenchDate"
+  },
+  {
+    "id": 665,
+    "component": "frontend/src/app/features/projects/cve-table.component.ts",
+    "template": "frontend/src/app/features/projects/cve-table.component.ts",
+    "line": 132,
+    "expression": "attempt.finishedAt | frenchDate"
+  },
+  {
+    "id": 666,
+    "component": "frontend/src/app/features/projects/cve-table.component.ts",
+    "template": "frontend/src/app/features/projects/cve-table.component.ts",
+    "line": 133,
+    "expression": "failureLabel(attempt.reasonCode)"
+  },
+  {
+    "id": 667,
+    "component": "frontend/src/app/features/projects/cve-table.component.ts",
+    "template": "frontend/src/app/features/projects/cve-table.component.ts",
+    "line": 133,
+    "expression": "auditReasonCode(attempt.reasonCode)"
+  },
+  {
+    "id": 668,
+    "component": "frontend/src/app/features/projects/cve-table.component.ts",
+    "template": "frontend/src/app/features/projects/cve-table.component.ts",
+    "line": 137,
+    "expression": "owaspPresentation(c)?.prNumber ? ' — #' + owaspPresentation(c)?.prNumber : ''"
+  },
+  {
+    "id": 669,
+    "component": "frontend/src/app/features/projects/cve-table.component.ts",
+    "template": "frontend/src/app/features/projects/cve-table.component.ts",
+    "line": 148,
+    "expression": "task.status === 'VERIFIED' ? 'Vérifié' : 'Traité manuellement'"
+  },
+  {
+    "id": 670,
+    "component": "frontend/src/app/features/projects/cve-table.component.ts",
+    "template": "frontend/src/app/features/projects/cve-table.component.ts",
+    "line": 149,
+    "expression": "task.completedByDisplayName"
+  },
+  {
+    "id": 671,
+    "component": "frontend/src/app/features/projects/cve-table.component.ts",
+    "template": "frontend/src/app/features/projects/cve-table.component.ts",
+    "line": 149,
+    "expression": "task.completedAt | frenchDate"
+  },
+  {
+    "id": 672,
+    "component": "frontend/src/app/features/projects/cve-table.component.ts",
+    "template": "frontend/src/app/features/projects/cve-table.component.ts",
+    "line": 150,
+    "expression": "task.completionNote"
+  },
+  {
+    "id": 673,
+    "component": "frontend/src/app/features/projects/cve-table.component.ts",
+    "template": "frontend/src/app/features/projects/cve-table.component.ts",
+    "line": 151,
+    "expression": "task.lastSeenBuild ? 'build #' + task.lastSeenBuild : 'Non disponible'"
+  },
+  {
+    "id": 674,
+    "component": "frontend/src/app/features/projects/cve-table.component.ts",
+    "template": "frontend/src/app/features/projects/cve-table.component.ts",
+    "line": 151,
+    "expression": "task.verifiedBuild"
+  },
+  {
+    "id": 675,
+    "component": "frontend/src/app/features/projects/cve-table.component.ts",
+    "template": "frontend/src/app/features/projects/cve-table.component.ts",
+    "line": 151,
+    "expression": "scannerLabel(task)"
+  },
+  {
+    "id": 676,
+    "component": "frontend/src/app/features/projects/cve-table.component.ts",
+    "template": "frontend/src/app/features/projects/cve-table.component.ts",
+    "line": 151,
+    "expression": "task.status === 'VERIFIED' ? 'Vérifié' : 'À vérifier'"
+  },
+  {
+    "id": 677,
+    "component": "frontend/src/app/features/projects/cve-table.component.ts",
+    "template": "frontend/src/app/features/projects/cve-table.component.ts",
+    "line": 160,
+    "expression": "v18.installedVersion || 'Non disponible'"
+  },
+  {
+    "id": 678,
+    "component": "frontend/src/app/features/projects/cve-table.component.ts",
+    "template": "frontend/src/app/features/projects/cve-table.component.ts",
+    "line": 161,
+    "expression": "v18.securityVersion"
+  },
+  {
+    "id": 679,
+    "component": "frontend/src/app/features/projects/cve-table.component.ts",
+    "template": "frontend/src/app/features/projects/cve-table.component.ts",
+    "line": 162,
+    "expression": "v18.recommendation"
+  },
+  {
+    "id": 680,
+    "component": "frontend/src/app/features/projects/cve-table.component.ts",
+    "template": "frontend/src/app/features/projects/cve-table.component.ts",
+    "line": 163,
+    "expression": "v18.managedBy"
+  },
+  {
+    "id": 681,
+    "component": "frontend/src/app/features/projects/cve-table.component.ts",
+    "template": "frontend/src/app/features/projects/cve-table.component.ts",
+    "line": 164,
+    "expression": "v18.validationLabel"
+  },
+  {
+    "id": 682,
+    "component": "frontend/src/app/features/projects/cve-table.component.ts",
+    "template": "frontend/src/app/features/projects/cve-table.component.ts",
+    "line": 164,
+    "expression": "v18.label"
+  },
+  {
+    "id": 683,
+    "component": "frontend/src/app/features/projects/cve-table.component.ts",
+    "template": "frontend/src/app/features/projects/cve-table.component.ts",
+    "line": 165,
+    "expression": "v18.reason"
+  },
+  {
+    "id": 684,
+    "component": "frontend/src/app/features/projects/cve-table.component.ts",
+    "template": "frontend/src/app/features/projects/cve-table.component.ts",
+    "line": 184,
+    "expression": "pendingFinding()?.id"
+  },
+  {
+    "id": 685,
+    "component": "frontend/src/app/features/projects/cve-table.component.ts",
+    "template": "frontend/src/app/features/projects/cve-table.component.ts",
+    "line": 184,
+    "expression": "pendingFinding()?.pkg || 'Non disponible'"
+  },
+  {
+    "id": 686,
+    "component": "frontend/src/app/features/projects/cve-table.component.ts",
+    "template": "frontend/src/app/features/projects/cve-table.component.ts",
+    "line": 185,
+    "expression": "source"
+  },
+  {
+    "id": 687,
+    "component": "frontend/src/app/features/projects/zap-table.component.ts",
+    "template": "frontend/src/app/features/projects/zap-table.component.ts",
+    "line": 10,
+    "expression": "isOpen(a.id) ? '▾' : '▸'"
+  },
+  {
+    "id": 688,
+    "component": "frontend/src/app/features/projects/zap-table.component.ts",
+    "template": "frontend/src/app/features/projects/zap-table.component.ts",
+    "line": 11,
+    "expression": "zapAlertLabel(a.title)"
+  },
+  {
+    "id": 689,
+    "component": "frontend/src/app/features/projects/zap-table.component.ts",
+    "template": "frontend/src/app/features/projects/zap-table.component.ts",
+    "line": 12,
+    "expression": "a.severity | presentationLabel"
+  },
+  {
+    "id": 690,
+    "component": "frontend/src/app/features/projects/zap-table.component.ts",
+    "template": "frontend/src/app/features/projects/zap-table.component.ts",
+    "line": 13,
+    "expression": "a.url || 'Non disponible'"
+  },
+  {
+    "id": 691,
+    "component": "frontend/src/app/features/projects/zap-table.component.ts",
+    "template": "frontend/src/app/features/projects/zap-table.component.ts",
+    "line": 22,
+    "expression": "a.title"
+  },
+  {
+    "id": 692,
+    "component": "frontend/src/app/features/projects/zap-table.component.ts",
+    "template": "frontend/src/app/features/projects/zap-table.component.ts",
+    "line": 36,
+    "expression": "a.remediationLabel"
+  },
+  {
+    "id": 693,
+    "component": "frontend/src/app/features/projects/zap-table.component.ts",
+    "template": "frontend/src/app/features/projects/zap-table.component.ts",
+    "line": 39,
+    "expression": "a.param"
+  },
+  {
+    "id": 694,
+    "component": "frontend/src/app/features/projects/zap-table.component.ts",
+    "template": "frontend/src/app/features/projects/zap-table.component.ts",
+    "line": 40,
+    "expression": "a.reference"
+  },
+  {
+    "id": 695,
+    "component": "frontend/src/app/features/projects/zap-table.component.ts",
+    "template": "frontend/src/app/features/projects/zap-table.component.ts",
+    "line": 41,
+    "expression": "a.id"
+  },
+  {
+    "id": 696,
+    "component": "frontend/src/app/features/projects/zap-table.component.ts",
+    "template": "frontend/src/app/features/projects/zap-table.component.ts",
+    "line": 47,
+    "expression": "task.status === 'VERIFIED' ? 'Vérifié' : 'Traité manuellement'"
+  },
+  {
+    "id": 697,
+    "component": "frontend/src/app/features/projects/zap-table.component.ts",
+    "template": "frontend/src/app/features/projects/zap-table.component.ts",
+    "line": 47,
+    "expression": "task.completedByDisplayName || 'Non disponible'"
+  },
+  {
+    "id": 698,
+    "component": "frontend/src/app/features/projects/zap-table.component.ts",
+    "template": "frontend/src/app/features/projects/zap-table.component.ts",
+    "line": 47,
+    "expression": "task.completedAt | frenchDate"
+  },
+  {
+    "id": 699,
+    "component": "frontend/src/app/features/projects/zap-table.component.ts",
+    "template": "frontend/src/app/features/projects/zap-table.component.ts",
+    "line": 47,
+    "expression": "task.completionNote"
+  },
+  {
+    "id": 700,
+    "component": "frontend/src/app/features/projects/zap-table.component.ts",
+    "template": "frontend/src/app/features/projects/zap-table.component.ts",
+    "line": 47,
+    "expression": "task.lastSeenBuild ? 'build #' + task.lastSeenBuild : 'Non disponible'"
+  },
+  {
+    "id": 701,
+    "component": "frontend/src/app/features/projects/zap-table.component.ts",
+    "template": "frontend/src/app/features/projects/zap-table.component.ts",
+    "line": 47,
+    "expression": "task.verifiedBuild"
+  },
+  {
+    "id": 702,
+    "component": "frontend/src/app/features/projects/zap-table.component.ts",
+    "template": "frontend/src/app/features/projects/zap-table.component.ts",
+    "line": 50,
+    "expression": "scannerLabel(task)"
+  },
+  {
+    "id": 703,
+    "component": "frontend/src/app/features/projects/zap-table.component.ts",
+    "template": "frontend/src/app/features/projects/zap-table.component.ts",
+    "line": 50,
+    "expression": "task.status === 'VERIFIED' ? 'Vérifié' : (task.status === 'DONE_BY_USER' ? 'À vérifier' : 'Action requise')"
+  },
+  {
+    "id": 704,
+    "component": "frontend/src/app/features/projects/zap-table.component.ts",
+    "template": "frontend/src/app/features/projects/zap-table.component.ts",
+    "line": 65,
+    "expression": "zapAlertLabel(pendingFinding()?.title)"
+  },
+  {
+    "id": 705,
+    "component": "frontend/src/app/features/projects/jenkinsfile-optimizer.component.ts",
+    "template": "frontend/src/app/features/projects/jenkinsfile-optimizer.component.ts",
+    "line": 34,
+    "expression": "source().length"
+  },
+  {
+    "id": 706,
+    "component": "frontend/src/app/features/projects/jenkinsfile-optimizer.component.ts",
+    "template": "frontend/src/app/features/projects/jenkinsfile-optimizer.component.ts",
+    "line": 37,
+    "expression": "fetching() ? 'Récupération…' : 'Récupérer depuis Git'"
+  },
+  {
+    "id": 707,
+    "component": "frontend/src/app/features/projects/jenkinsfile-optimizer.component.ts",
+    "template": "frontend/src/app/features/projects/jenkinsfile-optimizer.component.ts",
+    "line": 40,
+    "expression": "fetchError()"
+  },
+  {
+    "id": 708,
+    "component": "frontend/src/app/features/projects/jenkinsfile-optimizer.component.ts",
+    "template": "frontend/src/app/features/projects/jenkinsfile-optimizer.component.ts",
+    "line": 41,
+    "expression": "source()"
+  },
+  {
+    "id": 709,
+    "component": "frontend/src/app/features/projects/jenkinsfile-optimizer.component.ts",
+    "template": "frontend/src/app/features/projects/jenkinsfile-optimizer.component.ts",
+    "line": 51,
+    "expression": "source().length"
+  },
+  {
+    "id": 710,
+    "component": "frontend/src/app/features/projects/jenkinsfile-optimizer.component.ts",
+    "template": "frontend/src/app/features/projects/jenkinsfile-optimizer.component.ts",
+    "line": 58,
+    "expression": "loading() ? 'Analyse en cours…' : 'Analyser et optimiser'"
+  },
+  {
+    "id": 711,
+    "component": "frontend/src/app/features/projects/jenkinsfile-optimizer.component.ts",
+    "template": "frontend/src/app/features/projects/jenkinsfile-optimizer.component.ts",
+    "line": 61,
+    "expression": "error()"
+  },
+  {
+    "id": 712,
+    "component": "frontend/src/app/features/projects/jenkinsfile-optimizer.component.ts",
+    "template": "frontend/src/app/features/projects/jenkinsfile-optimizer.component.ts",
+    "line": 74,
+    "expression": "r.score"
+  },
+  {
+    "id": 713,
+    "component": "frontend/src/app/features/projects/jenkinsfile-optimizer.component.ts",
+    "template": "frontend/src/app/features/projects/jenkinsfile-optimizer.component.ts",
+    "line": 79,
+    "expression": "r.summary"
+  },
+  {
+    "id": 714,
+    "component": "frontend/src/app/features/projects/jenkinsfile-optimizer.component.ts",
+    "template": "frontend/src/app/features/projects/jenkinsfile-optimizer.component.ts",
+    "line": 82,
+    "expression": "r.estimatedTimeSavingPercent"
+  },
+  {
+    "id": 715,
+    "component": "frontend/src/app/features/projects/jenkinsfile-optimizer.component.ts",
+    "template": "frontend/src/app/features/projects/jenkinsfile-optimizer.component.ts",
+    "line": 85,
+    "expression": "r.issues.length"
+  },
+  {
+    "id": 716,
+    "component": "frontend/src/app/features/projects/jenkinsfile-optimizer.component.ts",
+    "template": "frontend/src/app/features/projects/jenkinsfile-optimizer.component.ts",
+    "line": 85,
+    "expression": "r.issues.length === 1 ? 'point d’amélioration' : 'points d’amélioration'"
+  },
+  {
+    "id": 717,
+    "component": "frontend/src/app/features/projects/jenkinsfile-optimizer.component.ts",
+    "template": "frontend/src/app/features/projects/jenkinsfile-optimizer.component.ts",
+    "line": 101,
+    "expression": "i.severity | presentationLabel"
+  },
+  {
+    "id": 718,
+    "component": "frontend/src/app/features/projects/jenkinsfile-optimizer.component.ts",
+    "template": "frontend/src/app/features/projects/jenkinsfile-optimizer.component.ts",
+    "line": 102,
+    "expression": "i.category | presentationLabel"
+  },
+  {
+    "id": 719,
+    "component": "frontend/src/app/features/projects/jenkinsfile-optimizer.component.ts",
+    "template": "frontend/src/app/features/projects/jenkinsfile-optimizer.component.ts",
+    "line": 103,
+    "expression": "i.title"
+  },
+  {
+    "id": 720,
+    "component": "frontend/src/app/features/projects/jenkinsfile-optimizer.component.ts",
+    "template": "frontend/src/app/features/projects/jenkinsfile-optimizer.component.ts",
+    "line": 108,
+    "expression": "i.problem"
+  },
+  {
+    "id": 721,
+    "component": "frontend/src/app/features/projects/jenkinsfile-optimizer.component.ts",
+    "template": "frontend/src/app/features/projects/jenkinsfile-optimizer.component.ts",
+    "line": 109,
+    "expression": "i.recommendation"
+  },
+  {
+    "id": 722,
+    "component": "frontend/src/app/features/projects/jenkinsfile-optimizer.component.ts",
+    "template": "frontend/src/app/features/projects/jenkinsfile-optimizer.component.ts",
+    "line": 110,
+    "expression": "i.lineHint"
+  },
+  {
+    "id": 723,
+    "component": "frontend/src/app/features/projects/jenkinsfile-optimizer.component.ts",
+    "template": "frontend/src/app/features/projects/jenkinsfile-optimizer.component.ts",
+    "line": 121,
+    "expression": "selectedIssueIds().size"
+  },
+  {
+    "id": 724,
+    "component": "frontend/src/app/features/projects/jenkinsfile-optimizer.component.ts",
+    "template": "frontend/src/app/features/projects/jenkinsfile-optimizer.component.ts",
+    "line": 121,
+    "expression": "r.issues.length"
+  },
+  {
+    "id": 725,
+    "component": "frontend/src/app/features/projects/jenkinsfile-optimizer.component.ts",
+    "template": "frontend/src/app/features/projects/jenkinsfile-optimizer.component.ts",
+    "line": 121,
+    "expression": "r.issues.length === 1 ? 'correction retenue' : 'corrections retenues'"
+  },
+  {
+    "id": 726,
+    "component": "frontend/src/app/features/projects/jenkinsfile-optimizer.component.ts",
+    "template": "frontend/src/app/features/projects/jenkinsfile-optimizer.component.ts",
+    "line": 134,
+    "expression": "baseBranch || 'Branche à renseigner'"
+  },
+  {
+    "id": 727,
+    "component": "frontend/src/app/features/projects/jenkinsfile-optimizer.component.ts",
+    "template": "frontend/src/app/features/projects/jenkinsfile-optimizer.component.ts",
+    "line": 147,
+    "expression": "applying() ? 'Création de la PR…' : 'Valider → créer la PR'"
+  },
+  {
+    "id": 728,
+    "component": "frontend/src/app/features/projects/jenkinsfile-optimizer.component.ts",
+    "template": "frontend/src/app/features/projects/jenkinsfile-optimizer.component.ts",
+    "line": 155,
+    "expression": "selectionViolation()"
+  },
+  {
+    "id": 729,
+    "component": "frontend/src/app/features/projects/jenkinsfile-optimizer.component.ts",
+    "template": "frontend/src/app/features/projects/jenkinsfile-optimizer.component.ts",
+    "line": 158,
+    "expression": "applyError()"
+  },
+  {
+    "id": 730,
+    "component": "frontend/src/app/features/projects/jenkinsfile-optimizer.component.ts",
+    "template": "frontend/src/app/features/projects/jenkinsfile-optimizer.component.ts",
+    "line": 167,
+    "expression": "pr.branch"
+  },
+  {
+    "id": 731,
+    "component": "frontend/src/app/features/projects/jenkinsfile-optimizer.component.ts",
+    "template": "frontend/src/app/features/projects/jenkinsfile-optimizer.component.ts",
+    "line": 178,
+    "expression": "c.ref"
+  },
+  {
+    "id": 732,
+    "component": "frontend/src/app/features/projects/jenkinsfile-optimizer.component.ts",
+    "template": "frontend/src/app/features/projects/jenkinsfile-optimizer.component.ts",
+    "line": 179,
+    "expression": "c.description"
+  }
+]

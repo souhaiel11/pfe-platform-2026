@@ -1,0 +1,29 @@
+{
+  "reason": "Chromium inspector evicted the large bodies; this was a measurement limitation, not a failed API/UI request",
+  "rows": [
+    {
+      "endpoint": "/api/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+      "decodedBytes": 15516430,
+      "status": 200,
+      "durationMs": 354.2,
+      "contentEncoding": null,
+      "source": "Separate authenticated streaming GET of same endpoint; no body persisted"
+    },
+    {
+      "endpoint": "/api/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&size=20",
+      "decodedBytes": 11432334,
+      "status": 200,
+      "durationMs": 227.6,
+      "contentEncoding": null,
+      "source": "Separate authenticated streaming GET of same endpoint; no body persisted"
+    },
+    {
+      "endpoint": "/api/reports?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+      "decodedBytes": 12102637,
+      "status": 200,
+      "durationMs": 225.6,
+      "contentEncoding": null,
+      "source": "Separate authenticated streaming GET of same endpoint; no body persisted"
+    }
+  ]
+}

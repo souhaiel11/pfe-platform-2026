@@ -1,0 +1,14 @@
+[
+  {
+    "method": "launchBatchRemediation",
+    "http": 503,
+    "code": "SECURITY_REMEDIATION_TEMPORARILY_DISABLED",
+    "dbAccess": false
+  },
+  {
+    "method": "retrySecurityRemediation",
+    "http": 503,
+    "code": "SECURITY_REMEDIATION_TEMPORARILY_DISABLED",
+    "dbAccess": false
+  }
+]

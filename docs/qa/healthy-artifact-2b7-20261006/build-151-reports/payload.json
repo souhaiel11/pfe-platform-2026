@@ -1,0 +1,71 @@
+{
+    "event": "pipeline_success",
+    "job": "pfe-app-test",
+    "build_number": "151",
+    "build_url": "http://172.31.172.61:8082/job/pfe-app-test/151/",
+    "logs_url": "http://172.31.172.61:8082/job/pfe-app-test/151/consoleText",
+    "branch": "main",
+    "commit": "393816c2",
+    "status": "SUCCESS",
+    "severity_hint": "HIGH",
+    "duration_ms": 277131,
+    "buildStageStatus": {
+        "build": "SUCCESS",
+        "sonar": "SUCCESS",
+        "docker": "SUCCESS",
+        "tests": "SKIPPED",
+        "trivy": "COMPLETED",
+        "owasp": "COMPLETED",
+        "zap": "COMPLETED"
+    },
+    "technicalFailure": null,
+    "pull_request": null,
+    "reports": {
+        "jenkinsBasePath": "/shared/reports/pfe-app-test/151",
+        "basePath": "/home/node/.n8n-files/reports/pfe-app-test/151",
+        "trivyPath": "/home/node/.n8n-files/reports/pfe-app-test/151/trivy-report.json",
+        "zapPath": "/home/node/.n8n-files/reports/pfe-app-test/151/zap-report.json",
+        "owaspPath": "/home/node/.n8n-files/reports/pfe-app-test/151/dependency-check-report.json",
+        "available": {
+            "trivy": true,
+            "zap": true,
+            "owasp": true
+        }
+    },
+    "tests": {
+        "status": "SKIPPED",
+        "total": 0,
+        "failures": 0,
+        "skipped": 0,
+        "coverage": null
+    },
+    "semanticEvidence": null,
+    "sonar": {
+        "project_key": "pfe-app-test",
+        "dashboard_url": "http://sonarqube:9000/dashboard?id=pfe-app-test",
+        "ceTaskId": "b4b2949a-fc4a-4407-9c22-17ce4606d6fb",
+        "analysisId": null
+    },
+    "docker": {
+        "image": "pfe-app-test:151",
+        "build_status": "SUCCESS",
+        "image_tag": "pfe-app-test:151",
+        "push_status": "NOT_ATTEMPTED"
+    },
+    "kubernetes": {
+        "namespace": "pfe-devsecops",
+        "target": "http://app-test:8080"
+    },
+    "zap": {
+        "launchAttempted": true,
+        "launchSucceeded": true,
+        "scanStarted": true,
+        "podObserved": true,
+        "resultAvailable": true,
+        "technicalCode": null,
+        "launchErrorType": null,
+        "launchExitCode": 0,
+        "diagnosticMessage": null
+    },
+    "commitSha": "393816c250f73d907eb5a2dd43b2ec2288c7abcb"
+}

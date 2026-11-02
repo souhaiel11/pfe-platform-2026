@@ -1,4 +1,6 @@
-// chat.module.ts
+/**
+ * Câblage NestJS du module ChatOps (contrôleur HTTP + passerelle Socket.IO).
+ */
 import { Module } from '@nestjs/common';
 import { HttpModule } from '@nestjs/axios';
 import { ChatGateway } from './chat.gateway';

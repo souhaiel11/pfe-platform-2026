@@ -1,0 +1,63 @@
+{
+  "sourceVersion": "fe09bc17-27e7-4b0b-a76b-cd45d3959370",
+  "sourceSha256": "a72a6d4d6b8da8ef2b3729f7b6858895e85fd0aaad7638977b7a2531c12c6ed2",
+  "selectedBoundary": "Branch Existed At Generation? (Pass 2 Entry)",
+  "domination": {
+    "Create Missing Branch": "YES",
+    "Update File in Branch": "YES",
+    "Create File in Branch": "YES",
+    "Create Pull Request1": "YES"
+  },
+  "FUNCTIONAL_NODE_ADDED_COUNT": 7,
+  "FUNCTIONAL_NODE_REMOVED_COUNT": 0,
+  "FUNCTIONAL_NODE_CHANGED_COUNT": 0,
+  "CONNECTION_CHANGED_COUNT": 8,
+  "STICKY_NOTE_CHANGED_COUNT": 0,
+  "CREDENTIAL_CHANGED_COUNT": 0,
+  "UNRELATED_NODE_CHANGED_COUNT": 0,
+  "addedNodes": [
+    {
+      "name": "Register WF2 Execution",
+      "justification": "Execution registration or atomic cancellation permission"
+    },
+    {
+      "name": "Execution May Continue?",
+      "justification": "Execution registration or atomic cancellation permission"
+    },
+    {
+      "name": "Restore Registered Intake",
+      "justification": "Restore original input after backend permission response"
+    },
+    {
+      "name": "Pre-Git Cancellation Gate",
+      "justification": "Execution registration or atomic cancellation permission"
+    },
+    {
+      "name": "Git Write Allowed?",
+      "justification": "Execution registration or atomic cancellation permission"
+    },
+    {
+      "name": "Restore Pre-Git Context",
+      "justification": "Restore original input after backend permission response"
+    },
+    {
+      "name": "WF2 Cancellation Terminal",
+      "justification": "Clean cancellation termination without success/failure callbacks"
+    }
+  ],
+  "changedConnectionSources": [
+    "Adapt Webhook Payload",
+    "Remote Head Drift Passed?",
+    "Register WF2 Execution",
+    "Execution May Continue?",
+    "Restore Registered Intake",
+    "Pre-Git Cancellation Gate",
+    "Git Write Allowed?",
+    "Restore Pre-Git Context"
+  ],
+  "rootChanges": [
+    "active=false",
+    "activeVersionId=null",
+    "versionId=offline candidate identifier"
+  ]
+}

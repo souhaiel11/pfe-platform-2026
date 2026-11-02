@@ -1,0 +1,37 @@
+{
+  "businessDiff": {
+    "projects": {
+      "changedIds": [
+        "ebe3bd94-8240-4c30-a2d9-6de2106a28bc"
+      ],
+      "unrelatedChanges": []
+    },
+    "manual_remediation_tasks": {
+      "changedIds": [
+        "a390e383-42b7-4348-894c-5e02a7e5f98d"
+      ],
+      "unrelatedChanges": []
+    },
+    "incidents": {
+      "changedIds": [
+        "f84e7464-eac7-4bb3-a050-369797ed632f"
+      ],
+      "unrelatedChanges": []
+    },
+    "reports": {
+      "changedIds": [],
+      "unrelatedChanges": []
+    }
+  },
+  "active": {
+    "remediation_target_reservations": 0,
+    "security_remediation_retry_e2e_plans": 0
+  },
+  "activeWF6Executions": [],
+  "flags": {
+    "dispatch": "false",
+    "harness": "false"
+  },
+  "backendSource": "0957ab63280b32e4180ba47ae72bfb5a802db15a",
+  "noGitWritersExecuted": true
+}

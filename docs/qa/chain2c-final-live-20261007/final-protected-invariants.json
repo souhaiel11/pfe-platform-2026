@@ -1,0 +1,20 @@
+{
+  "at": "2026-10-07T11:29:52.646731+00:00",
+  "dispatch": "false",
+  "DISPATCH_REMAINS_FROZEN": true,
+  "runtimeFilesUnchanged": 977,
+  "executableJSUnchanged": 330,
+  "WF2_CHANGED": false,
+  "WF6_CHANGED": false,
+  "LEGACY_CALLBACK_BRIDGE_CHANGED": false,
+  "PHASE4G_APPLIED": false,
+  "PHASE4G_ACTIVATED": false,
+  "RETRY_HARNESS_ENABLED": false,
+  "REMEDIATION_DISPATCHED": false,
+  "AZURE_CHANGED": false,
+  "schema": {
+    "reservationTable": null,
+    "harnessTable": null
+  },
+  "backendDocsHTTP": 200
+}

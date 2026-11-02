@@ -1,0 +1,20 @@
+# CHAIN-3B future live activation runbook — NOT EXECUTED
+
+Qualified source: `07c7421122fae809920742893e2e1d345d87aa3a` / tree `0bc655a82290bb58a0e25adb04741bbf68a5be24`.
+Release: `chain3a-r1-07c7421122fa`.
+Exact image content identity: `sha256:1021380f76c1d63e6a4950b257ea8c52a0211559053702a3a8d2a42d4f3b621b`. Do not deploy a mutable tag without matching this ID and its OCI revision/tree labels.
+
+1. Obtain explicit approval for CHAIN-3B. Freshly verify effective live dispatch=false, harness=false/unset, DB_SYNCHRONIZE=false. Recheck all 330 live executable hashes and protected workflow/branch inventory. Do not rebuild the historical backend.
+2. Prove no active remediation, relevant WF6, Git writer or worker execution. Do not terminate legitimate jobs blindly. Stop on ambiguity or drift.
+3. Persist a restricted full DB backup, migration/table/index inventory and current runtime/container configuration. Independently verify restore evidence and preserve the existing rollback artifact. Keep unrelated workstreams outside the promotion scope; review the new known-baseline release delta rather than treating it as a historical-overlay reproduction.
+4. Verify the candidate migration hash against the source bundle. Run its exact trusted-target and lifecycle reconciliation guards read-only first. Require zero legacy pointers/claims/writers. Apply ONLY `backend/migrations/20261006_add_remediation_target_reservations.sql` under the approved operation. Do not run all migrations automatically. Missing trusted target binding or independent same-target lifecycles must abort; no fallback file assumption or manual repair.
+5. Deploy the exact qualified image above using a reviewed configuration. Preserve dispatch=false and harness=false. DB_SYNCHRONIZE must remain false. Do not enable the retry harness or automatically apply its optional schema migration. Configure any approved evidence data explicitly; the release has no bundled fixture evidence.
+6. Verify actual image ID, OCI revision/source-tree labels, application/dependency executable hashes against the retained manifests, backend startup, DB connectivity and health.
+7. Verify the reservation table, ACTIVE partial unique index on (projectId,targetKey), claim/state constraints and no-expiry policy against the source. Confirm default flags still false and no accidental writer dispatch.
+8. Run non-mutating finding/remediation read checks and protected-workstream checks. The normal backend must not expose/load the historical catalog/reconciliation controller. Preserve the legacy callback bridge and unchanged WF2/WF6 configuration. Preserve PR33/43/44, Boot3 and unrelated work.
+9. Perform only the separately reviewed controlled single-writer live proof using an operator-approved non-dispatch, rollback-only transaction/service invocation. Require one FILE owner, sibling blocked before attempt/count/batch/transport, distinct files/projects independent, and no persistent proof rows or actual WF6/Git/PR effects. Do not repurpose the destructive disposable qualification scripts against live. Stop if the proof would require unapproved real remediation or unfreezing normal dispatch.
+10. Verify modern retry/attempt correlation, callback bridge and read semantics using the reviewed safe checks. Keep the E2E test harness OFF throughout.
+11. Recheck DB blast radius, zero legacy writers, workflow hashes, protected source/runtime boundaries and health. On regression, restore the reviewed prior artifact/config while KEEPING dispatch frozen. Do not roll back an ACTIVE reservation schema blindly; down migration rejects active locks.
+12. Only after all separately approved live validation passes may the operator decide whether normal dispatch can resume. No automatic reopen. Fresh scan/eligibility and any archive readmission authorization remain required before future real remediation.
+
+No step above was executed during CHAIN-3A-R1. No Phase 4G live migration, deployment, retry E2E or dispatch reopening is authorized by this document alone.

@@ -1,0 +1,179 @@
+{
+  "counts": {
+    "NONE": 760,
+    "CLOSED": 11,
+    "CANDIDATE_READY": 1,
+    "TECHNICAL_FAILURE": 2
+  },
+  "projectVerifiedFixed": 32,
+  "records": [
+    {
+      "taskId": "64deba0e-f6ab-4da8-a3c9-da8e1b0eb30d",
+      "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+      "source": "TRIVY",
+      "cve": "CVE-2022-42004",
+      "manualStatus": "REOPENED",
+      "scannerStatus": "DETECTED",
+      "remediationStatus": "CLOSED",
+      "batchId": "sec-batch-181e0a6587c834e1",
+      "attemptNumber": 2,
+      "reasonCode": "TARGET_CVE_CLOSED"
+    },
+    {
+      "taskId": "c8fb2207-c8de-40af-acd4-1d2f96896715",
+      "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+      "source": "TRIVY",
+      "cve": "CVE-2023-6378",
+      "manualStatus": "TODO",
+      "scannerStatus": "DETECTED",
+      "remediationStatus": "CANDIDATE_READY",
+      "batchId": null,
+      "attemptNumber": 1,
+      "reasonCode": "DETERMINISTIC_CANDIDATE_READY"
+    },
+    {
+      "taskId": "6e6c3597-96bc-4f72-bcd8-eb0d4b8036db",
+      "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+      "source": "TRIVY",
+      "cve": "CVE-2022-42252",
+      "manualStatus": "TODO",
+      "scannerStatus": "DETECTED",
+      "remediationStatus": "CLOSED",
+      "batchId": "sec-batch-181e0a6587c834e1",
+      "attemptNumber": 2,
+      "reasonCode": "TARGET_CVE_CLOSED"
+    },
+    {
+      "taskId": "af1d6556-b782-4faf-b01b-4e87b119d033",
+      "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+      "source": "TRIVY",
+      "cve": "CVE-2022-25857",
+      "manualStatus": "TODO",
+      "scannerStatus": "DETECTED",
+      "remediationStatus": "CLOSED",
+      "batchId": "sec-batch-c808d8203ba03491",
+      "attemptNumber": 6,
+      "reasonCode": "TARGET_CVE_CLOSED"
+    },
+    {
+      "taskId": "bd9dc6f2-2202-4280-933e-4adb824dc695",
+      "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+      "source": "TRIVY",
+      "cve": "CVE-2022-38752",
+      "manualStatus": "TODO",
+      "scannerStatus": "DETECTED",
+      "remediationStatus": "CLOSED",
+      "batchId": "sec-batch-a4646d8385306b84",
+      "attemptNumber": 2,
+      "reasonCode": "TARGET_CVE_CLOSED"
+    },
+    {
+      "taskId": "a84a24c4-8673-4826-a4f2-4990ce7d118b",
+      "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+      "source": "TRIVY",
+      "cve": "CVE-2022-42003",
+      "manualStatus": "TODO",
+      "scannerStatus": "DETECTED",
+      "remediationStatus": "CLOSED",
+      "batchId": "sec-batch-181e0a6587c834e1",
+      "attemptNumber": 2,
+      "reasonCode": "TARGET_CVE_CLOSED"
+    },
+    {
+      "taskId": "70fd88ac-2011-437d-a387-57d0fb3fa65d",
+      "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+      "source": "TRIVY",
+      "cve": "CVE-2023-41080",
+      "manualStatus": "TODO",
+      "scannerStatus": "DETECTED",
+      "remediationStatus": "CLOSED",
+      "batchId": "sec-batch-181e0a6587c834e1",
+      "attemptNumber": 2,
+      "reasonCode": "TARGET_CVE_CLOSED"
+    },
+    {
+      "taskId": "f21b69ba-922b-4ccb-8851-c2a43d9ce7ca",
+      "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+      "source": "TRIVY",
+      "cve": "CVE-2023-34034",
+      "manualStatus": "TODO",
+      "scannerStatus": "DETECTED",
+      "remediationStatus": "CLOSED",
+      "batchId": "sec-batch-181e0a6587c834e1",
+      "attemptNumber": 2,
+      "reasonCode": "TARGET_CVE_CLOSED"
+    },
+    {
+      "taskId": "9dc3706b-aabd-4b9a-a888-854641a2e64e",
+      "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+      "source": "TRIVY",
+      "cve": "CVE-2022-31692",
+      "manualStatus": "TODO",
+      "scannerStatus": "DETECTED",
+      "remediationStatus": "CLOSED",
+      "batchId": "sec-batch-a4646d8385306b84",
+      "attemptNumber": 2,
+      "reasonCode": "TARGET_CVE_CLOSED"
+    },
+    {
+      "taskId": "b52ea617-f5c3-47a3-bc6e-6230ea648d63",
+      "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+      "source": "TRIVY",
+      "cve": "CVE-2022-38751",
+      "manualStatus": "TODO",
+      "scannerStatus": "DETECTED",
+      "remediationStatus": "TECHNICAL_FAILURE",
+      "batchId": "sec-batch-bd22285c1649ea80",
+      "attemptNumber": 2,
+      "reasonCode": "WF6_STALE_DISPATCH_RECONCILED"
+    },
+    {
+      "taskId": "306e8b84-90fe-4344-8fd6-5c38fcabcf40",
+      "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+      "source": "OWASP",
+      "cve": "CVE-2022-25857",
+      "manualStatus": "TODO",
+      "scannerStatus": "DETECTED",
+      "remediationStatus": "CLOSED",
+      "batchId": "sec-batch-215851539abb7f37",
+      "attemptNumber": 2,
+      "reasonCode": "TARGET_CVE_CLOSED"
+    },
+    {
+      "taskId": "10fe9043-86f9-42eb-a0a2-ce5abaf26631",
+      "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+      "source": "TRIVY",
+      "cve": "CVE-2022-45143",
+      "manualStatus": "TODO",
+      "scannerStatus": "DETECTED",
+      "remediationStatus": "CLOSED",
+      "batchId": "sec-batch-181e0a6587c834e1",
+      "attemptNumber": 2,
+      "reasonCode": "TARGET_CVE_CLOSED"
+    },
+    {
+      "taskId": "ca8f57e7-3839-4914-8805-d518aafe4c4a",
+      "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+      "source": "TRIVY",
+      "cve": "CVE-2024-22257",
+      "manualStatus": "TODO",
+      "scannerStatus": "DETECTED",
+      "remediationStatus": "CLOSED",
+      "batchId": "sec-batch-fb980983352c6d7c",
+      "attemptNumber": 2,
+      "reasonCode": "TARGET_CVE_CLOSED"
+    },
+    {
+      "taskId": "83555b3a-efa1-45e1-90a8-008debddba92",
+      "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+      "source": "TRIVY",
+      "cve": "CVE-2022-38749",
+      "manualStatus": "TODO",
+      "scannerStatus": "DETECTED",
+      "remediationStatus": "TECHNICAL_FAILURE",
+      "batchId": "sec-batch-d359edf8f878f1dd",
+      "attemptNumber": 2,
+      "reasonCode": "WF6_STALE_DISPATCH_RECONCILED"
+    }
+  ]
+}

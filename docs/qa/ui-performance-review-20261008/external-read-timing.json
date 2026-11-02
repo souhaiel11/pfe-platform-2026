@@ -1,0 +1,19 @@
+{
+  "scope": "Existing production read-only registry/OCI resolver methods; no authorization/deploy/write method invoked",
+  "fullGovernanceMs": 11933.78027200015,
+  "externalAgentCalls": [
+    {
+      "endpoint": "agent /resolve-digest",
+      "durationMs": 4611.739995,
+      "found": true,
+      "readOnly": true
+    },
+    {
+      "endpoint": "agent /inspect-artifact",
+      "durationMs": 5752.816895,
+      "found": true,
+      "readOnly": true
+    }
+  ],
+  "note": "Separate sequential diagnostic sample; subtraction from a different full-request sample is not an exact exclusive backend time."
+}

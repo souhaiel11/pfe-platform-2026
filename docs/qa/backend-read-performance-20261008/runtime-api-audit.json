@@ -1,0 +1,122 @@
+[
+  {
+    "check": "backend/DB health",
+    "status": 200,
+    "result": "PASS"
+  },
+  {
+    "check": "served list",
+    "project": "remediation-retry-e2e-fixture",
+    "kind": "incidents",
+    "rows": 2,
+    "total": 2,
+    "bytes": 710,
+    "result": "PASS"
+  },
+  {
+    "check": "served list",
+    "project": "remediation-retry-e2e-fixture",
+    "kind": "reports",
+    "rows": 0,
+    "total": 0,
+    "bytes": 61,
+    "result": "PASS"
+  },
+  {
+    "check": "served list",
+    "project": "devsecops-platform-testbed",
+    "kind": "incidents",
+    "rows": 9,
+    "total": 9,
+    "bytes": 3274,
+    "result": "PASS"
+  },
+  {
+    "check": "served list",
+    "project": "devsecops-platform-testbed",
+    "kind": "reports",
+    "rows": 9,
+    "total": 9,
+    "bytes": 2392,
+    "result": "PASS"
+  },
+  {
+    "check": "served list",
+    "project": "vuln-testapp",
+    "kind": "incidents",
+    "rows": 20,
+    "total": 64,
+    "bytes": 6388,
+    "result": "PASS"
+  },
+  {
+    "check": "served list",
+    "project": "vuln-testapp",
+    "kind": "reports",
+    "rows": 18,
+    "total": 18,
+    "bytes": 4764,
+    "result": "PASS"
+  },
+  {
+    "check": "served list",
+    "project": "devsecops-testbed",
+    "kind": "incidents",
+    "rows": 20,
+    "total": 29,
+    "bytes": 6744,
+    "result": "PASS"
+  },
+  {
+    "check": "served list",
+    "project": "devsecops-testbed",
+    "kind": "reports",
+    "rows": 6,
+    "total": 6,
+    "bytes": 1620,
+    "result": "PASS"
+  },
+  {
+    "check": "served list",
+    "project": "pfe-app-test",
+    "kind": "incidents",
+    "rows": 20,
+    "total": 145,
+    "bytes": 6854,
+    "result": "PASS"
+  },
+  {
+    "check": "served list",
+    "project": "pfe-app-test",
+    "kind": "reports",
+    "rows": 20,
+    "total": 30,
+    "bytes": 5264,
+    "result": "PASS"
+  },
+  {
+    "check": "full detail unchanged",
+    "kind": "incidents",
+    "id": "70bc8f46-5cd2-48a3-9f8b-169cf2ba250b",
+    "bytes": 620529,
+    "sha256": "cf1845ee1a1c91b08119bc08b0511a88e1f4f6b35b503b96ad54ed4f6f82b1d9",
+    "result": "PASS"
+  },
+  {
+    "check": "full detail unchanged",
+    "kind": "reports",
+    "id": "f08a7508-29fd-479a-9092-6eee1f562e4b",
+    "bytes": 572378,
+    "sha256": "7726460dea255d883320192bf7903cdc1ad4f1e3e0cfc2cd6ad421e03055b1f6",
+    "result": "PASS"
+  },
+  {
+    "check": "authentication required",
+    "status": 401,
+    "result": "PASS"
+  },
+  {
+    "check": "malformed project/pagination rejected",
+    "result": "PASS"
+  }
+]

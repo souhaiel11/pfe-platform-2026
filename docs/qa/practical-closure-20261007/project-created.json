@@ -1,0 +1,40 @@
+{
+  "status": 200,
+  "body": {
+    "id": "ebe3bd94-8240-4c30-a2d9-6de2106a28bc",
+    "name": "remediation-retry-e2e-fixture",
+    "description": "Dedicated controlled remediation E2E test fixture only",
+    "environment": "dev",
+    "status": "healthy",
+    "securityScore": 100,
+    "isActive": true,
+    "deployReadyNotified": false,
+    "tags": [
+      "dedicated-remediation-e2e"
+    ],
+    "source": null,
+    "cicdTool": "jenkins",
+    "jenkinsUrl": null,
+    "jenkinsInternalUrl": null,
+    "jenkinsPublicUrl": null,
+    "jenkinsJobName": null,
+    "jenkinsJobPath": null,
+    "githubRepo": "souhaiel11/remediation-retry-e2e-fixture",
+    "sonarqubeUrl": null,
+    "sonarqubeKey": null,
+    "emailEnabled": false,
+    "emailRecipient": null,
+    "slackEnabled": false,
+    "slackChannel": null,
+    "validationStatus": null,
+    "azureConfig": null,
+    "createdAt": "2026-10-07T14:58:15.131Z",
+    "updatedAt": "2026-10-07T14:58:15.131Z",
+    "jenkinsCredentialConfigured": false,
+    "githubCredentialConfigured": false,
+    "sonarqubeCredentialConfigured": false,
+    "openIncidents": 0,
+    "analyzingIncidents": 1,
+    "resolvedIncidents": 0
+  }
+}

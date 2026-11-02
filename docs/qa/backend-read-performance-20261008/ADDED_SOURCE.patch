@@ -1,0 +1,114 @@
+--- /dev/null
++++ backend/src/project-reads/project-reads.module.ts
+@@ -0,0 +1,72 @@
++import { BadRequestException, Controller, Get, Injectable, Module, Query, UseGuards } from '@nestjs/common';
++import { DataSource } from 'typeorm';
++import { JwtAuthGuard } from '../auth/jwt-auth.guard';
++
++export interface ReadPageQuery { projectId?: string; page?: string; pageSize?: string; analysisOnly?: string }
++export function readPage(query: ReadPageQuery) {
++  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(query.projectId || '')) {
++    throw new BadRequestException('A valid projectId is required');
++  }
++  const integer = (value: string | undefined, fallback: number, max: number) => {
++    if (value === undefined) return fallback;
++    if (!/^[1-9][0-9]*$/.test(value) || !Number.isSafeInteger(Number(value)) || Number(value) > max) {
++      throw new BadRequestException('Invalid pagination');
++    }
++    return Number(value);
++  };
++  if (query.analysisOnly !== undefined && !['true', 'false'].includes(query.analysisOnly)) {
++    throw new BadRequestException('Invalid analysisOnly');
++  }
++  const page = integer(query.page, 1, 1000000);
++  const pageSize = integer(query.pageSize, 20, 100);
++  return { projectId: query.projectId!, page, pageSize, offset: (page - 1) * pageSize, analysisOnly: query.analysisOnly === 'true' };
++}
++
++// History needs only the original build/decision fields. Invalid analysis stays
++// invalid; absent values never become an invented business result.
++export function analysisPreview(value: string | null): string | null {
++  if (!value) return value;
++  try {
++    const parsed = JSON.parse(value);
++    if (parsed === null) return '!invalid-analysis';
++    const preview: any = {};
++    for (const key of ['build', 'build_number', 'decision']) {
++      if (Object.prototype.hasOwnProperty.call(parsed, key)) preview[key] = parsed[key];
++    }
++    return JSON.stringify(preview);
++  } catch { return '!invalid-analysis'; }
++}
++
++@Injectable()
++export class ProjectReadsService {
++  constructor(private readonly db: DataSource) {}
++
++  async list(kind: 'incidents' | 'reports', query: ReadPageQuery) {
++    const p = readPage(query);
++    const where = '"projectId" = $1' + (kind === 'reports' ? ' AND "archived" = false' :
++      p.analysisOnly ? ' AND "aiAnalysis" IS NOT NULL AND "aiAnalysis" <> \'\'' : '');
++    const fields = kind === 'incidents'
++      ? '"id", "projectId", "title", "status", "source", "createdAt", "updatedAt", "buildNumber", "aiAnalysis"'
++      : '"id", "projectId", "type", "createdAt", "securityScore", "riskLevel", "judgeDecision", "judgeConfidence", "rawData" #> \'{enrichedData,build,number}\' AS "buildNumber"';
++    // Count and page see one authoritative snapshot. No relation hydration or
++    // evidence JSON is fetched, and no business service/write path is invoked.
++    return this.db.transaction('REPEATABLE READ', async manager => {
++      await manager.query('SET TRANSACTION READ ONLY');
++      const [count] = await manager.query(`SELECT count(*)::int AS total FROM "${kind}" WHERE ${where}`, [p.projectId]);
++      const rows = await manager.query(`SELECT ${fields} FROM "${kind}" WHERE ${where} ORDER BY "createdAt" DESC, "id" DESC LIMIT $2 OFFSET $3`, [p.projectId, p.pageSize, p.offset]);
++      const items = kind === 'incidents' ? rows.map(row => ({ ...row, aiAnalysis: analysisPreview(row.aiAnalysis), summaryOnly: true })) : rows;
++      return { items, total: count.total, page: p.page, pageSize: p.pageSize, hasNext: p.offset + rows.length < count.total };
++    });
++  }
++}
++
++@Controller('project-reads')
++@UseGuards(JwtAuthGuard)
++export class ProjectReadsController {
++  constructor(private readonly reads: ProjectReadsService) {}
++  @Get('incidents') incidents(@Query() query: ReadPageQuery) { return this.reads.list('incidents', query); }
++  @Get('reports') reports(@Query() query: ReadPageQuery) { return this.reads.list('reports', query); }
++}
++
++@Module({ controllers: [ProjectReadsController], providers: [ProjectReadsService] })
++export class ProjectReadsModule {}
+--- /dev/null
++++ backend/src/project-reads/project-reads.spec.ts
+@@ -0,0 +1,26 @@
++import * as assert from 'node:assert/strict';
++import { analysisPreview, readPage, ProjectReadsService } from './project-reads.module';
++const id = '00000000-0000-0000-0000-000000000001';
++async function main() {
++  for (const query of [{}, { projectId: 'invalid' }, { projectId: id, page: '0' }, { projectId: id, pageSize: '101' }, { projectId: id, page: '1;SELECT' }, {projectId:id,analysisOnly:'yes'}]) assert.throws(() => readPage(query));
++  assert.equal(readPage({projectId:id}).pageSize,20);
++  assert.equal(readPage({projectId:id,page:'2',pageSize:'5'}).offset,5);
++  assert.equal(analysisPreview(null), null);
++  assert.equal(analysisPreview('broken'), '!invalid-analysis');
++  assert.equal(analysisPreview('{"build":8,"decision":"BLOCK","rawData":{"huge":true}}'), '{"build":8,"decision":"BLOCK"}');
++  const calls:any[]=[];
++  const db:any={transaction:async(isolation,fn)=>{assert.equal(isolation,'REPEATABLE READ');return fn({query:async(sql,args)=>{
++    calls.push({sql,args});if(sql.startsWith('SET'))return [];
++    if(sql.includes('count(*)'))return [{total:22}];return [{id:'row',aiAnalysis:'{"build":8,"rawData":{"large":true}}'}];
++  }})}};
++  const service=new ProjectReadsService(db);
++  const page=await service.list('incidents',{projectId:id,analysisOnly:'true',page:'2',pageSize:'20'});
++  assert.equal(page.total,22);assert.equal(page.page,2);assert.equal(page.hasNext,true);
++  assert.equal(page.items[0].aiAnalysis,'{"build":8}');assert.equal(page.items[0].summaryOnly,true);
++  assert.match(calls[0].sql,/READ ONLY/);assert.match(calls[1].sql,/aiAnalysis.*IS NOT NULL/);
++  assert.deepEqual(calls[2].args,[id,20,20]);assert.ok(!calls[2].sql.includes('metadata'));assert.ok(!calls[2].sql.includes('JOIN'));
++  calls.length=0;await service.list('reports',{projectId:id});assert.match(calls[2].sql,/rawData.*#>/);assert.match(calls[1].sql,/archived.*false/);
++  const broken:any={transaction:async()=>{throw Error('DB unavailable')}};await assert.rejects(()=>new ProjectReadsService(broken).list('incidents',{projectId:id}),/DB unavailable/);
++  console.log('PASS: pagination validation, authoritative counts, parameterized SQL, small projections, archive/analysis filters, readonly snapshot, failure propagation');
++}
++main().catch(e=>{console.error(e);process.exitCode=1});
+--- /dev/null
++++ frontend/scripts/project-read-contract.spec.mjs
+@@ -0,0 +1,7 @@
++import assert from 'node:assert/strict';import{test}from'node:test';import{Subject,of,throwError}from'rxjs';import{loadFrontend}from'./security-lifecycle-test-loader.mjs';
++const{ProjectDetailComponent}=loadFrontend('../src/app/features/projects/project-detail.component.ts');
++function component(api={}){const c=new ProjectDetailComponent(api,{error(){}},{snapshot:{queryParamMap:{get:()=>null}}},{navigate(){}},{},{currentUser:{role:'viewer'}});c.id='A';return c}
++test('history pagination uses authoritative total and never fetches detail preemptively',()=>{let calls=0;const c=component({getIncidentSummaries:q=>{calls++;return of({items:[{id:String(q.page)}],total:45,page:q.page,hasNext:q.page<3})}});c.selectReport=()=>{};c.loadHistory(true);assert.equal(c.allReportsTotal,45);assert.equal(c.allReports.length,1);c.loadHistory();assert.equal(c.allReports.length,2);assert.equal(c.historyPage,2);assert.equal(calls,2);c.ngOnDestroy()});
++test('detail is loaded on selection, cached within project, and stale selections cannot replace newer ones',()=>{const reads={one:new Subject(),two:new Subject()};let calls=0;const c=component({getIncident:id=>{calls++;return reads[id]}});const applied=[];c.applyReport=r=>applied.push(r.id);c.selectReport({id:'one',summaryOnly:true});c.selectReport({id:'two',summaryOnly:true});reads.two.next({id:'two',projectId:'A'});reads.one.next({id:'one',projectId:'A'});assert.deepEqual(applied,['two']);c.selectReport({id:'two',summaryOnly:true});assert.equal(calls,2);assert.deepEqual(applied,['two','two']);c.ngOnDestroy()});
++test('project reset cancels pending detail and clears history, counts, pagination and cache',()=>{const read=new Subject();const c=component({getIncident:()=>read});let applied=0;c.applyReport=()=>applied++;c.selectReport({id:'one',summaryOnly:true});c.allReportsTotal=10;c.historyPage=2;c.reportDetails.set('old',{});c.id='B';c.loadProject=()=>{};c.ngOnChanges({id:{firstChange:false}});read.next({id:'one',projectId:'A'});assert.equal(applied,0);assert.equal(c.allReportsTotal,null);assert.equal(c.historyPage,1);assert.equal(c.reportDetails.size,0);c.ngOnDestroy()});
++test('failed history remains unknown, successful empty page means total zero, detail failures do not become a clean report',()=>{const c=component({getIncidentSummaries:()=>throwError(()=>Error('offline')),getIncident:()=>throwError(()=>Error('offline'))});c.loadHistory(true);assert.equal(c.allReportsTotal,null);assert.ok(c.dataErrors.decisions);c.api.getIncidentSummaries=()=>of({items:[],total:0,page:1,hasNext:false});c.loadHistory(true);assert.equal(c.allReportsTotal,0);assert.equal(c.latestReport,null);c.selectReport({id:'one',summaryOnly:true});assert.ok(c.dataErrors.reportDetail);assert.equal(c.latestReport,null);c.ngOnDestroy()});

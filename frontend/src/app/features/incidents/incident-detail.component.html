@@ -1,0 +1,751 @@
+<!-- Présente le détail d’un incident. -->
+<div *ngIf="loadError" role="alert" class="card">{{loadError}} <button type="button" class="btn btn-secondary btn-sm" (click)="load()">Réessayer</button></div>
+    <div class="page-container">
+      <div class="page-header">
+        <button class="btn btn-back" (click)="goBack()">← Retour</button>
+        <h1 class="page-title" style="margin-top:8px;">Détail de l’incident</h1>
+      </div>
+
+      <div *ngIf="loading" class="loading-overlay"><div class="spinner"></div><span>Chargement...</span></div>
+
+      <ng-container *ngIf="incident && !loading && !loadError">
+
+        <!-- ─── HEADER CARD ─── -->
+        <div class="card" style="margin-bottom:16px;border-left:3px solid {{dominantStatusColor()}};">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+            <div>
+              <div style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted);margin-bottom:6px;">
+                {{incident.id}}
+              </div>
+              <h2 style="font-size:16px;color:var(--text-primary);margin-bottom:8px;">
+                {{incident.title}}
+              </h2>
+
+              <!-- Statut DOMINANT — la décision de la plateforme, seule
+                   information affichée en grand. Le reste (statut Jenkins/
+                   cycle de vie, sévérité) devient secondaire ci-dessous. -->
+              <div style="font-size:22px;font-weight:700;letter-spacing:.02em;margin-bottom:4px;"
+                   [style.color]="dominantStatusColor()">
+                {{dominantStatusLabel()}}
+              </div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:11px;color:var(--text-muted);font-family:var(--font-mono);">
+                <span>statut : {{incident.status | presentationLabel}}</span>
+                <span *ngIf="aiAnalysis?.securityLevel">· estimation IA : {{aiAnalysis.securityLevel | presentationLabel}}</span>
+                <span *ngIf="aiAnalysis?.confidenceScore">· confiance {{aiAnalysis.confidenceScore}}%</span>
+                <span>· {{incident.createdAt | frenchDate}}</span>
+              </div>
+
+              <!-- Résultat WF2 (génération) — distinct de validation.prUrl (WF3, onglet
+                   Validation PR) : ceci reflète la génération, pas la validation post-PR. -->
+              <div *ngIf="incident.prUrl" style="margin-top:10px;">
+                <app-source-evidence-link [item]="evidence('FIX_PULL_REQUEST')" [showProvider]="false" [showReason]="false" [state]="sourceEvidenceState"></app-source-evidence-link>
+              </div>
+              <!-- Bandeau de statut fixRequest — piloté par metadata.fixRequest.status
+                   (vérité serveur, restaurée à chaque chargement), pas seulement par
+                   le polling local prGenerationState. Voir audit stuck-UX 2026-10-04. -->
+              <div *ngIf="!incident.prUrl && isFixInProgress()"
+                   style="margin-top:10px;font-size:12px;color:var(--text-muted);display:flex;align-items:center;gap:6px;">
+                <span class="spinner" style="width:12px;height:12px;border-width:1.5px;"></span>
+                {{fixRequestStatusLabel()}}...
+              </div>
+              <div *ngIf="!incident.prUrl && isFixValidatingStage()"
+                   style="margin-top:10px;font-size:12px;color:var(--accent-blue);">
+                ⏳ {{fixRequestStatusLabel()}}
+              </div>
+              <div *ngIf="isFixFailedStage() && isManualReviewRequired()"
+                   style="margin-top:10px;padding:10px;border-radius:6px;background:rgba(245,158,11,0.10);color:#b45309;font-size:12px;">
+                🧑‍💻 Correction humaine requise
+                <div style="margin-top:4px;color:var(--text-muted);">
+                  {{fixFailureDetails()?.message}}
+                  Ce constat est désormais marqué « Nécessite une action humaine » : sélectionnez d’autres constats pour WF2.
+                </div>
+              </div>
+              <div *ngIf="isFixFailedStage() && !isManualReviewRequired()"
+                   style="margin-top:10px;padding:10px;border-radius:6px;background:var(--accent-red-bg, rgba(220,53,69,0.08));color:var(--accent-red);font-size:12px;">
+                ❌ {{fixRequestStatusLabel()}}
+                <div *ngIf="fixFailureDetails()" style="margin-top:4px;color:var(--text-muted);">
+                  {{fixFailureDetails()?.message}}
+                </div>
+              </div>
+              <div *ngIf="isFixRejectedStage()" style="margin-top:10px;font-size:12px;color:var(--text-muted);">
+                {{fixRequestStatusLabel()}}
+              </div>
+              <div *ngIf="!incident.prUrl && prGenerationState === 'timeout' && !isFixFailedStage()"
+                   style="margin-top:10px;font-size:12px;color:var(--accent-orange);">
+                ⚠️ La génération n’a pas abouti (vérifiez le dépôt GitHub et les problèmes SonarQube bloquants).
+              </div>
+              <div *ngIf="canCancelFix()" style="margin-top:10px;">
+                <button class="btn btn-secondary btn-sm"
+                        [disabled]="cancelBusy || fixRequestStatus() === 'CANCEL_REQUESTED'"
+                        (click)="cancelFix()">
+                  {{cancelBusy || fixRequestStatus() === 'CANCEL_REQUESTED' ? 'Annulation en cours...' : 'Annuler la correction'}}
+                </button>
+              </div>
+              <div *ngIf="fixRequestStatus() === 'CANCELLED'" style="margin-top:10px;">{{fixRequestStatusLabel()}}</div>
+              <div *ngIf="cancelError" role="alert" style="margin-top:6px;color:var(--accent-red);">{{cancelError}}</div>
+              <!-- GOAL 5 — dispatch potentiellement bloqué (seuil EXISTANT côté
+                   backend, reconcile-stale-dispatch). N'arrête jamais n8n : voir
+                   la confirmation affichée avant l'appel (reconcileStaleDispatch()). -->
+              <div *ngIf="looksStuck()"
+                   style="margin-top:10px;padding:10px;border-radius:6px;background:var(--accent-orange-bg, rgba(245,158,11,0.08));color:var(--accent-orange);font-size:12px;">
+                ⚠️ Cette correction semble bloquée.
+                <div *ngIf="auth.isAdmin" style="margin-top:8px;">
+                  <button class="btn btn-secondary btn-sm" [disabled]="reconcileBusy" (click)="reconcileStaleDispatch()">
+                    {{reconcileBusy ? 'Marquage…' : 'Marquer la correction bloquée comme échouée'}}
+                  </button>
+                  <div *ngIf="reconcileError" style="margin-top:6px;color:var(--accent-red);">{{reconcileError}}</div>
+                </div>
+              </div>
+            </div>
+            <div style="display:flex;gap:8px;flex-shrink:0;">
+              <button *ngIf="!hasRealPr() && (incident.status === 'analyzed' || incident.status === 'blocked') && hasAutoFixEligible()"
+                      class="btn btn-success btn-sm" [disabled]="approvalBusy" (click)="approveFix()">
+                {{approvalBusy ? 'Démarrage…' : 'Créer la Pull Request'}}
+              </button>
+              <button *ngIf="!hasRealPr() && (incident.status === 'analyzed' || incident.status === 'blocked')"
+                      class="btn btn-secondary btn-sm" [disabled]="approvalBusy" (click)="rejectFix()">
+                ✕ Refuser / corriger manuellement
+              </button>
+              <button *ngIf="hasRealPr() && canRequestPrValidation()"
+                      class="btn btn-success btn-sm" [disabled]="prValidationBusy || correctiveBusy || isCorrectiveInFlight()" (click)="requestPrValidation()">
+                {{prValidationBusy ? 'Validation en attente…' : (prValidationRequest?.status === 'FAILED' ? 'Réessayer la validation' : 'Valider la Pull Request')}}
+              </button>
+              <app-status-chip *ngIf="prValidationRequest?.status === 'REQUESTED' || prValidationRequest?.status === 'QUEUED'"
+                               status="QUEUED" labelOverride="Validation en attente"></app-status-chip>
+              <app-status-chip *ngIf="prValidationRequest?.status === 'RUNNING'" status="RUNNING" labelOverride="Validation en cours"></app-status-chip>
+              <app-status-chip *ngIf="prValidationRequest?.status === 'COMPLETED'" status="COMPLETED" labelOverride="Validation terminée"></app-status-chip>
+              <app-status-chip *ngIf="prValidationRequest?.status === 'FAILED'" status="FAILED" labelOverride="Validation échouée"></app-status-chip>
+              <!-- BRIQUE 5 — état "Correction supplémentaire en cours", distinct de la
+                   génération initiale. Aucune action concurrente possible pendant ce temps. -->
+              <app-status-chip *ngIf="isCorrectiveInFlight()" status="RUNNING" labelOverride="Correction supplémentaire en cours"></app-status-chip>
+            </div>
+            <div *ngIf="prValidationTargetStale" style="margin-top:10px;padding:10px;border-radius:6px;background:var(--accent-red-bg, rgba(220,53,69,0.08));color:var(--accent-red);font-size:13px;">
+              La Pull Request a changé depuis la demande de correction initiale (un nouveau commit de remédiation approuvé a été détecté). Actualisez la cible de validation avant de réessayer.
+              <div style="margin-top:8px;">
+                <button class="btn btn-secondary btn-sm" [disabled]="refreshValidationTargetBusy" (click)="refreshValidationTarget()">
+                  {{refreshValidationTargetBusy ? 'Actualisation…' : 'Actualiser la cible'}}
+                </button>
+              </div>
+            </div>
+          </div>
+          <div *ngIf="approvalError" style="margin-top:10px;color:var(--accent-red);font-size:12px;">{{approvalError}}</div>
+        </div>
+
+        <!-- ─── TIMELINE CYCLE DE VIE ─── -->
+        <div class="card" style="margin-bottom:16px;padding:16px 20px;">
+          <div style="font-size:10px;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase;font-family:var(--font-mono);margin-bottom:14px;">
+            Cycle de vie de l'incident
+          </div>
+          <div class="lifecycle-timeline">
+            <div *ngFor="let step of lifecycleSteps; let i = index" class="lifecycle-step">
+              <!-- Connecteur -->
+              <div *ngIf="i > 0" class="lifecycle-connector"
+                   [style.background]="step.done ? 'var(--accent-green)' : 'var(--border)'"></div>
+              <!-- Point -->
+              <div class="lifecycle-dot"
+                   [style.border-color]="step.done ? (step.active ? 'var(--accent-orange)' : 'var(--accent-green)') : 'var(--border)'"
+                   [style.background]="step.done ? (step.active ? 'var(--accent-orange)' : 'var(--accent-green)') : 'var(--bg-primary)'">
+                <span *ngIf="step.done && !step.active" style="color:white;font-size:9px;">✓</span>
+                <span *ngIf="step.active" style="color:white;font-size:9px;">●</span>
+              </div>
+              <!-- Label -->
+              <div class="lifecycle-label">
+                <div style="font-size:11px;font-weight:600;"
+                     [style.color]="step.done ? (step.active ? 'var(--accent-orange)' : 'var(--text-primary)') : 'var(--text-muted)'">
+                  {{step.label}}
+                </div>
+                <div style="font-size:10px;color:var(--text-muted);font-family:var(--font-mono);">{{step.sub}}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ─── ONGLETS ─── -->
+        <div style="display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:16px;">
+          <button *ngFor="let tab of tabs" class="tab-btn"
+                  [class.active]="activeTab === tab.id"
+                  (click)="activeTab = tab.id">
+            <span *ngIf="tab.dot" class="tab-dot" [style.background]="tab.dot"></span>
+            {{tab.label}}
+          </button>
+        </div>
+
+        <!-- ══ ONGLET : ANALYSE IA (WF1) ══ -->
+        <div *ngIf="activeTab === 'analysis'">
+          <app-zone-label kind="information"
+            note="Constats des scanners, décision de gouvernance et preuves d’origine. Lecture seule."></app-zone-label>
+
+          <!-- ══ PROVENANCE (§12) ══
+               Permet de remonter de l'écran jusqu'à la preuve : détecté par
+               quel scanner, sur quel build, à quel commit, dans quel rapport.
+               Les étapes restent SÉPARÉES (constat / correction / validation /
+               image / déploiement) : ce ne sont pas les mêmes faits, et une
+               « source » unique les mélangerait. -->
+
+
+          <!-- Rail de phases (Couche 1, Build→Tests→SAST→SCA→Conteneur→DAST→Déploiement) —
+               réutilise tel quel app-project-overview (déjà écrit pour l'onglet "Rapport IA"
+               du projet, même données enrichedData/aiAnalysis) : chaque phase pass/warn/fail/
+               skip, cliquable, route vers l'onglet projet correspondant. -->
+          <div style="margin-bottom:16px;" *ngIf="enrichedData">
+            <app-project-overview [ed]="enrichedData" [rp]="aiAnalysis"
+              [backendStages]="governedStages()"
+              [errorReason]="incident.errorReason" [errorStep]="incident.errorStep"
+              (goToTab)="onGoToTab($event)">
+            </app-project-overview>
+          </div>
+
+          <!-- ══ Guide de priorisation ══
+               1) barre de progression 2) action prioritaire (seule mise en
+               avant) 3) "ensuite" (atténué, groupé par rang) 4) verrou de
+               déploiement — tri réutilisé tel quel depuis cleanliness()
+               .blockingPhases (project-cleanliness.ts), rien recalculé ici. -->
+
+          <!-- 1) Barre de progression -->
+          <div class="progress-block" *ngIf="enrichedData">
+            <div class="progress-head">
+              <span class="progress-label">{{ progress().resolved }} sur {{ progress().total }} {{ progress().total === 1 ? 'phase résolue' : 'phases résolues' }}</span>
+              <span class="progress-pct">{{ progress().percent }}%</span>
+            </div>
+            <div class="progress-bar">
+              <div class="progress-fill" [style.width.%]="progress().percent"></div>
+            </div>
+          </div>
+
+          <!-- 2)+3) Cartes de remédiation — CONTENU inchangé (mêmes bindings
+               qu'avant), seule la PRÉSENTATION change : chaque carte est
+               enveloppée dans un slot dont [style.order] la place en tête
+               (prioritaire) ou plus bas (atténuée), selon le même rang que
+               le verrou. Le slot a exactement la même condition *ngIf que
+               la carte qu'il contient (pas de case vide dans le flux). -->
+          <div class="phase-flow" *ngIf="enrichedData">
+
+            <div class="phase-slot" *ngIf="incident.source === 'jenkins'"
+                 [style.order]="slotOrder(jenkinsRank())"
+                 [class.priority-slot]="isPriority(jenkinsRank())"
+                 [class.later-slot]="hasPriorityPhase() && !isPriority(jenkinsRank())">
+              <span class="priority-tag" *ngIf="isPriority(jenkinsRank())">🎯 Action prioritaire</span>
+              <!-- Build Jenkins direct — Couche 2, mode A (patron) : composant générique,
+                   mode/issues/action calculés dynamiquement depuis classify(errorReason)
+                   (peut pointer vers WF4 OU WF5 selon la vraie cause, voir jenkinsRemediationMode). -->
+              <app-remediation-card
+                phaseLabel="⬡ Build Jenkins"
+                [mode]="jenkinsRemediationMode()"
+                [issues]="jenkinsIssues()"
+                [advice]="classification.solution"
+                [actionLabel]="jenkinsActionLabel()"
+                [sources]="[evidence('JENKINS_BUILD'), evidence('JENKINS_BUILD_LOGS')]"
+                [correcting]="jenkinsCorrecting()"
+                (correct)="onJenkinsCorrect()">
+              </app-remediation-card>
+            </div>
+
+            <div class="phase-slot" *ngIf="trivyIssues().length"
+                 [style.order]="slotOrder(trivyRank())"
+                 [class.priority-slot]="isPriority(trivyRank())"
+                 [class.later-slot]="hasPriorityPhase() && !isPriority(trivyRank())">
+              <span class="priority-tag" *ngIf="isPriority(trivyRank())">🎯 Action prioritaire</span>
+              <!-- Conteneur (Trivy) — Couche 2, signalement : phase TOUJOURS
+                   'vulnerability', jamais de bouton (garde-fou fixe dans le
+                   composant). Une carte par CVE, instruction précise
+                   (mettre à jour <pkg> de X vers Y) — voir cveInstruction(). -->
+              <app-remediation-card
+                phaseLabel="Conteneur (Trivy)"
+                [mode]="trivyMode()"
+                [sources]="[evidence('TRIVY_REPORT'), evidence('JENKINS_BUILD')]"
+                [issues]="trivyIssues()">
+              </app-remediation-card>
+            </div>
+
+            <div class="phase-slot" *ngIf="owaspIssues().length"
+                 [style.order]="slotOrder(owaspRank())"
+                 [class.priority-slot]="isPriority(owaspRank())"
+                 [class.later-slot]="hasPriorityPhase() && !isPriority(owaspRank())">
+              <span class="priority-tag" *ngIf="isPriority(owaspRank())">🎯 Action prioritaire</span>
+              <!-- Dépendances (OWASP Dependency-Check) — même patron que Trivy. -->
+              <app-remediation-card
+                phaseLabel="Dépendances (OWASP)"
+                [mode]="owaspMode()"
+                [sources]="[evidence('OWASP_REPORT'), evidence('JENKINS_BUILD')]"
+                [issues]="owaspIssues()">
+              </app-remediation-card>
+            </div>
+
+            <div class="phase-slot" *ngIf="zapIssues().length"
+                 [style.order]="slotOrder(zapRank())"
+                 [class.priority-slot]="isPriority(zapRank())"
+                 [class.later-slot]="hasPriorityPhase() && !isPriority(zapRank())">
+              <span class="priority-tag" *ngIf="isPriority(zapRank())">🎯 Action prioritaire</span>
+              <!-- DAST (ZAP) — même patron. -->
+              <app-remediation-card
+                phaseLabel="DAST (ZAP)"
+                [mode]="zapMode()"
+                [sources]="[evidence('ZAP_REPORT'), evidence('ZAP_TARGET'), evidence('JENKINS_BUILD')]"
+                [issues]="zapIssues()">
+              </app-remediation-card>
+            </div>
+
+            <div class="phase-slot" *ngIf="sonarIssues().length"
+                 [style.order]="slotOrder(sonarRank())"
+                 [class.priority-slot]="isPriority(sonarRank())"
+                 [class.later-slot]="hasPriorityPhase() && !isPriority(sonarRank())">
+              <span class="priority-tag" *ngIf="isPriority(sonarRank())">🎯 Action prioritaire</span>
+              <!-- Écran incident secondaire : même contrat batch atomique que la vue projet. -->
+              <app-remediation-card
+                phaseLabel="🔍 SonarQube"
+                [mode]="sonarMode()"
+                [sources]="[evidence('SONAR_PROJECT'), evidence('JENKINS_BUILD')]"
+                [issues]="sonarIssues()"
+                advice="Examinez la correction proposée. GitHub ne sera modifié qu'après votre clic explicite."
+                actionLabel="Proposer une correction"
+                [locked]="sonarSelectionLocked()"
+                [lockedNote]="sonarSelectionLocked() ? 'Une correction est en cours pour cet incident : attendez sa Pull Request avant d’en lancer une autre.' : null"
+                [validatedIds]="validatedSonarIds()"
+                [prUrl]="batchPrUrl()"
+                [prLabel]="batchPrLabel()"
+                [mergeReady]="isMergeReadySuccess()"
+                [correcting]="sonarCorrecting()"
+                (correct)="onSonarCorrect($event)">
+              </app-remediation-card>
+            </div>
+
+            <div class="ensuite-heading" *ngIf="hasLaterCards()" [style.order]="1">
+              <span class="eyebrow">Ensuite</span>
+            </div>
+
+          </div>
+
+          <!-- 4) ══ Couche 3 — Verrou de déploiement (Bloc C) ══
+               Reflète UNIQUEMENT evaluateProjectCleanliness() (project-cleanliness.ts) :
+               ce bloc ne recalcule rien, il traduit son résultat en texte. Fail-closed :
+               cleanliness() renvoie déjà "verrouillé" si enrichedData est absent.
+               Toujours en bas du GUIDE (avant les sections brutes annexes qui suivent :
+               décision Judge, grille scanners, rapports agents — celles-ci restent pour
+               qui veut creuser, mais ne font plus partie du flux d'action). -->
+          <div class="card deploy-card" [class.is-clean]="cleanliness().clean" style="margin-bottom:16px;" *ngIf="enrichedData">
+            <div class="card-header" style="margin-bottom:12px;">
+              <span class="card-title">🔒 Déploiement</span>
+            </div>
+
+            <div *ngIf="!cleanliness().clean" class="deploy-box deploy-locked">
+              <div class="deploy-headline">
+                <span class="deploy-icon">🔒</span>
+                <strong>Déploiement bloqué</strong> — {{ deploymentLines().length }} {{ deploymentLines().length === 1 ? 'point à traiter' : 'points à traiter' }}
+              </div>
+              <ul class="deploy-list">
+                <li *ngFor="let line of deploymentLines()">
+                  <span class="deploy-actor" [class.agent]="line.actor==='Agent'" [class.vous]="line.actor==='Vous'">[{{ line.actor }}]</span>
+                  <strong>{{ line.phase }}</strong> : {{ line.text | presentationText }}
+                </li>
+              </ul>
+            </div>
+
+            <div *ngIf="cleanliness().clean" class="deploy-box deploy-unlocked">
+              <div class="deploy-headline">
+                <span class="deploy-icon">✓</span>
+                <strong>Aucun problème bloquant détecté dans ce rapport</strong>
+              </div>
+              <p class="deploy-note">L’état de préparation au déploiement reste calculé exclusivement par le serveur du projet.</p>
+              <p class="deploy-note" *ngIf="nonBlockingSummary()">
+                Points non bloquants restants : {{ nonBlockingSummary() }}
+              </p>
+            </div>
+          </div>
+
+          <!-- Décision Judge -->
+          <div *ngIf="aiAnalysis" class="card decision-card" style="margin-bottom:16px;">
+            <div class="card-header" style="margin-bottom:12px;">
+              <span class="card-title">▣ Décision de gouvernance</span>
+              <span class="badge" [class]="getDecisionBadgeClass(aiAnalysis.decision)">
+                {{aiAnalysis.decision | presentationLabel}}
+              </span>
+            </div>
+            <div class="historical-narrative" style="font-size:12px;color:var(--text-secondary);line-height:1.7;white-space:pre-wrap;margin-bottom:12px;">
+              {{aiAnalysis.justification | presentationText}}
+            </div>
+            <div *ngIf="aiAnalysis.errorsSummary" class="historical-technical-evidence" style="font-family:var(--font-mono);font-size:11px;color:var(--accent-orange);background:var(--bg-primary);padding:10px 12px;border-radius:var(--radius-sm);">
+              {{aiAnalysis.errorsSummary | presentationText}}
+            </div>
+          </div>
+
+          <!-- Scanners sécurité -->
+          <div *ngIf="enrichedData" style="margin-bottom:16px;">
+            <div style="font-size:10px;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase;font-family:var(--font-mono);margin-bottom:10px;">
+              Résultats des scanners
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;">
+
+              <!-- SonarQube -->
+              <div class="card scanner-card" style="border-left:2px solid #f59e0b;">
+                <div style="font-size:10px;color:var(--text-muted);font-family:var(--font-mono);margin-bottom:8px;">SONARQUBE</div>
+                <div style="display:flex;gap:12px;">
+                  <div style="text-align:center;">
+                    <div style="font-size:18px;font-weight:700;color:var(--accent-red);">{{scannerMetric(enrichedData.sonar, 'vulnerabilities') ?? 'Non disponible'}}</div>
+                    <div style="font-size:9px;color:var(--text-muted);">VULNÉRABILITÉS</div>
+                  </div>
+                  <div style="text-align:center;">
+                    <div style="font-size:18px;font-weight:700;color:var(--accent-orange);">{{scannerMetric(enrichedData.sonar, 'code_smells') ?? 'Non disponible'}}</div>
+                    <div style="font-size:9px;color:var(--text-muted);">PROBLÈMES DE MAINTENABILITÉ</div>
+                  </div>
+                </div>
+                <div class="scanner-status" [class]="enrichedData.sonar?.status?.toLowerCase()">
+                  {{enrichedData.sonar?.status | stageStatusLabel}}
+                </div>
+              </div>
+
+              <!-- Trivy -->
+              <div class="card scanner-card" style="border-left:2px solid #e24b4a;">
+                <div style="font-size:10px;color:var(--text-muted);font-family:var(--font-mono);margin-bottom:8px;">TRIVY (IMAGE)</div>
+                <div style="display:flex;gap:12px;">
+                  <div style="text-align:center;">
+                    <div style="font-size:18px;font-weight:700;color:var(--accent-red);">{{scannerMetric(enrichedData.trivy, 'critical') ?? 'Non disponible'}}</div>
+                    <div style="font-size:9px;color:var(--text-muted);">CRITIQUE</div>
+                  </div>
+                  <div style="text-align:center;">
+                    <div style="font-size:18px;font-weight:700;color:var(--accent-orange);">{{scannerMetric(enrichedData.trivy, 'high') ?? 'Non disponible'}}</div>
+                    <div style="font-size:9px;color:var(--text-muted);">ÉLEVÉ</div>
+                  </div>
+                </div>
+                <div class="scanner-status" [class]="enrichedData.trivy?.status?.toLowerCase()">
+                  {{enrichedData.trivy?.status | stageStatusLabel}}
+                </div>
+              </div>
+
+              <!-- OWASP -->
+              <div class="card scanner-card" style="border-left:2px solid #8b5cf6;">
+                <div style="font-size:10px;color:var(--text-muted);font-family:var(--font-mono);margin-bottom:8px;">OWASP DC</div>
+                <div style="display:flex;gap:12px;">
+                  <div style="text-align:center;">
+                    <div style="font-size:18px;font-weight:700;color:var(--accent-red);">{{scannerMetric(enrichedData.owasp, 'critical') ?? 'Non disponible'}}</div>
+                    <div style="font-size:9px;color:var(--text-muted);">CRITIQUE</div>
+                  </div>
+                  <div style="text-align:center;">
+                    <div style="font-size:18px;font-weight:700;color:var(--accent-orange);">{{scannerMetric(enrichedData.owasp, 'high') ?? 'Non disponible'}}</div>
+                    <div style="font-size:9px;color:var(--text-muted);">ÉLEVÉ</div>
+                  </div>
+                </div>
+                <div class="scanner-status" [class]="enrichedData.owasp?.status?.toLowerCase()">
+                  {{enrichedData.owasp?.status | stageStatusLabel}}
+                </div>
+              </div>
+
+              <!-- ZAP -->
+              <div class="card scanner-card" style="border-left:2px solid #38bdf8;">
+                <div style="font-size:10px;color:var(--text-muted);font-family:var(--font-mono);margin-bottom:8px;">ZAP (DAST)</div>
+                <div style="display:flex;gap:12px;">
+                  <div style="text-align:center;">
+                    <div style="font-size:18px;font-weight:700;color:var(--accent-red);">{{scannerMetric(enrichedData.zap, 'alerts_high') ?? 'Non disponible'}}</div>
+                    <div style="font-size:9px;color:var(--text-muted);">ÉLEVÉ</div>
+                  </div>
+                  <div style="text-align:center;">
+                    <div style="font-size:18px;font-weight:700;color:var(--accent-orange);">{{scannerMetric(enrichedData.zap, 'alerts_medium') ?? 'Non disponible'}}</div>
+                    <div style="font-size:9px;color:var(--text-muted);">MOYEN</div>
+                  </div>
+                </div>
+                <div class="scanner-status" [class]="enrichedData.zap?.status?.toLowerCase()">
+                  {{enrichedData.zap?.status | stageStatusLabel}}
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- Actions développeur -->
+          <div *ngIf="aiAnalysis?.developerActions" class="card" style="margin-bottom:16px;">
+            <div class="card-header" style="margin-bottom:10px;">
+              <span class="card-title">Actions recommandées</span>
+            </div>
+            <div class="historical-narrative" style="font-size:12px;color:var(--text-secondary);line-height:1.8;white-space:pre-wrap;">
+              {{aiAnalysis.developerActions | presentationText}}
+            </div>
+          </div>
+
+          <!-- Rapports agents -->
+          <div *ngIf="reports.length > 0">
+            <div style="font-size:10px;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase;font-family:var(--font-mono);margin-bottom:10px;">
+              Rapports des agents IA
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;">
+              <div *ngFor="let r of reports" class="card agent-report-card" data-content-language="historique-non-transformé">
+                <div class="card-header" style="margin-bottom:12px;">
+                  <div style="display:flex;align-items:center;gap:8px;">
+                    <span class="agent-badge" [style.color]="getAgentColor(r.agentType)"
+                          [style.background]="getAgentColor(r.agentType)+'11'">
+                      {{getAgentIcon(r.agentType)}}
+                    </span>
+                    <span class="card-title">{{getAgentLabel(r.agentType)}}</span>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:4px;">
+                    <div class="confidence-bar">
+                      <div [style.width]="(r.confidence||0)*100+'%'"
+                           [style.background]="getAgentColor(r.agentType)"></div>
+                    </div>
+                    <span style="font-size:10px;color:var(--text-muted);font-family:var(--font-mono);">
+                      {{r.confidence == null ? 'Non disponible' : ((r.confidence * 100 | number:'1.0-0') + '%')}}
+                    </span>
+                  </div>
+                </div>
+                <div class="report-content">{{r.analysis || r.content}}</div>
+              </div>
+            </div>
+          </div>
+
+        <!-- Resources follow results and corrective actions. -->
+          <app-source-evidence-list style="display:block;margin-top:24px;"
+            title="Provenance et preuves"
+            [note]="provenanceNote()"
+            [sections]="evidenceSections()"
+            [slots]="evidenceSlots()"
+            [state]="sourceEvidenceState" (retry)="loadSourceEvidence()">
+          </app-source-evidence-list>
+      </div>
+
+        <!-- ══ ONGLET : VALIDATION WF3 ══ -->
+        <div *ngIf="activeTab === 'validation'">
+          <app-zone-label [kind]="canOperate ? 'action' : 'information'"
+            [note]="canOperate
+              ? 'Verdict de la validation post-Pull Request, et relance de cette validation quand elle est permise.'
+              : 'Verdict de la validation post-Pull Request. Lecture seule.'"></app-zone-label>
+
+          <!-- Verrou de fichier Sonar : tant que la PR n'est pas fusionnée, ses fichiers sont refusés aux autres corrections. -->
+          <div *ngIf="sonarFileLock() as lock" class="card" style="margin-bottom:16px;"
+               [style.border-left]="'3px solid ' + (lock.releasedAt ? 'var(--accent-green)' : 'var(--accent-orange)')">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+              <div style="flex:1;min-width:240px;">
+                <div class="card-title" style="font-size:14px;">
+                  {{ lock.releasedAt ? 'Fichiers libérés' : 'Fichiers réservés par cette correction' }}
+                </div>
+                <div style="font-size:12px;color:var(--text-secondary);line-height:1.5;margin-top:4px;">
+                  <ng-container *ngIf="!lock.releasedAt">
+                    Aucune autre correction ne peut modifier ces fichiers tant que la Pull Request n’est pas fusionnée.
+                  </ng-container>
+                  <ng-container *ngIf="lock.releasedAt">
+                    {{ lock.releaseReason === 'PR_CLOSED_UNMERGED' ? 'Pull Request fermée sans merge' : 'Merge constaté sur GitHub' }}
+                    le {{ lock.releasedAt | frenchDate }} — ces fichiers peuvent recevoir une nouvelle correction.
+                  </ng-container>
+                </div>
+                <ul style="margin:8px 0 0;padding-left:18px;font-size:11px;font-family:var(--font-mono);color:var(--text-primary);line-height:1.6;">
+                  <li *ngFor="let file of lock.files">{{ file }}</li>
+                </ul>
+                <div *ngIf="lock.contestedFiles?.length" style="margin-top:6px;font-size:11px;color:var(--accent-orange);">
+                  Déjà réservé par une autre correction : {{ lock.contestedFiles?.join(', ') }}
+                </div>
+              </div>
+              <button *ngIf="canConfirmSonarMerge()" type="button" class="btn btn-primary btn-sm"
+                      [disabled]="confirmMergePending" (click)="confirmSonarMerge()">
+                {{ confirmMergePending ? 'Vérification du merge sur GitHub…' : 'Merge effectué — libérer les fichiers' }}
+              </button>
+            </div>
+          </div>
+
+          <!-- Pas encore validé -->
+          <div *ngIf="!validation" class="card" style="text-align:center;padding:40px;border:1px dashed var(--border);">
+            <div style="font-size:32px;margin-bottom:12px;">⏳</div>
+            <div style="font-size:14px;color:var(--text-secondary);margin-bottom:6px;">
+              En attente de validation automatique
+            </div>
+            <div style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono);">
+              WF3 se déclenchera automatiquement après le build de la PR
+            </div>
+          </div>
+
+          <!-- Résultat WF3 disponible -->
+          <ng-container *ngIf="validation">
+
+            <!-- ══ AUTORISATION DE MERGE (4 états) ══ -->
+            <ng-container *ngIf="mergeAuthorization() as ma; else mergeAuthFallback">
+              <div class="card" style="margin-bottom:16px;"
+                   [style.border-left]="'3px solid ' + mergeAuthMeta(ma.authorization).color">
+                <div style="display:flex;align-items:flex-start;gap:16px;">
+                  <div style="font-size:32px;line-height:1;">{{ mergeAuthMeta(ma.authorization).icon }}</div>
+                  <div style="flex:1;min-width:0;">
+                    <div style="font-size:15px;font-weight:600;color:var(--text-primary);margin-bottom:4px;">
+                      {{ isMergeReadySuccess() ? 'Correction réussie' : mergeAuthMeta(ma.authorization).title }}
+                    </div>
+                    <div style="font-size:12px;color:var(--text-secondary);line-height:1.5;">
+                      <ng-container *ngIf="isMergeReadySuccess(); else regularMergeSubtitle">
+                        La Pull Request {{batchPrLabel()}} a été validée avec succès et peut maintenant être fusionnée.
+                      </ng-container>
+                      <ng-template #regularMergeSubtitle>{{ mergeAuthMeta(ma.authorization).subtitle }}</ng-template>
+                    </div>
+
+                    <!-- MERGE_READY : checklist, lien PR (lecture seule, aucune fusion auto), avertissement QG séparé -->
+                    <ng-container *ngIf="ma.authorization === 'MERGE_READY'">
+                      <div *ngIf="isMergeReadySuccess()" class="badge"
+                           style="display:inline-block;margin-top:10px;color:var(--accent-green);border:1px solid var(--accent-green);background:transparent;">
+                        En attente de fusion
+                      </div>
+                      <ul style="margin:10px 0 0;padding-left:18px;font-size:12px;color:var(--text-secondary);line-height:1.7;">
+                        <li *ngFor="let item of mergeReadyChecklist()">✓ {{ item }}</li>
+                      </ul>
+                      <div *ngIf="batchPrUrl()" style="margin-top:8px;">
+                        <a [href]="batchPrUrl()" target="_blank" rel="noopener noreferrer"
+                           style="color:var(--accent-blue);text-decoration:none;font-family:var(--font-mono);font-size:12px;">
+                          {{ batchPrLabel() }} ↗
+                        </a>
+                        <div style="margin-top:4px;font-size:11px;color:var(--text-muted);">
+                          Vous pouvez ouvrir la Pull Request et effectuer la fusion après revue.
+                        </div>
+                      </div>
+                      <div *ngIf="showMergeReadyQualityWarning()"
+                           style="margin-top:10px;padding:8px 10px;border-radius:6px;background:var(--accent-orange-bg, rgba(234,88,12,0.1));color:var(--accent-orange);font-size:11px;line-height:1.5;">
+                        <strong>Qualité globale du projet : attention</strong>
+                        <span *ngIf="preexistingFindingCountIfReliable() !== null">
+                          — {{ preexistingFindingCountIfReliable() }} vulnérabilité(s) historique(s) restante(s), hors du lot corrigé.
+                        </span>
+                      </div>
+                    </ng-container>
+
+                    <!-- BLOCKED : causes prouvées. INCONCLUSIVE : preuves incertaines/non résolues. Jamais le même vocabulaire mélangé. -->
+                    <ul *ngIf="ma.authorization === 'BLOCKED' && ma.blockingReasons?.length"
+                        style="margin:10px 0 0;padding-left:18px;font-size:12px;color:var(--text-secondary);line-height:1.6;">
+                      <li *ngFor="let r of ma.blockingReasons">{{ mergeBlockingLabel(r) }}</li>
+                    </ul>
+                    <!-- BRIQUE 5 — action humaine gouvernée. N'apparaît que si le backend a
+                         lui-même déclaré la cause exploitable ; jamais Brique 5 tant que la PR
+                         est encore VALIDATING, et jamais pour INCONCLUSIVE. -->
+                    <div *ngIf="ma.authorization === 'BLOCKED' && ma.correctiveActionAllowed && !isCorrectiveInFlight()" style="margin-top:10px;">
+                      <button class="btn btn-danger btn-sm" [disabled]="correctiveBusy || prValidationBusy" (click)="correctAndRevalidate()">
+                        {{ correctiveBusy ? 'Autorisation…' : 'Corriger et revalider' }}
+                      </button>
+                    </div>
+                    <div *ngIf="ma.authorization === 'BLOCKED' && isCorrectiveInFlight()"
+                         style="margin-top:10px;font-size:12px;color:var(--accent-blue);display:flex;align-items:center;gap:6px;">
+                      <span class="spinner" style="width:12px;height:12px;border-width:1.5px;"></span>
+                      Correction supplémentaire en cours
+                    </div>
+                    <ul *ngIf="ma.authorization === 'INCONCLUSIVE' && ma.technicalReasons?.length"
+                        style="margin:10px 0 0;padding-left:18px;font-size:12px;color:var(--text-secondary);line-height:1.6;">
+                      <li *ngFor="let r of ma.technicalReasons">{{ mergeBlockingLabel(r) }}</li>
+                    </ul>
+
+                    <!-- Traçabilité : commit + horodatage -->
+                    <div style="margin-top:10px;font-size:10px;color:var(--text-muted);font-family:var(--font-mono);">
+                      <span *ngIf="ma.forSha">commit {{ shortSha(ma.forSha) }}</span>
+                      <span *ngIf="ma.computedAt"> · {{ ma.computedAt | frenchDate }}</span>
+                    </div>
+                    <div *ngIf="mergeAuthForShaStale()"
+                         style="margin-top:8px;padding:8px 10px;border-radius:6px;background:var(--accent-orange-bg, rgba(234,88,12,0.1));color:var(--accent-orange);font-size:11px;line-height:1.5;">
+                      Autorisation calculée pour un commit différent du HEAD actuel de la PR — relancez la validation.
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </ng-container>
+
+            <!-- Fallback : incidents antérieurs sans mergeAuthorization persisté -->
+            <ng-template #mergeAuthFallback>
+              <div class="card" style="margin-bottom:16px;"
+                   style="border-left:3px solid var(--border);">
+                <div style="display:flex;align-items:center;gap:16px;">
+                  <div style="font-size:32px;">ℹ️</div>
+                  <div style="flex:1;min-width:0;">
+                    <div style="font-size:15px;font-weight:600;color:var(--text-primary);margin-bottom:4px;">
+                      Autorisation de fusion non disponible
+                    </div>
+                    <div style="font-size:12px;color:var(--text-secondary);">
+                      Validation historique — état de fusion non déterminé.
+                    </div>
+                    <ul *ngIf="validation.failureReasons?.length"
+                        style="margin:8px 0 0;padding-left:18px;font-size:12px;color:var(--text-secondary);line-height:1.6;">
+                      <li *ngFor="let r of validation.failureReasons">{{ r }}</li>
+                    </ul>
+                    <div style="font-size:10px;color:var(--text-muted);font-family:var(--font-mono);margin-top:6px;">
+                      {{ validation.validatedAt | frenchDate }}
+                    </div>
+                    <div style="margin-top:8px;font-size:11px;color:var(--text-muted);">
+                      Autorisation de merge détaillée indisponible pour cette validation (antérieure).
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </ng-template>
+
+            <!-- ══ QUALITÉ GLOBALE DU PROJET (séparé — informatif) ══ -->
+            <div class="card" style="margin-bottom:16px;" *ngIf="pipelineHealth() as ph">
+              <div class="card-header" style="margin-bottom:6px;">
+                <span class="card-title">Qualité globale du projet</span>
+              </div>
+              <div style="font-size:11px;color:var(--text-muted);margin-bottom:12px;line-height:1.5;">
+                Informatif pour la fusion ; peut rester bloquant pour le déploiement.
+              </div>
+              <table style="width:100%;border-collapse:collapse;">
+                <tbody>
+                  <tr *ngFor="let row of pipelineHealthRows(); let last = last"
+                      [style.border-bottom]="last ? 'none' : '1px solid var(--border)'">
+                    <td style="padding:9px 0;font-size:12px;color:var(--text-primary);">{{ row.label }}</td>
+                    <td style="padding:9px 0;text-align:right;">
+                      <span class="badge" [class]="healthBadgeClass(row.value)">{{ healthLabel(row.value) }}</span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+              <div *ngIf="ph.technicalFailure" style="margin-top:10px;font-size:11px;color:var(--accent-red);">
+                Défaillance technique signalée : {{ ph.technicalFailure }}
+              </div>
+              <div *ngIf="showPreexistingSonarNote()"
+                   style="margin-top:10px;padding:8px 10px;border-radius:6px;background:var(--accent-orange-bg, rgba(234,88,12,0.1));color:var(--accent-orange);font-size:11px;line-height:1.5;">
+                Des problèmes préexistants (hors du lot corrigé) maintiennent le contrôle qualité en échec — ils seront
+                traités lors des prochains cycles de correction et ne bloquent pas la fusion de cette PR.
+              </div>
+              <ul *ngIf="mergeAuthorization()?.advisories?.length"
+                  style="margin:12px 0 0;padding-left:18px;font-size:11px;color:var(--text-secondary);line-height:1.6;">
+                <li *ngFor="let a of mergeAuthorization().advisories">{{ a.message || advisoryLabel(a) }}</li>
+              </ul>
+            </div>
+
+            <!-- Info Pull Request -->
+            <div class="card" style="margin-bottom:16px;">
+              <div class="card-header" style="margin-bottom:10px;">
+                <span class="card-title">Pull Request</span>
+              </div>
+              <div style="display:grid;grid-template-columns:auto 1fr;gap:6px 16px;align-items:center;">
+                <div style="font-size:10px;color:var(--text-muted);font-family:var(--font-mono);">NUMÉRO</div>
+                <div style="font-size:12px;color:var(--text-primary);">
+                  <app-source-evidence-link [item]="evidence('VALIDATION_PULL_REQUEST')" variant="inline" [showProvider]="false" [showReason]="false" [state]="sourceEvidenceState"></app-source-evidence-link>
+                </div>
+                <div style="font-size:10px;color:var(--text-muted);font-family:var(--font-mono);">BRANCHE</div>
+                <div style="font-size:11px;color:var(--text-secondary);font-family:var(--font-mono);">{{validation.prBranch}}</div>
+                <!-- Le COMMIT validé est l'identité de ce qui a été analysé —
+                     distinct du commit du constat d'origine. -->
+                <div style="font-size:10px;color:var(--text-muted);font-family:var(--font-mono);">COMMIT VALIDÉ</div>
+                <div style="font-size:11px;">
+                  <app-source-evidence-link [item]="evidence('VALIDATION_COMMIT')" variant="inline" [showProvider]="false" [showReason]="false" [state]="sourceEvidenceState"></app-source-evidence-link>
+                </div>
+                <div style="font-size:10px;color:var(--text-muted);font-family:var(--font-mono);">BUILD</div>
+                <div style="font-size:11px;">
+                  <app-source-evidence-link [item]="evidence('VALIDATION_BUILD')" variant="inline" [showProvider]="false" [showReason]="false" [state]="sourceEvidenceState"></app-source-evidence-link>
+                </div>
+                <div style="font-size:10px;color:var(--text-muted);font-family:var(--font-mono);">JOURNAL</div>
+                <div style="font-size:11px;">
+                  <app-source-evidence-link [item]="evidence('VALIDATION_LOGS')" variant="inline" [showProvider]="false" [showReason]="false" [state]="sourceEvidenceState"></app-source-evidence-link>
+                </div>
+                <div style="font-size:10px;color:var(--text-muted);font-family:var(--font-mono);">ANALYSE SONAR</div>
+                <div style="font-size:11px;">
+                  <app-source-evidence-link [item]="evidence('SONAR_PROJECT')" variant="inline" [showProvider]="false" [showReason]="false" [state]="sourceEvidenceState"></app-source-evidence-link>
+                </div>
+              </div>
+            </div>
+
+          </ng-container>
+        </div>
+
+        <!-- ══ ONGLET : DONNÉES BRUTES ══ -->
+        <div *ngIf="activeTab === 'raw'" class="card">
+          <app-zone-label kind="information"
+            note="Charge utile brute enregistrée pour cet incident, telle quelle. Lecture seule."></app-zone-label>
+          <div class="card-header">
+            <span class="card-title">Données brutes</span>
+          </div>
+          <pre class="code-block" style="margin-top:12px;">{{incident | json}}</pre>
+        </div>
+
+        <!-- ══ ONGLET : GUIDE DE CORRECTION ══ -->
+        <div *ngIf="activeTab === 'guide'">
+          <app-zone-label kind="information"
+            note="Marche à suivre pour corriger, à appliquer dans le dépôt. Aucune action n’est déclenchée ici."></app-zone-label>
+          <app-developer-guide-tab [guide]="developerGuide"></app-developer-guide-tab>
+        </div>
+
+      </ng-container>
+    </div>

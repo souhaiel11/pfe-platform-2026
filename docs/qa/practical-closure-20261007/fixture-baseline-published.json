@@ -1,0 +1,6 @@
+{
+  "repository": "souhaiel11/remediation-retry-e2e-fixture",
+  "baselineCommit": "13af977f770f78d47462b5ccbe856de9c0a4f077",
+  "originalBaselinePreserved": "24630265ea4ed764bbb22c76d4d7dc689b5fe0bf",
+  "fixtureSetupPushOnly": true
+}

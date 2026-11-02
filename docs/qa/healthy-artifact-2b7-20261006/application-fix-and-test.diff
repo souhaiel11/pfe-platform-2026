@@ -1,0 +1,38 @@
+diff --git a/src/main/java/com/pfe/devsecops/repository/TaskRepository.java b/src/main/java/com/pfe/devsecops/repository/TaskRepository.java
+index dcbf7ba..c85e34b 100644
+--- a/src/main/java/com/pfe/devsecops/repository/TaskRepository.java
++++ b/src/main/java/com/pfe/devsecops/repository/TaskRepository.java
+@@ -16,7 +16,7 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
+ 
+     // VULNERABILITY S1 — SQL Injection CRITICAL
+     // Concaténation directe du paramètre dans la requête native
+-    @Query(value = "SELECT * FROM tasks WHERE title = '" + "' OR '1'='1", nativeQuery = true)
++    @Query(value = "SELECT * FROM tasks WHERE title = '" + "' OR '1'='1'", nativeQuery = true)
+     List<Task> findByTitleUnsafe(String title);
+ 
+     // Version encore plus explicite pour SonarQube
+diff --git a/src/test/java/com/pfe/devsecops/repository/TaskRepositoryInitializationTest.java b/src/test/java/com/pfe/devsecops/repository/TaskRepositoryInitializationTest.java
+new file mode 100644
+index 0000000..42035d1
+--- /dev/null
++++ b/src/test/java/com/pfe/devsecops/repository/TaskRepositoryInitializationTest.java
+@@ -0,0 +1,19 @@
++package com.pfe.devsecops.repository;
++
++import org.junit.jupiter.api.Test;
++import org.springframework.beans.factory.annotation.Autowired;
++import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
++
++import static org.junit.jupiter.api.Assertions.assertNotNull;
++
++@DataJpaTest
++class TaskRepositoryInitializationTest {
++
++    @Autowired
++    private TaskRepository taskRepository;
++
++    @Test
++    void repositoryInitializesWithDeclaredQueries() {
++        assertNotNull(taskRepository);
++    }
++}

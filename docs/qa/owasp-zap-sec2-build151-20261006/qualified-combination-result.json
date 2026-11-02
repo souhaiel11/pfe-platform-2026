@@ -1,0 +1,10 @@
+{
+  "buildPass": true,
+  "testPass": true,
+  "tests": 18,
+  "startupPass": true,
+  "healthPass": true,
+  "running": true,
+  "runtimeJava": "11 (exact151 base runtime)",
+  "jarSha256": "d9fdebf66dd23378196eecd4b3a0cd96eb57b477b5ee7e45741649507cb5969f"
+}

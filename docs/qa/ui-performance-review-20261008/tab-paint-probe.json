@@ -1,0 +1,195 @@
+{
+  "scope": "AFTER only; capture-phase click to first requestAnimationFrame, active tab/loading feedback; CDP renderer CPU includes section loading, not Angular-exclusive profiler",
+  "rows": [
+    {
+      "project": "devsecops-platform-testbed",
+      "tab": "Jenkins",
+      "initialFeedbackMs": 16.699999999254942,
+      "activeLabel": "Jenkins",
+      "loadingText": [
+        "Chargement de l’historique Jenkins…"
+      ],
+      "mainThreadTaskMs": 52.130999999999986,
+      "scriptMs": 12.873999999999997,
+      "layoutMs": 9.444000000000008,
+      "recalcStyleMs": 1.882
+    },
+    {
+      "project": "devsecops-platform-testbed",
+      "tab": "SonarQube",
+      "initialFeedbackMs": 11.399999998509884,
+      "activeLabel": "SonarQube",
+      "loadingText": [],
+      "mainThreadTaskMs": 14.340999999999992,
+      "scriptMs": 4.428000000000002,
+      "layoutMs": 1.805000000000001,
+      "recalcStyleMs": 1.464
+    },
+    {
+      "project": "devsecops-platform-testbed",
+      "tab": "Docker",
+      "initialFeedbackMs": 11.800000000745058,
+      "activeLabel": "Docker",
+      "loadingText": [],
+      "mainThreadTaskMs": 13.44899999999999,
+      "scriptMs": 4.304000000000002,
+      "layoutMs": 1.1579999999999924,
+      "recalcStyleMs": 1.3950000000000005
+    },
+    {
+      "project": "devsecops-platform-testbed",
+      "tab": "Sécurité",
+      "initialFeedbackMs": 29.399999998509884,
+      "activeLabel": "Sécurité",
+      "loadingText": [
+        "Chargement du suivi des remédiations…",
+        "Chargement du suivi…"
+      ],
+      "mainThreadTaskMs": 84.341,
+      "scriptMs": 43.264999999999986,
+      "layoutMs": 20.25500000000001,
+      "recalcStyleMs": 4.827999999999999
+    },
+    {
+      "project": "devsecops-platform-testbed",
+      "tab": "Incidents",
+      "initialFeedbackMs": 10.199999999254942,
+      "activeLabel": "Incidents 9",
+      "loadingText": [],
+      "mainThreadTaskMs": 20.204,
+      "scriptMs": 6.980000000000014,
+      "layoutMs": 2.160999999999996,
+      "recalcStyleMs": 1.7640000000000016
+    },
+    {
+      "project": "devsecops-platform-testbed",
+      "tab": "Config",
+      "initialFeedbackMs": 11.5,
+      "activeLabel": "Config",
+      "loadingText": [],
+      "mainThreadTaskMs": 17.88799999999996,
+      "scriptMs": 6.815999999999988,
+      "layoutMs": 2.2979999999999947,
+      "recalcStyleMs": 1.5779999999999996
+    },
+    {
+      "project": "devsecops-platform-testbed",
+      "tab": "Déploiement",
+      "initialFeedbackMs": 11.899999998509884,
+      "activeLabel": "Déploiement",
+      "loadingText": [
+        "Vérification de l'état de gouvernance du déploiement…"
+      ],
+      "mainThreadTaskMs": 16.703000000000024,
+      "scriptMs": 5.496,
+      "layoutMs": 1.2109999999999899,
+      "recalcStyleMs": 2.172
+    },
+    {
+      "project": "devsecops-platform-testbed",
+      "tab": "Rapport IA",
+      "initialFeedbackMs": 18.300000000745058,
+      "activeLabel": "Rapport IA 9",
+      "loadingText": [],
+      "mainThreadTaskMs": 46.89699999999996,
+      "scriptMs": 16.034999999999993,
+      "layoutMs": 16.308000000000018,
+      "recalcStyleMs": 3.727999999999999
+    },
+    {
+      "project": "pfe-app-test",
+      "tab": "Jenkins",
+      "initialFeedbackMs": 14.399999998509884,
+      "activeLabel": "Jenkins",
+      "loadingText": [
+        "Chargement de l’historique Jenkins…"
+      ],
+      "mainThreadTaskMs": 43.05100000000001,
+      "scriptMs": 8.848999999999997,
+      "layoutMs": 4.216999999999999,
+      "recalcStyleMs": 1.7309999999999999
+    },
+    {
+      "project": "pfe-app-test",
+      "tab": "SonarQube",
+      "initialFeedbackMs": 16.900000002235174,
+      "activeLabel": "SonarQube",
+      "loadingText": [],
+      "mainThreadTaskMs": 55.965000000000046,
+      "scriptMs": 22.244000000000014,
+      "layoutMs": 13.218,
+      "recalcStyleMs": 4.7989999999999995
+    },
+    {
+      "project": "pfe-app-test",
+      "tab": "Docker",
+      "initialFeedbackMs": 11.899999998509884,
+      "activeLabel": "Docker",
+      "loadingText": [],
+      "mainThreadTaskMs": 14.195999999999987,
+      "scriptMs": 3.5580000000000056,
+      "layoutMs": 0.8639999999999968,
+      "recalcStyleMs": 1.507999999999999
+    },
+    {
+      "project": "pfe-app-test",
+      "tab": "Sécurité",
+      "initialFeedbackMs": 60.100000001490116,
+      "activeLabel": "Sécurité",
+      "loadingText": [
+        "Chargement du suivi des remédiations…",
+        "Chargement du suivi…"
+      ],
+      "mainThreadTaskMs": 700.3349999999999,
+      "scriptMs": 551.925,
+      "layoutMs": 64.01799999999999,
+      "recalcStyleMs": 16.247
+    },
+    {
+      "project": "pfe-app-test",
+      "tab": "Incidents",
+      "initialFeedbackMs": 22.400000002235174,
+      "activeLabel": "Incidents 20",
+      "loadingText": [],
+      "mainThreadTaskMs": 32.50799999999998,
+      "scriptMs": 19.109000000000044,
+      "layoutMs": 1.7720000000000096,
+      "recalcStyleMs": 1.7599999999999976
+    },
+    {
+      "project": "pfe-app-test",
+      "tab": "Config",
+      "initialFeedbackMs": 11.900000002235174,
+      "activeLabel": "Config",
+      "loadingText": [],
+      "mainThreadTaskMs": 15.849000000000002,
+      "scriptMs": 4.1719999999999535,
+      "layoutMs": 1.790999999999987,
+      "recalcStyleMs": 1.7290000000000014
+    },
+    {
+      "project": "pfe-app-test",
+      "tab": "Déploiement",
+      "initialFeedbackMs": 12.099999997764826,
+      "activeLabel": "Déploiement",
+      "loadingText": [
+        "Vérification de l'état de gouvernance du déploiement…"
+      ],
+      "mainThreadTaskMs": 16.653999999999947,
+      "scriptMs": 4.932999999999965,
+      "layoutMs": 0.907000000000005,
+      "recalcStyleMs": 2.001000000000003
+    },
+    {
+      "project": "pfe-app-test",
+      "tab": "Rapport IA",
+      "initialFeedbackMs": 15.399999998509884,
+      "activeLabel": "Rapport IA 104",
+      "loadingText": [],
+      "mainThreadTaskMs": 25.177999999999923,
+      "scriptMs": 7.457000000000047,
+      "layoutMs": 5.865000000000009,
+      "recalcStyleMs": 2.818000000000001
+    }
+  ]
+}

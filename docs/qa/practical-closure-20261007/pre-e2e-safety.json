@@ -1,0 +1,29 @@
+{
+  "flags": {
+    "dispatch": "false",
+    "harness": "false"
+  },
+  "counts": {
+    "remediation_target_reservations": 0,
+    "security_remediation_retry_e2e_plans": 0
+  },
+  "activeWriters": 0,
+  "activeWf6": [],
+  "allowedDedicatedBusinessDiff": {
+    "projects": [],
+    "manual_remediation_tasks": [
+      "a390e383-42b7-4348-894c-5e02a7e5f98d",
+      "9d2ff915-23e1-4f0b-8f4a-561b4d95845f"
+    ],
+    "incidents": [
+      "492b38c7-99bc-49f7-aa03-df11828c71ba"
+    ],
+    "reports": []
+  },
+  "allUnrelatedRowsUnchanged": true,
+  "taskEligible": {
+    "decision": "ALLOW",
+    "reason": "ALL_GATES_PASSED",
+    "evidenceId": "f3f39a386e60d971fcfda22ce43d498605494dd649631f3b3d0c30abdf3f527c"
+  }
+}

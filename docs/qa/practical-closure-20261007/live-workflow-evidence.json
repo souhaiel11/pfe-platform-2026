@@ -1,0 +1,91 @@
+[
+  {
+    "id": 2092,
+    "status": "success",
+    "startedAt": "2026-10-07 19:08:13.523",
+    "stoppedAt": "2026-10-07 19:08:13.766",
+    "executedNodes": [
+      "Webhook - Security Remediation Request",
+      "Evaluate Security Remediation",
+      "Evaluation HTTP OK?",
+      "Evaluation Not Technical Failure?",
+      "Record Batch Result (EVALUATION_FAILED)",
+      "Respond - EVALUATION_FAILED"
+    ],
+    "request": {
+      "projectId": "ebe3bd94-8240-4c30-a2d9-6de2106a28bc",
+      "batchId": "sec-batch-0637f733-42d1-4aa8-a58e-48c373a7c3d5",
+      "findingTaskIds": [
+        "9d2ff915-23e1-4f0b-8f4a-561b4d95845f"
+      ],
+      "attempts": [
+        {
+          "findingTaskId": "9d2ff915-23e1-4f0b-8f4a-561b4d95845f",
+          "attemptId": "238c2d38-5f09-44d9-aaf3-54253a2fc453",
+          "attemptNumber": 1
+        }
+      ]
+    },
+    "evaluation": {
+      "status": "TECHNICAL_FAILURE",
+      "failureClass": "VERIFIER_TIMEOUT",
+      "reason": "VERIFIER_TIMEOUT",
+      "batchId": "sec-batch-0637f733-42d1-4aa8-a58e-48c373a7c3d5",
+      "attempts": [
+        {
+          "findingTaskId": "9d2ff915-23e1-4f0b-8f4a-561b4d95845f",
+          "attemptId": "238c2d38-5f09-44d9-aaf3-54253a2fc453",
+          "attemptNumber": 1
+        }
+      ],
+      "repository": "souhaiel11/remediation-retry-e2e-fixture",
+      "decision": null,
+      "branchName": null,
+      "commitMessage": null,
+      "prTitle": null,
+      "prBody": null
+    }
+  },
+  {
+    "id": 2093,
+    "status": "success",
+    "startedAt": "2026-10-07 19:11:57.109",
+    "stoppedAt": "2026-10-07 19:14:23.270",
+    "executedNodes": [
+      "Webhook - Security Remediation Request",
+      "Evaluate Security Remediation",
+      "Evaluation HTTP OK?",
+      "Evaluation Not Technical Failure?",
+      "Candidate Ready?",
+      "Record Batch Result (Not Ready)",
+      "Respond - Not Eligible"
+    ],
+    "request": {
+      "projectId": "ebe3bd94-8240-4c30-a2d9-6de2106a28bc",
+      "batchId": "sec-batch-4285b874-1b51-4fe3-8983-09eab7777107",
+      "findingTaskIds": [
+        "9d2ff915-23e1-4f0b-8f4a-561b4d95845f"
+      ],
+      "attempts": [
+        {
+          "findingTaskId": "9d2ff915-23e1-4f0b-8f4a-561b4d95845f",
+          "attemptId": "09d7b431-dca3-4fd3-a45d-bc93afa432f6",
+          "attemptNumber": 2
+        }
+      ]
+    },
+    "evaluation": {
+      "status": "OPERATOR_TEST_STOPPED",
+      "operatorTestBarrier": true,
+      "operatorTestEvaluationPassed": true,
+      "batchId": "sec-batch-4285b874-1b51-4fe3-8983-09eab7777107",
+      "attempts": [
+        {
+          "findingTaskId": "9d2ff915-23e1-4f0b-8f4a-561b4d95845f",
+          "attemptId": "09d7b431-dca3-4fd3-a45d-bc93afa432f6",
+          "attemptNumber": 2
+        }
+      ]
+    }
+  }
+]

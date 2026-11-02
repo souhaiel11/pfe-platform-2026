@@ -1,0 +1,8 @@
+{
+  "path": "/home/souhaiel/pfe-2026/platform/docs/qa/chain4a-r1-scoped-20261007/qualified-backend-image.tar.gz",
+  "sha256": "e687a5855eb79ee257275eeb3b05b073271169d69486917e62c89e54b432561e",
+  "bytes": 115120680,
+  "imageId": "sha256:8ee224f973389451be32820381201e8466c8f710b887aed55f6d3363fb8f1fcd",
+  "sourceCommit": "0957ab63280b32e4180ba47ae72bfb5a802db15a",
+  "archiveConfigIdentityVerified": true
+}

@@ -1,0 +1,148 @@
+[
+  {
+    "dependency": "pkg:maven/org.yaml/snakeyaml@1.29",
+    "currentVersion": "1.29",
+    "cves": [
+      "CVE-2022-1471"
+    ],
+    "directOrTransitive": "DIRECT",
+    "versionOwner": "pom.xml dependency literal 1.29 (line 71); snakeyaml.version property also 1.29 but literal wins",
+    "candidatesConsidered": [
+      "2.4 on Boot 2.7.0: YAML loader incompatible",
+      "2.4 on Boot 2.7.18: qualified"
+    ],
+    "selectedCompatibleCandidate": "2.4 with Boot 2.7.18 and aligned Security family",
+    "buildPass": true,
+    "testPass": true,
+    "startupPass": true,
+    "healthPass": true
+  },
+  {
+    "dependency": "pkg:maven/org.springframework.boot/spring-boot@2.7.0",
+    "currentVersion": "2.7.0",
+    "cves": [
+      "CVE-2023-20873",
+      "CVE-2026-40974"
+    ],
+    "directOrTransitive": "TRANSITIVE",
+    "versionOwner": "Spring Boot parent/BOM 2.7.0",
+    "candidatesConsidered": [
+      "Boot 2.7.18 managed family: runtime compatible but critical findings remain",
+      "Boot 2.7.33 / Framework 5.3.49 / Security 5.7.22: unavailable from configured public repository",
+      "Boot 3.5.16 family: compilation fails without source migration"
+    ],
+    "selectedCompatibleCandidate": null,
+    "buildPass": "NOT_QUALIFIED",
+    "testPass": "NOT_QUALIFIED",
+    "startupPass": "NOT_QUALIFIED",
+    "healthPass": "NOT_QUALIFIED"
+  },
+  {
+    "dependency": "pkg:maven/org.springframework/spring-core@5.3.20",
+    "currentVersion": "5.3.20",
+    "cves": [
+      "CVE-2026-41855"
+    ],
+    "directOrTransitive": "TRANSITIVE",
+    "versionOwner": "Boot BOM spring-framework.version=5.3.20 / imported Spring Framework BOM",
+    "candidatesConsidered": [
+      "Boot 2.7.18 managed family: runtime compatible but critical findings remain",
+      "Boot 2.7.33 / Framework 5.3.49 / Security 5.7.22: unavailable from configured public repository",
+      "Boot 3.5.16 family: compilation fails without source migration"
+    ],
+    "selectedCompatibleCandidate": null,
+    "buildPass": "NOT_QUALIFIED",
+    "testPass": "NOT_QUALIFIED",
+    "startupPass": "NOT_QUALIFIED",
+    "healthPass": "NOT_QUALIFIED"
+  },
+  {
+    "dependency": "pkg:maven/org.springframework.security/spring-security-core@5.6.4",
+    "currentVersion": "5.6.4",
+    "cves": [
+      "CVE-2022-31692",
+      "CVE-2023-34034",
+      "CVE-2026-22732"
+    ],
+    "directOrTransitive": "DIRECT",
+    "versionOwner": "pom.xml direct literal 5.6.4 overrides Boot security.version=5.7.1",
+    "candidatesConsidered": [
+      "Boot 2.7.18 managed family: runtime compatible but critical findings remain",
+      "Boot 2.7.33 / Framework 5.3.49 / Security 5.7.22: unavailable from configured public repository",
+      "Boot 3.5.16 family: compilation fails without source migration"
+    ],
+    "selectedCompatibleCandidate": null,
+    "buildPass": "NOT_QUALIFIED",
+    "testPass": "NOT_QUALIFIED",
+    "startupPass": "NOT_QUALIFIED",
+    "healthPass": "NOT_QUALIFIED"
+  },
+  {
+    "dependency": "pkg:maven/org.springframework.security/spring-security-web@5.7.1",
+    "currentVersion": "5.7.1",
+    "cves": [
+      "CVE-2022-31692",
+      "CVE-2023-34034",
+      "CVE-2026-22732"
+    ],
+    "directOrTransitive": "TRANSITIVE",
+    "versionOwner": "Boot BOM spring-security.version=5.7.1 / imported Spring Security BOM",
+    "candidatesConsidered": [
+      "Boot 2.7.18 managed family: runtime compatible but critical findings remain",
+      "Boot 2.7.33 / Framework 5.3.49 / Security 5.7.22: unavailable from configured public repository",
+      "Boot 3.5.16 family: compilation fails without source migration"
+    ],
+    "selectedCompatibleCandidate": null,
+    "buildPass": "NOT_QUALIFIED",
+    "testPass": "NOT_QUALIFIED",
+    "startupPass": "NOT_QUALIFIED",
+    "healthPass": "NOT_QUALIFIED"
+  },
+  {
+    "dependency": "pkg:maven/org.springframework/spring-web@5.3.20",
+    "currentVersion": "5.3.20",
+    "cves": [
+      "CVE-2016-1000027",
+      "CVE-2026-41855"
+    ],
+    "directOrTransitive": "TRANSITIVE",
+    "versionOwner": "Boot BOM spring-framework.version=5.3.20 / imported Spring Framework BOM",
+    "candidatesConsidered": [
+      "Boot 2.7.18 managed family: runtime compatible but critical findings remain",
+      "Boot 2.7.33 / Framework 5.3.49 / Security 5.7.22: unavailable from configured public repository",
+      "Boot 3.5.16 family: compilation fails without source migration"
+    ],
+    "selectedCompatibleCandidate": null,
+    "buildPass": "NOT_QUALIFIED",
+    "testPass": "NOT_QUALIFIED",
+    "startupPass": "NOT_QUALIFIED",
+    "healthPass": "NOT_QUALIFIED"
+  },
+  {
+    "dependency": "pkg:maven/org.apache.tomcat.embed/tomcat-embed-core@9.0.63",
+    "currentVersion": "9.0.63",
+    "cves": [
+      "CVE-2024-50379",
+      "CVE-2024-52316",
+      "CVE-2024-56337",
+      "CVE-2025-24813",
+      "CVE-2025-31651",
+      "CVE-2026-41293",
+      "CVE-2026-43512",
+      "CVE-2025-55754",
+      "CVE-2025-66614",
+      "CVE-2026-43515",
+      "CVE-2026-55276"
+    ],
+    "directOrTransitive": "TRANSITIVE",
+    "versionOwner": "Boot BOM tomcat.version=9.0.63",
+    "candidatesConsidered": [
+      "9.0.119"
+    ],
+    "selectedCompatibleCandidate": "9.0.119 whole Tomcat family",
+    "buildPass": true,
+    "testPass": true,
+    "startupPass": true,
+    "healthPass": true
+  }
+]

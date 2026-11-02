@@ -1,0 +1,42 @@
+   1 package com.pfe.devsecops.controller;
+   2 
+   3 import com.pfe.devsecops.dto.LoginRequest;
+   4 import com.pfe.devsecops.dto.LoginResponse;
+   5 import com.pfe.devsecops.dto.RegisterRequest;
+   6 import com.pfe.devsecops.model.User;
+   7 import com.pfe.devsecops.service.AuthService;
+   8 import org.springframework.beans.factory.annotation.Autowired;
+   9 import org.springframework.http.ResponseEntity;
+  10 import org.springframework.web.bind.annotation.*;
+  11 
+  12 @RestController
+  13 @RequestMapping("/api/auth")
+  14 public class AuthController {
+  15 
+  16     @Autowired
+  17     private AuthService authService;
+  18 
+  19     // VULNERABILITY : pas de rate limiting → brute force possible (ZAP détecte)
+  20     @PostMapping("/login")
+  21     public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest request) {
+  22         try {
+  23             LoginResponse response = authService.login(request);
+  24             return ResponseEntity.ok(response);
+  25         } catch (Exception e) {
+  26             // Message d'erreur trop verbeux — expose des infos système
+  27             return ResponseEntity.status(401).build();
+  28         }
+  29     }
+  30 
+  31     @PostMapping("/register")
+  32     public ResponseEntity<User> register(@RequestBody RegisterRequest request) {
+  33         User user = authService.register(request);
+  34         user.setPassword(null); // masquer le hash
+  35         return ResponseEntity.ok(user);
+  36     }
+  37 
+  38     @GetMapping("/health")
+  39     public ResponseEntity<String> health() {
+  40         return ResponseEntity.ok("OK");
+  41     }
+  42 }

@@ -1,0 +1,29 @@
+{
+  "SOURCE_COMMIT": "0957ab63280b32e4180ba47ae72bfb5a802db15a",
+  "SOURCE_TREE_SHA": "049f905a9d73e43867457aa217d5dcff9d230d5c",
+  "WORKTREE_CLEAN": true,
+  "EXECUTABLE_RUNTIME_REPRODUCIBLE": true,
+  "ALL_RUNTIME_FILES_REPRODUCIBLE": true,
+  "executableJS": 179,
+  "distFiles": 537,
+  "builds": [
+    {
+      "build": 1,
+      "sourceCommit": "0957ab63280b32e4180ba47ae72bfb5a802db15a",
+      "sourceTree": "049f905a9d73e43867457aa217d5dcff9d230d5c",
+      "imageId": "sha256:8ee224f973389451be32820381201e8466c8f710b887aed55f6d3363fb8f1fcd",
+      "tag": "chain4a-r1-qualified:build1",
+      "ociRevision": "0957ab63280b32e4180ba47ae72bfb5a802db15a",
+      "node": "v20.20.2"
+    },
+    {
+      "build": 2,
+      "sourceCommit": "0957ab63280b32e4180ba47ae72bfb5a802db15a",
+      "sourceTree": "049f905a9d73e43867457aa217d5dcff9d230d5c",
+      "imageId": "sha256:e79258b4f5b702637a7c69a9af6220e7304d4036a92665711de0e999cee2859d",
+      "tag": "chain4a-r1-qualified:build2",
+      "ociRevision": "0957ab63280b32e4180ba47ae72bfb5a802db15a",
+      "node": "v20.20.2"
+    }
+  ]
+}

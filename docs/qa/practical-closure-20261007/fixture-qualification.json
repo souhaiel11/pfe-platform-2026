@@ -1,0 +1,161 @@
+{
+  "repository": "souhaiel11/remediation-retry-e2e-fixture",
+  "commit": "13af977f770f78d47462b5ccbe856de9c0a4f077",
+  "finding": {
+    "id": "CVE-2022-45868",
+    "pkg": "com.h2database:h2",
+    "installedVersion": "2.1.212",
+    "fixedVersion": "2.2.220",
+    "source": "TRIVY",
+    "severity": "HIGH",
+    "title": "The web-based admin console in H2 Database Engine before 2.2.220 can b ...",
+    "primaryUrl": "https://avd.aquasec.com/nvd/cve-2022-45868"
+  },
+  "owaspFinding": {
+    "id": "CVE-2022-45868",
+    "ruleOrCve": "CVE-2022-45868",
+    "cve": "CVE-2022-45868",
+    "stage": "owasp",
+    "source": "OWASP",
+    "severity": "HIGH",
+    "category": "DEPENDENCY",
+    "title": "CVE-2022-45868",
+    "description": "The web-based admin console in H2 Database Engine before 2.2.220 can be started via the CLI with the argument -webAdminPassword, which allows the user to specify the password in cleartext for the web admin console. Consequently, a local user (or an attacker that has obtained local access through some means) would be able to discover the password by listing processes and their arguments. NOTE: the ",
+    "file": "h2-2.1.212.jar",
+    "fileName": "h2-2.1.212.jar",
+    "line": null,
+    "legacyPackage": "h2-2.1.212.jar",
+    "dependency": "h2-2.1.212.jar",
+    "packageType": "maven",
+    "pkg": "com.h2database:h2",
+    "package": "com.h2database:h2",
+    "purl": "pkg:maven/com.h2database/h2@2.1.212",
+    "groupId": "com.h2database",
+    "artifactId": "h2",
+    "installedVersion": "2.1.212",
+    "fixedVersion": null,
+    "recommendation": null,
+    "evidence": "https://sites.google.com/sonatype.com/vulnerabilities/sonatype-2022-6243",
+    "primaryUrl": "https://sites.google.com/sonatype.com/vulnerabilities/sonatype-2022-6243",
+    "cvss": 7.8,
+    "blocking": false,
+    "remediationType": "DEVELOPER_ACTION_REQUIRED"
+  },
+  "facts": {
+    "candidateVersion": "2.2.220",
+    "actualEditTarget": "com.h2database:h2",
+    "existence": "AVAILABLE",
+    "resolvedVersion": "2.2.220",
+    "dependencyResolution": "PASS",
+    "build": "PASS",
+    "tests": "PASS",
+    "securityRescan": "PASS",
+    "targetCveClosed": true,
+    "newHighCriticalCount": 0,
+    "dependencyGraphDelta": [
+      "com.h2database:h2: 2.1.212 -> 2.2.220"
+    ],
+    "versionPolicy": {
+      "state": "SAFE_SAME_MAJOR",
+      "currentVersion": "2.1.212",
+      "candidateVersion": "2.2.220",
+      "reason": "Same major (2) -- eligible per production's existing same-major policy."
+    },
+    "automationEligible": true
+  },
+  "gate": {
+    "status": "VALIDATED",
+    "reason": "ALL_GATES_PASSED"
+  },
+  "decision": {
+    "state": "VALIDATED_RECOMMENDED",
+    "vulnerableDependency": "com.h2database:h2",
+    "testedCandidates": [
+      {
+        "candidateVersion": "2.2.220",
+        "actualEditTarget": "com.h2database:h2",
+        "existence": "AVAILABLE",
+        "resolvedVersion": "2.2.220",
+        "dependencyResolution": "PASS",
+        "build": "PASS",
+        "tests": "PASS",
+        "securityRescan": "PASS",
+        "targetCveClosed": true,
+        "newHighCriticalCount": 0,
+        "dependencyGraphDelta": [
+          "com.h2database:h2: 2.1.212 -> 2.2.220"
+        ],
+        "versionPolicy": {
+          "state": "SAFE_SAME_MAJOR",
+          "currentVersion": "2.1.212",
+          "candidateVersion": "2.2.220",
+          "reason": "Same major (2) -- eligible per production's existing same-major policy."
+        },
+        "automationEligible": true,
+        "status": "VALIDATED",
+        "reason": "ALL_GATES_PASSED"
+      }
+    ],
+    "recommendedCandidate": {
+      "candidateVersion": "2.2.220",
+      "actualEditTarget": "com.h2database:h2",
+      "existence": "AVAILABLE",
+      "resolvedVersion": "2.2.220",
+      "dependencyResolution": "PASS",
+      "build": "PASS",
+      "tests": "PASS",
+      "securityRescan": "PASS",
+      "targetCveClosed": true,
+      "newHighCriticalCount": 0,
+      "dependencyGraphDelta": [
+        "com.h2database:h2: 2.1.212 -> 2.2.220"
+      ],
+      "versionPolicy": {
+        "state": "SAFE_SAME_MAJOR",
+        "currentVersion": "2.1.212",
+        "candidateVersion": "2.2.220",
+        "reason": "Same major (2) -- eligible per production's existing same-major policy."
+      },
+      "automationEligible": true,
+      "status": "VALIDATED",
+      "reason": "ALL_GATES_PASSED"
+    },
+    "recommendationReason": "2.2.220 passed every required gate (dependency resolution, build, tests, target CVE closure, no new HIGH/CRITICAL) and is the smallest safe (same-major) change from 2.1.212.",
+    "validationEvidence": []
+  },
+  "eligibility": {
+    "decision": "ALLOW",
+    "reason": "ALL_GATES_PASSED",
+    "evidence": {
+      "schemaVersion": 2,
+      "evidenceId": "f3f39a386e60d971fcfda22ce43d498605494dd649631f3b3d0c30abdf3f527c",
+      "repository": "souhaiel11/remediation-retry-e2e-fixture",
+      "validatedCommitSha": "13af977f770f78d47462b5ccbe856de9c0a4f077",
+      "findingSource": "OWASP",
+      "cve": "CVE-2022-45868",
+      "component": "com.h2database:h2",
+      "installedVersion": "2.1.212",
+      "validationRunId": "practical-closure-20261007",
+      "validatedAt": "2026-10-07T18:59:10.865Z",
+      "state": "VALIDATED_RECOMMENDED",
+      "recommendedVersion": "2.2.220",
+      "actualEditTarget": "com.h2database:h2",
+      "editType": "DEPENDENCY_VERSION",
+      "fromVersion": "2.1.212",
+      "toVersion": "2.2.220",
+      "expectedResolvedDependency": "2.2.220",
+      "ownerType": null,
+      "ownerCoordinate": null,
+      "evidenceSummary": "Exact corrected source, real clean-worktree batch verifier CANDIDATE_READY, real application tests, native baseline Trivy/OWASP, target absent in candidate Trivy and OWASP",
+      "recommendationReason": "ALL_GATES_PASSED",
+      "sandboxValidated": true,
+      "targetCveClosed": true,
+      "newHighCriticalCount": 0,
+      "requiresDeveloperReview": false
+    }
+  },
+  "baselineReportDigest": "91ac0b31184c0b68f72f83b152ed68c50bcec9ccbfca7535768bd2a04c0b5724",
+  "candidateReportDigest": "b7f46272e03707c425c599aea891b1ac1eec66b936c6a097ff476aee3b7234a3",
+  "owaspCandidateReportDigest": "0361e4da78719d53e51fcc5b3f3d0b981bfb060148d9c151d23a70e909dd7c4d",
+  "evidenceId": "f3f39a386e60d971fcfda22ce43d498605494dd649631f3b3d0c30abdf3f527c"
+}

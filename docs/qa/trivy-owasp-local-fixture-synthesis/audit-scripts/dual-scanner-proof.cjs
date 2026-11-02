@@ -1,0 +1,15 @@
+const root='/home/souhaiel/pfe-2026/platform';require(root+'/backend/node_modules/ts-node').register({transpileOnly:true,project:root+'/backend/tsconfig.json'});
+const fs=require('fs'),assert=require('assert/strict');
+const {normalizeOwaspFinding}=require(root+'/backend/src/common/owasp-finding-normalizer');
+const {findingFingerprint}=require(root+'/backend/src/manual-remediation/finding-fingerprint');
+const {resolveMavenProvenance}=require(root+'/backend/src/security-remediation/maven-provenance-resolver');
+const {buildTrivyFixedVersionIndex,qualifyOwaspFixedVersionCorrelation}=require(root+'/backend/src/manual-remediation/owasp-trivy-fixed-version-correlation');
+const base='/tmp/remediation-fixture-candidate-10';const trivy=JSON.parse(fs.readFileSync(base+'/trivy.json'));const owasp=JSON.parse(fs.readFileSync(base+'/target/dependency-check-report.json'));assert.equal(owasp.scanInfo.engineVersion,'12.2.2');assert.ok(!owasp.scanInfo.analysisExceptions?.length);
+const native=(trivy.Results||[]).flatMap(r=>r.Vulnerabilities||[]);assert.equal(native.length,1);
+const tf=native.map(v=>({id:v.VulnerabilityID,pkg:v.PkgName,installedVersion:v.InstalledVersion,fixedVersion:v.FixedVersion,source:'TRIVY'}));
+const of=owasp.dependencies.flatMap(d=>(d.vulnerabilities||[]).map(v=>normalizeOwaspFinding(d,v)));assert.equal(of.length,1);
+const proof=JSON.parse(fs.readFileSync(base+'/qualification.json'));
+const rows=[...tf,...of].map(f=>{const p=resolveMavenProvenance({package:f.pkg,installedVersion:f.installedVersion,pomXmlText:fs.readFileSync(base+'/pom.xml','utf8'),dependencyTreeText:fs.readFileSync(base+'/dependency-tree.txt','utf8'),controllingFilePath:'pom.xml',groundedSha:proof.localCommit});return {...f,fingerprint:findingFingerprint(f.source,f),provenance:p,targetFile:p.controllingFile,targetCoordinate:p.package};});
+assert.equal(rows[0].targetFile,rows[1].targetFile);assert.equal(rows[0].targetCoordinate,rows[1].targetCoordinate);assert.notEqual(rows[0].fingerprint,rows[1].fingerprint);
+const correlation=qualifyOwaspFixedVersionCorrelation({cve:of[0].id,pkg:of[0].pkg,installedVersion:of[0].installedVersion},buildTrivyFixedVersionIndex(tf));
+console.log(JSON.stringify({trivyCount:1,owaspCount:1,totalActiveFindings:2,targetFile:'pom.xml',targetCoordinate:'com.h2database:h2',targetActiveFindingCount:2,targetCollisionCount:1,uniqueMutationTarget:false,normalIngestionKeepsScannerIdentitiesDistinct:true,rows,owaspFixedVersionCorrelation:correlation,readOnly:true},null,2));

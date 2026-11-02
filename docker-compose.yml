@@ -1,10 +1,65 @@
+# Assemble les services, réseaux et volumes de la plateforme.
 networks:
   pfe-network:
     external: true
     name: pfe-network
+  # R22-E2C2 — isolates the candidate-verifier worker from Postgres/n8n/
+  # Jenkins/SonarQube (none of which it has any legitimate reason to reach,
+  # per R22-E2C1 Phase 4/5/10's audit): backend joins this network in
+  # ADDITION to pfe-network; candidate-verifier joins ONLY this network.
+  # Deliberately not `internal: true` -- the worker still needs outbound
+  # internet for Maven dependency downloads (R22-E2C1 Phase 10); isolation
+  # here comes from network SEPARATION (no path to pfe-network's members),
+  # not from blocking all egress.
+  candidate-verification-net:
+    driver: bridge
+  # V1.7 predeploy phase — isolates the dedicated builder/scanner from
+  # EVERYTHING except candidate-verifier itself: not pfe-network, not even
+  # candidate-verification-net. candidate-verifier joins this network IN
+  # ADDITION to its existing ones; nothing else ever does. Network
+  # isolation is deliberately the ONLY trust boundary between the two (no
+  # second authentication system), matching the same pattern
+  # candidate-verification-net already uses one hop up.
+  builder-scanner-net:
+    driver: bridge
 
 volumes:
+  scanner_reports:
+    external: true
+    # 2026-10-27 — volume réellement alimenté par Jenkins (/shared/reports) depuis la reconstruction
+    # de secours ; l'ancien `pfe-2026_shared_reports` n'existe plus.
+    name: vermeg_rescue_shared_reports
   postgres_data:
+  # R22-E2C2 Phase 9 — worker-owned repository cache (clone-once/fetch-
+  # thereafter git object database + ephemeral per-candidate worktrees).
+  # Mounted only into candidate-verifier; the backend has no repository
+  # filesystem access at all after this migration.
+  candidate_repo_cache:
+  # V1.7 predeploy phase — the candidate workspace candidate-verifier
+  # materializes/patches must be visible to builder-scanner too (it builds
+  # exactly that workspace with Podman); shared at the SAME path in both
+  # containers rather than transferring file content over HTTP.
+  candidate_workspace_shared:
+  # V1.7 Phase B — the persistent Trivy vulnerability + Java DB cache.
+  # Populated ONLY by the explicit, out-of-band bootstrap command below
+  # (never by an application evaluation call, never baked into the image).
+  # Mounted only into builder-scanner.
+  trivy_scanner_cache:
+  # V1.7 runtime stabilization phase, Phase B — persistent Maven local-repo
+  # cache, bind-mounted straight into the nested `podman build`'s `mvn`
+  # steps (never by rewriting a target repository's own Dockerfile).
+  # Populated organically by real evaluations; contains only downloaded
+  # package artifacts, never a secret or a candidate decision input.
+  # Mounted only into builder-scanner.
+  builder_maven_cache:
+  # V1.7 runtime stabilization phase, Phase C — persistent rootless Podman
+  # graph root (base image / layer cache), so redeploying builder-scanner
+  # does not force a full re-pull of unchanged base images. Isolated to
+  # builder-scanner alone; never the host Docker daemon's own storage,
+  # never docker.sock. Mounted only into builder-scanner.
+  builder_podman_storage:
+  owasp_data:
+  candidate_maven_cache:
 
 services:
   postgres:
@@ -13,7 +68,7 @@ services:
     environment:
       POSTGRES_DB: devsecops
       POSTGRES_USER: devsecops
-      POSTGRES_PASSWORD: devsecops123
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
@@ -28,6 +83,8 @@ services:
 
   backend:
     build: ./backend
+    env_file:
+      - ./backend/.env
     container_name: pfe-backend
     hostname: backend
     ports:
@@ -36,26 +93,272 @@ services:
       DB_HOST: postgres
       DB_PORT: 5432
       DB_USER: devsecops
-      DB_PASS: devsecops123
+      DB_PASS: ${POSTGRES_PASSWORD}
       DB_NAME: devsecops
-      JWT_SECRET: devsecops-super-secret-2026
+      JWT_SECRET: ${JWT_SECRET}
       N8N_URL: http://n8n:5678
+      N8N_API_URL: http://n8n:5678
+      AZURE_DEPLOY_AGENT_URL: http://172.19.0.1:7799
+      AZURE_DEFAULT_RESOURCE_GROUP: ${AZURE_DEFAULT_RESOURCE_GROUP:-}
+      AZURE_DEFAULT_REGISTRY: ${AZURE_DEFAULT_REGISTRY:-}
+      AZURE_DEFAULT_REGION: ${AZURE_DEFAULT_REGION:-}
+      AZURE_DEFAULT_CPU: ${AZURE_DEFAULT_CPU:-}
+      AZURE_DEFAULT_MEMORY_GB: ${AZURE_DEFAULT_MEMORY_GB:-}
+      AZURE_DEFAULT_PORTS: ${AZURE_DEFAULT_PORTS:-}
+      # R22-E2C2 — internal DNS name of the worker; not a secret, not a
+      # credential, just an address. Backend never receives a worker
+      # credential at all (see candidate-verification-net's own comment).
+      CANDIDATE_VERIFIER_URL: http://candidate-verifier:4100/verify
+    volumes:
+      # Rapports Trivy / OWASP / ZAP écrits par Jenkins, lus par l'onglet Sécurité et les pages
+      # « Rapport Trivy / OWASP / ZAP » (racine par défaut de LocalScannerReportStore), en lecture seule.
+      - scanner_reports:/run/local-scanner-reports:ro
     networks:
       pfe-network:
         aliases:
           - backend
+      candidate-verification-net:
     depends_on:
       postgres:
         condition: service_healthy
     restart: unless-stopped
 
+  # R22-E2C2 — execution-plane worker (R22-E2C1's audited architecture).
+  # Receives a CandidateManifest from the backend, materializes it onto an
+  # exact-SHA git worktree, compiles/tests it with Maven, and returns a
+  # CandidateVerification result. Owns no DB_PASS, no JWT_SECRET, no
+  # N8N_INTERNAL_SECRET, no GitHub/Jenkins/Sonar credential of any kind
+  # (verified by a structural test, not just this comment -- see
+  # candidate-verifier/isolation.spec.ts). V1.7 final predeploy phase: it
+  # now owns exactly ONE credential, BUILDER_INTERNAL_SECRET, used only to
+  # authenticate its own outbound calls to builder-scanner (see that
+  # service's own comment below) -- never forwarded to Maven, never logged,
+  # never a GitHub/Jenkins/Sonar/DB credential.
+  #
+  # CAP_SYS_ADMIN MUST NEVER be added to this service. The V1.7 runtime
+  # audit's whole point in splitting builder-scanner out was to keep this
+  # write-authorizing decision-logic process at zero elevated capability --
+  # see builder-scanner's own comment below for where that capability
+  # belongs instead.
+  candidate-verifier:
+    # Build context is the repo root (not ./candidate-verifier): the image
+    # needs the two shared-contract files plus scope-lock.service.ts from
+    # backend/src/ (see Dockerfile), which Docker cannot COPY from outside
+    # its build context.
+    build:
+      context: .
+      dockerfile: candidate-verifier/Dockerfile
+    container_name: pfe-candidate-verifier
+    hostname: candidate-verifier
+    # No `ports:` — never published to the host, reachable only from
+    # `backend` over candidate-verification-net.
+    environment:
+      PORT: 4100
+      WORKSPACE_ROOT: /var/pfe-remediation-workspaces
+      REPO_CACHE_ROOT: /var/pfe-remediation-repos
+      # V1.7 predeploy phase — where the dedicated builder/scanner is
+      # reached over the network (builder-scanner-net, below). Not a
+      # secret, not a credential, just an address — same convention as
+      # CANDIDATE_VERIFIER_URL above.
+      BUILDER_SCANNER_URL: http://builder-scanner:4200/internal/build-scan
+      # V1.7 final predeploy phase — Phase A: the shared secret
+      # candidate-verifier sends as the X-Internal-Secret header on every
+      # call to builder-scanner's /internal/build-scan. Its OWN dedicated
+      # value, distinct from JWT_SECRET/N8N_INTERNAL_SECRET, so a
+      # compromise of one trust boundary cannot unlock another. Sourced
+      # from the same untracked, gitignored root .env this file already
+      # reads JWT_SECRET/POSTGRES_PASSWORD from.
+      BUILDER_INTERNAL_SECRET: ${BUILDER_INTERNAL_SECRET}
+      # 2026-10-25 — base NVD de l'OWASP Dependency-Check 12.2.2 (odc.mv.db)
+      # utilisée par owasp-rescan.ts pour prouver qu'une CVE de source OWASP a
+      # disparu du candidat. Sans elle, toute remédiation OWASP échoue en
+      # RUNTIME_IO_FAILED:OWASP_DATABASE. Le scan tourne en autoUpdate=false :
+      # le volume est alimenté depuis /var/jenkins_home/dependency-check-data-v12
+      # (même moteur 12.2.2, mis à jour par chaque build Jenkins).
+      OWASP_DATA_DIRECTORY: /var/pfe-owasp-data
+    volumes:
+      - candidate_repo_cache:/var/pfe-remediation-repos
+      - owasp_data:/var/pfe-owasp-data
+      # Cache Maven persistant : sans lui, chaque recréation du conteneur
+      # retélécharge toutes les dépendances et le plugin OWASP, et un simple
+      # « Connection reset » réseau fait échouer la remédiation (cf. WF6 #2269).
+      - candidate_maven_cache:/home/node/.m2
+      # V1.7 predeploy phase — shared with builder-scanner at the SAME
+      # path (see that service's own volumes below): candidate-verifier
+      # materializes/patches the candidate here; builder-scanner builds
+      # exactly that workspace with Podman.
+      - candidate_workspace_shared:/var/pfe-remediation-workspaces
+    networks:
+      candidate-verification-net:
+        aliases:
+          - candidate-verifier
+      builder-scanner-net:
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2g
+    restart: unless-stopped
+
+  # V1.7 predeploy phase — the dedicated builder/scanner (V1.7 runtime
+  # audit's own recommendation: isolate the untrusted-repository-controlled
+  # build/scan step from candidate-verifier's write-authorizing decision
+  # logic). Receives ONLY a workspace path + a time budget from
+  # candidate-verifier over builder-scanner-net; builds it with rootless
+  # Podman (--isolation=chroot) and scans it with Trivy; returns a
+  # structured result. Makes no remediation decision, chooses no
+  # dependency version, authorizes no GitHub write. Owns no DB_PASS, no
+  # JWT_SECRET, no N8N_INTERNAL_SECRET, no GitHub/Jenkins/Sonar credential
+  # of any kind — this service definition grants it none. It owns exactly
+  # ONE credential, BUILDER_INTERNAL_SECRET (V1.7 final predeploy phase,
+  # Phase A), used only to authenticate its one caller on
+  # /internal/build-scan; never forwarded into the podman/trivy subprocess
+  # environment (security-artifact-validator.ts's own explicit allowlist
+  # excludes it), never logged.
+  #
+  # CAP_SYS_ADMIN — PRODUCTION PLACEMENT DECISION MADE (V1.7 final
+  # predeploy phase, Phase B). The V1.7 runtime audit
+  # (n8n-workflows/WF6-V1_7-RUNTIME-INTEGRATION-AUDIT.md) proved rootless
+  # Podman nested in a container on this host's Docker needs exactly this
+  # one capability, and real end-to-end runs (candidate-verifier ->
+  # builder-scanner -> rootless Podman --isolation=chroot -> Trivy) only
+  # ever succeeded with it granted. It is added HERE and ONLY here — never
+  # to candidate-verifier, which must stay at zero elevated capability —
+  # with every other control unchanged: PRIVILEGED stays unset (false),
+  # no docker.sock is mounted anywhere in this file, no `security_opt` is
+  # set (Docker's default seccomp profile applies unmodified), no
+  # `pid: host` / `network_mode: host` is set, no `ports:` are published
+  # for this service, and it owns none of DB_PASS/JWT_SECRET/
+  # N8N_INTERNAL_SECRET/a GitHub/Jenkins/Sonar credential — only the one
+  # BUILDER_INTERNAL_SECRET above. This is the ONLY capability added; no
+  # other `cap_add` entry belongs here.
+  builder-scanner:
+    build:
+      context: .
+      dockerfile: builder-scanner/Dockerfile
+    container_name: pfe-builder-scanner
+    hostname: builder-scanner
+    # No `ports:` — never published to the host, reachable only from
+    # candidate-verifier over builder-scanner-net.
+    #
+    # V1.7 final predeploy phase, Phase F/G real finding — this image's own
+    # PID 1 is `node`, which (unlike a real init) never reaps a process it
+    # did not itself spawn. When a SIGKILLed `podman build` leaves a
+    # `--isolation=chroot` RUN-step process (e.g. a nested `mvn`) orphaned
+    # -- reparented here to PID 1 -- that process, once it eventually exits
+    # on its own, becomes a permanent, never-reaped zombie without this.
+    # `init: true` (Docker's built-in tini) is the standard fix. It does
+    # NOT replace the application-level sweep in
+    # security-artifact-validator.ts (which proactively SIGKILLs a
+    # still-LIVE orphan the instant its build is known to have been
+    # killed) -- tini only reaps deaths, it does not hunt down runaway
+    # live processes.
+    init: true
+    cap_add:
+      - SYS_ADMIN
+    environment:
+      PORT: 4200
+      WORKSPACE_ROOT: /var/pfe-remediation-workspaces
+      REPO_CACHE_ROOT: /var/pfe-remediation-repos
+      SECURITY_TRIVY_CACHE_DIR: /var/pfe-trivy-cache
+      # V1.7 runtime stabilization phase, Phase B/C — see security-
+      # artifact-validator.ts (MAVEN_CACHE_DIR, bind-mounted into the
+      # nested build's own `mvn` steps) and this Dockerfile's storage.conf
+      # (graphroot, read at Podman-startup time, not from this env var --
+      # kept here only so the RUN mkdir/chown step below has it).
+      MAVEN_CACHE_DIR: /var/pfe-maven-cache
+      PODMAN_GRAPH_ROOT_DIR: /var/pfe-podman-storage
+      # V1.7 final predeploy phase — Phase A: the same shared secret
+      # candidate-verifier sends (see that service's own comment above);
+      # this side verifies it, fail-closed if unset (see internal-auth.ts).
+      BUILDER_INTERNAL_SECRET: ${BUILDER_INTERNAL_SECRET}
+    volumes:
+      - candidate_workspace_shared:/var/pfe-remediation-workspaces
+      - trivy_scanner_cache:/var/pfe-trivy-cache
+      - builder_maven_cache:/var/pfe-maven-cache
+      - builder_podman_storage:/var/pfe-podman-storage
+      # V1.7 predeploy phase — real end-to-end proof discovered this is
+      # required, not optional: a `git worktree add` workspace's own `.git`
+      # is a FILE pointing back at its origin repo's `.git/worktrees/<id>`
+      # metadata directory, not a self-contained `.git` directory. Without
+      # this same repo cache mounted at the SAME path candidate-verifier
+      # uses, every git command here (trackedSourceDigest included) fails
+      # with "fatal: not a git repository" even though the workspace
+      # directory itself is present and correct. Read-only: this process
+      # only ever needs to read tracked file content, never mutate the
+      # shared git object database.
+      - candidate_repo_cache:/var/pfe-remediation-repos:ro
+    networks:
+      builder-scanner-net:
+        aliases:
+          - builder-scanner
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2g
+    restart: unless-stopped
+
   frontend:
     image: nginx:alpine
     container_name: pfe-frontend
+    restart: unless-stopped
     ports:
       - "4200:80"
     volumes:
-      - ./frontend/dist/devsecops-frontend/browser:/usr/share/nginx/html
+      # 2026-10-12 — sert une RELEASE GELÉE, en lecture seule.
+      # Avant : `./frontend/dist/devsecops-frontend/browser` monté en
+      # lecture-écriture, c'est-à-dire le dossier de sortie de l'arbre de
+      # travail. Un simple `ng build` lancé pour vérifier quelque chose
+      # écrasait donc l'interface en production, sans avertissement. Le `:ro`
+      # empêche en plus toute écriture depuis le conteneur.
+      # Pour publier une nouvelle version : construire, copier le `browser/`
+      # obtenu dans un nouveau dossier de ../frontend-releases/, puis changer
+      # cette ligne. Le ROLLBACK.md de chaque release décrit le retour arrière.
+      # 2026-10-12 — release `tests-tab-20261012`. Remplace `errmap-20261012`,
+      # dont elle conserve l'intégralité du correctif (garde anti-régression
+      # vérifiée dans le bundle avant publication, voir son ROLLBACK.md).
+      # Publier / revenir en arrière : TOUJOURS avec `--no-deps`, sinon compose
+      # démarre aussi le service `backend` (conteneur r98 arrêté) qui réclame
+      # le même port hôte 3001 que `pfe-backend-r99`.
+      # 2026-10-12 — release `build-tab-20261012`. Remplace `tests-tab-20261012`,
+      # dont elle conserve l'intégralité du correctif (garde anti-régression
+      # vérifiée dans le bundle avant publication, voir son ROLLBACK.md).
+      # Elle ajoute l'onglet « Build » du projet, qui exige les deux routes
+      # GET /api/projects/:id/builds/:number[/console] publiées le même jour
+      # dans l'image backend local/pfe-build-view:20261012.
+      # 2026-10-12 — release `scanner-truth-20261012`. Remplace `build-tab-20261012`,
+      # dont elle conserve l'intégralité du correctif (garde anti-régression
+      # vérifiée dans le bundle avant publication, voir son ROLLBACK.md).
+      # Elle affiche la fraîcheur de la base de vulnérabilités OWASP, les
+      # constats écartés par le filtre de sévérité et la cible réelle de ZAP —
+      # trois champs produits par le correctif R101 du nœud WF1
+      # « Merge All Fetched Data », appliqué le même jour. Sans ces champs
+      # (rapports antérieurs), aucune mention ne s'affiche.
+      # 2026-10-13 — release `dast-coverage-20261013`. Remplace
+      # `scanner-truth-20261012`, dont elle conserve l'intégralité du correctif.
+      # Elle affiche la couverture du scan DAST (nombre d'URL explorées) et, quand
+      # le scan n'a trouvé aucune alerte, rappelle que cela ne prouve pas
+      # l'absence de vulnérabilité. Mesure produite par la bibliothèque partagée
+      # 778f882 et transportée par le correctif WF1 R102.
+      # 2026-10-20 — release `test-connexion-formulaire-20261020`. Remplace
+      # `resources-footer-final-20261019`, dont elle conserve tout le contenu.
+      # Dépend de la route POST /api/config-check/project côté backend.
+      # 2026-10-22 — release `wf4-apply-poll-20261022`. Reprend tout le contenu
+      # de `dockerfile-selection-20261022` et porte un seul correctif : le
+      # plafond de polling de l'apply WF4 passe de 60 s à 13 min, pour que le
+      # dashboard affiche enfin le lien de la PR produite (callback n8n plus lent
+      # que l'ancienne horloge navigateur). Voir le ROLLBACK.md de la release.
+      # 2026-10-22 — release `depfix-display-20261022` : includeV18=false, pour que
+      # la couche V1.8 (preuves d'un autre projet) ne force plus tous les findings en
+      # « manuel ». Reprend tout wf4-apply-poll-20261022. Voir son ROLLBACK.md.
+      # 2026-10-25 — release `merge-confirm-20261025` : bouton « Merge effectué » (libère le fichier traité
+      # après vérification GitHub du merge, sans build). Reprend wf6-evidence-slots-20261024. Voir son ROLLBACK.md.
+      # 2026-10-27 — release `sonar-file-lock-20261027-r2` (verrou de fichier Sonar + message clair
+      # du refus WF6 en attente de merge, voir son ROLLBACK.md).
+      # 2026-10-27 — release `sonar-same-incident-20261027` (refus « merge requis » puis nouveau cycle sur le
+      # même incident, voir son ROLLBACK.md).
+      - ./frontend/releases/security-score-label-r2-20261030/browser:/usr/share/nginx/html:ro
       - ./docker/nginx.conf:/etc/nginx/conf.d/default.conf:ro
     networks:
       - pfe-network

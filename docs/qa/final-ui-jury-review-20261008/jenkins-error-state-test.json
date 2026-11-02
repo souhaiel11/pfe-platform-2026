@@ -1,0 +1,6 @@
+{
+  "test": "Explicitly injected GET Jenkins analysis history 503; no live failure inferred",
+  "errorMessageVisible": true,
+  "falseEmptyMessageVisible": false,
+  "pass": true
+}

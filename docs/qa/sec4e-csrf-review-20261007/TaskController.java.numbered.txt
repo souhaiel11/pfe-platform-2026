@@ -1,0 +1,67 @@
+   1 package com.pfe.devsecops.controller;
+   2 
+   3 import com.pfe.devsecops.dto.TaskDTO;
+   4 import com.pfe.devsecops.model.Task;
+   5 import com.pfe.devsecops.service.TaskService;
+   6 import org.springframework.beans.factory.annotation.Autowired;
+   7 import org.springframework.http.ResponseEntity;
+   8 import org.springframework.web.bind.annotation.*;
+   9 
+  10 import java.util.List;
+  11 
+  12 @RestController
+  13 @RequestMapping("/api/tasks")
+  14 public class TaskController {
+  15 
+  16     @Autowired
+  17     private TaskService taskService;
+  18 
+  19     @GetMapping
+  20     public ResponseEntity<List<Task>> getAllTasks() {
+  21         return ResponseEntity.ok(taskService.getAllTasks());
+  22     }
+  23 
+  24     // VULNERABILITY Z4 — IDOR : pas de vérification ownership
+  25     // N'importe quel user authentifié peut voir la tâche de n'importe qui
+  26     // en changeant l'id dans l'URL
+  27     @GetMapping("/{id}")
+  28     public ResponseEntity<Task> getTaskById(@PathVariable Long id) {
+  29         return taskService.getTaskById(id)
+  30                 .map(ResponseEntity::ok)
+  31                 .orElse(ResponseEntity.notFound().build());
+  32     }
+  33 
+  34     @PostMapping
+  35     public ResponseEntity<TaskDTO> createTask(@RequestBody TaskDTO task) {
+  36         return ResponseEntity.ok(taskService.createTask(task));
+  37     }
+  38 
+  39     @PutMapping("/{id}")
+  40     public ResponseEntity<TaskDTO> updateTask(@PathVariable Long id, @RequestBody TaskDTO task) {
+  41         return ResponseEntity.ok(taskService.updateTask(id, task));
+  42     }
+  43 
+  44     @DeleteMapping("/{id}")
+  45     public ResponseEntity<Void> deleteTask(@PathVariable Long id) {
+  46         taskService.deleteTask(id);
+  47         return ResponseEntity.noContent().build();
+  48     }
+  49 
+  50     // VULNERABILITY S1 — endpoint qui expose la SQL injection
+  51     @GetMapping("/search")
+  52     public ResponseEntity<List<Task>> searchTasks(@RequestParam String title) {
+  53         // title est passé directement sans sanitization → SQL injection
+  54         return ResponseEntity.ok(taskService.searchTasksByTitle(title));
+  55     }
+  56 
+  57     @PostMapping("/{id}/process")
+  58     public ResponseEntity<String> processTask(@PathVariable Long id,
+  59                                                @RequestParam String action,
+  60                                                @RequestParam(defaultValue = "USER") String role,
+  61                                                @RequestParam(defaultValue = "false") boolean urgent,
+  62                                                @RequestParam(defaultValue = "false") boolean bulk) {
+  63         Task task = taskService.getTaskById(id)
+  64                 .orElseThrow(() -> new RuntimeException("Task not found"));
+  65         return ResponseEntity.ok(taskService.processTaskWorkflow(task, action, role, urgent, bulk));
+  66     }
+  67 }

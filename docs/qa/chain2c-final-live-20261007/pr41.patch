@@ -1,0 +1,23 @@
+From cb1432c97f601ef1ffbf436a3f3f9215bdaa03f9 Mon Sep 17 00:00:00 2001
+From: souhaiel amri <131708236+souhaiel11@users.noreply.github.com>
+Date: Wed, 30 Sep 2026 17:00:53 +0100
+Subject: [PATCH] fix(security): remediate CVE-2024-22257 in
+ spring-security-core (5.6.4 -> 5.7.12)
+
+---
+ pom.xml | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/pom.xml b/pom.xml
+index 9d657db..76fffc9 100644
+--- a/pom.xml
++++ b/pom.xml
+@@ -37,7 +37,7 @@
+         <dependency>
+             <groupId>org.springframework.security</groupId>
+             <artifactId>spring-security-core</artifactId>
+-            <version>5.6.4</version>
++            <version>5.7.12</version>
+         </dependency>
+         <dependency>
+             <groupId>org.springframework.boot</groupId>

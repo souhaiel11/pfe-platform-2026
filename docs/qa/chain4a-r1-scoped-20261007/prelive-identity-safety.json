@@ -1,0 +1,19 @@
+{
+  "at": "2026-10-07T12:58:20.732628+00:00",
+  "sourceCommit": "07c7421122fae809920742893e2e1d345d87aa3a",
+  "image": "sha256:1021380f76c1d63e6a4950b257ea8c52a0211559053702a3a8d2a42d4f3b621b",
+  "executableHashesMatched": 11446,
+  "dispatch": false,
+  "harness": false,
+  "dbSynchronize": "false",
+  "wf6": {
+    "id": "RdYyfjVpOm2LxS95",
+    "versionId": "0470ab42-713a-4097-a9a7-72c8f00bacde",
+    "active": 1,
+    "hash": "0f3eaba95b0b2520a76638cb40b6823c238a9c976238c98f82cbb39711b8af1f"
+  },
+  "workflowHashesUnchanged": true,
+  "activeWorkflowExecutions": 0,
+  "legacyBridgeCompiled": true,
+  "scopedTestDispatchAvailable": false
+}

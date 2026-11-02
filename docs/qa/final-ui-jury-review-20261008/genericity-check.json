@@ -1,0 +1,13 @@
+{
+  "fixtureRuntimeImports": [],
+  "specificFixtureRepository": [],
+  "specificCVE": [],
+  "projectIdBranches": [],
+  "reviewedRuntimeFiles": 69,
+  "patternClassifications": {
+    "SUSPICIOUS": 32,
+    "VALID_UI_LABEL": 16,
+    "VALID_TEST_FIXTURE": 482,
+    "VALID_DOCUMENTATION": 2
+  }
+}

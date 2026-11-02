@@ -1,0 +1,72 @@
+[
+  {
+    "table": "bugs",
+    "rows": 0,
+    "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+  },
+  {
+    "table": "deployment_artifacts",
+    "rows": 2,
+    "sha256": "58382188d18033bc50ab7ee261339e7f78d867fa4ccf921589c1310a0dd2a125"
+  },
+  {
+    "table": "deployment_attempts",
+    "rows": 0,
+    "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+  },
+  {
+    "table": "deployment_authorizations",
+    "rows": 0,
+    "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+  },
+  {
+    "table": "dockerfile_analyses",
+    "rows": 25,
+    "sha256": "e8cb83ab1086e059f9abe47716ef5c58ba691e274293e42ee709d35aaea2732c"
+  },
+  {
+    "table": "incidents",
+    "rows": 247,
+    "sha256": "455beac74a821476a16618c4646ae64107368f958928bb2942367879ebf50a6e"
+  },
+  {
+    "table": "integrations",
+    "rows": 2,
+    "sha256": "7a39419fa48423ca0e77600d1e4cc6a6aeea4ad8f28bac508077d8d51bfd595e"
+  },
+  {
+    "table": "jenkins_analyses",
+    "rows": 64,
+    "sha256": "0779dfe9e66987dbb1dc61d91263c783176def9bca6087796279755ad472863c"
+  },
+  {
+    "table": "jenkins_applies",
+    "rows": 21,
+    "sha256": "8edd8d679412a3c0b8ada10083ebcedf0ccf57f7c3b13f42e976078554d00e5b"
+  },
+  {
+    "table": "manual_remediation_tasks",
+    "rows": 775,
+    "sha256": "9abace2c9f4b1d4c8a4c18cc2df0ccd4a4f26fd5653823fe21939aa3baf0672a"
+  },
+  {
+    "table": "projects",
+    "rows": 4,
+    "sha256": "61eb1aeda369e1b986d08c3bb54da68a927f458becf134d0b3ce1f0008e6d065"
+  },
+  {
+    "table": "reports",
+    "rows": 63,
+    "sha256": "7f59ebfbf54060e5e40fa8e4b90797437e72cec3b00676acf57e16129fc62cec"
+  },
+  {
+    "table": "routed_builds",
+    "rows": 3,
+    "sha256": "dd884b38b856cd263242fcd38cff56272b1cddf1aefd25cff86631723bd62884"
+  },
+  {
+    "table": "users",
+    "rows": 5,
+    "sha256": "a74058ffc12a03d3b8304efa764750420a9f2fb3556af6a5c56139e834a20476"
+  }
+]

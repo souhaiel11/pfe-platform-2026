@@ -1,0 +1,42 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "declaration": false,
+    "removeComments": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "allowSyntheticDefaultImports": true,
+    "target": "ES2021",
+    "sourceMap": true,
+    "outDir": "./dist",
+    "rootDir": "../",
+    "baseUrl": "./",
+    "incremental": true,
+    "skipLibCheck": true,
+    "strictNullChecks": false,
+    "noImplicitAny": false
+  },
+  "include": [
+    "src/**/*.ts",
+    "../backend/src/candidate-verification/candidate-verification.types.ts",
+    "../backend/src/candidate-verification/candidate-digest.ts",
+    "../backend/src/context/scope-lock.service.ts",
+    "../backend/src/security-remediation/dependency-provenance.types.ts",
+    "../backend/src/security-remediation/fixed-version-normalizer.ts",
+    "../backend/src/security-remediation/version-selection-policy.ts",
+    "../backend/src/security-remediation/maven-provenance-resolver.ts",
+    "../backend/src/security-remediation/security-eligibility-classifier.ts",
+    "../backend/src/security-remediation/grounded-maven-provenance.types.ts",
+    "../backend/src/security-remediation/security-finding-decision.types.ts",
+    "../backend/src/security-remediation/security-patch-request.types.ts",
+    "../backend/src/security-remediation/maven-security-patch-writer.ts",
+    "../backend/src/security-remediation/security-patch-guard.ts",
+    "../backend/src/security-remediation/security-candidate-identity.ts",
+    "../backend/src/security-remediation/maven-dependency-resolution-check.ts",
+    "../backend/src/security-remediation/security-remediation-orchestration.types.ts",
+    "../backend/src/security-remediation/security-remediation-batch-orchestration.types.ts",
+    "../backend/src/security-remediation/maven-security-patch-writer-batch.ts",
+    "../backend/src/security-remediation/security-remediation-batch-closure.ts",
+    "../backend/src/security-remediation/security-artifact-scan.ts"
+  ]
+}

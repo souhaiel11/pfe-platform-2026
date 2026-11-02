@@ -1,0 +1,17 @@
+{
+  "pass": true,
+  "checks": [
+    {
+      "check": "served 503 incident read remains an error, never zero/empty",
+      "result": "PASS"
+    },
+    {
+      "check": "served 503 history read remains an error, never empty",
+      "result": "PASS"
+    },
+    {
+      "check": "served 503 full detail remains a detail error, never empty history or clean scan",
+      "result": "PASS"
+    }
+  ]
+}

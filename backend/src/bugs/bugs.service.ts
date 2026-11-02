@@ -1,33 +1,37 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+// Logique du module legacy "bugs".
+import { GoneException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Bug, BugStatus } from './bug.entity';
-import { HttpService } from '@nestjs/axios';
-import { ConfigService } from '@nestjs/config';
-import { firstValueFrom } from 'rxjs';
 import { BugsGateway } from './bugs.gateway';
+import { sanitizeEntityProject } from '../common/sanitize-project';
+
+export const LEGACY_REMEDIATION_DISABLED = 'LEGACY_REMEDIATION_DISABLED';
 
 @Injectable()
 export class BugsService {
+  /** Initialise les dépendances et l’état de ce composant. */
   constructor(
     @InjectRepository(Bug) private readonly repo: Repository<Bug>,
-    private readonly http: HttpService,
-    private readonly config: ConfigService,
     private readonly gateway: BugsGateway,
   ) {}
 
-  findAll(projectId?: string) {
+  // Liste les bugs (filtrables par projet), avec le projet associé assaini.
+  async findAll(projectId?: string) {
     const where: any = {};
     if (projectId) where.projectId = projectId;
-    return this.repo.find({ where, order: { createdAt: 'DESC' }, relations: ['project'] });
+    const bugs = await this.repo.find({ where, order: { createdAt: 'DESC' }, relations: ['project'] });
+    return bugs.map(b => sanitizeEntityProject(b));
   }
 
+  // Récupère un bug par id, ou lève une 404 s'il n'existe pas.
   async findOne(id: string) {
     const bug = await this.repo.findOne({ where: { id }, relations: ['project'] });
-    if (!bug) throw new NotFoundException('Bug not found');
-    return bug;
+    if (!bug) throw new NotFoundException('Anomalie introuvable.');
+    return sanitizeEntityProject(bug);
   }
 
+  // Crée un bug et notifie les clients connectés via la passerelle websocket.
   async create(dto: Partial<Bug>) {
     const bug = this.repo.create(dto);
     const saved = await this.repo.save(bug);
@@ -35,38 +39,13 @@ export class BugsService {
     return saved;
   }
 
-  async triggerAiFix(id: string) {
-    const bug = await this.findOne(id);
-    bug.status = BugStatus.AI_FIXING;
-    await this.repo.save(bug);
-    this.gateway.emitBugUpdated(bug);
-
-    // Trigger n8n workflow
-    const n8nUrl = this.config.get('N8N_URL', 'http://n8n:5678');
-    const webhookPath = this.config.get('N8N_BUG_FIX_WEBHOOK', '/webhook/bug-fix');
-    try {
-      await firstValueFrom(
-        this.http.post(`${n8nUrl}${webhookPath}`, {
-          bugId: bug.id,
-          projectId: bug.projectId,
-          title: bug.title,
-          rawMessage: bug.rawMessage,
-          filePath: bug.filePath,
-          lineNumber: bug.lineNumber,
-          severity: bug.severity,
-          source: bug.source,
-          metadata: bug.metadata,
-        }),
-      );
-    } catch (e) {
-      // n8n might not be running, simulate for demo
-      setTimeout(() => this.simulateAiFix(id), 3000);
-    }
-
-    return { message: 'AI fix triggered', bugId: id };
+  // Ancien déclencheur de correction IA — toujours refusé, ce chemin est désactivé.
+  async triggerAiFix(_id: string): Promise<never> {
+    throw new GoneException(LEGACY_REMEDIATION_DISABLED);
   }
 
-  async updateFromN8n(id: string, data: {
+  // Ancien callback de résultat de correction IA (venant de n8n) — toujours refusé, ce chemin est désactivé.
+  async updateFromN8n(_id: string, _data: {
     humanReadableExplanation?: string;
     aiFixSuggestion?: string;
     prUrl?: string;
@@ -74,38 +53,18 @@ export class BugsService {
     fixConfidence?: number;
     status?: BugStatus;
   }) {
-    const bug = await this.findOne(id);
-    Object.assign(bug, data);
-    const saved = await this.repo.save(bug);
-    this.gateway.emitBugUpdated(saved);
-    return saved;
+    throw new GoneException(LEGACY_REMEDIATION_DISABLED);
   }
 
+  // Supprime un bug.
   async remove(id: string) {
     const bug = await this.findOne(id);
     await this.repo.remove(bug);
-    return { message: 'Bug deleted' };
+    return { message: 'Anomalie supprimée.' };
   }
 
-  async updateStatus(id: string, status: BugStatus) {
-    const bug = await this.findOne(id);
-    bug.status = status;
-    const saved = await this.repo.save(bug);
-    this.gateway.emitBugUpdated(saved);
-    return saved;
-  }
-
-  private async simulateAiFix(id: string) {
-    try {
-      const bug = await this.findOne(id);
-      bug.status = BugStatus.PR_CREATED;
-      bug.humanReadableExplanation = `Ce bug est causé par une mauvaise validation des entrées utilisateur. L'application ne vérifie pas correctement les paramètres avant de les utiliser, ce qui peut causer des comportements inattendus.`;
-      bug.aiFixSuggestion = `Ajouter une validation stricte des entrées avec des guards NestJS et des DTOs avec class-validator. Utiliser @IsString(), @IsNotEmpty() et sanitiser les données avant traitement.`;
-      bug.prUrl = `https://github.com/example/repo/pull/${Math.floor(Math.random() * 100)}`;
-      bug.prNumber = Math.floor(Math.random() * 100);
-      bug.fixConfidence = Math.floor(75 + Math.random() * 20);
-      await this.repo.save(bug);
-      this.gateway.emitBugUpdated(bug);
-    } catch {}
+  // Ancien changement de statut manuel — toujours refusé, ce chemin est désactivé.
+  async updateStatus(_id: string, _status: BugStatus): Promise<never> {
+    throw new GoneException(LEGACY_REMEDIATION_DISABLED);
   }
 }

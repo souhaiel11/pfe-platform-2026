@@ -1,0 +1,53 @@
+Compiled from "H2ConsoleProperties.java"
+public class org.springframework.boot.autoconfigure.h2.H2ConsoleProperties$Settings {
+  private boolean trace;
+
+  private boolean webAllowOthers;
+
+  private java.lang.String webAdminPassword;
+
+  public org.springframework.boot.autoconfigure.h2.H2ConsoleProperties$Settings();
+    Code:
+       0: aload_0
+       1: invokespecial #1                  // Method java/lang/Object."<init>":()V
+       4: return
+
+  public boolean isTrace();
+    Code:
+       0: aload_0
+       1: getfield      #7                  // Field trace:Z
+       4: ireturn
+
+  public void setTrace(boolean);
+    Code:
+       0: aload_0
+       1: iload_1
+       2: putfield      #7                  // Field trace:Z
+       5: return
+
+  public boolean isWebAllowOthers();
+    Code:
+       0: aload_0
+       1: getfield      #13                 // Field webAllowOthers:Z
+       4: ireturn
+
+  public void setWebAllowOthers(boolean);
+    Code:
+       0: aload_0
+       1: iload_1
+       2: putfield      #13                 // Field webAllowOthers:Z
+       5: return
+
+  public java.lang.String getWebAdminPassword();
+    Code:
+       0: aload_0
+       1: getfield      #16                 // Field webAdminPassword:Ljava/lang/String;
+       4: areturn
+
+  public void setWebAdminPassword(java.lang.String);
+    Code:
+       0: aload_0
+       1: aload_1
+       2: putfield      #16                 // Field webAdminPassword:Ljava/lang/String;
+       5: return
+}

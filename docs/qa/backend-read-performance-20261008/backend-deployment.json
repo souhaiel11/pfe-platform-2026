@@ -1,0 +1,8 @@
+{
+  "image": "sha256:ca111a808536447282c854e1ba92b232da8427cf8af9df8bd4f4f1995201d1e0",
+  "patchSha256": "1c6d3e06fcd47ad469757e1bf81b96e956599a2ef6b4e2755173a5f6a7fabcfc",
+  "allEnvironmentValuesPreserved": true,
+  "componentsUpdated": [
+    "backend"
+  ]
+}

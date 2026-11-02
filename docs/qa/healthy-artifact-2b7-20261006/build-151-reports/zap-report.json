@@ -1,0 +1,99 @@
+{
+	"@programName": "ZAP",
+	"@version": "2.17.0",
+	"@generated": "Tue, 6 Oct 2026 16:11:32",
+	"created": "2026-10-06T16:11:32.188940863Z",
+	"site":[ 
+		{
+			"@name": "http://app-test:8080",
+			"@host": "app-test",
+			"@port": "8080",
+			"@ssl": "false",
+			"alerts": [ 
+				{
+					"pluginid": "40042",
+					"alertRef": "40042",
+					"alert": "Spring Actuator Information Leak",
+					"name": "Spring Actuator Information Leak",
+					"riskcode": "2",
+					"confidence": "2",
+					"riskdesc": "Medium (Medium)",
+					"desc": "<p>Spring Actuator for Health is enabled and may reveal sensitive information about this application. Spring Actuators can be used for real monitoring purposes, but should be used with caution as to not expose too much information about the application or the infrastructure running it.</p>",
+					"instances":[ 
+						{
+							"id": "4",
+							"uri": "http://app-test:8080/actuator/health",
+							"nodeName": "http:\/\/app-test:8080\/actuator\/health",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "{\"status\":\"UP\",\"components\":{\"db\":{\"status\":\"UP\",\"details\":{\"database\":\"PostgreSQL\",\"validationQuery",
+							"otherinfo": ""
+						}
+					],
+					"count": "1",
+					"systemic": false,
+					"solution": "<p>Disable the Health Actuators and other actuators, or restrict them to administrative users.</p>",
+					"otherinfo": "",
+					"reference": "<p>https://docs.spring.io/spring-boot/api/rest/actuator/index.html#overview</p>",
+					"cweid": "215",
+					"wascid": "13",
+					"sourceid": "114"
+				},
+				{
+					"pluginid": "10105",
+					"alertRef": "10105-2",
+					"alert": "Weak Authentication Method",
+					"name": "Weak Authentication Method",
+					"riskcode": "2",
+					"confidence": "2",
+					"riskdesc": "Medium (Medium)",
+					"desc": "<p>HTTP basic or digest authentication has been used over an unsecured connection. The credentials can be read and then reused by someone with access to the network.</p>",
+					"instances":[ 
+						{
+							"id": "0",
+							"uri": "http://app-test:8080",
+							"nodeName": "http:\/\/app-test:8080",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "www-authenticate: Basic realm=\"Realm\"",
+							"otherinfo": ""
+						},
+						{
+							"id": "1",
+							"uri": "http://app-test:8080/robots.txt",
+							"nodeName": "http:\/\/app-test:8080\/robots.txt",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "www-authenticate: Basic realm=\"Realm\"",
+							"otherinfo": ""
+						},
+						{
+							"id": "3",
+							"uri": "http://app-test:8080/sitemap.xml",
+							"nodeName": "http:\/\/app-test:8080\/sitemap.xml",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "www-authenticate: Basic realm=\"Realm\"",
+							"otherinfo": ""
+						}
+					],
+					"count": "3",
+					"systemic": false,
+					"solution": "<p>Protect the connection using HTTPS or use a stronger authentication mechanism.</p>",
+					"otherinfo": "",
+					"reference": "<p>https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html</p>",
+					"cweid": "326",
+					"wascid": "4",
+					"sourceid": "1"
+				}
+			]
+		}
+	],
+	"sequences":[
+	]
+
+}

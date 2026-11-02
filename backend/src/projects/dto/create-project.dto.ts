@@ -1,4 +1,6 @@
-import { IsString, IsOptional, IsEnum, IsArray, IsBoolean } from 'class-validator';
+// Définit et valide les champs admis pour créer un projet : nom et configuration des outils notamment. Le DTO transforme une saisie HTTP en données de création contrôlées.
+import { IsString, IsOptional, IsEnum, IsArray, IsBoolean, IsObject, IsUrl, Matches } from 'class-validator';
+import { AzureDeploymentConfig } from '../project.entity';
 import { ProjectEnvironment, CicdTool } from '../project.entity';
 
 export class CreateProjectDto {
@@ -19,31 +21,35 @@ export class CreateProjectDto {
   @IsOptional() @IsEnum(CicdTool)
   cicdTool?: CicdTool;
 
+  // DEPRECATED — voir jenkinsInternalUrl / jenkinsPublicUrl.
   @IsOptional() @IsString()
   jenkinsUrl?: string;
+
+  // URL Jenkins serveur-à-serveur (jamais un lien navigateur).
+  @IsOptional() @IsString()
+  jenkinsInternalUrl?: string;
+
+  // URL Jenkins affichée/cliquée dans le navigateur (jamais un appel backend).
+  @IsOptional() @IsString()
+  jenkinsPublicUrl?: string;
 
   @IsOptional() @IsString()
   jenkinsJobName?: string;
 
   @IsOptional() @IsString()
-  jenkinsToken?: string;
+  jenkinsJobPath?: string;
 
   // GitHub
-  @IsOptional() @IsString()
+  @IsOptional() @Matches(/^(?:https:\/\/github\.com\/)?[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/ , { message: 'Le dépôt doit avoir la forme propriétaire/dépôt.' })
   githubRepo?: string;
 
-  @IsOptional() @IsString()
-  githubToken?: string;
-
   // SonarQube
-  @IsOptional() @IsString()
+  @IsOptional() @IsUrl({ require_tld: false, protocols: ['http', 'https'], require_protocol: true, disallow_auth: true }, { message: 'L’URL SonarQube doit être une URL HTTP(S) sans identifiants.' })
+  @Matches(/^[^?#]+$/, { message: 'L’URL SonarQube ne doit pas contenir de paramètres ni de fragment.' })
   sonarqubeUrl?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional() @Matches(/^(?=.*[^0-9])[A-Za-z0-9_.:-]+$/, { message: 'La clé SonarQube doit contenir une lettre ou un séparateur autorisé.' })
   sonarqubeKey?: string;
-
-  @IsOptional() @IsString()
-  sonarqubeToken?: string;
 
   // Notifications
   @IsOptional() @IsBoolean()
@@ -58,6 +64,6 @@ export class CreateProjectDto {
   @IsOptional() @IsString()
   slackChannel?: string;
 
-  @IsOptional() @IsString()
-  slackToken?: string;
+  @IsOptional() @IsObject()
+  azureConfig?: AzureDeploymentConfig;
 }

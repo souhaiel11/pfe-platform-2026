@@ -1,0 +1,13 @@
+diff --git a/pom.xml b/pom.xml
+index 9d657db..615d25d 100644
+--- a/pom.xml
++++ b/pom.xml
+@@ -68,7 +68,7 @@
+         <dependency>
+             <groupId>org.yaml</groupId>
+             <artifactId>snakeyaml</artifactId>
+-            <version>1.29</version>
++            <version>1.31</version>
+         </dependency>
+ 
+         <!-- JWT -->

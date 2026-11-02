@@ -1,0 +1,11 @@
+{
+  "activeState": "active",
+  "subState": "running",
+  "mainPid": 50592,
+  "approvedHealthPatchLive": true,
+  "backendDeployed": false,
+  "projectConfigUpdated": false,
+  "allowlistsChanged": false,
+  "sourceHashEvidence": "agent-source-promotion-hash.json",
+  "healthOnlyDiff": "agent-health-only.diff"
+}

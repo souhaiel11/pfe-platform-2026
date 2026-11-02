@@ -1,4 +1,6 @@
-import { Injectable } from '@nestjs/common';
+// Stocke les rapports de scan, calcule leur score de sécurité déterministe, demande un résumé IA à n8n,
+// répercute le score sur le projet parent et déclenche la notification "prêt à déployer".
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Report, ReportType } from './report.entity';
@@ -6,60 +8,141 @@ import { Project } from '../projects/project.entity';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { firstValueFrom } from 'rxjs';
+import { normalizeReport } from '../common/report-normalizer';
+import { calculateSecurityScore, getRiskLevel } from '../common/security-score';
+import { sanitizeEntityProject } from '../common/sanitize-project';
+import { AzureDeployReadinessService, DeployReadiness } from '../azure-deploy/azure-deploy-readiness.service';
+import { IncidentsService } from '../incidents/incidents.service';
+import { IncidentStatus } from '../incidents/incident.entity';
 
 @Injectable()
 export class ReportsService {
+  /** Initialise les dépendances et l’état de ce composant. */
   constructor(
     @InjectRepository(Report) private readonly repo: Repository<Report>,
     @InjectRepository(Project) private readonly projectRepo: Repository<Project>,
     private readonly http: HttpService,
     private readonly config: ConfigService,
+    private readonly readiness: AzureDeployReadinessService,
+    private readonly incidents: IncidentsService,
   ) {}
 
-  findAll(projectId?: string) {
+  // Nombre maximal de rapports renvoyés par une recherche (l'historique complet reste en base).
+  private static readonly MAX_RESULTS = 100;
+
+  // Liste les rapports (filtrables par projet), les plus récents d'abord, bornés à MAX_RESULTS.
+  async findAll(projectId?: string, includeArchived?: boolean) {
     const where: any = {};
     if (projectId) where.projectId = projectId;
-    return this.repo.find({ where, order: { createdAt: 'DESC' }, relations: ['project'] });
+    if (!includeArchived) where.archived = false;
+    const reports = await this.repo.find({
+      where,
+      order: { createdAt: 'DESC' },
+      relations: ['project'],
+      take: ReportsService.MAX_RESULTS,
+    });
+    return reports.map(r => sanitizeEntityProject(r));
   }
 
-  findOne(id: string) {
-    return this.repo.findOne({ where: { id }, relations: ['project'] });
+  // Récupère un rapport par id.
+  async findOne(id: string) {
+    const report = await this.repo.findOne({ where: { id }, relations: ['project'] });
+    return sanitizeEntityProject(report);
   }
 
+  /** Crée et enregistre un nouvel élément. */
   async create(dto: Partial<Report>) {
     const report = this.repo.create(dto);
-    // Generate AI summary
     report.aiSummary = (dto as any).aiSummary || await this.generateAiSummary(dto.type, dto.rawData);
-    report.securityScore = (dto as any).securityScore ?? this.calculateSecurityScore(dto.rawData, (dto as any).aiSummary);
-    report.riskLevel = (dto as any).riskLevel || this.getRiskLevel(report.securityScore);
+    const normalized = normalizeReport(dto.rawData);
+    const { score, incomplete } = calculateSecurityScore(normalized);
+    report.securityScore = incomplete ? null : score;
+    report.riskLevel = getRiskLevel(score, incomplete);
+    report.judgeDecision = (dto as any).judgeDecision ?? null;
+    report.judgeConfidence = (dto as any).judgeConfidence ?? null;
+
     const saved = await this.repo.save(report);
 
-    // Garder seulement les 3 derniers rapports combined par projet
     if (dto.type === 'combined' && dto.projectId) {
-      const allCombined = await this.repo.find({
-        where: { projectId: dto.projectId, type: 'combined' as any },
-        order: { createdAt: 'DESC' }
-      });
-      // Mettre à jour le score du projet
+      const projectStatus = incomplete
+        ? 'warning'
+        : (report.securityScore >= 80 ? 'healthy' : report.securityScore >= 40 ? 'warning' : 'critical');
       await this.projectRepo.update(dto.projectId, {
         securityScore: report.securityScore,
-        status: (report.securityScore >= 80 ? 'healthy' : report.securityScore >= 40 ? 'warning' : 'critical') as any,
+        status: projectStatus as any,
       });
-      if (allCombined.length > 3) {
-        const toDelete = allCombined.slice(3);
-        await this.repo.remove(toDelete);
-      }
+      const after = await this.readiness.isReadyToDeploy(dto.projectId);
+      await this.syncDeployReadyNotification(dto.projectId, after);
     }
 
     return saved;
   }
 
+  // Décisions de Judge acceptées en mise à jour.
+  private static readonly VALID_DECISIONS = ['BLOCK', 'AUTO_FIX', 'FIX_PROPOSED', 'NOTIFY_ONLY'];
+
+  /** Met à jour Judge décision. */
+  async updateJudgeDecision(id: string, dto: any) {
+    const update: { judgeDecision?: string; judgeConfidence?: number } = {};
+
+    if (typeof dto?.judgeDecision === 'string' && ReportsService.VALID_DECISIONS.includes(dto.judgeDecision.toUpperCase())) {
+      update.judgeDecision = dto.judgeDecision.toUpperCase();
+    }
+    if (typeof dto?.judgeConfidence === 'number' && dto.judgeConfidence >= 0 && dto.judgeConfidence <= 100) {
+      update.judgeConfidence = dto.judgeConfidence;
+    }
+
+    if (Object.keys(update).length === 0) {
+      throw new BadRequestException(
+        `judgeDecision (${ReportsService.VALID_DECISIONS.join('|')}) et/ou judgeConfidence (0-100) requis et valide(s)`,
+      );
+    }
+
+    const report = await this.repo.findOne({ where: { id } });
+
+    await this.repo.update(id, update);
+    const updated = await this.findOne(id);
+
+    if (report?.type === ReportType.COMBINED) {
+      const after = await this.readiness.isReadyToDeploy(report.projectId);
+      await this.syncDeployReadyNotification(report.projectId, after);
+    }
+
+    return updated;
+  }
+
+  // Crée (ou efface) l'incident de notification "prêt à déployer" selon la transition de readiness,
+  // avec idempotence via le flag Project.deployReadyNotified.
+  private async syncDeployReadyNotification(projectId: string, after: DeployReadiness) {
+    const project = await this.projectRepo.findOne({ where: { id: projectId } });
+    if (!project) return;
+
+    if (after.ready && !project.deployReadyNotified) {
+      await this.incidents.create({
+        projectId,
+        title: `${project.name} prêt à déployer`,
+        description:
+          `Le projet "${project.name}" vient de passer à l'état "prêt à déployer" ` +
+          `(gouvernance, CVE critiques et quality gate au vert). Page projet : /projects/${projectId}`,
+        status: IncidentStatus.COMPLETED,
+        source: 'DEPLOY_READY',
+        metadata: { link: `/projects/${projectId}`, reportId: after.reportId },
+      } as any);
+      await this.projectRepo.update(projectId, { deployReadyNotified: true });
+    } else if (!after.ready && project.deployReadyNotified) {
+      await this.projectRepo.update(projectId, { deployReadyNotified: false });
+    }
+  }
+
+  // Supprime un rapport.
   async remove(id: string) {
     const r = await this.repo.findOne({ where: { id } });
     if (r) await this.repo.remove(r);
-    return { message: 'Report deleted' };
+    return { message: 'Rapport supprimé.' };
   }
 
+  // Demande à n8n (webhook report-summary) de générer un résumé IA du rapport ; retombe sur un résumé
+  // par défaut si n8n est injoignable.
   private async generateAiSummary(type: ReportType, data: any): Promise<string> {
     const n8nUrl = this.config.get('N8N_URL', 'http://n8n:5678');
     try {
@@ -72,6 +155,7 @@ export class ReportsService {
     }
   }
 
+  // Résumé textuel par défaut (sans IA), utilisé en repli si n8n est indisponible.
   private getDefaultSummary(type: ReportType, data: any): string {
     if (type === ReportType.SONARQUBE) {
       const bugs = data?.bugs || 0;
@@ -94,71 +178,4 @@ export class ReportsService {
     return 'Rapport généré et analysé par le système DevSecOps.';
   }
 
-  private calculateSecurityScore(data: any, aiSummary?: string): number {
-    if (!data) return 100;
-
-    // Lire depuis enrichedData (format n8n v2.1)
-    const enriched = data.enrichedData || data;
-    const trivy  = enriched.trivy  || {};
-    const owasp  = enriched.owasp  || {};
-    const zap    = enriched.zap    || {};
-    const sonar  = enriched.sonar  || {};
-    const tests  = enriched.tests  || {};
-    const deploy = enriched.deploy || {};
-
-    // ── Score technique (70%) ─────────────────────────────
-    let techScore = 100;
-
-    // Trivy CVEs
-    const trivyCritical = trivy.cves?.filter((c: any) => c.severity === 'CRITICAL').length || trivy.critical || 0;
-    const trivyHigh     = trivy.cves?.filter((c: any) => c.severity === 'HIGH').length     || trivy.high     || 0;
-    const trivyMedium   = trivy.cves?.filter((c: any) => c.severity === 'MEDIUM').length   || 0;
-    techScore -= trivyCritical * 15;
-    techScore -= trivyHigh     * 5;
-    techScore -= trivyMedium   * 2;
-
-    // OWASP
-    techScore -= (owasp.critical || 0) * 15;
-    techScore -= (owasp.high     || 0) * 5;
-
-    // ZAP
-    techScore -= (zap.alerts_high   || 0) * 8;
-    techScore -= (zap.alerts_medium || 0) * 3;
-
-    // SonarQube
-    techScore -= (sonar.vulnerabilities || 0) * 10;
-    techScore -= (sonar.bugs            || 0) * 3;
-    techScore -= Math.min(sonar.code_smells || 0, 10) * 1;
-    if (sonar.quality_gate === 'ERROR' || sonar.quality_gate === 'FAILED') techScore -= 15;
-
-    // Pipeline
-    techScore -= (tests.failures || 0) * 5;
-    if (deploy.status === 'FAILED') techScore -= 20;
-
-    techScore = Math.max(0, Math.min(100, techScore));
-
-    // ── Score IA (30%) ────────────────────────────────────
-    let aiScore = techScore; // fallback si pas de Judge
-    if (aiSummary) {
-      try {
-        const judge = JSON.parse(aiSummary);
-        const decision  = judge.decision      || 'NOTIFY_ONLY';
-        const confidence = judge.confidenceScore || 50;
-        if      (decision === 'BLOCK')     aiScore = 0;
-        else if (decision === 'AUTO_FIX')  aiScore = 50;
-        else                               aiScore = confidence;
-      } catch(e) {}
-    }
-
-    // ── Score final combiné ───────────────────────────────
-    const finalScore = Math.round((techScore * 0.7) + (aiScore * 0.3));
-    return Math.max(0, Math.min(100, finalScore));
-  }
-
-  private getRiskLevel(score: number): string {
-    if (score >= 80) return 'LOW';
-    if (score >= 60) return 'MEDIUM';
-    if (score >= 40) return 'HIGH';
-    return 'CRITICAL';
-  }
 }

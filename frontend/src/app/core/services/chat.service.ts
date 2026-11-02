@@ -1,6 +1,7 @@
+// État et logique du widget ChatOps : historique de conversation, ouverture/fermeture, envoi des questions au proxy backend.
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { BehaviorSubject } from 'rxjs';
+import { BehaviorSubject, defer, finalize } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
 export interface ChatMessage {
@@ -8,6 +9,7 @@ export interface ChatMessage {
   content: string;
   timestamp: Date;
   loading?: boolean;
+  isError?: boolean;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -20,12 +22,12 @@ export class ChatService {
   messages$ = this.messagesSubject.asObservable();
   loading$  = this.loadingSubject.asObservable();
 
-  // FIX: production webhook URL (not /webhook-test/)
-  private readonly webhookUrl = `${environment.n8nUrl}/webhook/chat-agent`;
-  private readonly defaultProjectId = environment.defaultProjectId;
+  private readonly chatUrl = `${environment.apiUrl}/chat/ask`;
 
+  /** Injecte le client HTTP utilisé par sendMessage(). */
   constructor(private http: HttpClient) {}
 
+  /** Ouvre/ferme le widget ChatOps ; envoie un message d'accueil à la première ouverture si l'historique est vide. */
   toggle() {
     const opening = !this.isOpenSubject.value;
     this.isOpenSubject.next(opening);
@@ -36,35 +38,44 @@ export class ChatService {
     }
   }
 
+  /** Ferme le widget ChatOps. */
   close() { this.isOpenSubject.next(false); }
 
+  /** Envoie la question au proxy ChatOps backend (qui relaie vers n8n), affiche la réponse ou un message d'erreur distinct si la requête échoue ou si la réponse est inutilisable. */
   sendMessage(question: string, projectId?: string) {
     if (!question.trim() || this.loadingSubject.value) return;
 
     this.addMessage('user', question);
     this.loadingSubject.next(true);
 
-    this.http.post<any>(this.webhookUrl, {
+    defer(() => this.http.post<unknown>(this.chatUrl, {
       question: question.trim(),
-      projectId: projectId || this.defaultProjectId
-    }).subscribe({
+      ...(projectId ? { projectId } : {})
+    })).pipe(
+      finalize(() => this.loadingSubject.next(false)),
+    ).subscribe({
+      /** Traite le résultat reçu et actualise les données locales. */
       next: res => {
-        this.addMessage('assistant', res.answer || 'Réponse reçue.');
-        this.loadingSubject.next(false);
+        const response = res as { ok?: unknown; answer?: unknown } | null;
+        const ok = response?.ok === true && typeof response.answer === 'string';
+        const answer = ok ? (response!.answer as string).trim() : '';
+        this.addMessage('assistant', answer || "Réponse indisponible. Vous pouvez réessayer.", !answer);
       },
+      /** Traite l’erreur reçue et termine le suivi de la demande. */
       error: () => {
-        this.addMessage('assistant', '⚠️ Impossible de contacter l\'agent IA. Vérifiez que le workflow n8n est actif.');
-        this.loadingSubject.next(false);
+        this.addMessage('assistant', "Le service de discussion n'a pas pu répondre. Vous pouvez réessayer.", true);
       }
     });
   }
 
+  /** Vide l'historique de conversation affiché (ne touche à aucune donnée serveur). */
   clearHistory() {
     this.messagesSubject.next([]);
   }
 
-  private addMessage(role: 'user' | 'assistant', content: string) {
+  /** Ajoute un message local au flux affiché, sans appel réseau. */
+  private addMessage(role: 'user' | 'assistant', content: string, isError = false) {
     const current = this.messagesSubject.value;
-    this.messagesSubject.next([...current, { role, content, timestamp: new Date() }]);
+    this.messagesSubject.next([...current, { role, content, timestamp: new Date(), isError }]);
   }
 }

@@ -1,0 +1,23 @@
+[
+  {
+    "coordinate": "org.springframework.boot:spring-boot:2.7.33",
+    "url": "https://repo.maven.apache.org/maven2/org/springframework/boot/spring-boot/2.7.33/spring-boot-2.7.33.pom",
+    "publicRepositoryStatus": 404,
+    "selected": false,
+    "buildTestStartupHealth": "NOT_RUN when unavailable from public repository"
+  },
+  {
+    "coordinate": "org.springframework:spring-core:5.3.49",
+    "url": "https://repo.maven.apache.org/maven2/org/springframework/spring-core/5.3.49/spring-core-5.3.49.pom",
+    "publicRepositoryStatus": 404,
+    "selected": false,
+    "buildTestStartupHealth": "NOT_RUN when unavailable from public repository"
+  },
+  {
+    "coordinate": "org.springframework.security:spring-security-core:5.7.22",
+    "url": "https://repo.maven.apache.org/maven2/org/springframework/security/spring-security-core/5.7.22/spring-security-core-5.7.22.pom",
+    "publicRepositoryStatus": 404,
+    "selected": false,
+    "buildTestStartupHealth": "NOT_RUN when unavailable from public repository"
+  }
+]

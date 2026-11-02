@@ -1,0 +1,214 @@
+{
+  "at": "2026-10-07T12:36:31.139770+00:00",
+  "sourceMigrationSHA256": "80867bcc02976c15e935d523a1b34c78f0d7a9540d09ebdf9c126e602058a566",
+  "guardQueries": [
+    "SELECT 1 FROM remediation_target_cutover WHERE\n   trusted_file IS NULL OR trusted_key IS NULL OR\n   trusted_file !~ '^[A-Za-z0-9_.-]+(/[A-Za-z0-9_.-]+)*$' OR\n   trusted_file ~ '(^|/)(\\.\\.?|\\.[gG][iI][tT])(/|$)' OR\n   r->'reservationTarget'->>'projectId' IS DISTINCT FROM lower(\"projectId\"::text) OR\n   trusted_key IS DISTINCT FROM replace(jsonb_build_array('v1','FILE',trusted_file)::text, ' ', '')",
+    "SELECT 1 FROM remediation_target_cutover GROUP BY \"projectId\",trusted_key HAVING count(DISTINCT lifecycle)>1"
+  ],
+  "guardResults": [
+    [],
+    []
+  ],
+  "LIVE_4G_GUARD_PASS": true,
+  "legacyPointers": 0,
+  "legacyClaims": 0,
+  "legacyWriters": 0,
+  "dispatch": "false",
+  "harness": "unset",
+  "runtimeFilesUnchanged": 977,
+  "executableJSUnchanged": 330,
+  "workflowsUnchanged": true,
+  "wf6": {
+    "found": true,
+    "contract": "0470ab42-713a-4097-a9a7-72c8f00bacde",
+    "id": "RdYyfjVpOm2LxS95",
+    "versionId": "0470ab42-713a-4097-a9a7-72c8f00bacde",
+    "fields": [
+      {
+        "key": "projectId",
+        "present": true
+      },
+      {
+        "key": "findingId",
+        "present": false
+      },
+      {
+        "key": "taskId",
+        "present": true
+      },
+      {
+        "key": "attemptId",
+        "present": true
+      },
+      {
+        "key": "attemptNumber",
+        "present": true
+      },
+      {
+        "key": "batchId",
+        "present": true
+      },
+      {
+        "key": "scanner",
+        "present": false
+      },
+      {
+        "key": "repository",
+        "present": true
+      }
+    ],
+    "runtimeProjectLiterals": [
+      "PR36 Protection Check (Target)",
+      "PR36 Protection Check (Resolved PR)"
+    ],
+    "workflows": [
+      {
+        "id": "vNOQiEgnXg9Zqn2q",
+        "versionId": "55ba20a0-f076-49df-89ee-753c511d3722",
+        "active": 1,
+        "hash": "f786fe7fbdc6636b53d19ddaa945919bc7e9c079e643e808e3b9661c81701f53"
+      },
+      {
+        "id": "9adcV31eaIgJyMR0",
+        "versionId": "1250b0d5-e21a-4786-9a3b-fe38d5f9c14c",
+        "active": 0,
+        "hash": "7423cf75d25191352c9d83abcba6fb7759f4e1271856eaed45a28bdd430de6b2"
+      },
+      {
+        "id": "4JiOKpyHhx1znTYw",
+        "versionId": "5488b9c5-337b-4598-9c90-2b0cbc4fd21a",
+        "active": 1,
+        "hash": "bafb358141d2ea4d5235679e473539bbcaebd3e97f5c8ef345cb1d2ad3c8a0f0"
+      },
+      {
+        "id": "6BVXqAsePEPAjiIQ",
+        "versionId": "6f97161c-70fa-40ce-b3f3-cf550ba33465",
+        "active": 1,
+        "hash": "5866667b3766935ed6bfdfd1a57ca4d82cd90c5ebaea4444f74524a59139d007"
+      },
+      {
+        "id": "x4oTJ4HbkC1R526b",
+        "versionId": "63c57b0a-01b2-4fc2-a571-6c1dc7bf4e33",
+        "active": 1,
+        "hash": "992fca27df44bccdfa8756cb426a19e0257cd0e6e9c4e92337da8137efce6f44"
+      },
+      {
+        "id": "vWWrhwuXjcAxmO2B",
+        "versionId": "e61e41cc-b248-4911-9f32-45c33905da02",
+        "active": 0,
+        "hash": "61091d4e474cb7a81a81b3991a75f75a65cb73234a42e6adaa2287a395100e8a"
+      },
+      {
+        "id": "b7SEqPJK3weGXziV",
+        "versionId": "2a10b436-f8ed-40a4-b946-f5ab13b10ac8",
+        "active": 1,
+        "hash": "801cb7294a34fa934e79f4172ed154f3fb26e5cc81f9459986a8ecd5aaf8c8cd"
+      },
+      {
+        "id": "DEBUGGhProbe0001",
+        "versionId": "55ac1782-0b7f-4a53-becc-40033b8c8f0d",
+        "active": 0,
+        "hash": "554ced4d72a373474b72921d5b52119df165b0ce85fe9128f6c77a812530a683"
+      },
+      {
+        "id": "PRCreateProbe0001",
+        "versionId": "482b1c45-01be-4597-977d-1d9cdd9e3c76",
+        "active": 0,
+        "hash": "b7813d2369140d61e6c147db3311ddbaf80afc212713e91b189d75177c7ce6a3"
+      },
+      {
+        "id": "r52SonarAuthProbeTemp",
+        "versionId": "11e65013-8179-468b-aecb-d9f71167e4e7",
+        "active": 0,
+        "hash": "003ebae1a6b90ee8961ad76f4fab956205674a854f8f0ef8c50e111bb1bc8b48"
+      },
+      {
+        "id": "r54SonarSmokeProbeTemp",
+        "versionId": "d1f6249f-d016-4498-a950-8c8907dcc25d",
+        "active": 0,
+        "hash": "33986ed55fe5647b543377d8264e6300ecd788462ff84afc85ab19f1d82b233f"
+      },
+      {
+        "id": "r57SonarProbeTemp",
+        "versionId": "d999279b-4197-49cd-9854-42829b34e33e",
+        "active": 0,
+        "hash": "7ad014560304de7255247707595a4aed0218bb212857242212feed176375db9a"
+      },
+      {
+        "id": "r58SonarProbeTemp",
+        "versionId": "4a939a5d-aca1-4012-9c3a-0fbf469d6eb2",
+        "active": 0,
+        "hash": "11fdc84772164a759fbfbb7ccddc9e32775bf0c23be639deda90f6ad40a00a56"
+      },
+      {
+        "id": "r59SonarProbeTemp",
+        "versionId": "7b5c2639-3315-482e-bcf9-867ea02e9f1c",
+        "active": 0,
+        "hash": "4970816fe1fcf1345558e2d0539503f5a46b3f6622818f16bcf81cf4bb880f32"
+      },
+      {
+        "id": "r60SonarProbeTemp",
+        "versionId": "0956dd08-e7be-473a-9273-7b785465b2d0",
+        "active": 0,
+        "hash": "72682ee7573c6a313be64300d88b49782121b95e68a0da71ea5b5eed221f9930"
+      },
+      {
+        "id": "e96d6ee1-0a6c-4779-9200-4e2dc87ef9f2",
+        "versionId": "ad03631d-1603-4fa8-82cd-b7d1279ad92e",
+        "active": 0,
+        "hash": "d09f0bf0457bf58da55d04b57573d5f8745c512cedffcff6a69a956a60472f43"
+      },
+      {
+        "id": "QvLjJGLX5V5mKXvX",
+        "versionId": "40c46c3e-70bc-4495-a16d-0c35e2c3d9f3",
+        "active": 0,
+        "hash": "bf113823437cb4df2e8f8786f634c1b1b6220204e17fbf403cbee94c254831c4"
+      },
+      {
+        "id": "WAiqNGhkGICvDh4A",
+        "versionId": "5c65139e-9844-4d5d-99bd-92589a4c082e",
+        "active": 0,
+        "hash": "990b1feb33905b4a1c7d0752a9ab878d98b15934aafee7a586e7dd335ba3b7b8"
+      },
+      {
+        "id": "u3eeMwTuhCsetfcS",
+        "versionId": "db31718c-c591-4ea0-aa4d-f66037988471",
+        "active": 1,
+        "hash": "42a9f1c43acf4a51e5ea8c22947645fdc423b1e9754ddc70d02b546e5a48a4a1"
+      },
+      {
+        "id": "RdYyfjVpOm2LxS95",
+        "versionId": "0470ab42-713a-4097-a9a7-72c8f00bacde",
+        "active": 1,
+        "hash": "0f3eaba95b0b2520a76638cb40b6823c238a9c976238c98f82cbb39711b8af1f"
+      },
+      {
+        "id": "AsSw576hITkPKsbR",
+        "versionId": "d510d442-b47f-4f38-93b4-9cd152cf74c0",
+        "active": 0,
+        "hash": "84fcda7b404f806f3d6d5eb35d7cc8fcddde9a8bb0ef273a9e9dd31ddf0a735c"
+      },
+      {
+        "id": "OtiwddQrG21ZYo7t",
+        "versionId": "b4184709-5027-4302-bccc-72430547db05",
+        "active": 0,
+        "hash": "95c4d75bfacc4784d354d7191579023a9f1a3e866eea8886deb14bb4d861760e"
+      },
+      {
+        "id": "DSwtkgWBK6qm2z8A",
+        "versionId": "bce15bec-d14c-4fe6-907c-eeae8c77addb",
+        "active": 0,
+        "hash": "f8cfa8f1956d8d6f7f49214a5b8a216bdd0936bb831bb54f335aae1c57a6defa"
+      },
+      {
+        "id": "Yh2VkmFbnk4kUBuT",
+        "versionId": "b3889983-de78-40d5-bbb7-75cba4ccec4a",
+        "active": 0,
+        "hash": "58365f16b0156947f7a1ef86aec20d98a5a30e3d588c27b2dcadbbadfee50414"
+      }
+    ],
+    "activeExecutions": []
+  },
+  "liveChanged": false,
+  "liveDBChanged": false
+}

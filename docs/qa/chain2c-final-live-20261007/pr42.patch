@@ -1,0 +1,22 @@
+From 7f57eec0f47b5b47c7320c65662348ec6b2404b4 Mon Sep 17 00:00:00 2001
+From: souhaiel amri <131708236+souhaiel11@users.noreply.github.com>
+Date: Wed, 30 Sep 2026 18:21:57 +0100
+Subject: [PATCH] fix(security): remediate 6 dependency versions
+
+---
+ pom.xml | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/pom.xml b/pom.xml
+index 9d657db..4fad403 100644
+--- a/pom.xml
++++ b/pom.xml
+@@ -8,7 +8,7 @@
+     <parent>
+         <groupId>org.springframework.boot</groupId>
+         <artifactId>spring-boot-starter-parent</artifactId>
+-        <version>2.7.0</version>
++        <version>2.7.18</version>
+         <relativePath/>
+     </parent>
+ 

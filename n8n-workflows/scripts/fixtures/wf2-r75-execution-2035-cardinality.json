@@ -1,0 +1,689 @@
+{
+  "note": "Self-contained R75 fixture: real n8n execution 2035 (attempt 10), incident 73733ec0. Offline replay only -- no LLM call, no git write. Independent of R74's committed fixture file.",
+  "attempt10": {
+    "batch": {
+      "incidentId": "73733ec0-4077-4c81-aed3-df3a3bca5245",
+      "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+      "buildNumber": 147,
+      "batchKey": "833de3d11643043ece6236777c14df928ea18a8fa1201c62948ce9bbb041470e",
+      "batchId": "833de3d11643043ece6236777c14df928ea18a8fa1201c62948ce9bbb041470e",
+      "attemptCount": 10,
+      "findingId": "b8db9c11-ddf9-4a23-9bf3-1d2ff15a59ef",
+      "findingIds": [
+        "b8db9c11-ddf9-4a23-9bf3-1d2ff15a59ef",
+        "f11d4686-a7ba-4c0c-abbb-a12998c57220"
+      ],
+      "requestId": "dfcd0966-c81a-4726-b47c-2ee5a81b1029",
+      "approvedBy": {
+        "id": "823b8cc8-aac1-4229-a5f9-cb79ed48f908",
+        "role": "admin"
+      },
+      "stage": "sonar",
+      "source": "SONARQUBE",
+      "remediationType": "AUTO_FIX_ELIGIBLE",
+      "githubRepo": "souhaiel11/pfe-app-test",
+      "repository_owner": "souhaiel11",
+      "repository_name": "pfe-app-test",
+      "target_file_path": "src/main/java/com/pfe/devsecops/controller/TaskController.java",
+      "targetFiles": [
+        "src/main/java/com/pfe/devsecops/controller/TaskController.java"
+      ],
+      "default_branch": "main",
+      "finding": {
+        "findingId": "b8db9c11-ddf9-4a23-9bf3-1d2ff15a59ef",
+        "rule": "java:S4684",
+        "severity": "CRITICAL",
+        "type": "VULNERABILITY",
+        "source": "SONARQUBE",
+        "stage": "sonar",
+        "file": "src/main/java/com/pfe/devsecops/controller/TaskController.java",
+        "line": 34,
+        "message": "Replace this persistent entity with a simple POJO or DTO object.",
+        "evidence": "b8db9c11-ddf9-4a23-9bf3-1d2ff15a59ef",
+        "recommendation": null,
+        "remediationType": "AUTO_FIX_ELIGIBLE"
+      },
+      "findings": [
+        {
+          "findingId": "b8db9c11-ddf9-4a23-9bf3-1d2ff15a59ef",
+          "rule": "java:S4684",
+          "severity": "CRITICAL",
+          "type": "VULNERABILITY",
+          "source": "SONARQUBE",
+          "stage": "sonar",
+          "file": "src/main/java/com/pfe/devsecops/controller/TaskController.java",
+          "line": 34,
+          "message": "Replace this persistent entity with a simple POJO or DTO object.",
+          "evidence": "b8db9c11-ddf9-4a23-9bf3-1d2ff15a59ef",
+          "recommendation": null,
+          "remediationType": "AUTO_FIX_ELIGIBLE"
+        },
+        {
+          "findingId": "f11d4686-a7ba-4c0c-abbb-a12998c57220",
+          "rule": "java:S4684",
+          "severity": "CRITICAL",
+          "type": "VULNERABILITY",
+          "source": "SONARQUBE",
+          "stage": "sonar",
+          "file": "src/main/java/com/pfe/devsecops/controller/TaskController.java",
+          "line": 39,
+          "message": "Replace this persistent entity with a simple POJO or DTO object.",
+          "evidence": "f11d4686-a7ba-4c0c-abbb-a12998c57220",
+          "recommendation": null,
+          "remediationType": "AUTO_FIX_ELIGIBLE"
+        }
+      ],
+      "correctiveAttempt": true,
+      "correctiveContext": {
+        "previousAttempt": 9,
+        "previousValidatedSha": "dc1aa978719ca40e6339e075cfe52a79875b2342",
+        "currentPrHeadSha": "dc1aa978719ca40e6339e075cfe52a79875b2342",
+        "reasonCodes": [
+          "DEFAULT_VALUE_SEMANTICS_REGRESSION"
+        ],
+        "blockingCauses": [
+          {
+            "type": "DEFAULT_VALUE_SEMANTICS_DEFECT",
+            "candidateSha": "dc1aa978719ca40e6339e075cfe52a79875b2342",
+            "sourceType": "Task",
+            "sourceField": "status",
+            "sourceDefault": "TaskStatus.TODO",
+            "candidateType": "TaskDTO",
+            "candidateField": "status",
+            "candidateDefault": null,
+            "baselineAbsentBehavior": "Field kept at its declared initializer: TaskStatus.TODO",
+            "candidateAbsentBehavior": "Field kept at the language default (no initializer), unconditionally propagated",
+            "mappingPath": "updateTask(TaskDTO): existing.setStatus(parseStatus(updatedTask.getStatus()));",
+            "behavioralInvariant": "The candidate changes observable behavior for an omitted externally-deserialized property. Restore baseline-equivalent behavior for all four cases: when the property is ABSENT, the candidate must observably behave the same as the baseline default; when the property is EXPLICIT NULL, preserve the baseline\u2019s explicit-null behavior; when the property carries an EXPLICIT VALUE, preserve the baseline\u2019s explicit-value behavior; when the value is INVALID, preserve the baseline\u2019s applicable rejection behavior. Do not restrict the fix to a single hardcoded literal or line \u2014 select whichever implementation genuinely restores this invariant for the candidate\u2019s own type."
+          }
+        ],
+        "originalFindingResults": [
+          {
+            "findingId": "b8db9c11-ddf9-4a23-9bf3-1d2ff15a59ef",
+            "result": "VALID",
+            "evidence": "Sonar Community exact-SHA validation 870e88c1-792b-4531-8328-48f0048b0363 at dc1aa978719ca40e6339e075cfe52a79875b2342: approved finding absent"
+          },
+          {
+            "findingId": "f11d4686-a7ba-4c0c-abbb-a12998c57220",
+            "result": "VALID",
+            "evidence": "Sonar Community exact-SHA validation 870e88c1-792b-4531-8328-48f0048b0363 at dc1aa978719ca40e6339e075cfe52a79875b2342: approved finding absent"
+          }
+        ]
+      },
+      "decision": "FIX_PROPOSED",
+      "confidenceScore": 1,
+      "riskLevel": "critical",
+      "enrichedData": {
+        "source": "SONARQUBE",
+        "stage": "sonar",
+        "findings": [
+          {
+            "findingId": "b8db9c11-ddf9-4a23-9bf3-1d2ff15a59ef",
+            "rule": "java:S4684",
+            "severity": "CRITICAL",
+            "type": "VULNERABILITY",
+            "source": "SONARQUBE",
+            "stage": "sonar",
+            "file": "src/main/java/com/pfe/devsecops/controller/TaskController.java",
+            "line": 34,
+            "message": "Replace this persistent entity with a simple POJO or DTO object.",
+            "evidence": "b8db9c11-ddf9-4a23-9bf3-1d2ff15a59ef",
+            "recommendation": null,
+            "remediationType": "AUTO_FIX_ELIGIBLE"
+          },
+          {
+            "findingId": "f11d4686-a7ba-4c0c-abbb-a12998c57220",
+            "rule": "java:S4684",
+            "severity": "CRITICAL",
+            "type": "VULNERABILITY",
+            "source": "SONARQUBE",
+            "stage": "sonar",
+            "file": "src/main/java/com/pfe/devsecops/controller/TaskController.java",
+            "line": 39,
+            "message": "Replace this persistent entity with a simple POJO or DTO object.",
+            "evidence": "f11d4686-a7ba-4c0c-abbb-a12998c57220",
+            "recommendation": null,
+            "remediationType": "AUTO_FIX_ELIGIBLE"
+          }
+        ]
+      },
+      "deploymentBlocked": false,
+      "blocked": false,
+      "block_reason": "All constraints passed",
+      "baseSha": "6ed56ff791acbf3e111431285bef7b30c8076084",
+      "baseBranch": "main",
+      "targetBranchName": "fix/pfe-73733ec0-4077-4c81-aed3-df3a3bca5245-dfcd0966-c81a-4726-b47c-2ee5a81b1029"
+    },
+    "tree_resp": {
+      "sha": "dc1aa978719ca40e6339e075cfe52a79875b2342",
+      "url": "https://api.github.com/repos/souhaiel11/pfe-app-test/git/trees/dc1aa978719ca40e6339e075cfe52a79875b2342",
+      "tree": [
+        {
+          "path": ".gitignore",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "4eccf772c6a88bc13d55a9175a04af6912e15c35",
+          "size": 119,
+          "url": "https://api.github.com/repos/souhaiel11/pfe-app-test/git/blobs/4eccf772c6a88bc13d55a9175a04af6912e15c35"
+        },
+        {
+          "path": "Dockerfile",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "3d2453597e2d97f71d6fa7f52aad9032a9ebfe69",
+          "size": 828,
+          "url": "https://api.github.com/repos/souhaiel11/pfe-app-test/git/blobs/3d2453597e2d97f71d6fa7f52aad9032a9ebfe69"
+        },
+        {
+          "path": "Jenkinsfile",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "985bad0f4f4d06116302e886ef91a85d5b2bd414",
+          "size": 160,
+          "url": "https://api.github.com/repos/souhaiel11/pfe-app-test/git/blobs/985bad0f4f4d06116302e886ef91a85d5b2bd414"
+        },
+        {
+          "path": "README.md",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "859f07ce6a1b86bd5fcff10e47b11e013051d54b",
+          "size": 3199,
+          "url": "https://api.github.com/repos/souhaiel11/pfe-app-test/git/blobs/859f07ce6a1b86bd5fcff10e47b11e013051d54b"
+        },
+        {
+          "path": "k8s",
+          "mode": "040000",
+          "type": "tree",
+          "sha": "6960ed18d064c1e985d620f069385abdf1d842cb",
+          "url": "https://api.github.com/repos/souhaiel11/pfe-app-test/git/trees/6960ed18d064c1e985d620f069385abdf1d842cb"
+        },
+        {
+          "path": "k8s/deployment.yaml",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "5cfa8b726dae99d4db03d1818def7f15328e0bd6",
+          "size": 1115,
+          "url": "https://api.github.com/repos/souhaiel11/pfe-app-test/git/blobs/5cfa8b726dae99d4db03d1818def7f15328e0bd6"
+        },
+        {
+          "path": "pom.xml",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "9d657db8e4ecb126a15ee2df6ce3a8a98f0cf660",
+          "size": 6186,
+          "url": "https://api.github.com/repos/souhaiel11/pfe-app-test/git/blobs/9d657db8e4ecb126a15ee2df6ce3a8a98f0cf660"
+        },
+        {
+          "path": "src",
+          "mode": "040000",
+          "type": "tree",
+          "sha": "984c43b2fa6293a9f2d83aeaf1884d97ae8735c4",
+          "url": "https://api.github.com/repos/souhaiel11/pfe-app-test/git/trees/984c43b2fa6293a9f2d83aeaf1884d97ae8735c4"
+        },
+        {
+          "path": "src/main",
+          "mode": "040000",
+          "type": "tree",
+          "sha": "f8b3bf0f1b973e014514fb627aec83d163433964",
+          "url": "https://api.github.com/repos/souhaiel11/pfe-app-test/git/trees/f8b3bf0f1b973e014514fb627aec83d163433964"
+        },
+        {
+          "path": "src/main/java",
+          "mode": "040000",
+          "type": "tree",
+          "sha": "1ae8155d506149ca487b2cff4e32bfd8312944be",
+          "url": "https://api.github.com/repos/souhaiel11/pfe-app-test/git/trees/1ae8155d506149ca487b2cff4e32bfd8312944be"
+        },
+        {
+          "path": "src/main/java/com",
+          "mode": "040000",
+          "type": "tree",
+          "sha": "8c1de825d96b863711edcf6291cad11a12abdc58",
+          "url": "https://api.github.com/repos/souhaiel11/pfe-app-test/git/trees/8c1de825d96b863711edcf6291cad11a12abdc58"
+        },
+        {
+          "path": "src/main/java/com/pfe",
+          "mode": "040000",
+          "type": "tree",
+          "sha": "4f54120cab074b4e3d190869b359701339906053",
+          "url": "https://api.github.com/repos/souhaiel11/pfe-app-test/git/trees/4f54120cab074b4e3d190869b359701339906053"
+        },
+        {
+          "path": "src/main/java/com/pfe/devsecops",
+          "mode": "040000",
+          "type": "tree",
+          "sha": "dfb4fca9b3febf645a9d134c5088471d1c4eec6d",
+          "url": "https://api.github.com/repos/souhaiel11/pfe-app-test/git/trees/dfb4fca9b3febf645a9d134c5088471d1c4eec6d"
+        },
+        {
+          "path": "src/main/java/com/pfe/devsecops/PfeAppTestApplication.java",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "3ecb7f7af7152168a4f11970a520a4f5ce00d406",
+          "size": 328,
+          "url": "https://api.github.com/repos/souhaiel11/pfe-app-test/git/blobs/3ecb7f7af7152168a4f11970a520a4f5ce00d406"
+        },
+        {
+          "path": "src/main/java/com/pfe/devsecops/config",
+          "mode": "040000",
+          "type": "tree",
+          "sha": "e72b4cf15eefa699765ffbea90c92f923cc6f7e0",
+          "url": "https://api.github.com/repos/souhaiel11/pfe-app-test/git/trees/e72b4cf15eefa699765ffbea90c92f923cc6f7e0"
+        },
+        {
+          "path": "src/main/java/com/pfe/devsecops/config/SecurityConfig.java",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "f494227b213135ece1dc85409f3be91094fdf8be",
+          "size": 3622,
+          "url": "https://api.github.com/repos/souhaiel11/pfe-app-test/git/blobs/f494227b213135ece1dc85409f3be91094fdf8be"
+        },
+        {
+          "path": "src/main/java/com/pfe/devsecops/controller",
+          "mode": "040000",
+          "type": "tree",
+          "sha": "f9f07b2d9fb85cab5cb819812081d0d46ce4e9f7",
+          "url": "https://api.github.com/repos/souhaiel11/pfe-app-test/git/trees/f9f07b2d9fb85cab5cb819812081d0d46ce4e9f7"
+        },
+        {
+          "path": "src/main/java/com/pfe/devsecops/controller/AuthController.java",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "19f37a0d5b60f92063f011f7bc103fc610a32aa1",
+          "size": 1427,
+          "url": "https://api.github.com/repos/souhaiel11/pfe-app-test/git/blobs/19f37a0d5b60f92063f011f7bc103fc610a32aa1"
+        },
+        {
+          "path": "src/main/java/com/pfe/devsecops/controller/TaskController.java",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "b3089aa09a996d686257508bd4f2aad06414ff14",
+          "size": 2628,
+          "url": "https://api.github.com/repos/souhaiel11/pfe-app-test/git/blobs/b3089aa09a996d686257508bd4f2aad06414ff14"
+        },
+        {
+          "path": "src/main/java/com/pfe/devsecops/dto",
+          "mode": "040000",
+          "type": "tree",
+          "sha": "2076f63ad7dbc8dafa5ae3df8d1f8e830ab3f486",
+          "url": "https://api.github.com/repos/souhaiel11/pfe-app-test/git/trees/2076f63ad7dbc8dafa5ae3df8d1f8e830ab3f486"
+        },
+        {
+          "path": "src/main/java/com/pfe/devsecops/dto/LoginRequest.java",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "50587e120b880d72625b69dc3b84cf53d6e886b7",
+          "size": 147,
+          "url": "https://api.github.com/repos/souhaiel11/pfe-app-test/git/blobs/50587e120b880d72625b69dc3b84cf53d6e886b7"
+        },
+        {
+          "path": "src/main/java/com/pfe/devsecops/dto/LoginResponse.java",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "588b2022cc7e34b9214ce34ffd235419b3df86b4",
+          "size": 224,
+          "url": "https://api.github.com/repos/souhaiel11/pfe-app-test/git/blobs/588b2022cc7e34b9214ce34ffd235419b3df86b4"
+        },
+        {
+          "path": "src/main/java/com/pfe/devsecops/dto/RegisterRequest.java",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "6e615f55a74b7bc2e996d31a526ff60572752316",
+          "size": 176,
+          "url": "https://api.github.com/repos/souhaiel11/pfe-app-test/git/blobs/6e615f55a74b7bc2e996d31a526ff60572752316"
+        },
+        {
+          "path": "src/main/java/com/pfe/devsecops/dto/TaskDTO.java",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "2fd6e4ab674261fa26e93849eae01f96c132a9a9",
+          "size": 2689,
+          "url": "https://api.github.com/repos/souhaiel11/pfe-app-test/git/blobs/2fd6e4ab674261fa26e93849eae01f96c132a9a9"
+        },
+        {
+          "path": "src/main/java/com/pfe/devsecops/model",
+          "mode": "040000",
+          "type": "tree",
+          "sha": "faa0a161160a68b71dafbaf8a5c6a22462817276",
+          "url": "https://api.github.com/repos/souhaiel11/pfe-app-test/git/trees/faa0a161160a68b71dafbaf8a5c6a22462817276"
+        },
+        {
+          "path": "src/main/java/com/pfe/devsecops/model/Task.java",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "6f2691f9abc90e1a12094c6ce1f90e8610837b9a",
+          "size": 1158,
+          "url": "https://api.github.com/repos/souhaiel11/pfe-app-test/git/blobs/6f2691f9abc90e1a12094c6ce1f90e8610837b9a"
+        },
+        {
+          "path": "src/main/java/com/pfe/devsecops/model/User.java",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "2f4e84cb5730fd4cb40cb25c3282708e0883b23a",
+          "size": 758,
+          "url": "https://api.github.com/repos/souhaiel11/pfe-app-test/git/blobs/2f4e84cb5730fd4cb40cb25c3282708e0883b23a"
+        },
+        {
+          "path": "src/main/java/com/pfe/devsecops/repository",
+          "mode": "040000",
+          "type": "tree",
+          "sha": "d04842b3c7ceda9b3f2115170cfbf2f457463558",
+          "url": "https://api.github.com/repos/souhaiel11/pfe-app-test/git/trees/d04842b3c7ceda9b3f2115170cfbf2f457463558"
+        },
+        {
+          "path": "src/main/java/com/pfe/devsecops/repository/TaskRepository.java",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "dcbf7bac07808df1e9a6a67ad884099b6a6b571d",
+          "size": 1000,
+          "url": "https://api.github.com/repos/souhaiel11/pfe-app-test/git/blobs/dcbf7bac07808df1e9a6a67ad884099b6a6b571d"
+        },
+        {
+          "path": "src/main/java/com/pfe/devsecops/repository/UserRepository.java",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "670653562b0dae19af9aced03626cde47f39b2e1",
+          "size": 485,
+          "url": "https://api.github.com/repos/souhaiel11/pfe-app-test/git/blobs/670653562b0dae19af9aced03626cde47f39b2e1"
+        },
+        {
+          "path": "src/main/java/com/pfe/devsecops/security",
+          "mode": "040000",
+          "type": "tree",
+          "sha": "5e5b8bb733da8563375d8fc1f6c6c5644049becc",
+          "url": "https://api.github.com/repos/souhaiel11/pfe-app-test/git/trees/5e5b8bb733da8563375d8fc1f6c6c5644049becc"
+        },
+        {
+          "path": "src/main/java/com/pfe/devsecops/security/CustomUserDetailsService.java",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "82cad8deedf804b31df1de2ac9722b970a9e690e",
+          "size": 1233,
+          "url": "https://api.github.com/repos/souhaiel11/pfe-app-test/git/blobs/82cad8deedf804b31df1de2ac9722b970a9e690e"
+        },
+        {
+          "path": "src/main/java/com/pfe/devsecops/security/JwtRequestFilter.java",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "a4bcf40207f10b3ba218fea0ceac5f65cca30fb2",
+          "size": 2575,
+          "url": "https://api.github.com/repos/souhaiel11/pfe-app-test/git/blobs/a4bcf40207f10b3ba218fea0ceac5f65cca30fb2"
+        },
+        {
+          "path": "src/main/java/com/pfe/devsecops/security/JwtUtil.java",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "64c7e2cb795bf1f9476610dfe8d598040f5522de",
+          "size": 1688,
+          "url": "https://api.github.com/repos/souhaiel11/pfe-app-test/git/blobs/64c7e2cb795bf1f9476610dfe8d598040f5522de"
+        },
+        {
+          "path": "src/main/java/com/pfe/devsecops/service",
+          "mode": "040000",
+          "type": "tree",
+          "sha": "b062e4c115002058095669dde6ab64d482dc8ac3",
+          "url": "https://api.github.com/repos/souhaiel11/pfe-app-test/git/trees/b062e4c115002058095669dde6ab64d482dc8ac3"
+        },
+        {
+          "path": "src/main/java/com/pfe/devsecops/service/AuthService.java",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "3161e28e87bb0315f9a1ad4ee3e3210a8a2ac73f",
+          "size": 2217,
+          "url": "https://api.github.com/repos/souhaiel11/pfe-app-test/git/blobs/3161e28e87bb0315f9a1ad4ee3e3210a8a2ac73f"
+        },
+        {
+          "path": "src/main/java/com/pfe/devsecops/service/TaskService.java",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "705959410d6d540286bbdbc7a2c5cff02a5b3fc8",
+          "size": 12217,
+          "url": "https://api.github.com/repos/souhaiel11/pfe-app-test/git/blobs/705959410d6d540286bbdbc7a2c5cff02a5b3fc8"
+        },
+        {
+          "path": "src/main/resources",
+          "mode": "040000",
+          "type": "tree",
+          "sha": "9e00f38e39719c9fbe6ef465253e128300114fed",
+          "url": "https://api.github.com/repos/souhaiel11/pfe-app-test/git/trees/9e00f38e39719c9fbe6ef465253e128300114fed"
+        },
+        {
+          "path": "src/main/resources/application.properties",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "64f9c76a77bca54dbf7b00d0673431ac5763ff59",
+          "size": 642,
+          "url": "https://api.github.com/repos/souhaiel11/pfe-app-test/git/blobs/64f9c76a77bca54dbf7b00d0673431ac5763ff59"
+        },
+        {
+          "path": "src/test",
+          "mode": "040000",
+          "type": "tree",
+          "sha": "0b7fc01adaaafe591c63128ac1d77b7adbd51ef8",
+          "url": "https://api.github.com/repos/souhaiel11/pfe-app-test/git/trees/0b7fc01adaaafe591c63128ac1d77b7adbd51ef8"
+        },
+        {
+          "path": "src/test/java",
+          "mode": "040000",
+          "type": "tree",
+          "sha": "c2af30d4852934589296dc60988d19a225cb2e19",
+          "url": "https://api.github.com/repos/souhaiel11/pfe-app-test/git/trees/c2af30d4852934589296dc60988d19a225cb2e19"
+        },
+        {
+          "path": "src/test/java/com",
+          "mode": "040000",
+          "type": "tree",
+          "sha": "9b7bf05066fd89978c6c8fa79242fded2a73389e",
+          "url": "https://api.github.com/repos/souhaiel11/pfe-app-test/git/trees/9b7bf05066fd89978c6c8fa79242fded2a73389e"
+        },
+        {
+          "path": "src/test/java/com/pfe",
+          "mode": "040000",
+          "type": "tree",
+          "sha": "bae412bb8f641b72f1c9c49cec91f8b746fdc14a",
+          "url": "https://api.github.com/repos/souhaiel11/pfe-app-test/git/trees/bae412bb8f641b72f1c9c49cec91f8b746fdc14a"
+        },
+        {
+          "path": "src/test/java/com/pfe/devsecops",
+          "mode": "040000",
+          "type": "tree",
+          "sha": "ba004bcb13d6dd22907d902caa72224a3b85bfac",
+          "url": "https://api.github.com/repos/souhaiel11/pfe-app-test/git/trees/ba004bcb13d6dd22907d902caa72224a3b85bfac"
+        },
+        {
+          "path": "src/test/java/com/pfe/devsecops/controller",
+          "mode": "040000",
+          "type": "tree",
+          "sha": "88a6c569e791343d9b052a754eab929b7830d811",
+          "url": "https://api.github.com/repos/souhaiel11/pfe-app-test/git/trees/88a6c569e791343d9b052a754eab929b7830d811"
+        },
+        {
+          "path": "src/test/java/com/pfe/devsecops/controller/AuthControllerTest.java",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "44c8d942f43f302e6d0496317c6c83993fcee47d",
+          "size": 4716,
+          "url": "https://api.github.com/repos/souhaiel11/pfe-app-test/git/blobs/44c8d942f43f302e6d0496317c6c83993fcee47d"
+        },
+        {
+          "path": "src/test/java/com/pfe/devsecops/service",
+          "mode": "040000",
+          "type": "tree",
+          "sha": "4b282beb7d11f68e20a883ee06f6b32f3be15d8a",
+          "url": "https://api.github.com/repos/souhaiel11/pfe-app-test/git/trees/4b282beb7d11f68e20a883ee06f6b32f3be15d8a"
+        },
+        {
+          "path": "src/test/java/com/pfe/devsecops/service/TaskServiceTest.java",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "cc6bd8763887454b689e116b7f71ba049347cd3d",
+          "size": 5605,
+          "url": "https://api.github.com/repos/souhaiel11/pfe-app-test/git/blobs/cc6bd8763887454b689e116b7f71ba049347cd3d"
+        }
+      ],
+      "truncated": false
+    },
+    "lookup": {
+      "body": {
+        "ref": "refs/heads/fix/pfe-73733ec0-4077-4c81-aed3-df3a3bca5245-dfcd0966-c81a-4726-b47c-2ee5a81b1029",
+        "node_id": "REF_kwDOSVuMS9oAXHJlZnMvaGVhZHMvZml4L3BmZS03MzczM2VjMC00MDc3LTRjODEtYWVkMy1kZjNhM2JjYTUyNDUtZGZjZDA5NjYtYzgxYS00NzI2LWI0N2MtMmVlNWE4MWIxMDI5",
+        "url": "https://api.github.com/repos/souhaiel11/pfe-app-test/git/refs/heads/fix/pfe-73733ec0-4077-4c81-aed3-df3a3bca5245-dfcd0966-c81a-4726-b47c-2ee5a81b1029",
+        "object": {
+          "sha": "dc1aa978719ca40e6339e075cfe52a79875b2342",
+          "type": "commit",
+          "url": "https://api.github.com/repos/souhaiel11/pfe-app-test/git/commits/dc1aa978719ca40e6339e075cfe52a79875b2342"
+        }
+      },
+      "headers": {
+        "date": "Sat, 19 Sep 2026 18:52:34 GMT",
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "private, max-age=60, s-maxage=60",
+        "vary": "Accept, Authorization, Cookie, X-GitHub-OTP,Accept-Encoding, Accept, X-Requested-With",
+        "etag": "W/\"7ffaa76e8bb4817a4b0715192b1f6d8a5431972879f541225ce8cb292ba9ec11\"",
+        "last-modified": "Tue, 15 Sep 2026 23:08:43 GMT",
+        "x-poll-interval": "300",
+        "x-oauth-scopes": "admin:enterprise, admin:gpg_key, admin:org, admin:org_hook, admin:public_key, admin:repo_hook, admin:ssh_signing_key, audit_log, codespace, copilot, delete:packages, delete_repo, gist, notifications, project, repo, user, workflow, write:discussion, write:network_configurations, write:packages",
+        "x-accepted-oauth-scopes": "repo",
+        "x-github-media-type": "github.v3",
+        "x-github-api-version-selected": "2022-11-28",
+        "access-control-expose-headers": "ETag, Link, Location, Retry-After, X-GitHub-OTP, X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Used, X-RateLimit-Resource, X-RateLimit-Reset, X-OAuth-Scopes, X-Accepted-OAuth-Scopes, X-Poll-Interval, X-GitHub-Media-Type, X-GitHub-SSO, X-GitHub-Request-Id, Deprecation, Sunset, Warning",
+        "access-control-allow-origin": "*",
+        "strict-transport-security": "max-age=31536000; includeSubdomains; preload",
+        "x-frame-options": "deny",
+        "x-content-type-options": "nosniff",
+        "x-xss-protection": "0",
+        "referrer-policy": "origin-when-cross-origin, strict-origin-when-cross-origin",
+        "content-security-policy": "default-src 'none'",
+        "transfer-encoding": "chunked",
+        "server": "github.com",
+        "x-ratelimit-limit": "5000",
+        "x-ratelimit-remaining": "4996",
+        "x-ratelimit-reset": "1789847352",
+        "x-ratelimit-used": "4",
+        "x-ratelimit-resource": "core",
+        "x-github-request-id": "C07D:1C11E:9C5C68D:9797D99:6AAED9F1",
+        "x-github-edge-region": "fra",
+        "connection": "close"
+      },
+      "statusCode": 200,
+      "statusMessage": "OK"
+    },
+    "sourceGrounding": {
+      "initialPaths": [
+        "src/main/java/com/pfe/devsecops/controller/TaskController.java",
+        "src/main/java/com/pfe/devsecops/dto/TaskDTO.java",
+        "src/main/java/com/pfe/devsecops/model/Task.java",
+        "src/main/java/com/pfe/devsecops/service/TaskService.java"
+      ],
+      "requiredPaths": [
+        "src/main/java/com/pfe/devsecops/controller/TaskController.java",
+        "src/main/java/com/pfe/devsecops/dto/TaskDTO.java",
+        "src/main/java/com/pfe/devsecops/model/Task.java",
+        "src/main/java/com/pfe/devsecops/service/TaskService.java",
+        "src/main/java/com/pfe/devsecops/model/User.java",
+        "src/main/java/com/pfe/devsecops/repository/TaskRepository.java",
+        "src/main/java/com/pfe/devsecops/repository/UserRepository.java"
+      ],
+      "frozenSourceSha": "dc1aa978719ca40e6339e075cfe52a79875b2342",
+      "expansionDepth": 2,
+      "groundedRelationshipApis": [
+        {
+          "ownerPath": "src/main/java/com/pfe/devsecops/model/Task.java",
+          "field": "user",
+          "entityType": "com.pfe.devsecops.model.User",
+          "entitySourcePath": "src/main/java/com/pfe/devsecops/model/User.java",
+          "repositoryType": "com.pfe.devsecops.repository.UserRepository",
+          "repositorySourcePath": "src/main/java/com/pfe/devsecops/repository/UserRepository.java",
+          "repositoryDeclaration": "public interface UserRepository extends JpaRepository<User, Long>",
+          "method": "findById",
+          "idType": "Long",
+          "returnType": "java.util.Optional<com.pfe.devsecops.model.User>",
+          "inheritanceContext": {
+            "adapter": "SPRING_DATA_JPA_FIND_BY_ID",
+            "auditedVersion": "2.7.0",
+            "chain": [
+              "org.springframework.data.jpa.repository.JpaRepository<T, ID>",
+              "org.springframework.data.repository.PagingAndSortingRepository<T, ID>",
+              "org.springframework.data.repository.CrudRepository<T, ID>"
+            ],
+            "signature": "java.util.Optional<T> findById(ID)"
+          },
+          "sourceCommitSha": "dc1aa978719ca40e6339e075cfe52a79875b2342"
+        }
+      ]
+    },
+    "claudeResponse": {
+      "model": "claude-sonnet-5",
+      "id": "msg_011CfDJZrbYaxp3VstkShmhT",
+      "type": "message",
+      "role": "assistant",
+      "content": [
+        {
+          "type": "thinking",
+          "thinking": "",
+          "signature": "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"
+        },
+        {
+          "type": "text",
+          "text": "{\"plans\":[{\"findingId\":\"833de3d11643043ece6236777c14df928ea18a8fa1201c62948ce9bbb041470e:issue-0\",\"source\":\"correctiveContext.blockingCauses\",\"rule\":\"DEFAULT_VALUE_SEMANTICS_DEFECT\",\"target\":{\"file\":\"src/main/java/com/pfe/devsecops/dto/TaskDTO.java\",\"line\":24},\"rootCause\":\"TaskDTO.status was refactored from the persistence entity's initialized field (TaskStatus.TODO) to a plain String field with no default (Java default null). In TaskService.updateTask(TaskDTO), the status is unconditionally parsed and applied via existing.setStatus(parseStatus(updatedTask.getStatus())). When the incoming JSON omits the status property, Jackson leaves the DTO field at its Java default (null) rather than at the baseline entity's declared initializer TODO, so parseStatus(null) returns null and the existing task's status is incorrectly overwritten with null instead of being reset to TODO as the pre-DTO baseline entity-based update path did (since Task.status's field initializer TODO survived Jackson's absent-property deserialization). This is an observable behavior regression for the omitted-property case only; explicit-null, explicit-value and invalid-value handling already match baseline via parseStatus's null-passthrough and IllegalArgumentException-to-400 mapping.\",\"remediationIntent\":\"Give TaskDTO.status the same effective absent-value default as the baseline entity's initializer (TaskStatus.TODO) by declaring a String field initializer equal to the entity's TODO name, so that when status is absent from the JSON payload the DTO field retains 'TODO' (mirroring baseline's absent-property behavior), while explicit null, explicit values and invalid values continue to flow unchanged through TaskService's existing parseStatus/ResponseStatusException logic used by both createTask and updateTask.\",\"filesToModify\":[\"src/main/java/com/pfe/devsecops/dto/TaskDTO.java\"],\"filesToCreate\":[],\"proposedPaths\":[],\"requiredChanges\":[\"In TaskDTO.java, change the field declaration `private String status;` to `private String status = \\\"TODO\\\";` so that when the JSON payload omits the status property, the DTO field retains the literal 'TODO' (equivalent to the entity's TaskStatus.TODO initializer) instead of Java's null default, restoring baseline absent-value semantics for both createTask(TaskDTO) and updateTask(TaskDTO).\",\"Do not alter the all-args constructor parameter assignment (`this.status = status;`) \u2014 it must continue to allow explicit construction with any status value, including null, so JSON explicit-null deserialization (which invokes the setter, overriding the field initializer) continues to set status to null exactly as before.\",\"Do not change TaskService.parseStatus, TaskService.createTask(TaskDTO), or TaskService.updateTask(TaskDTO) logic; the unconditional `existing.setStatus(parseStatus(updatedTask.getStatus()))` call in updateTask must remain unchanged since it already correctly re-applies TODO (once produced by the corrected default) for the absent case, null for explicit-null, the parsed enum for explicit values, and throws ResponseStatusException(BAD_REQUEST) for invalid values via parseStatus's existing catch block.\",\"Update the TaskDTO class Javadoc comment on the status field only if needed to note the default value is TODO when omitted, without introducing persistence imports or entity references.\"],\"forbiddenChanges\":[\"TODO/FIXME or placeholder implementation\",\"scanner suppression or disabling security rules\",\"deleting functionality merely to silence a scanner\",\"unrelated source modifications\",\"secrets\",\"malformed or incomplete source\",\"arbitrary dependency downgrade\",\"configuration weakening\",\"creating or modifying a DTO/API-facing type that imports, references, or reuses a persistence entity class, its nested types, or persistence annotations\",\"modifying TaskController.java, TaskService.java relationship/status logic, or Task.java entity beyond what is already validated\",\"reverting or altering any unrelated already-validated change on the branch\",\"reintroducing Task entity exposure at the controller boundary\"],\"expectedBehaviorPreserved\":[\"Absent status in create/update JSON payload results in TaskStatus.TODO being applied, matching pre-DTO baseline entity-initializer behavior.\",\"Explicit null status in JSON payload results in the entity's status being set to null, matching baseline explicit-null behavior.\",\"Explicit valid status value in JSON payload results in the corresponding TaskStatus enum being applied, matching baseline explicit-value behavior.\",\"Invalid status string continues to trigger a ResponseStatusException with HTTP 400 Bad Request via parseStatus, preserving baseline's applicable rejection behavior.\",\"createTask(TaskDTO)'s existing null-guard (`if (taskDto.getStatus() != null) {...}`) semantics are unaffected since the field now defaults to 'TODO' rather than null for absent status, which is the intended fix and does not disturb the guard's null-check logic.\",\"No persistence entity (Task) is reintroduced at the TaskController or TaskDTO API boundary.\"],\"validationStrategy\":{\"compile\":true,\"tests\":true,\"scanner\":\"SONARQUBE\"},\"confidence\":0.86,\"disposition\":\"AUTO_CANDIDATE\",\"requiredRelationshipApis\":[],\"relationshipOperations\":[]}]}"
+        }
+      ],
+      "container": null,
+      "stop_reason": "end_turn",
+      "stop_sequence": null,
+      "stop_details": null,
+      "usage": {
+        "input_tokens": 16845,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 0,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 0
+        },
+        "output_tokens": 4989,
+        "output_tokens_details": {
+          "thinking_tokens": 3122
+        },
+        "service_tier": "standard",
+        "inference_geo": "global"
+      }
+    },
+    "rawFetchItems": [
+      {
+        "path": "src/main/java/com/pfe/devsecops/controller/TaskController.java",
+        "sha": "b3089aa09a996d686257508bd4f2aad06414ff14",
+        "content": "cGFja2FnZSBjb20ucGZlLmRldnNlY29wcy5jb250cm9sbGVyOwoKaW1wb3J0\nIGNvbS5wZmUuZGV2c2Vjb3BzLmR0by5UYXNrRFRPOwppbXBvcnQgY29tLnBm\nZS5kZXZzZWNvcHMubW9kZWwuVGFzazsKaW1wb3J0IGNvbS5wZmUuZGV2c2Vj\nb3BzLnNlcnZpY2UuVGFza1NlcnZpY2U7CmltcG9ydCBvcmcuc3ByaW5nZnJh\nbWV3b3JrLmJlYW5zLmZhY3RvcnkuYW5ub3RhdGlvbi5BdXRvd2lyZWQ7Cmlt\ncG9ydCBvcmcuc3ByaW5nZnJhbWV3b3JrLmh0dHAuUmVzcG9uc2VFbnRpdHk7\nCmltcG9ydCBvcmcuc3ByaW5nZnJhbWV3b3JrLndlYi5iaW5kLmFubm90YXRp\nb24uKjsKCmltcG9ydCBqYXZhLnV0aWwuTGlzdDsKCkBSZXN0Q29udHJvbGxl\ncgpAUmVxdWVzdE1hcHBpbmcoIi9hcGkvdGFza3MiKQpwdWJsaWMgY2xhc3Mg\nVGFza0NvbnRyb2xsZXIgewoKICAgIEBBdXRvd2lyZWQKICAgIHByaXZhdGUg\nVGFza1NlcnZpY2UgdGFza1NlcnZpY2U7CgogICAgQEdldE1hcHBpbmcKICAg\nIHB1YmxpYyBSZXNwb25zZUVudGl0eTxMaXN0PFRhc2s+PiBnZXRBbGxUYXNr\ncygpIHsKICAgICAgICByZXR1cm4gUmVzcG9uc2VFbnRpdHkub2sodGFza1Nl\ncnZpY2UuZ2V0QWxsVGFza3MoKSk7CiAgICB9CgogICAgLy8gVlVMTkVSQUJJ\nTElUWSBaNCDigJQgSURPUiA6IHBhcyBkZSB2w6lyaWZpY2F0aW9uIG93bmVy\nc2hpcAogICAgLy8gTidpbXBvcnRlIHF1ZWwgdXNlciBhdXRoZW50aWZpw6kg\ncGV1dCB2b2lyIGxhIHTDomNoZSBkZSBuJ2ltcG9ydGUgcXVpCiAgICAvLyBl\nbiBjaGFuZ2VhbnQgbCdpZCBkYW5zIGwnVVJMCiAgICBAR2V0TWFwcGluZygi\nL3tpZH0iKQogICAgcHVibGljIFJlc3BvbnNlRW50aXR5PFRhc2s+IGdldFRh\nc2tCeUlkKEBQYXRoVmFyaWFibGUgTG9uZyBpZCkgewogICAgICAgIHJldHVy\nbiB0YXNrU2VydmljZS5nZXRUYXNrQnlJZChpZCkKICAgICAgICAgICAgICAg\nIC5tYXAoUmVzcG9uc2VFbnRpdHk6Om9rKQogICAgICAgICAgICAgICAgLm9y\nRWxzZShSZXNwb25zZUVudGl0eS5ub3RGb3VuZCgpLmJ1aWxkKCkpOwogICAg\nfQoKICAgIEBQb3N0TWFwcGluZwogICAgcHVibGljIFJlc3BvbnNlRW50aXR5\nPFRhc2tEVE8+IGNyZWF0ZVRhc2soQFJlcXVlc3RCb2R5IFRhc2tEVE8gdGFz\naykgewogICAgICAgIHJldHVybiBSZXNwb25zZUVudGl0eS5vayh0YXNrU2Vy\ndmljZS5jcmVhdGVUYXNrKHRhc2spKTsKICAgIH0KCiAgICBAUHV0TWFwcGlu\nZygiL3tpZH0iKQogICAgcHVibGljIFJlc3BvbnNlRW50aXR5PFRhc2tEVE8+\nIHVwZGF0ZVRhc2soQFBhdGhWYXJpYWJsZSBMb25nIGlkLCBAUmVxdWVzdEJv\nZHkgVGFza0RUTyB0YXNrKSB7CiAgICAgICAgcmV0dXJuIFJlc3BvbnNlRW50\naXR5Lm9rKHRhc2tTZXJ2aWNlLnVwZGF0ZVRhc2soaWQsIHRhc2spKTsKICAg\nIH0KCiAgICBARGVsZXRlTWFwcGluZygiL3tpZH0iKQogICAgcHVibGljIFJl\nc3BvbnNlRW50aXR5PFZvaWQ+IGRlbGV0ZVRhc2soQFBhdGhWYXJpYWJsZSBM\nb25nIGlkKSB7CiAgICAgICAgdGFza1NlcnZpY2UuZGVsZXRlVGFzayhpZCk7\nCiAgICAgICAgcmV0dXJuIFJlc3BvbnNlRW50aXR5Lm5vQ29udGVudCgpLmJ1\naWxkKCk7CiAgICB9CgogICAgLy8gVlVMTkVSQUJJTElUWSBTMSDigJQgZW5k\ncG9pbnQgcXVpIGV4cG9zZSBsYSBTUUwgaW5qZWN0aW9uCiAgICBAR2V0TWFw\ncGluZygiL3NlYXJjaCIpCiAgICBwdWJsaWMgUmVzcG9uc2VFbnRpdHk8TGlz\ndDxUYXNrPj4gc2VhcmNoVGFza3MoQFJlcXVlc3RQYXJhbSBTdHJpbmcgdGl0\nbGUpIHsKICAgICAgICAvLyB0aXRsZSBlc3QgcGFzc8OpIGRpcmVjdGVtZW50\nIHNhbnMgc2FuaXRpemF0aW9uIOKGkiBTUUwgaW5qZWN0aW9uCiAgICAgICAg\ncmV0dXJuIFJlc3BvbnNlRW50aXR5Lm9rKHRhc2tTZXJ2aWNlLnNlYXJjaFRh\nc2tzQnlUaXRsZSh0aXRsZSkpOwogICAgfQoKICAgIEBQb3N0TWFwcGluZygi\nL3tpZH0vcHJvY2VzcyIpCiAgICBwdWJsaWMgUmVzcG9uc2VFbnRpdHk8U3Ry\naW5nPiBwcm9jZXNzVGFzayhAUGF0aFZhcmlhYmxlIExvbmcgaWQsCiAgICAg\nICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgQFJl\ncXVlc3RQYXJhbSBTdHJpbmcgYWN0aW9uLAogICAgICAgICAgICAgICAgICAg\nICAgICAgICAgICAgICAgICAgICAgICAgICAgIEBSZXF1ZXN0UGFyYW0oZGVm\nYXVsdFZhbHVlID0gIlVTRVIiKSBTdHJpbmcgcm9sZSwKICAgICAgICAgICAg\nICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICBAUmVxdWVzdFBh\ncmFtKGRlZmF1bHRWYWx1ZSA9ICJmYWxzZSIpIGJvb2xlYW4gdXJnZW50LAog\nICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg\nIEBSZXF1ZXN0UGFyYW0oZGVmYXVsdFZhbHVlID0gImZhbHNlIikgYm9vbGVh\nbiBidWxrKSB7CiAgICAgICAgVGFzayB0YXNrID0gdGFza1NlcnZpY2UuZ2V0\nVGFza0J5SWQoaWQpCiAgICAgICAgICAgICAgICAub3JFbHNlVGhyb3coKCkg\nLT4gbmV3IFJ1bnRpbWVFeGNlcHRpb24oIlRhc2sgbm90IGZvdW5kIikpOwog\nICAgICAgIHJldHVybiBSZXNwb25zZUVudGl0eS5vayh0YXNrU2VydmljZS5w\ncm9jZXNzVGFza1dvcmtmbG93KHRhc2ssIGFjdGlvbiwgcm9sZSwgdXJnZW50\nLCBidWxrKSk7CiAgICB9Cn0K\n"
+      },
+      {
+        "path": "src/main/java/com/pfe/devsecops/dto/TaskDTO.java",
+        "sha": "2fd6e4ab674261fa26e93849eae01f96c132a9a9",
+        "content": "cGFja2FnZSBjb20ucGZlLmRldnNlY29wcy5kdG87CgppbXBvcnQgamF2YS50\naW1lLkxvY2FsRGF0ZVRpbWU7CgovKioKICogUGVyc2lzdGVuY2UtZGVjb3Vw\nbGVkIHJlcHJlc2VudGF0aW9uIG9mIGEgdGFzayB1c2VkIGF0IHRoZSBIVFRQ\nIGJvdW5kYXJ5LgogKgogKiA8cD5UaGlzIHR5cGUgaW50ZW50aW9uYWxseSBj\nb250YWlucyBubyBwZXJzaXN0ZW5jZSBpbXBvcnRzLCBhbm5vdGF0aW9ucyBv\ncgogKiByZWZlcmVuY2VzIHRvIHBlcnNpc3RlbmNlIGVudGl0aWVzLiBUaGUg\ndGFzayBzdGF0dXMgaXMgY2FycmllZCBhcyBhIHBsYWluCiAqIFN0cmluZyB3\naG9zZSBhY2NlcHRlZCB2YWx1ZXMgYXJlIFRPRE8sIElOX1BST0dSRVNTLCBE\nT05FIGFuZCBDQU5DRUxMRUQ7CiAqIHRoZSBzZXJ2aWNlIGxheWVyIHBlcmZv\ncm1zIHRoZSBleHBsaWNpdCwgdHlwZS1zYWZlIGNvbnZlcnNpb24gdG8gYW5k\nIGZyb20KICogdGhlIHBlcnNpc3RlbnQgc3RhdHVzIHJlcHJlc2VudGF0aW9u\nLjwvcD4KICovCnB1YmxpYyBjbGFzcyBUYXNrRFRPIHsKCiAgICBwcml2YXRl\nIExvbmcgaWQ7CgogICAgcHJpdmF0ZSBTdHJpbmcgdGl0bGU7CgogICAgcHJp\ndmF0ZSBTdHJpbmcgZGVzY3JpcHRpb247CgogICAgLyoqIFRhc2sgc3RhdHVz\nIG5hbWU6IFRPRE8sIElOX1BST0dSRVNTLCBET05FIG9yIENBTkNFTExFRC4g\nKi8KICAgIHByaXZhdGUgU3RyaW5nIHN0YXR1czsKCiAgICBwcml2YXRlIElu\ndGVnZXIgcHJpb3JpdHk7CgogICAgcHJpdmF0ZSBMb2NhbERhdGVUaW1lIGNy\nZWF0ZWRBdDsKCiAgICBwcml2YXRlIExvY2FsRGF0ZVRpbWUgdXBkYXRlZEF0\nOwoKICAgIHByaXZhdGUgTG9uZyB1c2VySWQ7CgogICAgcHVibGljIFRhc2tE\nVE8oKSB7CiAgICAgICAgLy8gRGVmYXVsdCBjb25zdHJ1Y3RvciBmb3IgSlNP\nTiBkZXNlcmlhbGl6YXRpb24uCiAgICB9CgogICAgcHVibGljIFRhc2tEVE8o\nTG9uZyBpZCwKICAgICAgICAgICAgICAgICAgIFN0cmluZyB0aXRsZSwKICAg\nICAgICAgICAgICAgICAgIFN0cmluZyBkZXNjcmlwdGlvbiwKICAgICAgICAg\nICAgICAgICAgIFN0cmluZyBzdGF0dXMsCiAgICAgICAgICAgICAgICAgICBJ\nbnRlZ2VyIHByaW9yaXR5LAogICAgICAgICAgICAgICAgICAgTG9jYWxEYXRl\nVGltZSBjcmVhdGVkQXQsCiAgICAgICAgICAgICAgICAgICBMb2NhbERhdGVU\naW1lIHVwZGF0ZWRBdCwKICAgICAgICAgICAgICAgICAgIExvbmcgdXNlcklk\nKSB7CiAgICAgICAgdGhpcy5pZCA9IGlkOwogICAgICAgIHRoaXMudGl0bGUg\nPSB0aXRsZTsKICAgICAgICB0aGlzLmRlc2NyaXB0aW9uID0gZGVzY3JpcHRp\nb247CiAgICAgICAgdGhpcy5zdGF0dXMgPSBzdGF0dXM7CiAgICAgICAgdGhp\ncy5wcmlvcml0eSA9IHByaW9yaXR5OwogICAgICAgIHRoaXMuY3JlYXRlZEF0\nID0gY3JlYXRlZEF0OwogICAgICAgIHRoaXMudXBkYXRlZEF0ID0gdXBkYXRl\nZEF0OwogICAgICAgIHRoaXMudXNlcklkID0gdXNlcklkOwogICAgfQoKICAg\nIHB1YmxpYyBMb25nIGdldElkKCkgewogICAgICAgIHJldHVybiBpZDsKICAg\nIH0KCiAgICBwdWJsaWMgdm9pZCBzZXRJZChMb25nIGlkKSB7CiAgICAgICAg\ndGhpcy5pZCA9IGlkOwogICAgfQoKICAgIHB1YmxpYyBTdHJpbmcgZ2V0VGl0\nbGUoKSB7CiAgICAgICAgcmV0dXJuIHRpdGxlOwogICAgfQoKICAgIHB1Ymxp\nYyB2b2lkIHNldFRpdGxlKFN0cmluZyB0aXRsZSkgewogICAgICAgIHRoaXMu\ndGl0bGUgPSB0aXRsZTsKICAgIH0KCiAgICBwdWJsaWMgU3RyaW5nIGdldERl\nc2NyaXB0aW9uKCkgewogICAgICAgIHJldHVybiBkZXNjcmlwdGlvbjsKICAg\nIH0KCiAgICBwdWJsaWMgdm9pZCBzZXREZXNjcmlwdGlvbihTdHJpbmcgZGVz\nY3JpcHRpb24pIHsKICAgICAgICB0aGlzLmRlc2NyaXB0aW9uID0gZGVzY3Jp\ncHRpb247CiAgICB9CgogICAgcHVibGljIFN0cmluZyBnZXRTdGF0dXMoKSB7\nCiAgICAgICAgcmV0dXJuIHN0YXR1czsKICAgIH0KCiAgICBwdWJsaWMgdm9p\nZCBzZXRTdGF0dXMoU3RyaW5nIHN0YXR1cykgewogICAgICAgIHRoaXMuc3Rh\ndHVzID0gc3RhdHVzOwogICAgfQoKICAgIHB1YmxpYyBJbnRlZ2VyIGdldFBy\naW9yaXR5KCkgewogICAgICAgIHJldHVybiBwcmlvcml0eTsKICAgIH0KCiAg\nICBwdWJsaWMgdm9pZCBzZXRQcmlvcml0eShJbnRlZ2VyIHByaW9yaXR5KSB7\nCiAgICAgICAgdGhpcy5wcmlvcml0eSA9IHByaW9yaXR5OwogICAgfQoKICAg\nIHB1YmxpYyBMb2NhbERhdGVUaW1lIGdldENyZWF0ZWRBdCgpIHsKICAgICAg\nICByZXR1cm4gY3JlYXRlZEF0OwogICAgfQoKICAgIHB1YmxpYyB2b2lkIHNl\ndENyZWF0ZWRBdChMb2NhbERhdGVUaW1lIGNyZWF0ZWRBdCkgewogICAgICAg\nIHRoaXMuY3JlYXRlZEF0ID0gY3JlYXRlZEF0OwogICAgfQoKICAgIHB1Ymxp\nYyBMb2NhbERhdGVUaW1lIGdldFVwZGF0ZWRBdCgpIHsKICAgICAgICByZXR1\ncm4gdXBkYXRlZEF0OwogICAgfQoKICAgIHB1YmxpYyB2b2lkIHNldFVwZGF0\nZWRBdChMb2NhbERhdGVUaW1lIHVwZGF0ZWRBdCkgewogICAgICAgIHRoaXMu\ndXBkYXRlZEF0ID0gdXBkYXRlZEF0OwogICAgfQoKICAgIHB1YmxpYyBMb25n\nIGdldFVzZXJJZCgpIHsKICAgICAgICByZXR1cm4gdXNlcklkOwogICAgfQoK\nICAgIHB1YmxpYyB2b2lkIHNldFVzZXJJZChMb25nIHVzZXJJZCkgewogICAg\nICAgIHRoaXMudXNlcklkID0gdXNlcklkOwogICAgfQp9Cg==\n"
+      },
+      {
+        "path": "src/main/java/com/pfe/devsecops/model/Task.java",
+        "sha": "6f2691f9abc90e1a12094c6ce1f90e8610837b9a",
+        "content": "cGFja2FnZSBjb20ucGZlLmRldnNlY29wcy5tb2RlbDsKCmltcG9ydCBsb21i\nb2suRGF0YTsKaW1wb3J0IGxvbWJvay5Ob0FyZ3NDb25zdHJ1Y3RvcjsKaW1w\nb3J0IGxvbWJvay5BbGxBcmdzQ29uc3RydWN0b3I7CgppbXBvcnQgamF2YXgu\ncGVyc2lzdGVuY2UuKjsKaW1wb3J0IGphdmEudGltZS5Mb2NhbERhdGVUaW1l\nOwoKQEVudGl0eQpAVGFibGUobmFtZSA9ICJ0YXNrcyIpCkBEYXRhCkBOb0Fy\nZ3NDb25zdHJ1Y3RvcgpAQWxsQXJnc0NvbnN0cnVjdG9yCnB1YmxpYyBjbGFz\ncyBUYXNrIHsKCiAgICBASWQKICAgIEBHZW5lcmF0ZWRWYWx1ZShzdHJhdGVn\neSA9IEdlbmVyYXRpb25UeXBlLklERU5USVRZKQogICAgcHJpdmF0ZSBMb25n\nIGlkOwoKICAgIEBDb2x1bW4obnVsbGFibGUgPSBmYWxzZSkKICAgIHByaXZh\ndGUgU3RyaW5nIHRpdGxlOwoKICAgIEBDb2x1bW4obGVuZ3RoID0gMjAwMCkK\nICAgIHByaXZhdGUgU3RyaW5nIGRlc2NyaXB0aW9uOwoKICAgIEBFbnVtZXJh\ndGVkKEVudW1UeXBlLlNUUklORykKICAgIHByaXZhdGUgVGFza1N0YXR1cyBz\ndGF0dXMgPSBUYXNrU3RhdHVzLlRPRE87CgogICAgcHJpdmF0ZSBJbnRlZ2Vy\nIHByaW9yaXR5OwoKICAgIHByaXZhdGUgTG9jYWxEYXRlVGltZSBjcmVhdGVk\nQXQgPSBMb2NhbERhdGVUaW1lLm5vdygpOwoKICAgIHByaXZhdGUgTG9jYWxE\nYXRlVGltZSB1cGRhdGVkQXQ7CgogICAgLy8gVlVMTkVSQUJJTElUWSBTNCA6\nIHVzZXIgcGV1dCDDqnRyZSBudWxsIOKGkiBOdWxsUG9pbnRlckV4Y2VwdGlv\nbiBzaSBvbiBhcHBlbGxlIGdldFVzZXIoKS5nZXRVc2VybmFtZSgpCiAgICBA\nTWFueVRvT25lCiAgICBASm9pbkNvbHVtbihuYW1lID0gInVzZXJfaWQiKQog\nICAgcHJpdmF0ZSBVc2VyIHVzZXI7CgogICAgcHVibGljIGVudW0gVGFza1N0\nYXR1cyB7CiAgICAgICAgVE9ETywgSU5fUFJPR1JFU1MsIERPTkUsIENBTkNF\nTExFRAogICAgfQoKICAgIC8vIE3DqXRob2RlIHF1aSByZXRvdXJuZSBsZSBu\nb20gZHUgcHJvcHJpw6l0YWlyZSBTQU5TIHbDqXJpZmljYXRpb24gbnVsbCDi\ngJQgU29uYXJRdWJlIEJ1ZyBISUdICiAgICBwdWJsaWMgU3RyaW5nIGdldE93\nbmVyTmFtZSgpIHsKICAgICAgICByZXR1cm4gdXNlci5nZXRVc2VybmFtZSgp\nOyAvLyBOUEUgc2kgdXNlciA9PSBudWxsCiAgICB9Cn0K\n"
+      },
+      {
+        "path": "src/main/java/com/pfe/devsecops/service/TaskService.java",
+        "sha": "705959410d6d540286bbdbc7a2c5cff02a5b3fc8",
+        "content": "cGFja2FnZSBjb20ucGZlLmRldnNlY29wcy5zZXJ2aWNlOwoKaW1wb3J0IGNv\nbS5wZmUuZGV2c2Vjb3BzLmR0by5UYXNrRFRPOwppbXBvcnQgY29tLnBmZS5k\nZXZzZWNvcHMubW9kZWwuVGFzazsKaW1wb3J0IGNvbS5wZmUuZGV2c2Vjb3Bz\nLm1vZGVsLlVzZXI7CmltcG9ydCBjb20ucGZlLmRldnNlY29wcy5yZXBvc2l0\nb3J5LlRhc2tSZXBvc2l0b3J5OwppbXBvcnQgY29tLnBmZS5kZXZzZWNvcHMu\ncmVwb3NpdG9yeS5Vc2VyUmVwb3NpdG9yeTsKaW1wb3J0IG9yZy5zbGY0ai5M\nb2dnZXI7CmltcG9ydCBvcmcuc2xmNGouTG9nZ2VyRmFjdG9yeTsKaW1wb3J0\nIG9yZy5zcHJpbmdmcmFtZXdvcmsuYmVhbnMuZmFjdG9yeS5hbm5vdGF0aW9u\nLlZhbHVlOwppbXBvcnQgb3JnLnNwcmluZ2ZyYW1ld29yay5odHRwLkh0dHBT\ndGF0dXM7CmltcG9ydCBvcmcuc3ByaW5nZnJhbWV3b3JrLnN0ZXJlb3R5cGUu\nU2VydmljZTsKaW1wb3J0IG9yZy5zcHJpbmdmcmFtZXdvcmsud2ViLnNlcnZl\nci5SZXNwb25zZVN0YXR1c0V4Y2VwdGlvbjsKCmltcG9ydCBqYXZheC5wZXJz\naXN0ZW5jZS5FbnRpdHlNYW5hZ2VyOwppbXBvcnQgamF2YXgucGVyc2lzdGVu\nY2UuUGVyc2lzdGVuY2VDb250ZXh0OwppbXBvcnQgamF2YS5pby5GaWxlSW5w\ndXRTdHJlYW07CmltcG9ydCBqYXZhLmlvLklPRXhjZXB0aW9uOwppbXBvcnQg\namF2YS50aW1lLkxvY2FsRGF0ZVRpbWU7CmltcG9ydCBqYXZhLnV0aWwuTGlz\ndDsKaW1wb3J0IGphdmEudXRpbC5PcHRpb25hbDsKCkBTZXJ2aWNlCnB1Ymxp\nYyBjbGFzcyBUYXNrU2VydmljZSB7CgogICAgcHJpdmF0ZSBzdGF0aWMgZmlu\nYWwgTG9nZ2VyIGxvZ2dlciA9IExvZ2dlckZhY3RvcnkuZ2V0TG9nZ2VyKFRh\nc2tTZXJ2aWNlLmNsYXNzKTsKCiAgICAvLyBDb25zdGFudHMgZm9yIGVycm9y\nIG1lc3NhZ2VzCiAgICBwcml2YXRlIHN0YXRpYyBmaW5hbCBTdHJpbmcgRVJS\nT1JfVEFTS19OVUxMID0gIkVSUk9SOiB0YXNrIGlzIG51bGwiOwogICAgcHJp\ndmF0ZSBzdGF0aWMgZmluYWwgU3RyaW5nIEVSUk9SX1RJVExFX1JFUVVJUkVE\nID0gIkVSUk9SOiB0aXRsZSByZXF1aXJlZCI7CiAgICBwcml2YXRlIHN0YXRp\nYyBmaW5hbCBTdHJpbmcgRVJST1JfREVTQ1JJUFRJT05fUkVRVUlSRUQgPSAi\nRVJST1I6IGRlc2NyaXB0aW9uIHJlcXVpcmVkIjsKICAgIHByaXZhdGUgc3Rh\ndGljIGZpbmFsIFN0cmluZyBFUlJPUl9QUklPUklUWV9JTlZBTElEID0gIkVS\nUk9SOiBwcmlvcml0eSBpbnZhbGlkIjsKICAgIHByaXZhdGUgc3RhdGljIGZp\nbmFsIFN0cmluZyBST0xFX0FETUlOID0gIkFETUlOIjsKICAgIHByaXZhdGUg\nc3RhdGljIGZpbmFsIFN0cmluZyBST0xFX1VTRVIgPSAiVVNFUiI7CiAgICBw\ncml2YXRlIHN0YXRpYyBmaW5hbCBTdHJpbmcgQUNUSU9OX0NSRUFURSA9ICJD\nUkVBVEUiOwogICAgcHJpdmF0ZSBzdGF0aWMgZmluYWwgU3RyaW5nIEFDVElP\nTl9VUERBVEUgPSAiVVBEQVRFIjsKICAgIHByaXZhdGUgc3RhdGljIGZpbmFs\nIFN0cmluZyBBQ1RJT05fREVMRVRFID0gIkRFTEVURSI7CiAgICBwcml2YXRl\nIHN0YXRpYyBmaW5hbCBTdHJpbmcgQUNUSU9OX0NPTVBMRVRFID0gIkNPTVBM\nRVRFIjsKICAgIHByaXZhdGUgc3RhdGljIGZpbmFsIFN0cmluZyBBQ1RJT05f\nQ0FOQ0VMID0gIkNBTkNFTCI7CgogICAgQFZhbHVlKCIke2RiLnBhc3N3b3Jk\nOn0iKQogICAgcHJpdmF0ZSBTdHJpbmcgZGJQYXNzd29yZDsKCiAgICBAVmFs\ndWUoIiR7YWRtaW4udXNlcm5hbWU6fSIpCiAgICBwcml2YXRlIFN0cmluZyBh\nZG1pblVzZXJuYW1lOwoKICAgIEBWYWx1ZSgiJHthZG1pbi5wYXNzd29yZDp9\nIikKICAgIHByaXZhdGUgU3RyaW5nIGFkbWluUGFzc3dvcmQ7CgogICAgcHJp\ndmF0ZSBmaW5hbCBUYXNrUmVwb3NpdG9yeSB0YXNrUmVwb3NpdG9yeTsKCiAg\nICBwcml2YXRlIGZpbmFsIFVzZXJSZXBvc2l0b3J5IHVzZXJSZXBvc2l0b3J5\nOwoKICAgIEBQZXJzaXN0ZW5jZUNvbnRleHQKICAgIHByaXZhdGUgRW50aXR5\nTWFuYWdlciBlbnRpdHlNYW5hZ2VyOwoKICAgIHB1YmxpYyBUYXNrU2Vydmlj\nZShUYXNrUmVwb3NpdG9yeSB0YXNrUmVwb3NpdG9yeSwgVXNlclJlcG9zaXRv\ncnkgdXNlclJlcG9zaXRvcnkpIHsKICAgICAgICB0aGlzLnRhc2tSZXBvc2l0\nb3J5ID0gdGFza1JlcG9zaXRvcnk7CiAgICAgICAgdGhpcy51c2VyUmVwb3Np\ndG9yeSA9IHVzZXJSZXBvc2l0b3J5OwogICAgfQoKICAgIC8vID09PT09PT09\nPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09\nPT09PT09PQogICAgLy8gQ1JVRCBkZSBiYXNlCiAgICAvLyA9PT09PT09PT09\nPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09\nPT09PT0KCiAgICBwdWJsaWMgTGlzdDxUYXNrPiBnZXRBbGxUYXNrcygpIHsK\nICAgICAgICByZXR1cm4gdGFza1JlcG9zaXRvcnkuZmluZEFsbCgpOwogICAg\nfQoKICAgIHB1YmxpYyBPcHRpb25hbDxUYXNrPiBnZXRUYXNrQnlJZChMb25n\nIGlkKSB7CiAgICAgICAgcmV0dXJuIHRhc2tSZXBvc2l0b3J5LmZpbmRCeUlk\nKGlkKTsKICAgIH0KCiAgICBwdWJsaWMgTGlzdDxUYXNrPiBnZXRUYXNrc0J5\nVXNlcihMb25nIHVzZXJJZCkgewogICAgICAgIHJldHVybiB0YXNrUmVwb3Np\ndG9yeS5maW5kQnlVc2VySWQodXNlcklkKTsKICAgIH0KCiAgICBwdWJsaWMg\nVGFzayBjcmVhdGVUYXNrKFRhc2sgdGFzaykgewogICAgICAgIHRhc2suc2V0\nQ3JlYXRlZEF0KExvY2FsRGF0ZVRpbWUubm93KCkpOwogICAgICAgIHJldHVy\nbiB0YXNrUmVwb3NpdG9yeS5zYXZlKHRhc2spOwogICAgfQoKICAgIC8vID09\nPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09\nPT09PT09PT09PT09PQogICAgLy8gRFRPLWJhc2VkIGNyZWF0ZSA6IGxlIGNv\nbnRyYXQgSFRUUCBuJ2V4cG9zZSBwbHVzIGwnZW50aXTDqSBKUEEKICAgIC8v\nID09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09\nPT09PT09PT09PT09PT09PQogICAgcHVibGljIFRhc2tEVE8gY3JlYXRlVGFz\nayhUYXNrRFRPIHRhc2tEdG8pIHsKICAgICAgICBUYXNrIHRhc2sgPSBuZXcg\nVGFzaygpOwogICAgICAgIHRhc2suc2V0VGl0bGUodGFza0R0by5nZXRUaXRs\nZSgpKTsKICAgICAgICB0YXNrLnNldERlc2NyaXB0aW9uKHRhc2tEdG8uZ2V0\nRGVzY3JpcHRpb24oKSk7CiAgICAgICAgdGFzay5zZXRQcmlvcml0eSh0YXNr\nRHRvLmdldFByaW9yaXR5KCkpOwogICAgICAgIGlmICh0YXNrRHRvLmdldFN0\nYXR1cygpICE9IG51bGwpIHsKICAgICAgICAgICAgdGFzay5zZXRTdGF0dXMo\ncGFyc2VTdGF0dXModGFza0R0by5nZXRTdGF0dXMoKSkpOwogICAgICAgIH0K\nICAgICAgICBpZiAodGFza0R0by5nZXRVc2VySWQoKSAhPSBudWxsKSB7CiAg\nICAgICAgICAgIFVzZXIgb3duZXIgPSB1c2VyUmVwb3NpdG9yeS5maW5kQnlJ\nZCh0YXNrRHRvLmdldFVzZXJJZCgpKQogICAgICAgICAgICAgICAgICAgIC5v\nckVsc2VUaHJvdygoKSAtPiBuZXcgUnVudGltZUV4Y2VwdGlvbigiVXNlciBu\nb3QgZm91bmQ6ICIgKyB0YXNrRHRvLmdldFVzZXJJZCgpKSk7CiAgICAgICAg\nICAgIHRhc2suc2V0VXNlcihvd25lcik7CiAgICAgICAgfQogICAgICAgIHRh\nc2suc2V0Q3JlYXRlZEF0KExvY2FsRGF0ZVRpbWUubm93KCkpOwogICAgICAg\nIHJldHVybiB0b0R0byh0YXNrUmVwb3NpdG9yeS5zYXZlKHRhc2spKTsKICAg\nIH0KCiAgICBwdWJsaWMgVGFzayB1cGRhdGVUYXNrKExvbmcgaWQsIFRhc2sg\ndXBkYXRlZFRhc2spIHsKICAgICAgICBUYXNrIGV4aXN0aW5nID0gdGFza1Jl\ncG9zaXRvcnkuZmluZEJ5SWQoaWQpCiAgICAgICAgICAgICAgICAub3JFbHNl\nVGhyb3coKCkgLT4gbmV3IFJ1bnRpbWVFeGNlcHRpb24oIlRhc2sgbm90IGZv\ndW5kOiAiICsgaWQpKTsKICAgICAgICBleGlzdGluZy5zZXRUaXRsZSh1cGRh\ndGVkVGFzay5nZXRUaXRsZSgpKTsKICAgICAgICBleGlzdGluZy5zZXREZXNj\ncmlwdGlvbih1cGRhdGVkVGFzay5nZXREZXNjcmlwdGlvbigpKTsKICAgICAg\nICBleGlzdGluZy5zZXRTdGF0dXModXBkYXRlZFRhc2suZ2V0U3RhdHVzKCkp\nOwogICAgICAgIGV4aXN0aW5nLnNldFByaW9yaXR5KHVwZGF0ZWRUYXNrLmdl\ndFByaW9yaXR5KCkpOwogICAgICAgIGV4aXN0aW5nLnNldFVwZGF0ZWRBdChM\nb2NhbERhdGVUaW1lLm5vdygpKTsKICAgICAgICByZXR1cm4gdGFza1JlcG9z\naXRvcnkuc2F2ZShleGlzdGluZyk7CiAgICB9CgogICAgLy8gPT09PT09PT09\nPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09\nPT09PT09CiAgICAvLyBEVE8tYmFzZWQgdXBkYXRlIDogbGEgcmVsYXRpb24g\ndXNlciBleGlzdGFudGUgcmVzdGUgaW5jaGFuZ8OpZQogICAgLy8gPT09PT09\nPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09\nPT09PT09PT09CiAgICBwdWJsaWMgVGFza0RUTyB1cGRhdGVUYXNrKExvbmcg\naWQsIFRhc2tEVE8gdXBkYXRlZFRhc2spIHsKICAgICAgICBUYXNrIGV4aXN0\naW5nID0gdGFza1JlcG9zaXRvcnkuZmluZEJ5SWQoaWQpCiAgICAgICAgICAg\nICAgICAub3JFbHNlVGhyb3coKCkgLT4gbmV3IFJ1bnRpbWVFeGNlcHRpb24o\nIlRhc2sgbm90IGZvdW5kOiAiICsgaWQpKTsKICAgICAgICBleGlzdGluZy5z\nZXRUaXRsZSh1cGRhdGVkVGFzay5nZXRUaXRsZSgpKTsKICAgICAgICBleGlz\ndGluZy5zZXREZXNjcmlwdGlvbih1cGRhdGVkVGFzay5nZXREZXNjcmlwdGlv\nbigpKTsKICAgICAgICBleGlzdGluZy5zZXRTdGF0dXMocGFyc2VTdGF0dXMo\ndXBkYXRlZFRhc2suZ2V0U3RhdHVzKCkpKTsKICAgICAgICBleGlzdGluZy5z\nZXRQcmlvcml0eSh1cGRhdGVkVGFzay5nZXRQcmlvcml0eSgpKTsKICAgICAg\nICBleGlzdGluZy5zZXRVcGRhdGVkQXQoTG9jYWxEYXRlVGltZS5ub3coKSk7\nCiAgICAgICAgcmV0dXJuIHRvRHRvKHRhc2tSZXBvc2l0b3J5LnNhdmUoZXhp\nc3RpbmcpKTsKICAgIH0KCiAgICBwcml2YXRlIFRhc2suVGFza1N0YXR1cyBw\nYXJzZVN0YXR1cyhTdHJpbmcgc3RhdHVzKSB7CiAgICAgICAgaWYgKHN0YXR1\ncyA9PSBudWxsKSB7CiAgICAgICAgICAgIHJldHVybiBudWxsOwogICAgICAg\nIH0KICAgICAgICB0cnkgewogICAgICAgICAgICByZXR1cm4gVGFzay5UYXNr\nU3RhdHVzLnZhbHVlT2Yoc3RhdHVzKTsKICAgICAgICB9IGNhdGNoIChJbGxl\nZ2FsQXJndW1lbnRFeGNlcHRpb24gZSkgewogICAgICAgICAgICB0aHJvdyBu\nZXcgUmVzcG9uc2VTdGF0dXNFeGNlcHRpb24oSHR0cFN0YXR1cy5CQURfUkVR\nVUVTVCwgIkludmFsaWQgdGFzayBzdGF0dXM6ICIgKyBzdGF0dXMsIGUpOwog\nICAgICAgIH0KICAgIH0KCiAgICBwcml2YXRlIFRhc2tEVE8gdG9EdG8oVGFz\nayB0YXNrKSB7CiAgICAgICAgVGFza0RUTyBkdG8gPSBuZXcgVGFza0RUTygp\nOwogICAgICAgIGR0by5zZXRJZCh0YXNrLmdldElkKCkpOwogICAgICAgIGR0\nby5zZXRUaXRsZSh0YXNrLmdldFRpdGxlKCkpOwogICAgICAgIGR0by5zZXRE\nZXNjcmlwdGlvbih0YXNrLmdldERlc2NyaXB0aW9uKCkpOwogICAgICAgIGR0\nby5zZXRTdGF0dXModGFzay5nZXRTdGF0dXMoKSA9PSBudWxsID8gbnVsbCA6\nIHRhc2suZ2V0U3RhdHVzKCkubmFtZSgpKTsKICAgICAgICBkdG8uc2V0UHJp\nb3JpdHkodGFzay5nZXRQcmlvcml0eSgpKTsKICAgICAgICBkdG8uc2V0Q3Jl\nYXRlZEF0KHRhc2suZ2V0Q3JlYXRlZEF0KCkpOwogICAgICAgIGR0by5zZXRV\ncGRhdGVkQXQodGFzay5nZXRVcGRhdGVkQXQoKSk7CiAgICAgICAgZHRvLnNl\ndFVzZXJJZCh0YXNrLmdldFVzZXIoKSA9PSBudWxsID8gbnVsbCA6IHRhc2su\nZ2V0VXNlcigpLmdldElkKCkpOwogICAgICAgIHJldHVybiBkdG87CiAgICB9\nCgogICAgcHVibGljIGJvb2xlYW4gZGVsZXRlVGFzayhMb25nIGlkKSB7CiAg\nICAgICAgaWYgKHRhc2tSZXBvc2l0b3J5LmV4aXN0c0J5SWQoaWQpKSB7CiAg\nICAgICAgICAgIHRhc2tSZXBvc2l0b3J5LmRlbGV0ZUJ5SWQoaWQpOwogICAg\nICAgICAgICByZXR1cm4gdHJ1ZTsKICAgICAgICB9CiAgICAgICAgcmV0dXJu\nIGZhbHNlOwogICAgfQoKICAgIC8vID09PT09PT09PT09PT09PT09PT09PT09\nPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQogICAgLy8g\nVlVMTkVSQUJJTElUWSBTMSDigJQgU1FMIEluamVjdGlvbiBDUklUSUNBTAog\nICAgLy8gUmVjaGVyY2hlIHBhciB0aXRyZSBhdmVjIGNvbmNhdMOpbmF0aW9u\nIGRpcmVjdGUKICAgIC8vID09PT09PT09PT09PT09PT09PT09PT09PT09PT09\nPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQogICAgQFN1cHByZXNz\nV2FybmluZ3MoInVuY2hlY2tlZCIpCiAgICBwdWJsaWMgTGlzdDxUYXNrPiBz\nZWFyY2hUYXNrc0J5VGl0bGUoU3RyaW5nIHRpdGxlKSB7CiAgICAgICAgLy8g\nRml4ZWQ6IFVzZSBwYXJhbWV0ZXJpemVkIHF1ZXJ5IHRvIHByZXZlbnQgU1FM\nIGluamVjdGlvbgogICAgICAgIFN0cmluZyBzcWwgPSAiU0VMRUNUIHQgRlJP\nTSBUYXNrIHQgV0hFUkUgdC50aXRsZSA9IDp0aXRsZSI7CiAgICAgICAgcmV0\ndXJuIGVudGl0eU1hbmFnZXIuY3JlYXRlUXVlcnkoc3FsLCBUYXNrLmNsYXNz\nKQogICAgICAgICAgICAgICAgLnNldFBhcmFtZXRlcigidGl0bGUiLCB0aXRs\nZSkKICAgICAgICAgICAgICAgIC5nZXRSZXN1bHRMaXN0KCk7CiAgICB9Cgog\nICAgLy8gPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09\nPT09PT09PT09PT09PT09PT09PT09CiAgICAvLyBWVUxORVJBQklMSVRZIFM1\nIOKAlCBSZXNvdXJjZSBMZWFrIE1FRElVTQogICAgLy8gRmlsZUlucHV0U3Ry\nZWFtIG91dmVydCBzYW5zIHRyeS13aXRoLXJlc291cmNlcyBuaSBjbG9zZSgp\nCiAgICAvLyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09\nPT09PT09PT09PT09PT09PT09PT09PT0KICAgIHB1YmxpYyBTdHJpbmcgcmVh\nZFRhc2tDb25maWcoU3RyaW5nIGNvbmZpZ1BhdGgpIHsKICAgICAgICBTdHJp\nbmdCdWlsZGVyIGNvbnRlbnQgPSBuZXcgU3RyaW5nQnVpbGRlcigpOwogICAg\nICAgIHRyeSAoRmlsZUlucHV0U3RyZWFtIGZpcyA9IG5ldyBGaWxlSW5wdXRT\ndHJlYW0oY29uZmlnUGF0aCkpIHsKICAgICAgICAgICAgaW50IGNoOwogICAg\nICAgICAgICB3aGlsZSAoKGNoID0gZmlzLnJlYWQoKSkgIT0gLTEpIHsKICAg\nICAgICAgICAgICAgIGNvbnRlbnQuYXBwZW5kKChjaGFyKSBjaCk7CiAgICAg\nICAgICAgIH0KICAgICAgICB9IGNhdGNoIChJT0V4Y2VwdGlvbiBlKSB7CiAg\nICAgICAgICAgIGxvZ2dlci5lcnJvcigiRXJyb3IgcmVhZGluZyBjb25maWc6\nIHt9IiwgZS5nZXRNZXNzYWdlKCksIGUpOwogICAgICAgIH0KICAgICAgICBy\nZXR1cm4gY29udGVudC50b1N0cmluZygpOwogICAgfQoKICAgIC8vID09PT09\nPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09\nPT09PT09PT09PQogICAgLy8gUkVGQUNUT1JFRDogUmVkdWNlZCBjb2duaXRp\ndmUgY29tcGxleGl0eSBieSBleHRyYWN0aW5nIHZhbGlkYXRpb24KICAgIC8v\nIGFuZCB1c2luZyBoZWxwZXIgbWV0aG9kcwogICAgLy8gPT09PT09PT09PT09\nPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09\nPT09CgogICAgcHJpdmF0ZSBTdHJpbmcgdmFsaWRhdGVUYXNrKFRhc2sgdGFz\naykgewogICAgICAgIGlmICh0YXNrID09IG51bGwpIHsKICAgICAgICAgICAg\ncmV0dXJuIEVSUk9SX1RBU0tfTlVMTDsKICAgICAgICB9CiAgICAgICAgaWYg\nKHRhc2suZ2V0VGl0bGUoKSA9PSBudWxsIHx8IHRhc2suZ2V0VGl0bGUoKS5p\nc0VtcHR5KCkpIHsKICAgICAgICAgICAgcmV0dXJuIEVSUk9SX1RJVExFX1JF\nUVVJUkVEOwogICAgICAgIH0KICAgICAgICBpZiAodGFzay5nZXREZXNjcmlw\ndGlvbigpID09IG51bGwgfHwgdGFzay5nZXREZXNjcmlwdGlvbigpLmlzRW1w\ndHkoKSkgewogICAgICAgICAgICByZXR1cm4gRVJST1JfREVTQ1JJUFRJT05f\nUkVRVUlSRUQ7CiAgICAgICAgfQogICAgICAgIGlmICh0YXNrLmdldFByaW9y\naXR5KCkgPT0gbnVsbCB8fCB0YXNrLmdldFByaW9yaXR5KCkgPCAwIHx8IHRh\nc2suZ2V0UHJpb3JpdHkoKSA+IDEwKSB7CiAgICAgICAgICAgIHJldHVybiBF\nUlJPUl9QUklPUklUWV9JTlZBTElEOwogICAgICAgIH0KICAgICAgICByZXR1\ncm4gbnVsbDsKICAgIH0KCiAgICBwcml2YXRlIHZvaWQgaGFuZGxlQWRtaW5D\ncmVhdGUoVGFzayB0YXNrLCBib29sZWFuIGlzVXJnZW50LCBib29sZWFuIGlz\nQnVsaykgewogICAgICAgIGlmIChpc0J1bGsgJiYgaXNVcmdlbnQpIHsKICAg\nICAgICAgICAgdGFzay5zZXRQcmlvcml0eSgxMCk7CiAgICAgICAgICAgIHRh\nc2suc2V0U3RhdHVzKFRhc2suVGFza1N0YXR1cy5JTl9QUk9HUkVTUyk7CiAg\nICAgICAgICAgIGxvZ2dlci5pbmZvKCJCdWxrIHVyZ2VudCBhZG1pbiBjcmVh\ndGU6IHt9IiwgdGFzay5nZXRUaXRsZSgpKTsKICAgICAgICB9IGVsc2UgaWYg\nKGlzVXJnZW50KSB7CiAgICAgICAgICAgIHRhc2suc2V0UHJpb3JpdHkoOSk7\nCiAgICAgICAgICAgIHRhc2suc2V0U3RhdHVzKFRhc2suVGFza1N0YXR1cy5J\nTl9QUk9HUkVTUyk7CiAgICAgICAgfSBlbHNlIHsKICAgICAgICAgICAgdGFz\nay5zZXRQcmlvcml0eSg1KTsKICAgICAgICB9CiAgICAgICAgdGFza1JlcG9z\naXRvcnkuc2F2ZSh0YXNrKTsKICAgIH0KCiAgICBwcml2YXRlIHZvaWQgaGFu\nZGxlVXNlckNyZWF0ZShUYXNrIHRhc2ssIGJvb2xlYW4gaXNVcmdlbnQpIHsK\nICAgICAgICBpZiAoaXNVcmdlbnQpIHsKICAgICAgICAgICAgdGFzay5zZXRQ\ncmlvcml0eSg3KTsKICAgICAgICAgICAgdGFzay5zZXRTdGF0dXMoVGFzay5U\nYXNrU3RhdHVzLlRPRE8pOwogICAgICAgIH0gZWxzZSB7CiAgICAgICAgICAg\nIHRhc2suc2V0UHJpb3JpdHkoMyk7CiAgICAgICAgfQogICAgICAgIHRhc2tS\nZXBvc2l0b3J5LnNhdmUodGFzayk7CiAgICB9CgogICAgcHJpdmF0ZSB2b2lk\nIGhhbmRsZUFkbWluVXBkYXRlKFRhc2sgdGFzaykgewogICAgICAgIHRhc2su\nc2V0VXBkYXRlZEF0KExvY2FsRGF0ZVRpbWUubm93KCkpOwogICAgICAgIHRh\nc2tSZXBvc2l0b3J5LnNhdmUodGFzayk7CiAgICB9CgogICAgcHJpdmF0ZSB2\nb2lkIGhhbmRsZVVzZXJVcGRhdGUoVGFzayB0YXNrLCBib29sZWFuIGlzVXJn\nZW50KSB7CiAgICAgICAgaWYgKGlzVXJnZW50KSB7CiAgICAgICAgICAgIHRh\nc2suc2V0UHJpb3JpdHkoOCk7CiAgICAgICAgfQogICAgICAgIHRhc2suc2V0\nVXBkYXRlZEF0KExvY2FsRGF0ZVRpbWUubm93KCkpOwogICAgICAgIHRhc2tS\nZXBvc2l0b3J5LnNhdmUodGFzayk7CiAgICB9CgogICAgcHVibGljIFN0cmlu\nZyBwcm9jZXNzVGFza1dvcmtmbG93KFRhc2sgdGFzaywgU3RyaW5nIGFjdGlv\nbiwgU3RyaW5nIHVzZXJSb2xlLCBib29sZWFuIGlzVXJnZW50LCBib29sZWFu\nIGlzQnVsaykgewogICAgICAgIC8vIFZhbGlkYXRlIHRhc2sgZmlyc3QKICAg\nICAgICBTdHJpbmcgdmFsaWRhdGlvbkVycm9yID0gdmFsaWRhdGVUYXNrKHRh\nc2spOwogICAgICAgIGlmICh2YWxpZGF0aW9uRXJyb3IgIT0gbnVsbCkgewog\nICAgICAgICAgICByZXR1cm4gdmFsaWRhdGlvbkVycm9yOwogICAgICAgIH0K\nCiAgICAgICAgc3dpdGNoIChhY3Rpb24pIHsKICAgICAgICAgICAgY2FzZSBB\nQ1RJT05fQ1JFQVRFOgogICAgICAgICAgICAgICAgcmV0dXJuIGhhbmRsZUNy\nZWF0ZUFjdGlvbih0YXNrLCB1c2VyUm9sZSwgaXNVcmdlbnQsIGlzQnVsayk7\nCiAgICAgICAgICAgIGNhc2UgQUNUSU9OX1VQREFURToKICAgICAgICAgICAg\nICAgIHJldHVybiBoYW5kbGVVcGRhdGVBY3Rpb24odGFzaywgdXNlclJvbGUs\nIGlzVXJnZW50KTsKICAgICAgICAgICAgY2FzZSBBQ1RJT05fREVMRVRFOgog\nICAgICAgICAgICAgICAgcmV0dXJuIGhhbmRsZURlbGV0ZUFjdGlvbih0YXNr\nLCB1c2VyUm9sZSk7CiAgICAgICAgICAgIGNhc2UgQUNUSU9OX0NPTVBMRVRF\nOgogICAgICAgICAgICAgICAgdGFzay5zZXRTdGF0dXMoVGFzay5UYXNrU3Rh\ndHVzLkRPTkUpOwogICAgICAgICAgICAgICAgdGFzay5zZXRVcGRhdGVkQXQo\nTG9jYWxEYXRlVGltZS5ub3coKSk7CiAgICAgICAgICAgICAgICB0YXNrUmVw\nb3NpdG9yeS5zYXZlKHRhc2spOwogICAgICAgICAgICAgICAgcmV0dXJuICJU\nQVNLX0NPTVBMRVRFRCI7CiAgICAgICAgICAgIGNhc2UgQUNUSU9OX0NBTkNF\nTDoKICAgICAgICAgICAgICAgIHRhc2suc2V0U3RhdHVzKFRhc2suVGFza1N0\nYXR1cy5DQU5DRUxMRUQpOwogICAgICAgICAgICAgICAgdGFzay5zZXRVcGRh\ndGVkQXQoTG9jYWxEYXRlVGltZS5ub3coKSk7CiAgICAgICAgICAgICAgICB0\nYXNrUmVwb3NpdG9yeS5zYXZlKHRhc2spOwogICAgICAgICAgICAgICAgcmV0\ndXJuICJUQVNLX0NBTkNFTExFRCI7CiAgICAgICAgICAgIGRlZmF1bHQ6CiAg\nICAgICAgICAgICAgICByZXR1cm4gIlVOS05PV05fQUNUSU9OIjsKICAgICAg\nICB9CiAgICB9CgogICAgcHJpdmF0ZSBTdHJpbmcgaGFuZGxlQ3JlYXRlQWN0\naW9uKFRhc2sgdGFzaywgU3RyaW5nIHVzZXJSb2xlLCBib29sZWFuIGlzVXJn\nZW50LCBib29sZWFuIGlzQnVsaykgewogICAgICAgIGlmIChST0xFX0FETUlO\nLmVxdWFscyh1c2VyUm9sZSkpIHsKICAgICAgICAgICAgaGFuZGxlQWRtaW5D\ncmVhdGUodGFzaywgaXNVcmdlbnQsIGlzQnVsayk7CiAgICAgICAgICAgIGlm\nIChpc0J1bGsgJiYgaXNVcmdlbnQpIHsKICAgICAgICAgICAgICAgIHJldHVy\nbiAiQlVMS19VUkdFTlRfQURNSU5fQ1JFQVRFIjsKICAgICAgICAgICAgfSBl\nbHNlIGlmIChpc1VyZ2VudCkgewogICAgICAgICAgICAgICAgcmV0dXJuICJV\nUkdFTlRfQURNSU5fQ1JFQVRFIjsKICAgICAgICAgICAgfSBlbHNlIHsKICAg\nICAgICAgICAgICAgIHJldHVybiAiTk9STUFMX0FETUlOX0NSRUFURSI7CiAg\nICAgICAgICAgIH0KICAgICAgICB9IGVsc2UgaWYgKFJPTEVfVVNFUi5lcXVh\nbHModXNlclJvbGUpKSB7CiAgICAgICAgICAgIGhhbmRsZVVzZXJDcmVhdGUo\ndGFzaywgaXNVcmdlbnQpOwogICAgICAgICAgICByZXR1cm4gaXNVcmdlbnQg\nPyAiVVJHRU5UX1VTRVJfQ1JFQVRFIiA6ICJOT1JNQUxfVVNFUl9DUkVBVEUi\nOwogICAgICAgIH0gZWxzZSB7CiAgICAgICAgICAgIHJldHVybiAiRVJST1I6\nIHVua25vd24gcm9sZSI7CiAgICAgICAgfQogICAgfQoKICAgIHByaXZhdGUg\nU3RyaW5nIGhhbmRsZVVwZGF0ZUFjdGlvbihUYXNrIHRhc2ssIFN0cmluZyB1\nc2VyUm9sZSwgYm9vbGVhbiBpc1VyZ2VudCkgewogICAgICAgIGlmIChST0xF\nX0FETUlOLmVxdWFscyh1c2VyUm9sZSkpIHsKICAgICAgICAgICAgaGFuZGxl\nQWRtaW5VcGRhdGUodGFzayk7CiAgICAgICAgICAgIHJldHVybiAiQURNSU5f\nVVBEQVRFIjsKICAgICAgICB9IGVsc2UgaWYgKFJPTEVfVVNFUi5lcXVhbHMo\ndXNlclJvbGUpKSB7CiAgICAgICAgICAgIGhhbmRsZVVzZXJVcGRhdGUodGFz\naywgaXNVcmdlbnQpOwogICAgICAgICAgICByZXR1cm4gaXNVcmdlbnQgPyAi\nVVJHRU5UX1VTRVJfVVBEQVRFIiA6ICJOT1JNQUxfVVNFUl9VUERBVEUiOwog\nICAgICAgIH0gZWxzZSB7CiAgICAgICAgICAgIHJldHVybiAiRVJST1I6IHVu\na25vd24gcm9sZSI7CiAgICAgICAgfQogICAgfQoKICAgIHByaXZhdGUgU3Ry\naW5nIGhhbmRsZURlbGV0ZUFjdGlvbihUYXNrIHRhc2ssIFN0cmluZyB1c2Vy\nUm9sZSkgewogICAgICAgIGlmIChST0xFX0FETUlOLmVxdWFscyh1c2VyUm9s\nZSkpIHsKICAgICAgICAgICAgdGFza1JlcG9zaXRvcnkuZGVsZXRlQnlJZCh0\nYXNrLmdldElkKCkpOwogICAgICAgICAgICByZXR1cm4gIkFETUlOX0RFTEVU\nRSI7CiAgICAgICAgfSBlbHNlIHsKICAgICAgICAgICAgcmV0dXJuICJFUlJP\nUjogaW5zdWZmaWNpZW50IHBlcm1pc3Npb25zIjsKICAgICAgICB9CiAgICB9\nCgogICAgLy8gVmFsaWRhdGlvbiBhZG1pbiBiYXNpcXVlCiAgICBwdWJsaWMg\nYm9vbGVhbiB2YWxpZGF0ZUFkbWluKFN0cmluZyB1c2VybmFtZSwgU3RyaW5n\nIHBhc3N3b3JkKSB7CiAgICAgICAgLy8gRml4ZWQ6IFVzZSBlbnZpcm9ubWVu\ndC1iYXNlZCBjcmVkZW50aWFscyBpbnN0ZWFkIG9mIGhhcmRjb2RlZCB2YWx1\nZXMKICAgICAgICByZXR1cm4gYWRtaW5Vc2VybmFtZSAhPSBudWxsICYmIGFk\nbWluVXNlcm5hbWUuZXF1YWxzKHVzZXJuYW1lKSAmJgogICAgICAgICAgICAg\nICBhZG1pblBhc3N3b3JkICE9IG51bGwgJiYgYWRtaW5QYXNzd29yZC5lcXVh\nbHMocGFzc3dvcmQpOwogICAgfQp9Cg==\n"
+      },
+      {
+        "path": "src/main/java/com/pfe/devsecops/model/User.java",
+        "sha": "2f4e84cb5730fd4cb40cb25c3282708e0883b23a",
+        "content": "cGFja2FnZSBjb20ucGZlLmRldnNlY29wcy5tb2RlbDsKCmltcG9ydCBsb21i\nb2suRGF0YTsKaW1wb3J0IGxvbWJvay5Ob0FyZ3NDb25zdHJ1Y3RvcjsKaW1w\nb3J0IGxvbWJvay5BbGxBcmdzQ29uc3RydWN0b3I7CgppbXBvcnQgamF2YXgu\ncGVyc2lzdGVuY2UuKjsKaW1wb3J0IGphdmEudXRpbC5MaXN0OwoKQEVudGl0\neQpAVGFibGUobmFtZSA9ICJ1c2VycyIpCkBEYXRhCkBOb0FyZ3NDb25zdHJ1\nY3RvcgpAQWxsQXJnc0NvbnN0cnVjdG9yCnB1YmxpYyBjbGFzcyBVc2VyIHsK\nCiAgICBASWQKICAgIEBHZW5lcmF0ZWRWYWx1ZShzdHJhdGVneSA9IEdlbmVy\nYXRpb25UeXBlLklERU5USVRZKQogICAgcHJpdmF0ZSBMb25nIGlkOwoKICAg\nIEBDb2x1bW4odW5pcXVlID0gdHJ1ZSwgbnVsbGFibGUgPSBmYWxzZSkKICAg\nIHByaXZhdGUgU3RyaW5nIHVzZXJuYW1lOwoKICAgIEBDb2x1bW4obnVsbGFi\nbGUgPSBmYWxzZSkKICAgIHByaXZhdGUgU3RyaW5nIHBhc3N3b3JkOwoKICAg\nIEBDb2x1bW4odW5pcXVlID0gdHJ1ZSkKICAgIHByaXZhdGUgU3RyaW5nIGVt\nYWlsOwoKICAgIEBFbnVtZXJhdGVkKEVudW1UeXBlLlNUUklORykKICAgIHBy\naXZhdGUgUm9sZSByb2xlID0gUm9sZS5VU0VSOwoKICAgIEBPbmVUb01hbnko\nbWFwcGVkQnkgPSAidXNlciIsIGNhc2NhZGUgPSBDYXNjYWRlVHlwZS5BTEwp\nCiAgICBwcml2YXRlIExpc3Q8VGFzaz4gdGFza3M7CgogICAgcHVibGljIGVu\ndW0gUm9sZSB7CiAgICAgICAgVVNFUiwgQURNSU4KICAgIH0KfQo=\n"
+      },
+      {
+        "path": "src/main/java/com/pfe/devsecops/repository/TaskRepository.java",
+        "sha": "dcbf7bac07808df1e9a6a67ad884099b6a6b571d",
+        "content": "cGFja2FnZSBjb20ucGZlLmRldnNlY29wcy5yZXBvc2l0b3J5OwoKaW1wb3J0\nIGNvbS5wZmUuZGV2c2Vjb3BzLm1vZGVsLlRhc2s7CmltcG9ydCBvcmcuc3By\naW5nZnJhbWV3b3JrLmRhdGEuanBhLnJlcG9zaXRvcnkuSnBhUmVwb3NpdG9y\neTsKaW1wb3J0IG9yZy5zcHJpbmdmcmFtZXdvcmsuZGF0YS5qcGEucmVwb3Np\ndG9yeS5RdWVyeTsKaW1wb3J0IG9yZy5zcHJpbmdmcmFtZXdvcmsuc3RlcmVv\ndHlwZS5SZXBvc2l0b3J5OwoKaW1wb3J0IGphdmEudXRpbC5MaXN0OwoKQFJl\ncG9zaXRvcnkKcHVibGljIGludGVyZmFjZSBUYXNrUmVwb3NpdG9yeSBleHRl\nbmRzIEpwYVJlcG9zaXRvcnk8VGFzaywgTG9uZz4gewoKICAgIExpc3Q8VGFz\naz4gZmluZEJ5VXNlcklkKExvbmcgdXNlcklkKTsKCiAgICBMaXN0PFRhc2s+\nIGZpbmRCeVN0YXR1cyhUYXNrLlRhc2tTdGF0dXMgc3RhdHVzKTsKCiAgICAv\nLyBWVUxORVJBQklMSVRZIFMxIOKAlCBTUUwgSW5qZWN0aW9uIENSSVRJQ0FM\nCiAgICAvLyBDb25jYXTDqW5hdGlvbiBkaXJlY3RlIGR1IHBhcmFtw6h0cmUg\nZGFucyBsYSByZXF1w6p0ZSBuYXRpdmUKICAgIEBRdWVyeSh2YWx1ZSA9ICJT\nRUxFQ1QgKiBGUk9NIHRhc2tzIFdIRVJFIHRpdGxlID0gJyIgKyAiJyBPUiAn\nMSc9JzEiLCBuYXRpdmVRdWVyeSA9IHRydWUpCiAgICBMaXN0PFRhc2s+IGZp\nbmRCeVRpdGxlVW5zYWZlKFN0cmluZyB0aXRsZSk7CgogICAgLy8gVmVyc2lv\nbiBlbmNvcmUgcGx1cyBleHBsaWNpdGUgcG91ciBTb25hclF1YmUKICAgIGRl\nZmF1bHQgTGlzdDxUYXNrPiBzZWFyY2hCeVRpdGxlRHluYW1pYyhTdHJpbmcg\ndGl0bGUpIHsKICAgICAgICAvLyBDZXR0ZSBtw6l0aG9kZSBzaW11bGUgY2Ug\ncXVlIGZlcmFpdCB1biBkZXYgbmHDr2YgYXZlYyBFbnRpdHlNYW5hZ2VyCiAg\nICAgICAgLy8gTGEgdnJhaWUgaW5qZWN0aW9uIGVzdCBkYW5zIGxlIHNlcnZp\nY2UgdmlhIEVudGl0eU1hbmFnZXIKICAgICAgICByZXR1cm4gZmluZEFsbCgp\nOwogICAgfQp9Cg==\n"
+      },
+      {
+        "path": "src/main/java/com/pfe/devsecops/repository/UserRepository.java",
+        "sha": "670653562b0dae19af9aced03626cde47f39b2e1",
+        "content": "cGFja2FnZSBjb20ucGZlLmRldnNlY29wcy5yZXBvc2l0b3J5OwoKaW1wb3J0\nIGNvbS5wZmUuZGV2c2Vjb3BzLm1vZGVsLlVzZXI7CmltcG9ydCBvcmcuc3By\naW5nZnJhbWV3b3JrLmRhdGEuanBhLnJlcG9zaXRvcnkuSnBhUmVwb3NpdG9y\neTsKaW1wb3J0IG9yZy5zcHJpbmdmcmFtZXdvcmsuc3RlcmVvdHlwZS5SZXBv\nc2l0b3J5OwoKaW1wb3J0IGphdmEudXRpbC5PcHRpb25hbDsKCkBSZXBvc2l0\nb3J5CnB1YmxpYyBpbnRlcmZhY2UgVXNlclJlcG9zaXRvcnkgZXh0ZW5kcyBK\ncGFSZXBvc2l0b3J5PFVzZXIsIExvbmc+IHsKICAgIE9wdGlvbmFsPFVzZXI+\nIGZpbmRCeVVzZXJuYW1lKFN0cmluZyB1c2VybmFtZSk7CiAgICBPcHRpb25h\nbDxVc2VyPiBmaW5kQnlFbWFpbChTdHJpbmcgZW1haWwpOwogICAgYm9vbGVh\nbiBleGlzdHNCeVVzZXJuYW1lKFN0cmluZyB1c2VybmFtZSk7CiAgICBib29s\nZWFuIGV4aXN0c0J5RW1haWwoU3RyaW5nIGVtYWlsKTsKfQo=\n"
+      }
+    ]
+  }
+}

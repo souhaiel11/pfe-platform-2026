@@ -1,0 +1,21 @@
+{
+  "task": {
+    "id": "b4b2949a-fc4a-4407-9c22-17ce4606d6fb",
+    "type": "REPORT",
+    "componentId": "3c980cb7-cd45-418b-912c-62cd23eadf78",
+    "componentKey": "pfe-app-test",
+    "componentName": "pfe-app-test",
+    "componentQualifier": "TRK",
+    "analysisId": "9007ce0a-ad29-4e50-aec4-ea7f12a1692b",
+    "status": "SUCCESS",
+    "submittedAt": "2026-10-06T16:08:04+0000",
+    "submitterLogin": "admin",
+    "startedAt": "2026-10-06T16:08:04+0000",
+    "executedAt": "2026-10-06T16:08:12+0000",
+    "executionTimeMs": 7377,
+    "hasScannerContext": true,
+    "warningCount": 0,
+    "warnings": [],
+    "infoMessages": []
+  }
+}

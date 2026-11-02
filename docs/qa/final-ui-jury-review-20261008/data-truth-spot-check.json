@@ -1,0 +1,133 @@
+{
+  "project": {
+    "id": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+    "name": "pfe-app-test",
+    "githubRepo": "souhaiel11/pfe-app-test"
+  },
+  "incident": {
+    "id": "70bc8f46-5cd2-48a3-9f8b-169cf2ba250b",
+    "status": "blocked",
+    "createdAt": "2026-10-06T16:12:16.761Z"
+  },
+  "scanners": {
+    "sonar": {
+      "status": "COMPLETED",
+      "quality_gate": "ERROR",
+      "bugs": 0,
+      "vulnerabilities": 0,
+      "code_smells": 12,
+      "coverage": 0
+    },
+    "trivy": {
+      "status": "COMPLETED",
+      "critical": 14,
+      "high": 50,
+      "cves_count": 111
+    },
+    "owasp": {
+      "status": "COMPLETED",
+      "critical": 23,
+      "high": 58,
+      "cves_count": 146
+    },
+    "zap": {
+      "status": "COMPLETED",
+      "alerts_high": 0,
+      "alerts_medium": 2,
+      "alerts_count": 2
+    }
+  },
+  "jenkins": {
+    "_liveData": true,
+    "buildNumber": 151,
+    "result": "SUCCESS",
+    "timestamp": 1791302858376,
+    "message": null,
+    "url": "http://172.31.172.61:8082/job/pfe-app-test/151/",
+    "buildSuccessRate": 100,
+    "sampleSize": 15
+  },
+  "remediation": {
+    "taskId": "9d2ff915-23e1-4f0b-8f4a-561b4d95845f",
+    "findingId": "CVE-2022-45868",
+    "scannerStatus": "DETECTED",
+    "manualStatus": "TODO",
+    "attemptStatus": "OPERATOR_TEST_STOPPED",
+    "candidateEvaluationPassed": true
+  },
+  "deployment": {
+    "ready": false,
+    "deploymentConfigured": true,
+    "deploymentTarget": {
+      "provider": "azure-container-instances",
+      "resourceGroup": "rg-pfe-devsecops",
+      "targetName": "aci-pfe-app-test",
+      "registry": "acrpfedevsecops",
+      "imageRepository": "pfe-app-test",
+      "region": "francecentral"
+    },
+    "currentBuild": 151,
+    "validatedBuild": null,
+    "reasons": [
+      "La validation ne correspond pas au build courant",
+      "La validation après correction n’est pas réussie",
+      "La corrélation projet/build/incident/PR n’est pas vérifiée",
+      "La corrélation de l’analyse SonarQube n’est pas vérifiée",
+      "Le Quality Gate SonarQube requis n’est pas validé",
+      "38 problèmes bloquants non résolus",
+      "Tests : non exécuté",
+      "SonarQube : en échec",
+      "Trivy : en échec",
+      "OWASP Dependency-Check : en échec",
+      "Déploiement : non exécuté",
+      "La décision de gouvernance bloque explicitement ce build",
+      "14 CVE critiques Trivy",
+      "23 CVE critiques OWASP Dependency-Check",
+      "Le Quality Gate SonarQube est en échec (ERROR)"
+    ]
+  },
+  "governance": {
+    "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+    "decision": "CRITICAL_RISK",
+    "mainBuildNumber": 151,
+    "buildIdentity": {
+      "resolved": true,
+      "commitSha": "393816c250f73d907eb5a2dd43b2ec2288c7abcb"
+    },
+    "artifact": {
+      "provenanceVerified": true,
+      "digest": "sha256:6dc3cdba69592a91a5a1569978bcfca74d4080597a769ab368ed585ba397bcf5",
+      "registry": "acrpfedevsecops",
+      "repository": "pfe-app-test",
+      "tag": "151"
+    },
+    "environment": {
+      "resolved": true,
+      "identityHash": "bb61953c3dd7ef5abb33259ef24a0af176664969ac86b3989b0d014847099be7",
+      "targetName": "aci-pfe-app-test",
+      "region": "francecentral"
+    },
+    "securityValidation": {
+      "applicability": "MISSING",
+      "status": "MISSING"
+    },
+    "failedControls": [
+      "Validation de sécurité WF3 absente",
+      "Tests applicatifs non exécutés",
+      "Quality Gate SonarQube en échec (ERROR)",
+      "14 CVE critique(s) Trivy",
+      "23 CVE critique(s) OWASP Dependency-Check",
+      "Décision de gouvernance : BLOCK",
+      "38 problème(s) bloquant(s) non résolu(s)",
+      "Étape requise bloquante : owasp (FAILED)",
+      "Étape requise bloquante : sonar (FAILED)",
+      "Étape requise bloquante : trivy (FAILED)",
+      "Étape en avertissement, non bloquante : zap"
+    ]
+  },
+  "securityGlobalNoData": [
+    "remediation-retry-e2e-fixture"
+  ],
+  "databaseMatchesApi": true,
+  "nonemptyCredentialFieldPaths": []
+}

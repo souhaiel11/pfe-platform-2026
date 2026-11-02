@@ -1,0 +1,33 @@
+{
+  "generatedAt": "2026-10-07T14:57:37.038Z",
+  "entryCount": 1,
+  "decisions": {
+    "TRIVY:CVE-2022-45868:com.h2database:h2": {
+      "schemaVersion": 2,
+      "evidenceId": "e6b10bce5f0cde581b0f4581f5fda3b05323f347a70fcc84cad3b3e2e54fb23d",
+      "repository": "souhaiel11/remediation-retry-e2e-fixture",
+      "validatedCommitSha": "24630265ea4ed764bbb22c76d4d7dc689b5fe0bf",
+      "findingSource": "TRIVY",
+      "cve": "CVE-2022-45868",
+      "component": "com.h2database:h2",
+      "installedVersion": "2.1.212",
+      "validationRunId": "final-closure-r2-20261007",
+      "validatedAt": "2026-10-07T14:57:37.037Z",
+      "state": "VALIDATED_RECOMMENDED",
+      "recommendedVersion": "2.2.220",
+      "actualEditTarget": "com.h2database:h2",
+      "editType": "DEPENDENCY_VERSION",
+      "fromVersion": "2.1.212",
+      "toVersion": "2.2.220",
+      "expectedResolvedDependency": "2.2.220",
+      "ownerType": null,
+      "ownerCoordinate": null,
+      "evidenceSummary": "Exact baseline/candidate real Maven build/tests/graphs, production patch/materializer equality and authenticated deployed Trivy API plus real OWASP reports",
+      "recommendationReason": "ALL_GATES_PASSED",
+      "sandboxValidated": true,
+      "targetCveClosed": true,
+      "newHighCriticalCount": 0,
+      "requiresDeveloperReview": false
+    }
+  }
+}

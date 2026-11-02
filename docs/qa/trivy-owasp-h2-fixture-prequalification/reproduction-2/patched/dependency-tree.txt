@@ -1,0 +1,2 @@
+operator.fixture:retry-e2e-h2:jar:1.0.0
+\- com.h2database:h2:jar:2.2.220:compile

@@ -1,0 +1,40 @@
+{
+  "at": "2026-10-07T11:18:10.000401+00:00",
+  "activeSecurityDispatches": [],
+  "activeN8NExecutions": [],
+  "jenkins": {
+    "queue": {
+      "_class": "hudson.model.Queue",
+      "discoverableItems": [],
+      "items": []
+    },
+    "computers": {
+      "_class": "hudson.model.ComputerSet",
+      "computer": [
+        {
+          "_class": "hudson.model.Hudson$MasterComputer",
+          "displayName": "Built-In Node",
+          "executors": [
+            {
+              "currentExecutable": null
+            },
+            {
+              "currentExecutable": null
+            }
+          ],
+          "oneOffExecutors": []
+        }
+      ]
+    }
+  },
+  "workerProcesses": {
+    "pfe-candidate-verifier": "PID                 PPID                COMMAND\n2426                2215                node\n",
+    "pfe-builder-scanner": "PID                 PPID                COMMAND\n2392                2190                docker-init\n2931                2392                node\n",
+    "jenkins": "PID                 PPID                COMMAND\n2440                2232                tini\n3100                2440                java\n"
+  },
+  "hostGitWriters": 0,
+  "backendDocsHTTP": 200,
+  "databaseRowsUnchangedBeforeRemoteMutation": true,
+  "findingIngestionContract": true,
+  "dispatch": "false"
+}

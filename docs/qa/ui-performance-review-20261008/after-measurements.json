@@ -1,0 +1,3150 @@
+{
+  "phase": "after",
+  "projects": [
+    {
+      "id": "7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+      "name": "devsecops-platform-testbed"
+    },
+    {
+      "id": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+      "name": "pfe-app-test"
+    }
+  ],
+  "origin": "http://127.0.0.1:4200",
+  "rows": [
+    {
+      "project": "devsecops-platform-testbed",
+      "projectId": "7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+      "flow": "overview",
+      "tab": "rapport",
+      "mode": "cold",
+      "trial": 1,
+      "navigationStart": 1791417862678,
+      "requests": [
+        {
+          "endpoint": "/api/projects/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791417863120,
+          "durationMs": 18,
+          "bytes": 961,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791417863135,
+          "durationMs": 48,
+          "bytes": 479869,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/reports?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791417863137,
+          "durationMs": 96,
+          "bytes": 305526,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/azure-deploy/ready/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791417863137,
+          "durationMs": 53,
+          "bytes": 3080,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 461.5,
+      "settled": true,
+      "dataCompleteMs": 555,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 0,
+      "totalApiRequests": 4,
+      "slowest": {
+        "endpoint": "/api/reports?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+        "start": 1791417863137,
+        "durationMs": 96,
+        "bytes": 305526,
+        "status": 200
+      },
+      "largest": {
+        "endpoint": "/api/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+        "start": 1791417863135,
+        "durationMs": 48,
+        "bytes": 479869,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "devsecops-platform-testbed",
+      "projectId": "7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+      "flow": "Rapport",
+      "tab": "rapport",
+      "mode": "cold",
+      "trial": 1,
+      "navigationStart": 1791417863545,
+      "requests": [
+        {
+          "endpoint": "/api/projects/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791417864089,
+          "durationMs": 16,
+          "bytes": 961,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791417864103,
+          "durationMs": 65,
+          "bytes": 479869,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/reports?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791417864103,
+          "durationMs": 28,
+          "bytes": 305526,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/azure-deploy/ready/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791417864104,
+          "durationMs": 66,
+          "bytes": 3080,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 561.3999999985099,
+      "settled": true,
+      "dataCompleteMs": 625,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 0,
+      "totalApiRequests": 4,
+      "slowest": {
+        "endpoint": "/api/azure-deploy/ready/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+        "start": 1791417864104,
+        "durationMs": 66,
+        "bytes": 3080,
+        "status": 200
+      },
+      "largest": {
+        "endpoint": "/api/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+        "start": 1791417864103,
+        "durationMs": 65,
+        "bytes": 479869,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "devsecops-platform-testbed",
+      "projectId": "7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+      "flow": "Jenkins",
+      "tab": "jenkins",
+      "mode": "cold",
+      "trial": 1,
+      "navigationStart": 1791417864479,
+      "requests": [
+        {
+          "endpoint": "/api/projects/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791417864788,
+          "durationMs": 19,
+          "bytes": 961,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791417864805,
+          "durationMs": 43,
+          "bytes": 479869,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/reports?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791417864805,
+          "durationMs": 35,
+          "bytes": 305526,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/projects/7b8a91e6-d07c-4367-aaa7-dd300a424fe2/jenkins-status",
+          "start": 1791417864806,
+          "durationMs": 43,
+          "bytes": 261,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/jenkins/analyses?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791417864807,
+          "durationMs": 81,
+          "bytes": 2,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 327.1000000014901,
+      "settled": true,
+      "dataCompleteMs": 409,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 0,
+      "totalApiRequests": 5,
+      "slowest": {
+        "endpoint": "/api/jenkins/analyses?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+        "start": 1791417864807,
+        "durationMs": 81,
+        "bytes": 2,
+        "status": 200
+      },
+      "largest": {
+        "endpoint": "/api/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+        "start": 1791417864805,
+        "durationMs": 43,
+        "bytes": 479869,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "devsecops-platform-testbed",
+      "projectId": "7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+      "flow": "SonarQube",
+      "tab": "sonarqube",
+      "mode": "cold",
+      "trial": 1,
+      "navigationStart": 1791417865188,
+      "requests": [
+        {
+          "endpoint": "/api/projects/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791417865616,
+          "durationMs": 26,
+          "bytes": 961,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791417865639,
+          "durationMs": 69,
+          "bytes": 479869,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/reports?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791417865641,
+          "durationMs": 30,
+          "bytes": 305526,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 447.5,
+      "settled": true,
+      "dataCompleteMs": 520,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 0,
+      "totalApiRequests": 3,
+      "slowest": {
+        "endpoint": "/api/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+        "start": 1791417865639,
+        "durationMs": 69,
+        "bytes": 479869,
+        "status": 200
+      },
+      "largest": {
+        "endpoint": "/api/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+        "start": 1791417865639,
+        "durationMs": 69,
+        "bytes": 479869,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "devsecops-platform-testbed",
+      "projectId": "7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+      "flow": "Docker",
+      "tab": "docker",
+      "mode": "cold",
+      "trial": 1,
+      "navigationStart": 1791417865988,
+      "requests": [
+        {
+          "endpoint": "/api/projects/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791417866374,
+          "durationMs": 21,
+          "bytes": 961,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791417866394,
+          "durationMs": 70,
+          "bytes": 479869,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/reports?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791417866395,
+          "durationMs": 29,
+          "bytes": 305526,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 402.20000000298023,
+      "settled": true,
+      "dataCompleteMs": 476,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 0,
+      "totalApiRequests": 3,
+      "slowest": {
+        "endpoint": "/api/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+        "start": 1791417866394,
+        "durationMs": 70,
+        "bytes": 479869,
+        "status": 200
+      },
+      "largest": {
+        "endpoint": "/api/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+        "start": 1791417866394,
+        "durationMs": 70,
+        "bytes": 479869,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "devsecops-platform-testbed",
+      "projectId": "7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+      "flow": "Security",
+      "tab": "securite",
+      "mode": "cold",
+      "trial": 1,
+      "navigationStart": 1791417866754,
+      "requests": [
+        {
+          "endpoint": "/api/projects/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791417867063,
+          "durationMs": 27,
+          "bytes": 961,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791417867086,
+          "durationMs": 59,
+          "bytes": 479869,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/reports?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791417867087,
+          "durationMs": 102,
+          "bytes": 305526,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/azure-deploy/ready/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791417867088,
+          "durationMs": 80,
+          "bytes": 3080,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents/project/7b8a91e6-d07c-4367-aaa7-dd300a424fe2/cycles",
+          "start": 1791417867088,
+          "durationMs": 43,
+          "bytes": 3166,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/manual-remediation?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&includeV18=true",
+          "start": 1791417867089,
+          "durationMs": 161,
+          "bytes": 24629,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/manual-remediation/summary?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791417867090,
+          "durationMs": 81,
+          "bytes": 68,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 328.80000000074506,
+      "settled": true,
+      "dataCompleteMs": 496,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 0,
+      "totalApiRequests": 7,
+      "slowest": {
+        "endpoint": "/api/manual-remediation?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&includeV18=true",
+        "start": 1791417867089,
+        "durationMs": 161,
+        "bytes": 24629,
+        "status": 200
+      },
+      "largest": {
+        "endpoint": "/api/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+        "start": 1791417867086,
+        "durationMs": 59,
+        "bytes": 479869,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "devsecops-platform-testbed",
+      "projectId": "7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+      "flow": "Remediation",
+      "tab": "securite",
+      "mode": "cold",
+      "trial": 1,
+      "navigationStart": 1791417867523,
+      "requests": [
+        {
+          "endpoint": "/api/projects/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791417867879,
+          "durationMs": 24,
+          "bytes": 961,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791417867900,
+          "durationMs": 43,
+          "bytes": 479869,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/reports?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791417867901,
+          "durationMs": 54,
+          "bytes": 305526,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/azure-deploy/ready/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791417867901,
+          "durationMs": 125,
+          "bytes": 3080,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents/project/7b8a91e6-d07c-4367-aaa7-dd300a424fe2/cycles",
+          "start": 1791417867901,
+          "durationMs": 32,
+          "bytes": 3166,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/manual-remediation?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&includeV18=true",
+          "start": 1791417867902,
+          "durationMs": 67,
+          "bytes": 24629,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/manual-remediation/summary?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791417867903,
+          "durationMs": 122,
+          "bytes": 68,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 375.30000000074506,
+      "settled": true,
+      "dataCompleteMs": 503,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 0,
+      "totalApiRequests": 7,
+      "slowest": {
+        "endpoint": "/api/azure-deploy/ready/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+        "start": 1791417867901,
+        "durationMs": 125,
+        "bytes": 3080,
+        "status": 200
+      },
+      "largest": {
+        "endpoint": "/api/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+        "start": 1791417867900,
+        "durationMs": 43,
+        "bytes": 479869,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "devsecops-platform-testbed",
+      "projectId": "7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+      "flow": "Incidents",
+      "tab": "incidents",
+      "mode": "cold",
+      "trial": 1,
+      "navigationStart": 1791417868270,
+      "requests": [
+        {
+          "endpoint": "/api/projects/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791417868616,
+          "durationMs": 19,
+          "bytes": 961,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791417868634,
+          "durationMs": 74,
+          "bytes": 479869,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/reports?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791417868635,
+          "durationMs": 35,
+          "bytes": 305526,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 363.1000000014901,
+      "settled": true,
+      "dataCompleteMs": 438,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 0,
+      "totalApiRequests": 3,
+      "slowest": {
+        "endpoint": "/api/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+        "start": 1791417868634,
+        "durationMs": 74,
+        "bytes": 479869,
+        "status": 200
+      },
+      "largest": {
+        "endpoint": "/api/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+        "start": 1791417868634,
+        "durationMs": 74,
+        "bytes": 479869,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "devsecops-platform-testbed",
+      "projectId": "7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+      "flow": "Configuration",
+      "tab": "config",
+      "mode": "cold",
+      "trial": 1,
+      "navigationStart": 1791417868987,
+      "requests": [
+        {
+          "endpoint": "/api/projects/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791417869285,
+          "durationMs": 19,
+          "bytes": 961,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791417869302,
+          "durationMs": 39,
+          "bytes": 479869,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/reports?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791417869304,
+          "durationMs": 31,
+          "bytes": 305526,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/azure-deploy/ready/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791417869304,
+          "durationMs": 39,
+          "bytes": 3080,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 312,
+      "settled": true,
+      "dataCompleteMs": 356,
+      "renderAfterLastResponseMs": 1.60009765625,
+      "longTaskMs": 0,
+      "totalApiRequests": 4,
+      "slowest": {
+        "endpoint": "/api/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+        "start": 1791417869302,
+        "durationMs": 39,
+        "bytes": 479869,
+        "status": 200
+      },
+      "largest": {
+        "endpoint": "/api/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+        "start": 1791417869302,
+        "durationMs": 39,
+        "bytes": 479869,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "devsecops-platform-testbed",
+      "projectId": "7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+      "flow": "Deployment",
+      "tab": "deploiement",
+      "mode": "cold",
+      "trial": 1,
+      "navigationStart": 1791417869654,
+      "requests": [
+        {
+          "endpoint": "/api/projects/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791417870075,
+          "durationMs": 19,
+          "bytes": 961,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791417870091,
+          "durationMs": 41,
+          "bytes": 479869,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/reports?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791417870093,
+          "durationMs": 42,
+          "bytes": 305526,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/azure-deploy/ready/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791417870093,
+          "durationMs": 43,
+          "bytes": 3080,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/azure-deploy/governance/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791417870094,
+          "durationMs": 109,
+          "bytes": 836,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 434.4000000022352,
+      "settled": true,
+      "dataCompleteMs": 549,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 0,
+      "totalApiRequests": 5,
+      "slowest": {
+        "endpoint": "/api/azure-deploy/governance/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+        "start": 1791417870094,
+        "durationMs": 109,
+        "bytes": 836,
+        "status": 200
+      },
+      "largest": {
+        "endpoint": "/api/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+        "start": 1791417870091,
+        "durationMs": 41,
+        "bytes": 479869,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "pfe-app-test",
+      "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+      "flow": "overview",
+      "tab": "rapport",
+      "mode": "cold",
+      "trial": 1,
+      "navigationStart": 1791417870454,
+      "requests": [
+        {
+          "endpoint": "/api/projects/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791417870948,
+          "durationMs": 16,
+          "bytes": 1264,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791417870964,
+          "durationMs": 731,
+          "bytes": null,
+          "status": 200,
+          "bodyError": "response.body: Protocol error (Network.getResponseBody): Request content was evicted from inspector cache\nResponse body is not available for a response that was navigated away from. Read response.body() before triggering any navigation."
+        },
+        {
+          "endpoint": "/api/reports?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791417870965,
+          "durationMs": 616,
+          "bytes": null,
+          "status": 200,
+          "bodyError": "response.body: Protocol error (Network.getResponseBody): Request content was evicted from inspector cache\nResponse body is not available for a response that was navigated away from. Read response.body() before triggering any navigation."
+        },
+        {
+          "endpoint": "/api/azure-deploy/ready/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791417870966,
+          "durationMs": 82,
+          "bytes": 3109,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 516.3999999985099,
+      "settled": true,
+      "dataCompleteMs": 1241,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 165,
+      "totalApiRequests": 4,
+      "slowest": {
+        "endpoint": "/api/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+        "start": 1791417870964,
+        "durationMs": 731,
+        "bytes": null,
+        "status": 200,
+        "bodyError": "response.body: Protocol error (Network.getResponseBody): Request content was evicted from inspector cache\nResponse body is not available for a response that was navigated away from. Read response.body() before triggering any navigation."
+      },
+      "largest": {
+        "endpoint": "/api/azure-deploy/ready/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+        "start": 1791417870966,
+        "durationMs": 82,
+        "bytes": 3109,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "pfe-app-test",
+      "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+      "flow": "Rapport",
+      "tab": "rapport",
+      "mode": "cold",
+      "trial": 1,
+      "navigationStart": 1791417871937,
+      "requests": [
+        {
+          "endpoint": "/api/projects/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791417872250,
+          "durationMs": 15,
+          "bytes": 1264,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791417872263,
+          "durationMs": 711,
+          "bytes": null,
+          "status": 200,
+          "bodyError": "response.body: Protocol error (Network.getResponseBody): Request content was evicted from inspector cache\nResponse body is not available for a response that was navigated away from. Read response.body() before triggering any navigation."
+        },
+        {
+          "endpoint": "/api/reports?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791417872264,
+          "durationMs": 566,
+          "bytes": null,
+          "status": 200,
+          "bodyError": "response.body: Protocol error (Network.getResponseBody): Request content was evicted from inspector cache\nResponse body is not available for a response that was navigated away from. Read response.body() before triggering any navigation."
+        },
+        {
+          "endpoint": "/api/azure-deploy/ready/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791417872264,
+          "durationMs": 64,
+          "bytes": 3109,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 329.1000000014901,
+      "settled": true,
+      "dataCompleteMs": 1037,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 182,
+      "totalApiRequests": 4,
+      "slowest": {
+        "endpoint": "/api/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+        "start": 1791417872263,
+        "durationMs": 711,
+        "bytes": null,
+        "status": 200,
+        "bodyError": "response.body: Protocol error (Network.getResponseBody): Request content was evicted from inspector cache\nResponse body is not available for a response that was navigated away from. Read response.body() before triggering any navigation."
+      },
+      "largest": {
+        "endpoint": "/api/azure-deploy/ready/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+        "start": 1791417872264,
+        "durationMs": 64,
+        "bytes": 3109,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "pfe-app-test",
+      "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+      "flow": "Jenkins",
+      "tab": "jenkins",
+      "mode": "cold",
+      "trial": 1,
+      "navigationStart": 1791417873220,
+      "requests": [
+        {
+          "endpoint": "/api/projects/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791417873628,
+          "durationMs": 19,
+          "bytes": 1264,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791417873645,
+          "durationMs": 666,
+          "bytes": null,
+          "status": 200,
+          "bodyError": "response.body: Protocol error (Network.getResponseBody): Request content was evicted from inspector cache\nResponse body is not available for a response that was navigated away from. Read response.body() before triggering any navigation."
+        },
+        {
+          "endpoint": "/api/reports?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791417873645,
+          "durationMs": 559,
+          "bytes": null,
+          "status": 200,
+          "bodyError": "response.body: Protocol error (Network.getResponseBody): Request content was evicted from inspector cache\nResponse body is not available for a response that was navigated away from. Read response.body() before triggering any navigation."
+        },
+        {
+          "endpoint": "/api/projects/3aa1c9b9-e114-40e4-884b-ebc7aa32e002/jenkins-status",
+          "start": 1791417873646,
+          "durationMs": 223,
+          "bytes": 2211,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/jenkins/analyses?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791417873646,
+          "durationMs": 113,
+          "bytes": 864407,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 429.69999999925494,
+      "settled": true,
+      "dataCompleteMs": 1091,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 151,
+      "totalApiRequests": 5,
+      "slowest": {
+        "endpoint": "/api/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+        "start": 1791417873645,
+        "durationMs": 666,
+        "bytes": null,
+        "status": 200,
+        "bodyError": "response.body: Protocol error (Network.getResponseBody): Request content was evicted from inspector cache\nResponse body is not available for a response that was navigated away from. Read response.body() before triggering any navigation."
+      },
+      "largest": {
+        "endpoint": "/api/jenkins/analyses?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+        "start": 1791417873646,
+        "durationMs": 113,
+        "bytes": 864407,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "pfe-app-test",
+      "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+      "flow": "SonarQube",
+      "tab": "sonarqube",
+      "mode": "cold",
+      "trial": 1,
+      "navigationStart": 1791417874538,
+      "requests": [
+        {
+          "endpoint": "/api/projects/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791417874850,
+          "durationMs": 16,
+          "bytes": 1264,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791417874865,
+          "durationMs": 683,
+          "bytes": null,
+          "status": 200,
+          "bodyError": "response.body: Protocol error (Network.getResponseBody): Request content was evicted from inspector cache\nResponse body is not available for a response that was navigated away from. Read response.body() before triggering any navigation."
+        },
+        {
+          "endpoint": "/api/reports?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791417874865,
+          "durationMs": 550,
+          "bytes": null,
+          "status": 200,
+          "bodyError": "response.body: Protocol error (Network.getResponseBody): Request content was evicted from inspector cache\nResponse body is not available for a response that was navigated away from. Read response.body() before triggering any navigation."
+        }
+      ],
+      "feedbackMs": 328.3999999985099,
+      "settled": true,
+      "dataCompleteMs": 1010,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 188,
+      "totalApiRequests": 3,
+      "slowest": {
+        "endpoint": "/api/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+        "start": 1791417874865,
+        "durationMs": 683,
+        "bytes": null,
+        "status": 200,
+        "bodyError": "response.body: Protocol error (Network.getResponseBody): Request content was evicted from inspector cache\nResponse body is not available for a response that was navigated away from. Read response.body() before triggering any navigation."
+      },
+      "largest": {
+        "endpoint": "/api/projects/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+        "start": 1791417874850,
+        "durationMs": 16,
+        "bytes": 1264,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "pfe-app-test",
+      "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+      "flow": "Docker",
+      "tab": "docker",
+      "mode": "cold",
+      "trial": 1,
+      "navigationStart": 1791417875787,
+      "requests": [
+        {
+          "endpoint": "/api/projects/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791417876104,
+          "durationMs": 17,
+          "bytes": 1264,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791417876119,
+          "durationMs": 731,
+          "bytes": null,
+          "status": 200,
+          "bodyError": "response.body: Protocol error (Network.getResponseBody): Request content was evicted from inspector cache\nResponse body is not available for a response that was navigated away from. Read response.body() before triggering any navigation."
+        },
+        {
+          "endpoint": "/api/reports?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791417876121,
+          "durationMs": 635,
+          "bytes": null,
+          "status": 200,
+          "bodyError": "response.body: Protocol error (Network.getResponseBody): Request content was evicted from inspector cache\nResponse body is not available for a response that was navigated away from. Read response.body() before triggering any navigation."
+        }
+      ],
+      "feedbackMs": 328.6000000014901,
+      "settled": true,
+      "dataCompleteMs": 1063,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 173,
+      "totalApiRequests": 3,
+      "slowest": {
+        "endpoint": "/api/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+        "start": 1791417876119,
+        "durationMs": 731,
+        "bytes": null,
+        "status": 200,
+        "bodyError": "response.body: Protocol error (Network.getResponseBody): Request content was evicted from inspector cache\nResponse body is not available for a response that was navigated away from. Read response.body() before triggering any navigation."
+      },
+      "largest": {
+        "endpoint": "/api/projects/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+        "start": 1791417876104,
+        "durationMs": 17,
+        "bytes": 1264,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "pfe-app-test",
+      "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+      "flow": "Security",
+      "tab": "securite",
+      "mode": "cold",
+      "trial": 1,
+      "navigationStart": 1791417877104,
+      "requests": [
+        {
+          "endpoint": "/api/projects/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791417877437,
+          "durationMs": 29,
+          "bytes": 1264,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791417877460,
+          "durationMs": 1478,
+          "bytes": null,
+          "status": 200,
+          "bodyError": "response.body: Protocol error (Network.getResponseBody): Request content was evicted from inspector cache\nResponse body is not available for a response that was navigated away from. Read response.body() before triggering any navigation."
+        },
+        {
+          "endpoint": "/api/reports?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791417877460,
+          "durationMs": 1153,
+          "bytes": null,
+          "status": 200,
+          "bodyError": "response.body: Protocol error (Network.getResponseBody): Request content was evicted from inspector cache\nResponse body is not available for a response that was navigated away from. Read response.body() before triggering any navigation."
+        },
+        {
+          "endpoint": "/api/azure-deploy/ready/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791417877461,
+          "durationMs": 139,
+          "bytes": 3109,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents/project/3aa1c9b9-e114-40e4-884b-ebc7aa32e002/cycles",
+          "start": 1791417877461,
+          "durationMs": 392,
+          "bytes": 176463,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/manual-remediation?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&includeV18=true",
+          "start": 1791417877465,
+          "durationMs": 780,
+          "bytes": 852634,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/manual-remediation/summary?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791417877465,
+          "durationMs": 553,
+          "bytes": 71,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 352.80000000074506,
+      "settled": true,
+      "dataCompleteMs": 1834,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 654,
+      "totalApiRequests": 7,
+      "slowest": {
+        "endpoint": "/api/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+        "start": 1791417877460,
+        "durationMs": 1478,
+        "bytes": null,
+        "status": 200,
+        "bodyError": "response.body: Protocol error (Network.getResponseBody): Request content was evicted from inspector cache\nResponse body is not available for a response that was navigated away from. Read response.body() before triggering any navigation."
+      },
+      "largest": {
+        "endpoint": "/api/manual-remediation?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&includeV18=true",
+        "start": 1791417877465,
+        "durationMs": 780,
+        "bytes": 852634,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "pfe-app-test",
+      "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+      "flow": "Remediation",
+      "tab": "securite",
+      "mode": "cold",
+      "trial": 1,
+      "navigationStart": 1791417879204,
+      "requests": [
+        {
+          "endpoint": "/api/projects/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791417879584,
+          "durationMs": 23,
+          "bytes": 1264,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791417879605,
+          "durationMs": 1394,
+          "bytes": null,
+          "status": 200,
+          "bodyError": "response.body: Protocol error (Network.getResponseBody): Request content was evicted from inspector cache\nResponse body is not available for a response that was navigated away from. Read response.body() before triggering any navigation."
+        },
+        {
+          "endpoint": "/api/reports?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791417879605,
+          "durationMs": 1111,
+          "bytes": null,
+          "status": 200,
+          "bodyError": "response.body: Protocol error (Network.getResponseBody): Request content was evicted from inspector cache\nResponse body is not available for a response that was navigated away from. Read response.body() before triggering any navigation."
+        },
+        {
+          "endpoint": "/api/azure-deploy/ready/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791417879606,
+          "durationMs": 144,
+          "bytes": 3109,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents/project/3aa1c9b9-e114-40e4-884b-ebc7aa32e002/cycles",
+          "start": 1791417879607,
+          "durationMs": 833,
+          "bytes": 176463,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/manual-remediation?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&includeV18=true",
+          "start": 1791417879607,
+          "durationMs": 569,
+          "bytes": 852634,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/manual-remediation/summary?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791417879607,
+          "durationMs": 216,
+          "bytes": 71,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 398.19999999925494,
+      "settled": true,
+      "dataCompleteMs": 1795,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 736,
+      "totalApiRequests": 7,
+      "slowest": {
+        "endpoint": "/api/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+        "start": 1791417879605,
+        "durationMs": 1394,
+        "bytes": null,
+        "status": 200,
+        "bodyError": "response.body: Protocol error (Network.getResponseBody): Request content was evicted from inspector cache\nResponse body is not available for a response that was navigated away from. Read response.body() before triggering any navigation."
+      },
+      "largest": {
+        "endpoint": "/api/manual-remediation?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&includeV18=true",
+        "start": 1791417879607,
+        "durationMs": 569,
+        "bytes": 852634,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "pfe-app-test",
+      "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+      "flow": "Incidents",
+      "tab": "incidents",
+      "mode": "cold",
+      "trial": 1,
+      "navigationStart": 1791417881304,
+      "requests": [
+        {
+          "endpoint": "/api/projects/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791417881633,
+          "durationMs": 17,
+          "bytes": 1264,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791417881649,
+          "durationMs": 662,
+          "bytes": null,
+          "status": 200,
+          "bodyError": "response.body: Protocol error (Network.getResponseBody): Request content was evicted from inspector cache\nResponse body is not available for a response that was navigated away from. Read response.body() before triggering any navigation."
+        },
+        {
+          "endpoint": "/api/reports?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791417881649,
+          "durationMs": 512,
+          "bytes": null,
+          "status": 200,
+          "bodyError": "response.body: Protocol error (Network.getResponseBody): Request content was evicted from inspector cache\nResponse body is not available for a response that was navigated away from. Read response.body() before triggering any navigation."
+        }
+      ],
+      "feedbackMs": 345.6000000014901,
+      "settled": true,
+      "dataCompleteMs": 1007,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 165,
+      "totalApiRequests": 3,
+      "slowest": {
+        "endpoint": "/api/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+        "start": 1791417881649,
+        "durationMs": 662,
+        "bytes": null,
+        "status": 200,
+        "bodyError": "response.body: Protocol error (Network.getResponseBody): Request content was evicted from inspector cache\nResponse body is not available for a response that was navigated away from. Read response.body() before triggering any navigation."
+      },
+      "largest": {
+        "endpoint": "/api/projects/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+        "start": 1791417881633,
+        "durationMs": 17,
+        "bytes": 1264,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "pfe-app-test",
+      "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+      "flow": "Configuration",
+      "tab": "config",
+      "mode": "cold",
+      "trial": 1,
+      "navigationStart": 1791417882570,
+      "requests": [
+        {
+          "endpoint": "/api/projects/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791417882787,
+          "durationMs": 22,
+          "bytes": 1264,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791417882807,
+          "durationMs": 798,
+          "bytes": null,
+          "status": 200,
+          "bodyError": "response.body: Protocol error (Network.getResponseBody): Request content was evicted from inspector cache\nResponse body is not available for a response that was navigated away from. Read response.body() before triggering any navigation."
+        },
+        {
+          "endpoint": "/api/reports?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791417882808,
+          "durationMs": 653,
+          "bytes": null,
+          "status": 200,
+          "bodyError": "response.body: Protocol error (Network.getResponseBody): Request content was evicted from inspector cache\nResponse body is not available for a response that was navigated away from. Read response.body() before triggering any navigation."
+        },
+        {
+          "endpoint": "/api/azure-deploy/ready/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791417882808,
+          "durationMs": 91,
+          "bytes": 3109,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 232.70000000298023,
+      "settled": true,
+      "dataCompleteMs": 1035,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 194,
+      "totalApiRequests": 4,
+      "slowest": {
+        "endpoint": "/api/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+        "start": 1791417882807,
+        "durationMs": 798,
+        "bytes": null,
+        "status": 200,
+        "bodyError": "response.body: Protocol error (Network.getResponseBody): Request content was evicted from inspector cache\nResponse body is not available for a response that was navigated away from. Read response.body() before triggering any navigation."
+      },
+      "largest": {
+        "endpoint": "/api/azure-deploy/ready/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+        "start": 1791417882808,
+        "durationMs": 91,
+        "bytes": 3109,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "pfe-app-test",
+      "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+      "flow": "Deployment",
+      "tab": "deploiement",
+      "mode": "cold",
+      "trial": 1,
+      "navigationStart": 1791417883854,
+      "requests": [
+        {
+          "endpoint": "/api/projects/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791417884101,
+          "durationMs": 21,
+          "bytes": 1264,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791417884121,
+          "durationMs": 757,
+          "bytes": null,
+          "status": 200,
+          "bodyError": "response.body: Protocol error (Network.getResponseBody): Request content was evicted from inspector cache\nResponse body is not available for a response that was navigated away from. Read response.body() before triggering any navigation."
+        },
+        {
+          "endpoint": "/api/reports?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791417884122,
+          "durationMs": 585,
+          "bytes": null,
+          "status": 200,
+          "bodyError": "response.body: Protocol error (Network.getResponseBody): Request content was evicted from inspector cache\nResponse body is not available for a response that was navigated away from. Read response.body() before triggering any navigation."
+        },
+        {
+          "endpoint": "/api/azure-deploy/ready/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791417884122,
+          "durationMs": 128,
+          "bytes": 3109,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/azure-deploy/governance/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791417884122,
+          "durationMs": 11128,
+          "bytes": 1445,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 262.30000000074506,
+      "settled": true,
+      "dataCompleteMs": 11396,
+      "renderAfterLastResponseMs": 1103.900146484375,
+      "longTaskMs": 170,
+      "totalApiRequests": 5,
+      "slowest": {
+        "endpoint": "/api/azure-deploy/governance/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+        "start": 1791417884122,
+        "durationMs": 11128,
+        "bytes": 1445,
+        "status": 200
+      },
+      "largest": {
+        "endpoint": "/api/azure-deploy/ready/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+        "start": 1791417884122,
+        "durationMs": 128,
+        "bytes": 3109,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "devsecops-platform-testbed",
+      "projectId": "7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+      "flow": "overview",
+      "tab": "rapport",
+      "mode": "cold",
+      "trial": 2,
+      "navigationStart": 1791417895498,
+      "requests": [
+        {
+          "endpoint": "/api/projects/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791417895764,
+          "durationMs": 17,
+          "bytes": 961,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791417895779,
+          "durationMs": 42,
+          "bytes": 479869,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/reports?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791417895780,
+          "durationMs": 138,
+          "bytes": 305526,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/azure-deploy/ready/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791417895780,
+          "durationMs": 138,
+          "bytes": 3080,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 279.30000000074506,
+      "settled": true,
+      "dataCompleteMs": 420,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 0,
+      "totalApiRequests": 4,
+      "slowest": {
+        "endpoint": "/api/reports?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+        "start": 1791417895780,
+        "durationMs": 138,
+        "bytes": 305526,
+        "status": 200
+      },
+      "largest": {
+        "endpoint": "/api/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+        "start": 1791417895779,
+        "durationMs": 42,
+        "bytes": 479869,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "devsecops-platform-testbed",
+      "projectId": "7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+      "flow": "Rapport",
+      "tab": "rapport",
+      "mode": "cold",
+      "trial": 2,
+      "navigationStart": 1791417896182,
+      "requests": [
+        {
+          "endpoint": "/api/projects/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791417896438,
+          "durationMs": 26,
+          "bytes": 961,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791417896462,
+          "durationMs": 66,
+          "bytes": 479869,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/reports?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791417896463,
+          "durationMs": 77,
+          "bytes": 305526,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/azure-deploy/ready/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791417896464,
+          "durationMs": 72,
+          "bytes": 3080,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 279.4000000022352,
+      "settled": true,
+      "dataCompleteMs": 358,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 0,
+      "totalApiRequests": 4,
+      "slowest": {
+        "endpoint": "/api/reports?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+        "start": 1791417896463,
+        "durationMs": 77,
+        "bytes": 305526,
+        "status": 200
+      },
+      "largest": {
+        "endpoint": "/api/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+        "start": 1791417896462,
+        "durationMs": 66,
+        "bytes": 479869,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "devsecops-platform-testbed",
+      "projectId": "7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+      "flow": "Jenkins",
+      "tab": "jenkins",
+      "mode": "cold",
+      "trial": 2,
+      "navigationStart": 1791417896782,
+      "requests": [
+        {
+          "endpoint": "/api/projects/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791417897067,
+          "durationMs": 21,
+          "bytes": 961,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791417897086,
+          "durationMs": 50,
+          "bytes": 479869,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/reports?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791417897087,
+          "durationMs": 43,
+          "bytes": 305526,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/projects/7b8a91e6-d07c-4367-aaa7-dd300a424fe2/jenkins-status",
+          "start": 1791417897087,
+          "durationMs": 51,
+          "bytes": 261,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/jenkins/analyses?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791417897088,
+          "durationMs": 51,
+          "bytes": 2,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 300,
+      "settled": true,
+      "dataCompleteMs": 357,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 0,
+      "totalApiRequests": 5,
+      "slowest": {
+        "endpoint": "/api/projects/7b8a91e6-d07c-4367-aaa7-dd300a424fe2/jenkins-status",
+        "start": 1791417897087,
+        "durationMs": 51,
+        "bytes": 261,
+        "status": 200
+      },
+      "largest": {
+        "endpoint": "/api/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+        "start": 1791417897086,
+        "durationMs": 50,
+        "bytes": 479869,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "devsecops-platform-testbed",
+      "projectId": "7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+      "flow": "SonarQube",
+      "tab": "sonarqube",
+      "mode": "cold",
+      "trial": 2,
+      "navigationStart": 1791417897466,
+      "requests": [
+        {
+          "endpoint": "/api/projects/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791417897687,
+          "durationMs": 21,
+          "bytes": 961,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791417897706,
+          "durationMs": 81,
+          "bytes": 479869,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/reports?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791417897707,
+          "durationMs": 38,
+          "bytes": 305526,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 233.39999999850988,
+      "settled": true,
+      "dataCompleteMs": 321,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 0,
+      "totalApiRequests": 3,
+      "slowest": {
+        "endpoint": "/api/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+        "start": 1791417897706,
+        "durationMs": 81,
+        "bytes": 479869,
+        "status": 200
+      },
+      "largest": {
+        "endpoint": "/api/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+        "start": 1791417897706,
+        "durationMs": 81,
+        "bytes": 479869,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "devsecops-platform-testbed",
+      "projectId": "7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+      "flow": "Docker",
+      "tab": "docker",
+      "mode": "cold",
+      "trial": 2,
+      "navigationStart": 1791417898082,
+      "requests": [
+        {
+          "endpoint": "/api/projects/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791417898314,
+          "durationMs": 17,
+          "bytes": 961,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791417898329,
+          "durationMs": 40,
+          "bytes": 479869,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/reports?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791417898330,
+          "durationMs": 42,
+          "bytes": 305526,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 245.19999999925494,
+      "settled": true,
+      "dataCompleteMs": 290,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 0,
+      "totalApiRequests": 3,
+      "slowest": {
+        "endpoint": "/api/reports?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+        "start": 1791417898330,
+        "durationMs": 42,
+        "bytes": 305526,
+        "status": 200
+      },
+      "largest": {
+        "endpoint": "/api/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+        "start": 1791417898329,
+        "durationMs": 40,
+        "bytes": 479869,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "devsecops-platform-testbed",
+      "projectId": "7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+      "flow": "Security",
+      "tab": "securite",
+      "mode": "cold",
+      "trial": 2,
+      "navigationStart": 1791417898682,
+      "requests": [
+        {
+          "endpoint": "/api/projects/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791417898938,
+          "durationMs": 25,
+          "bytes": 961,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791417898960,
+          "durationMs": 87,
+          "bytes": 479869,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/reports?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791417898961,
+          "durationMs": 50,
+          "bytes": 305526,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/azure-deploy/ready/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791417898961,
+          "durationMs": 120,
+          "bytes": 3080,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents/project/7b8a91e6-d07c-4367-aaa7-dd300a424fe2/cycles",
+          "start": 1791417898962,
+          "durationMs": 69,
+          "bytes": 3166,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/manual-remediation?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&includeV18=true",
+          "start": 1791417898962,
+          "durationMs": 39,
+          "bytes": 24629,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/manual-remediation/summary?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791417898962,
+          "durationMs": 44,
+          "bytes": 68,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 274.9000000022352,
+      "settled": true,
+      "dataCompleteMs": 399,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 0,
+      "totalApiRequests": 7,
+      "slowest": {
+        "endpoint": "/api/azure-deploy/ready/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+        "start": 1791417898961,
+        "durationMs": 120,
+        "bytes": 3080,
+        "status": 200
+      },
+      "largest": {
+        "endpoint": "/api/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+        "start": 1791417898960,
+        "durationMs": 87,
+        "bytes": 479869,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "devsecops-platform-testbed",
+      "projectId": "7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+      "flow": "Remediation",
+      "tab": "securite",
+      "mode": "cold",
+      "trial": 2,
+      "navigationStart": 1791417899382,
+      "requests": [
+        {
+          "endpoint": "/api/projects/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791417899584,
+          "durationMs": 26,
+          "bytes": 961,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791417899608,
+          "durationMs": 90,
+          "bytes": 479869,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/reports?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791417899608,
+          "durationMs": 99,
+          "bytes": 305526,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/azure-deploy/ready/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791417899609,
+          "durationMs": 109,
+          "bytes": 3080,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents/project/7b8a91e6-d07c-4367-aaa7-dd300a424fe2/cycles",
+          "start": 1791417899609,
+          "durationMs": 104,
+          "bytes": 3166,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/manual-remediation?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&includeV18=true",
+          "start": 1791417899609,
+          "durationMs": 61,
+          "bytes": 24629,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/manual-remediation/summary?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791417899610,
+          "durationMs": 64,
+          "bytes": 68,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 220.80000000074506,
+      "settled": true,
+      "dataCompleteMs": 336,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 0,
+      "totalApiRequests": 7,
+      "slowest": {
+        "endpoint": "/api/azure-deploy/ready/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+        "start": 1791417899609,
+        "durationMs": 109,
+        "bytes": 3080,
+        "status": 200
+      },
+      "largest": {
+        "endpoint": "/api/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+        "start": 1791417899608,
+        "durationMs": 90,
+        "bytes": 479869,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "devsecops-platform-testbed",
+      "projectId": "7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+      "flow": "Incidents",
+      "tab": "incidents",
+      "mode": "cold",
+      "trial": 2,
+      "navigationStart": 1791417900015,
+      "requests": [
+        {
+          "endpoint": "/api/projects/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791417900247,
+          "durationMs": 19,
+          "bytes": 961,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791417900265,
+          "durationMs": 37,
+          "bytes": 479869,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/reports?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791417900266,
+          "durationMs": 28,
+          "bytes": 305526,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 247.79999999701977,
+      "settled": true,
+      "dataCompleteMs": 287,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 0,
+      "totalApiRequests": 3,
+      "slowest": {
+        "endpoint": "/api/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+        "start": 1791417900265,
+        "durationMs": 37,
+        "bytes": 479869,
+        "status": 200
+      },
+      "largest": {
+        "endpoint": "/api/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+        "start": 1791417900265,
+        "durationMs": 37,
+        "bytes": 479869,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "devsecops-platform-testbed",
+      "projectId": "7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+      "flow": "Configuration",
+      "tab": "config",
+      "mode": "cold",
+      "trial": 2,
+      "navigationStart": 1791417900615,
+      "requests": [
+        {
+          "endpoint": "/api/projects/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791417900960,
+          "durationMs": 20,
+          "bytes": 961,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791417900979,
+          "durationMs": 42,
+          "bytes": 479869,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/reports?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791417900980,
+          "durationMs": 51,
+          "bytes": 305526,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/azure-deploy/ready/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791417900980,
+          "durationMs": 43,
+          "bytes": 3080,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 362.3999999985099,
+      "settled": true,
+      "dataCompleteMs": 416,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 0,
+      "totalApiRequests": 4,
+      "slowest": {
+        "endpoint": "/api/reports?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+        "start": 1791417900980,
+        "durationMs": 51,
+        "bytes": 305526,
+        "status": 200
+      },
+      "largest": {
+        "endpoint": "/api/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+        "start": 1791417900979,
+        "durationMs": 42,
+        "bytes": 479869,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "devsecops-platform-testbed",
+      "projectId": "7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+      "flow": "Deployment",
+      "tab": "deploiement",
+      "mode": "cold",
+      "trial": 2,
+      "navigationStart": 1791417901348,
+      "requests": [
+        {
+          "endpoint": "/api/projects/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791417901612,
+          "durationMs": 17,
+          "bytes": 961,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791417901628,
+          "durationMs": 32,
+          "bytes": 479869,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/reports?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791417901628,
+          "durationMs": 36,
+          "bytes": 305526,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/azure-deploy/ready/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791417901629,
+          "durationMs": 39,
+          "bytes": 3080,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/azure-deploy/governance/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791417901629,
+          "durationMs": 115,
+          "bytes": 836,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 273.69999999925494,
+      "settled": true,
+      "dataCompleteMs": 396,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 0,
+      "totalApiRequests": 5,
+      "slowest": {
+        "endpoint": "/api/azure-deploy/governance/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+        "start": 1791417901629,
+        "durationMs": 115,
+        "bytes": 836,
+        "status": 200
+      },
+      "largest": {
+        "endpoint": "/api/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+        "start": 1791417901628,
+        "durationMs": 32,
+        "bytes": 479869,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "pfe-app-test",
+      "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+      "flow": "overview",
+      "tab": "rapport",
+      "mode": "cold",
+      "trial": 2,
+      "navigationStart": 1791417901998,
+      "requests": [
+        {
+          "endpoint": "/api/projects/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791417902202,
+          "durationMs": 24,
+          "bytes": 1264,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791417902224,
+          "durationMs": 776,
+          "bytes": null,
+          "status": 200,
+          "bodyError": "response.body: Protocol error (Network.getResponseBody): Request content was evicted from inspector cache\nResponse body is not available for a response that was navigated away from. Read response.body() before triggering any navigation."
+        },
+        {
+          "endpoint": "/api/reports?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791417902225,
+          "durationMs": 630,
+          "bytes": null,
+          "status": 200,
+          "bodyError": "response.body: Protocol error (Network.getResponseBody): Request content was evicted from inspector cache\nResponse body is not available for a response that was navigated away from. Read response.body() before triggering any navigation."
+        },
+        {
+          "endpoint": "/api/azure-deploy/ready/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791417902225,
+          "durationMs": 116,
+          "bytes": 3109,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 229.10000000149012,
+      "settled": true,
+      "dataCompleteMs": 1002,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 189,
+      "totalApiRequests": 4,
+      "slowest": {
+        "endpoint": "/api/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+        "start": 1791417902224,
+        "durationMs": 776,
+        "bytes": null,
+        "status": 200,
+        "bodyError": "response.body: Protocol error (Network.getResponseBody): Request content was evicted from inspector cache\nResponse body is not available for a response that was navigated away from. Read response.body() before triggering any navigation."
+      },
+      "largest": {
+        "endpoint": "/api/azure-deploy/ready/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+        "start": 1791417902225,
+        "durationMs": 116,
+        "bytes": 3109,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "pfe-app-test",
+      "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+      "flow": "Rapport",
+      "tab": "rapport",
+      "mode": "cold",
+      "trial": 2,
+      "navigationStart": 1791417903232,
+      "requests": [
+        {
+          "endpoint": "/api/projects/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791417903503,
+          "durationMs": 20,
+          "bytes": 1264,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791417903520,
+          "durationMs": 611,
+          "bytes": null,
+          "status": 200,
+          "bodyError": "response.body: Protocol error (Network.getResponseBody): Request content was evicted from inspector cache\nResponse body is not available for a response that was navigated away from. Read response.body() before triggering any navigation."
+        },
+        {
+          "endpoint": "/api/reports?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791417903521,
+          "durationMs": 394,
+          "bytes": null,
+          "status": 200,
+          "bodyError": "response.body: Protocol error (Network.getResponseBody): Request content was evicted from inspector cache\nResponse body is not available for a response that was navigated away from. Read response.body() before triggering any navigation."
+        },
+        {
+          "endpoint": "/api/azure-deploy/ready/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791417903522,
+          "durationMs": 73,
+          "bytes": 3109,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 285.4000000022352,
+      "settled": true,
+      "dataCompleteMs": 899,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 186,
+      "totalApiRequests": 4,
+      "slowest": {
+        "endpoint": "/api/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+        "start": 1791417903520,
+        "durationMs": 611,
+        "bytes": null,
+        "status": 200,
+        "bodyError": "response.body: Protocol error (Network.getResponseBody): Request content was evicted from inspector cache\nResponse body is not available for a response that was navigated away from. Read response.body() before triggering any navigation."
+      },
+      "largest": {
+        "endpoint": "/api/azure-deploy/ready/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+        "start": 1791417903522,
+        "durationMs": 73,
+        "bytes": 3109,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "pfe-app-test",
+      "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+      "flow": "Jenkins",
+      "tab": "jenkins",
+      "mode": "cold",
+      "trial": 2,
+      "navigationStart": 1791417904382,
+      "requests": [
+        {
+          "endpoint": "/api/projects/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791417904680,
+          "durationMs": 35,
+          "bytes": 1264,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791417904712,
+          "durationMs": 745,
+          "bytes": null,
+          "status": 200,
+          "bodyError": "response.body: Protocol error (Network.getResponseBody): Request content was evicted from inspector cache\nResponse body is not available for a response that was navigated away from. Read response.body() before triggering any navigation."
+        },
+        {
+          "endpoint": "/api/reports?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791417904713,
+          "durationMs": 610,
+          "bytes": null,
+          "status": 200,
+          "bodyError": "response.body: Protocol error (Network.getResponseBody): Request content was evicted from inspector cache\nResponse body is not available for a response that was navigated away from. Read response.body() before triggering any navigation."
+        },
+        {
+          "endpoint": "/api/projects/3aa1c9b9-e114-40e4-884b-ebc7aa32e002/jenkins-status",
+          "start": 1791417904714,
+          "durationMs": 203,
+          "bytes": 2211,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/jenkins/analyses?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791417904715,
+          "durationMs": 52,
+          "bytes": 864407,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 327.80000000074506,
+      "settled": true,
+      "dataCompleteMs": 1075,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 160,
+      "totalApiRequests": 5,
+      "slowest": {
+        "endpoint": "/api/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+        "start": 1791417904712,
+        "durationMs": 745,
+        "bytes": null,
+        "status": 200,
+        "bodyError": "response.body: Protocol error (Network.getResponseBody): Request content was evicted from inspector cache\nResponse body is not available for a response that was navigated away from. Read response.body() before triggering any navigation."
+      },
+      "largest": {
+        "endpoint": "/api/jenkins/analyses?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+        "start": 1791417904715,
+        "durationMs": 52,
+        "bytes": 864407,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "pfe-app-test",
+      "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+      "flow": "SonarQube",
+      "tab": "sonarqube",
+      "mode": "cold",
+      "trial": 2,
+      "navigationStart": 1791417905698,
+      "requests": [
+        {
+          "endpoint": "/api/projects/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791417905902,
+          "durationMs": 17,
+          "bytes": 1264,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791417905918,
+          "durationMs": 705,
+          "bytes": null,
+          "status": 200,
+          "bodyError": "response.body: Protocol error (Network.getResponseBody): Request content was evicted from inspector cache\nResponse body is not available for a response that was navigated away from. Read response.body() before triggering any navigation."
+        },
+        {
+          "endpoint": "/api/reports?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791417905919,
+          "durationMs": 593,
+          "bytes": null,
+          "status": 200,
+          "bodyError": "response.body: Protocol error (Network.getResponseBody): Request content was evicted from inspector cache\nResponse body is not available for a response that was navigated away from. Read response.body() before triggering any navigation."
+        }
+      ],
+      "feedbackMs": 217,
+      "settled": true,
+      "dataCompleteMs": 925,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 168,
+      "totalApiRequests": 3,
+      "slowest": {
+        "endpoint": "/api/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+        "start": 1791417905918,
+        "durationMs": 705,
+        "bytes": null,
+        "status": 200,
+        "bodyError": "response.body: Protocol error (Network.getResponseBody): Request content was evicted from inspector cache\nResponse body is not available for a response that was navigated away from. Read response.body() before triggering any navigation."
+      },
+      "largest": {
+        "endpoint": "/api/projects/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+        "start": 1791417905902,
+        "durationMs": 17,
+        "bytes": 1264,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "pfe-app-test",
+      "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+      "flow": "Docker",
+      "tab": "docker",
+      "mode": "cold",
+      "trial": 2,
+      "navigationStart": 1791417906881,
+      "requests": [
+        {
+          "endpoint": "/api/projects/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791417907131,
+          "durationMs": 16,
+          "bytes": 1264,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791417907146,
+          "durationMs": 633,
+          "bytes": null,
+          "status": 200,
+          "bodyError": "response.body: Protocol error (Network.getResponseBody): Request content was evicted from inspector cache\nResponse body is not available for a response that was navigated away from. Read response.body() before triggering any navigation."
+        },
+        {
+          "endpoint": "/api/reports?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791417907147,
+          "durationMs": 511,
+          "bytes": null,
+          "status": 200,
+          "bodyError": "response.body: Protocol error (Network.getResponseBody): Request content was evicted from inspector cache\nResponse body is not available for a response that was navigated away from. Read response.body() before triggering any navigation."
+        }
+      ],
+      "feedbackMs": 262.8999999985099,
+      "settled": true,
+      "dataCompleteMs": 898,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 137,
+      "totalApiRequests": 3,
+      "slowest": {
+        "endpoint": "/api/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+        "start": 1791417907146,
+        "durationMs": 633,
+        "bytes": null,
+        "status": 200,
+        "bodyError": "response.body: Protocol error (Network.getResponseBody): Request content was evicted from inspector cache\nResponse body is not available for a response that was navigated away from. Read response.body() before triggering any navigation."
+      },
+      "largest": {
+        "endpoint": "/api/projects/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+        "start": 1791417907131,
+        "durationMs": 16,
+        "bytes": 1264,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "pfe-app-test",
+      "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+      "flow": "Security",
+      "tab": "securite",
+      "mode": "cold",
+      "trial": 2,
+      "navigationStart": 1791417908031,
+      "requests": [
+        {
+          "endpoint": "/api/projects/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791417908225,
+          "durationMs": 27,
+          "bytes": 1264,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791417908248,
+          "durationMs": 1538,
+          "bytes": null,
+          "status": 200,
+          "bodyError": "response.body: Protocol error (Network.getResponseBody): Request content was evicted from inspector cache\nResponse body is not available for a response that was navigated away from. Read response.body() before triggering any navigation."
+        },
+        {
+          "endpoint": "/api/reports?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791417908249,
+          "durationMs": 1139,
+          "bytes": null,
+          "status": 200,
+          "bodyError": "response.body: Protocol error (Network.getResponseBody): Request content was evicted from inspector cache\nResponse body is not available for a response that was navigated away from. Read response.body() before triggering any navigation."
+        },
+        {
+          "endpoint": "/api/azure-deploy/ready/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791417908250,
+          "durationMs": 133,
+          "bytes": 3109,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents/project/3aa1c9b9-e114-40e4-884b-ebc7aa32e002/cycles",
+          "start": 1791417908250,
+          "durationMs": 400,
+          "bytes": 176463,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/manual-remediation?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&includeV18=true",
+          "start": 1791417908250,
+          "durationMs": 816,
+          "bytes": 852634,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/manual-remediation/summary?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791417908251,
+          "durationMs": 438,
+          "bytes": 71,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 214.60000000149012,
+      "settled": true,
+      "dataCompleteMs": 1755,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 627,
+      "totalApiRequests": 7,
+      "slowest": {
+        "endpoint": "/api/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+        "start": 1791417908248,
+        "durationMs": 1538,
+        "bytes": null,
+        "status": 200,
+        "bodyError": "response.body: Protocol error (Network.getResponseBody): Request content was evicted from inspector cache\nResponse body is not available for a response that was navigated away from. Read response.body() before triggering any navigation."
+      },
+      "largest": {
+        "endpoint": "/api/manual-remediation?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&includeV18=true",
+        "start": 1791417908250,
+        "durationMs": 816,
+        "bytes": 852634,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "pfe-app-test",
+      "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+      "flow": "Remediation",
+      "tab": "securite",
+      "mode": "cold",
+      "trial": 2,
+      "navigationStart": 1791417910031,
+      "requests": [
+        {
+          "endpoint": "/api/projects/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791417910232,
+          "durationMs": 28,
+          "bytes": 1264,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791417910257,
+          "durationMs": 1419,
+          "bytes": null,
+          "status": 200,
+          "bodyError": "response.body: Protocol error (Network.getResponseBody): Request content was evicted from inspector cache\nResponse body is not available for a response that was navigated away from. Read response.body() before triggering any navigation."
+        },
+        {
+          "endpoint": "/api/reports?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791417910258,
+          "durationMs": 1159,
+          "bytes": null,
+          "status": 200,
+          "bodyError": "response.body: Protocol error (Network.getResponseBody): Request content was evicted from inspector cache\nResponse body is not available for a response that was navigated away from. Read response.body() before triggering any navigation."
+        },
+        {
+          "endpoint": "/api/azure-deploy/ready/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791417910258,
+          "durationMs": 183,
+          "bytes": 3109,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents/project/3aa1c9b9-e114-40e4-884b-ebc7aa32e002/cycles",
+          "start": 1791417910259,
+          "durationMs": 761,
+          "bytes": 176463,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/manual-remediation?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&includeV18=true",
+          "start": 1791417910260,
+          "durationMs": 497,
+          "bytes": 852634,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/manual-remediation/summary?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791417910260,
+          "durationMs": 34,
+          "bytes": 71,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 228.89999999850988,
+      "settled": true,
+      "dataCompleteMs": 1645,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 836,
+      "totalApiRequests": 7,
+      "slowest": {
+        "endpoint": "/api/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+        "start": 1791417910257,
+        "durationMs": 1419,
+        "bytes": null,
+        "status": 200,
+        "bodyError": "response.body: Protocol error (Network.getResponseBody): Request content was evicted from inspector cache\nResponse body is not available for a response that was navigated away from. Read response.body() before triggering any navigation."
+      },
+      "largest": {
+        "endpoint": "/api/manual-remediation?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&includeV18=true",
+        "start": 1791417910260,
+        "durationMs": 497,
+        "bytes": 852634,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "pfe-app-test",
+      "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+      "flow": "Incidents",
+      "tab": "incidents",
+      "mode": "cold",
+      "trial": 2,
+      "navigationStart": 1791417911915,
+      "requests": [
+        {
+          "endpoint": "/api/projects/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791417912126,
+          "durationMs": 19,
+          "bytes": 1264,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791417912144,
+          "durationMs": 713,
+          "bytes": null,
+          "status": 200,
+          "bodyError": "response.body: Protocol error (Network.getResponseBody): Request content was evicted from inspector cache\nResponse body is not available for a response that was navigated away from. Read response.body() before triggering any navigation."
+        },
+        {
+          "endpoint": "/api/reports?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791417912144,
+          "durationMs": 577,
+          "bytes": null,
+          "status": 200,
+          "bodyError": "response.body: Protocol error (Network.getResponseBody): Request content was evicted from inspector cache\nResponse body is not available for a response that was navigated away from. Read response.body() before triggering any navigation."
+        }
+      ],
+      "feedbackMs": 229.10000000149012,
+      "settled": true,
+      "dataCompleteMs": 942,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 175,
+      "totalApiRequests": 3,
+      "slowest": {
+        "endpoint": "/api/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+        "start": 1791417912144,
+        "durationMs": 713,
+        "bytes": null,
+        "status": 200,
+        "bodyError": "response.body: Protocol error (Network.getResponseBody): Request content was evicted from inspector cache\nResponse body is not available for a response that was navigated away from. Read response.body() before triggering any navigation."
+      },
+      "largest": {
+        "endpoint": "/api/projects/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+        "start": 1791417912126,
+        "durationMs": 19,
+        "bytes": 1264,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "pfe-app-test",
+      "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+      "flow": "Configuration",
+      "tab": "config",
+      "mode": "cold",
+      "trial": 2,
+      "navigationStart": 1791417913098,
+      "requests": [
+        {
+          "endpoint": "/api/projects/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791417913293,
+          "durationMs": 19,
+          "bytes": 1264,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791417913311,
+          "durationMs": 688,
+          "bytes": null,
+          "status": 200,
+          "bodyError": "response.body: Protocol error (Network.getResponseBody): Request content was evicted from inspector cache\nResponse body is not available for a response that was navigated away from. Read response.body() before triggering any navigation."
+        },
+        {
+          "endpoint": "/api/reports?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791417913311,
+          "durationMs": 579,
+          "bytes": null,
+          "status": 200,
+          "bodyError": "response.body: Protocol error (Network.getResponseBody): Request content was evicted from inspector cache\nResponse body is not available for a response that was navigated away from. Read response.body() before triggering any navigation."
+        },
+        {
+          "endpoint": "/api/azure-deploy/ready/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791417913311,
+          "durationMs": 43,
+          "bytes": 3109,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 212.40000000223517,
+      "settled": true,
+      "dataCompleteMs": 901,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 164,
+      "totalApiRequests": 4,
+      "slowest": {
+        "endpoint": "/api/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+        "start": 1791417913311,
+        "durationMs": 688,
+        "bytes": null,
+        "status": 200,
+        "bodyError": "response.body: Protocol error (Network.getResponseBody): Request content was evicted from inspector cache\nResponse body is not available for a response that was navigated away from. Read response.body() before triggering any navigation."
+      },
+      "largest": {
+        "endpoint": "/api/azure-deploy/ready/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+        "start": 1791417913311,
+        "durationMs": 43,
+        "bytes": 3109,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "pfe-app-test",
+      "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+      "flow": "Deployment",
+      "tab": "deploiement",
+      "mode": "cold",
+      "trial": 2,
+      "navigationStart": 1791417914248,
+      "requests": [
+        {
+          "endpoint": "/api/projects/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791417914441,
+          "durationMs": 21,
+          "bytes": 1264,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791417914458,
+          "durationMs": 714,
+          "bytes": null,
+          "status": 200,
+          "bodyError": "response.body: Protocol error (Network.getResponseBody): Request content was evicted from inspector cache\nResponse body is not available for a response that was navigated away from. Read response.body() before triggering any navigation."
+        },
+        {
+          "endpoint": "/api/reports?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791417914459,
+          "durationMs": 537,
+          "bytes": null,
+          "status": 200,
+          "bodyError": "response.body: Protocol error (Network.getResponseBody): Request content was evicted from inspector cache\nResponse body is not available for a response that was navigated away from. Read response.body() before triggering any navigation."
+        },
+        {
+          "endpoint": "/api/azure-deploy/ready/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791417914460,
+          "durationMs": 42,
+          "bytes": 3109,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/azure-deploy/governance/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791417914461,
+          "durationMs": 12166,
+          "bytes": 1445,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 213.30000000074506,
+      "settled": true,
+      "dataCompleteMs": 12379,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 192,
+      "totalApiRequests": 5,
+      "slowest": {
+        "endpoint": "/api/azure-deploy/governance/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+        "start": 1791417914461,
+        "durationMs": 12166,
+        "bytes": 1445,
+        "status": 200
+      },
+      "largest": {
+        "endpoint": "/api/azure-deploy/ready/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+        "start": 1791417914460,
+        "durationMs": 42,
+        "bytes": 3109,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "devsecops-platform-testbed",
+      "projectId": "7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+      "flow": "Rapport",
+      "tab": "rapport",
+      "mode": "warm",
+      "trial": 1,
+      "navigationStart": 1791417926809,
+      "requests": [],
+      "feedbackMs": 62,
+      "settled": true,
+      "dataCompleteMs": 62,
+      "renderAfterLastResponseMs": 406.39990234375,
+      "longTaskMs": 0,
+      "totalApiRequests": 0,
+      "slowest": null,
+      "largest": null,
+      "duplicates": []
+    },
+    {
+      "project": "devsecops-platform-testbed",
+      "projectId": "7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+      "flow": "Jenkins",
+      "tab": "jenkins",
+      "mode": "warm",
+      "trial": 1,
+      "navigationStart": 1791417927109,
+      "requests": [
+        {
+          "endpoint": "/api/projects/7b8a91e6-d07c-4367-aaa7-dd300a424fe2/jenkins-status",
+          "start": 1791417927148,
+          "durationMs": 14,
+          "bytes": 261,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/jenkins/analyses?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791417927159,
+          "durationMs": 9,
+          "bytes": 2,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 55,
+      "settled": true,
+      "dataCompleteMs": 59,
+      "renderAfterLastResponseMs": 1071.60009765625,
+      "longTaskMs": 0,
+      "totalApiRequests": 2,
+      "slowest": {
+        "endpoint": "/api/projects/7b8a91e6-d07c-4367-aaa7-dd300a424fe2/jenkins-status",
+        "start": 1791417927148,
+        "durationMs": 14,
+        "bytes": 261,
+        "status": 200
+      },
+      "largest": {
+        "endpoint": "/api/projects/7b8a91e6-d07c-4367-aaa7-dd300a424fe2/jenkins-status",
+        "start": 1791417927148,
+        "durationMs": 14,
+        "bytes": 261,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "devsecops-platform-testbed",
+      "projectId": "7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+      "flow": "SonarQube",
+      "tab": "sonarqube",
+      "mode": "warm",
+      "trial": 1,
+      "navigationStart": 1791417927425,
+      "requests": [],
+      "feedbackMs": 45,
+      "settled": true,
+      "dataCompleteMs": 45,
+      "renderAfterLastResponseMs": 1111.60009765625,
+      "longTaskMs": 0,
+      "totalApiRequests": 0,
+      "slowest": null,
+      "largest": null,
+      "duplicates": []
+    },
+    {
+      "project": "devsecops-platform-testbed",
+      "projectId": "7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+      "flow": "Docker",
+      "tab": "docker",
+      "mode": "warm",
+      "trial": 1,
+      "navigationStart": 1791417927708,
+      "requests": [],
+      "feedbackMs": 45,
+      "settled": true,
+      "dataCompleteMs": 45,
+      "renderAfterLastResponseMs": 1112,
+      "longTaskMs": 0,
+      "totalApiRequests": 0,
+      "slowest": null,
+      "largest": null,
+      "duplicates": []
+    },
+    {
+      "project": "devsecops-platform-testbed",
+      "projectId": "7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+      "flow": "Security",
+      "tab": "securite",
+      "mode": "warm",
+      "trial": 1,
+      "navigationStart": 1791417927991,
+      "requests": [
+        {
+          "endpoint": "/api/azure-deploy/ready/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791417928033,
+          "durationMs": 34,
+          "bytes": 3080,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents/project/7b8a91e6-d07c-4367-aaa7-dd300a424fe2/cycles",
+          "start": 1791417928033,
+          "durationMs": 25,
+          "bytes": 3166,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/manual-remediation?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&includeV18=true",
+          "start": 1791417928034,
+          "durationMs": 45,
+          "bytes": 24629,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/manual-remediation/summary?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791417928035,
+          "durationMs": 29,
+          "bytes": 68,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 101,
+      "settled": true,
+      "dataCompleteMs": 101,
+      "renderAfterLastResponseMs": 1071.199951171875,
+      "longTaskMs": 0,
+      "totalApiRequests": 4,
+      "slowest": {
+        "endpoint": "/api/manual-remediation?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&includeV18=true",
+        "start": 1791417928034,
+        "durationMs": 45,
+        "bytes": 24629,
+        "status": 200
+      },
+      "largest": {
+        "endpoint": "/api/manual-remediation?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&includeV18=true",
+        "start": 1791417928034,
+        "durationMs": 45,
+        "bytes": 24629,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "devsecops-platform-testbed",
+      "projectId": "7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+      "flow": "Incidents",
+      "tab": "incidents",
+      "mode": "warm",
+      "trial": 1,
+      "navigationStart": 1791417928325,
+      "requests": [],
+      "feedbackMs": 50,
+      "settled": true,
+      "dataCompleteMs": 50,
+      "renderAfterLastResponseMs": 1114.10009765625,
+      "longTaskMs": 0,
+      "totalApiRequests": 0,
+      "slowest": null,
+      "largest": null,
+      "duplicates": []
+    },
+    {
+      "project": "devsecops-platform-testbed",
+      "projectId": "7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+      "flow": "Configuration",
+      "tab": "config",
+      "mode": "warm",
+      "trial": 1,
+      "navigationStart": 1791417928608,
+      "requests": [
+        {
+          "endpoint": "/api/azure-deploy/ready/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791417928647,
+          "durationMs": 15,
+          "bytes": 3080,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 47,
+      "settled": true,
+      "dataCompleteMs": 54,
+      "renderAfterLastResponseMs": 1071.60009765625,
+      "longTaskMs": 0,
+      "totalApiRequests": 1,
+      "slowest": {
+        "endpoint": "/api/azure-deploy/ready/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+        "start": 1791417928647,
+        "durationMs": 15,
+        "bytes": 3080,
+        "status": 200
+      },
+      "largest": {
+        "endpoint": "/api/azure-deploy/ready/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+        "start": 1791417928647,
+        "durationMs": 15,
+        "bytes": 3080,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "devsecops-platform-testbed",
+      "projectId": "7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+      "flow": "Deployment",
+      "tab": "deploiement",
+      "mode": "warm",
+      "trial": 1,
+      "navigationStart": 1791417928908,
+      "requests": [
+        {
+          "endpoint": "/api/azure-deploy/ready/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791417928948,
+          "durationMs": 15,
+          "bytes": 3080,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/azure-deploy/governance/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791417928952,
+          "durationMs": 20,
+          "bytes": 836,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 47,
+      "settled": true,
+      "dataCompleteMs": 64,
+      "renderAfterLastResponseMs": 1072.10009765625,
+      "longTaskMs": 0,
+      "totalApiRequests": 2,
+      "slowest": {
+        "endpoint": "/api/azure-deploy/governance/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+        "start": 1791417928952,
+        "durationMs": 20,
+        "bytes": 836,
+        "status": 200
+      },
+      "largest": {
+        "endpoint": "/api/azure-deploy/ready/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+        "start": 1791417928948,
+        "durationMs": 15,
+        "bytes": 3080,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "pfe-app-test",
+      "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+      "flow": "Rapport",
+      "tab": "rapport",
+      "mode": "warm",
+      "trial": 1,
+      "navigationStart": 1791417930168,
+      "requests": [],
+      "feedbackMs": 133,
+      "settled": true,
+      "dataCompleteMs": 133,
+      "renderAfterLastResponseMs": 4.5,
+      "longTaskMs": 0,
+      "totalApiRequests": 0,
+      "slowest": null,
+      "largest": null,
+      "duplicates": []
+    },
+    {
+      "project": "pfe-app-test",
+      "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+      "flow": "Jenkins",
+      "tab": "jenkins",
+      "mode": "warm",
+      "trial": 1,
+      "navigationStart": 1791417930524,
+      "requests": [
+        {
+          "endpoint": "/api/projects/3aa1c9b9-e114-40e4-884b-ebc7aa32e002/jenkins-status",
+          "start": 1791417930565,
+          "durationMs": 64,
+          "bytes": 2211,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/jenkins/analyses?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791417930576,
+          "durationMs": 40,
+          "bytes": 864407,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 56,
+      "settled": true,
+      "dataCompleteMs": 105,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 0,
+      "totalApiRequests": 2,
+      "slowest": {
+        "endpoint": "/api/projects/3aa1c9b9-e114-40e4-884b-ebc7aa32e002/jenkins-status",
+        "start": 1791417930565,
+        "durationMs": 64,
+        "bytes": 2211,
+        "status": 200
+      },
+      "largest": {
+        "endpoint": "/api/jenkins/analyses?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+        "start": 1791417930576,
+        "durationMs": 40,
+        "bytes": 864407,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "pfe-app-test",
+      "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+      "flow": "SonarQube",
+      "tab": "sonarqube",
+      "mode": "warm",
+      "trial": 1,
+      "navigationStart": 1791417930875,
+      "requests": [],
+      "feedbackMs": 55,
+      "settled": true,
+      "dataCompleteMs": 55,
+      "renderAfterLastResponseMs": 43.199951171875,
+      "longTaskMs": 0,
+      "totalApiRequests": 0,
+      "slowest": null,
+      "largest": null,
+      "duplicates": []
+    },
+    {
+      "project": "pfe-app-test",
+      "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+      "flow": "Docker",
+      "tab": "docker",
+      "mode": "warm",
+      "trial": 1,
+      "navigationStart": 1791417931158,
+      "requests": [],
+      "feedbackMs": 45,
+      "settled": true,
+      "dataCompleteMs": 45,
+      "renderAfterLastResponseMs": 40,
+      "longTaskMs": 0,
+      "totalApiRequests": 0,
+      "slowest": null,
+      "largest": null,
+      "duplicates": []
+    },
+    {
+      "project": "pfe-app-test",
+      "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+      "flow": "Security",
+      "tab": "securite",
+      "mode": "warm",
+      "trial": 1,
+      "navigationStart": 1791417931424,
+      "requests": [
+        {
+          "endpoint": "/api/azure-deploy/ready/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791417931465,
+          "durationMs": 104,
+          "bytes": 3109,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents/project/3aa1c9b9-e114-40e4-884b-ebc7aa32e002/cycles",
+          "start": 1791417931466,
+          "durationMs": 651,
+          "bytes": 176463,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/manual-remediation?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&includeV18=true",
+          "start": 1791417931466,
+          "durationMs": 312,
+          "bytes": 852634,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/manual-remediation/summary?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791417931466,
+          "durationMs": 510,
+          "bytes": 71,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 810,
+      "settled": true,
+      "dataCompleteMs": 810,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 518,
+      "totalApiRequests": 4,
+      "slowest": {
+        "endpoint": "/api/incidents/project/3aa1c9b9-e114-40e4-884b-ebc7aa32e002/cycles",
+        "start": 1791417931466,
+        "durationMs": 651,
+        "bytes": 176463,
+        "status": 200
+      },
+      "largest": {
+        "endpoint": "/api/manual-remediation?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&includeV18=true",
+        "start": 1791417931466,
+        "durationMs": 312,
+        "bytes": 852634,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "pfe-app-test",
+      "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+      "flow": "Incidents",
+      "tab": "incidents",
+      "mode": "warm",
+      "trial": 1,
+      "navigationStart": 1791417932458,
+      "requests": [],
+      "feedbackMs": 65,
+      "settled": true,
+      "dataCompleteMs": 65,
+      "renderAfterLastResponseMs": 56.5,
+      "longTaskMs": 0,
+      "totalApiRequests": 0,
+      "slowest": null,
+      "largest": null,
+      "duplicates": []
+    },
+    {
+      "project": "pfe-app-test",
+      "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+      "flow": "Configuration",
+      "tab": "config",
+      "mode": "warm",
+      "trial": 1,
+      "navigationStart": 1791417932758,
+      "requests": [
+        {
+          "endpoint": "/api/azure-deploy/ready/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791417932796,
+          "durationMs": 31,
+          "bytes": 3109,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 46,
+      "settled": true,
+      "dataCompleteMs": 69,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 0,
+      "totalApiRequests": 1,
+      "slowest": {
+        "endpoint": "/api/azure-deploy/ready/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+        "start": 1791417932796,
+        "durationMs": 31,
+        "bytes": 3109,
+        "status": 200
+      },
+      "largest": {
+        "endpoint": "/api/azure-deploy/ready/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+        "start": 1791417932796,
+        "durationMs": 31,
+        "bytes": 3109,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "pfe-app-test",
+      "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+      "flow": "Deployment",
+      "tab": "deploiement",
+      "mode": "warm",
+      "trial": 1,
+      "navigationStart": 1791417933057,
+      "requests": [
+        {
+          "endpoint": "/api/azure-deploy/ready/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791417933096,
+          "durationMs": 32,
+          "bytes": 3109,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/azure-deploy/governance/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791417933099,
+          "durationMs": 11562,
+          "bytes": 1445,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 45,
+      "settled": true,
+      "dataCompleteMs": 11604,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 0,
+      "totalApiRequests": 2,
+      "slowest": {
+        "endpoint": "/api/azure-deploy/governance/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+        "start": 1791417933099,
+        "durationMs": 11562,
+        "bytes": 1445,
+        "status": 200
+      },
+      "largest": {
+        "endpoint": "/api/azure-deploy/ready/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+        "start": 1791417933096,
+        "durationMs": 32,
+        "bytes": 3109,
+        "status": 200
+      },
+      "duplicates": []
+    }
+  ],
+  "exceptions": [],
+  "method": "Two cold navigations per flow/project; one warm tab sequence; bytes decoded API bodies; header visibility at requestAnimationFrame; data completion last API response; render after response mutation proxy, not Angular profiler duration"
+}

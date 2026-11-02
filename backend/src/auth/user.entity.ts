@@ -1,4 +1,4 @@
-// user.entity.ts
+// Entité TypeORM représentant un utilisateur de la plateforme : identité, mot de passe haché, rôle et statut d'activation.
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn } from 'typeorm';
 
 export enum UserRole { ADMIN = 'admin', DEVELOPER = 'developer', VIEWER = 'viewer' }

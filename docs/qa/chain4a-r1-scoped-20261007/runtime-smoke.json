@@ -1,0 +1,37 @@
+{
+  "backendStartup": true,
+  "dbConnectivity": true,
+  "health": true,
+  "findingIngestion": true,
+  "findingReads": true,
+  "remediationReads": true,
+  "dispatchBlocked": true,
+  "harness": "false",
+  "dispatch": "false",
+  "reads": [
+    {
+      "path": "/healthz",
+      "http": 200
+    },
+    {
+      "path": "/api/docs",
+      "http": 200
+    },
+    {
+      "path": "/api/incidents?projectId=b209a5e5-27fd-4cc7-b456-713f0aa6e79d",
+      "http": 200
+    },
+    {
+      "path": "/api/manual-remediation?projectId=b209a5e5-27fd-4cc7-b456-713f0aa6e79d",
+      "http": 200
+    },
+    {
+      "path": "/api/manual-remediation/summary?projectId=b209a5e5-27fd-4cc7-b456-713f0aa6e79d",
+      "http": 200
+    }
+  ],
+  "productionAccess": false,
+  "zeroReservationsAndAttempts": true,
+  "imageId": "sha256:8ee224f973389451be32820381201e8466c8f710b887aed55f6d3363fb8f1fcd",
+  "sourceCommit": "0957ab63280b32e4180ba47ae72bfb5a802db15a"
+}

@@ -1,0 +1,51 @@
+ M backend/src/manual-remediation/manual-remediation.controller.ts
+ M backend/src/manual-remediation/manual-remediation.entity.ts
+ M backend/src/manual-remediation/manual-remediation.module.ts
+ M backend/src/manual-remediation/manual-remediation.service.batch.spec.ts
+ M backend/src/manual-remediation/manual-remediation.service.ts
+ M backend/src/manual-remediation/manual-remediation.service.v1-8-decision.spec.ts
+ M backend/src/manual-remediation/manual-remediation.service.v1-8-enforcement.spec.ts
+ M backend/src/manual-remediation/manual-remediation.service.v1-8-fixedversion-override.spec.ts
+ M backend/src/manual-remediation/manual-remediation.service.wf6-result.spec.ts
+ M backend/src/security-remediation/security-artifact-scan.ts
+ M backend/src/security-remediation/security-remediation-evaluate-batch.dto.ts
+ M backend/src/security-remediation/security-remediation-orchestration.types.ts
+ M backend/src/security-remediation/security-remediation.controller.batch.spec.ts
+ M backend/src/security-remediation/security-remediation.controller.spec.ts
+ M backend/src/security-remediation/security-remediation.controller.ts
+ M backend/src/security-remediation/security-remediation.module.ts
+ M backend/src/security-remediation/wf6-batch-remediation-result.dto.spec.ts
+ M backend/src/security-remediation/wf6-batch-remediation-result.dto.ts
+ M backend/src/security-remediation/wf6-remediation-result.dto.spec.ts
+ M backend/src/security-remediation/wf6-remediation-result.dto.ts
+?? backend/migrations/20261005_add_deployment_authorization_and_attempt.sql
+?? backend/migrations/20261005_add_retry_e2e_test_plans.sql
+?? backend/migrations/20261006_add_remediation_target_reservations.down.sql
+?? backend/migrations/20261006_add_remediation_target_reservations.sql
+?? backend/src/manual-remediation/legacy-reconciliation-catalog.ts
+?? backend/src/manual-remediation/legacy-reconciliation.controller.ts
+?? backend/src/manual-remediation/legacy-reconciliation.dto.ts
+?? backend/src/manual-remediation/legacy-reconciliation.service.ts
+?? backend/src/manual-remediation/legacy-reconciliation.spec.ts
+?? backend/src/manual-remediation/legacy-reconciliation.ts
+?? backend/src/manual-remediation/legacy-remote-settlement.ts
+?? backend/src/manual-remediation/lifecycle-test-transaction.ts
+?? backend/src/manual-remediation/reconcile-stale-wf6-dispatch.dto.ts
+?? backend/src/manual-remediation/reconcile-stale-wf6-dispatch.spec.ts
+?? backend/src/manual-remediation/remediation-target-reservation.spec.ts
+?? backend/src/manual-remediation/remediation-target-reservation.ts
+?? backend/src/manual-remediation/retry-security-remediation.dto.ts
+?? backend/src/manual-remediation/security-remediation-bridge.spec.ts
+?? backend/src/manual-remediation/security-remediation-lifecycle.spec.ts
+?? backend/src/manual-remediation/security-remediation-lifecycle.ts
+?? backend/src/manual-remediation/target-reservation-test-query.ts
+?? backend/src/security-remediation/fixtures/pfe-app-test.effective-pom.xml
+?? backend/src/security-remediation/retry-e2e-harness.controller.ts
+?? backend/src/security-remediation/retry-e2e-harness.logic.ts
+?? backend/src/security-remediation/retry-e2e-harness.service.ts
+?? backend/src/security-remediation/retry-e2e-harness.spec.ts
+?? backend/src/security-remediation/retry-e2e-test-plan.entity.ts
+?? backend/src/security-remediation/security-remediation-revalidate-batch.dto.spec.ts
+?? backend/src/security-remediation/security-remediation-revalidate-batch.dto.ts
+?? backend/src/security-remediation/target-reservation-entrypoints.spec.ts
+?? backend/src/security-remediation/wf6-attempt-correlation.dto.ts

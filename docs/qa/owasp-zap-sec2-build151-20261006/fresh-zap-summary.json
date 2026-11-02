@@ -1,0 +1,13 @@
+{
+  "reportReal": true,
+  "targetIdentityProven": true,
+  "version": "2.17.0",
+  "alertCount": 0,
+  "high": 0,
+  "medium": 0,
+  "low": 0,
+  "40042": "NOT_APPLICABLE_TO_BUILD151",
+  "10105": "NOT_APPLICABLE_TO_BUILD151",
+  "coverage": "approved unauthenticated root spider/active profile; no authenticated API coverage",
+  "healthyAfterScan": true
+}

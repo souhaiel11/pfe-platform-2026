@@ -1,0 +1,14 @@
+{
+  "authorizationRowsCreated": 0,
+  "deploymentAttemptRowsCreated": 0,
+  "projectAzureConfigUnchanged": true,
+  "finalDeploymentStateUnchanged": true,
+  "allWorkflowDefinitionsUnchanged": true,
+  "tag150Unchanged": true,
+  "acrLatestStillAbsent": true,
+  "newTagDigestConfirmed": true,
+  "agentAllowlists": {
+    "AZURE_ALLOWED_RESOURCE_GROUPS": "rg-pfe-devsecops",
+    "AZURE_ALLOWED_ACRS": "acrpfedevsecops"
+  }
+}

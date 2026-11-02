@@ -1,0 +1,35 @@
+{
+  "SOURCE_COMMIT": "52e49d8d210f2c2253ef0365ef05d03647c79ea7",
+  "SOURCE_TREE_SHA": "3981db4a1805dbf66152802730d634afc46bc1a9",
+  "WORKTREE_CLEAN": true,
+  "EXECUTABLE_RUNTIME_REPRODUCIBLE": true,
+  "ALL_RUNTIME_FILES_REPRODUCIBLE": true,
+  "executableJS": 178,
+  "distFiles": 534,
+  "builds": [
+    {
+      "build": 1,
+      "sourceCommit": "52e49d8d210f2c2253ef0365ef05d03647c79ea7",
+      "sourceTree": "3981db4a1805dbf66152802730d634afc46bc1a9",
+      "imageId": "sha256:50c845c2448dd2ade7e0639bb77ea5f5aafee66876e43e36ec11cc080d1164e1",
+      "tag": "chain3a-r1-qualified:build1",
+      "ociRevision": "52e49d8d210f2c2253ef0365ef05d03647c79ea7",
+      "node": "v20.20.2"
+    },
+    {
+      "build": 2,
+      "sourceCommit": "52e49d8d210f2c2253ef0365ef05d03647c79ea7",
+      "sourceTree": "3981db4a1805dbf66152802730d634afc46bc1a9",
+      "imageId": "sha256:eb20ba3eacb93cff9500fbb85f5f400ba8e9aec9c8a912c3694196261e7141a3",
+      "tag": "chain3a-r1-qualified:build2",
+      "ociRevision": "52e49d8d210f2c2253ef0365ef05d03647c79ea7",
+      "node": "v20.20.2"
+    }
+  ],
+  "allExecutableFilesIncludingDependencies": 11446,
+  "DEPENDENCY_EXECUTABLES_REPRODUCIBLE": true,
+  "imageByteDifferenceClassification": "Image creation/history timestamps and filesystem layer metadata; all application dist files and dependency JS/CJS/MJS/native addon bytes match.",
+  "RELEASE_ID": "chain3a-r1-52e49d8d210f",
+  "ARTIFACT_HASH": "sha256:50c845c2448dd2ade7e0639bb77ea5f5aafee66876e43e36ec11cc080d1164e1",
+  "OCI_REVISION_MATCH": true
+}

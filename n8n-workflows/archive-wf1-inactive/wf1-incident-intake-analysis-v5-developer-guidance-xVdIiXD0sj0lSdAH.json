@@ -1,0 +1,3530 @@
+{
+  "name": "WF1 - Incident Intake & Analysis v5 (Developer Guidance)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "jenkins-event",
+        "options": {}
+      },
+      "id": "620a6c7d-0d63-468f-a2cf-6395bc2d024f",
+      "name": "Incident Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -14352,
+        -3456
+      ],
+      "webhookId": "cdf6c6d7-9e56-4a58-b872-448f96b8913c"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.event ?? $json.body?.event }}",
+                    "rightValue": "pipeline_failed",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "3f6412aa-47ca-4b15-a87c-5641a56559b7"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "47e9da06-bc5a-4dd5-ab92-bd4041719ea7",
+                    "leftValue": "={{ $json.event ?? $json.body?.event }}",
+                    "rightValue": "pipeline_blocked",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "af970071-25a6-4cc3-892b-e6b0256957cc",
+                    "leftValue": "={{ $json.event ?? $json.body?.event }}",
+                    "rightValue": "pipeline_success",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "7d25a125-7fa9-4ab7-a5c3-dca00418b284",
+                    "leftValue": "={{ $json.event ?? $json.body?.event }}",
+                    "rightValue": "pipeline_unstable",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        -13712,
+        -3472
+      ],
+      "id": "093a8ded-35eb-4dee-be5a-3c3f5e31c566",
+      "name": "Switch3"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst normalizedItems = [];\n\nfor (const item of items) {\n  const body = item.json.body || item.json;\n  const headers = item.json.headers || {};\n\n  // ── Détection de la source ────────────────────────────────\n  let sourceType = 'unknown';\n  let source = 'unknown';\n\n  if (headers['x-github-event']) {\n    sourceType = 'github';\n    source = 'GitHub';\n  } else if (body.sonarqube || body.project?.key) {\n    sourceType = 'sonarqube';\n    source = 'SonarQube';\n  } else if (\n    body.event === 'pipeline_failed'   ||\n    body.event === 'pipeline_unstable' ||\n    body.event === 'pipeline_success'  ||\n    body.job !== undefined             ||\n    body.jenkins === true\n  ) {\n    sourceType = 'jenkins';\n    source = 'Jenkins';\n  }\n\n  // ── Normalisation ─────────────────────────────────────────\n  const normalized = {\n    incidentId: body.incidentId ||\n      `incident-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,\n\n    source,\n    sourceType,\n\n    // ── Champs dynamiques — 100% depuis le payload ──────────\n    // Chaque projet Jenkins fournit ces valeurs dans son Jenkinsfile\n    // n8n ne connaît aucune valeur par défaut\n    projectId:  body.project_id  || null,\n    backendUrl: body.backend_url || null,\n\n    // ── Métadonnées du pipeline ──────────────────────────────\n    repository: body.repository?.full_name ||\n                body.repository?.name      ||\n                body.project?.key          ||\n                body.repo                  ||\n                body.job                   || null,\n\n    branch: body.ref?.replace('refs/heads/', '') ||\n            body.branch                          ||\n            body.git?.branch                     || null,\n\n    commitSha: body.after              ||\n               body.head_commit?.id    ||\n               body.commit             ||\n               body.revision?.sha      || null,\n\n    pullRequestNumber: body.pull_request?.number ||\n                       body.number               || null,\n\n    title: body.title ||\n           (body.job\n             ? `${body.job} - Build #${body.build_number || 'N/A'}`\n             : null) ||\n           body.head_commit?.message?.split('\\n')[0] ||\n           body.message ||\n           'Untitled Incident',\n\n    description: body.description          ||\n                 body.build_url            ||\n                 body.head_commit?.message ||\n                 body.message              || '',\n\n    severity: body.severity                     ||\n              body.rule?.severity?.toLowerCase() ||\n              'medium',\n\n    environment: body.environment                ||\n                 body.deployment?.environment    ||\n                 'production',\n\n    logs: body.logs         ||\n          body.console_output ||\n          (body.logs_url ? [body.logs_url] : []),\n\n    changedFiles: body.commits?.[0]?.modified ||\n                  body.head_commit?.modified   || [],\n\n    // ── Sources spécifiques ──────────────────────────────────\n    github:    sourceType === 'github'    ? body : null,\n    sonarqube: sourceType === 'sonarqube' ? body : null,\n\n    // ── Jenkins — sections v3.0 ──────────────────────────────\n    jenkins: sourceType === 'jenkins' ? {\n      event:        body.event        || null,\n      job:          body.job          || null,\n      build_number: body.build_number || null,\n      build_url:    body.build_url    || null,\n      logs_url:     body.logs_url     || null,\n      status:       body.status       || null,\n      severity:     body.severity     || null,\n      tests:        body.tests        || {},\n      sonar:        body.sonar        || {},\n      trivy:        body.trivy        || {},\n      owasp:        body.owasp        || {},\n      zap:          body.zap          || {},\n      docker:       body.docker       || {},\n      deploy:       body.deploy       || {},\n      nexus:        body.nexus        || {}\n    } : null,\n\n    createdAt: new Date().toISOString()\n  };\n\n  normalizedItems.push({ json: normalized });\n}\n\nreturn normalizedItems;"
+      },
+      "id": "79975425-8419-4fda-bc27-a52f6c9df988",
+      "name": "Normalize Incident Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -13392,
+        -3472
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.backendUrl || 'http://172.31.172.61:3001' }}/api/projects/internal/by-job/{{ $json.jenkins.job }}",
+        "options": {}
+      },
+      "id": "83a50200-28be-4f93-9749-462499d60699",
+      "name": "Lookup Project",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -13104,
+        -3488
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const getIncident = () => {\n  const sources = ['Normalize Incident Payload', 'Normalize status BLOCKED', 'Normalize status RESOLVED'];\n  for (const s of sources) {\n    try {\n      const d = $(s).first().json;\n      if (d) return d;\n    } catch(e) {}\n  }\n  return $input.first().json;\n};\n\nconst incident = getIncident();\n\n// Les données sont à la racine du payload, pas sous \"jenkins\"\nconst jenkins = incident.jenkins || {};\nconst zapData   = incident.zap   || jenkins.zap   || {};\nconst owaspData = incident.owasp || jenkins.owasp || {};\nconst trivyData = incident.trivy || jenkins.trivy || {};\nconst reports   = incident.reports || jenkins.reports || {};\nconst reportsAvailable = reports.available || {};\n\nconst jobName = incident.job || jenkins.job || incident.repository;\n\n// Lookup Project\nconst projects = $('Lookup Project').all();\nlet project = null;\nfor (const item of projects) {\n  const p = item.json;\n  if (Array.isArray(p)) {\n    project = p.find(x => x.jenkinsJobName === jobName) || p[0];\n    break;\n  }\n  if (p.jenkinsJobName === jobName) { project = p; break; }\n}\nif (!project && projects.length > 0) {\n  const first = projects[0].json;\n  project = Array.isArray(first) ? first[0] : first;\n}\n\n// Flags activés\nconst trivyEnabled = !!(reportsAvailable.trivy || trivyData.report_path || trivyData.report_url || reports.trivyPath);\nconst owaspEnabled = !!(reportsAvailable.owasp || owaspData.report_path || owaspData.report_url || reports.owaspPath);\nconst zapEnabled   = !!(reportsAvailable.zap   || zapData.report_path   || zapData.report_url   || reports.zapPath);\n\n// Paths (priorité: données directes > reports)\nconst trivyReportPath = trivyData.report_path || trivyData.report_url || reports.trivyPath || null;\nconst owaspReportPath = owaspData.report_path || owaspData.report_url || reports.owaspPath || null;\nconst zapReportPath   = zapData.report_path   || zapData.report_url   || reports.zapPath   || null;\n\nreturn [{\n  json: {\n    ...incident,\n    projectId:  project?.id         || null,\n    githubRepo: project?.githubRepo || null,\n    projectConfig: {\n      cicdTool:       project?.cicdTool       || 'jenkins',\n      githubToken:    project?.githubToken    || null,\n      jenkinsUrl:     project?.jenkinsUrl     || incident.build_url?.split('/job/')[0] || null,\n      jenkinsToken:   project?.jenkinsToken   || null,\n      sonarqubeUrl:   project?.sonarqubeUrl   || null,\n      sonarqubeKey:   project?.sonarqubeKey   || incident.sonar?.project_key || null,\n      sonarqubeToken: project?.sonarqubeToken || null,\n      trivyEnabled,\n      trivyReportPath,\n      dockerImage:    incident.docker?.image  || jenkins.docker?.image_tag || null,\n      owaspEnabled,\n      owaspReportPath,\n      zapEnabled,\n      zapTargetUrl:   zapData.target_url      || incident.kubernetes?.target || null,\n      zapReportPath,\n    }\n  }\n}];"
+      },
+      "id": "00ff5a5d-abf4-41a3-8d56-9d9d3a425afb",
+      "name": "Extract Project Config",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -12864,
+        -3488
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://172.31.172.61:3001/api/webhooks/jenkins/by-job/{{ $json.jenkins.job }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"job\": \"{{ $json.jenkins.job }}\",\n  \"build_number\": \"{{ $json.jenkins.build_number }}\",\n  \"status\": \"{{ $json.jenkins.status }}\",\n  \"build_url\": \"{{ $json.jenkins.build_url }}\",\n  \"title\": \"{{ $json.title }}\",\n  \"severity\": \"{{ $json.severity }}\"\n}",
+        "options": {}
+      },
+      "id": "a8d4e49d-9ddb-460a-88be-335ad5007e13",
+      "name": "Send Raw Incident to Backend",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -12624,
+        -3488
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const incident = $('Extract Project Config').first().json;\nconst config = incident.projectConfig || {};\nconst jenkins = incident.jenkins || {};\n\n// Réponse directe de \"Send Raw Incident to Backend\"\nconst incidentUUID = $input.first().json.id || null;\n\n// Jenkins config\nconst jenkinsUrl =\n  config.jenkinsUrl ||\n  incident.jenkinsUrl ||\n  \"http://172.31.172.61:8082\";\n\nconst jobName =\n  jenkins.job ||\n  config.jenkinsJobName ||\n  incident.jenkinsJobName ||\n  incident.repository ||\n  null  // AUCUN fallback — le job doit être fourni par le webhook;\n\n// Dernière build Jenkins\nconst buildRef = \"lastBuild\";\n\n// Sécuriser les slash\nconst cleanJenkinsUrl = jenkinsUrl.replace(/\\/$/, \"\");\n\n// Si job simple : pfe-app-test\n// URL Jenkins : /job/pfe-app-test/lastBuild\nconst buildBaseUrl =\n  `${cleanJenkinsUrl}/job/${jobName}/${buildRef}`;\n\n// Si un path custom existe, on le garde\nfunction resolveReportUrl(customPath, defaultFileName) {\n  if (customPath) {\n    return customPath\n      .replace(\"{build_url}\", `${buildBaseUrl}/`)\n      .replace(\"{jenkins_url}\", cleanJenkinsUrl)\n      .replace(\"{job_name}\", jobName)\n      .replace(\"{build_number}\", buildRef);\n  }\n\n  return `${buildBaseUrl}/artifact/${defaultFileName}`;\n}\n\nreturn [\n  {\n    json: {\n      ...incident,\n\n      incidentUUID,\n\n      resolvedUrls: {\n        trivy: resolveReportUrl(\n          config.trivyReportPath,\n          \"trivy-report.json\"\n        ),\n\n        zap: resolveReportUrl(\n          config.zapReportPath,\n          \"zap-report.json\"\n        ),\n\n        owasp: resolveReportUrl(\n          config.owaspReportPath,\n          \"dependency-check-report.json\"\n        ),\n      },\n\n      fetchFlags: {\n        sonarqube: !!(\n          config.sonarqubeUrl &&\n          config.sonarqubeKey &&\n          config.sonarqubeToken\n        ),\n\n        trivy: true,\n        zap: true,\n        owasp: true,\n      },\n    },\n  },\n];"
+      },
+      "id": "abb0dea3-4eda-4545-b0f6-db815e533180",
+      "name": "Prepare Fetch URLs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -12384,
+        -3504
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=http://sonarqube:9000/api/issues/search?componentKeys={{ $json.projectConfig.sonarqubeKey }}&severities=BLOCKER,CRITICAL,MAJOR&statuses=OPEN,CONFIRMED,REOPENED&ps=50",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "a10a1d1b-fef6-449c-8b6f-b4d2cf2a3925",
+      "name": "Fetch SonarQube Issues",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -12160,
+        -3504
+      ],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "AxQb6AG51EcWcXik",
+          "name": "SONARQUBE credential 2"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ══════════════════════════════════════════════════════════════\n//  MERGE ALL FETCHED DATA — Extract From File (fromJson) + webhook fallback\n// ══════════════════════════════════════════════════════════════\n\n// ── Helper : extraire JSON depuis un node Extract From File ──\nconst parseNodeOutput = (nodeName) => {\n  try {\n    const item = $(nodeName).first();\n\n    // Cas Extract From File (fromJson) : objet parsé dans json.data\n    if (item.json?.data && typeof item.json.data === 'object') {\n      return { data: item.json.data, source: 'local_file' };\n    }\n\n    // Cas JSON direct (HTTP ou autre)\n    if (item.json && !item.json.error && Object.keys(item.json).length > 2) {\n      return { data: item.json, source: 'local_file' };\n    }\n\n    return { data: null, source: 'none' };\n  } catch (e) {\n    return { data: null, source: 'error', error: e.message };\n  }\n};\n\n// ── Sources principales ──\nconst sonarRaw = $('Fetch SonarQube Issues').first()?.json || {};\nconst trivyResult = parseNodeOutput('Parse Trivy JSON');\nconst zapResult = parseNodeOutput('Parse ZAP JSON');\nconst owaspResult = parseNodeOutput('Parse OWASP JSON');\n\n// ── Fallback webhook ──\nconst incident = $('Extract Project Config').first().json || {};\nconst jenkins = incident.jenkins || {};\nconst webhookTrivy = jenkins.trivy || {};\nconst webhookZap = jenkins.zap || {};\nconst webhookOwasp = jenkins.owasp || {};\nconst webhookTests = jenkins.tests || {};\nconst incidentUUID = $('Prepare Fetch URLs').first()?.json?.incidentUUID || null;\nconst projectConfig = incident.projectConfig || {};\n\n// ══════════════════════════════════════════════════════════════\n//  SONARQUBE — toujours via API (fiable)\n// ══════════════════════════════════════════════════════════════\nconst sonarIssues = sonarRaw.issues || [];\nconst sonar = {\n  status: sonarIssues.length > 0 ? 'COMPLETED' : 'EMPTY',\n  quality_gate: sonarRaw.qualityGate?.status || 'UNKNOWN',\n  bugs: sonarIssues.filter(i => i.type === 'BUG').length,\n  vulnerabilities: sonarIssues.filter(i => i.type === 'VULNERABILITY').length,\n  code_smells: sonarIssues.filter(i => i.type === 'CODE_SMELL').length,\n  coverage: sonarRaw.coverage || '0',\n  issues_count: sonarRaw.total || sonarIssues.length,\n  issues: sonarIssues.map(i => ({\n    key: i.key, rule: i.rule, severity: i.severity,\n    component: i.component, project: i.project,\n    line: i.line || i.textRange?.startLine,\n    message: i.message, type: i.type, effort: i.effort || i.debt,\n  })),\n};\n\n// ══════════════════════════════════════════════════════════════\n//  TRIVY — fichier local > webhook\n// ══════════════════════════════════════════════════════════════\nconst trivyData = trivyResult.data;\nconst trivyHasData = trivyData && trivyData.Results && !trivyData._source;\nlet trivyCves = []; let trivyCritical = 0; let trivyHigh = 0;\n\nif (trivyHasData) {\n  (trivyData.Results || []).forEach(r => {\n    (r.Vulnerabilities || []).forEach(v => {\n      if (v.Severity === 'CRITICAL') trivyCritical++;\n      if (v.Severity === 'HIGH') trivyHigh++;\n      if (trivyCves.length < 10 && ['CRITICAL','HIGH'].includes(v.Severity)) {\n        trivyCves.push({ id: v.VulnerabilityID, severity: v.Severity, pkg: v.PkgName, title: (v.Title || '').substring(0, 80) });\n      }\n    });\n  });\n} else {\n  trivyCritical = webhookTrivy.critical || 0;\n  trivyHigh = webhookTrivy.high || 0;\n  trivyCves = webhookTrivy.cves || [];\n}\n\nconst trivy = {\n  status: trivyHasData ? 'COMPLETED' : trivyResult.source === 'local_file' ? 'LOCAL' : (trivyCritical + trivyHigh > 0 ? 'WEBHOOK' : 'UNKNOWN'),\n  critical: trivyCritical, high: trivyHigh,\n  cves_count: trivyCves.length, cves: trivyCves,\n  _source: trivyResult.source,\n  error: trivyHasData ? '' : 'Fallback: ' + trivyResult.source,\n};\n\n// ══════════════════════════════════════════════════════════════\n//  ZAP — fichier local > webhook\n// ══════════════════════════════════════════════════════════════\nconst zapData = zapResult.data;\nconst zapHasData = zapData && zapData.site && !zapData._source;\nlet zapAlerts = []; let zapHigh = 0; let zapMedium = 0; let zapLow = 0;\n\nif (zapHasData) {\n  (zapData.site || []).forEach(s => {\n    (s.alerts || []).forEach(a => {\n      const risk = (a.riskdesc || '').split(' ')[0];\n      if (risk === 'High') zapHigh++;\n      if (risk === 'Medium') zapMedium++;\n      if (risk === 'Low') zapLow++;\n      if (zapAlerts.length < 5 && ['High','Medium'].includes(risk)) {\n        zapAlerts.push({ name: (a.name || '').substring(0, 60), risk, desc: (a.desc || '').substring(0, 80) });\n      }\n    });\n  });\n} else {\n  zapHigh = webhookZap.alerts_high || 0;\n  zapMedium = webhookZap.alerts_medium || 0;\n  zapLow = webhookZap.alerts_low || 0;\n  zapAlerts = webhookZap.alerts || [];\n}\n\nconst zap = {\n  status: zapHasData ? 'COMPLETED' : zapResult.source === 'local_file' ? 'LOCAL' : (zapHigh + zapMedium > 0 ? 'WEBHOOK' : 'UNKNOWN'),\n  alerts_high: zapHigh, alerts_medium: zapMedium, alerts_low: zapLow,\n  alerts_count: zapAlerts.length, alerts: zapAlerts,\n  target_url: webhookZap.target_url || projectConfig.zapTargetUrl || '',\n  _source: zapResult.source,\n  error: zapHasData ? '' : 'Fallback: ' + zapResult.source,\n};\n\n// ══════════════════════════════════════════════════════════════\n//  OWASP — fichier local > webhook\n// ══════════════════════════════════════════════════════════════\nconst owaspData = owaspResult.data;\nconst owaspHasData = owaspData && owaspData.dependencies && !owaspData._source;\nlet owaspCves = []; let owaspCritical = 0; let owaspHigh = 0;\n\nif (owaspHasData) {\n  (owaspData.dependencies || []).forEach(dep => {\n    (dep.vulnerabilities || []).forEach(v => {\n      const sev = (v.severity || '').toUpperCase();\n      if (sev === 'CRITICAL') owaspCritical++;\n      if (sev === 'HIGH') owaspHigh++;\n      if (owaspCves.length < 5 && ['CRITICAL','HIGH'].includes(sev)) {\n        owaspCves.push({ id: v.name, severity: sev, pkg: dep.fileName, desc: (v.description || '').substring(0, 80) });\n      }\n    });\n  });\n} else {\n  owaspCritical = webhookOwasp.critical || 0;\n  owaspHigh = webhookOwasp.high || 0;\n  owaspCves = webhookOwasp.cves || [];\n}\n\nconst owasp = {\n  status: owaspHasData ? 'COMPLETED' : owaspResult.source === 'local_file' ? 'LOCAL' : (owaspCritical + owaspHigh > 0 ? 'WEBHOOK' : 'UNKNOWN'),\n  critical: owaspCritical, high: owaspHigh,\n  cves_count: owaspCves.length, cves: owaspCves,\n  _source: owaspResult.source,\n  error: owaspHasData ? '' : 'Fallback: ' + owaspResult.source,\n};\n\n// ══════════════════════════════════════════════════════════════\n//  TESTS + BUILD + DEPLOY + DOCKER\n// ══════════════════════════════════════════════════════════════\nconst tests = {\n  total: webhookTests.total || 0, failures: webhookTests.failures || 0,\n  skipped: webhookTests.skipped || 0, status: webhookTests.status || 'UNKNOWN',\n  coverage: webhookTests.coverage || '0',\n};\nconst build = {\n  job: jenkins.job || incident.job || '', number: jenkins.build_number || incident.build_number || '',\n  status: jenkins.status || incident.status || 'UNKNOWN', url: jenkins.build_url || '',\n};\nconst deploy = { status: jenkins.deploy?.status || 'UNKNOWN', app_url: jenkins.deploy?.app_url || '' };\nconst docker = { image_tag: jenkins.docker?.image || '', build_status: 'UNKNOWN', push_status: 'UNKNOWN' };\n\n// ══════════════════════════════════════════════════════════════\n//  OUTPUT\n// ══════════════════════════════════════════════════════════════\nreturn [{\n  json: {\n    enrichedData: { sonar, trivy, zap, owasp, tests, build, deploy, docker },\n    incidentUUID,\n    projectConfig,\n  }\n}];"
+      },
+      "id": "0e7255b4-8a4f-476e-ad08-fc1f854e620f",
+      "name": "Merge All Fetched Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -10048,
+        -3408
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst d = input.enrichedData || {};\n\nconst systemPrompt = `You are an elite Root Cause Analysis expert for CI/CD DevSecOps pipelines.\nAnalyze ALL the structured data and identify the main root cause.\nReturn ONLY valid JSON — no markdown, no backticks, no explanation.\nSCORING RULES:\n- severityScore: integer 1-10 (1=trivial, 10=critical blocker that prevents safe deployment)\n- confidence: float 0.0-1.0 based on how complete the scan data is (missing scans lower confidence)\nReturn EXACTLY:\n{\"incidentId\":\"<id>\",\"errorType\":\"<type>\",\"rootCause\":\"<cause>\",\"severityScore\":<1-10>,\"affectedComponent\":\"<component>\",\"analysisSummary\":\"<summary>\",\"confidence\":<0.0-1.0>}`;\n\nconst sonarIssuesCriticalFirst = (() => {\n  const all = d.sonar?.issues || [];\n  const crit = all.filter(i => ['BLOCKER','CRITICAL'].includes(i.severity));\n  const rest = all.filter(i => !['BLOCKER','CRITICAL'].includes(i.severity));\n  return JSON.stringify([...crit, ...rest].slice(0, 15));\n})();\n\nconst userContent = `Root Cause Analysis:\nBUILD: ${d.build?.job} #${d.build?.number} — ${d.build?.status}\nTESTS: total=${d.tests?.total}, failures=${d.tests?.failures}, status=${d.tests?.status}, coverage=${d.tests?.coverage}%\nSONAR: quality_gate=${d.sonar?.quality_gate}, bugs=${d.sonar?.bugs}, vulnerabilities=${d.sonar?.vulnerabilities}, code_smells=${d.sonar?.code_smells}\nSONAR ISSUES (${d.sonar?.issues_count} total — showing critical first):\n${sonarIssuesCriticalFirst}\nTRIVY: status=${d.trivy?.status}, critical=${d.trivy?.critical}, high=${d.trivy?.high}, error=\"${d.trivy?.error}\"\nTRIVY CVEs (${d.trivy?.cves_count} total):\n${JSON.stringify(d.trivy?.cves?.slice(0,5) || [])}\nOWASP: status=${d.owasp?.status}, critical=${d.owasp?.critical}, high=${d.owasp?.high}, error=\"${d.owasp?.error}\"\nZAP: status=${d.zap?.status}, alerts_high=${d.zap?.alerts_high}, error=\"${d.zap?.error}\"\nZAP ALERTS (${d.zap?.alerts_count} total):\n${JSON.stringify(d.zap?.alerts?.slice(0,3) || [])}\nDEPLOY: status=${d.deploy?.status}, app_url=${d.deploy?.app_url}\nDOCKER: build=${d.docker?.build_status}, push=${d.docker?.push_status}, image=${d.docker?.image_tag}`;\n\nconst body = {\n  model: 'claude-haiku-4-5-20251001',\n  max_tokens: 4000,\n  temperature: 0,\n  system: systemPrompt,\n  messages: [{ role: 'user', content: userContent }]\n};\n\nreturn [{ json: { ollamaBodyString: JSON.stringify(body) } }];"
+      },
+      "id": "05f9e432-110d-4aa8-b129-1c2f4e47dd6a",
+      "name": "Prepare - Root Cause Body",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -9776,
+        -3632
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst d = input.enrichedData || {};\n\nconst systemPrompt = `You are a DevSecOps Security Risk expert.\nAnalyze ALL security scan results and provide a complete risk assessment.\nReturn ONLY valid JSON — no markdown, no backticks, no explanation.\nSCORING RULES:\n- riskScore: integer 0-100 (0=no risk, 100=actively exploitable critical vulnerability)\n- riskLevel: one of LOW | MEDIUM | HIGH | CRITICAL, derived from riskScore (0-25=LOW, 26-50=MEDIUM, 51-75=HIGH, 76-100=CRITICAL)\n- safeToApply: true ONLY if no CRITICAL/HIGH CVE is present\n- confidence: 0.0-1.0; lower it when scans returned UNKNOWN status\nReturn EXACTLY:\n{\"incidentId\":\"<id>\",\"riskLevel\":\"<LEVEL>\",\"riskScore\":<0-100>,\"vulnerabilities\":[\"<vuln>\"],\"safeToApply\":<bool>,\"securitySummary\":\"<summary>\",\"confidence\":<0.0-1.0>}`;\n\nconst sonarVulnsCriticalFirst = (() => {\n  const all = (d.sonar?.issues || []).filter(i => i.type === 'VULNERABILITY');\n  const crit = all.filter(i => ['BLOCKER','CRITICAL'].includes(i.severity));\n  const rest = all.filter(i => !['BLOCKER','CRITICAL'].includes(i.severity));\n  return JSON.stringify([...crit, ...rest].slice(0, 10));\n})();\n\nconst userContent = `Security Risk Analysis:\nBUILD: ${d.build?.job} #${d.build?.number} — ${d.build?.status}\nTRIVY CONTAINER SCAN:\n  status: ${d.trivy?.status}, critical: ${d.trivy?.critical}, high: ${d.trivy?.high}\n  error: \"${d.trivy?.error}\"\n  CVEs (${d.trivy?.cves_count}):\n  ${JSON.stringify(d.trivy?.cves?.slice(0,10) || [])}\nOWASP DEPENDENCY CHECK:\n  status: ${d.owasp?.status}, critical: ${d.owasp?.critical}, high: ${d.owasp?.high}\n  CVEs: ${JSON.stringify(d.owasp?.cves?.slice(0,5) || [])}\nZAP DAST SCAN:\n  status: ${d.zap?.status}, alerts_high: ${d.zap?.alerts_high}, alerts_medium: ${d.zap?.alerts_medium}\n  target: ${d.zap?.target_url}, error: \"${d.zap?.error}\"\n  Alerts: ${JSON.stringify(d.zap?.alerts?.slice(0,5) || [])}\nSONAR SECURITY:\n  vulnerabilities: ${d.sonar?.vulnerabilities}, quality_gate: ${d.sonar?.quality_gate}\n  Security Issues (critical first): ${sonarVulnsCriticalFirst}`;\n\nconst body = {\n  model: 'claude-haiku-4-5-20251001',\n  max_tokens: 4000,\n  temperature: 0,\n  system: systemPrompt,\n  messages: [{ role: 'user', content: userContent }]\n};\n\nreturn [{ json: { ollamaBodyString: JSON.stringify(body) } }];"
+      },
+      "id": "6654d897-2cd4-44cb-a540-fcf9d8ef0d78",
+      "name": "Prepare - Security Body",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -9776,
+        -3296
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst d = input.enrichedData || {};\n\nconst systemPrompt = `You are a DevSecOps Remediation Engineer.\nAnalyze the pipeline data and provide ONE remediation plan covering the most critical issues.\nABSOLUTE RULES:\n- Return ONLY a single raw JSON object\n- NO array, NO markdown, NO backticks, NO code blocks, NO escaped JSON strings\n- Start your response with { and end with }\n- Each fixStep is a short actionable command (max 120 chars)\n- Maximum 4 fixSteps\nautoFixable DECISION RULE (critical — this drives the platform recommendation):\n- Set autoFixable=true ONLY if ALL issues can be fixed by editing source files without architectural changes, new dependencies, or secret/infra migration.\n- Set autoFixable=false if any fix requires: credential externalization to a vault, new infrastructure, database migration, or breaking API changes.\n- Be conservative: when in doubt, autoFixable=false.\nRETURN EXACTLY THIS STRUCTURE:\n{\"incidentId\":\"string\",\"fixDescription\":\"string\",\"fixSteps\":[\"step1\",\"step2\",\"step3\"],\"codePatch\":\"\",\"autoFixable\":false,\"confidence\":0.9}`;\n\nconst criticalFirst = (() => {\n  const all = d.sonar?.issues || [];\n  const crit = all.filter(i => ['BLOCKER','CRITICAL'].includes(i.severity));\n  return JSON.stringify([...crit, ...all].slice(0, 10));\n})();\n\nconst userContent = `Remediation Plan for DevSecOps Pipeline:\nBUILD: ${d.build?.job || 'unknown'} #${d.build?.number || 'N/A'} — ${d.build?.status || 'UNKNOWN'}\nTESTS: total=${d.tests?.total || 0}, failures=${d.tests?.failures || 0}, status=${d.tests?.status || 'UNKNOWN'}\nSONAR: quality_gate=${d.sonar?.quality_gate || 'UNKNOWN'}, bugs=${d.sonar?.bugs || 0}, vulnerabilities=${d.sonar?.vulnerabilities || 0}\nIssues (critical first): ${criticalFirst}\nTRIVY: status=${d.trivy?.status || 'UNKNOWN'}, critical=${d.trivy?.critical || 0}, high=${d.trivy?.high || 0}, error=\"${d.trivy?.error || ''}\"\nCVEs: ${JSON.stringify(d.trivy?.cves?.slice(0,3) || [])}\nOWASP: status=${d.owasp?.status || 'UNKNOWN'}, error=\"${d.owasp?.error || ''}\"\nZAP: status=${d.zap?.status || 'UNKNOWN'}, alerts_high=${d.zap?.alerts_high || 0}, error=\"${d.zap?.error || ''}\"\nAlerts: ${JSON.stringify(d.zap?.alerts?.slice(0,3) || [])}\nDEPLOY: status=${d.deploy?.status || 'UNKNOWN'}, app_url=${d.deploy?.app_url || ''}\nIdentify the most critical issues and provide exact fix steps with commands.`;\n\nconst body = {\n  model: 'claude-haiku-4-5-20251001',\n  max_tokens: 2500,\n  temperature: 0,\n  system: systemPrompt,\n  messages: [{ role: 'user', content: userContent }]\n};\n\nreturn [{ json: { ollamaBodyString: JSON.stringify(body) } }];"
+      },
+      "id": "4560a19b-8571-4903-a957-4a0b584f12f4",
+      "name": "Prepare - Remediation Body",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -9776,
+        -2960
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "x-api-key",
+              "value": "__ANTHROPIC_API_KEY__"
+            },
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json.ollamaBodyString }}",
+        "options": {}
+      },
+      "id": "f734d312-26ff-4fa0-a26f-c57f01049c60",
+      "name": "Route cause Analysis",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -9456,
+        -3632
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "x-api-key",
+              "value": "__ANTHROPIC_API_KEY__"
+            },
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json.ollamaBodyString }}",
+        "options": {}
+      },
+      "id": "1719e32a-bb37-4a0d-a3a0-c84b4a6e6bd8",
+      "name": "Security Risk Analysis",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -9456,
+        -3296
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "x-api-key",
+              "value": "__ANTHROPIC_API_KEY__"
+            },
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json.ollamaBodyString }}",
+        "options": {}
+      },
+      "id": "c9d0d3f2-52e4-4502-a6a8-8e635617229c",
+      "name": "Remediation Feasibility ",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -9456,
+        -2960
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst content = response.content?.[0]?.text || '';\nif (!content) return [{ json: { incidentId:'empty', errorType:'NO_RESPONSE', rootCause:'Agent returned empty response', severityScore:0, affectedComponent:'AI Agent', analysisSummary:'No analysis available', confidence:0.0 } }];\nlet clean = content.replace(/```json\\s*/gi,'').replace(/```\\s*/gi,'').trim();\nconst start = clean.indexOf('{'); const end = clean.lastIndexOf('}');\nif (start===-1||end===-1) return [{ json: { incidentId:'no-json', errorType:'PARSE_ERROR', rootCause:clean.substring(0,300), severityScore:3, affectedComponent:'Unknown', analysisSummary:clean.substring(0,500), confidence:0.3 } }];\ntry { return [{ json: JSON.parse(clean.substring(start,end+1)) }]; }\ncatch(e) { return [{ json: { incidentId:'parse-failed', errorType:'JSON_ERROR', rootCause:clean.substring(0,300), severityScore:3, affectedComponent:'Unknown', analysisSummary:clean.substring(0,500), confidence:0.3 } }]; }"
+      },
+      "id": "c7afc7cd-1e2c-4837-8244-af4d097fa851",
+      "name": "Parse - Root Cause Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -9136,
+        -3632
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst content = response.content?.[0]?.text || '';\nif (!content) return [{ json: { incidentId:'empty', riskLevel:'UNKNOWN', riskScore:0, vulnerabilities:[], safeToApply:false, securitySummary:'No security analysis', confidence:0.0 } }];\nlet clean = content.replace(/```json\\s*/gi,'').replace(/```\\s*/gi,'').trim();\nconst start = clean.indexOf('{'); const end = clean.lastIndexOf('}');\nif (start===-1||end===-1) return [{ json: { incidentId:'no-json', riskLevel:'UNKNOWN', riskScore:0, vulnerabilities:[], safeToApply:false, securitySummary:clean.substring(0,500), confidence:0.3 } }];\ntry { return [{ json: JSON.parse(clean.substring(start,end+1)) }]; }\ncatch(e) { return [{ json: { incidentId:'parse-failed', riskLevel:'UNKNOWN', riskScore:0, vulnerabilities:[], safeToApply:false, securitySummary:clean.substring(0,500), confidence:0.3 } }]; }"
+      },
+      "id": "fdf87aab-cf01-4d2a-b54e-9bc83ebb4e8a",
+      "name": "Parse - Security Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -9136,
+        -3296
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst content = response.content?.[0]?.text || '';\n\nconst fallback = (msg) => [{ json: {\n  incidentId: 'parse-issue',\n  fixDescription: msg.substring(0, 300),\n  fixSteps: [msg.substring(0, 150)],\n  codePatch: '',\n  autoFixable: false,\n  confidence: 0.3\n}}];\n\nif (!content) return [{ json: { incidentId:'empty', fixDescription:'No remediation available', fixSteps:[], codePatch:'', autoFixable:false, confidence:0.0 } }];\n\nlet clean = content.replace(/```json\\s*/gi,'').replace(/```\\s*/gi,'').trim();\n\n// Cas 1 — Claude retourne un array → prendre le 1er élément\nconst arrStart = clean.indexOf('[');\nconst objStart = clean.indexOf('{');\n\nif (arrStart !== -1 && (objStart === -1 || arrStart < objStart)) {\n  const arrEnd = clean.lastIndexOf(']');\n  try {\n    const arr = JSON.parse(clean.substring(arrStart, arrEnd + 1));\n    const first = Array.isArray(arr) && arr.length ? arr[0] : null;\n    if (first && first.fixDescription) return [{ json: first }];\n  } catch(e) {}\n}\n\n// Cas 2 — objet JSON standard\nconst objEnd = clean.lastIndexOf('}');\nif (objStart === -1 || objEnd === -1) return fallback(clean);\n\ntry {\n  const parsed = JSON.parse(clean.substring(objStart, objEnd + 1));\n  // Cas 3 — JSON escapé dans fixDescription (double encodage)\n  if (typeof parsed.fixDescription === 'string' && parsed.fixDescription.trim().startsWith('{')) {\n    try {\n      const inner = JSON.parse(parsed.fixDescription);\n      if (inner.fixDescription) return [{ json: inner }];\n    } catch(e) {}\n  }\n  return [{ json: parsed }];\n} catch(e) {\n  return fallback(clean);\n}"
+      },
+      "id": "a82dca60-057d-429a-90f6-bc096384edf8",
+      "name": "Parse - Remediation Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -9136,
+        -2960
+      ]
+    },
+    {
+      "parameters": {
+        "numberInputs": 3
+      },
+      "id": "9e5d0e50-5dd5-4129-91d8-3b3ea9eb76a9",
+      "name": "Merge Agent Reports",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -8816,
+        -3296
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst rootCause   = items[0]?.json || {};\nconst security    = items[1]?.json || {};\nconst remediation = items[2]?.json || {};\nconst incident    = $('Extract Project Config').first().json;\nconst body = {\n  type: 'combined',\n  projectId: incident.projectId,\n  rawData: { rootCause, security, remediation },\n  securityScore: security.riskScore || 0,\n  riskLevel: security.riskLevel || 'LOW'\n};\nreturn [{ json: { ...body, bodyString: JSON.stringify(body) } }];"
+      },
+      "id": "674006b3-fab9-483c-9ef4-0412ad088751",
+      "name": "Prepare Save Body",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -8656,
+        -3504
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://172.31.172.61:3001/api/reports",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json.bodyString }}",
+        "options": {}
+      },
+      "id": "2bd3905d-a970-46be-b62e-d1977ad5c1f6",
+      "name": "Save Agent Reports to Backend",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -8416,
+        -3504
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nif (items.length < 3) {\n  throw new Error(`Le Judge attend 3 résultats agents, reçu ${items.length}.`);\n}\n\nconst rootCause   = items[0]?.json ?? {};\nconst security    = items[1]?.json ?? {};\nconst remediation = items[2]?.json ?? {};\n\nconst incidentNode    = $('Extract Project Config');\nconst fetchedDataNode = $('Merge All Fetched Data');\nif (!incidentNode.isExecuted)    throw new Error('Node \"Extract Project Config\" non exécuté.');\nif (!fetchedDataNode.isExecuted) throw new Error('Node \"Merge All Fetched Data\" non exécuté.');\n\nconst incident    = incidentNode.first().json ?? {};\nconst fetchedData = fetchedDataNode.first().json ?? {};\nconst enriched    = fetchedData.enrichedData ?? {};\n\n// ── Comptage COMPLET (aucune troncature) ──\nconst cves         = enriched.trivy?.cves ?? [];\nconst owaspCves    = enriched.owasp?.cves ?? [];\nconst criticalCves = cves.filter(c => c.severity === 'CRITICAL').length\n                   + owaspCves.filter(c => c.severity === 'CRITICAL').length;\nconst highCves     = cves.filter(c => c.severity === 'HIGH').length\n                   + owaspCves.filter(c => c.severity === 'HIGH').length;\n\nconst sonarIssues   = enriched.sonar?.issues ?? [];\nconst blockers      = sonarIssues.filter(i => i.severity === 'BLOCKER').length;\nconst criticalVulns = sonarIssues.filter(i => i.severity === 'CRITICAL' && i.type === 'VULNERABILITY').length;\nconst bugs          = sonarIssues.filter(i => i.type === 'BUG').length;\nconst codeIssues    = sonarIssues.filter(i => ['BUG', 'VULNERABILITY'].includes(i.type)).length;\n\nconst autoFixable     = remediation.autoFixable === true;\nconst remediationPlan = remediation.fixSteps ?? remediation.steps ?? [];\n\n// ── LOGIQUE DE RECOMMANDATION — SÉCURITÉ D'ABORD ──\nlet recommendation, requiresApproval = false, reasonCode, reasonText;\n\nif (criticalCves > 0) {\n  recommendation = 'BLOCK';\n  reasonCode     = 'CRITICAL_CVE';\n  reasonText     = `${criticalCves} CVE critique(s) détectée(s) dans le conteneur ou les dépendances. `\n                 + `Déploiement à risque : remédiation manuelle requise avant tout merge.`;\n}\nelse if (blockers > 0 || criticalVulns > 0 || bugs > 0) {\n  if (autoFixable) {\n    recommendation   = 'FIX_PROPOSED';\n    requiresApproval = true;\n    reasonCode       = 'CODE_FIX_AVAILABLE';\n    reasonText       = `${blockers} blocker(s), ${criticalVulns} vulnérabilité(s) critique(s), ${bugs} bug(s) `\n                     + `détecté(s) dans le code source. L'agent IA propose une correction automatique. `\n                     + `Validation développeur requise avant génération de la Pull Request.`;\n  } else {\n    recommendation   = 'FIX_PROPOSED';\n    requiresApproval = true;\n    reasonCode       = 'MANUAL_FIX_RECOMMENDED';\n    reasonText       = `${blockers} blocker(s), ${criticalVulns} vulnérabilité(s) critique(s), ${bugs} bug(s) `\n                     + `détecté(s). L'agent estime la correction COMPLEXE (autoFixable=false). `\n                     + `Un patch IA est proposé mais une revue manuelle approfondie est fortement conseillée.`;\n  }\n}\nelse {\n  recommendation = 'NOTIFY_ONLY';\n  reasonCode     = 'NO_CRITICAL_ISSUE';\n  reasonText     = `Aucun problème critique de sécurité ou de code détecté. `\n                 + `${codeIssues} issue(s) mineure(s) — aucune action automatique requise.`;\n}\n\n// ── Score de sécurité (0 = pire, 100 = sain) ──\nconst securityScore = Math.max(0, 100\n  - criticalCves * 30\n  - highCves     * 10\n  - blockers     * 12\n  - criticalVulns * 8\n  - bugs         * 5);\n\nconst riskLevel =\n  criticalCves > 0 || blockers > 2 ? 'critical'\n  : blockers > 0 || criticalVulns > 0 ? 'high'\n  : bugs > 0 ? 'medium'\n  : 'low';\n\n// ── Payload pour le Judge IA (validation + rédaction, PAS décision) ──\nconst judgePayload = {\n  incidentId:   incident.incidentId ?? null,\n  job:          incident.jenkins?.job          ?? incident.job          ?? null,\n  build_number: incident.jenkins?.build_number ?? incident.build_number ?? null,\n  status:       incident.jenkins?.status       ?? incident.status       ?? 'UNKNOWN',\n\n  enrichedData:         enriched,\n  rootCauseAnalysis:    rootCause,\n  securityRiskAnalysis: security,\n  remediationAnalysis:  remediation,\n\n  recommendation,\n  requiresApproval,\n  reasonCode,\n  reasonText,\n  securityScore,\n  riskLevel,\n\n  evidence: {\n    criticalCves, highCves,\n    sonarBlockers: blockers,\n    sonarCriticalVulns: criticalVulns,\n    sonarBugs: bugs,\n    totalCodeIssues: codeIssues,\n    autoFixable,\n    remediationStepsCount: Array.isArray(remediationPlan) ? remediationPlan.length : 0,\n  },\n\n  mandate: `The deterministic governance layer has decided: recommendation=\"${recommendation}\" `\n         + `(reason: ${reasonCode}). Your job is NOT to change this decision. Your job is to: `\n         + `(1) write a clear human-readable justification, (2) summarize what the developer should `\n         + `review before approving. Only flag if you detect a critical risk the data missed.`,\n};\n\nreturn [{ json: { judgeInput: JSON.stringify(judgePayload) } }];"
+      },
+      "id": "c7078a81-9a52-4c52-a003-6d94c0224a05",
+      "name": "Prepare - Judge Body",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -8656,
+        -3168
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "__ANTHROPIC_API_KEY__"
+            },
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify({ \"model\": \"claude-opus-4-5\", \"max_tokens\": 2000, \"temperature\": 0, \"system\": \"ABSOLUTE RULE: Return ONLY a raw JSON object. NO markdown, NO backticks. Start with { end with }.\\n\\nMANDATORY DECISION RULE: The input payload contains a field 'recommendation' computed by the platform's deterministic governance engine from raw scanner data. You MUST copy this value into your 'decision' field. Do NOT override it. The 3 agents are advisory only.\\n\\nYou are the JUDGE AGENT for a DevSecOps platform. Your role is to EXPLAIN and JUSTIFY the recommendation in clear human-readable terms, NOT to decide.\\n\\nThe recommendation can be:\\n- BLOCK: a critical CVE was found in container/dependencies. Deployment must be blocked, manual remediation required.\\n- FIX_PROPOSED: code-level defects (BLOCKER/CRITICAL vulnerabilities or BUGs) were found and are fixable. A patch is proposed but REQUIRES developer approval before any Pull Request is created.\\n- NOTIFY_ONLY: no critical issue, informational only.\\n\\nThe payload also contains 'reasonText' (why this recommendation), 'evidence' (the counts), and 'requiresApproval'. Use them to write a precise justification.\\n\\nYOUR TASK:\\n1. Copy 'recommendation' into 'decision'.\\n2. Write a clear justification explaining why.\\n3. If FIX_PROPOSED, list concretely what the developer should review before approving.\\n4. Only set 'warning' if you detect a critical risk the data clearly missed; otherwise empty string.\\n\\nReturn ONLY this JSON:\\n{\\\"decision\\\":\\\"<copy recommendation: BLOCK|FIX_PROPOSED|NOTIFY_ONLY>\\\",\\\"confidenceScore\\\":0-100,\\\"securityLevel\\\":\\\"CRITICAL|HIGH|MEDIUM|LOW\\\",\\\"justification\\\":\\\"clear explanation for the developer\\\",\\\"developerReviewPoints\\\":[\\\"point1\\\",\\\"point2\\\"],\\\"warning\\\":\\\"\\\",\\\"errorsSummary\\\":\\\"ALL errors by severity with counts\\\",\\\"cicdIssues\\\":\\\"CI/CD pipeline failures\\\",\\\"securityIssues\\\":\\\"CVEs and SonarQube security findings\\\",\\\"agentActions\\\":\\\"Summary of what each agent found\\\",\\\"developerActions\\\":\\\"Numbered action list with exact commands\\\",\\\"recommendations\\\":\\\"1. rec | 2. rec | 3. rec\\\"}\", \"messages\": [{\"role\": \"user\", \"content\": $json.judgeInput}] }) }}",
+        "options": {}
+      },
+      "id": "ac38217d-7d4b-4de1-9efe-fbcd4afc8a38",
+      "name": "Judge - HTTP Request",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -8336,
+        -3168
+      ],
+      "retryOnFail": true,
+      "maxTries": 5,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst content = response.content?.[0]?.text || '';\nlet parsed;\ntry {\n  let cleaned = content.trim();\n  const firstBrace = cleaned.indexOf('{');\n  const lastBrace = cleaned.lastIndexOf('}');\n  if (firstBrace !== -1 && lastBrace !== -1) cleaned = cleaned.substring(firstBrace, lastBrace+1);\n  cleaned = cleaned.replace(/```json\\n?/g,'').replace(/```\\n?/g,'');\n  parsed = JSON.parse(cleaned);\n} catch(e) {\n  const extract = (key) => { const m = content.match(new RegExp('\"'+key+'\"\\\\s*:\\\\s*\"([^\"]*)\"')); return m?m[1]:null; };\n  const extractNum = (key) => { const m = content.match(new RegExp('\"'+key+'\"\\\\s*:\\\\s*(\\\\d+)')); return m?parseInt(m[1]):0; };\n  parsed = { decision:extract('decision')||'NOTIFY_ONLY', confidenceScore:extractNum('confidenceScore'), securityLevel:extract('securityLevel')||'LOW', decisionReason:'Parse error: '+e.message, errorsSummary:extract('errorsSummary')||'', cicdIssues:'', securityIssues:'', agentActions:'', developerActions:'', recommendations:'' };\n}\nif (parsed.reasoning && !parsed.decisionReason) parsed.decisionReason = parsed.reasoning;\nreturn [{ json: parsed }];"
+      },
+      "id": "e26d4045-c535-45a4-9439-9793b0f3e859",
+      "name": "Judge - Parse Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -8016,
+        -3168
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const judge    = $('Judge - Parse Output').first().json;\nconst incident = $('Extract Project Config').first().json;\nconst enriched = $('Merge All Fetched Data').first().json.enrichedData || {};\n\nconst decision      = (judge.decision || 'NOTIFY_ONLY').toUpperCase();\nconst securityLevel = (judge.securityLevel || 'LOW').toUpperCase();\nconst projectId     = incident.projectId || null;\n\nconst decisionToStatus = {\n  'FIX_PROPOSED': 'analyzed',\n  'BLOCK':        'blocked',\n  'NOTIFY_ONLY':  'completed',\n  'AUTO_FIX':     'analyzed',\n};\nconst statusForBackend = decisionToStatus[decision] || 'analyzed';\n\nconst computeScore = (level, dec) => {\n  if (level === 'CRITICAL' || dec === 'BLOCK') return 10;\n  if (level === 'HIGH')                         return 30;\n  if (level === 'MEDIUM')                       return 60;\n  if (level === 'LOW')                          return 90;\n  return 75;\n};\n\nconst aiSummary = JSON.stringify({\n  build:  enriched.build?.number,\n  job:    enriched.build?.job,\n  status: enriched.build?.status,\n  ...judge,\n});\n\nconst incidentUUID = $('Prepare Fetch URLs').first().json.incidentUUID || null;\n\nreturn [{\n  json: {\n    incidentUUID,\n    type:            'combined',\n    projectId,\n    aiSummary,\n    statusForBackend,\n    rawData: {\n      rootCause:    $('Parse - Root Cause Output').first()?.json || {},\n      security:     $('Parse - Security Output').first()?.json   || {},\n      remediation:  $('Parse - Remediation Output').first()?.json || {},\n      enrichedData: enriched,\n    },\n    securityScore: computeScore(securityLevel, decision),\n    riskLevel:     securityLevel.toLowerCase(),\n    decision,\n  }\n}];"
+      },
+      "id": "c912dd76-7348-4982-ba34-b0fc6233f54e",
+      "name": "Prepare Final Report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -7776,
+        -3168
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "=http://172.31.172.61:3001/api/incidents/{{ $(\"Send Raw Incident to Backend\").first().json.id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ \"status\": $('Prepare Final Report').first().json.statusForBackend, \"aiAnalysis\": $('Prepare Final Report').first().json.aiSummary, \"metadata\": $('Prepare Final Report').first().json.rawData }) }}",
+        "options": {}
+      },
+      "id": "83029e35-5416-4b6e-8907-b0288ebe7a42",
+      "name": "Save Final Decision to Backend",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -7536,
+        -3168
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "id-1",
+              "leftValue": "={{ $('Judge - Parse Output').first().json.decision }}",
+              "rightValue": "AUTO_FIX",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "d67b701f-def6-4116-aaf9-133b3f50f545",
+      "name": "Check Execution Type",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -7056,
+        -4512
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "id-1",
+              "leftValue": "={{ $('Judge - Parse Output').first().json.decision }}",
+              "rightValue": "AUTO_FIX",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "40796459-faba-46a3-ac3d-790a860eed73",
+      "name": "Check Selected Action",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -6336,
+        -4512
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "=http://172.31.172.61:3001/api/incidents/{{ $(\"Prepare Final Report\").first().json.incidentUUID }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{ \"status\": \"failed\" }",
+        "options": {}
+      },
+      "id": "123336e9-e74c-4c0d-becc-48021cc9377e",
+      "name": "Update Status - Blocked",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -6480,
+        -4896
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "=http://172.31.172.61:3001/api/incidents/{{ $(\"Prepare Final Report\").first().json.incidentUUID }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{ \"status\": \"analyzed\" }",
+        "options": {}
+      },
+      "id": "eff8351b-a695-409a-88cf-79a7a06a2902",
+      "name": "Update Status - Analyzed",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -6544,
+        -1776
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body || $input.first().json;\nreturn [{ json: {\n  incidentId: `incident-${Date.now()}-${Math.random().toString(36).substr(2,9)}`,\n  source: 'Jenkins', sourceType: 'jenkins',\n  title: `${body.job||'Unknown'} - Build #${body.build_number||'N/A'} - BLOCKED`,\n  description: body.build_url || '', severity: 'high', environment: 'production',\n  jenkins: { event:body.event, job:body.job, build_number:body.build_number, build_url:body.build_url, logs_url:body.logs_url, status:'BLOCKED', tests:body.tests||{}, sonar:body.sonar||{}, trivy:body.trivy||{}, owasp:body.owasp||{}, zap:body.zap||{}, docker:body.docker||{}, deploy:body.deploy||{} },\n  createdAt: new Date().toISOString()\n}}];"
+      },
+      "id": "84eb84f5-9b55-46c1-91c1-0d5c37005cb4",
+      "name": "Normalize status BLOCKED",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -11696,
+        -1392
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $input.first().json; const body = raw.body || raw;\nreturn [{ json: {\n  incidentId: 'incident-'+Date.now()+'-success',\n  source:'Jenkins', sourceType:'jenkins',\n  branch: body.branch||'main', severity:'LOW',\n  jenkins: { job:body.job||'unknown', build_number:body.build_number||'N/A', build_url:body.build_url||'', logs_url:body.logs_url||'', status:'SUCCESS', tests:body.tests||{}, sonar:body.sonar||{}, trivy:body.trivy||{}, owasp:body.owasp||{}, zap:body.zap||{}, docker:body.docker||{}, deploy:body.deploy||{}, nexus:body.nexus||{} },\n  project_id: body.project_id||null,\n  createdAt: new Date().toISOString()\n}}];"
+      },
+      "id": "f4246fb9-6912-436c-bb9b-3b5b5cc28e5b",
+      "name": "Normalize status RESOLVED",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -11920,
+        -1392
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "vWWrhwuXjcAxmO2B",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/vWWrhwuXjcAxmO2B",
+          "cachedResultName": "WF2 - Git Patch & PR v2.5 FIXED"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "incidentData": "={{ JSON.stringify($json) }}"
+          },
+          "matchingColumns": [
+            "incidentData"
+          ],
+          "schema": [
+            {
+              "id": "incidentData",
+              "displayName": "incidentData",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "id": "95f56475-d2af-4f64-88a5-c766949cd4d7",
+      "name": "Call WF2 - Git Patch & PR",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        -6352,
+        -2144
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "=http://172.31.172.61:3001/api/incidents/{{ $(\"Send Raw Incident to Backend\").first().json.id }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={ \"status\": \"failed\" }",
+        "options": {},
+        "infoMessage": "This node updates the backend incident status when saving the final decision fails, marking the incident as 'decision_save_failed' with the error details."
+      },
+      "id": "5de8ff68-c4df-4b99-8d4c-3b3a578c415f",
+      "name": "Backend Error - Decision Save Failed",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -7424,
+        -2944
+      ]
+    },
+    {
+      "parameters": {
+        "method": "=PUT",
+        "url": "=http://172.31.172.61:3001/api/incidents/{{ $(\"Send Raw Incident to Backend\").first().json.id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"status\": \"blocked\"\n}",
+        "options": {},
+        "infoMessage": "This node updates the backend incident status to 'blocked' when the Judge Agent determines the incident cannot proceed with automated remediation and requires manual intervention or is blocked for other reasons."
+      },
+      "id": "57762358-5fbc-458b-903d-eb88e8f82d72",
+      "name": "Update Status - Blocked1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -7008,
+        -2176
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "=http://172.31.172.61:3001/api/incidents/{{ $(\"Prepare Final Report\").first().json.incidentUUID }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ \"aiAnalysis\": $('Prepare Final Report').first().json.aiSummary, \"status\": $('Prepare Final Report').first().json.statusForBackend }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -7312,
+        -3184
+      ],
+      "id": "a31b280a-167a-4637-b4fb-a1a400faec8e",
+      "name": "Update Incident AI Analysis"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Judge - Parse Output').first().json.decision }}",
+                    "rightValue": "BLOCK",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "b518c443-d4cd-4043-87b3-19c0ad45456f"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "73466d9b-c29c-471b-80c8-3e7905a6a463",
+                    "leftValue": "={{ $('Judge - Parse Output').first().json.decision }}",
+                    "rightValue": "FIX_PROPOSED",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "39b2f10d-432d-4135-b8ab-eda6f7f3415f",
+                    "leftValue": "={{ $('Judge - Parse Output').first().json.decision }}",
+                    "rightValue": "NOTIFY_ONLY",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        -6736,
+        -2224
+      ],
+      "id": "68bbb524-912c-4427-8a62-7526339c740f",
+      "name": "Route Decision"
+    },
+    {
+      "parameters": {
+        "jsCode": "const incident = $('Extract Project Config').first().json;\nconst jenkins  = incident.jenkins || {};\nconst config   = incident.projectConfig || {};\nconst reports  = jenkins.reports || {};\n\n// Cherche le chemin à TOUS les endroits possibles, dans l'ordre de priorité :\n// 1. Nouveau format Jenkins (reports.trivyPath)\n// 2. Ancien format Jenkins (trivy.report_path)\n// 3. Config stockée en base pour ce projet\n// 4. Reconstruction manuelle si on a juste le nom du job + numéro de build\nconst filePath =\n  reports.trivyPath ||\n  (jenkins.trivy && jenkins.trivy.report_path) ||\n  config.trivyReportPath ||\n  (jenkins.job && jenkins.build_number\n    ? `/home/node/.n8n-files/reports/${jenkins.job}/${jenkins.build_number}/trivy-report.json`\n    : '');\n\nreturn [{ json: { filePath, tool: 'trivy' } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -11968,
+        -3536
+      ],
+      "id": "a334e469-4d6c-437e-81e2-2da3758f68f7",
+      "name": "Fetch Trivy Report1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const incident = $('Extract Project Config').first().json;\nconst jenkins  = incident.jenkins || {};\nconst config   = incident.projectConfig || {};\nconst reports  = jenkins.reports || {};\n\nconst filePath =\n  reports.zapPath ||\n  (jenkins.zap && jenkins.zap.report_path) ||\n  config.zapReportPath ||\n  (jenkins.job && jenkins.build_number\n    ? `/home/node/.n8n-files/reports/${jenkins.job}/${jenkins.build_number}/zap-report.json`\n    : '');\n\nreturn [{ json: { filePath, tool: 'zap' } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -11280,
+        -3552
+      ],
+      "id": "4a1e6b59-44c8-43a9-bc91-83e02ee5310d",
+      "name": "Fetch ZAP Report1"
+    },
+    {
+      "parameters": {
+        "fileSelector": "={{ $json.filePath }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1.1,
+      "position": [
+        -11792,
+        -3536
+      ],
+      "id": "0c346fb3-e38a-40c3-a53c-b31405fbe339",
+      "name": "Fetch Trivy Report3",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "fileSelector": "={{ $json.filePath }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1.1,
+      "position": [
+        -11120,
+        -3552
+      ],
+      "id": "50d0204b-a1c1-410f-ab47-92a98d639825",
+      "name": "Fetch ZAP Report2",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "fileSelector": "={{ $json.filePath }}",
+        "options": {
+          "dataPropertyName": "data"
+        }
+      },
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1.1,
+      "position": [
+        -10544,
+        -3552
+      ],
+      "id": "3fb1a8b1-d4ad-4e80-bfc4-00c418a36a74",
+      "name": "Fetch OWASP Report2",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "operation": "fromJson",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        -11616,
+        -3552
+      ],
+      "id": "94e3e6f3-c3eb-4c5b-aa10-cde88e838f90",
+      "name": "Parse Trivy JSON",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const incident = $('Extract Project Config').first().json;\nconst jenkins  = incident.jenkins || {};\nconst config   = incident.projectConfig || {};\nconst reports  = jenkins.reports || {};\n\nconst filePath =\n  reports.owaspPath ||\n  (jenkins.owasp && jenkins.owasp.report_path) ||\n  config.owaspReportPath ||\n  (jenkins.job && jenkins.build_number\n    ? `/home/node/.n8n-files/reports/${jenkins.job}/${jenkins.build_number}/dependency-check-report.json`\n    : '');\n\nreturn [{ json: { filePath, tool: 'owasp' } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -10704,
+        -3552
+      ],
+      "id": "59b59321-2827-4fd5-854f-27ea2f58abd2",
+      "name": "Fetch OWASP Report1"
+    },
+    {
+      "parameters": {
+        "operation": "fromJson",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        -10928,
+        -3552
+      ],
+      "id": "8fb99757-f5ad-4da7-a14d-94173cbeb7a9",
+      "name": "Parse ZAP JSON",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "fromJson",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        -10352,
+        -3552
+      ],
+      "id": "dd6eac3b-2942-415d-ab14-15e9f683aeae",
+      "name": "Parse OWASP JSON",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "20b4e70e-a5fc-4e10-a72d-3424538c499f",
+              "leftValue": "={{ $json.body?.event \n\n $json.event }}",
+              "rightValue": "pr_validation",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -14064,
+        -3456
+      ],
+      "id": "d7959d9d-80a2-4668-93c8-d4ca247f80ac",
+      "name": "Is PR Validation"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "gtKgfFRV5gj7nB3Y",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/gtKgfFRV5gj7nB3Y",
+          "cachedResultName": "WF3 - Post-PR Validation v1.1"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "payload": "={{ JSON.stringify($json.body || $json) }}"
+          },
+          "matchingColumns": [
+            "payload"
+          ],
+          "schema": [
+            {
+              "id": "payload",
+              "displayName": "payload",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "id": "067752ed-5049-4cd0-a86f-6ecab86e86fa",
+      "name": "Call WF3 - Post-PR Validation",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        -13728,
+        -3776
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "59066712-0591-4111-a692-6a8576fed5ad",
+              "leftValue": "={{ $('Judge - Parse Output').first().json.decision }}",
+              "rightValue": "FIX_PROPOSED",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -7104,
+        -3184
+      ],
+      "id": "e87eed77-0144-4530-a2f0-c5310126e8bd",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "fromEmail": "amrisouhail96@gmail.com",
+        "toEmail": "souhaiel.amri@esprit.tn",
+        "subject": "=={{ '🔔 Approbation requise — ' + $('Judge - Parse Output').first().json.securityLevel + ' — ' + $('Extract Project Config').first().json.jenkins.job }}",
+        "html": "=={{ \n'<h2>🔔 Nouvelle proposition de correctif IA</h2>' +\n'<p><b>Projet :</b> ' + $('Extract Project Config').first().json.jenkins.job + '</p>' +\n'<p><b>Build :</b> #' + $('Extract Project Config').first().json.jenkins.build_number + '</p>' +\n'<p><b>Niveau de risque :</b> ' + $('Judge - Parse Output').first().json.securityLevel + '</p>' +\n'<p><b>Confiance IA :</b> ' + $('Judge - Parse Output').first().json.confidenceScore + '%</p>' +\n'<h3>Résumé</h3>' +\n'<p>' + $('Judge - Parse Output').first().json.justification + '</p>' +\n'<h3>Action recommandée</h3>' +\n'<p>' + ($('Judge - Parse Output').first().json.developerActions || 'Voir la plateforme pour le détail') + '</p>' +\n'<hr>' +\n'<p>👉 <a href=\"http://172.31.172.61:4200/incidents/' + $('Prepare Fetch URLs').first().json.incidentUUID + '\">Ouvrir sur la plateforme DevSecOps AI</a></p>' +\n'<p style=\"color:#888;font-size:11px;\">Approuvez ou rejetez directement depuis la plateforme.</p>'\n}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        -6864,
+        -3232
+      ],
+      "id": "2912f2b3-d448-460d-b2e9-99baef3c2bee",
+      "name": "Send an Email",
+      "webhookId": "bbfe92dd-7a70-423d-a499-202aac1cb526",
+      "credentials": {
+        "smtp": {
+          "id": "Mr2rXybH3Y1xw2ge",
+          "name": "Gmail SMTP DevSecOps"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json.ollamaBodyString }}",
+        "options": {}
+      },
+      "id": "08e8d80e-bcf9-44a6-8a00-39bc626bc4c2",
+      "name": "Route cause Analysis1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -2416,
+        -1280
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "Ee9vVedmz84oXg5W",
+          "name": "Claude API"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json.ollamaBodyString }}",
+        "options": {}
+      },
+      "id": "feffa43d-245d-4a45-83d9-0fefb8c0e7d2",
+      "name": "Security Risk Analysis1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -2416,
+        -944
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "Ee9vVedmz84oXg5W",
+          "name": "Claude API"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json.ollamaBodyString }}",
+        "options": {}
+      },
+      "id": "7bdcd03d-f60c-4cab-9344-fc484775beaf",
+      "name": "Remediation Feasibility 1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -2416,
+        -608
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "Ee9vVedmz84oXg5W",
+          "name": "Claude API"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify({ \"model\": \"claude-opus-4-5\", \"max_tokens\": 2000, \"temperature\": 0, \"system\": \"ABSOLUTE RULE: Return ONLY a raw JSON object. NO markdown, NO backticks. Start with { end with }.\\n\\nMANDATORY DECISION RULE: The input payload contains a field 'recommendation' computed by the platform's deterministic governance engine from raw scanner data. You MUST copy this value into your 'decision' field. Do NOT override it. The 3 agents are advisory only.\\n\\nYou are the JUDGE AGENT for a DevSecOps platform. Your role is to EXPLAIN and JUSTIFY the recommendation in clear human-readable terms, NOT to decide.\\n\\nThe recommendation can be:\\n- BLOCK: a critical CVE was found in container/dependencies. Deployment must be blocked, manual remediation required.\\n- FIX_PROPOSED: code-level defects (BLOCKER/CRITICAL vulnerabilities or BUGs) were found and are fixable. A patch is proposed but REQUIRES developer approval before any Pull Request is created.\\n- NOTIFY_ONLY: no critical issue, informational only.\\n\\nThe payload also contains 'reasonText' (why this recommendation), 'evidence' (the counts), and 'requiresApproval'. Use them to write a precise justification.\\n\\nYOUR TASK:\\n1. Copy 'recommendation' into 'decision'.\\n2. Write a clear justification explaining why.\\n3. If FIX_PROPOSED, list concretely what the developer should review before approving, using the 'developerGuide' section (issue ids, files, lines).\\n4. Only set 'warning' if you detect a critical risk the data clearly missed; otherwise empty string.\\n\\nReturn ONLY this JSON:\\n{\\\"decision\\\":\\\"<copy recommendation: BLOCK|FIX_PROPOSED|NOTIFY_ONLY>\\\",\\\"confidenceScore\\\":0-100,\\\"securityLevel\\\":\\\"CRITICAL|HIGH|MEDIUM|LOW\\\",\\\"justification\\\":\\\"clear explanation for the developer\\\",\\\"developerReviewPoints\\\":[\\\"point1\\\",\\\"point2\\\"],\\\"warning\\\":\\\"\\\",\\\"errorsSummary\\\":\\\"ALL errors by severity with counts\\\",\\\"cicdIssues\\\":\\\"CI/CD pipeline failures\\\",\\\"securityIssues\\\":\\\"CVEs and SonarQube security findings\\\",\\\"agentActions\\\":\\\"Summary of what each agent found\\\",\\\"developerActions\\\":\\\"Numbered action list with exact commands\\\",\\\"recommendations\\\":\\\"1. rec | 2. rec | 3. rec\\\"}\", \"messages\": [{\"role\": \"user\", \"content\": $json.judgeInput}] }) }}",
+        "options": {}
+      },
+      "id": "5a5acb13-6f8a-4239-af37-91911cc6a801",
+      "name": "Judge - HTTP Request1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -1360,
+        -816
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "Ee9vVedmz84oXg5W",
+          "name": "Claude API"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ═══════════════════════════════════════════════════════════════\n//  PREPARE WF2 PAYLOAD\n//  Construit le contrat d'entree attendu par WF2 (Policy Gate)\n//  a partir du contexte deja disponible dans WF1.\n//  Aucune valeur en dur : fonctionne pour n'importe quel projet.\n// ═══════════════════════════════════════════════════════════════\n\nconst cfg    = $('Extract Project Config1').first().json;\nconst merged = $('Merge All Fetched Data1').first().json;\nconst judge  = $('Judge - Parse Output1').first().json;\nconst devGuide = (() => { try { return $('Parse - Dev Guide Output').first().json; } catch (e) { return null; } })();\nconst final  = $('Prepare Final Report1').first().json;\n\n// ── Depot GitHub (obligatoire pour ouvrir une PR) ──\nconst githubRepo = (cfg.githubRepo || cfg.projectConfig?.githubRepo || '').trim();\nif (!githubRepo || !githubRepo.includes('/')) {\n  throw new Error(\n    'githubRepo absent ou invalide (\"' + githubRepo + '\"). ' +\n    'Renseigner le champ Repository (owner/repo) du projet dans la plateforme.'\n  );\n}\nconst [repoOwner, repoName] = githubRepo.split('/');\n\n// ── Donnees des scanners ──\nconst enriched = merged.enrichedData || {};\nconst issues   = enriched.sonar?.issues || [];\n\n// ── Ciblage du fichier a patcher ──\n// On retire le prefixe SonarQube \"<projectKey>:\" de facon dynamique,\n// sans supposer le nom du projet.\nconst targetFile = (() => {\n  const severe = issues.filter(i => ['BLOCKER', 'CRITICAL'].includes(i.severity));\n  const pool = severe.length ? severe : issues;\n  if (pool.length === 0) {\n    throw new Error('Aucun finding SonarQube exploitable : rien a corriger dans ce build.');\n  }\n  const counts = {};\n  for (const i of pool) {\n    const comp = i.component || '';\n    const path = comp.includes(':') ? comp.split(':').slice(1).join(':') : comp;\n    if (path) counts[path] = (counts[path] || 0) + 1;\n  }\n  const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);\n  if (!sorted.length) {\n    throw new Error('Impossible de determiner un fichier cible depuis les findings SonarQube.');\n  }\n  return sorted[0][0];\n})();\n\n// ── Confiance normalisee entre 0 et 1 ──\nconst rawConf = Number(judge.confidenceScore ?? 90);\nconst confidenceScore = rawConf > 1 ? rawConf / 100 : rawConf;\n\nconst incidentId = final.incidentUUID || merged.incidentUUID || null;\n\nreturn [{\n  json: {\n    incidentId,\n    incidentUUID:     incidentId,\n    projectId:        cfg.projectId || final.projectId || null,\n    githubRepo,\n    githubToken:      cfg.projectConfig?.githubToken || null,\n    branch:           'main',\n    default_branch:   'main',\n    decision:         (judge.decision || 'NOTIFY_ONLY').toUpperCase(),\n    confidenceScore,\n    riskLevel:        (judge.securityLevel || 'HIGH').toLowerCase(),\n    aiAnalysis:       judge,\n    developerGuide:   devGuide,\n    jenkinsJobName:   cfg.job || cfg.jenkinsJobName || enriched.build?.job || null,\n    buildNumber:      enriched.build?.number || cfg.build_number || null,\n    enrichedData:     enriched,\n    repository_owner: repoOwner,\n    repository_name:  repoName,\n    target_file_path: targetFile,\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1024,
+        352
+      ],
+      "id": "e9fc1a71-e1ff-4643-b22b-08dfdb56c98d",
+      "name": "Prepare WF2 Payload"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst d = input.enrichedData || {};\n\nconst systemPrompt = `You are the DEVELOPER GUIDANCE agent of a DevSecOps AI platform.\nYour ONLY mission: make the developer's life easy. For EVERY significant issue found by the scanners, produce a ready-to-follow fix guide.\nReturn ONLY valid JSON — no markdown, no backticks, no explanation. Start with { end with }.\n\nISSUE SELECTION (in this order, max 12 issues total):\n1. All SonarQube BLOCKER and CRITICAL issues (bugs + vulnerabilities)\n2. All CRITICAL/HIGH CVEs from Trivy and OWASP Dependency-Check\n3. ZAP High alerts\n4. Test failures\n5. SonarQube MAJOR bugs if room remains\n\nFOR EACH ISSUE, ALL FIELDS ARE MANDATORY:\n- id: short unique ref like \"SONAR-1\", \"CVE-2024-1234\", \"ZAP-1\", \"TEST-1\"\n- source: SONARQUBE | TRIVY | OWASP | ZAP | TESTS | BUILD\n- severity: BLOCKER | CRITICAL | HIGH | MAJOR | MEDIUM\n- title: one-line name of the issue\n- file: exact file path from the data (strip the \"projectKey:\" prefix). Use \"pom.xml\"/\"Dockerfile\" for dependency/image issues, \"N/A\" only if truly unknown\n- line: integer line number from the data, or 0\n- rule: SonarQube rule key, CVE id, or ZAP alert name\n- problem: the REAL problem explained in plain language a junior developer understands (2-3 sentences). Not the symptom — the cause.\n- whyItMatters: concrete risk if not fixed (security exploit, crash, data loss...)\n- howToFix: array of 2-5 ordered, actionable steps. Steps must be concrete: which file to open, what to change, which command to run\n- codeExample: {\"before\":\"<vulnerable/buggy snippet or dependency line reconstructed from the rule and context>\",\"after\":\"<corrected snippet>\"} — keep each under 300 chars; use \"\" if not applicable (e.g. infra issue)\n- verification: exact command or action to prove the fix works (e.g. \"mvn test\", \"docker build . && trivy image ...\", \"re-run Jenkins job and check quality gate\")\n- estimatedEffortMinutes: realistic integer\n- priority: integer 1..N (1 = fix first). Order: exploitable security > blockers > bugs > rest\n\nGLOBAL FIELDS:\n- summaryForDeveloper: 3-4 sentences: what is broken overall and the recommended attack plan\n- quickWins: array of up to 3 issue ids fixable in under 15 min\n- fixOrder: array of ALL issue ids in recommended order\n- totalEstimatedMinutes: sum of efforts\n- confidence: 0.0-1.0\n\nReturn EXACTLY:\n{\"incidentId\":\"<id>\",\"summaryForDeveloper\":\"...\",\"issues\":[{...}],\"quickWins\":[\"...\"],\"fixOrder\":[\"...\"],\"totalEstimatedMinutes\":<int>,\"confidence\":<0.0-1.0>}`;\n\n// ── Sélection des données : sévère d'abord, budget token maîtrisé ──\nconst sonarAll = d.sonar?.issues || [];\nconst sevOrder = { BLOCKER: 0, CRITICAL: 1, MAJOR: 2, MINOR: 3, INFO: 4 };\nconst sonarSorted = [...sonarAll].sort((a, b) =>\n  (sevOrder[a.severity] ?? 9) - (sevOrder[b.severity] ?? 9)\n).slice(0, 20).map(i => ({\n  key: i.key, rule: i.rule, severity: i.severity, type: i.type,\n  component: i.component, line: i.line, message: i.message\n}));\n\nconst trivyCves = (d.trivy?.cves || []).slice(0, 10);\nconst owaspCves = (d.owasp?.cves || []).slice(0, 8);\nconst zapAlerts = (d.zap?.alerts || []).slice(0, 6);\n\nconst userContent = `Generate the developer fix guide for this pipeline incident.\nINCIDENT: ${input.incidentUUID || d.build?.job || 'unknown'}\nBUILD: ${d.build?.job} #${d.build?.number} — status=${d.build?.status}\nTESTS: total=${d.tests?.total}, failures=${d.tests?.failures}, status=${d.tests?.status}, coverage=${d.tests?.coverage}%\nSONARQUBE: quality_gate=${d.sonar?.quality_gate}, bugs=${d.sonar?.bugs}, vulnerabilities=${d.sonar?.vulnerabilities}, code_smells=${d.sonar?.code_smells}\nSONAR ISSUES (severe first, ${d.sonar?.issues_count ?? sonarAll.length} total):\n${JSON.stringify(sonarSorted)}\nTRIVY (container): status=${d.trivy?.status}, critical=${d.trivy?.critical}, high=${d.trivy?.high}\nTRIVY CVEs: ${JSON.stringify(trivyCves)}\nOWASP DEPENDENCY-CHECK: status=${d.owasp?.status}, critical=${d.owasp?.critical}, high=${d.owasp?.high}\nOWASP CVEs: ${JSON.stringify(owaspCves)}\nZAP DAST: status=${d.zap?.status}, alerts_high=${d.zap?.alerts_high}, target=${d.zap?.target_url}\nZAP ALERTS: ${JSON.stringify(zapAlerts)}\nDOCKER: build=${d.docker?.build_status}, image=${d.docker?.image_tag}\nDEPLOY: status=${d.deploy?.status}`;\n\nconst body = {\n  model: 'claude-sonnet-4-6',\n  max_tokens: 6000,\n  temperature: 0,\n  system: systemPrompt,\n  messages: [{ role: 'user', content: userContent }]\n};\n\nreturn [{ json: { ollamaBodyString: JSON.stringify(body) } }];\n"
+      },
+      "id": "db287d6e-9106-4a7a-9325-464037c23d70",
+      "name": "Prepare - Dev Guide Body",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2432,
+        -368
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json.ollamaBodyString }}",
+        "options": {}
+      },
+      "id": "439fb8e4-9924-4bff-bf26-ca8babc88c3a",
+      "name": "Developer Guidance Analysis",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -2224,
+        -368
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "Ee9vVedmz84oXg5W",
+          "name": "Claude API"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst content = response.content?.[0]?.text || '';\nconst fallback = (reason, raw) => [{ json: {\n  incidentId: 'unknown', summaryForDeveloper: reason,\n  issues: [], quickWins: [], fixOrder: [], totalEstimatedMinutes: 0,\n  confidence: 0.0, parseError: true, raw: (raw || '').substring(0, 500)\n}}];\nif (!content) return fallback('Developer Guidance agent returned empty response', '');\nlet clean = content.replace(/```json\\s*/gi, '').replace(/```\\s*/gi, '').trim();\nconst start = clean.indexOf('{'); const end = clean.lastIndexOf('}');\nif (start === -1 || end === -1) return fallback('No JSON found in agent output', clean);\ntry {\n  const parsed = JSON.parse(clean.substring(start, end + 1));\n  parsed.issues = Array.isArray(parsed.issues) ? parsed.issues : [];\n  // Tri de sécurité : toujours par priorité croissante\n  parsed.issues.sort((a, b) => (a.priority ?? 99) - (b.priority ?? 99));\n  return [{ json: parsed }];\n} catch (e) {\n  return fallback('JSON parse failed: ' + e.message, clean);\n}\n"
+      },
+      "id": "4cfee696-cb33-4d4b-a876-294a768696cb",
+      "name": "Parse - Dev Guide Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2016,
+        -368
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "jenkins-event",
+        "options": {}
+      },
+      "id": "1be636aa-7a12-4240-861e-1f379a1b2f9d",
+      "name": "Incident Webhook1",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -7328,
+        -1072
+      ],
+      "webhookId": "cdf6c6d7-9e56-4a58-b872-448f96b8913c"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.event ?? $json.body?.event }}",
+                    "rightValue": "pipeline_failed",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "3f6412aa-47ca-4b15-a87c-5641a56559b7"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "47e9da06-bc5a-4dd5-ab92-bd4041719ea7",
+                    "leftValue": "={{ $json.event ?? $json.body?.event }}",
+                    "rightValue": "pipeline_blocked",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "af970071-25a6-4cc3-892b-e6b0256957cc",
+                    "leftValue": "={{ $json.event ?? $json.body?.event }}",
+                    "rightValue": "pipeline_success",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "7d25a125-7fa9-4ab7-a5c3-dca00418b284",
+                    "leftValue": "={{ $json.event ?? $json.body?.event }}",
+                    "rightValue": "pipeline_unstable",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        -6688,
+        -1088
+      ],
+      "id": "c6c53246-c415-419c-b74d-65e91046d86e",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst normalizedItems = [];\n\nfor (const item of items) {\n  const body = item.json.body || item.json;\n  const headers = item.json.headers || {};\n\n  // ── Détection de la source ────────────────────────────────\n  let sourceType = 'unknown';\n  let source = 'unknown';\n\n  if (headers['x-github-event']) {\n    sourceType = 'github';\n    source = 'GitHub';\n  } else if (body.sonarqube || body.project?.key) {\n    sourceType = 'sonarqube';\n    source = 'SonarQube';\n  } else if (\n    body.event === 'pipeline_failed'   ||\n    body.event === 'pipeline_unstable' ||\n    body.event === 'pipeline_success'  ||\n    body.job !== undefined             ||\n    body.jenkins === true\n  ) {\n    sourceType = 'jenkins';\n    source = 'Jenkins';\n  }\n\n  // ── Normalisation ─────────────────────────────────────────\n  const normalized = {\n    incidentId: body.incidentId ||\n      `incident-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,\n\n    source,\n    sourceType,\n\n    // ── Champs dynamiques — 100% depuis le payload ──────────\n    // Chaque projet Jenkins fournit ces valeurs dans son Jenkinsfile\n    // n8n ne connaît aucune valeur par défaut\n    projectId:  body.project_id  || null,\n    backendUrl: body.backend_url || null,\n\n    // ── Métadonnées du pipeline ──────────────────────────────\n    repository: body.repository?.full_name ||\n                body.repository?.name      ||\n                body.project?.key          ||\n                body.repo                  ||\n                body.job                   || null,\n\n    branch: body.ref?.replace('refs/heads/', '') ||\n            body.branch                          ||\n            body.git?.branch                     || null,\n\n    commitSha: body.after              ||\n               body.head_commit?.id    ||\n               body.commit             ||\n               body.revision?.sha      || null,\n\n    pullRequestNumber: body.pull_request?.number ||\n                       body.number               || null,\n\n    title: body.title ||\n           (body.job\n             ? `${body.job} - Build #${body.build_number || 'N/A'}`\n             : null) ||\n           body.head_commit?.message?.split('\\n')[0] ||\n           body.message ||\n           'Untitled Incident',\n\n    description: body.description          ||\n                 body.build_url            ||\n                 body.head_commit?.message ||\n                 body.message              || '',\n\n    severity: body.severity                     ||\n              body.rule?.severity?.toLowerCase() ||\n              'medium',\n\n    environment: body.environment                ||\n                 body.deployment?.environment    ||\n                 'production',\n\n    logs: body.logs         ||\n          body.console_output ||\n          (body.logs_url ? [body.logs_url] : []),\n\n    changedFiles: body.commits?.[0]?.modified ||\n                  body.head_commit?.modified   || [],\n\n    // ── Sources spécifiques ──────────────────────────────────\n    github:    sourceType === 'github'    ? body : null,\n    sonarqube: sourceType === 'sonarqube' ? body : null,\n\n    // ── Jenkins — sections v3.0 ──────────────────────────────\n    jenkins: sourceType === 'jenkins' ? {\n      event:        body.event        || null,\n      job:          body.job          || null,\n      build_number: body.build_number || null,\n      build_url:    body.build_url    || null,\n      logs_url:     body.logs_url     || null,\n      status:       body.status       || null,\n      severity:     body.severity     || null,\n      tests:        body.tests        || {},\n      sonar:        body.sonar        || {},\n      trivy:        body.trivy        || {},\n      owasp:        body.owasp        || {},\n      zap:          body.zap          || {},\n      docker:       body.docker       || {},\n      deploy:       body.deploy       || {},\n      nexus:        body.nexus        || {}\n    } : null,\n\n    createdAt: new Date().toISOString()\n  };\n\n  normalizedItems.push({ json: normalized });\n}\n\nreturn normalizedItems;"
+      },
+      "id": "19ee9b3e-3eac-45f3-8e67-bd6f3888a838",
+      "name": "Normalize Incident Payload1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -6368,
+        -1088
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.backendUrl || 'http://172.31.172.61:3001' }}/api/projects/internal/by-job/{{ $json.jenkins.job }}",
+        "options": {}
+      },
+      "id": "8a2e5664-ba79-43cd-aa4a-34768bf8e80e",
+      "name": "Lookup Project1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -6080,
+        -1104
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const getIncident = () => {\n  const sources = ['Normalize Incident Payload', 'Normalize status BLOCKED', 'Normalize status RESOLVED'];\n  for (const s of sources) {\n    try {\n      const d = $(s).first().json;\n      if (d) return d;\n    } catch(e) {}\n  }\n  return $input.first().json;\n};\n\nconst incident = getIncident();\n\n// Les données sont à la racine du payload, pas sous \"jenkins\"\nconst jenkins = incident.jenkins || {};\nconst zapData   = incident.zap   || jenkins.zap   || {};\nconst owaspData = incident.owasp || jenkins.owasp || {};\nconst trivyData = incident.trivy || jenkins.trivy || {};\nconst reports   = incident.reports || jenkins.reports || {};\nconst reportsAvailable = reports.available || {};\n\nconst jobName = incident.job || jenkins.job || incident.repository;\n\n// Lookup Project\nconst projects = $('Lookup Project1').all();\nlet project = null;\nfor (const item of projects) {\n  const p = item.json;\n  if (Array.isArray(p)) {\n    project = p.find(x => x.jenkinsJobName === jobName) || p[0];\n    break;\n  }\n  if (p.jenkinsJobName === jobName) { project = p; break; }\n}\nif (!project && projects.length > 0) {\n  const first = projects[0].json;\n  project = Array.isArray(first) ? first[0] : first;\n}\n\n// Flags activés\nconst trivyEnabled = !!(reportsAvailable.trivy || trivyData.report_path || trivyData.report_url || reports.trivyPath);\nconst owaspEnabled = !!(reportsAvailable.owasp || owaspData.report_path || owaspData.report_url || reports.owaspPath);\nconst zapEnabled   = !!(reportsAvailable.zap   || zapData.report_path   || zapData.report_url   || reports.zapPath);\n\n// Paths (priorité: données directes > reports)\nconst trivyReportPath = trivyData.report_path || trivyData.report_url || reports.trivyPath || null;\nconst owaspReportPath = owaspData.report_path || owaspData.report_url || reports.owaspPath || null;\nconst zapReportPath   = zapData.report_path   || zapData.report_url   || reports.zapPath   || null;\n\nreturn [{\n  json: {\n    ...incident,\n    projectId:  project?.id         || null,\n    githubRepo: project?.githubRepo || null,\n    projectConfig: {\n      cicdTool:       project?.cicdTool       || 'jenkins',\n      githubToken:    project?.githubToken    || null,\n      jenkinsUrl:     project?.jenkinsUrl     || incident.build_url?.split('/job/')[0] || null,\n      jenkinsToken:   project?.jenkinsToken   || null,\n      sonarqubeUrl:   project?.sonarqubeUrl   || null,\n      sonarqubeKey:   project?.sonarqubeKey   || incident.sonar?.project_key || null,\n      sonarqubeToken: project?.sonarqubeToken || null,\n      trivyEnabled,\n      trivyReportPath,\n      dockerImage:    incident.docker?.image  || jenkins.docker?.image_tag || null,\n      owaspEnabled,\n      owaspReportPath,\n      zapEnabled,\n      zapTargetUrl:   zapData.target_url      || incident.kubernetes?.target || null,\n      zapReportPath,\n    }\n  }\n}];"
+      },
+      "id": "16b9f49e-8c99-415e-9971-2ee36413cdf4",
+      "name": "Extract Project Config1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -5808,
+        -1072
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://172.31.172.61:3001/api/webhooks/jenkins/by-job/{{ $json.jenkins.job }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"job\": \"{{ $json.jenkins.job }}\",\n  \"build_number\": \"{{ $json.jenkins.build_number }}\",\n  \"status\": \"{{ $json.jenkins.status }}\",\n  \"build_url\": \"{{ $json.jenkins.build_url }}\",\n  \"title\": \"{{ $json.title }}\",\n  \"severity\": \"{{ $json.severity }}\"\n}",
+        "options": {}
+      },
+      "id": "638afd89-7a91-4291-aa9a-8bed0e32ab00",
+      "name": "Send Raw Incident to Backend1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -5568,
+        -1072
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const incident = $('Extract Project Config1').first().json;\nconst config = incident.projectConfig || {};\nconst jenkins = incident.jenkins || {};\n\n// Réponse directe de \"Send Raw Incident to Backend\"\nconst incidentUUID = $input.first().json.id || null;\n\n// Jenkins config\nconst jenkinsUrl =\n  config.jenkinsUrl ||\n  incident.jenkinsUrl ||\n  \"http://172.31.172.61:8082\";\n\nconst jobName =\n  jenkins.job ||\n  config.jenkinsJobName ||\n  incident.jenkinsJobName ||\n  incident.repository ||\n  null  // AUCUN fallback — le job doit être fourni par le webhook;\n\n// Dernière build Jenkins\nconst buildRef = \"lastBuild\";\n\n// Sécuriser les slash\nconst cleanJenkinsUrl = jenkinsUrl.replace(/\\/$/, \"\");\n\n// Si job simple : pfe-app-test\n// URL Jenkins : /job/pfe-app-test/lastBuild\nconst buildBaseUrl =\n  `${cleanJenkinsUrl}/job/${jobName}/${buildRef}`;\n\n// Si un path custom existe, on le garde\nfunction resolveReportUrl(customPath, defaultFileName) {\n  if (customPath) {\n    return customPath\n      .replace(\"{build_url}\", `${buildBaseUrl}/`)\n      .replace(\"{jenkins_url}\", cleanJenkinsUrl)\n      .replace(\"{job_name}\", jobName)\n      .replace(\"{build_number}\", buildRef);\n  }\n\n  return `${buildBaseUrl}/artifact/${defaultFileName}`;\n}\n\nreturn [\n  {\n    json: {\n      ...incident,\n\n      incidentUUID,\n\n      resolvedUrls: {\n        trivy: resolveReportUrl(\n          config.trivyReportPath,\n          \"trivy-report.json\"\n        ),\n\n        zap: resolveReportUrl(\n          config.zapReportPath,\n          \"zap-report.json\"\n        ),\n\n        owasp: resolveReportUrl(\n          config.owaspReportPath,\n          \"dependency-check-report.json\"\n        ),\n      },\n\n      fetchFlags: {\n        sonarqube: !!(\n          config.sonarqubeUrl &&\n          config.sonarqubeKey &&\n          config.sonarqubeToken\n        ),\n\n        trivy: true,\n        zap: true,\n        owasp: true,\n      },\n    },\n  },\n];"
+      },
+      "id": "e10f8b3c-6820-4b79-a48f-d27cf143573b",
+      "name": "Prepare Fetch URLs1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -5328,
+        -1088
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=http://sonarqube:9000/api/issues/search?componentKeys={{ $json.projectConfig.sonarqubeKey }}&severities=BLOCKER,CRITICAL,MAJOR&statuses=OPEN,CONFIRMED,REOPENED&ps=50",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "06a51635-d688-48b9-9c67-d965528b9010",
+      "name": "Fetch SonarQube Issues1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -5104,
+        -1088
+      ],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "AxQb6AG51EcWcXik",
+          "name": "SONARQUBE credential 2"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ══════════════════════════════════════════════════════════════\n//  MERGE ALL FETCHED DATA — Extract From File (fromJson) + webhook fallback\n// ══════════════════════════════════════════════════════════════\n\n// ── Helper : extraire JSON depuis un node Extract From File ──\nconst parseNodeOutput = (nodeName) => {\n  try {\n    const item = $(nodeName).first();\n\n    // Cas Extract From File (fromJson) : objet parsé dans json.data\n    if (item.json?.data && typeof item.json.data === 'object') {\n      return { data: item.json.data, source: 'local_file' };\n    }\n\n    // Cas JSON direct (HTTP ou autre)\n    if (item.json && !item.json.error && Object.keys(item.json).length > 2) {\n      return { data: item.json, source: 'local_file' };\n    }\n\n    return { data: null, source: 'none' };\n  } catch (e) {\n    return { data: null, source: 'error', error: e.message };\n  }\n};\n\n// ── Sources principales ──\nconst sonarRaw = $('Fetch SonarQube Issues1').first()?.json || {};\nconst trivyResult = parseNodeOutput('Parse Trivy JSON');\nconst zapResult = parseNodeOutput('Parse ZAP JSON');\nconst owaspResult = parseNodeOutput('Parse OWASP JSON');\n\n// ── Fallback webhook ──\nconst incident = $('Extract Project Config1').first().json || {};\nconst jenkins = incident.jenkins || {};\nconst webhookTrivy = jenkins.trivy || {};\nconst webhookZap = jenkins.zap || {};\nconst webhookOwasp = jenkins.owasp || {};\nconst webhookTests = jenkins.tests || {};\nconst incidentUUID = $('Prepare Fetch URLs1').first()?.json?.incidentUUID || null;\nconst projectConfig = incident.projectConfig || {};\n\n// ══════════════════════════════════════════════════════════════\n//  SONARQUBE — toujours via API (fiable)\n// ══════════════════════════════════════════════════════════════\nconst sonarIssues = sonarRaw.issues || [];\nconst sonar = {\n  status: sonarIssues.length > 0 ? 'COMPLETED' : 'EMPTY',\n  quality_gate: sonarRaw.qualityGate?.status || 'UNKNOWN',\n  bugs: sonarIssues.filter(i => i.type === 'BUG').length,\n  vulnerabilities: sonarIssues.filter(i => i.type === 'VULNERABILITY').length,\n  code_smells: sonarIssues.filter(i => i.type === 'CODE_SMELL').length,\n  coverage: sonarRaw.coverage || '0',\n  issues_count: sonarRaw.total || sonarIssues.length,\n  issues: sonarIssues.map(i => ({\n    key: i.key, rule: i.rule, severity: i.severity,\n    component: i.component, project: i.project,\n    line: i.line || i.textRange?.startLine,\n    message: i.message, type: i.type, effort: i.effort || i.debt,\n  })),\n};\n\n// ══════════════════════════════════════════════════════════════\n//  TRIVY — fichier local > webhook\n// ══════════════════════════════════════════════════════════════\nconst trivyData = trivyResult.data;\nconst trivyHasData = trivyData && trivyData.Results && !trivyData._source;\nlet trivyCves = []; let trivyCritical = 0; let trivyHigh = 0;\n\nif (trivyHasData) {\n  (trivyData.Results || []).forEach(r => {\n    (r.Vulnerabilities || []).forEach(v => {\n      if (v.Severity === 'CRITICAL') trivyCritical++;\n      if (v.Severity === 'HIGH') trivyHigh++;\n      if (trivyCves.length < 10 && ['CRITICAL','HIGH'].includes(v.Severity)) {\n        trivyCves.push({ id: v.VulnerabilityID, severity: v.Severity, pkg: v.PkgName, title: (v.Title || '').substring(0, 80) });\n      }\n    });\n  });\n} else {\n  trivyCritical = webhookTrivy.critical || 0;\n  trivyHigh = webhookTrivy.high || 0;\n  trivyCves = webhookTrivy.cves || [];\n}\n\nconst trivy = {\n  status: trivyHasData ? 'COMPLETED' : trivyResult.source === 'local_file' ? 'LOCAL' : (trivyCritical + trivyHigh > 0 ? 'WEBHOOK' : 'UNKNOWN'),\n  critical: trivyCritical, high: trivyHigh,\n  cves_count: trivyCves.length, cves: trivyCves,\n  _source: trivyResult.source,\n  error: trivyHasData ? '' : 'Fallback: ' + trivyResult.source,\n};\n\n// ══════════════════════════════════════════════════════════════\n//  ZAP — fichier local > webhook\n// ══════════════════════════════════════════════════════════════\nconst zapData = zapResult.data;\nconst zapHasData = zapData && zapData.site && !zapData._source;\nlet zapAlerts = []; let zapHigh = 0; let zapMedium = 0; let zapLow = 0;\n\nif (zapHasData) {\n  (zapData.site || []).forEach(s => {\n    (s.alerts || []).forEach(a => {\n      const risk = (a.riskdesc || '').split(' ')[0];\n      if (risk === 'High') zapHigh++;\n      if (risk === 'Medium') zapMedium++;\n      if (risk === 'Low') zapLow++;\n      if (zapAlerts.length < 5 && ['High','Medium'].includes(risk)) {\n        zapAlerts.push({ name: (a.name || '').substring(0, 60), risk, desc: (a.desc || '').substring(0, 80) });\n      }\n    });\n  });\n} else {\n  zapHigh = webhookZap.alerts_high || 0;\n  zapMedium = webhookZap.alerts_medium || 0;\n  zapLow = webhookZap.alerts_low || 0;\n  zapAlerts = webhookZap.alerts || [];\n}\n\nconst zap = {\n  status: zapHasData ? 'COMPLETED' : zapResult.source === 'local_file' ? 'LOCAL' : (zapHigh + zapMedium > 0 ? 'WEBHOOK' : 'UNKNOWN'),\n  alerts_high: zapHigh, alerts_medium: zapMedium, alerts_low: zapLow,\n  alerts_count: zapAlerts.length, alerts: zapAlerts,\n  target_url: webhookZap.target_url || projectConfig.zapTargetUrl || '',\n  _source: zapResult.source,\n  error: zapHasData ? '' : 'Fallback: ' + zapResult.source,\n};\n\n// ══════════════════════════════════════════════════════════════\n//  OWASP — fichier local > webhook\n// ══════════════════════════════════════════════════════════════\nconst owaspData = owaspResult.data;\nconst owaspHasData = owaspData && owaspData.dependencies && !owaspData._source;\nlet owaspCves = []; let owaspCritical = 0; let owaspHigh = 0;\n\nif (owaspHasData) {\n  (owaspData.dependencies || []).forEach(dep => {\n    (dep.vulnerabilities || []).forEach(v => {\n      const sev = (v.severity || '').toUpperCase();\n      if (sev === 'CRITICAL') owaspCritical++;\n      if (sev === 'HIGH') owaspHigh++;\n      if (owaspCves.length < 5 && ['CRITICAL','HIGH'].includes(sev)) {\n        owaspCves.push({ id: v.name, severity: sev, pkg: dep.fileName, desc: (v.description || '').substring(0, 80) });\n      }\n    });\n  });\n} else {\n  owaspCritical = webhookOwasp.critical || 0;\n  owaspHigh = webhookOwasp.high || 0;\n  owaspCves = webhookOwasp.cves || [];\n}\n\nconst owasp = {\n  status: owaspHasData ? 'COMPLETED' : owaspResult.source === 'local_file' ? 'LOCAL' : (owaspCritical + owaspHigh > 0 ? 'WEBHOOK' : 'UNKNOWN'),\n  critical: owaspCritical, high: owaspHigh,\n  cves_count: owaspCves.length, cves: owaspCves,\n  _source: owaspResult.source,\n  error: owaspHasData ? '' : 'Fallback: ' + owaspResult.source,\n};\n\n// ══════════════════════════════════════════════════════════════\n//  TESTS + BUILD + DEPLOY + DOCKER\n// ══════════════════════════════════════════════════════════════\nconst tests = {\n  total: webhookTests.total || 0, failures: webhookTests.failures || 0,\n  skipped: webhookTests.skipped || 0, status: webhookTests.status || 'UNKNOWN',\n  coverage: webhookTests.coverage || '0',\n};\nconst build = {\n  job: jenkins.job || incident.job || '', number: jenkins.build_number || incident.build_number || '',\n  status: jenkins.status || incident.status || 'UNKNOWN', url: jenkins.build_url || '',\n};\nconst deploy = { status: jenkins.deploy?.status || 'UNKNOWN', app_url: jenkins.deploy?.app_url || '' };\nconst docker = { image_tag: jenkins.docker?.image || '', build_status: 'UNKNOWN', push_status: 'UNKNOWN' };\n\n// ══════════════════════════════════════════════════════════════\n//  OUTPUT\n// ══════════════════════════════════════════════════════════════\nreturn [{\n  json: {\n    enrichedData: { sonar, trivy, zap, owasp, tests, build, deploy, docker },\n    incidentUUID,\n    projectConfig,\n  }\n}];"
+      },
+      "id": "98b21a59-a95f-4ab0-a23f-c3ae3a07f3bb",
+      "name": "Merge All Fetched Data1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3024,
+        -1024
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst d = input.enrichedData || {};\n\nconst systemPrompt = `You are an elite Root Cause Analysis expert for CI/CD DevSecOps pipelines.\nAnalyze ALL the structured data and identify the main root cause.\nYour audience is the DEVELOPER who must fix this: be precise, cite files/lines/rules from the data, never invent evidence.\nReturn ONLY valid JSON — no markdown, no backticks, no explanation.\nSCORING RULES:\n- severityScore: integer 1-10 (1=trivial, 10=critical blocker that prevents safe deployment)\n- confidence: float 0.0-1.0 based on how complete the scan data is (missing scans lower confidence)\nFIELD RULES:\n- rootCause: the REAL underlying problem in plain language (not just the symptom)\n- evidence: array of concrete references from the data, format \"SOURCE | file:line | rule/CVE | short fact\"\n- whatHappenedForDev: 2-3 sentences explaining to the developer, in simple words, what broke and why the pipeline reacted this way\nReturn EXACTLY:\n{\"incidentId\":\"<id>\",\"errorType\":\"<type>\",\"rootCause\":\"<cause>\",\"severityScore\":<1-10>,\"affectedComponent\":\"<component>\",\"evidence\":[\"<ref1>\",\"<ref2>\"],\"whatHappenedForDev\":\"<plain explanation>\",\"analysisSummary\":\"<summary>\",\"confidence\":<0.0-1.0>}`;\n\nconst sonarIssuesCriticalFirst = (() => {\n  const all = d.sonar?.issues || [];\n  const crit = all.filter(i => ['BLOCKER','CRITICAL'].includes(i.severity));\n  const rest = all.filter(i => !['BLOCKER','CRITICAL'].includes(i.severity));\n  return JSON.stringify([...crit, ...rest].slice(0, 15));\n})();\n\nconst userContent = `Root Cause Analysis:\nBUILD: ${d.build?.job} #${d.build?.number} — ${d.build?.status}\nTESTS: total=${d.tests?.total}, failures=${d.tests?.failures}, status=${d.tests?.status}, coverage=${d.tests?.coverage}%\nSONAR: quality_gate=${d.sonar?.quality_gate}, bugs=${d.sonar?.bugs}, vulnerabilities=${d.sonar?.vulnerabilities}, code_smells=${d.sonar?.code_smells}\nSONAR ISSUES (${d.sonar?.issues_count} total — showing critical first):\n${sonarIssuesCriticalFirst}\nTRIVY: status=${d.trivy?.status}, critical=${d.trivy?.critical}, high=${d.trivy?.high}, error=\"${d.trivy?.error}\"\nTRIVY CVEs (${d.trivy?.cves_count} total):\n${JSON.stringify(d.trivy?.cves?.slice(0,5) || [])}\nOWASP: status=${d.owasp?.status}, critical=${d.owasp?.critical}, high=${d.owasp?.high}, error=\"${d.owasp?.error}\"\nZAP: status=${d.zap?.status}, alerts_high=${d.zap?.alerts_high}, error=\"${d.zap?.error}\"\nZAP ALERTS (${d.zap?.alerts_count} total):\n${JSON.stringify(d.zap?.alerts?.slice(0,3) || [])}\nDEPLOY: status=${d.deploy?.status}, app_url=${d.deploy?.app_url}\nDOCKER: build=${d.docker?.build_status}, push=${d.docker?.push_status}, image=${d.docker?.image_tag}`;\n\nconst body = {\n  model: 'claude-haiku-4-5-20251001',\n  max_tokens: 4000,\n  temperature: 0,\n  system: systemPrompt,\n  messages: [{ role: 'user', content: userContent }]\n};\n\nreturn [{ json: { ollamaBodyString: JSON.stringify(body) } }];"
+      },
+      "id": "4446324f-546a-471a-bf68-3ac6dc3a0fbd",
+      "name": "Prepare - Root Cause Body1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2752,
+        -1248
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst d = input.enrichedData || {};\n\nconst systemPrompt = `You are a DevSecOps Security Risk expert.\nAnalyze ALL security scan results and provide a complete risk assessment.\nYour audience is the DEVELOPER: for each major vulnerability explain concretely HOW it could be exploited and WHAT the business impact is, so the fix priority is obvious.\nReturn ONLY valid JSON — no markdown, no backticks, no explanation.\nSCORING RULES:\n- riskScore: integer 0-100 (0=no risk, 100=actively exploitable critical vulnerability)\n- riskLevel: one of LOW | MEDIUM | HIGH | CRITICAL, derived from riskScore (0-25=LOW, 26-50=MEDIUM, 51-75=HIGH, 76-100=CRITICAL)\n- safeToApply: true ONLY if no CRITICAL/HIGH CVE is present\n- confidence: 0.0-1.0; lower it when scans returned UNKNOWN status\nFIELD RULES:\n- vulnerabilities: array of objects, one per major finding (max 8), each with:\n  {\"ref\":\"CVE-XXXX or rule key\",\"source\":\"TRIVY|OWASP|ZAP|SONARQUBE\",\"severity\":\"...\",\"component\":\"file/lib/endpoint\",\"exploitScenario\":\"1-2 sentences: how an attacker abuses this\",\"impact\":\"what happens if exploited\",\"fixHint\":\"the single most effective fix action\"}\nReturn EXACTLY:\n{\"incidentId\":\"<id>\",\"riskLevel\":\"<LEVEL>\",\"riskScore\":<0-100>,\"vulnerabilities\":[{...}],\"safeToApply\":<bool>,\"securitySummary\":\"<summary>\",\"confidence\":<0.0-1.0>}`;\n\nconst sonarVulnsCriticalFirst = (() => {\n  const all = (d.sonar?.issues || []).filter(i => i.type === 'VULNERABILITY');\n  const crit = all.filter(i => ['BLOCKER','CRITICAL'].includes(i.severity));\n  const rest = all.filter(i => !['BLOCKER','CRITICAL'].includes(i.severity));\n  return JSON.stringify([...crit, ...rest].slice(0, 10));\n})();\n\nconst userContent = `Security Risk Analysis:\nBUILD: ${d.build?.job} #${d.build?.number} — ${d.build?.status}\nTRIVY CONTAINER SCAN:\n  status: ${d.trivy?.status}, critical: ${d.trivy?.critical}, high: ${d.trivy?.high}\n  error: \"${d.trivy?.error}\"\n  CVEs (${d.trivy?.cves_count}):\n  ${JSON.stringify(d.trivy?.cves?.slice(0,10) || [])}\nOWASP DEPENDENCY CHECK:\n  status: ${d.owasp?.status}, critical: ${d.owasp?.critical}, high: ${d.owasp?.high}\n  CVEs: ${JSON.stringify(d.owasp?.cves?.slice(0,5) || [])}\nZAP DAST SCAN:\n  status: ${d.zap?.status}, alerts_high: ${d.zap?.alerts_high}, alerts_medium: ${d.zap?.alerts_medium}\n  target: ${d.zap?.target_url}, error: \"${d.zap?.error}\"\n  Alerts: ${JSON.stringify(d.zap?.alerts?.slice(0,5) || [])}\nSONAR SECURITY:\n  vulnerabilities: ${d.sonar?.vulnerabilities}, quality_gate: ${d.sonar?.quality_gate}\n  Security Issues (critical first): ${sonarVulnsCriticalFirst}`;\n\nconst body = {\n  model: 'claude-haiku-4-5-20251001',\n  max_tokens: 4000,\n  temperature: 0,\n  system: systemPrompt,\n  messages: [{ role: 'user', content: userContent }]\n};\n\nreturn [{ json: { ollamaBodyString: JSON.stringify(body) } }];"
+      },
+      "id": "af03e015-e642-492a-9a2a-d5f99818b750",
+      "name": "Prepare - Security Body1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2752,
+        -912
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst d = input.enrichedData || {};\n\nconst systemPrompt = `You are a DevSecOps Remediation Engineer.\nAnalyze the pipeline data and provide ONE remediation plan covering the most critical issues.\nABSOLUTE RULES:\n- Return ONLY a single raw JSON object\n- NO array, NO markdown, NO backticks, NO code blocks, NO escaped JSON strings\n- Start your response with { and end with }\n- Each fixStep is a short actionable command (max 120 chars)\n- Maximum 4 fixSteps\nautoFixable DECISION RULE (critical — this drives the platform recommendation):\n- Set autoFixable=true ONLY if ALL issues can be fixed by editing source files without architectural changes, new dependencies, or secret/infra migration.\n- Set autoFixable=false if any fix requires: credential externalization to a vault, new infrastructure, database migration, or breaking API changes.\n- Be conservative: when in doubt, autoFixable=false.\nRETURN EXACTLY THIS STRUCTURE:\n{\"incidentId\":\"string\",\"fixDescription\":\"string\",\"fixSteps\":[\"step1\",\"step2\",\"step3\"],\"codePatch\":\"\",\"autoFixable\":false,\"confidence\":0.9}`;\n\nconst criticalFirst = (() => {\n  const all = d.sonar?.issues || [];\n  const crit = all.filter(i => ['BLOCKER','CRITICAL'].includes(i.severity));\n  return JSON.stringify([...crit, ...all].slice(0, 10));\n})();\n\nconst userContent = `Remediation Plan for DevSecOps Pipeline:\nBUILD: ${d.build?.job || 'unknown'} #${d.build?.number || 'N/A'} — ${d.build?.status || 'UNKNOWN'}\nTESTS: total=${d.tests?.total || 0}, failures=${d.tests?.failures || 0}, status=${d.tests?.status || 'UNKNOWN'}\nSONAR: quality_gate=${d.sonar?.quality_gate || 'UNKNOWN'}, bugs=${d.sonar?.bugs || 0}, vulnerabilities=${d.sonar?.vulnerabilities || 0}\nIssues (critical first): ${criticalFirst}\nTRIVY: status=${d.trivy?.status || 'UNKNOWN'}, critical=${d.trivy?.critical || 0}, high=${d.trivy?.high || 0}, error=\"${d.trivy?.error || ''}\"\nCVEs: ${JSON.stringify(d.trivy?.cves?.slice(0,3) || [])}\nOWASP: status=${d.owasp?.status || 'UNKNOWN'}, error=\"${d.owasp?.error || ''}\"\nZAP: status=${d.zap?.status || 'UNKNOWN'}, alerts_high=${d.zap?.alerts_high || 0}, error=\"${d.zap?.error || ''}\"\nAlerts: ${JSON.stringify(d.zap?.alerts?.slice(0,3) || [])}\nDEPLOY: status=${d.deploy?.status || 'UNKNOWN'}, app_url=${d.deploy?.app_url || ''}\nIdentify the most critical issues and provide exact fix steps with commands.`;\n\nconst body = {\n  model: 'claude-haiku-4-5-20251001',\n  max_tokens: 2500,\n  temperature: 0,\n  system: systemPrompt,\n  messages: [{ role: 'user', content: userContent }]\n};\n\nreturn [{ json: { ollamaBodyString: JSON.stringify(body) } }];"
+      },
+      "id": "3c68d111-649e-4410-9b96-8638c470a9e9",
+      "name": "Prepare - Remediation Body1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2752,
+        -576
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst content = response.content?.[0]?.text || '';\nif (!content) return [{ json: { incidentId:'empty', errorType:'NO_RESPONSE', rootCause:'Agent returned empty response', severityScore:0, affectedComponent:'AI Agent', analysisSummary:'No analysis available', confidence:0.0 } }];\nlet clean = content.replace(/```json\\s*/gi,'').replace(/```\\s*/gi,'').trim();\nconst start = clean.indexOf('{'); const end = clean.lastIndexOf('}');\nif (start===-1||end===-1) return [{ json: { incidentId:'no-json', errorType:'PARSE_ERROR', rootCause:clean.substring(0,300), severityScore:3, affectedComponent:'Unknown', analysisSummary:clean.substring(0,500), confidence:0.3 } }];\ntry { return [{ json: JSON.parse(clean.substring(start,end+1)) }]; }\ncatch(e) { return [{ json: { incidentId:'parse-failed', errorType:'JSON_ERROR', rootCause:clean.substring(0,300), severityScore:3, affectedComponent:'Unknown', analysisSummary:clean.substring(0,500), confidence:0.3 } }]; }"
+      },
+      "id": "40b0abe2-a12c-42f3-a995-3ce7f98d00ba",
+      "name": "Parse - Root Cause Output1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2112,
+        -1248
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst content = response.content?.[0]?.text || '';\nif (!content) return [{ json: { incidentId:'empty', riskLevel:'UNKNOWN', riskScore:0, vulnerabilities:[], safeToApply:false, securitySummary:'No security analysis', confidence:0.0 } }];\nlet clean = content.replace(/```json\\s*/gi,'').replace(/```\\s*/gi,'').trim();\nconst start = clean.indexOf('{'); const end = clean.lastIndexOf('}');\nif (start===-1||end===-1) return [{ json: { incidentId:'no-json', riskLevel:'UNKNOWN', riskScore:0, vulnerabilities:[], safeToApply:false, securitySummary:clean.substring(0,500), confidence:0.3 } }];\ntry { return [{ json: JSON.parse(clean.substring(start,end+1)) }]; }\ncatch(e) { return [{ json: { incidentId:'parse-failed', riskLevel:'UNKNOWN', riskScore:0, vulnerabilities:[], safeToApply:false, securitySummary:clean.substring(0,500), confidence:0.3 } }]; }"
+      },
+      "id": "39093fbb-9145-4c61-b9ca-e43ad800c68a",
+      "name": "Parse - Security Output1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2112,
+        -912
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst content = response.content?.[0]?.text || '';\n\nconst fallback = (msg) => [{ json: {\n  incidentId: 'parse-issue',\n  fixDescription: msg.substring(0, 300),\n  fixSteps: [msg.substring(0, 150)],\n  codePatch: '',\n  autoFixable: false,\n  confidence: 0.3\n}}];\n\nif (!content) return [{ json: { incidentId:'empty', fixDescription:'No remediation available', fixSteps:[], codePatch:'', autoFixable:false, confidence:0.0 } }];\n\nlet clean = content.replace(/```json\\s*/gi,'').replace(/```\\s*/gi,'').trim();\n\n// Cas 1 — Claude retourne un array → prendre le 1er élément\nconst arrStart = clean.indexOf('[');\nconst objStart = clean.indexOf('{');\n\nif (arrStart !== -1 && (objStart === -1 || arrStart < objStart)) {\n  const arrEnd = clean.lastIndexOf(']');\n  try {\n    const arr = JSON.parse(clean.substring(arrStart, arrEnd + 1));\n    const first = Array.isArray(arr) && arr.length ? arr[0] : null;\n    if (first && first.fixDescription) return [{ json: first }];\n  } catch(e) {}\n}\n\n// Cas 2 — objet JSON standard\nconst objEnd = clean.lastIndexOf('}');\nif (objStart === -1 || objEnd === -1) return fallback(clean);\n\ntry {\n  const parsed = JSON.parse(clean.substring(objStart, objEnd + 1));\n  // Cas 3 — JSON escapé dans fixDescription (double encodage)\n  if (typeof parsed.fixDescription === 'string' && parsed.fixDescription.trim().startsWith('{')) {\n    try {\n      const inner = JSON.parse(parsed.fixDescription);\n      if (inner.fixDescription) return [{ json: inner }];\n    } catch(e) {}\n  }\n  return [{ json: parsed }];\n} catch(e) {\n  return fallback(clean);\n}"
+      },
+      "id": "9da5af4d-a1ee-4f8f-a342-a2d6222c3502",
+      "name": "Parse - Remediation Output1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2112,
+        -576
+      ]
+    },
+    {
+      "parameters": {
+        "numberInputs": 4
+      },
+      "id": "23d1f316-6152-4e6f-8ec5-e7ebc7f41290",
+      "name": "Merge Agent Reports1",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -1792,
+        -912
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst rootCause   = items[0]?.json || {};\nconst security    = items[1]?.json || {};\nconst remediation = items[2]?.json || {};\nconst devGuide    = items[3]?.json || {};\nconst incident    = $('Extract Project Config1').first().json;\nconst body = {\n  type: 'combined',\n  projectId: incident.projectId,\n  rawData: { rootCause, security, remediation, developerGuide: devGuide },\n  securityScore: security.riskScore || 0,\n  riskLevel: security.riskLevel || 'LOW'\n};\nreturn [{ json: { ...body, bodyString: JSON.stringify(body) } }];"
+      },
+      "id": "9098dab0-773e-4943-b3ce-d1d75022759d",
+      "name": "Prepare Save Body1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1632,
+        -1120
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://172.31.172.61:3001/api/reports",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json.bodyString }}",
+        "options": {}
+      },
+      "id": "a91ea5b4-0755-4b02-9722-6a249c0d0cdb",
+      "name": "Save Agent Reports to Backend1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -1392,
+        -1120
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nif (items.length < 4) {\n  throw new Error(`Le Judge attend 4 résultats agents, reçu ${items.length}.`);\n}\n\nconst rootCause   = items[0]?.json ?? {};\nconst security    = items[1]?.json ?? {};\nconst remediation = items[2]?.json ?? {};\nconst devGuide    = items[3]?.json ?? {};\n\nconst incidentNode    = $('Extract Project Config1');\nconst fetchedDataNode = $('Merge All Fetched Data1');\nif (!incidentNode.isExecuted)    throw new Error('Node \"Extract Project Config\" non exécuté.');\nif (!fetchedDataNode.isExecuted) throw new Error('Node \"Merge All Fetched Data\" non exécuté.');\n\nconst incident    = incidentNode.first().json ?? {};\nconst fetchedData = fetchedDataNode.first().json ?? {};\nconst enriched    = fetchedData.enrichedData ?? {};\n\n// ── Comptage COMPLET (aucune troncature) ──\nconst cves         = enriched.trivy?.cves ?? [];\nconst owaspCves    = enriched.owasp?.cves ?? [];\nconst criticalCves = cves.filter(c => c.severity === 'CRITICAL').length\n                   + owaspCves.filter(c => c.severity === 'CRITICAL').length;\nconst highCves     = cves.filter(c => c.severity === 'HIGH').length\n                   + owaspCves.filter(c => c.severity === 'HIGH').length;\n\nconst sonarIssues   = enriched.sonar?.issues ?? [];\nconst blockers      = sonarIssues.filter(i => i.severity === 'BLOCKER').length;\nconst criticalVulns = sonarIssues.filter(i => i.severity === 'CRITICAL' && i.type === 'VULNERABILITY').length;\nconst bugs          = sonarIssues.filter(i => i.type === 'BUG').length;\nconst codeIssues    = sonarIssues.filter(i => ['BUG', 'VULNERABILITY'].includes(i.type)).length;\n\nconst autoFixable     = remediation.autoFixable === true;\nconst remediationPlan = remediation.fixSteps ?? remediation.steps ?? [];\n\n// ── LOGIQUE DE RECOMMANDATION — SÉCURITÉ D'ABORD ──\nlet recommendation, requiresApproval = false, reasonCode, reasonText;\n\nif (criticalCves > 0) {\n  recommendation = 'BLOCK';\n  reasonCode     = 'CRITICAL_CVE';\n  reasonText     = `${criticalCves} CVE critique(s) détectée(s) dans le conteneur ou les dépendances. `\n                 + `Déploiement à risque : remédiation manuelle requise avant tout merge.`;\n}\nelse if (blockers > 0 || criticalVulns > 0 || bugs > 0) {\n  if (autoFixable) {\n    recommendation   = 'FIX_PROPOSED';\n    requiresApproval = true;\n    reasonCode       = 'CODE_FIX_AVAILABLE';\n    reasonText       = `${blockers} blocker(s), ${criticalVulns} vulnérabilité(s) critique(s), ${bugs} bug(s) `\n                     + `détecté(s) dans le code source. L'agent IA propose une correction automatique. `\n                     + `Validation développeur requise avant génération de la Pull Request.`;\n  } else {\n    recommendation   = 'FIX_PROPOSED';\n    requiresApproval = true;\n    reasonCode       = 'MANUAL_FIX_RECOMMENDED';\n    reasonText       = `${blockers} blocker(s), ${criticalVulns} vulnérabilité(s) critique(s), ${bugs} bug(s) `\n                     + `détecté(s). L'agent estime la correction COMPLEXE (autoFixable=false). `\n                     + `Un patch IA est proposé mais une revue manuelle approfondie est fortement conseillée.`;\n  }\n}\nelse {\n  recommendation = 'NOTIFY_ONLY';\n  reasonCode     = 'NO_CRITICAL_ISSUE';\n  reasonText     = `Aucun problème critique de sécurité ou de code détecté. `\n                 + `${codeIssues} issue(s) mineure(s) — aucune action automatique requise.`;\n}\n\n// ── Score de sécurité (0 = pire, 100 = sain) ──\nconst securityScore = Math.max(0, 100\n  - criticalCves * 30\n  - highCves     * 10\n  - blockers     * 12\n  - criticalVulns * 8\n  - bugs         * 5);\n\nconst riskLevel =\n  criticalCves > 0 || blockers > 2 ? 'critical'\n  : blockers > 0 || criticalVulns > 0 ? 'high'\n  : bugs > 0 ? 'medium'\n  : 'low';\n\n// ── Payload pour le Judge IA (validation + rédaction, PAS décision) ──\nconst judgePayload = {\n  incidentId:   incident.incidentId ?? null,\n  job:          incident.jenkins?.job          ?? incident.job          ?? null,\n  build_number: incident.jenkins?.build_number ?? incident.build_number ?? null,\n  status:       incident.jenkins?.status       ?? incident.status       ?? 'UNKNOWN',\n\n  enrichedData:         enriched,\n  rootCauseAnalysis:    rootCause,\n  securityRiskAnalysis: security,\n  remediationAnalysis:  remediation,\n  developerGuide: {\n    summaryForDeveloper: devGuide.summaryForDeveloper ?? '',\n    quickWins:           devGuide.quickWins ?? [],\n    fixOrder:            devGuide.fixOrder ?? [],\n    totalEstimatedMinutes: devGuide.totalEstimatedMinutes ?? 0,\n    issues: (devGuide.issues ?? []).map(i => ({\n      id: i.id, source: i.source, severity: i.severity, title: i.title,\n      file: i.file, line: i.line, rule: i.rule,\n      problem: i.problem, howToFix: i.howToFix, verification: i.verification,\n      estimatedEffortMinutes: i.estimatedEffortMinutes, priority: i.priority\n    })),\n  },\n\n  recommendation,\n  requiresApproval,\n  reasonCode,\n  reasonText,\n  securityScore,\n  riskLevel,\n\n  evidence: {\n    criticalCves, highCves,\n    sonarBlockers: blockers,\n    sonarCriticalVulns: criticalVulns,\n    sonarBugs: bugs,\n    totalCodeIssues: codeIssues,\n    autoFixable,\n    remediationStepsCount: Array.isArray(remediationPlan) ? remediationPlan.length : 0,\n  },\n\n  mandate: `The deterministic governance layer has decided: recommendation=\"${recommendation}\" `\n         + `(reason: ${reasonCode}). Your job is NOT to change this decision. Your job is to: `\n         + `(1) write a clear human-readable justification, (2) summarize what the developer should `\n         + `review before approving. Use the 'developerGuide' section to make 'developerActions' concrete (files, lines, commands). Only flag if you detect a critical risk the data missed.`,\n};\n\nreturn [{ json: { judgeInput: JSON.stringify(judgePayload) } }];"
+      },
+      "id": "54353865-c5c2-4667-aa00-8f2e804230bd",
+      "name": "Prepare - Judge Body1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1632,
+        -784
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst content = response.content?.[0]?.text || '';\nlet parsed;\ntry {\n  let cleaned = content.trim();\n  const firstBrace = cleaned.indexOf('{');\n  const lastBrace = cleaned.lastIndexOf('}');\n  if (firstBrace !== -1 && lastBrace !== -1) cleaned = cleaned.substring(firstBrace, lastBrace+1);\n  cleaned = cleaned.replace(/```json\\n?/g,'').replace(/```\\n?/g,'');\n  parsed = JSON.parse(cleaned);\n} catch(e) {\n  const extract = (key) => { const m = content.match(new RegExp('\"'+key+'\"\\\\s*:\\\\s*\"([^\"]*)\"')); return m?m[1]:null; };\n  const extractNum = (key) => { const m = content.match(new RegExp('\"'+key+'\"\\\\s*:\\\\s*(\\\\d+)')); return m?parseInt(m[1]):0; };\n  parsed = { decision:extract('decision')||'NOTIFY_ONLY', confidenceScore:extractNum('confidenceScore'), securityLevel:extract('securityLevel')||'LOW', decisionReason:'Parse error: '+e.message, errorsSummary:extract('errorsSummary')||'', cicdIssues:'', securityIssues:'', agentActions:'', developerActions:'', recommendations:'' };\n}\nif (parsed.reasoning && !parsed.decisionReason) parsed.decisionReason = parsed.reasoning;\nreturn [{ json: parsed }];"
+      },
+      "id": "d019e133-2e8e-435d-8a78-fc9154e1f113",
+      "name": "Judge - Parse Output1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -992,
+        -784
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const judge    = $('Judge - Parse Output1').first().json;\nconst incident = $('Extract Project Config1').first().json;\nconst enriched = $('Merge All Fetched Data1').first().json.enrichedData || {};\n\nconst decision      = (judge.decision || 'NOTIFY_ONLY').toUpperCase();\nconst securityLevel = (judge.securityLevel || 'LOW').toUpperCase();\nconst projectId     = incident.projectId || null;\n\nconst decisionToStatus = {\n  'FIX_PROPOSED': 'analyzed',\n  'BLOCK':        'blocked',\n  'NOTIFY_ONLY':  'completed',\n  'AUTO_FIX':     'analyzed',\n};\nconst statusForBackend = decisionToStatus[decision] || 'analyzed';\n\nconst computeScore = (level, dec) => {\n  if (level === 'CRITICAL' || dec === 'BLOCK') return 10;\n  if (level === 'HIGH')                         return 30;\n  if (level === 'MEDIUM')                       return 60;\n  if (level === 'LOW')                          return 90;\n  return 75;\n};\n\nconst aiSummary = JSON.stringify({\n  build:  enriched.build?.number,\n  job:    enriched.build?.job,\n  status: enriched.build?.status,\n  ...judge,\n});\n\nconst incidentUUID = $('Prepare Fetch URLs1').first().json.incidentUUID || null;\n\n// ── Génération du HTML de l'email développeur ──\nconst devGuide = $('Parse - Dev Guide Output').first()?.json || {};\nconst esc = (s) => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');\nconst sevColor = (s) => ({BLOCKER:'#d32f2f',CRITICAL:'#d32f2f',HIGH:'#f57c00',MAJOR:'#f57c00',MEDIUM:'#fbc02d'}[s] || '#757575');\nconst issuesRows = (devGuide.issues || []).map(i => `\n  <tr>\n    <td style=\"padding:6px;border:1px solid #ddd;text-align:center;\"><b>${esc(i.priority)}</b></td>\n    <td style=\"padding:6px;border:1px solid #ddd;\"><span style=\"color:${sevColor(i.severity)};font-weight:bold;\">${esc(i.severity)}</span><br><small>${esc(i.source)}</small></td>\n    <td style=\"padding:6px;border:1px solid #ddd;\"><b>${esc(i.title)}</b><br><code>${esc(i.file)}${i.line ? ':' + esc(i.line) : ''}</code><br><small>${esc(i.rule)}</small></td>\n    <td style=\"padding:6px;border:1px solid #ddd;\">${esc(i.problem)}<br><i style=\"color:#b71c1c;\">${esc(i.whyItMatters)}</i></td>\n    <td style=\"padding:6px;border:1px solid #ddd;\"><ol style=\"margin:0;padding-left:16px;\">${(i.howToFix||[]).map(s => '<li>'+esc(s)+'</li>').join('')}</ol><small><b>Vérifier :</b> <code>${esc(i.verification)}</code> — ~${esc(i.estimatedEffortMinutes)} min</small></td>\n  </tr>`).join('');\nconst quickWins = (devGuide.quickWins || []).length\n  ? '<p><b>⚡ Quick wins (&lt;15 min) :</b> ' + devGuide.quickWins.map(esc).join(', ') + '</p>' : '';\nconst emailDevSection = (devGuide.issues || []).length ? `\n  <h3>🛠️ Guide de correction développeur (${devGuide.issues.length} problème(s) — ~${esc(devGuide.totalEstimatedMinutes)} min)</h3>\n  <p>${esc(devGuide.summaryForDeveloper)}</p>\n  ${quickWins}\n  <table style=\"border-collapse:collapse;font-size:12px;width:100%;\">\n    <tr style=\"background:#263238;color:#fff;\">\n      <th style=\"padding:6px;border:1px solid #ddd;\">#</th>\n      <th style=\"padding:6px;border:1px solid #ddd;\">Sévérité</th>\n      <th style=\"padding:6px;border:1px solid #ddd;\">Problème</th>\n      <th style=\"padding:6px;border:1px solid #ddd;\">Explication &amp; risque</th>\n      <th style=\"padding:6px;border:1px solid #ddd;\">Comment corriger</th>\n    </tr>\n    ${issuesRows}\n  </table>` : '<p><i>Aucun guide développeur généré pour ce build.</i></p>';\n\nreturn [{\n  json: {\n    emailDevSection,\n    incidentUUID,\n    type:            'combined',\n    projectId,\n    aiSummary,\n    statusForBackend,\n    rawData: {\n      rootCause:    $('Parse - Root Cause Output1').first()?.json || {},\n      security:     $('Parse - Security Output1').first()?.json   || {},\n      remediation:  $('Parse - Remediation Output1').first()?.json || {},\n      developerGuide: $('Parse - Dev Guide Output').first()?.json || {},\n      enrichedData: enriched,\n    },\n    securityScore: computeScore(securityLevel, decision),\n    riskLevel:     securityLevel.toLowerCase(),\n    decision,\n  }\n}];"
+      },
+      "id": "236787fc-65f4-47d4-b4e4-522ee1928c6e",
+      "name": "Prepare Final Report1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -752,
+        -784
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "9adcV31eaIgJyMR0",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/9adcV31eaIgJyMR0",
+          "cachedResultName": "WF2 - Git Patch & PR v4"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "incidentData": "={{ JSON.stringify($json) }}"
+          },
+          "matchingColumns": [
+            "incidentData"
+          ],
+          "schema": [
+            {
+              "id": "incidentData",
+              "displayName": "incidentData",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "id": "e9670dd3-8409-4c67-8fa3-5a0e078a3c54",
+      "name": "Call WF2 - Git Patch & PR1",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        -800,
+        368
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Judge - Parse Output1').first().json.decision }}",
+                    "rightValue": "BLOCK",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "b518c443-d4cd-4043-87b3-19c0ad45456f"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "732de8e1-fa2f-4dd0-b876-1cde2b153d44",
+                    "leftValue": "={{ $('Judge - Parse Output1').first().json.decision }}",
+                    "rightValue": "AUTO_FIX",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "73466d9b-c29c-471b-80c8-3e7905a6a463",
+                    "leftValue": "={{ $('Judge - Parse Output1').first().json.decision }}",
+                    "rightValue": "FIX_PROPOSED",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "39b2f10d-432d-4135-b8ab-eda6f7f3415f",
+                    "leftValue": "={{ $('Judge - Parse Output1').first().json.decision }}",
+                    "rightValue": "NOTIFY_ONLY",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        -1424,
+        368
+      ],
+      "id": "0972f5d6-bfed-4fee-ad6e-4b020fd362b9",
+      "name": "Route Decision1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const incident = $('Extract Project Config1').first().json;\nconst jenkins  = incident.jenkins || {};\nconst config   = incident.projectConfig || {};\nconst reports  = jenkins.reports || {};\n\n// Cherche le chemin à TOUS les endroits possibles, dans l'ordre de priorité :\n// 1. Nouveau format Jenkins (reports.trivyPath)\n// 2. Ancien format Jenkins (trivy.report_path)\n// 3. Config stockée en base pour ce projet\n// 4. Reconstruction manuelle si on a juste le nom du job + numéro de build\nconst filePath =\n  reports.trivyPath ||\n  (jenkins.trivy && jenkins.trivy.report_path) ||\n  config.trivyReportPath ||\n  (jenkins.job && jenkins.build_number\n    ? `/home/node/.n8n-files/reports/${jenkins.job}/${jenkins.build_number}/trivy-report.json`\n    : '');\n\nreturn [{ json: { filePath, tool: 'trivy' } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -4912,
+        -1120
+      ],
+      "id": "c5ff43e8-d366-41d3-9854-cee33d11c393",
+      "name": "Fetch Trivy Report"
+    },
+    {
+      "parameters": {
+        "jsCode": "const incident = $('Extract Project Config1').first().json;\nconst jenkins  = incident.jenkins || {};\nconst config   = incident.projectConfig || {};\nconst reports  = jenkins.reports || {};\n\nconst filePath =\n  reports.zapPath ||\n  (jenkins.zap && jenkins.zap.report_path) ||\n  config.zapReportPath ||\n  (jenkins.job && jenkins.build_number\n    ? `/home/node/.n8n-files/reports/${jenkins.job}/${jenkins.build_number}/zap-report.json`\n    : '');\n\nreturn [{ json: { filePath, tool: 'zap' } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -4336,
+        -1072
+      ],
+      "id": "c8fb5b94-29ba-4d8d-9ccf-eb811aea7a21",
+      "name": "Fetch ZAP Report"
+    },
+    {
+      "parameters": {
+        "fileSelector": "={{ $json.filePath }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1.1,
+      "position": [
+        -4736,
+        -1120
+      ],
+      "id": "995635f2-bb4e-4a38-b695-605749d829fa",
+      "name": "Fetch Trivy Report4",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "fileSelector": "={{ $json.filePath }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1.1,
+      "position": [
+        -4176,
+        -1072
+      ],
+      "id": "a8efdf03-3344-46eb-8034-758c79c8b944",
+      "name": "Fetch ZAP Report3",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "fileSelector": "={{ $json.filePath }}",
+        "options": {
+          "dataPropertyName": "data"
+        }
+      },
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1.1,
+      "position": [
+        -3600,
+        -1072
+      ],
+      "id": "73f3f8fc-dac0-4c5e-9ae3-271aea8cd520",
+      "name": "Fetch OWASP Report",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "operation": "fromJson",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        -4560,
+        -1136
+      ],
+      "id": "75568c01-b436-43d3-8129-0734c997034c",
+      "name": "Parse Trivy JSON1",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const incident = $('Extract Project Config1').first().json;\nconst jenkins  = incident.jenkins || {};\nconst config   = incident.projectConfig || {};\nconst reports  = jenkins.reports || {};\n\nconst filePath =\n  reports.owaspPath ||\n  (jenkins.owasp && jenkins.owasp.report_path) ||\n  config.owaspReportPath ||\n  (jenkins.job && jenkins.build_number\n    ? `/home/node/.n8n-files/reports/${jenkins.job}/${jenkins.build_number}/dependency-check-report.json`\n    : '');\n\nreturn [{ json: { filePath, tool: 'owasp' } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3760,
+        -1072
+      ],
+      "id": "fe0aa303-f4dd-430e-8f61-fb0b109da615",
+      "name": "Fetch OWASP Report3"
+    },
+    {
+      "parameters": {
+        "operation": "fromJson",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        -3984,
+        -1072
+      ],
+      "id": "71317e3b-d65c-4ca5-8fd2-8facf59f6065",
+      "name": "Parse ZAP JSON1",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "fromJson",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        -3408,
+        -1072
+      ],
+      "id": "1c1762c1-37a0-4b70-a5b2-5124108236b3",
+      "name": "Parse OWASP JSON1",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "20b4e70e-a5fc-4e10-a72d-3424538c499f",
+              "leftValue": "={{ $json.body?.event \n\n $json.event }}",
+              "rightValue": "pr_validation",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -7040,
+        -1072
+      ],
+      "id": "6fdf3a03-9199-4733-b137-02233951dc4c",
+      "name": "Is PR Validation1"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "4JiOKpyHhx1znTYw",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/4JiOKpyHhx1znTYw",
+          "cachedResultName": "WF3 - Post-PR Validation v4"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "payload": "={{ JSON.stringify($json.body || $json) }}"
+          },
+          "matchingColumns": [
+            "payload"
+          ],
+          "schema": [
+            {
+              "id": "payload",
+              "displayName": "payload",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "id": "cb4767b6-dffa-4145-bd62-0ed939cc0be3",
+      "name": "Call WF3 - Post-PR Validation1",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        -6704,
+        -1392
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "amrisouhail96@gmail.com",
+        "toEmail": "souhaiel.amri@esprit.tn",
+        "subject": "=={{ '🔔 Approbation requise — ' + $('Judge - Parse Output1').first().json.securityLevel + ' — ' + $('Extract Project Config1').first().json.jenkins.job }}",
+        "html": "=={{ \n'<h2>🔔 Analyse IA du pipeline — action requise</h2>' +\n'<p><b>Projet :</b> ' + $('Extract Project Config1').first().json.jenkins.job + '</p>' +\n'<p><b>Build :</b> #' + $('Extract Project Config1').first().json.jenkins.build_number + '</p>' +\n'<p><b>Décision :</b> ' + $('Judge - Parse Output1').first().json.decision + ' — <b>Niveau de risque :</b> ' + $('Judge - Parse Output1').first().json.securityLevel + ' — <b>Confiance IA :</b> ' + $('Judge - Parse Output1').first().json.confidenceScore + '%</p>' +\n'<h3>Résumé</h3>' +\n'<p>' + ($('Judge - Parse Output1').first().json.justification || $('Judge - Parse Output1').first().json.decisionReason || '') + '</p>' +\n($('Prepare Final Report1').first().json.emailDevSection || '') +\n'<h3>Actions recommandées par le Judge</h3>' +\n'<p>' + ($('Judge - Parse Output1').first().json.developerActions || 'Voir la plateforme pour le détail') + '</p>' +\n'<hr>' +\n'<p>👉 <a href=\"http://172.31.172.61:4200/incidents/' + $('Prepare Fetch URLs1').first().json.incidentUUID + '\">Ouvrir sur la plateforme DevSecOps AI</a></p>' +\n'<p style=\"color:#888;font-size:11px;\">Approuvez ou rejetez directement depuis la plateforme.</p>'\n}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        160,
+        -848
+      ],
+      "id": "70e2b612-7133-4a39-b141-e66059e73b09",
+      "name": "Send an Email1",
+      "webhookId": "bbfe92dd-7a70-423d-a499-202aac1cb526",
+      "credentials": {
+        "smtp": {
+          "id": "Mr2rXybH3Y1xw2ge",
+          "name": "Gmail SMTP DevSecOps"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "59066712-0591-4111-a692-6a8576fed5ad",
+              "leftValue": "={{ $('Judge - Parse Output1').first().json.decision }}",
+              "rightValue": "FIX_PROPOSED",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -80,
+        -800
+      ],
+      "id": "3ee393dd-4f66-4818-9212-871d8693ac3a",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "=http://172.31.172.61:3001/api/incidents/{{ $(\"Prepare Final Report1\").first().json.incidentUUID }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ \"aiAnalysis\": $('Prepare Final Report1').first().json.aiSummary, \"status\": $('Prepare Final Report1').first().json.statusForBackend }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -288,
+        -800
+      ],
+      "id": "cd5debe9-0a32-4b6a-881d-282428a5c968",
+      "name": "Update Incident AI Analysis1"
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "=http://172.31.172.61:3001/api/incidents/{{ $(\"Send Raw Incident to Backend1\").first().json.id }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={ \"status\": \"failed\" }",
+        "options": {},
+        "infoMessage": "This node updates the backend incident status when saving the final decision fails, marking the incident as 'decision_save_failed' with the error details."
+      },
+      "id": "cee18c7f-f726-4693-a27b-d69e4fe88aeb",
+      "name": "Backend Error - Decision Save Failed1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -400,
+        -560
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "=http://172.31.172.61:3001/api/incidents/{{ $(\"Send Raw Incident to Backend1\").first().json.id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ \"status\": $('Prepare Final Report1').first().json.statusForBackend, \"aiAnalysis\": $('Prepare Final Report1').first().json.aiSummary, \"metadata\": $('Prepare Final Report1').first().json.rawData }) }}",
+        "options": {}
+      },
+      "id": "89c56efc-51b9-4df8-9be5-c5801a6de4ef",
+      "name": "Save Final Decision to Backend1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -512,
+        -784
+      ],
+      "onError": "continueErrorOutput"
+    }
+  ],
+  "connections": {
+    "Incident Webhook": {
+      "main": [
+        [
+          {
+            "node": "Is PR Validation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch3": {
+      "main": [
+        [
+          {
+            "node": "Normalize Incident Payload",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Normalize Incident Payload",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Normalize Incident Payload",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Normalize Incident Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Incident Payload": {
+      "main": [
+        [
+          {
+            "node": "Lookup Project",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lookup Project": {
+      "main": [
+        [
+          {
+            "node": "Extract Project Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Project Config": {
+      "main": [
+        [
+          {
+            "node": "Send Raw Incident to Backend",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Fetch URLs": {
+      "main": [
+        [
+          {
+            "node": "Fetch SonarQube Issues",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch SonarQube Issues": {
+      "main": [
+        [
+          {
+            "node": "Fetch Trivy Report1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge All Fetched Data": {
+      "main": [
+        [
+          {
+            "node": "Prepare - Root Cause Body",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Prepare - Security Body",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Prepare - Remediation Body",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare - Root Cause Body": {
+      "main": [
+        [
+          {
+            "node": "Route cause Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare - Security Body": {
+      "main": [
+        [
+          {
+            "node": "Security Risk Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare - Remediation Body": {
+      "main": [
+        [
+          {
+            "node": "Remediation Feasibility ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route cause Analysis": {
+      "main": [
+        [
+          {
+            "node": "Parse - Root Cause Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Security Risk Analysis": {
+      "main": [
+        [
+          {
+            "node": "Parse - Security Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Remediation Feasibility ": {
+      "main": [
+        [
+          {
+            "node": "Parse - Remediation Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse - Root Cause Output": {
+      "main": [
+        [
+          {
+            "node": "Merge Agent Reports",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse - Security Output": {
+      "main": [
+        [
+          {
+            "node": "Merge Agent Reports",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Parse - Remediation Output": {
+      "main": [
+        [
+          {
+            "node": "Merge Agent Reports",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Merge Agent Reports": {
+      "main": [
+        [
+          {
+            "node": "Prepare Save Body",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Prepare - Judge Body",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Save Body": {
+      "main": [
+        [
+          {
+            "node": "Save Agent Reports to Backend",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare - Judge Body": {
+      "main": [
+        [
+          {
+            "node": "Judge - HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Judge - HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Judge - Parse Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Judge - Parse Output": {
+      "main": [
+        [
+          {
+            "node": "Prepare Final Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Final Report": {
+      "main": [
+        [
+          {
+            "node": "Save Final Decision to Backend",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Final Decision to Backend": {
+      "main": [
+        [
+          {
+            "node": "Update Incident AI Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Backend Error - Decision Save Failed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Raw Incident to Backend": {
+      "main": [
+        [
+          {
+            "node": "Prepare Fetch URLs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Status - Blocked1": {
+      "main": [
+        [
+          {
+            "node": "Route Decision",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route Decision": {
+      "main": [
+        [
+          {
+            "node": "Call WF2 - Git Patch & PR",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Call WF2 - Git Patch & PR",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Trivy Report1": {
+      "main": [
+        [
+          {
+            "node": "Fetch Trivy Report3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch ZAP Report1": {
+      "main": [
+        [
+          {
+            "node": "Fetch ZAP Report2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Trivy Report3": {
+      "main": [
+        [
+          {
+            "node": "Parse Trivy JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch ZAP Report2": {
+      "main": [
+        [
+          {
+            "node": "Parse ZAP JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch OWASP Report2": {
+      "main": [
+        [
+          {
+            "node": "Parse OWASP JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Trivy JSON": {
+      "main": [
+        [
+          {
+            "node": "Fetch ZAP Report1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch OWASP Report1": {
+      "main": [
+        [
+          {
+            "node": "Fetch OWASP Report2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse ZAP JSON": {
+      "main": [
+        [
+          {
+            "node": "Fetch OWASP Report1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse OWASP JSON": {
+      "main": [
+        [
+          {
+            "node": "Merge All Fetched Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is PR Validation": {
+      "main": [
+        [
+          {
+            "node": "Call WF3 - Post-PR Validation",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Switch3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Incident AI Analysis": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Send an Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route cause Analysis1": {
+      "main": [
+        [
+          {
+            "node": "Parse - Root Cause Output1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Security Risk Analysis1": {
+      "main": [
+        [
+          {
+            "node": "Parse - Security Output1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Remediation Feasibility 1": {
+      "main": [
+        [
+          {
+            "node": "Parse - Remediation Output1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Judge - HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "Judge - Parse Output1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare WF2 Payload": {
+      "main": [
+        [
+          {
+            "node": "Call WF2 - Git Patch & PR1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare - Dev Guide Body": {
+      "main": [
+        [
+          {
+            "node": "Developer Guidance Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Developer Guidance Analysis": {
+      "main": [
+        [
+          {
+            "node": "Parse - Dev Guide Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse - Dev Guide Output": {
+      "main": [
+        [
+          {
+            "node": "Merge Agent Reports1",
+            "type": "main",
+            "index": 3
+          }
+        ]
+      ]
+    },
+    "Incident Webhook1": {
+      "main": [
+        [
+          {
+            "node": "Is PR Validation1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Normalize Incident Payload1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Normalize Incident Payload1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Normalize Incident Payload1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Normalize Incident Payload1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Incident Payload1": {
+      "main": [
+        [
+          {
+            "node": "Lookup Project1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lookup Project1": {
+      "main": [
+        [
+          {
+            "node": "Extract Project Config1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Project Config1": {
+      "main": [
+        [
+          {
+            "node": "Send Raw Incident to Backend1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Raw Incident to Backend1": {
+      "main": [
+        [
+          {
+            "node": "Prepare Fetch URLs1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Fetch URLs1": {
+      "main": [
+        [
+          {
+            "node": "Fetch SonarQube Issues1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch SonarQube Issues1": {
+      "main": [
+        [
+          {
+            "node": "Fetch Trivy Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge All Fetched Data1": {
+      "main": [
+        [
+          {
+            "node": "Prepare - Root Cause Body1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Prepare - Security Body1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Prepare - Remediation Body1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Prepare - Dev Guide Body",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare - Root Cause Body1": {
+      "main": [
+        [
+          {
+            "node": "Route cause Analysis1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare - Security Body1": {
+      "main": [
+        [
+          {
+            "node": "Security Risk Analysis1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare - Remediation Body1": {
+      "main": [
+        [
+          {
+            "node": "Remediation Feasibility 1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse - Root Cause Output1": {
+      "main": [
+        [
+          {
+            "node": "Merge Agent Reports1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse - Security Output1": {
+      "main": [
+        [
+          {
+            "node": "Merge Agent Reports1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Parse - Remediation Output1": {
+      "main": [
+        [
+          {
+            "node": "Merge Agent Reports1",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Merge Agent Reports1": {
+      "main": [
+        [
+          {
+            "node": "Prepare Save Body1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Prepare - Judge Body1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Save Body1": {
+      "main": [
+        [
+          {
+            "node": "Save Agent Reports to Backend1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare - Judge Body1": {
+      "main": [
+        [
+          {
+            "node": "Judge - HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Judge - Parse Output1": {
+      "main": [
+        [
+          {
+            "node": "Prepare Final Report1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Final Report1": {
+      "main": [
+        [
+          {
+            "node": "Save Final Decision to Backend1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route Decision1": {
+      "main": [
+        [
+          {
+            "node": "Prepare WF2 Payload",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare WF2 Payload",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare WF2 Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Trivy Report": {
+      "main": [
+        [
+          {
+            "node": "Fetch Trivy Report4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch ZAP Report": {
+      "main": [
+        [
+          {
+            "node": "Fetch ZAP Report3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Trivy Report4": {
+      "main": [
+        [
+          {
+            "node": "Parse Trivy JSON1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch ZAP Report3": {
+      "main": [
+        [
+          {
+            "node": "Parse ZAP JSON1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch OWASP Report": {
+      "main": [
+        [
+          {
+            "node": "Parse OWASP JSON1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Trivy JSON1": {
+      "main": [
+        [
+          {
+            "node": "Fetch ZAP Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch OWASP Report3": {
+      "main": [
+        [
+          {
+            "node": "Fetch OWASP Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse ZAP JSON1": {
+      "main": [
+        [
+          {
+            "node": "Fetch OWASP Report3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse OWASP JSON1": {
+      "main": [
+        [
+          {
+            "node": "Merge All Fetched Data1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is PR Validation1": {
+      "main": [
+        [
+          {
+            "node": "Call WF3 - Post-PR Validation1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "Send an Email1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send an Email1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Incident AI Analysis1": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Final Decision to Backend1": {
+      "main": [
+        [
+          {
+            "node": "Update Incident AI Analysis1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Backend Error - Decision Save Failed1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "id": "xVdIiXD0sj0lSdAH",
+  "meta": {},
+  "pinData": {
+    "Incident Webhook": [
+      {
+        "json": {
+          "headers": {
+            "host": "n8n:5678",
+            "user-agent": "curl/8.14.1",
+            "accept": "*/*",
+            "content-type": "application/json",
+            "x-api-key": "devsecops-secret-2024",
+            "content-length": "1287"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "event": "pipeline_success",
+            "job": "devsecops-testbed",
+            "build_number": "5",
+            "build_url": "http://172.31.172.61:8082/job/devsecops-testbed/job/main/5/",
+            "logs_url": "http://172.31.172.61:8082/job/devsecops-testbed/job/main/5/consoleText",
+            "branch": "main",
+            "commit": "8e790b4a",
+            "status": "SUCCESS",
+            "severity_hint": "LOW",
+            "duration_ms": 120233,
+            "pull_request": null,
+            "reports": {
+              "jenkinsBasePath": "/shared/reports/devsecops-testbed/5",
+              "basePath": "/home/node/.n8n-files/reports/devsecops-testbed/5",
+              "trivyPath": "/home/node/.n8n-files/reports/devsecops-testbed/5/trivy-report.json",
+              "zapPath": "/home/node/.n8n-files/reports/devsecops-testbed/5/zap-report.json",
+              "owaspPath": "/home/node/.n8n-files/reports/devsecops-testbed/5/dependency-check-report.json",
+              "available": {
+                "trivy": true,
+                "zap": true,
+                "owasp": true
+              }
+            },
+            "sonar": {
+              "project_key": "devsecops-testbed",
+              "dashboard_url": "http://sonarqube:9000/dashboard?id=devsecops-testbed"
+            },
+            "docker": {
+              "image": "devsecops-testbed:5"
+            },
+            "kubernetes": {
+              "namespace": "pfe-devsecops",
+              "target": "http://app-test:8080"
+            }
+          },
+          "webhookUrl": "http://localhost:5678/webhook/jenkins-event",
+          "executionMode": "production"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ],
+    "Incident Webhook1": [
+      {
+        "json": {
+          "headers": {
+            "host": "n8n:5678",
+            "user-agent": "curl/8.14.1",
+            "accept": "*/*",
+            "content-type": "application/json",
+            "x-api-key": "devsecops-secret-2024",
+            "content-length": "1296"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "event": "pipeline_success",
+            "job": "devsecops-testbed",
+            "build_number": "11",
+            "build_url": "http://172.31.172.61:8082/job/devsecops-testbed/job/main/11/",
+            "logs_url": "http://172.31.172.61:8082/job/devsecops-testbed/job/main/11/consoleText",
+            "branch": "main",
+            "commit": "496e3718",
+            "status": "SUCCESS",
+            "severity_hint": "LOW",
+            "duration_ms": 885836,
+            "pull_request": null,
+            "reports": {
+              "jenkinsBasePath": "/shared/reports/devsecops-testbed/11",
+              "basePath": "/home/node/.n8n-files/reports/devsecops-testbed/11",
+              "trivyPath": "/home/node/.n8n-files/reports/devsecops-testbed/11/trivy-report.json",
+              "zapPath": "/home/node/.n8n-files/reports/devsecops-testbed/11/zap-report.json",
+              "owaspPath": "/home/node/.n8n-files/reports/devsecops-testbed/11/dependency-check-report.json",
+              "available": {
+                "trivy": true,
+                "zap": true,
+                "owasp": true
+              }
+            },
+            "sonar": {
+              "project_key": "devsecops-testbed",
+              "dashboard_url": "http://sonarqube:9000/dashboard?id=devsecops-testbed"
+            },
+            "docker": {
+              "image": "devsecops-testbed:11"
+            },
+            "kubernetes": {
+              "namespace": "pfe-devsecops",
+              "target": "http://app-test:8080"
+            }
+          },
+          "webhookUrl": "http://localhost:5678/webhook/jenkins-event",
+          "executionMode": "production"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  }
+}

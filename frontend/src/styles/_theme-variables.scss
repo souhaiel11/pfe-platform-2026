@@ -1,101 +1,80 @@
-/* ── Vermeg Design System — Light / Dark theme variables ──────────────── */
-
-/* === LIGHT (default) ======================================================= */
+/* Définit les couleurs et dimensions communes du thème. */
 :root {
-  /* Backgrounds */
-  --bg-primary:   #FFFFFF;
-  --bg-secondary: #F8FAFC;
-  --bg-tertiary:  #F1F4F9;
-  --bg-hover:     #E5E9F0;
-
-  /* Borders */
-  --border-color: #E5E9F0;
-  --border:       #E5E9F0;        /* alias — used by legacy components */
-  --border-light: #D0D7E3;
-
-  /* Text */
-  --text-primary:   #1A1D29;
-  --text-secondary: #475467;
-  --text-tertiary:  #8A93A6;
-  --text-muted:     #8A93A6;      /* alias */
-  --text-faint:     #B0BAC9;
-
-  /* Brand */
-  --accent-primary:  #1F4E8A;
-  --accent-text-on:  #FFFFFF;
-
-  /* Layout slots */
-  --sidebar-bg: #F8FAFC;
-  --header-bg:  #FFFFFF;
-
-  /* Semantic accent colours (used by shared classes & existing components) */
-  --accent-blue:      #1F4E8A;
-  --accent-blue-bg:   rgba(31, 78, 138, 0.10);
-  --accent-green:     #3B6D11;
-  --accent-green-bg:  rgba(59, 109, 17, 0.10);
-  --accent-red:       #E24B4A;
-  --accent-red-bg:    rgba(226, 75, 74, 0.10);
-  --accent-orange:    #EF9F27;
-  --accent-orange-bg: rgba(239, 159, 39, 0.10);
-  --accent-purple:    #7C6AF7;
-  --accent-purple-bg: rgba(124, 106, 247, 0.10);
-
-  /* Semantic status colours */
-  --color-critical:    #E24B4A;
-  --color-critical-bg: #FCEBEB;
-  --color-high:        #F0997B;
-  --color-success:     #3B6D11;
-  --color-success-bg:  rgba(59, 109, 17, 0.10);
-  --color-warning:     #EF9F27;
-  --color-warning-bg:  rgba(239, 159, 39, 0.10);
+  color-scheme: light;
+  --bg-primary: #f3f1eb;
+  --bg-secondary: #fffefb;
+  --bg-tertiary: #eeece5;
+  --bg-hover: #e7e5dd;
+  --border-color: #dbd9cf;
+  --border: #dbd9cf;
+  --border-light: #b7b8ac;
+  --text-primary: #202d29;
+  --text-secondary: #4c5953;
+  --text-tertiary: #647068;
+  --text-muted: #647068;
+  --text-faint: #647068;
+  --accent-primary: #914527;
+  --accent-text-on: #fffaf2;
+  --sidebar-bg: #202d29;
+  --header-bg: #f3f1eb;
+  --accent-blue: #30665e;
+  --accent-blue-bg: #e2ece7;
+  --accent-green: #326441;
+  --accent-green-bg: #e5eddf;
+  --accent-red: #a33236;
+  --accent-red-bg: #f8e7e3;
+  --accent-orange: #89550e;
+  --accent-orange-bg: #f4e9d1;
+  --accent-purple: #6f557c;
+  --accent-purple-bg: #eee7f1;
+  --color-critical: #a33236;
+  --color-critical-bg: #f8e7e3;
+  --color-high: #914527;
+  --color-success: #326441;
+  --color-success-bg: #e5eddf;
+  --color-warning: #89550e;
+  --color-warning-bg: #f4e9d1;
+  --atelier-copper: #914527;
+  --atelier-display: Georgia, 'Times New Roman', serif;
+  --atelier-grid: #202d2909;
+  --atelier-shadow: 0 3px 0 #202d2906;
 }
-
-/* === DARK (.dark-theme on <body>) ========================================== */
 .dark-theme {
-  /* Backgrounds */
-  --bg-primary:   #101A2C;
-  --bg-secondary: #0F1B2E;
-  --bg-tertiary:  #0B1320;
-  --bg-hover:     #1A2840;
-
-  /* Borders */
-  --border-color: #1E2A3D;
-  --border:       #1E2A3D;
-  --border-light: #263548;
-
-  /* Text */
-  --text-primary:   #FFFFFF;
-  --text-secondary: #8AA4C4;
-  --text-tertiary:  #6B84A8;
-  --text-muted:     #6B84A8;
-  --text-faint:     #4A6080;
-
-  /* Brand */
-  --accent-primary:  #4A8FE0;
-  --accent-text-on:  #0B1320;
-
-  /* Layout slots */
-  --sidebar-bg: #0F1B2E;
-  --header-bg:  #0B1320;
-
-  /* Semantic accent colours */
-  --accent-blue:      #4A8FE0;
-  --accent-blue-bg:   rgba(74, 143, 224, 0.12);
-  --accent-green:     #5DCAA5;
-  --accent-green-bg:  rgba(93, 202, 165, 0.12);
-  --accent-red:       #E24B4A;
-  --accent-red-bg:    rgba(226, 75, 74, 0.12);
-  --accent-orange:    #EF9F27;
-  --accent-orange-bg: rgba(239, 159, 39, 0.12);
-  --accent-purple:    #A78BFA;
-  --accent-purple-bg: rgba(167, 139, 250, 0.12);
-
-  /* Semantic status colours */
-  --color-critical:    #E24B4A;
-  --color-critical-bg: #3A1418;
-  --color-high:        #F0997B;
-  --color-success:     #5DCAA5;
-  --color-success-bg:  rgba(93, 202, 165, 0.12);
-  --color-warning:     #EF9F27;
-  --color-warning-bg:  rgba(239, 159, 39, 0.12);
+  color-scheme: dark;
+  --bg-primary: #181f1d;
+  --bg-secondary: #202925;
+  --bg-tertiary: #28322c;
+  --bg-hover: #343e36;
+  --border-color: #3e4940;
+  --border: #3e4940;
+  --border-light: #647066;
+  --text-primary: #f1eee5;
+  --text-secondary: #cdcfc4;
+  --text-tertiary: #a4afa2;
+  --text-muted: #a4afa2;
+  --text-faint: #a4afa2;
+  --accent-primary: #ecb089;
+  --accent-text-on: #202d29;
+  --sidebar-bg: #131b17;
+  --header-bg: #181f1d;
+  --accent-blue: #9ac9b8;
+  --accent-blue-bg: #2c4037;
+  --accent-green: #afd09b;
+  --accent-green-bg: #2b3d2e;
+  --accent-red: #f4a6a0;
+  --accent-red-bg: #432c2a;
+  --accent-orange: #edc689;
+  --accent-orange-bg: #433a29;
+  --accent-purple: #d3b6df;
+  --accent-purple-bg: #3d3144;
+  --color-critical: #f4a6a0;
+  --color-critical-bg: #432c2a;
+  --color-high: #ecb089;
+  --color-success: #afd09b;
+  --color-success-bg: #2b3d2e;
+  --color-warning: #edc689;
+  --color-warning-bg: #433a29;
+  --atelier-copper: #ecb089;
+  --atelier-grid: #ece8da06;
+  --atelier-shadow: 0 3px 0 #00000016;
 }

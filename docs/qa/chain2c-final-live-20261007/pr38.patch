@@ -1,0 +1,23 @@
+From 1097ba035e6b2d88cd12f6af7cc1285e889f8aed Mon Sep 17 00:00:00 2001
+From: souhaiel amri <131708236+souhaiel11@users.noreply.github.com>
+Date: Tue, 29 Sep 2026 08:55:37 +0100
+Subject: [PATCH] fix(security): remediate CVE-2022-25857 in snakeyaml (1.29 ->
+ 1.31)
+
+---
+ pom.xml | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/pom.xml b/pom.xml
+index 9d657db..615d25d 100644
+--- a/pom.xml
++++ b/pom.xml
+@@ -68,7 +68,7 @@
+         <dependency>
+             <groupId>org.yaml</groupId>
+             <artifactId>snakeyaml</artifactId>
+-            <version>1.29</version>
++            <version>1.31</version>
+         </dependency>
+ 
+         <!-- JWT -->

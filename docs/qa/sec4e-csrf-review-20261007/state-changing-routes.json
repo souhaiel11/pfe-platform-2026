@@ -1,0 +1,34 @@
+[
+  {
+    "METHOD": "POST",
+    "PATH": "/api/tasks",
+    "AUTH_REQUIRED": true,
+    "CREDENTIAL_MECHANISM": "Explicit Authorization Bearer JWT",
+    "SOURCE_FILE": "src/main/java/com/pfe/devsecops/controller/TaskController.java",
+    "SOURCE_LINE": 34
+  },
+  {
+    "METHOD": "PUT",
+    "PATH": "/api/tasks/{id}",
+    "AUTH_REQUIRED": true,
+    "CREDENTIAL_MECHANISM": "Explicit Authorization Bearer JWT",
+    "SOURCE_FILE": "src/main/java/com/pfe/devsecops/controller/TaskController.java",
+    "SOURCE_LINE": 39
+  },
+  {
+    "METHOD": "DELETE",
+    "PATH": "/api/tasks/{id}",
+    "AUTH_REQUIRED": true,
+    "CREDENTIAL_MECHANISM": "Explicit Authorization Bearer JWT",
+    "SOURCE_FILE": "src/main/java/com/pfe/devsecops/controller/TaskController.java",
+    "SOURCE_LINE": 44
+  },
+  {
+    "METHOD": "POST",
+    "PATH": "/api/tasks/{id}/process",
+    "AUTH_REQUIRED": true,
+    "CREDENTIAL_MECHANISM": "Explicit Authorization Bearer JWT",
+    "SOURCE_FILE": "src/main/java/com/pfe/devsecops/controller/TaskController.java",
+    "SOURCE_LINE": 57
+  }
+]

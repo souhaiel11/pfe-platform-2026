@@ -1,3 +1,5 @@
+// Connexion générique à un outil externe de supervision/infra (Grafana, Prometheus, Kubernetes, Nexus) —
+// distinct des URL Sonar/Jenkins/Trivy propres à chaque projet. Aucune fonction ici, juste la table.
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 
 export enum IntegrationTool {

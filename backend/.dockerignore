@@ -1,0 +1,24 @@
+node_modules
+dist
+*.tsbuildinfo
+
+# Configuration locale et secrets
+.env
+.env.*
+!.env.example
+.claude
+CLAUDE.md
+
+# Sauvegardes, caches et fichiers temporaires
+*.bak*
+*.orig
+*.old
+*.log
+__pycache__
+*.pyc
+*.pyo
+.DS_Store
+
+# Copies de livraison manuelle, inutiles au build TypeScript
+config-check-compile
+correctifs-score

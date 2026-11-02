@@ -1,0 +1,29 @@
+{
+  "backendIncidentSpecs": {
+    "pass": 25,
+    "total": 25
+  },
+  "backendTypecheck": "PASS",
+  "backendCancellationContract": "B1-B16 and additional ownership/replay/dispatch-error/guard tests PASS",
+  "n8nClient": "response classifications and AbortSignal deadline PASS",
+  "wf2CancellationContract": "W1-W12 PASS",
+  "frontendSpecs": {
+    "pass": 24,
+    "total": 24
+  },
+  "frontendBuild": "PASS (output /tmp/wf2-cancellation-frontend-build)",
+  "wf2SourceSpecs": {
+    "pass": 38,
+    "total": 49
+  },
+  "wf2CandidateSpecs": {
+    "pass": 38,
+    "total": 49
+  },
+  "wf2NewRegressions": 0,
+  "historicalDefaultSpecsAfterJavacRerun": {
+    "pass": 48,
+    "total": 49
+  },
+  "liveActions": false
+}

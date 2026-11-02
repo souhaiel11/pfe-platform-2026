@@ -1,0 +1,11 @@
+# Décrit l’image de base fixée pour le projet de test.
+
+FROM eclipse-temurin:11-jre
+
+WORKDIR /app
+
+COPY target/devsecops-testbed-1.0.0.jar app.jar
+
+EXPOSE 8080
+
+ENTRYPOINT ["java", "-jar", "app.jar"]

@@ -1,0 +1,29 @@
+{
+  "production": [
+    "backend/src/manual-remediation/manual-remediation.service.ts",
+    "backend/src/manual-remediation/manual-remediation.controller.ts",
+    "backend/src/manual-remediation/manual-remediation.entity.ts",
+    "backend/src/manual-remediation/security-remediation-lifecycle.ts",
+    "backend/src/manual-remediation/retry-security-remediation.dto.ts",
+    "backend/src/security-remediation/security-remediation.controller.ts",
+    "backend/src/security-remediation/security-remediation-evaluate-batch.dto.ts",
+    "backend/src/security-remediation/security-remediation-revalidate-batch.dto.ts",
+    "backend/src/security-remediation/wf6-attempt-correlation.dto.ts",
+    "backend/src/security-remediation/wf6-remediation-result.dto.ts",
+    "backend/src/security-remediation/wf6-batch-remediation-result.dto.ts"
+  ],
+  "testsAndSupport": [
+    "backend/src/manual-remediation/lifecycle-test-transaction.ts",
+    "backend/src/manual-remediation/security-remediation-lifecycle.spec.ts",
+    "backend/src/manual-remediation/manual-remediation.service.batch.spec.ts",
+    "backend/src/manual-remediation/manual-remediation.service.wf6-result.spec.ts",
+    "backend/src/manual-remediation/manual-remediation.service.v1-8-enforcement.spec.ts",
+    "backend/src/manual-remediation/manual-remediation.service.v1-8-fixedversion-override.spec.ts",
+    "backend/src/manual-remediation/manual-remediation.service.v1-8-decision.spec.ts",
+    "backend/src/manual-remediation/reconcile-stale-wf6-dispatch.spec.ts",
+    "backend/src/security-remediation/security-remediation.controller.batch.spec.ts",
+    "backend/src/security-remediation/wf6-remediation-result.dto.spec.ts",
+    "backend/src/security-remediation/wf6-batch-remediation-result.dto.spec.ts",
+    "backend/src/security-remediation/security-remediation-revalidate-batch.dto.spec.ts"
+  ]
+}

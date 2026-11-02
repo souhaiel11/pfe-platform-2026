@@ -1,0 +1,208 @@
+{
+  "RUN_ID": "1ec2aff0-1235-427d-be0c-2331e3c31384",
+  "MANIFEST_HASH": "5cbc586edf9779136f3d2f2e6d5665cd22d29ed6f2fbd89335ec6a34698e00f6",
+  "START_TIME": "2026-10-07T11:22:14.603140+00:00",
+  "END_TIME": "2026-10-07T11:22:33.177451+00:00",
+  "LIVE_APPLY_EXECUTED": true,
+  "applyInvocationCount": 1,
+  "tasksReconciled": 14,
+  "groupsReconciled": 8,
+  "activePointers": 0,
+  "activeClaims": 0,
+  "activeWriters": 0,
+  "auditLocation": "/tmp/chain2c-final-private/runner-live-apply.json",
+  "groups": [
+    {
+      "groupId": "c8fb2207-c8de-40af-acd4-1d2f96896715",
+      "taskIds": [
+        "c8fb2207-c8de-40af-acd4-1d2f96896715"
+      ],
+      "reconciled": 1,
+      "committed": true,
+      "idempotent": false
+    },
+    {
+      "groupId": "sec-batch-181e0a6587c834e1",
+      "taskIds": [
+        "10fe9043-86f9-42eb-a0a2-ce5abaf26631",
+        "64deba0e-f6ab-4da8-a3c9-da8e1b0eb30d",
+        "6e6c3597-96bc-4f72-bcd8-eb0d4b8036db",
+        "70fd88ac-2011-437d-a387-57d0fb3fa65d",
+        "a84a24c4-8673-4826-a4f2-4990ce7d118b",
+        "f21b69ba-922b-4ccb-8851-c2a43d9ce7ca"
+      ],
+      "reconciled": 6,
+      "committed": true,
+      "idempotent": false
+    },
+    {
+      "groupId": "sec-batch-215851539abb7f37",
+      "taskIds": [
+        "306e8b84-90fe-4344-8fd6-5c38fcabcf40"
+      ],
+      "reconciled": 1,
+      "committed": true,
+      "idempotent": false
+    },
+    {
+      "groupId": "sec-batch-a4646d8385306b84",
+      "taskIds": [
+        "9dc3706b-aabd-4b9a-a888-854641a2e64e",
+        "bd9dc6f2-2202-4280-933e-4adb824dc695"
+      ],
+      "reconciled": 2,
+      "committed": true,
+      "idempotent": false
+    },
+    {
+      "groupId": "sec-batch-bd22285c1649ea80",
+      "taskIds": [
+        "b52ea617-f5c3-47a3-bc6e-6230ea648d63"
+      ],
+      "reconciled": 1,
+      "committed": true,
+      "idempotent": false
+    },
+    {
+      "groupId": "sec-batch-c808d8203ba03491",
+      "taskIds": [
+        "af1d6556-b782-4faf-b01b-4e87b119d033"
+      ],
+      "reconciled": 1,
+      "committed": true,
+      "idempotent": false
+    },
+    {
+      "groupId": "sec-batch-d359edf8f878f1dd",
+      "taskIds": [
+        "83555b3a-efa1-45e1-90a8-008debddba92"
+      ],
+      "reconciled": 1,
+      "committed": true,
+      "idempotent": false
+    },
+    {
+      "groupId": "sec-batch-fb980983352c6d7c",
+      "taskIds": [
+        "ca8f57e7-3839-4914-8805-d518aafe4c4a"
+      ],
+      "reconciled": 1,
+      "committed": true,
+      "idempotent": false
+    }
+  ],
+  "findingStatuses": [
+    {
+      "taskId": "10fe9043-86f9-42eb-a0a2-ce5abaf26631",
+      "findingId": "CVE-2022-45143",
+      "status": "TODO",
+      "scannerStatus": "DETECTED",
+      "fixed": false,
+      "verified": false
+    },
+    {
+      "taskId": "306e8b84-90fe-4344-8fd6-5c38fcabcf40",
+      "findingId": "CVE-2022-25857",
+      "status": "TODO",
+      "scannerStatus": "DETECTED",
+      "fixed": false,
+      "verified": false
+    },
+    {
+      "taskId": "64deba0e-f6ab-4da8-a3c9-da8e1b0eb30d",
+      "findingId": "CVE-2022-42004",
+      "status": "REOPENED",
+      "scannerStatus": "DETECTED",
+      "fixed": false,
+      "verified": false
+    },
+    {
+      "taskId": "6e6c3597-96bc-4f72-bcd8-eb0d4b8036db",
+      "findingId": "CVE-2022-42252",
+      "status": "TODO",
+      "scannerStatus": "DETECTED",
+      "fixed": false,
+      "verified": false
+    },
+    {
+      "taskId": "70fd88ac-2011-437d-a387-57d0fb3fa65d",
+      "findingId": "CVE-2023-41080",
+      "status": "TODO",
+      "scannerStatus": "DETECTED",
+      "fixed": false,
+      "verified": false
+    },
+    {
+      "taskId": "83555b3a-efa1-45e1-90a8-008debddba92",
+      "findingId": "CVE-2022-38749",
+      "status": "TODO",
+      "scannerStatus": "DETECTED",
+      "fixed": false,
+      "verified": false
+    },
+    {
+      "taskId": "9dc3706b-aabd-4b9a-a888-854641a2e64e",
+      "findingId": "CVE-2022-31692",
+      "status": "TODO",
+      "scannerStatus": "DETECTED",
+      "fixed": false,
+      "verified": false
+    },
+    {
+      "taskId": "a84a24c4-8673-4826-a4f2-4990ce7d118b",
+      "findingId": "CVE-2022-42003",
+      "status": "TODO",
+      "scannerStatus": "DETECTED",
+      "fixed": false,
+      "verified": false
+    },
+    {
+      "taskId": "af1d6556-b782-4faf-b01b-4e87b119d033",
+      "findingId": "CVE-2022-25857",
+      "status": "TODO",
+      "scannerStatus": "DETECTED",
+      "fixed": false,
+      "verified": false
+    },
+    {
+      "taskId": "b52ea617-f5c3-47a3-bc6e-6230ea648d63",
+      "findingId": "CVE-2022-38751",
+      "status": "TODO",
+      "scannerStatus": "DETECTED",
+      "fixed": false,
+      "verified": false
+    },
+    {
+      "taskId": "bd9dc6f2-2202-4280-933e-4adb824dc695",
+      "findingId": "CVE-2022-38752",
+      "status": "TODO",
+      "scannerStatus": "DETECTED",
+      "fixed": false,
+      "verified": false
+    },
+    {
+      "taskId": "c8fb2207-c8de-40af-acd4-1d2f96896715",
+      "findingId": "CVE-2023-6378",
+      "status": "TODO",
+      "scannerStatus": "DETECTED",
+      "fixed": false,
+      "verified": false
+    },
+    {
+      "taskId": "ca8f57e7-3839-4914-8805-d518aafe4c4a",
+      "findingId": "CVE-2024-22257",
+      "status": "TODO",
+      "scannerStatus": "DETECTED",
+      "fixed": false,
+      "verified": false
+    },
+    {
+      "taskId": "f21b69ba-922b-4ccb-8851-c2a43d9ce7ca",
+      "findingId": "CVE-2023-34034",
+      "status": "TODO",
+      "scannerStatus": "DETECTED",
+      "fixed": false,
+      "verified": false
+    }
+  ]
+}

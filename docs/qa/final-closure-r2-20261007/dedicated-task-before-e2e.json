@@ -1,0 +1,53 @@
+{
+  "id": "a390e383-42b7-4348-894c-5e02a7e5f98d",
+  "projectId": "ebe3bd94-8240-4c30-a2d9-6de2106a28bc",
+  "incidentId": "f84e7464-eac7-4bb3-a050-369797ed632f",
+  "findingId": "CVE-2022-45868",
+  "findingFingerprint": "513d498a97206dd164a58140053ddd2350ec44e11136fd8b155d1c7c3d5ba3f9",
+  "source": "TRIVY",
+  "ruleOrCve": "CVE-2022-45868",
+  "title": "The web-based admin console in H2 Database Engine before 2.2.220 can b ...",
+  "severity": "HIGH",
+  "remediationType": "DEVELOPER_ACTION_REQUIRED",
+  "findingSnapshot": {
+    "url": null,
+    "title": "The web-based admin console in H2 Database Engine before 2.2.220 can b ...",
+    "source": "TRIVY",
+    "evidence": null,
+    "severity": "HIGH",
+    "component": "com.h2database:h2",
+    "parameter": null,
+    "ruleOrCve": "CVE-2022-45868",
+    "description": null,
+    "fixedVersion": "2.2.220",
+    "currentVersion": "2.1.212",
+    "recommendation": null,
+    "fixedVersionSource": null,
+    "fixedVersionEvidence": null,
+    "fixedVersionUnavailableReason": null
+  },
+  "status": "TODO",
+  "scannerStatus": "DETECTED",
+  "completedByUserId": null,
+  "completedByDisplayName": null,
+  "completedAt": null,
+  "completionNote": null,
+  "lastSeenBuild": null,
+  "verifiedBuild": null,
+  "verifiedAt": null,
+  "events": [
+    {
+      "at": "2026-10-07T14:58:15.440Z",
+      "reason": "CREATED",
+      "actorId": null,
+      "newStatus": "TODO",
+      "oldStatus": null,
+      "buildNumber": null,
+      "actorDisplayName": "Scanner"
+    }
+  ],
+  "createdAt": "2026-10-07T14:58:15.440285",
+  "updatedAt": "2026-10-07T14:58:15.440285",
+  "securityFindingRemediation": null,
+  "securityRemediationBatchId": null
+}

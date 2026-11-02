@@ -1,0 +1,374 @@
+Compiled from "JakartaWebServlet.java"
+public class org.h2.server.web.JakartaWebServlet extends jakarta.servlet.http.HttpServlet {
+  private static final long serialVersionUID;
+
+  private transient org.h2.server.web.WebServer server;
+
+  public org.h2.server.web.JakartaWebServlet();
+    Code:
+       0: aload_0
+       1: invokespecial #1                  // Method jakarta/servlet/http/HttpServlet."<init>":()V
+       4: return
+
+  public void init();
+    Code:
+       0: aload_0
+       1: invokevirtual #2                  // Method getServletConfig:()Ljakarta/servlet/ServletConfig;
+       4: astore_1
+       5: aload_1
+       6: invokeinterface #3,  1            // InterfaceMethod jakarta/servlet/ServletConfig.getInitParameterNames:()Ljava/util/Enumeration;
+      11: astore_2
+      12: new           #4                  // class java/util/ArrayList
+      15: dup
+      16: invokespecial #5                  // Method java/util/ArrayList."<init>":()V
+      19: astore_3
+      20: aload_2
+      21: invokeinterface #6,  1            // InterfaceMethod java/util/Enumeration.hasMoreElements:()Z
+      26: ifeq          94
+      29: aload_2
+      30: invokeinterface #7,  1            // InterfaceMethod java/util/Enumeration.nextElement:()Ljava/lang/Object;
+      35: invokevirtual #8                  // Method java/lang/Object.toString:()Ljava/lang/String;
+      38: astore        4
+      40: aload_1
+      41: aload         4
+      43: invokeinterface #9,  2            // InterfaceMethod jakarta/servlet/ServletConfig.getInitParameter:(Ljava/lang/String;)Ljava/lang/String;
+      48: astore        5
+      50: aload         4
+      52: ldc           #10                 // String -
+      54: invokevirtual #11                 // Method java/lang/String.startsWith:(Ljava/lang/String;)Z
+      57: ifne          69
+      60: aload         4
+      62: invokedynamic #12,  0             // InvokeDynamic #0:makeConcatWithConstants:(Ljava/lang/String;)Ljava/lang/String;
+      67: astore        4
+      69: aload_3
+      70: aload         4
+      72: invokevirtual #13                 // Method java/util/ArrayList.add:(Ljava/lang/Object;)Z
+      75: pop
+      76: aload         5
+      78: invokevirtual #14                 // Method java/lang/String.length:()I
+      81: ifle          91
+      84: aload_3
+      85: aload         5
+      87: invokevirtual #13                 // Method java/util/ArrayList.add:(Ljava/lang/Object;)Z
+      90: pop
+      91: goto          20
+      94: aload_3
+      95: iconst_0
+      96: anewarray     #15                 // class java/lang/String
+      99: invokevirtual #16                 // Method java/util/ArrayList.toArray:([Ljava/lang/Object;)[Ljava/lang/Object;
+     102: checkcast     #17                 // class "[Ljava/lang/String;"
+     105: astore        4
+     107: aload_0
+     108: new           #18                 // class org/h2/server/web/WebServer
+     111: dup
+     112: invokespecial #19                 // Method org/h2/server/web/WebServer."<init>":()V
+     115: putfield      #20                 // Field server:Lorg/h2/server/web/WebServer;
+     118: aload_0
+     119: getfield      #20                 // Field server:Lorg/h2/server/web/WebServer;
+     122: iconst_0
+     123: invokevirtual #21                 // Method org/h2/server/web/WebServer.setAllowChunked:(Z)V
+     126: aload_0
+     127: getfield      #20                 // Field server:Lorg/h2/server/web/WebServer;
+     130: aload         4
+     132: invokevirtual #22                 // Method org/h2/server/web/WebServer.init:([Ljava/lang/String;)V
+     135: return
+
+  public void destroy();
+    Code:
+       0: aload_0
+       1: getfield      #20                 // Field server:Lorg/h2/server/web/WebServer;
+       4: invokevirtual #23                 // Method org/h2/server/web/WebServer.stop:()V
+       7: return
+
+  private boolean allow(jakarta.servlet.http.HttpServletRequest);
+    Code:
+       0: aload_0
+       1: getfield      #20                 // Field server:Lorg/h2/server/web/WebServer;
+       4: invokevirtual #24                 // Method org/h2/server/web/WebServer.getAllowOthers:()Z
+       7: ifeq          12
+      10: iconst_1
+      11: ireturn
+      12: aload_1
+      13: invokeinterface #25,  1           // InterfaceMethod jakarta/servlet/http/HttpServletRequest.getRemoteAddr:()Ljava/lang/String;
+      18: astore_2
+      19: aload_2
+      20: invokestatic  #26                 // Method java/net/InetAddress.getByName:(Ljava/lang/String;)Ljava/net/InetAddress;
+      23: astore_3
+      24: aload_3
+      25: invokevirtual #27                 // Method java/net/InetAddress.isLoopbackAddress:()Z
+      28: ireturn
+      29: astore_3
+      30: iconst_0
+      31: ireturn
+    Exception table:
+       from    to  target type
+          19    28    29   Class java/net/UnknownHostException
+          19    28    29   Class java/lang/NoClassDefFoundError
+
+  private java.lang.String getAllowedFile(jakarta.servlet.http.HttpServletRequest, java.lang.String);
+    Code:
+       0: aload_0
+       1: aload_1
+       2: invokevirtual #30                 // Method allow:(Ljakarta/servlet/http/HttpServletRequest;)Z
+       5: ifne          11
+       8: ldc           #31                 // String notAllowed.jsp
+      10: areturn
+      11: aload_2
+      12: invokevirtual #14                 // Method java/lang/String.length:()I
+      15: ifne          21
+      18: ldc           #32                 // String index.do
+      20: areturn
+      21: aload_2
+      22: areturn
+
+  public void doGet(jakarta.servlet.http.HttpServletRequest, jakarta.servlet.http.HttpServletResponse) throws java.io.IOException;
+    Code:
+       0: aload_1
+       1: ldc           #33                 // String utf-8
+       3: invokeinterface #34,  2           // InterfaceMethod jakarta/servlet/http/HttpServletRequest.setCharacterEncoding:(Ljava/lang/String;)V
+       8: aload_1
+       9: invokeinterface #35,  1           // InterfaceMethod jakarta/servlet/http/HttpServletRequest.getPathInfo:()Ljava/lang/String;
+      14: astore_3
+      15: aload_3
+      16: ifnonnull     37
+      19: aload_2
+      20: aload_1
+      21: invokeinterface #36,  1           // InterfaceMethod jakarta/servlet/http/HttpServletRequest.getRequestURI:()Ljava/lang/String;
+      26: invokedynamic #37,  0             // InvokeDynamic #1:makeConcatWithConstants:(Ljava/lang/String;)Ljava/lang/String;
+      31: invokeinterface #38,  2           // InterfaceMethod jakarta/servlet/http/HttpServletResponse.sendRedirect:(Ljava/lang/String;)V
+      36: return
+      37: aload_3
+      38: ldc           #39                 // String /
+      40: invokevirtual #11                 // Method java/lang/String.startsWith:(Ljava/lang/String;)Z
+      43: ifeq          52
+      46: aload_3
+      47: iconst_1
+      48: invokevirtual #40                 // Method java/lang/String.substring:(I)Ljava/lang/String;
+      51: astore_3
+      52: aload_0
+      53: aload_1
+      54: aload_3
+      55: invokevirtual #41                 // Method getAllowedFile:(Ljakarta/servlet/http/HttpServletRequest;Ljava/lang/String;)Ljava/lang/String;
+      58: astore_3
+      59: new           #42                 // class java/util/Properties
+      62: dup
+      63: invokespecial #43                 // Method java/util/Properties."<init>":()V
+      66: astore        4
+      68: aload_1
+      69: invokeinterface #44,  1           // InterfaceMethod jakarta/servlet/http/HttpServletRequest.getAttributeNames:()Ljava/util/Enumeration;
+      74: astore        5
+      76: aload         5
+      78: invokeinterface #6,  1            // InterfaceMethod java/util/Enumeration.hasMoreElements:()Z
+      83: ifeq          124
+      86: aload         5
+      88: invokeinterface #7,  1            // InterfaceMethod java/util/Enumeration.nextElement:()Ljava/lang/Object;
+      93: invokevirtual #8                  // Method java/lang/Object.toString:()Ljava/lang/String;
+      96: astore        6
+      98: aload_1
+      99: aload         6
+     101: invokeinterface #45,  2           // InterfaceMethod jakarta/servlet/http/HttpServletRequest.getAttribute:(Ljava/lang/String;)Ljava/lang/Object;
+     106: invokevirtual #8                  // Method java/lang/Object.toString:()Ljava/lang/String;
+     109: astore        7
+     111: aload         4
+     113: aload         6
+     115: aload         7
+     117: invokevirtual #46                 // Method java/util/Properties.put:(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;
+     120: pop
+     121: goto          76
+     124: aload_1
+     125: invokeinterface #47,  1           // InterfaceMethod jakarta/servlet/http/HttpServletRequest.getParameterNames:()Ljava/util/Enumeration;
+     130: astore        5
+     132: aload         5
+     134: invokeinterface #6,  1            // InterfaceMethod java/util/Enumeration.hasMoreElements:()Z
+     139: ifeq          177
+     142: aload         5
+     144: invokeinterface #7,  1            // InterfaceMethod java/util/Enumeration.nextElement:()Ljava/lang/Object;
+     149: invokevirtual #8                  // Method java/lang/Object.toString:()Ljava/lang/String;
+     152: astore        6
+     154: aload_1
+     155: aload         6
+     157: invokeinterface #48,  2           // InterfaceMethod jakarta/servlet/http/HttpServletRequest.getParameter:(Ljava/lang/String;)Ljava/lang/String;
+     162: astore        7
+     164: aload         4
+     166: aload         6
+     168: aload         7
+     170: invokevirtual #46                 // Method java/util/Properties.put:(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;
+     173: pop
+     174: goto          132
+     177: aconst_null
+     178: astore        6
+     180: aload         4
+     182: ldc           #49                 // String jsessionid
+     184: invokevirtual #50                 // Method java/util/Properties.getProperty:(Ljava/lang/String;)Ljava/lang/String;
+     187: astore        7
+     189: aload         7
+     191: ifnull        205
+     194: aload_0
+     195: getfield      #20                 // Field server:Lorg/h2/server/web/WebServer;
+     198: aload         7
+     200: invokevirtual #51                 // Method org/h2/server/web/WebServer.getSession:(Ljava/lang/String;)Lorg/h2/server/web/WebSession;
+     203: astore        6
+     205: new           #52                 // class org/h2/server/web/WebApp
+     208: dup
+     209: aload_0
+     210: getfield      #20                 // Field server:Lorg/h2/server/web/WebServer;
+     213: invokespecial #53                 // Method org/h2/server/web/WebApp."<init>":(Lorg/h2/server/web/WebServer;)V
+     216: astore        8
+     218: aload         8
+     220: aload         6
+     222: aload         4
+     224: invokevirtual #54                 // Method org/h2/server/web/WebApp.setSession:(Lorg/h2/server/web/WebSession;Ljava/util/Properties;)V
+     227: aload_1
+     228: ldc           #55                 // String if-modified-since
+     230: invokeinterface #56,  2           // InterfaceMethod jakarta/servlet/http/HttpServletRequest.getHeader:(Ljava/lang/String;)Ljava/lang/String;
+     235: astore        9
+     237: aload_1
+     238: invokeinterface #57,  1           // InterfaceMethod jakarta/servlet/http/HttpServletRequest.getScheme:()Ljava/lang/String;
+     243: astore        10
+     245: new           #58                 // class java/lang/StringBuilder
+     248: dup
+     249: aload         10
+     251: invokespecial #59                 // Method java/lang/StringBuilder."<init>":(Ljava/lang/String;)V
+     254: ldc           #60                 // String ://
+     256: invokevirtual #61                 // Method java/lang/StringBuilder.append:(Ljava/lang/String;)Ljava/lang/StringBuilder;
+     259: aload_1
+     260: invokeinterface #62,  1           // InterfaceMethod jakarta/servlet/http/HttpServletRequest.getServerName:()Ljava/lang/String;
+     265: invokevirtual #61                 // Method java/lang/StringBuilder.append:(Ljava/lang/String;)Ljava/lang/StringBuilder;
+     268: astore        11
+     270: aload_1
+     271: invokeinterface #63,  1           // InterfaceMethod jakarta/servlet/http/HttpServletRequest.getServerPort:()I
+     276: istore        12
+     278: iload         12
+     280: bipush        80
+     282: if_icmpne     295
+     285: aload         10
+     287: ldc           #64                 // String http
+     289: invokevirtual #65                 // Method java/lang/String.equals:(Ljava/lang/Object;)Z
+     292: ifne          326
+     295: iload         12
+     297: sipush        443
+     300: if_icmpne     313
+     303: aload         10
+     305: ldc           #66                 // String https
+     307: invokevirtual #65                 // Method java/lang/String.equals:(Ljava/lang/Object;)Z
+     310: ifne          326
+     313: aload         11
+     315: bipush        58
+     317: invokevirtual #67                 // Method java/lang/StringBuilder.append:(C)Ljava/lang/StringBuilder;
+     320: iload         12
+     322: invokevirtual #68                 // Method java/lang/StringBuilder.append:(I)Ljava/lang/StringBuilder;
+     325: pop
+     326: aload         11
+     328: aload_1
+     329: invokeinterface #69,  1           // InterfaceMethod jakarta/servlet/http/HttpServletRequest.getContextPath:()Ljava/lang/String;
+     334: invokevirtual #61                 // Method java/lang/StringBuilder.append:(Ljava/lang/String;)Ljava/lang/StringBuilder;
+     337: invokevirtual #70                 // Method java/lang/StringBuilder.toString:()Ljava/lang/String;
+     340: astore        13
+     342: aload         8
+     344: aload_3
+     345: new           #71                 // class org/h2/util/NetworkConnectionInfo
+     348: dup
+     349: aload         13
+     351: aload_1
+     352: invokeinterface #25,  1           // InterfaceMethod jakarta/servlet/http/HttpServletRequest.getRemoteAddr:()Ljava/lang/String;
+     357: aload_1
+     358: invokeinterface #72,  1           // InterfaceMethod jakarta/servlet/http/HttpServletRequest.getRemotePort:()I
+     363: invokespecial #73                 // Method org/h2/util/NetworkConnectionInfo."<init>":(Ljava/lang/String;Ljava/lang/String;I)V
+     366: invokevirtual #74                 // Method org/h2/server/web/WebApp.processRequest:(Ljava/lang/String;Lorg/h2/util/NetworkConnectionInfo;)Ljava/lang/String;
+     369: astore_3
+     370: aload         8
+     372: invokevirtual #75                 // Method org/h2/server/web/WebApp.getSession:()Lorg/h2/server/web/WebSession;
+     375: astore        6
+     377: aload         8
+     379: invokevirtual #76                 // Method org/h2/server/web/WebApp.getMimeType:()Ljava/lang/String;
+     382: astore        14
+     384: aload         8
+     386: invokevirtual #77                 // Method org/h2/server/web/WebApp.getCache:()Z
+     389: istore        15
+     391: iload         15
+     393: ifeq          421
+     396: aload_0
+     397: getfield      #20                 // Field server:Lorg/h2/server/web/WebServer;
+     400: invokevirtual #78                 // Method org/h2/server/web/WebServer.getStartDateTime:()Ljava/lang/String;
+     403: aload         9
+     405: invokevirtual #65                 // Method java/lang/String.equals:(Ljava/lang/Object;)Z
+     408: ifeq          421
+     411: aload_2
+     412: sipush        304
+     415: invokeinterface #80,  2           // InterfaceMethod jakarta/servlet/http/HttpServletResponse.setStatus:(I)V
+     420: return
+     421: aload_0
+     422: getfield      #20                 // Field server:Lorg/h2/server/web/WebServer;
+     425: aload_3
+     426: invokevirtual #81                 // Method org/h2/server/web/WebServer.getFile:(Ljava/lang/String;)[B
+     429: astore        16
+     431: aload         16
+     433: ifnonnull     462
+     436: aload_2
+     437: sipush        404
+     440: invokeinterface #82,  2           // InterfaceMethod jakarta/servlet/http/HttpServletResponse.sendError:(I)V
+     445: aload_3
+     446: invokedynamic #83,  0             // InvokeDynamic #2:makeConcatWithConstants:(Ljava/lang/String;)Ljava/lang/String;
+     451: getstatic     #84                 // Field java/nio/charset/StandardCharsets.UTF_8:Ljava/nio/charset/Charset;
+     454: invokevirtual #85                 // Method java/lang/String.getBytes:(Ljava/nio/charset/Charset;)[B
+     457: astore        16
+     459: goto          563
+     462: aload         6
+     464: ifnull        512
+     467: aload_3
+     468: ldc           #86                 // String .jsp
+     470: invokevirtual #87                 // Method java/lang/String.endsWith:(Ljava/lang/String;)Z
+     473: ifeq          512
+     476: new           #15                 // class java/lang/String
+     479: dup
+     480: aload         16
+     482: getstatic     #84                 // Field java/nio/charset/StandardCharsets.UTF_8:Ljava/nio/charset/Charset;
+     485: invokespecial #88                 // Method java/lang/String."<init>":([BLjava/nio/charset/Charset;)V
+     488: astore        17
+     490: aload         17
+     492: aload         6
+     494: getfield      #89                 // Field org/h2/server/web/WebSession.map:Ljava/util/HashMap;
+     497: invokestatic  #90                 // Method org/h2/server/web/PageParser.parse:(Ljava/lang/String;Ljava/util/Map;)Ljava/lang/String;
+     500: astore        17
+     502: aload         17
+     504: getstatic     #84                 // Field java/nio/charset/StandardCharsets.UTF_8:Ljava/nio/charset/Charset;
+     507: invokevirtual #85                 // Method java/lang/String.getBytes:(Ljava/nio/charset/Charset;)[B
+     510: astore        16
+     512: aload_2
+     513: aload         14
+     515: invokeinterface #91,  2           // InterfaceMethod jakarta/servlet/http/HttpServletResponse.setContentType:(Ljava/lang/String;)V
+     520: iload         15
+     522: ifne          538
+     525: aload_2
+     526: ldc           #92                 // String Cache-Control
+     528: ldc           #93                 // String no-cache
+     530: invokeinterface #94,  3           // InterfaceMethod jakarta/servlet/http/HttpServletResponse.setHeader:(Ljava/lang/String;Ljava/lang/String;)V
+     535: goto          563
+     538: aload_2
+     539: ldc           #92                 // String Cache-Control
+     541: ldc           #95                 // String max-age=10
+     543: invokeinterface #94,  3           // InterfaceMethod jakarta/servlet/http/HttpServletResponse.setHeader:(Ljava/lang/String;Ljava/lang/String;)V
+     548: aload_2
+     549: ldc           #96                 // String Last-Modified
+     551: aload_0
+     552: getfield      #20                 // Field server:Lorg/h2/server/web/WebServer;
+     555: invokevirtual #78                 // Method org/h2/server/web/WebServer.getStartDateTime:()Ljava/lang/String;
+     558: invokeinterface #94,  3           // InterfaceMethod jakarta/servlet/http/HttpServletResponse.setHeader:(Ljava/lang/String;Ljava/lang/String;)V
+     563: aload         16
+     565: ifnull        583
+     568: aload_2
+     569: invokeinterface #97,  1           // InterfaceMethod jakarta/servlet/http/HttpServletResponse.getOutputStream:()Ljakarta/servlet/ServletOutputStream;
+     574: astore        17
+     576: aload         17
+     578: aload         16
+     580: invokevirtual #98                 // Method jakarta/servlet/ServletOutputStream.write:([B)V
+     583: return
+
+  public void doPost(jakarta.servlet.http.HttpServletRequest, jakarta.servlet.http.HttpServletResponse) throws java.io.IOException;
+    Code:
+       0: aload_0
+       1: aload_1
+       2: aload_2
+       3: invokevirtual #99                 // Method doGet:(Ljakarta/servlet/http/HttpServletRequest;Ljakarta/servlet/http/HttpServletResponse;)V
+       6: return
+}

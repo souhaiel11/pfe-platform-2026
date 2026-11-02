@@ -1,0 +1,53 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Démo jury",
+      "detail": "Démarre la plateforme puis affiche Backend et Frontend côte à côte",
+      "dependsOrder": "sequence",
+      "dependsOn": ["1. Démarrer la plateforme", "2. Backend + Frontend"],
+      "problemMatcher": []
+    },
+    {
+      "label": "1. Démarrer la plateforme",
+      "type": "shell",
+      "command": "docker start vermeg-rescue-db n8n jenkins-docker jenkins sonarqube pfe-candidate-verifier pfe-builder-scanner pfe-backend pfe-frontend >/dev/null && echo && docker ps --format 'table {{.Names}}\\t{{.Status}}\\t{{.Ports}}' && echo && echo '  Frontend : http://localhost:4200' && echo '  API      : http://localhost:3001/api/docs (Swagger)'",
+      "options": { "cwd": "${workspaceFolder}" },
+      "presentation": { "panel": "dedicated", "reveal": "always", "clear": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "2. Backend + Frontend",
+      "dependsOn": ["Backend (NestJS)", "Frontend (Angular)"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Backend (NestJS)",
+      "type": "shell",
+      "command": "echo '=== Backend NestJS — http://localhost:3001/api/docs ===' && docker logs -f --tail 40 pfe-backend",
+      "isBackground": true,
+      "presentation": { "group": "demo", "panel": "dedicated", "reveal": "always", "clear": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "Frontend (Angular)",
+      "type": "shell",
+      "command": "echo '=== Frontend Angular — http://localhost:4200 ===' && docker logs -f --tail 20 pfe-frontend",
+      "isBackground": true,
+      "presentation": { "group": "demo", "panel": "dedicated", "reveal": "always", "clear": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "Redémarrer Backend",
+      "type": "shell",
+      "command": "docker restart pfe-backend",
+      "problemMatcher": []
+    },
+    {
+      "label": "Arrêter la plateforme",
+      "type": "shell",
+      "command": "docker stop pfe-frontend pfe-backend",
+      "problemMatcher": []
+    }
+  ]
+}

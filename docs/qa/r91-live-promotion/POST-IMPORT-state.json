@@ -1,0 +1,16 @@
+{
+  "active": false,
+  "versionId": "4fa669b4-20ce-4d66-a003-af21c0d9de61",
+  "activeVersionId": null,
+  "historyVersionId": "4fa669b4-20ce-4d66-a003-af21c0d9de61",
+  "totalNodes": 195,
+  "functionalNodes": 189,
+  "stickies": 6,
+  "webhookMatchCount": 0,
+  "webhookOwners": [],
+  "projectId": "k98wJmPx8NIzksqO",
+  "otherWorkflowsHash": "cfd24744dcbfa66eee0aa0d365eece3bd329f4537b4700314ca9b0165034a8f9",
+  "credentialEntitiesHash": "8ef59533bf485b7767f5cc51b8bcb9a084cf57322fc67b8812e594facb25445a",
+  "executionGate": [],
+  "activeWorkflowCount": 0
+}

@@ -1,0 +1,160 @@
+// Teste le composant « wf2-resilience » et ses cas d’erreur.
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+
+const wf = JSON.parse(readFileSync(new URL('../pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.PROMOTION-TARGET.json', import.meta.url)))[0];
+/** Retrouve ou construit le nœud du workflow demandé. */
+const node = name => wf.nodes.find(n => n.name === name);
+
+// ── Node classification (audit) ─────────────────────────────────────────────
+// Mutating: writes to GitHub (branch/file/PR) or to backend business state
+// (incident/fixRequest/report persistence). These must never receive a
+// blind generic retry -- their existing idempotency/reconciliation logic
+// (Lookup Existing Batch PR, Re-check Existing Branch Head, Evaluate GitHub
+// Write Reconciliation, etc.) is the only sanctioned protection.
+const MUTATING_NODES = [
+  'Update File in Branch', 'Create Pull Request1', 'Create Missing Branch', 'Create File in Branch',
+  'Save Execution Result to Backend', 'Log Fetch Error', 'Persist File Update Failure',
+  'Persist PR Creation Failure', 'Persist WF2 Failure Status',
+];
+// R23 -- execution 1997 (fixRequest 591853f3-9538-4df7-9b2d-7df1f8fca1f8)
+// proved the same transient-DNS profile on two more non-mutating nodes:
+// "Fetch Referenced API Sources" (read-only GitHub file GET; DNS error
+// fetching referenced source files) and "Generate Remediation Plan" (the
+// planner's pure outbound Claude call; getaddrinfo EAI_AGAIN
+// api.anthropic.com). Same bounded retry shape as the three above.
+const RETRY_HARDENED_NODES = ['Get Main Branch SHA1', 'Independent Semantic Review', 'Independent Cross-File Semantic Review', 'de Patch - HTTP Request', 'Fetch Referenced API Sources', 'Fetch Required Dependency Sources', 'Generate Remediation Plan'];
+
+// ── A/B. Bounded retry enabled on exactly the two target nodes ─────────────
+for (const name of RETRY_HARDENED_NODES) {
+  const n = node(name);
+  assert.equal(n.retryOnFail, true, `${name}: retryOnFail must be enabled`);
+  assert.equal(typeof n.maxTries, 'number', `${name}: maxTries must be a number`);
+  assert.equal(typeof n.waitBetweenTries, 'number', `${name}: waitBetweenTries must be a number`);
+}
+
+// ── C. Bounded, not infinite -- must fall inside n8n 2.14.2's own runtime
+// clamp (workflow-execute.js: maxTries clamped to [2,5], waitBetweenTries
+// clamped to [0,5000]ms). A configured value outside this range would
+// silently be reinterpreted by the engine, so the source of truth must
+// already be within bounds.
+for (const name of RETRY_HARDENED_NODES) {
+  const n = node(name);
+  assert.ok(n.maxTries >= 2 && n.maxTries <= 5, `${name}: maxTries must be within n8n's supported [2,5] range`);
+  assert.ok(n.waitBetweenTries >= 0 && n.waitBetweenTries <= 5000, `${name}: waitBetweenTries must be within n8n's supported [0,5000]ms range`);
+  assert.ok(Number.isFinite(n.maxTries) && n.maxTries < Infinity, `${name}: maxTries must be finite`);
+}
+
+// ── D. Mutating nodes never receive generic retry ──────────────────────────
+for (const name of MUTATING_NODES) {
+  const n = node(name);
+  assert.ok(n, `expected mutating node to exist: ${name}`);
+  assert.notEqual(n.retryOnFail, true, `${name}: mutating node must NOT receive automatic retry`);
+}
+// Sanity: confirm the mutating set is exhaustive over every httpRequest/github
+// node not in the hardened set and not a pure read (GET/lookup) -- any node
+// with retryOnFail=true must be one of the two explicitly authorized targets.
+const externalTypes = new Set(['n8n-nodes-base.httpRequest', 'n8n-nodes-base.github']);
+for (const n of wf.nodes) {
+  if (!externalTypes.has(n.type)) continue;
+  if (n.retryOnFail === true) {
+    assert.ok(RETRY_HARDENED_NODES.includes(n.name), `unexpected node with retryOnFail=true: ${n.name}`);
+  }
+}
+
+// ── E. Failure routing remains connected after retry exhaustion ───────────
+// onError must remain exactly as before (continueErrorOutput) so that once
+// maxTries is exhausted, the engine still routes to the node's error output
+// -- the canonical failure envelope path -- rather than stopping the
+// workflow or silently continuing on the regular output.
+for (const name of RETRY_HARDENED_NODES) {
+  const n = node(name);
+  assert.equal(n.onError, 'continueErrorOutput', `${name}: onError must be preserved for failure-envelope routing`);
+}
+// The dedicated failure-envelope node for each hardened node must still be
+// present and still be the thing that actually gets executed on error
+// (second output port), matching the graph's existing convention.
+assert.ok(node('Failure Envelope - Get Main Branch SHA1'), 'failure envelope for Get Main Branch SHA1 must remain');
+assert.ok(node('Failure Envelope - Independent Semantic Review'), 'failure envelope for Independent Semantic Review must remain');
+assert.ok(node('Failure Envelope - de Patch - HTTP Request'), 'failure envelope for de Patch - HTTP Request must remain');
+assert.ok(node('Failure Envelope - Generate Remediation Plan'), 'failure envelope for Generate Remediation Plan must remain');
+/** Prépare les données nécessaires à ce scénario. */
+const errorOutputTargets = (name) => (wf.connections[name]?.main?.[1] || []).map(e => e.node);
+assert.ok(errorOutputTargets('Get Main Branch SHA1').length > 0, 'Get Main Branch SHA1 error output must still be wired');
+assert.ok(errorOutputTargets('Independent Semantic Review').length > 0, 'Independent Semantic Review error output must still be wired');
+assert.deepEqual(errorOutputTargets('de Patch - HTTP Request'), ['Failure Envelope - de Patch - HTTP Request'],
+  'de Patch - HTTP Request error output routing must be unchanged');
+assert.deepEqual(errorOutputTargets('Generate Remediation Plan'), ['Failure Envelope - Generate Remediation Plan'],
+  'Generate Remediation Plan error output routing must be unchanged');
+// R23 -- "Fetch Referenced API Sources" no longer routes error items
+// directly to its own failure envelope: both outputs now fan into the
+// "Validate Source Context Completeness" gate first (wf2-source-context-
+// completeness.spec.mjs covers the gate's own pass/fail behavior in depth).
+assert.deepEqual(errorOutputTargets('Fetch Referenced API Sources'), ['Validate Source Context Completeness'],
+  'Fetch Referenced API Sources error output must route through the completeness gate');
+assert.deepEqual((wf.connections['Fetch Referenced API Sources']?.main?.[0] || []).map(e => e.node), ['Validate Source Context Completeness'],
+  'Fetch Referenced API Sources success output must route through the completeness gate');
+assert.ok(node('Validate Source Context Completeness'), 'source-context completeness gate must exist');
+assert.deepEqual(errorOutputTargets('Fetch Required Dependency Sources'),['Validate Required Dependency Sources']);
+assert.equal(node('Fetch Required Dependency Sources').parameters.operation,'get');
+assert.equal(node('Fetch Required Dependency Sources').maxTries,3);
+assert.equal(node('Validate Source Context Completeness').onError, 'continueErrorOutput');
+assert.deepEqual((wf.connections['de Patch - HTTP Request']?.main?.[0] || []).map(e => e.node), ['Parse - Code Patch Output'],
+  'de Patch - HTTP Request success output routing must be unchanged');
+
+// ── R76 B/D. de Patch - HTTP Request: timeout and request payload/shape
+// remain byte-identical -- only retryOnFail/maxTries/waitBetweenTries were
+// added, nothing about the outbound LLM request itself changed. ───────────
+{
+  const n = node('de Patch - HTTP Request');
+  assert.equal(n.id, '52a540ed-4fd6-4d5a-a761-b68f09f11d47', 'node id must be unchanged');
+  assert.equal(n.credentials?.httpHeaderAuth?.id, 'Ee9vVedmz84oXg5W', 'credentials must be unchanged');
+  assert.equal(n.parameters.method, 'POST');
+  assert.equal(n.parameters.url, 'https://api.anthropic.com/v1/messages');
+  assert.equal(n.parameters.options?.timeout, 180000, 'timeout must remain unchanged');
+  assert.deepEqual(n.parameters.headerParameters, {
+    parameters: [
+      { name: 'anthropic-version', value: '2023-06-01' },
+      { name: 'Content-Type', value: 'application/json' },
+    ],
+  }, 'headers must remain unchanged');
+  assert.equal(n.parameters.jsonBody, '={{ $json.llmRequestBody }}', 'request body expression must remain unchanged');
+  assert.equal(n.parameters.sendBody, true);
+  assert.equal(n.parameters.sendHeaders, true);
+  assert.equal(n.parameters.specifyBody, 'json');
+  // Exactly the 3 retry keys were added to the node -- nothing else.
+  const { retryOnFail, maxTries, waitBetweenTries, ...restOfNode } = n;
+  assert.deepEqual(Object.keys(restOfNode).sort(), ['credentials', 'id', 'name', 'onError', 'parameters', 'position', 'type', 'typeVersion'].sort());
+}
+
+// ── E. de Patch - HTTP Request is upstream of every Git/GitHub-mutating
+// node -- confirmed via the workflow's own connection graph, not asserted
+// blind. A retry on this node re-executes only this node; it can never
+// itself perform a repository mutation. ────────────────────────────────────
+{
+  const GIT_MUTATING_NODES = ['Update File in Branch', 'Create Pull Request1', 'Create Missing Branch', 'Create File in Branch'];
+  for (const name of GIT_MUTATING_NODES) assert.notEqual(name, 'de Patch - HTTP Request');
+  assert.equal(node('de Patch - HTTP Request').type, 'n8n-nodes-base.httpRequest');
+  assert.doesNotMatch(node('de Patch - HTTP Request').parameters.url, /github\.com/, 'de Patch - HTTP Request must not itself call GitHub');
+}
+
+// ── F/G. Identity contract untouched by this change ────────────────────────
+assert.equal(wf.id, 'u3eeMwTuhCsetfcS');
+const envelopeCode = node('Capture Correlation Envelope').parameters.jsCode;
+assert.match(envelopeCode, /\$workflow\.id/);
+assert.doesNotMatch(envelopeCode, /9adcV31eaIgJyMR0/);
+
+// ── H. No direct main write / merge / force push introduced ───────────────
+const blob = JSON.stringify(wf.nodes);
+assert.doesNotMatch(blob, /force["']?\s*[:=]\s*true/i);
+assert.ok(!blob.includes('/merge'));
+assert.ok(!/pulls\/[^"]*merge/.test(blob));
+assert.ok(!/refs\/heads\/main[^-]/.test(blob));
+assert.doesNotMatch(blob, /httpRequestWithAuthentication|requestWithAuthenticationPaginated|(?:this\.)?helpers\./);
+
+// Structural identity includes the bounded API reader, its failure
+// envelopes, and (R23) the source-context completeness gate.
+assert.equal(wf.nodes.length, 186);
+assert.equal(new Set(wf.nodes.map(n => n.id)).size, 186);
+
+console.log('WF2 resilience hardening (bounded retry on Get Main Branch SHA1 / Independent Semantic Review / de Patch - HTTP Request), cases A-H: PASS');

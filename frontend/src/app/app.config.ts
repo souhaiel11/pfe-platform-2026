@@ -1,3 +1,4 @@
+// Configuration racine de l'application : déclare le routeur, le client HTTP (avec l'intercepteur JWT) et les animations.
 import { ApplicationConfig } from '@angular/core';
 import { provideRouter, withComponentInputBinding } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';

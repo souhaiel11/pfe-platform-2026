@@ -1,0 +1,41 @@
+// Teste le composant « effective-config » et ses cas d’erreur.
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {createRequire} from 'node:module';
+import vm from 'node:vm';
+const ts=createRequire(import.meta.url)('typescript');
+/** Lit les données depuis leur source. */
+const read=p=>readFileSync(new URL(p,import.meta.url),'utf8');
+/** Prépare les données nécessaires à ce scénario. */
+function moduleOf(path,dependencies={}) { const exports={}; vm.runInNewContext(ts.transpileModule(read(path),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,experimentalDecorators:true}}).outputText,{exports,Intl,Number,console,URL,Set,
+/** Charge la dépendance prévue pour le scénario. */
+require:n=>dependencies[n] || (n==='@angular/core'?{
+/** Simule le décorateur de composant Angular. */
+Component:()=>v=>v}:{})});return exports; }
+const presentation=moduleOf('../src/app/features/settings/general-settings-presentation.ts');
+const labels=moduleOf('../src/app/shared/platform-capability-presentation.ts');
+const {SettingsComponent}=moduleOf('../src/app/features/settings/settings.component.ts',{'./general-settings-presentation':presentation,'../../shared/platform-capability-presentation':labels});
+let co,io;const calls=[];
+const component=new SettingsComponent({},{
+/** Simule la lecture des données demandées par le composant. */
+getPlatformCapabilities:()=>{calls.push('capabilities');return {
+/** Prépare les données nécessaires à ce scénario. */
+subscribe:o=>co=o};},
+/** Simule la lecture des données demandées par le composant. */
+getIntegrations:()=>{calls.push('integrations');return {
+/** Prépare les données nécessaires à ce scénario. */
+subscribe:o=>io=o};}},{});
+component.loadCapabilities();component.loadIntegrations();assert.equal(component.capabilitiesState,'LOADING');assert.equal(component.integrationsState,'LOADING');
+co.next({security:[{id:'sonar'},{id:'trivy'}],remediation:{enforcementMode:'ENFORCED',supportedEditTypes:['PARENT_VERSION']}});
+io.next([{toolType:'prometheus',url:'https://diagnostic.example',status:'connected',lastChecked:'2026-10-01T11:00:00Z'}]);
+assert.equal(component.capabilitiesState,'LOADED');assert.equal(component.integrationsState,'LOADED');assert.equal(component.generalSummary.mode,'Contrôle appliqué');assert.equal(component.generalSummary.editTypes[0],'Parent Maven');assert.equal(component.tools[0].lastChecked,'2026-10-01T11:00:00Z');assert.equal(component.securityScanners.length,2);
+component.loadCapabilities();co.next({security:[],remediation:{enforcementMode:'SHADOW',supportedEditTypes:['PROPERTY_VERSION']}});assert.equal(component.generalSummary.mode,'Mode observation');assert.equal(component.generalSummary.editTypes[0],'Propriété Maven');assert.equal(component.securityScanners.length,0);
+component.loadCapabilities();co.error(new Error('private failure'));assert.equal(component.capabilitiesState,'ERROR');assert.equal(component.capabilities,null);assert.equal(component.generalSummary.mode,'Non disponible');assert.equal(component.generalSummary.editTypes.length,0);
+component.loadIntegrations();io.error(new Error('private failure'));assert.equal(component.integrationsState,'ERROR');assert.equal(component.tools.length,0);
+assert.equal(component.diagnosticLabel({checkedAt:'2026-10-01',valid:false}),'Indisponible lors de la dernière vérification');assert.equal(component.diagnosticLabel({valid:true}),'Connexion non vérifiée');
+const html=read('../src/app/features/settings/settings.component.html');
+for(const file of [html,read('../src/app/features/settings/settings.component.ts'),read('../src/app/core/services/api.service.ts')])assert.doesNotMatch(file,/config\/effective|getEffectiveConfig|effectiveConfig/);
+const security=html.split('aria-label="Sécurité"')[1].split('</section>')[0];assert.match(security,/generalSummary.mode/);assert.match(security,/generalSummary.editTypes/);assert.match(security,/Impossible de récupérer les capacités/);
+const diagnostics=html.split('aria-label="Diagnostics"')[1];assert.match(diagnostics,/Impossible de récupérer les intégrations/);assert.match(diagnostics,/tool.lastChecked \| frenchDate/);assert.match(diagnostics,/scanner.lastObservedAt \| frenchDate/);assert.doesNotMatch(html,/severityThresholds|vulnDb|javaDb|invariants|ENFORCED|SHADOW/);
+assert.ok(calls.includes('capabilities')&&calls.includes('integrations'));
+console.log('Existing APIs, dynamic modes/scanners/timestamps, French errors, no effective-config dependency/fake fallback PASS');

@@ -1,0 +1,887 @@
+{
+  "network": "BLOCKED_BY_TEST_PRELOAD",
+  "fixtureOverrides": "legacy shared WF2 primary fixture only; all assertions unchanged",
+  "backend": [
+    {
+      "name": "automatic-pr-validation.spec.ts",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/backend-automatic-pr-validation.spec.ts.log"
+    },
+    {
+      "name": "baseline-sha-freeze.spec.ts",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/backend-baseline-sha-freeze.spec.ts.log"
+    },
+    {
+      "name": "corrective-convergence.spec.ts",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/backend-corrective-convergence.spec.ts.log"
+    },
+    {
+      "name": "default-value-corrective-loop.spec.ts",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/backend-default-value-corrective-loop.spec.ts.log"
+    },
+    {
+      "name": "execution-binding-security.spec.ts",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/backend-execution-binding-security.spec.ts.log"
+    },
+    {
+      "name": "finding-id-normalization.spec.ts",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/backend-finding-id-normalization.spec.ts.log"
+    },
+    {
+      "name": "finding-task-id-exposure.spec.ts",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/backend-finding-task-id-exposure.spec.ts.log"
+    },
+    {
+      "name": "merge-authorization-acceptance.spec.ts",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/backend-merge-authorization-acceptance.spec.ts.log"
+    },
+    {
+      "name": "merge-authorization-wiring.spec.ts",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/backend-merge-authorization-wiring.spec.ts.log"
+    },
+    {
+      "name": "modify-failed-selection.spec.ts",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/backend-modify-failed-selection.spec.ts.log"
+    },
+    {
+      "name": "n8n-execution-client.spec.ts",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/backend-n8n-execution-client.spec.ts.log"
+    },
+    {
+      "name": "post-write-recovery.spec.ts",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/backend-post-write-recovery.spec.ts.log"
+    },
+    {
+      "name": "pr-regression-wiring.spec.ts",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/backend-pr-regression-wiring.spec.ts.log"
+    },
+    {
+      "name": "pr-validation-contract.spec.ts",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/backend-pr-validation-contract.spec.ts.log"
+    },
+    {
+      "name": "pr-validation-failure-taxonomy.spec.ts",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/backend-pr-validation-failure-taxonomy.spec.ts.log"
+    },
+    {
+      "name": "pr-validation-head-verification.spec.ts",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/backend-pr-validation-head-verification.spec.ts.log"
+    },
+    {
+      "name": "pr-validation-parameter-bootstrap.spec.ts",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/backend-pr-validation-parameter-bootstrap.spec.ts.log"
+    },
+    {
+      "name": "r75-corrective-cardinality.spec.ts",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/backend-r75-corrective-cardinality.spec.ts.log"
+    },
+    {
+      "name": "reconcile-sha-fallback.spec.ts",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/backend-reconcile-sha-fallback.spec.ts.log"
+    },
+    {
+      "name": "remediation-batch.spec.ts",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/backend-remediation-batch.spec.ts.log"
+    },
+    {
+      "name": "same-sha-policy-reevaluation.spec.ts",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/backend-same-sha-policy-reevaluation.spec.ts.log"
+    },
+    {
+      "name": "same-sha-revalidation-epoch.spec.ts",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/backend-same-sha-revalidation-epoch.spec.ts.log"
+    },
+    {
+      "name": "stale-dispatch-recovery.spec.ts",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/backend-stale-dispatch-recovery.spec.ts.log"
+    },
+    {
+      "name": "verification-evidence-persistence.spec.ts",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/backend-verification-evidence-persistence.spec.ts.log"
+    },
+    {
+      "name": "wf2-cancellation.spec.ts",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/backend-wf2-cancellation.spec.ts.log"
+    },
+    {
+      "name": "workflow-attempt-identity.spec.ts",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/backend-workflow-attempt-identity.spec.ts.log"
+    }
+  ],
+  "workflows": [
+    {
+      "name": "wf2-association-guard.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/historical-wf2-association-guard.spec.mjs.log"
+    },
+    {
+      "name": "wf2-cancellation.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/historical-wf2-cancellation.spec.mjs.log"
+    },
+    {
+      "name": "wf2-canonical-final.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/historical-wf2-canonical-final.spec.mjs.log"
+    },
+    {
+      "name": "wf2-code-node-sandbox.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/historical-wf2-code-node-sandbox.spec.mjs.log"
+    },
+    {
+      "name": "wf2-corrective-same-pr.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/historical-wf2-corrective-same-pr.spec.mjs.log"
+    },
+    {
+      "name": "wf2-cross-file-compile-gate.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/historical-wf2-cross-file-compile-gate.spec.mjs.log"
+    },
+    {
+      "name": "wf2-cross-file-type-coherence.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/historical-wf2-cross-file-type-coherence.spec.mjs.log"
+    },
+    {
+      "name": "wf2-dto-entity-decoupling.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/historical-wf2-dto-entity-decoupling.spec.mjs.log"
+    },
+    {
+      "name": "wf2-dto-source-discovery.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/historical-wf2-dto-source-discovery.spec.mjs.log"
+    },
+    {
+      "name": "wf2-failure-evidence-forwarding.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/historical-wf2-failure-evidence-forwarding.spec.mjs.log"
+    },
+    {
+      "name": "wf2-failure-persistence-audit.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/historical-wf2-failure-persistence-audit.spec.mjs.log"
+    },
+    {
+      "name": "wf2-fix-h-semantic-policy.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/historical-wf2-fix-h-semantic-policy.spec.mjs.log"
+    },
+    {
+      "name": "wf2-multifile-candidate-review.spec.mjs",
+      "exitCode": 1,
+      "log": "docs/qa/wf2-cancellation/historical-wf2-multifile-candidate-review.spec.mjs.log"
+    },
+    {
+      "name": "wf2-patch-token-budget.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/historical-wf2-patch-token-budget.spec.mjs.log"
+    },
+    {
+      "name": "wf2-patch-truncation.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/historical-wf2-patch-truncation.spec.mjs.log"
+    },
+    {
+      "name": "wf2-placeholder-marker-context.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/historical-wf2-placeholder-marker-context.spec.mjs.log"
+    },
+    {
+      "name": "wf2-plan-relationship-api-validation.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/historical-wf2-plan-relationship-api-validation.spec.mjs.log"
+    },
+    {
+      "name": "wf2-preflight-rawcast.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/historical-wf2-preflight-rawcast.spec.mjs.log"
+    },
+    {
+      "name": "wf2-preflight-scanner-suppression.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/historical-wf2-preflight-scanner-suppression.spec.mjs.log"
+    },
+    {
+      "name": "wf2-promotion-identity.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/historical-wf2-promotion-identity.spec.mjs.log"
+    },
+    {
+      "name": "wf2-r19-3-dynamic.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/historical-wf2-r19-3-dynamic.spec.mjs.log"
+    },
+    {
+      "name": "wf2-r19-3c.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/historical-wf2-r19-3c.spec.mjs.log"
+    },
+    {
+      "name": "wf2-r22e-two-pass.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/historical-wf2-r22e-two-pass.spec.mjs.log"
+    },
+    {
+      "name": "wf2-r22e2b-nonprod-safety.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/historical-wf2-r22e2b-nonprod-safety.spec.mjs.log"
+    },
+    {
+      "name": "wf2-r22e2g-llm-timeout.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/historical-wf2-r22e2g-llm-timeout.spec.mjs.log"
+    },
+    {
+      "name": "wf2-r70-corrective-target-grounding.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/historical-wf2-r70-corrective-target-grounding.spec.mjs.log"
+    },
+    {
+      "name": "wf2-r71-corrective-source-authority.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/historical-wf2-r71-corrective-source-authority.spec.mjs.log"
+    },
+    {
+      "name": "wf2-r72-planner-output-budget.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/historical-wf2-r72-planner-output-budget.spec.mjs.log"
+    },
+    {
+      "name": "wf2-r73-corrective-target-propagation.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/historical-wf2-r73-corrective-target-propagation.spec.mjs.log"
+    },
+    {
+      "name": "wf2-r74-corrective-issue-canonicalization.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/historical-wf2-r74-corrective-issue-canonicalization.spec.mjs.log"
+    },
+    {
+      "name": "wf2-r75-corrective-cardinality-invariant.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/historical-wf2-r75-corrective-cardinality-invariant.spec.mjs.log"
+    },
+    {
+      "name": "wf2-r75-corrective-closure.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/historical-wf2-r75-corrective-closure.spec.mjs.log"
+    },
+    {
+      "name": "wf2-r77-corrective-plan-canonicalization.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/historical-wf2-r77-corrective-plan-canonicalization.spec.mjs.log"
+    },
+    {
+      "name": "wf2-r78-final-branch-head.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/historical-wf2-r78-final-branch-head.spec.mjs.log"
+    },
+    {
+      "name": "wf2-r81-2-writer-prompt.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/historical-wf2-r81-2-writer-prompt.spec.mjs.log"
+    },
+    {
+      "name": "wf2-r81-3-trust-binding.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/historical-wf2-r81-3-trust-binding.spec.mjs.log"
+    },
+    {
+      "name": "wf2-r83-sticky-notes.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/historical-wf2-r83-sticky-notes.spec.mjs.log"
+    },
+    {
+      "name": "wf2-r85-sticky-zone-labels.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/historical-wf2-r85-sticky-zone-labels.spec.mjs.log"
+    },
+    {
+      "name": "wf2-r86-sticky-zone-consolidation.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/historical-wf2-r86-sticky-zone-consolidation.spec.mjs.log"
+    },
+    {
+      "name": "wf2-r87-llm-retry.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/historical-wf2-r87-llm-retry.spec.mjs.log"
+    },
+    {
+      "name": "wf2-r88-opus-retry-backoff.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/historical-wf2-r88-opus-retry-backoff.spec.mjs.log"
+    },
+    {
+      "name": "wf2-r89-mapping-required-filename-fix.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/historical-wf2-r89-mapping-required-filename-fix.spec.mjs.log"
+    },
+    {
+      "name": "wf2-relationship-source-grounding.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/historical-wf2-relationship-source-grounding.spec.mjs.log"
+    },
+    {
+      "name": "wf2-resilience.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/historical-wf2-resilience.spec.mjs.log"
+    },
+    {
+      "name": "wf2-source-api.spec.mjs",
+      "exitCode": 1,
+      "log": "docs/qa/wf2-cancellation/historical-wf2-source-api.spec.mjs.log"
+    },
+    {
+      "name": "wf2-source-context-completeness.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/historical-wf2-source-context-completeness.spec.mjs.log"
+    },
+    {
+      "name": "wf2-source-provenance.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/historical-wf2-source-provenance.spec.mjs.log"
+    },
+    {
+      "name": "wf2-verification-evidence.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/historical-wf2-verification-evidence.spec.mjs.log"
+    },
+    {
+      "name": "wf2-wire-type-coherence-failure-envelope.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/historical-wf2-wire-type-coherence-failure-envelope.spec.mjs.log"
+    },
+    {
+      "name": "wf2-association-guard.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/r90-wf2-association-guard.spec.mjs.log"
+    },
+    {
+      "name": "wf2-cancellation.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/r90-wf2-cancellation.spec.mjs.log"
+    },
+    {
+      "name": "wf2-canonical-final.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/r90-wf2-canonical-final.spec.mjs.log"
+    },
+    {
+      "name": "wf2-code-node-sandbox.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/r90-wf2-code-node-sandbox.spec.mjs.log"
+    },
+    {
+      "name": "wf2-corrective-same-pr.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/r90-wf2-corrective-same-pr.spec.mjs.log"
+    },
+    {
+      "name": "wf2-cross-file-compile-gate.spec.mjs",
+      "exitCode": 1,
+      "log": "docs/qa/wf2-cancellation/r90-wf2-cross-file-compile-gate.spec.mjs.log"
+    },
+    {
+      "name": "wf2-cross-file-type-coherence.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/r90-wf2-cross-file-type-coherence.spec.mjs.log"
+    },
+    {
+      "name": "wf2-dto-entity-decoupling.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/r90-wf2-dto-entity-decoupling.spec.mjs.log"
+    },
+    {
+      "name": "wf2-dto-source-discovery.spec.mjs",
+      "exitCode": 1,
+      "log": "docs/qa/wf2-cancellation/r90-wf2-dto-source-discovery.spec.mjs.log"
+    },
+    {
+      "name": "wf2-failure-evidence-forwarding.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/r90-wf2-failure-evidence-forwarding.spec.mjs.log"
+    },
+    {
+      "name": "wf2-failure-persistence-audit.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/r90-wf2-failure-persistence-audit.spec.mjs.log"
+    },
+    {
+      "name": "wf2-fix-h-semantic-policy.spec.mjs",
+      "exitCode": 1,
+      "log": "docs/qa/wf2-cancellation/r90-wf2-fix-h-semantic-policy.spec.mjs.log"
+    },
+    {
+      "name": "wf2-multifile-candidate-review.spec.mjs",
+      "exitCode": 1,
+      "log": "docs/qa/wf2-cancellation/r90-wf2-multifile-candidate-review.spec.mjs.log"
+    },
+    {
+      "name": "wf2-patch-token-budget.spec.mjs",
+      "exitCode": 1,
+      "log": "docs/qa/wf2-cancellation/r90-wf2-patch-token-budget.spec.mjs.log"
+    },
+    {
+      "name": "wf2-patch-truncation.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/r90-wf2-patch-truncation.spec.mjs.log"
+    },
+    {
+      "name": "wf2-placeholder-marker-context.spec.mjs",
+      "exitCode": 1,
+      "log": "docs/qa/wf2-cancellation/r90-wf2-placeholder-marker-context.spec.mjs.log"
+    },
+    {
+      "name": "wf2-plan-relationship-api-validation.spec.mjs",
+      "exitCode": 1,
+      "log": "docs/qa/wf2-cancellation/r90-wf2-plan-relationship-api-validation.spec.mjs.log"
+    },
+    {
+      "name": "wf2-preflight-rawcast.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/r90-wf2-preflight-rawcast.spec.mjs.log"
+    },
+    {
+      "name": "wf2-preflight-scanner-suppression.spec.mjs",
+      "exitCode": 1,
+      "log": "docs/qa/wf2-cancellation/r90-wf2-preflight-scanner-suppression.spec.mjs.log"
+    },
+    {
+      "name": "wf2-promotion-identity.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/r90-wf2-promotion-identity.spec.mjs.log"
+    },
+    {
+      "name": "wf2-r19-3-dynamic.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/r90-wf2-r19-3-dynamic.spec.mjs.log"
+    },
+    {
+      "name": "wf2-r19-3c.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/r90-wf2-r19-3c.spec.mjs.log"
+    },
+    {
+      "name": "wf2-r22e-two-pass.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/r90-wf2-r22e-two-pass.spec.mjs.log"
+    },
+    {
+      "name": "wf2-r22e2b-nonprod-safety.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/r90-wf2-r22e2b-nonprod-safety.spec.mjs.log"
+    },
+    {
+      "name": "wf2-r22e2g-llm-timeout.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/r90-wf2-r22e2g-llm-timeout.spec.mjs.log"
+    },
+    {
+      "name": "wf2-r70-corrective-target-grounding.spec.mjs",
+      "exitCode": 1,
+      "log": "docs/qa/wf2-cancellation/r90-wf2-r70-corrective-target-grounding.spec.mjs.log"
+    },
+    {
+      "name": "wf2-r71-corrective-source-authority.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/r90-wf2-r71-corrective-source-authority.spec.mjs.log"
+    },
+    {
+      "name": "wf2-r72-planner-output-budget.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/r90-wf2-r72-planner-output-budget.spec.mjs.log"
+    },
+    {
+      "name": "wf2-r73-corrective-target-propagation.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/r90-wf2-r73-corrective-target-propagation.spec.mjs.log"
+    },
+    {
+      "name": "wf2-r74-corrective-issue-canonicalization.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/r90-wf2-r74-corrective-issue-canonicalization.spec.mjs.log"
+    },
+    {
+      "name": "wf2-r75-corrective-cardinality-invariant.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/r90-wf2-r75-corrective-cardinality-invariant.spec.mjs.log"
+    },
+    {
+      "name": "wf2-r75-corrective-closure.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/r90-wf2-r75-corrective-closure.spec.mjs.log"
+    },
+    {
+      "name": "wf2-r77-corrective-plan-canonicalization.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/r90-wf2-r77-corrective-plan-canonicalization.spec.mjs.log"
+    },
+    {
+      "name": "wf2-r78-final-branch-head.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/r90-wf2-r78-final-branch-head.spec.mjs.log"
+    },
+    {
+      "name": "wf2-r81-2-writer-prompt.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/r90-wf2-r81-2-writer-prompt.spec.mjs.log"
+    },
+    {
+      "name": "wf2-r81-3-trust-binding.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/r90-wf2-r81-3-trust-binding.spec.mjs.log"
+    },
+    {
+      "name": "wf2-r83-sticky-notes.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/r90-wf2-r83-sticky-notes.spec.mjs.log"
+    },
+    {
+      "name": "wf2-r85-sticky-zone-labels.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/r90-wf2-r85-sticky-zone-labels.spec.mjs.log"
+    },
+    {
+      "name": "wf2-r86-sticky-zone-consolidation.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/r90-wf2-r86-sticky-zone-consolidation.spec.mjs.log"
+    },
+    {
+      "name": "wf2-r87-llm-retry.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/r90-wf2-r87-llm-retry.spec.mjs.log"
+    },
+    {
+      "name": "wf2-r88-opus-retry-backoff.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/r90-wf2-r88-opus-retry-backoff.spec.mjs.log"
+    },
+    {
+      "name": "wf2-r89-mapping-required-filename-fix.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/r90-wf2-r89-mapping-required-filename-fix.spec.mjs.log"
+    },
+    {
+      "name": "wf2-relationship-source-grounding.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/r90-wf2-relationship-source-grounding.spec.mjs.log"
+    },
+    {
+      "name": "wf2-resilience.spec.mjs",
+      "exitCode": 1,
+      "log": "docs/qa/wf2-cancellation/r90-wf2-resilience.spec.mjs.log"
+    },
+    {
+      "name": "wf2-source-api.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/r90-wf2-source-api.spec.mjs.log"
+    },
+    {
+      "name": "wf2-source-context-completeness.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/r90-wf2-source-context-completeness.spec.mjs.log"
+    },
+    {
+      "name": "wf2-source-provenance.spec.mjs",
+      "exitCode": 1,
+      "log": "docs/qa/wf2-cancellation/r90-wf2-source-provenance.spec.mjs.log"
+    },
+    {
+      "name": "wf2-verification-evidence.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/r90-wf2-verification-evidence.spec.mjs.log"
+    },
+    {
+      "name": "wf2-wire-type-coherence-failure-envelope.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/r90-wf2-wire-type-coherence-failure-envelope.spec.mjs.log"
+    },
+    {
+      "name": "wf2-association-guard.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/r91-wf2-association-guard.spec.mjs.log"
+    },
+    {
+      "name": "wf2-cancellation.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/r91-wf2-cancellation.spec.mjs.log"
+    },
+    {
+      "name": "wf2-canonical-final.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/r91-wf2-canonical-final.spec.mjs.log"
+    },
+    {
+      "name": "wf2-code-node-sandbox.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/r91-wf2-code-node-sandbox.spec.mjs.log"
+    },
+    {
+      "name": "wf2-corrective-same-pr.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/r91-wf2-corrective-same-pr.spec.mjs.log"
+    },
+    {
+      "name": "wf2-cross-file-compile-gate.spec.mjs",
+      "exitCode": 1,
+      "log": "docs/qa/wf2-cancellation/r91-wf2-cross-file-compile-gate.spec.mjs.log"
+    },
+    {
+      "name": "wf2-cross-file-type-coherence.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/r91-wf2-cross-file-type-coherence.spec.mjs.log"
+    },
+    {
+      "name": "wf2-dto-entity-decoupling.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/r91-wf2-dto-entity-decoupling.spec.mjs.log"
+    },
+    {
+      "name": "wf2-dto-source-discovery.spec.mjs",
+      "exitCode": 1,
+      "log": "docs/qa/wf2-cancellation/r91-wf2-dto-source-discovery.spec.mjs.log"
+    },
+    {
+      "name": "wf2-failure-evidence-forwarding.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/r91-wf2-failure-evidence-forwarding.spec.mjs.log"
+    },
+    {
+      "name": "wf2-failure-persistence-audit.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/r91-wf2-failure-persistence-audit.spec.mjs.log"
+    },
+    {
+      "name": "wf2-fix-h-semantic-policy.spec.mjs",
+      "exitCode": 1,
+      "log": "docs/qa/wf2-cancellation/r91-wf2-fix-h-semantic-policy.spec.mjs.log"
+    },
+    {
+      "name": "wf2-multifile-candidate-review.spec.mjs",
+      "exitCode": 1,
+      "log": "docs/qa/wf2-cancellation/r91-wf2-multifile-candidate-review.spec.mjs.log"
+    },
+    {
+      "name": "wf2-patch-token-budget.spec.mjs",
+      "exitCode": 1,
+      "log": "docs/qa/wf2-cancellation/r91-wf2-patch-token-budget.spec.mjs.log"
+    },
+    {
+      "name": "wf2-patch-truncation.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/r91-wf2-patch-truncation.spec.mjs.log"
+    },
+    {
+      "name": "wf2-placeholder-marker-context.spec.mjs",
+      "exitCode": 1,
+      "log": "docs/qa/wf2-cancellation/r91-wf2-placeholder-marker-context.spec.mjs.log"
+    },
+    {
+      "name": "wf2-plan-relationship-api-validation.spec.mjs",
+      "exitCode": 1,
+      "log": "docs/qa/wf2-cancellation/r91-wf2-plan-relationship-api-validation.spec.mjs.log"
+    },
+    {
+      "name": "wf2-preflight-rawcast.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/r91-wf2-preflight-rawcast.spec.mjs.log"
+    },
+    {
+      "name": "wf2-preflight-scanner-suppression.spec.mjs",
+      "exitCode": 1,
+      "log": "docs/qa/wf2-cancellation/r91-wf2-preflight-scanner-suppression.spec.mjs.log"
+    },
+    {
+      "name": "wf2-promotion-identity.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/r91-wf2-promotion-identity.spec.mjs.log"
+    },
+    {
+      "name": "wf2-r19-3-dynamic.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/r91-wf2-r19-3-dynamic.spec.mjs.log"
+    },
+    {
+      "name": "wf2-r19-3c.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/r91-wf2-r19-3c.spec.mjs.log"
+    },
+    {
+      "name": "wf2-r22e-two-pass.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/r91-wf2-r22e-two-pass.spec.mjs.log"
+    },
+    {
+      "name": "wf2-r22e2b-nonprod-safety.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/r91-wf2-r22e2b-nonprod-safety.spec.mjs.log"
+    },
+    {
+      "name": "wf2-r22e2g-llm-timeout.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/r91-wf2-r22e2g-llm-timeout.spec.mjs.log"
+    },
+    {
+      "name": "wf2-r70-corrective-target-grounding.spec.mjs",
+      "exitCode": 1,
+      "log": "docs/qa/wf2-cancellation/r91-wf2-r70-corrective-target-grounding.spec.mjs.log"
+    },
+    {
+      "name": "wf2-r71-corrective-source-authority.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/r91-wf2-r71-corrective-source-authority.spec.mjs.log"
+    },
+    {
+      "name": "wf2-r72-planner-output-budget.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/r91-wf2-r72-planner-output-budget.spec.mjs.log"
+    },
+    {
+      "name": "wf2-r73-corrective-target-propagation.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/r91-wf2-r73-corrective-target-propagation.spec.mjs.log"
+    },
+    {
+      "name": "wf2-r74-corrective-issue-canonicalization.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/r91-wf2-r74-corrective-issue-canonicalization.spec.mjs.log"
+    },
+    {
+      "name": "wf2-r75-corrective-cardinality-invariant.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/r91-wf2-r75-corrective-cardinality-invariant.spec.mjs.log"
+    },
+    {
+      "name": "wf2-r75-corrective-closure.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/r91-wf2-r75-corrective-closure.spec.mjs.log"
+    },
+    {
+      "name": "wf2-r77-corrective-plan-canonicalization.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/r91-wf2-r77-corrective-plan-canonicalization.spec.mjs.log"
+    },
+    {
+      "name": "wf2-r78-final-branch-head.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/r91-wf2-r78-final-branch-head.spec.mjs.log"
+    },
+    {
+      "name": "wf2-r81-2-writer-prompt.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/r91-wf2-r81-2-writer-prompt.spec.mjs.log"
+    },
+    {
+      "name": "wf2-r81-3-trust-binding.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/r91-wf2-r81-3-trust-binding.spec.mjs.log"
+    },
+    {
+      "name": "wf2-r83-sticky-notes.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/r91-wf2-r83-sticky-notes.spec.mjs.log"
+    },
+    {
+      "name": "wf2-r85-sticky-zone-labels.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/r91-wf2-r85-sticky-zone-labels.spec.mjs.log"
+    },
+    {
+      "name": "wf2-r86-sticky-zone-consolidation.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/r91-wf2-r86-sticky-zone-consolidation.spec.mjs.log"
+    },
+    {
+      "name": "wf2-r87-llm-retry.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/r91-wf2-r87-llm-retry.spec.mjs.log"
+    },
+    {
+      "name": "wf2-r88-opus-retry-backoff.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/r91-wf2-r88-opus-retry-backoff.spec.mjs.log"
+    },
+    {
+      "name": "wf2-r89-mapping-required-filename-fix.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/r91-wf2-r89-mapping-required-filename-fix.spec.mjs.log"
+    },
+    {
+      "name": "wf2-relationship-source-grounding.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/r91-wf2-relationship-source-grounding.spec.mjs.log"
+    },
+    {
+      "name": "wf2-resilience.spec.mjs",
+      "exitCode": 1,
+      "log": "docs/qa/wf2-cancellation/r91-wf2-resilience.spec.mjs.log"
+    },
+    {
+      "name": "wf2-source-api.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/r91-wf2-source-api.spec.mjs.log"
+    },
+    {
+      "name": "wf2-source-context-completeness.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/r91-wf2-source-context-completeness.spec.mjs.log"
+    },
+    {
+      "name": "wf2-source-provenance.spec.mjs",
+      "exitCode": 1,
+      "log": "docs/qa/wf2-cancellation/r91-wf2-source-provenance.spec.mjs.log"
+    },
+    {
+      "name": "wf2-verification-evidence.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/r91-wf2-verification-evidence.spec.mjs.log"
+    },
+    {
+      "name": "wf2-wire-type-coherence-failure-envelope.spec.mjs",
+      "exitCode": 0,
+      "log": "docs/qa/wf2-cancellation/r91-wf2-wire-type-coherence-failure-envelope.spec.mjs.log"
+    }
+  ],
+  "baselineFailures": [
+    "wf2-cross-file-compile-gate.spec.mjs",
+    "wf2-dto-source-discovery.spec.mjs",
+    "wf2-fix-h-semantic-policy.spec.mjs",
+    "wf2-multifile-candidate-review.spec.mjs",
+    "wf2-patch-token-budget.spec.mjs",
+    "wf2-placeholder-marker-context.spec.mjs",
+    "wf2-plan-relationship-api-validation.spec.mjs",
+    "wf2-preflight-scanner-suppression.spec.mjs",
+    "wf2-r70-corrective-target-grounding.spec.mjs",
+    "wf2-resilience.spec.mjs",
+    "wf2-source-provenance.spec.mjs"
+  ],
+  "candidateRegressions": []
+}

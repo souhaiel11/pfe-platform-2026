@@ -1,0 +1,137 @@
+{
+  "sourceVersion": "125eb57e-ac69-4632-bf60-490ff5736d5b",
+  "WF6_FUNCTIONAL_NODE_CHANGED_COUNT": 32,
+  "WF6_CONNECTION_CHANGED_COUNT": 0,
+  "WF6_CREDENTIAL_CHANGED_COUNT": 0,
+  "WF6_UNRELATED_CHANGE_COUNT": 0,
+  "changes": [
+    {
+      "name": "Record Batch Result (Not Ready)",
+      "reason": "Exact reserved attempt identity on callback; conservative Git side-effect evidence; no candidate/guard/PR mutation."
+    },
+    {
+      "name": "Record Batch Result (Success)",
+      "reason": "Exact reserved attempt identity on callback; conservative Git side-effect evidence; no candidate/guard/PR mutation."
+    },
+    {
+      "name": "Record Batch Result (Candidate Drifted)",
+      "reason": "Exact reserved attempt identity on callback; conservative Git side-effect evidence; no candidate/guard/PR mutation."
+    },
+    {
+      "name": "Record Batch Result (Base SHA Unresolvable)",
+      "reason": "Exact reserved attempt identity on callback; conservative Git side-effect evidence; no candidate/guard/PR mutation."
+    },
+    {
+      "name": "Record Batch Result (Branch Content Conflict)",
+      "reason": "Exact reserved attempt identity on callback; conservative Git side-effect evidence; no candidate/guard/PR mutation."
+    },
+    {
+      "name": "Record Batch Result (Write Conflict)",
+      "reason": "Exact reserved attempt identity on callback; conservative Git side-effect evidence; no candidate/guard/PR mutation."
+    },
+    {
+      "name": "Record Batch Result (EVALUATION_FAILED)",
+      "reason": "Exact reserved attempt identity on callback; conservative Git side-effect evidence; no candidate/guard/PR mutation."
+    },
+    {
+      "name": "Record Batch Result (INVALID_CANDIDATE)",
+      "reason": "Exact reserved attempt identity on callback; conservative Git side-effect evidence; no candidate/guard/PR mutation."
+    },
+    {
+      "name": "Record Batch Result (PR Head SHA Mismatch)",
+      "reason": "Exact reserved attempt identity on callback; conservative Git side-effect evidence; no candidate/guard/PR mutation."
+    },
+    {
+      "name": "Record Batch Result (DEFAULT_BRANCH_UNRESOLVABLE)",
+      "reason": "Exact reserved attempt identity on callback; conservative Git side-effect evidence; no candidate/guard/PR mutation."
+    },
+    {
+      "name": "Record Batch Result (ANCESTRY_UNRESOLVABLE)",
+      "reason": "Exact reserved attempt identity on callback; conservative Git side-effect evidence; no candidate/guard/PR mutation."
+    },
+    {
+      "name": "Record Batch Result (ANCESTRY_INVALID)",
+      "reason": "Exact reserved attempt identity on callback; conservative Git side-effect evidence; no candidate/guard/PR mutation."
+    },
+    {
+      "name": "Record Batch Result (PR_LOOKUP_FAILED)",
+      "reason": "Exact reserved attempt identity on callback; conservative Git side-effect evidence; no candidate/guard/PR mutation."
+    },
+    {
+      "name": "Record Batch Result (PR_LOOKUP_INVALID)",
+      "reason": "Exact reserved attempt identity on callback; conservative Git side-effect evidence; no candidate/guard/PR mutation."
+    },
+    {
+      "name": "Record Batch Result (Historical Already Merged)",
+      "reason": "Exact reserved attempt identity on callback; conservative Git side-effect evidence; no candidate/guard/PR mutation."
+    },
+    {
+      "name": "Record Batch Result (Historical Closed Not Merged)",
+      "reason": "Exact reserved attempt identity on callback; conservative Git side-effect evidence; no candidate/guard/PR mutation."
+    },
+    {
+      "name": "Record Batch Result (Historical PR Reused)",
+      "reason": "Exact reserved attempt identity on callback; conservative Git side-effect evidence; no candidate/guard/PR mutation."
+    },
+    {
+      "name": "Record Batch Result (BRANCH_LOOKUP_FAILED)",
+      "reason": "Exact reserved attempt identity on callback; conservative Git side-effect evidence; no candidate/guard/PR mutation."
+    },
+    {
+      "name": "Record Batch Result (REVALIDATION_FAILED)",
+      "reason": "Exact reserved attempt identity on callback; conservative Git side-effect evidence; no candidate/guard/PR mutation."
+    },
+    {
+      "name": "Record Batch Result (BRANCH_CREATE_FAILED)",
+      "reason": "Exact reserved attempt identity on callback; conservative Git side-effect evidence; no candidate/guard/PR mutation."
+    },
+    {
+      "name": "Record Batch Result (Final Already Merged)",
+      "reason": "Exact reserved attempt identity on callback; conservative Git side-effect evidence; no candidate/guard/PR mutation."
+    },
+    {
+      "name": "Record Batch Result (Final Closed Not Merged)",
+      "reason": "Exact reserved attempt identity on callback; conservative Git side-effect evidence; no candidate/guard/PR mutation."
+    },
+    {
+      "name": "Record Batch Result (Final PR Reused)",
+      "reason": "Exact reserved attempt identity on callback; conservative Git side-effect evidence; no candidate/guard/PR mutation."
+    },
+    {
+      "name": "Record Batch Result (DEFAULT_BRANCH_DRIFTED)",
+      "reason": "Exact reserved attempt identity on callback; conservative Git side-effect evidence; no candidate/guard/PR mutation."
+    },
+    {
+      "name": "Record Batch Result (PR_CREATE_FAILED)",
+      "reason": "Exact reserved attempt identity on callback; conservative Git side-effect evidence; no candidate/guard/PR mutation."
+    },
+    {
+      "name": "Record Batch Result (PR Head Drift Cleanup Failed)",
+      "reason": "Exact reserved attempt identity on callback; conservative Git side-effect evidence; no candidate/guard/PR mutation."
+    },
+    {
+      "name": "Record Batch Result (PR Head Drifted)",
+      "reason": "Exact reserved attempt identity on callback; conservative Git side-effect evidence; no candidate/guard/PR mutation."
+    },
+    {
+      "name": "Record Batch Result (PR36_PROTECTED)",
+      "reason": "Exact reserved attempt identity on callback; conservative Git side-effect evidence; no candidate/guard/PR mutation."
+    },
+    {
+      "name": "Evaluate Security Remediation",
+      "reason": "Carry reserved correlation through evaluation/revalidation; candidate bytes and security decisions unchanged."
+    },
+    {
+      "name": "Revalidate Before Write (New Branch)",
+      "reason": "Carry reserved correlation through evaluation/revalidation; candidate bytes and security decisions unchanged."
+    },
+    {
+      "name": "Revalidate Before Write (Reuse)",
+      "reason": "Carry reserved correlation through evaluation/revalidation; candidate bytes and security decisions unchanged."
+    },
+    {
+      "name": "Revalidate Before Write (PR)",
+      "reason": "Carry reserved correlation through evaluation/revalidation; candidate bytes and security decisions unchanged."
+    }
+  ]
+}

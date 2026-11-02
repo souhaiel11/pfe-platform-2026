@@ -1,0 +1,14 @@
+{
+  "postgresChecks": 25,
+  "postgresAllPassed": true,
+  "regressionFiles": 56,
+  "nodeTestCases": 318,
+  "regressionAllPassed": true,
+  "liveChanged": false,
+  "realRetryExecuted": false,
+  "gitHubWritePerformed": false,
+  "wf6DefinitionChanged": false,
+  "postgresDisposableRemoved": true,
+  "backendBuildPassed": true,
+  "backendBuildOutput": "/tmp/phase4g-nest-build-final"
+}

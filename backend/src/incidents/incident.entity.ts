@@ -1,4 +1,4 @@
-// incident.entity.ts
+// Entité Incident : cœur du cycle de vie surveillé par la plateforme (pending -> ...
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne } from 'typeorm';
 import { Project } from '../projects/project.entity';
 
@@ -22,6 +22,10 @@ export class Incident {
   @Column({ nullable: true }) jenkinsJobName: string;
   @Column({ nullable: true }) buildNumber: number;
   @Column({ nullable: true }) aiAnalysis: string;
+  @Column({ nullable: true }) errorReason: string;
+  @Column({ type: 'text', nullable: true }) errorDetail: string;
+  @Column({ nullable: true }) errorStep: string;
+  @Column({ type: 'timestamp', nullable: true }) resolvedAt: Date;
   @CreateDateColumn() createdAt: Date;
   @UpdateDateColumn() updatedAt: Date;
 }

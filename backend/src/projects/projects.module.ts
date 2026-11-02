@@ -1,3 +1,4 @@
+// Assemble les contrôleurs et services de projets.
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { HttpModule } from '@nestjs/axios';

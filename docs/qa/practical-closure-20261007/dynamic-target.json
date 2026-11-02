@@ -1,0 +1,9 @@
+{
+  "targetType": "FILE",
+  "trustedTargetPath": "pom.xml",
+  "projectId": "ebe3bd94-8240-4c30-a2d9-6de2106a28bc",
+  "targetFile": "pom.xml",
+  "dependencyCoordinate": "com.h2database:h2",
+  "lockGranularity": "FILE",
+  "targetKey": "[\"v1\",\"FILE\",\"pom.xml\"]"
+}

@@ -1,0 +1,12 @@
+{
+  "status": "FAILED_BEFORE_TRIVY_EXECUTION",
+  "adapter": "deployed TrivyImageArtifactValidator.inspect",
+  "workspace": "/tmp/chain4b-r1-original",
+  "code": "RUNTIME_COMMAND_FAILED",
+  "stage": "PODMAN_BASE_IMAGE_PULL",
+  "exitCode": 125,
+  "image": "scratch",
+  "stderr": "Resolving scratch using unqualified-search registries (/etc/containers/registries.conf). Trying to pull docker.io/library/scratch:latest. Error: initializing source docker://scratch:latest: reading manifest latest in docker.io/library/scratch: manifest unknown: manifest unknown",
+  "productionRuntimeModified": false,
+  "stopGate": "Section 6: If the scanners do not reproduce a suitable finding: STOP."
+}

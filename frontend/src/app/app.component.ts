@@ -1,3 +1,4 @@
+// Composant racine de l'application : héberge le routeur et le conteneur global des notifications toast.
 import { Component } from '@angular/core';
 import { RouterModule } from '@angular/router';
 import { ToastComponent } from './shared/toast/toast.component';

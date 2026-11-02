@@ -1,58 +1,91 @@
+<!-- Présente la configuration d’un projet. -->
 <div class="pf-container">
 
   <!-- Header -->
   <div class="pf-header">
-    <button class="btn-back" (click)="goBack()">← Retour</button>
-    <h1>{{ isEdit ? '✏️ Modifier le projet' : '➕ Nouveau projet' }}</h1>
+    <button class="btn-back" (click)="goBack()"><span aria-hidden="true">←</span> Retour</button>
+    <h1>{{ isEdit ? 'Modifier le projet' : 'Nouveau projet' }}</h1>
     <div class="pf-actions">
-      <button class="btn-validate" (click)="validateProject()" [disabled]="!projectId || validating">
-        {{ validating ? '⏳ Vérification...' : '🔍 Vérifier la config' }}
+      <button class="btn-validate" (click)="testerConfiguration()" [disabled]="testEnCours">
+        {{ testEnCours ? 'Test en cours…' : 'Tester la configuration' }}
       </button>
-      <button class="btn-save" (click)="save()" [disabled]="loading">
-        {{ loading ? '⏳ Sauvegarde...' : '💾 Sauvegarder' }}
+      <button class="btn-save" (click)="save()" [disabled]="!enregistrementPossible"
+              [attr.title]="raisonBlocage() || null">
+        {{ loading ? 'Sauvegarde…' : 'Sauvegarder' }}
       </button>
     </div>
   </div>
 
   <!-- Alerts -->
-  <div class="alert success" *ngIf="saveSuccess">✅ Projet sauvegardé avec succès</div>
-  <div class="alert error"   *ngIf="saveError">❌ {{ saveError }}</div>
+  <div class="alert success" *ngIf="saveSuccess" role="status"><span aria-hidden="true">✓</span> Projet enregistré.</div>
+  <div class="alert error"   *ngIf="saveError" role="alert">
+    <div class="alert-line"><span aria-hidden="true">✕</span> {{ saveError }}</div>
+    <!-- Liste exacte de ce qui manque : champ, onglet et raison. Cliquer une
+         ligne ouvre l'onglet concerné et place le curseur dans le champ. -->
+    <ul class="missing-list" *ngIf="champsEnFaute.length">
+      <li *ngFor="let e of champsEnFaute">
+        <button type="button" class="missing-jump" (click)="allerAuChamp(e)">
+          <span class="missing-tab">{{ e.sectionLabel }}</span>
+          <span class="missing-field">{{ e.label }}</span>
+        </button>
+        <span class="missing-why">— {{ e.raison }}</span>
+      </li>
+    </ul>
+  </div>
 
-  <!-- Validation résultats -->
-  <div class="validation-box" *ngIf="validationResult">
-    <div class="vbox-title" [class.ok]="validationResult.overallValid">
-      {{ validationResult.overallValid ? '✅ Configuration valide' : '⚠️ Problèmes détectés' }}
+  <!-- Résultat du test de configuration — c'est lui qui débloque Sauvegarder -->
+  <div class="conn-hint" *ngIf="!test && !testEnCours && !testErreur">
+    L’enregistrement est conditionné au test : renseignez la configuration puis
+    cliquez sur <strong>Tester la configuration</strong>.
+  </div>
+
+  <div class="alert error" *ngIf="testErreur" role="alert">
+    <div class="alert-line"><span aria-hidden="true">✕</span> {{ testErreur }}</div>
+  </div>
+
+  <div class="conn-box" *ngIf="test" [class.conn-ko]="test.bloquant" [class.conn-ok]="!test.bloquant">
+    <div class="conn-title">
+      <span aria-hidden="true">{{ test.bloquant ? '✕' : '✓' }}</span>
+      {{ test.bloquant
+          ? 'Configuration incomplète — corrigez les points en rouge avant d’enregistrer'
+          : 'Toutes les connexions vérifiables sont établies — vous pouvez enregistrer' }}
     </div>
-    <div class="vbox-items">
-      <div class="vbox-item" *ngIf="validationResult.results?.jenkins">
-        <span>{{ getValidIcon('jenkins') }}</span>
-        <span class="vbox-label">Jenkins</span>
-        <span class="vbox-msg">{{ getValidMsg('jenkins') }}</span>
-      </div>
-      <div class="vbox-item" *ngIf="validationResult.results?.sonarqube">
-        <span>{{ getValidIcon('sonarqube') }}</span>
-        <span class="vbox-label">SonarQube</span>
-        <span class="vbox-msg">{{ getValidMsg('sonarqube') }}</span>
-      </div>
-    </div>
+
+    <ul class="conn-rows">
+      <li *ngFor="let c of test.controles" class="conn-row" [attr.data-statut]="c.etat">
+        <span class="conn-glyph" aria-hidden="true">{{ c.etat === 'ok' ? '✓' : c.etat === 'ko' ? '✕' : '—' }}</span>
+        <button type="button" class="conn-name conn-jump" (click)="setSection(c.section)">{{ c.champ }}</button>
+        <span class="conn-msg">{{ c.message }}</span>
+      </li>
+    </ul>
+
+    <p class="conn-foot">
+      <strong>—</strong> signifie « non vérifié » : la plateforme n’a pas eu de quoi
+      interroger la cible. Ce n’est pas un défaut et cela ne bloque pas
+      l’enregistrement. Seul un <strong>✕</strong> le bloque.
+    </p>
   </div>
 
   <!-- Sections nav -->
-  <div class="section-nav">
+  <div class="section-nav" *ngIf="!projectLoading">
     <button *ngFor="let s of sections"
       class="snav-btn" [class.active]="activeSection === s.id"
       (click)="setSection(s.id)">
-      {{ s.icon }} {{ s.label }}
+      <i class="ti" [ngClass]="s.icon" aria-hidden="true"></i> {{ s.label }}
     </button>
   </div>
 
-  <form [formGroup]="form">
+  <div class="loading-overlay" *ngIf="projectLoading">
+    <div class="spinner"></div><span>Chargement…</span>
+  </div>
+
+  <form [formGroup]="form" *ngIf="!projectLoading">
 
     <!-- ── GÉNÉRAL ─────────────────────────────────────────── -->
     <div class="section" *ngIf="activeSection === 'general'">
       <div class="field" [class.err]="isInvalid('name')">
         <label>Nom du projet <span class="req">*</span></label>
-        <input formControlName="name" placeholder="ex: pfe-devsecops-2026">
+        <input formControlName="name" placeholder="Nom du projet">
         <span class="errmsg" *ngIf="isInvalid('name')">Nom requis (min 3 caractères)</span>
       </div>
       <div class="field">
@@ -63,7 +96,7 @@
         <label>Environnement</label>
         <select formControlName="environment">
           <option value="dev">Développement</option>
-          <option value="staging">Staging</option>
+          <option value="staging">Préproduction</option>
           <option value="prod">Production</option>
         </select>
       </div>
@@ -73,178 +106,172 @@
     <div class="section" *ngIf="activeSection === 'cicd'">
       <div class="field">
         <label>Outil CI/CD <span class="req">*</span></label>
-        <div class="tool-grid">
-          <label class="tool-card" *ngFor="let t of [
-            {value:'jenkins', label:'Jenkins',          icon:'🔧'},
-            {value:'gitlab',  label:'GitLab CI',        icon:'🦊'},
-            {value:'github',  label:'GitHub Actions',   icon:'🐙'},
-            {value:'azure',   label:'Azure DevOps',     icon:'☁️'}
-          ]">
-            <input type="radio" formControlName="cicdTool" [value]="t.value">
-            <span class="tool-name">{{ t.icon }} {{ t.label }}</span>
-          </label>
-        </div>
+        <p>Pipeline implémenté : Jenkins</p>
+        <p class="hint" *ngIf="form.get('cicdTool')?.value !== 'jenkins'">L’outil enregistré pour ce projet ne dispose pas d’une intégration de pipeline implémentée.</p>
       </div>
 
-      <div class="divider">🔧 Jenkins</div>
+      <div class="divider"><i class="ti ti-git-branch" aria-hidden="true"></i> Jenkins</div>
       <div class="field-row">
         <div class="field">
-          <label>Jenkins URL</label>
-          <input formControlName="jenkinsUrl" placeholder="http://172.31.172.61:8082">
+          <label>Jenkins URL interne <span class="hint">(appels serveur, jamais un lien navigateur)</span></label>
+          <input formControlName="jenkinsInternalUrl"
+             [placeholder]="suggestionPour('jenkinsInternalUrl') || 'URL interne réelle de Jenkins'"
+             (keydown.enter)="accepterSuggestion('jenkinsInternalUrl'); $event.preventDefault()">
+      <button type="button" class="suggestion" *ngIf="suggestionDisponible('jenkinsInternalUrl')"
+              (click)="accepterSuggestion('jenkinsInternalUrl')">
+        Entrée pour reprendre <code>{{ suggestionPour('jenkinsInternalUrl') }}</code>
+      </button>
         </div>
         <div class="field">
-          <label>Job Name</label>
-          <input formControlName="jenkinsJobName" placeholder="pfe-devsecops-pipeline">
+          <label>Jenkins URL publique <span class="hint">(liens ouverts dans le navigateur)</span></label>
+          <input formControlName="jenkinsPublicUrl"
+             [placeholder]="suggestionPour('jenkinsPublicUrl') || 'URL publique réelle de Jenkins'"
+             (keydown.enter)="accepterSuggestion('jenkinsPublicUrl'); $event.preventDefault()">
+      <button type="button" class="suggestion" *ngIf="suggestionDisponible('jenkinsPublicUrl')"
+              (click)="accepterSuggestion('jenkinsPublicUrl')">
+        Entrée pour reprendre <code>{{ suggestionPour('jenkinsPublicUrl') }}</code>
+      </button>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Nom du job</label>
+          <input formControlName="jenkinsJobName"
+             [placeholder]="suggestionPour('jenkinsJobName') || 'Nom réel du job Jenkins'"
+             (keydown.enter)="accepterSuggestion('jenkinsJobName'); $event.preventDefault()">
+      <button type="button" class="suggestion" *ngIf="suggestionDisponible('jenkinsJobName')"
+              (click)="accepterSuggestion('jenkinsJobName')">
+        Entrée pour reprendre <code>{{ suggestionPour('jenkinsJobName') }}</code>
+      </button>
           <div class="field-error" *ngIf="isInvalid('jenkinsJobName')">Requis. Lettres, chiffres, points, tirets et underscores uniquement.</div>
         </div>
       </div>
       <div class="field">
-        <label>Jenkins Token <span class="hint">(format: user:token)</span></label>
-        <input formControlName="jenkinsToken" type="password" placeholder="souhaiel.amri:11f686...">
+        <label>Jenkins Job Path <span class="hint">(multibranch uniquement, ex: mon-dossier/job/main)</span></label>
+        <input formControlName="jenkinsJobPath" placeholder="mon-dossier/job/main">
+        <span class="hint">Laisser vide pour un job simple (non multibranch) — le Job Name suffit alors.</span>
       </div>
 
-      <div class="divider">🐙 GitHub</div>
-      <div class="field-row">
-        <div class="field">
-          <label>Repository <span class="hint">(owner/repo)</span></label>
-          <input formControlName="githubRepo" placeholder="souhaiel11/pfe-app-test">
-          <div class="field-error" *ngIf="isInvalid('githubRepo')">Requis, format owner/repo (ex: souhaiel11/devsecops-testbed).</div>
+      <div class="field" *ngIf="isEdit && auth.isAdmin">
+        <label>Identifiants Jenkins</label>
+        <p class="hint">
+          <ng-container *ngIf="jenkinsCredentialConfigured">Identifiants Jenkins configurés</ng-container>
+          <ng-container *ngIf="!jenkinsCredentialConfigured">Identifiants Jenkins non configurés</ng-container>
+        </p>
+        <div class="field-row">
+          <div class="field">
+            <label>Utilisateur Jenkins</label>
+            <input [(ngModel)]="jenkinsCredUsername" [ngModelOptions]="{standalone: true}" autocomplete="off" placeholder="platform-build">
+          </div>
+          <div class="field">
+            <label>Nouveau token Jenkins</label>
+            <input type="password" [(ngModel)]="jenkinsCredToken" [ngModelOptions]="{standalone: true}" autocomplete="new-password" placeholder="••••••••">
+          </div>
         </div>
-        <div class="field">
-          <label>GitHub Token <span class="hint">(optionnel)</span></label>
-          <input formControlName="githubToken" type="password" placeholder="ghp_xxx">
-        </div>
+        <button type="button" class="btn btn-sm" *ngIf="isEdit" [disabled]="jenkinsCredBusy || !jenkinsCredUsername || !jenkinsCredToken" (click)="saveJenkinsCredentials()">
+          {{ jenkinsCredBusy ? 'Vérification…' : 'Enregistrer les identifiants' }}
+        </button>
+        <p *ngIf="jenkinsCredMessage" [class]="jenkinsCredSuccess ? 'field-success' : 'field-error'">{{ jenkinsCredMessage }}</p>
       </div>
+      <p class="hint" *ngIf="isEdit && !auth.isAdmin">Les identifiants Jenkins sont réservés aux administrateurs.</p>
+
+      <div class="divider"><i class="ti ti-brand-github" aria-hidden="true"></i> GitHub</div>
+      <div class="field">
+          <label>Dépôt <span class="hint">(propriétaire/dépôt)</span></label>
+          <input formControlName="githubRepo" placeholder="organisation/dépôt">
+          <div class="field-error" *ngIf="isInvalid('githubRepo')">Champ requis au format propriétaire/dépôt.</div>
+      </div>
+      <p class="hint">Le token GitHub est géré par la plateforme.</p>
     </div>
 
     <!-- ── SONARQUBE ───────────────────────────────────────── -->
     <div class="section" *ngIf="activeSection === 'sonarqube'">
       <div class="field-row">
         <div class="field">
-          <label>SonarQube URL</label>
-          <input formControlName="sonarqubeUrl" placeholder="http://172.31.172.61:9000">
+          <label>SonarQube URL interne <span class="hint">(appels serveur, jamais un lien navigateur)</span></label>
+          <input formControlName="sonarqubeUrl"
+             [placeholder]="suggestionPour('sonarqubeUrl') || 'URL interne réelle de SonarQube'"
+             (keydown.enter)="accepterSuggestion('sonarqubeUrl'); $event.preventDefault()">
+      <button type="button" class="suggestion" *ngIf="suggestionDisponible('sonarqubeUrl')"
+              (click)="accepterSuggestion('sonarqubeUrl')">
+        Entrée pour reprendre <code>{{ suggestionPour('sonarqubeUrl') }}</code>
+      </button>
         </div>
         <div class="field">
-          <label>Project Key</label>
-          <input formControlName="sonarqubeKey" placeholder="pfe-devsecops-2026">
+          <label>SonarQube URL publique <span class="hint">(liens ouverts dans le navigateur)</span></label>
+          <input formControlName="sonarqubePublicUrl"
+             [placeholder]="suggestionPour('sonarqubePublicUrl') || 'URL publique réelle de SonarQube'"
+             (keydown.enter)="accepterSuggestion('sonarqubePublicUrl'); $event.preventDefault()">
+      <button type="button" class="suggestion" *ngIf="suggestionDisponible('sonarqubePublicUrl')"
+              (click)="accepterSuggestion('sonarqubePublicUrl')">
+        Entrée pour reprendre <code>{{ suggestionPour('sonarqubePublicUrl') }}</code>
+      </button>
         </div>
       </div>
-      <div class="field">
-        <label>SonarQube Token</label>
-        <input formControlName="sonarqubeToken" type="password" placeholder="squ_xxx">
-        <span class="hint">SonarQube → My Account → Security → Generate Token</span>
+      <div class="field-row">
+        <div class="field">
+          <label>Clé du projet</label>
+          <input formControlName="sonarqubeKey"
+             [placeholder]="suggestionPour('sonarqubeKey') || 'Clé réelle du projet SonarQube'"
+             (keydown.enter)="accepterSuggestion('sonarqubeKey'); $event.preventDefault()">
+      <button type="button" class="suggestion" *ngIf="suggestionDisponible('sonarqubeKey')"
+              (click)="accepterSuggestion('sonarqubeKey')">
+        Entrée pour reprendre <code>{{ suggestionPour('sonarqubeKey') }}</code>
+      </button>
+        </div>
       </div>
+      <p class="hint">L'identifiant SonarQube est géré par la plateforme.</p>
       <div class="valid-inline" *ngIf="validationResult?.results?.sonarqube">
         {{ getValidIcon('sonarqube') }} {{ getValidMsg('sonarqube') }}
       </div>
     </div>
 
-    <!-- ── NOTIFICATIONS ──────────────────────────────────── -->
-    <div class="section" *ngIf="activeSection === 'notifications'">
-
-      <div class="notif-row">
-        <div class="notif-header">
-          <span>📧 Email</span>
-          <label class="toggle">
-            <input type="checkbox" formControlName="emailEnabled">
-            <span class="slider"></span>
-          </label>
+    <!-- ── SOURCES / PREUVES ───────────────────────────────── -->
+    <div class="section" *ngIf="activeSection === 'sources'">
+      <p class="hint">
+        Chemins RÉELS des rapports produits par le pipeline de ce projet, relatifs au
+        workspace du build (ou URL HTTP(S) si le rapport est réellement publié).
+        Laissés vides, l’interface affiche « Source non disponible » pour ces preuves
+        plutôt qu’un chemin supposé.
+      </p>
+      <div class="field-row">
+        <div class="field">
+          <label>Rapport Trivy</label>
+          <input formControlName="trivyReportPath" placeholder="chemin réel du rapport Trivy">
+          <div class="field-error" *ngIf="isInvalid('trivyReportPath')">Chemin relatif simple ou URL HTTP(S), sans remontée de répertoire.</div>
         </div>
-        <div class="notif-body" *ngIf="form.get('emailEnabled')?.value">
-          <div class="field">
-            <label>Destinataire</label>
-            <input formControlName="emailRecipient" type="email" placeholder="souhaiel.amri@esprit.tn">
-          </div>
-        </div>
-      </div>
-
-      <div class="notif-row">
-        <div class="notif-header">
-          <span>💬 Slack</span>
-          <label class="toggle">
-            <input type="checkbox" formControlName="slackEnabled">
-            <span class="slider"></span>
-          </label>
-        </div>
-        <div class="notif-body" *ngIf="form.get('slackEnabled')?.value">
-          <div class="field-row">
-            <div class="field">
-              <label>Channel</label>
-              <input formControlName="slackChannel" placeholder="#souhaiel">
-            </div>
-            <div class="field">
-              <label>Token</label>
-              <input formControlName="slackToken" type="password" placeholder="xoxb-xxx">
-            </div>
-          </div>
+        <div class="field">
+          <label>Rapport OWASP Dependency-Check</label>
+          <input formControlName="owaspReportPath" placeholder="chemin réel du rapport OWASP">
+          <div class="field-error" *ngIf="isInvalid('owaspReportPath')">Chemin relatif simple ou URL HTTP(S), sans remontée de répertoire.</div>
         </div>
       </div>
-
+      <div class="field-row">
+        <div class="field">
+          <label>Rapport ZAP</label>
+          <input formControlName="zapReportPath" placeholder="chemin réel du rapport ZAP">
+          <div class="field-error" *ngIf="isInvalid('zapReportPath')">Chemin relatif simple ou URL HTTP(S), sans remontée de répertoire.</div>
+        </div>
+        <div class="field">
+          <label>Dockerfile <span class="hint">(dans le dépôt)</span></label>
+          <input formControlName="dockerfilePath" placeholder="chemin réel du Dockerfile">
+          <div class="field-error" *ngIf="isInvalid('dockerfilePath')">Chemin relatif simple, sans remontée de répertoire.</div>
+        </div>
+      </div>
     </div>
+
   </form>
 
   <!-- Footer -->
   <div class="pf-footer">
     <button class="btn-back" (click)="goBack()">Annuler</button>
-    <button class="btn-validate" (click)="validateProject()" [disabled]="!projectId || validating">
-      {{ validating ? '⏳' : '🔍 Vérifier' }}
+    <button class="btn-validate" (click)="testerConfiguration()" [disabled]="testEnCours">
+      {{ testEnCours ? 'Test en cours…' : 'Tester la configuration' }}
     </button>
-    <button class="btn-save" (click)="save()" [disabled]="loading">
-      {{ loading ? '⏳' : '💾 Sauvegarder' }}
+    <button class="btn-save" (click)="save()" [disabled]="!enregistrementPossible"
+            [attr.title]="raisonBlocage() || null">
+      {{ loading ? 'Sauvegarde…' : 'Sauvegarder' }}
     </button>
   </div>
 
 </div>
-
-<style>
-* { box-sizing: border-box; }
-.pf-container { max-width: 800px; margin: 0 auto; padding: 24px; background: #0d1117; color: #e6edf3; font-family: 'Inter', sans-serif; min-height: 100vh; }
-.pf-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
-.pf-header h1 { flex: 1; margin: 0; font-size: 1.4rem; }
-.pf-actions { display: flex; gap: 8px; }
-.btn-back     { background: transparent; border: 1px solid #30363d; color: #8b949e; padding: 8px 16px; border-radius: 6px; cursor: pointer; white-space: nowrap; }
-.btn-save     { background: #238636; border: none; color: #fff; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: 600; }
-.btn-validate { background: #1f6feb; border: none; color: #fff; padding: 10px 20px; border-radius: 6px; cursor: pointer; }
-.btn-save:disabled, .btn-validate:disabled { opacity: 0.5; cursor: not-allowed; }
-.field-error { color: #f85149; font-size: 0.8rem; margin-top: 4px; }
-.alert { padding: 10px 16px; border-radius: 6px; margin-bottom: 12px; font-size: 0.875rem; }
-.alert.success { background: #0d4429; border: 1px solid #238636; }
-.alert.error   { background: #3d1212; border: 1px solid #f85149; }
-.validation-box { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 14px; margin-bottom: 16px; }
-.vbox-title { font-weight: 600; margin-bottom: 10px; }
-.vbox-title.ok { color: #3fb950; }
-.vbox-items { display: flex; flex-direction: column; gap: 6px; }
-.vbox-item  { display: flex; gap: 10px; font-size: 0.85rem; align-items: center; }
-.vbox-label { font-weight: 600; min-width: 90px; }
-.vbox-msg   { color: #8b949e; }
-.section-nav { display: flex; gap: 2px; margin-bottom: 20px; border-bottom: 1px solid #21262d; }
-.snav-btn { background: transparent; border: none; color: #8b949e; padding: 10px 16px; cursor: pointer; border-bottom: 2px solid transparent; font-size: 0.875rem; white-space: nowrap; }
-.snav-btn.active { color: #58a6ff; border-bottom-color: #58a6ff; }
-.section { background: #161b22; border: 1px solid #21262d; border-radius: 8px; padding: 20px; }
-.field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 14px; }
-.field label { font-size: 0.85rem; color: #8b949e; font-weight: 500; }
-.field input, .field select, .field textarea { background: #0d1117; border: 1px solid #30363d; color: #e6edf3; padding: 8px 12px; border-radius: 6px; font-size: 0.875rem; }
-.field input:focus, .field select:focus, .field textarea:focus { outline: none; border-color: #58a6ff; }
-.field.err input { border-color: #f85149; }
-.errmsg { color: #f85149; font-size: 0.75rem; }
-.hint { color: #8b949e; font-size: 0.75rem; }
-.req { color: #f85149; }
-.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-.divider { color: #8b949e; font-size: 0.85rem; font-weight: 600; padding: 10px 0 6px; border-bottom: 1px solid #21262d; margin-bottom: 12px; }
-.tool-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.tool-card { display: flex; align-items: center; gap: 8px; cursor: pointer; background: #0d1117; border: 1px solid #30363d; border-radius: 6px; padding: 10px 14px; }
-.tool-card input { display: none; }
-.tool-card:has(input:checked) { border-color: #58a6ff; background: #1a2d4a; }
-.tool-name { font-size: 0.875rem; }
-.notif-row { background: #0d1117; border: 1px solid #21262d; border-radius: 6px; padding: 14px; margin-bottom: 12px; }
-.notif-header { display: flex; justify-content: space-between; align-items: center; font-weight: 600; }
-.notif-body { margin-top: 12px; }
-.toggle { position: relative; display: inline-block; width: 40px; height: 22px; }
-.toggle input { opacity: 0; width: 0; height: 0; }
-.slider { position: absolute; cursor: pointer; top:0; left:0; right:0; bottom:0; background: #21262d; border-radius: 22px; transition: .3s; }
-.slider:before { position: absolute; content:''; height:16px; width:16px; left:3px; bottom:3px; background:#fff; border-radius:50%; transition:.3s; }
-.toggle input:checked + .slider { background: #238636; }
-.toggle input:checked + .slider:before { transform: translateX(18px); }
-.valid-inline { margin-top: 8px; font-size: 0.85rem; color: #8b949e; }
-.pf-footer { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; padding-top: 20px; border-top: 1px solid #21262d; }
-</style>

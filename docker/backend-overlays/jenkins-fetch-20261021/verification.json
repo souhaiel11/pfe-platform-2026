@@ -1,0 +1,32 @@
+{
+  "date": "2026-10-21",
+  "baseImage": "local/pfe-source-navigation:20261018",
+  "patchedImage": "local/pfe-jenkins-fetch:20261021",
+  "runtimeChange": "JenkinsOptimizerController.fetch only + fetch-jenkinsfile.js",
+  "timeoutMs": 185000,
+  "nginxTimeoutSeconds": 200,
+  "tests": {
+    "backendFetchCases": "PASS",
+    "frontendErrorMessages": "PASS",
+    "backendTypeCheck": "PASS",
+    "frontendProductionBuild": "PASS, existing SCSS budget warning",
+    "frontendHttp": 200,
+    "backendDocsHttp": 200,
+    "servedFrontendErrorCodes": "PASS"
+  },
+  "liveReadOnlyTests": {
+    "workflow2150": "Jenkinsfile fetched successfully after 143 seconds",
+    "workflow2151": "Jenkinsfile fetched successfully after 19 seconds",
+    "workflow2152": "GitHub connection failure; corrected backend returned HTTP 502 JENKINSFILE_GIT_UNREACHABLE"
+  },
+  "limitation": "GitHub connectivity remains intermittent; end-to-end retrieval is not reliably restored.",
+  "rollback": {
+    "backendImage": "local/pfe-source-navigation:20261018",
+    "frontendMount": "./frontend/releases/suggestions-test-3-lignes-20261020/browser:/usr/share/nginx/html:ro"
+  },
+  "artifacts": {
+    "fetch-jenkinsfile.js": "b82d343402ced8a824f66405192eada9f680701b6ec8126c7acf7dce18b58c6c",
+    "jenkins-optimizer.module.js": "6aa031f375cd0f9e30f22c613d8466812c8b1e8f9cd7025849315bf883150bcf",
+    "Dockerfile": "9546d4c62dfab20caf51f07430f6472be6eae008af07413b5e60ea94a130bdd5"
+  }
+}

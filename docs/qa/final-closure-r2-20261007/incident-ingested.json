@@ -1,0 +1,53 @@
+{
+  "status": 201,
+  "body": {
+    "projectId": "ebe3bd94-8240-4c30-a2d9-6de2106a28bc",
+    "title": "Dedicated real Trivy baseline finding",
+    "description": "Real scanner evidence for the immutable dedicated test baseline",
+    "status": "analyzed",
+    "source": "TRIVY",
+    "metadata": {
+      "sourceCommitSha": "24630265ea4ed764bbb22c76d4d7dc689b5fe0bf",
+      "qualificationRunId": "final-closure-r2-20261007",
+      "scannerEvidence": {
+        "mode": "TRIVY_IMAGE_ARCHIVE",
+        "baselineReportDigest": "79df4b156a069d3323c6d0940dbd4eb8c6bc579cc2435cbabf6075396af6f843"
+      },
+      "enrichedData": {
+        "trivy": {
+          "status": "COMPLETED",
+          "executed": true,
+          "completed": true,
+          "resultAvailable": true,
+          "findingCount": 1,
+          "cves_count": 1,
+          "critical": 0,
+          "high": 1,
+          "cves": [
+            {
+              "id": "CVE-2022-45868",
+              "pkg": "com.h2database:h2",
+              "installedVersion": "2.1.212",
+              "fixedVersion": "2.2.220",
+              "source": "TRIVY",
+              "severity": "HIGH",
+              "title": "The web-based admin console in H2 Database Engine before 2.2.220 can b ...",
+              "primaryUrl": "https://avd.aquasec.com/nvd/cve-2022-45868"
+            }
+          ]
+        }
+      }
+    },
+    "prUrl": null,
+    "jenkinsJobName": null,
+    "buildNumber": null,
+    "aiAnalysis": null,
+    "errorReason": null,
+    "errorDetail": null,
+    "errorStep": null,
+    "resolvedAt": null,
+    "id": "f84e7464-eac7-4bb3-a050-369797ed632f",
+    "createdAt": "2026-10-07T14:58:15.420Z",
+    "updatedAt": "2026-10-07T14:58:15.420Z"
+  }
+}

@@ -1,4 +1,6 @@
-import { IsString, IsOptional, IsEnum, IsBoolean } from 'class-validator';
+// DTO de création/upsert d'une intégration d'outil externe — valide le type d'outil et l'URL (HTTP(S),
+// sans identifiants ni paramètres). Aucune fonction, uniquement des propriétés décorées.
+import { IsString, IsOptional, IsEnum, IsBoolean, IsUrl, Matches } from 'class-validator';
 import { IntegrationTool } from '../integration.entity';
 
 export class CreateIntegrationDto {
@@ -8,7 +10,8 @@ export class CreateIntegrationDto {
   @IsString()
   name: string;
 
-  @IsString()
+  @IsUrl({ require_tld: false, require_protocol: true, protocols: ['http', 'https'], disallow_auth: true }, { message: 'L’URL du service doit être une URL HTTP(S) sans identifiants.' })
+  @Matches(/^[^?#]+$/, { message: 'L’URL du service ne doit pas contenir de paramètres ni de fragment.' })
   url: string;
 
   @IsOptional() @IsString()

@@ -1,0 +1,221 @@
+{
+  "_class": "org.jenkinsci.plugins.workflow.job.WorkflowRun",
+  "actions": [
+    {
+      "_class": "hudson.model.ParametersAction",
+      "parameters": [
+        {
+          "_class": "hudson.model.BooleanParameterValue",
+          "name": "JENKINS_HARD_GATE",
+          "value": false
+        },
+        {
+          "_class": "hudson.model.StringParameterValue",
+          "name": "CVSS_FAIL_THRESHOLD",
+          "value": "9.0"
+        },
+        {
+          "_class": "hudson.model.StringParameterValue",
+          "name": "PFE_VALIDATION_CONTEXT",
+          "value": ""
+        }
+      ]
+    },
+    {
+      "_class": "hudson.model.CauseAction",
+      "causes": [
+        {
+          "_class": "hudson.model.Cause$UserIdCause",
+          "shortDescription": "Started by user souhaiel",
+          "userId": "souhaiel",
+          "userName": "souhaiel"
+        }
+      ]
+    },
+    {
+      "_class": "org.jenkinsci.plugins.workflow.libs.LibrariesAction"
+    },
+    {},
+    {
+      "_class": "hudson.plugins.git.util.BuildData",
+      "buildsByBranchName": {
+        "main": {
+          "_class": "hudson.plugins.git.util.Build",
+          "buildNumber": 151,
+          "buildResult": null,
+          "marked": {
+            "SHA1": "8fd76d2d1e5152ec4144f9c39e0f757f9e880c97",
+            "branch": [
+              {
+                "SHA1": "8fd76d2d1e5152ec4144f9c39e0f757f9e880c97",
+                "name": "main"
+              }
+            ]
+          },
+          "revision": {
+            "SHA1": "8fd76d2d1e5152ec4144f9c39e0f757f9e880c97",
+            "branch": [
+              {
+                "SHA1": "8fd76d2d1e5152ec4144f9c39e0f757f9e880c97",
+                "name": "main"
+              }
+            ]
+          }
+        }
+      },
+      "lastBuiltRevision": {
+        "SHA1": "8fd76d2d1e5152ec4144f9c39e0f757f9e880c97",
+        "branch": [
+          {
+            "SHA1": "8fd76d2d1e5152ec4144f9c39e0f757f9e880c97",
+            "name": "main"
+          }
+        ]
+      },
+      "remoteUrls": [
+        "https://github.com/souhaiel11/pfe-devsecops-shared-library.git"
+      ],
+      "scmName": ""
+    },
+    {},
+    {
+      "_class": "org.jenkinsci.plugins.workflow.cps.EnvActionImpl"
+    },
+    {
+      "_class": "hudson.plugins.git.util.BuildData",
+      "buildsByBranchName": {
+        "refs/remotes/origin/main": {
+          "_class": "hudson.plugins.git.util.Build",
+          "buildNumber": 151,
+          "buildResult": null,
+          "marked": {
+            "SHA1": "393816c250f73d907eb5a2dd43b2ec2288c7abcb",
+            "branch": [
+              {
+                "SHA1": "393816c250f73d907eb5a2dd43b2ec2288c7abcb",
+                "name": "refs/remotes/origin/main"
+              }
+            ]
+          },
+          "revision": {
+            "SHA1": "393816c250f73d907eb5a2dd43b2ec2288c7abcb",
+            "branch": [
+              {
+                "SHA1": "393816c250f73d907eb5a2dd43b2ec2288c7abcb",
+                "name": "refs/remotes/origin/main"
+              }
+            ]
+          }
+        }
+      },
+      "lastBuiltRevision": {
+        "SHA1": "393816c250f73d907eb5a2dd43b2ec2288c7abcb",
+        "branch": [
+          {
+            "SHA1": "393816c250f73d907eb5a2dd43b2ec2288c7abcb",
+            "name": "refs/remotes/origin/main"
+          }
+        ]
+      },
+      "remoteUrls": [
+        "https://github.com/souhaiel11/pfe-app-test.git"
+      ],
+      "scmName": ""
+    },
+    {},
+    {
+      "_class": "hudson.plugins.sonar.action.SonarAnalysisAction",
+      "ceTaskId": "b4b2949a-fc4a-4407-9c22-17ce4606d6fb",
+      "credentialsId": null,
+      "installationName": "sq1",
+      "installationUrl": "http://sonarqube:9000",
+      "new": true,
+      "serverUrl": "http://sonarqube:9000",
+      "skipped": false,
+      "sonarqubeDashboardUrl": "http://sonarqube:9000/dashboard?id=pfe-app-test"
+    },
+    {},
+    {},
+    {
+      "_class": "hudson.plugins.sonar.action.SonarBuildBadgeAction",
+      "url": "http://sonarqube:9000/dashboard?id=pfe-app-test"
+    },
+    {},
+    {},
+    {
+      "_class": "org.jenkinsci.plugins.displayurlapi.actions.RunDisplayAction"
+    },
+    {
+      "_class": "org.jenkinsci.plugins.pipeline.modeldefinition.actions.RestartDeclarativePipelineAction"
+    },
+    {},
+    {
+      "_class": "org.jenkinsci.plugins.workflow.job.views.FlowGraphAction"
+    },
+    {},
+    {}
+  ],
+  "artifacts": [],
+  "building": false,
+  "description": null,
+  "displayName": "#151",
+  "duration": 278490,
+  "estimatedDuration": 336513,
+  "executor": null,
+  "fullDisplayName": "pfe-app-test #151",
+  "id": "151",
+  "keepLog": false,
+  "number": 151,
+  "queueId": 9088,
+  "result": "SUCCESS",
+  "timestamp": 1791302858376,
+  "url": "http://172.31.172.61:8082/job/pfe-app-test/151/",
+  "changeSets": [
+    {
+      "_class": "hudson.plugins.git.GitChangeSetList",
+      "items": [
+        {
+          "_class": "hudson.plugins.git.GitChangeSet",
+          "affectedPaths": [
+            "src/main/java/com/pfe/devsecops/repository/TaskRepository.java",
+            "src/test/java/com/pfe/devsecops/repository/TaskRepositoryInitializationTest.java"
+          ],
+          "commitId": "393816c250f73d907eb5a2dd43b2ec2288c7abcb",
+          "timestamp": 1791302778000,
+          "author": {
+            "absoluteUrl": "http://172.31.172.61:8082/user/souhaiel.amri",
+            "fullName": "souhaiel.amri"
+          },
+          "authorEmail": "souhaiel.amri@esprit.tn",
+          "comment": "fix(runtime): close malformed task repository query\n",
+          "date": "2026-10-06 18:06:18 +0200",
+          "id": "393816c250f73d907eb5a2dd43b2ec2288c7abcb",
+          "msg": "fix(runtime): close malformed task repository query",
+          "paths": [
+            {
+              "editType": "add",
+              "file": "src/test/java/com/pfe/devsecops/repository/TaskRepositoryInitializationTest.java"
+            },
+            {
+              "editType": "edit",
+              "file": "src/main/java/com/pfe/devsecops/repository/TaskRepository.java"
+            }
+          ]
+        }
+      ],
+      "kind": "git"
+    }
+  ],
+  "culprits": [
+    {
+      "absoluteUrl": "http://172.31.172.61:8082/user/souhaiel.amri",
+      "fullName": "souhaiel.amri"
+    }
+  ],
+  "inProgress": false,
+  "nextBuild": null,
+  "previousBuild": {
+    "number": 150,
+    "url": "http://172.31.172.61:8082/job/pfe-app-test/150/"
+  }
+}

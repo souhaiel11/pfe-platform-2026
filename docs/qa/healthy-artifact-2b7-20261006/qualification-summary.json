@@ -1,0 +1,15 @@
+{
+  "newCommit": "393816c250f73d907eb5a2dd43b2ec2288c7abcb",
+  "newBuild": 151,
+  "digest": "sha256:6dc3cdba69592a91a5a1569978bcfca74d4080597a769ab368ed585ba397bcf5",
+  "artifactId": "008f1b22-7f96-4659-a88c-acc4df128b7e",
+  "provisioningState": "Succeeded",
+  "containerState": "Running",
+  "imagePullSucceeded": true,
+  "health": "PASS",
+  "canaryDeleted": true,
+  "governanceDecision": "CRITICAL_RISK",
+  "securityValidationApplicability": "MISSING",
+  "readyForFirstGovernedDeployment": false,
+  "finalVerdict": "E \u2014 SECURITY_OR_IDENTITY_BLOCKER"
+}

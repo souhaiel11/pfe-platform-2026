@@ -1,0 +1,48 @@
+[
+  {
+    "reconstruction": 1,
+    "baselineTrivy": 1,
+    "baselineOwasp": 1,
+    "patchedTrivy": 0,
+    "productionDecision": "VALIDATED_RECOMMENDED",
+    "baselineTests": {
+      "total": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "matchCount": 1
+    },
+    "candidateTests": {
+      "total": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "matchCount": 1
+    },
+    "baselineManifestSha256": "522a82df990724c8c868a1b46d887063a9976a637ef67e62202b60b2bea5b18b",
+    "candidateManifestSha256": "dbd7d806f7c8b546f972275e3708eebe259e9ab99132a889cb31ee57cf07da60"
+  },
+  {
+    "reconstruction": 2,
+    "baselineTrivy": 1,
+    "baselineOwasp": 1,
+    "patchedTrivy": 0,
+    "productionDecision": "VALIDATED_RECOMMENDED",
+    "baselineTests": {
+      "total": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "matchCount": 1
+    },
+    "candidateTests": {
+      "total": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "matchCount": 1
+    },
+    "baselineManifestSha256": "522a82df990724c8c868a1b46d887063a9976a637ef67e62202b60b2bea5b18b",
+    "candidateManifestSha256": "dbd7d806f7c8b546f972275e3708eebe259e9ab99132a889cb31ee57cf07da60"
+  }
+]

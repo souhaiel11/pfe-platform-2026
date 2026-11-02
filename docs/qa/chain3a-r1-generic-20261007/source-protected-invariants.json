@@ -1,0 +1,17 @@
+{
+  "worktree": "/tmp/chain3a-r1-source",
+  "branch": "release/chain3a-r1-generic",
+  "sourceCommit": "07c7421122fae809920742893e2e1d345d87aa3a",
+  "clean": true,
+  "untracked4gFilesAfter": [],
+  "protectedSourceChanges": [],
+  "comparedTo": "parent of dedicated source commit",
+  "protectedPaths": [
+    "backend/src/azure-deploy",
+    "backend/src/projects",
+    "backend/src/incidents",
+    "n8n-workflows",
+    "infra/azure-deploy-agent"
+  ],
+  "sourceFilesHashed": 366
+}

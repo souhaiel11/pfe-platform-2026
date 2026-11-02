@@ -1,0 +1,374 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- ════════════════════════════════════════════════════════════════════════════
+     PROJET DE VALIDATION VERMEG
+     APPLICATION INTENTIONNELLEMENT VULNÉRABLE — BANC D'ESSAI UNIQUEMENT.
+     Ne jamais déployer hors d'un environnement de test isolé.
+
+     Ce descripteur est volontairement SANS DÉFAUT : il doit fonctionner
+     parfaitement, car c'est lui que la chaîne de remédiation va modifier.
+     Les défauts du projet sont ailleurs — dans les versions de dépendances,
+     dans le Dockerfile, dans le Jenkinsfile et dans le code source.
+
+     Aucun parent : un parent introduirait une gestion de version par BOM,
+     c'est-à-dire exactement la provenance que la plateforme refuse
+     d'auto-corriger (BOM_MANAGED → ADMIN_ACTION_REQUIRED).
+     Un seul pom, à la racine : l'adaptateur de cible de la plateforme
+     n'ancre que le descripteur racine, jamais un module enfant.
+     Voir docs/MATRICE_VALIDATION.md.
+     ════════════════════════════════════════════════════════════════════════ -->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>tn.vermeg.validation</groupId>
+  <artifactId>projet-validation-vermeg</artifactId>
+  <version>1.0.0</version>
+  <packaging>jar</packaging>
+  <name>projet-validation-vermeg</name>
+  <description>PROJET DE VALIDATION INTENTIONNELLEMENT VULNERABLE — BANC D'ESSAI UNIQUEMENT</description>
+
+  <properties>
+    <!-- 17 est la seule valeur qui passe des deux côtés : le vérificateur de
+         candidats compile en JDK 17, Jenkins en JDK 21. -->
+    <maven.compiler.release>17</maven.compiler.release>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.build.outputTimestamp>2026-10-19T00:00:00Z</project.build.outputTimestamp>
+
+    <!-- Chemin du rapport JaCoCo, lu par le scanner Sonar. Sans cette propriété,
+         Sonar affiche 0 % de couverture : exact, mais trompeur. -->
+    <sonar.coverage.jacoco.xmlReportPaths>${project.build.directory}/site/jacoco/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
+
+    <!-- ╔══════════════════════════════════════════════════════════════════╗
+         ║ VAL-D02 — dépendance gérée par PROPRIÉTÉ LOCALE                  ║
+         ║ Provenance PROPERTY_MANAGED : la plateforme doit corriger CETTE  ║
+         ║ propriété, pas une version écrite en dur dans <dependency>.      ║
+         ╚══════════════════════════════════════════════════════════════════╝ -->
+    <commons-lang3.version>3.12.0</commons-lang3.version>
+  </properties>
+
+  <dependencies>
+
+    <!-- ╔══════════════════════════════════════════════════════════════════╗
+         ║ VAL-D01 — AUTO-CORRIGEABLE · provenance DIRECT_EXPLICIT          ║
+         ║ h2 2.1.212 porte CVE-2022-45868 (HIGH), corrigée en 2.2.220.     ║
+         ║ Même majeure (2.x) → dans l'enveloppe auto-corrigeable.          ║
+         ║ Usage authentique : la valorisation du portefeuille est calculée ║
+         ║ par agrégation SQL en mémoire (ValorisationPortefeuille).        ║
+         ║ Périmètre de sûreté : base strictement en mémoire, aucune        ║
+         ║ console H2, aucune URL fournie par l'appelant, requêtes          ║
+         ║ préparées uniquement, aucun SQL construit depuis une entrée.     ║
+         ╚══════════════════════════════════════════════════════════════════╝ -->
+    <dependency>
+      <groupId>com.h2database</groupId>
+      <artifactId>h2</artifactId>
+      <version>2.1.212</version>
+    </dependency>
+
+    <!-- VAL-D02 — pilotée par ${commons-lang3.version} déclarée ci-dessus.
+         3.12.0 porte CVE-2025-48924 (MEDIUM), corrigée en 3.18.0, même majeure. -->
+    <dependency>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-lang3</artifactId>
+      <version>${commons-lang3.version}</version>
+    </dependency>
+
+    <!-- ╔══════════════════════════════════════════════════════════════════╗
+         ║ VAL-D03 — AUTO-CORRIGEABLE · provenance DIRECT_EXPLICIT          ║
+         ║ commons-io 2.6 porte CVE-2021-29425 (traversée de chemin),       ║
+         ║ corrigée en 2.7 — même majeure.                                  ║
+         ║ Troisième positif : il prouve que la correction n'est pas câblée ║
+         ║ sur une dépendance particulière.                                 ║
+         ╚══════════════════════════════════════════════════════════════════╝ -->
+    <dependency>
+      <groupId>commons-io</groupId>
+      <artifactId>commons-io</artifactId>
+      <version>2.6</version>
+    </dependency>
+
+    <!-- ╔══════════════════════════════════════════════════════════════════╗
+         ║ VAL-D04 — REFUS ATTENDU · CROSS_MAJOR_ONLY                       ║
+         ║ snakeyaml 1.33 porte CVE-2022-1471, dont la SEULE correction est ║
+         ║ la version 2.0 — majeure supérieure.                             ║
+         ║ La politique de sélection ne retient qu'une version corrigée de  ║
+         ║ MÊME majeure : elle renvoie donc une cible nulle et refuse.      ║
+         ║ Le refus ne vient PAS d'une absence de correctif — il en existe  ║
+         ║ un — mais du franchissement de majeure, qui exige un humain.     ║
+         ╚══════════════════════════════════════════════════════════════════╝ -->
+    <dependency>
+      <groupId>org.yaml</groupId>
+      <artifactId>snakeyaml</artifactId>
+      <version>1.33</version>
+    </dependency>
+
+    <!-- ╔══════════════════════════════════════════════════════════════════╗
+         ║ VAL-D05 — REFUS ATTENDU · TRANSITIVE_NOT_AUTOFIXABLE_V1          ║
+         ║ commons-configuration2 2.8.0 entraîne commons-text 1.9 en        ║
+         ║ TRANSITIF. commons-text 1.9 porte CVE-2022-42889 « Text4Shell »  ║
+         ║ (CRITICAL, CVSS 9.8), corrigée en 1.10.0 — MÊME MAJEURE.         ║
+         ║                                                                  ║
+         ║ C'est le contre-exemple le plus instructif du projet : la même   ║
+         ║ CVE, avec un correctif de même majeure disponible, serait        ║
+         ║ auto-corrigée si la dépendance était déclarée en direct. Elle    ║
+         ║ est refusée ici uniquement parce qu'elle arrive par transitivité.║
+         ║ Le refus porte sur la PROVENANCE, pas sur la disponibilité d'un  ║
+         ║ correctif.                                                       ║
+         ║                                                                  ║
+         ║ L'application n'appelle PAS l'interpolateur vulnérable           ║
+         ║ (StringSubstitutor.createInterpolator) : la dépendance est       ║
+         ║ présente et réellement utilisée, le chemin exploitable ne l'est  ║
+         ║ pas.                                                             ║
+         ╚══════════════════════════════════════════════════════════════════╝ -->
+    <dependency>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-configuration2</artifactId>
+      <version>2.8.0</version>
+    </dependency>
+
+    <!-- ╔════════════════════════════════════════════════════════════════╗
+         ║ VAL-D07 — AUTO-CORRIGEABLE · provenance DIRECT_EXPLICIT          ║
+         ║ commons-compress 1.21 porte CVE-2024-25710 (boucle infinie) et    ║
+         ║ CVE-2024-26308 (épuisement mémoire), corrigées en 1.26.0 — même    ║
+         ║ majeure (1.x), donc dans l'enveloppe auto-corrigeable.            ║
+         ║ Usage authentique : lecture de l'inventaire d'une archive ZIP      ║
+         ║ d'export du référentiel (ArchiveReferentiel).                     ║
+         ║ Périmètre de sûreté : lecture d'un flux fourni par le code, jamais ║
+         ║ par un appelant ; aucune extraction sur disque, aucun chemin       ║
+         ║ d'entrée utilisé pour écrire quoi que ce soit.                     ║
+         ╚═════════════════════════════════════════════════════════════════╝ -->
+    <dependency>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-compress</artifactId>
+      <version>1.21</version>
+    </dependency>
+
+    <!-- ╔═════════════════════════════════════════════════════════════════╗
+         ║ VAL-D08 — AUTO-CORRIGEABLE · provenance DIRECT_EXPLICIT          ║
+         ║ bcprov-jdk18on 1.72 porte CVE-2023-33201 (fuite d'information via ║
+         ║ le CertStore LDAP), corrigée en 1.73 — même majeure (1.x).        ║
+         ║ Usage authentique : empreinte SHA-256 d'un contrat, calculée par   ║
+         ║ le fournisseur Bouncy Castle (EmpreinteContrat), en miroir du      ║
+         ║ contrôle de signature hérité déjà présent.                        ║
+         ║ Périmètre de sûreté : aucun CertStore, aucun accès LDAP, aucune    ║
+         ║ vérification de chaîne de certificats — le chemin exploitable de  ║
+         ║ la CVE n'est pas atteignable dans ce projet.                       ║
+         ╚═════════════════════════════════════════════════════════════════╝ -->
+    <dependency>
+      <groupId>org.bouncycastle</groupId>
+      <artifactId>bcprov-jdk18on</artifactId>
+      <version>1.72</version>
+    </dependency>
+
+    <!-- ╔═════════════════════════════════════════════════════════════════╗
+         ║ VAL-D09 — AUTO-CORRIGEABLE · provenance DIRECT_EXPLICIT          ║
+         ║ jsoup 1.14.3 porte CVE-2022-36033 (contournement de               ║
+         ║ l'assainissement HTML), corrigée en 1.15.3 — même majeure (1.x).  ║
+         ║ Usage authentique : échappement des libellés de contrat avant      ║
+         ║ insertion dans la page HTML (EtiquetteHtml).                       ║
+         ║ Périmètre de sûreté : seul l'échappement d'entités est employé,    ║
+         ║ jamais Jsoup.clean() avec une liste blanche — la CVE porte sur le  ║
+         ║ contournement de cette dernière, qui n'est pas appelée ici.        ║
+         ╚═════════════════════════════════════════════════════════════════╝ -->
+    <dependency>
+      <groupId>org.jsoup</groupId>
+      <artifactId>jsoup</artifactId>
+      <version>1.14.3</version>
+    </dependency>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         BANC DE VULNÉRABILITÉS ÉTENDU (VAL-D10 … VAL-D34)
+         ════════════════════════════════════════════════════════════════════
+         Toutes DIRECT_EXPLICIT avec une version corrigée de MÊME MAJEURE :
+         chacune est donc dans l'enveloppe AUTO-CORRIGEABLE de la plateforme
+         (Trivy + OWASP + Maven + triplet complet + provenance directe).
+         Elles ne sont pas appelées par le code — elles sont présentes dans
+         l'image (copy-dependencies) pour que Trivy et OWASP les voient. Le but
+         est de porter le volume total de constats bien au-delà de 100 CVE et de
+         fournir 20 à 30 dépendances réellement auto-corrigeables à démontrer.
+         AUCUNE ne tire commons-text ni snakeyaml en transitif : les scénarios
+         pédagogiques VAL-D04 (refus cross-major) et VAL-D05 (refus transitif)
+         restent intacts. ═══════════════════════════════════════════════════ -->
+
+    <!-- VAL-D10 — log4j-core 2.14.1 : CVE-2021-44228 « Log4Shell » + 44046/45105/44832.
+         Corrigé en 2.17.1 (même majeure 2.x). -->
+    <dependency><groupId>org.apache.logging.log4j</groupId><artifactId>log4j-core</artifactId><version>2.14.1</version></dependency>
+    <!-- VAL-D11 — log4j-api 2.14.1 → 2.17.1 (même majeure). -->
+    <dependency><groupId>org.apache.logging.log4j</groupId><artifactId>log4j-api</artifactId><version>2.14.1</version></dependency>
+
+    <!-- VAL-D12 — jackson-databind 2.12.6 : nombreuses CVE de désérialisation.
+         Corrigé en 2.12.7.1 (même majeure 2.x). -->
+    <dependency><groupId>com.fasterxml.jackson.core</groupId><artifactId>jackson-databind</artifactId><version>2.12.6</version></dependency>
+    <!-- VAL-D13 — jackson-core 2.12.6 → 2.12.7 (même majeure). -->
+    <dependency><groupId>com.fasterxml.jackson.core</groupId><artifactId>jackson-core</artifactId><version>2.12.6</version></dependency>
+
+    <!-- VAL-D14 — gson 2.8.5 : CVE-2022-25647 (désérialisation). Corrigé en 2.8.9 (même majeure). -->
+    <dependency><groupId>com.google.code.gson</groupId><artifactId>gson</artifactId><version>2.8.5</version></dependency>
+
+    <!-- VAL-D15 — httpclient 4.5.13 : CVE-2020-13956. Corrigé en 4.5.14 (même majeure 4.x). -->
+    <dependency><groupId>org.apache.httpcomponents</groupId><artifactId>httpclient</artifactId><version>4.5.13</version></dependency>
+
+    <!-- VAL-D16 — commons-collections 3.2.1 : CVE-2015-7501 (désérialisation).
+         Corrigé en 3.2.2 (même majeure 3.x). -->
+    <dependency><groupId>commons-collections</groupId><artifactId>commons-collections</artifactId><version>3.2.1</version></dependency>
+
+    <!-- VAL-D17 — commons-beanutils 1.9.3 : CVE-2019-10086. Corrigé en 1.9.4 (même majeure 1.x). -->
+    <dependency><groupId>commons-beanutils</groupId><artifactId>commons-beanutils</artifactId><version>1.9.3</version></dependency>
+
+    <!-- VAL-D18 — commons-fileupload 1.3.2 : CVE-2016-1000031 + CVE-2023-24998.
+         Corrigé en 1.5 (même majeure 1.x). -->
+    <dependency><groupId>commons-fileupload</groupId><artifactId>commons-fileupload</artifactId><version>1.3.2</version></dependency>
+
+    <!-- VAL-D19 — spring-web 5.3.18 : plusieurs CVE. Corrigé en 5.3.39 (même majeure 5.x). -->
+    <dependency><groupId>org.springframework</groupId><artifactId>spring-web</artifactId><version>5.3.18</version></dependency>
+    <!-- VAL-D20 — spring-core 5.3.18 → 5.3.39 (même majeure). -->
+    <dependency><groupId>org.springframework</groupId><artifactId>spring-core</artifactId><version>5.3.18</version></dependency>
+    <!-- VAL-D21 — spring-expression 5.3.18 (SpEL) → 5.3.39 (même majeure). -->
+    <dependency><groupId>org.springframework</groupId><artifactId>spring-expression</artifactId><version>5.3.18</version></dependency>
+
+    <!-- VAL-D22 — tomcat-embed-core 9.0.60 : nombreuses CVE. Corrigé en 9.0.100 (même majeure 9.x). -->
+    <dependency><groupId>org.apache.tomcat.embed</groupId><artifactId>tomcat-embed-core</artifactId><version>9.0.60</version></dependency>
+
+    <!-- VAL-D23 — netty-all 4.1.68.Final : nombreuses CVE. Corrigé en 4.1.118.Final (même majeure 4.x). -->
+    <dependency><groupId>io.netty</groupId><artifactId>netty-all</artifactId><version>4.1.68.Final</version></dependency>
+
+    <!-- VAL-D24 — xstream 1.4.17 : nombreuses CVE de désérialisation. Corrigé en 1.4.21 (même majeure 1.x). -->
+    <dependency><groupId>com.thoughtworks.xstream</groupId><artifactId>xstream</artifactId><version>1.4.17</version></dependency>
+
+    <!-- VAL-D25 — mysql-connector-java 8.0.28 : CVE-2023-21971. Corrigé en 8.0.33 (même majeure 8.x). -->
+    <dependency><groupId>mysql</groupId><artifactId>mysql-connector-java</artifactId><version>8.0.28</version></dependency>
+
+    <!-- VAL-D26 — postgresql 42.3.1 : CVE-2022-21724 + CVE-2024-1597. Corrigé en 42.3.9 (même majeure 42.x). -->
+    <dependency><groupId>org.postgresql</groupId><artifactId>postgresql</artifactId><version>42.3.1</version></dependency>
+
+    <!-- VAL-D27 — logback-core 1.2.9 : CVE-2023-6378 + CVE-2023-6481. Corrigé en 1.2.13 (même majeure 1.x). -->
+    <dependency><groupId>ch.qos.logback</groupId><artifactId>logback-core</artifactId><version>1.2.9</version></dependency>
+    <!-- VAL-D28 — logback-classic 1.2.9 → 1.2.13 (même majeure). -->
+    <dependency><groupId>ch.qos.logback</groupId><artifactId>logback-classic</artifactId><version>1.2.9</version></dependency>
+
+    <!-- VAL-D29 — json-smart 2.4.7 : CVE-2023-1370. Corrigé en 2.4.10 (même majeure 2.x). -->
+    <dependency><groupId>net.minidev</groupId><artifactId>json-smart</artifactId><version>2.4.7</version></dependency>
+
+    <!-- VAL-D30 — dom4j 2.1.1 : CVE-2020-10683 (XXE). Corrigé en 2.1.4 (même majeure 2.x). -->
+    <dependency><groupId>org.dom4j</groupId><artifactId>dom4j</artifactId><version>2.1.1</version></dependency>
+
+    <!-- VAL-D31 — protobuf-java 3.16.1 : CVE-2022-3509 + CVE-2022-3510. Corrigé en 3.16.3 (même majeure 3.x). -->
+    <dependency><groupId>com.google.protobuf</groupId><artifactId>protobuf-java</artifactId><version>3.16.1</version></dependency>
+
+    <!-- VAL-D32 — woodstox-core 5.0.3 : CVE-2022-40151 + CVE-2022-40152. Corrigé en 5.4.0 (même majeure 5.x). -->
+    <dependency><groupId>com.fasterxml.woodstox</groupId><artifactId>woodstox-core</artifactId><version>5.0.3</version></dependency>
+
+    <!-- VAL-D33 — org.json 20211205 : CVE-2022-45688 (débordement de pile). Corrigé en 20231013 (même majeure, versionnée par date). -->
+    <dependency><groupId>org.json</groupId><artifactId>json</artifactId><version>20211205</version></dependency>
+
+    <!-- VAL-D34 — okhttp 4.9.0 : CVE-2021-0341 + CVE-2023-3635. Corrigé en 4.12.0 (même majeure 4.x). -->
+    <dependency><groupId>com.squareup.okhttp3</groupId><artifactId>okhttp</artifactId><version>4.9.0</version></dependency>
+
+    <!-- ╔══════════════════════════════════════════════════════════════════╗
+         ║ VAL-D35 — REFUS ATTENDU · CROSS_MAJOR_ONLY (variété)             ║
+         ║ guava 31.0.1-jre porte CVE-2023-2976 (fichiers temporaires), dont ║
+         ║ la correction n'arrive qu'en 32.0.0 — majeure supérieure. Comme   ║
+         ║ VAL-D04 : correctif existant mais refusé pour franchissement de   ║
+         ║ majeure. Deuxième illustration du refus cross-major.              ║
+         ╚══════════════════════════════════════════════════════════════════╝ -->
+    <dependency><groupId>com.google.guava</groupId><artifactId>guava</artifactId><version>31.0.1-jre</version></dependency>
+
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <version>5.10.2</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <!-- os-maven-plugin : résout os.detected.name/arch au plus tôt. Requis car
+         netty-all tire des artefacts natifs à classifier OS
+         (netty-transport-native-epoll:${os.detected.name}-${os.detected.arch}) ;
+         sans ce plugin, `mvn dependency:go-offline` échoue à résoudre ce classifier.
+         Additif, aucune vulnérabilité, aucun impact sur les scénarios. -->
+    <extensions>
+      <extension>
+        <groupId>kr.motd.maven</groupId>
+        <artifactId>os-maven-plugin</artifactId>
+        <version>1.7.1</version>
+      </extension>
+    </extensions>
+    <plugins>
+      <!-- Versions de plugin toutes épinglées : sans cela Maven résout des
+           versions par défaut qui varient entre Jenkins (3.6.3) et le
+           vérificateur de candidats (3.8.7), et le build cesse d'être
+           reproductible d'un côté à l'autre. -->
+      <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-clean-plugin</artifactId><version>3.2.0</version></plugin>
+      <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-resources-plugin</artifactId><version>3.3.1</version></plugin>
+      <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-compiler-plugin</artifactId><version>3.11.0</version></plugin>
+      <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-install-plugin</artifactId><version>3.1.1</version></plugin>
+
+      <!-- Couverture réelle, pour que SonarQube affiche un pourcentage mesuré
+           plutôt que 0 % faute de rapport importé. Aucun seuil n'est imposé. -->
+      <plugin>
+        <groupId>org.jacoco</groupId>
+        <artifactId>jacoco-maven-plugin</artifactId>
+        <version>0.8.12</version>
+        <executions>
+          <execution><id>prepare-agent</id><goals><goal>prepare-agent</goal></goals></execution>
+          <execution><id>report</id><phase>test</phase><goals><goal>report</goal></goals></execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>3.2.5</version>
+        <configuration>
+          <!-- Un build sans test exécuté doit échouer, pas réussir en silence :
+               la plateforme ne doit jamais lire « 0 test, 0 échec » comme un
+               succès. C'est la traduction en Maven de l'exigence ENF-07. -->
+          <failIfNoTests>true</failIfNoTests>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <version>3.3.0</version>
+        <configuration>
+          <archive><manifest><mainClass>tn.vermeg.validation.App</mainClass></manifest></archive>
+        </configuration>
+      </plugin>
+
+      <!-- CONTRAT D'INTÉGRATION — ne pas retirer.
+           La bibliothèque partagée lance `mvn sonar:sonar` par PRÉFIXE. Maven ne
+           résout un préfixe que depuis ses groupes de plugins par défaut ou
+           depuis un plugin DÉCLARÉ dans le pom. sonar-maven-plugin vit dans
+           org.sonarsource.scanner.maven : sans cette déclaration, l'étape Sonar
+           échoue avec « No plugin found for prefix 'sonar' ». -->
+      <plugin>
+        <groupId>org.sonarsource.scanner.maven</groupId>
+        <artifactId>sonar-maven-plugin</artifactId>
+        <version>3.9.1.2184</version>
+      </plugin>
+
+      <!-- MÉCANISME, PAS DÉTAIL D'EMPAQUETAGE.
+           Les jars de dépendances sont copiés dans target/runtime/ puis placés
+           dans l'image. Trivy scanne l'IMAGE, pas le dépôt : sans ces jars, son
+           analyseur Java ne voit rien, et la fermeture de sécurité confirmée par
+           deux scanners devient impossible à prouver. -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <version>3.6.1</version>
+        <executions>
+          <execution>
+            <id>runtime-artifacts</id>
+            <phase>package</phase>
+            <goals><goal>copy-dependencies</goal></goals>
+            <configuration>
+              <includeScope>runtime</includeScope>
+              <outputDirectory>${project.build.directory}/runtime</outputDirectory>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>
