@@ -1,3 +1,5 @@
+// Stocke les rapports de scan, calcule leur score de sécurité déterministe, demande un résumé IA à n8n,
+// répercute le score sur le projet parent et déclenche la notification "prêt à déployer".
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -15,6 +17,7 @@ import { IncidentStatus } from '../incidents/incident.entity';
 
 @Injectable()
 export class ReportsService {
+  /** Initialise les dépendances et l’état de ce composant. */
   constructor(
     @InjectRepository(Report) private readonly repo: Repository<Report>,
     @InjectRepository(Project) private readonly projectRepo: Repository<Project>,
@@ -24,12 +27,10 @@ export class ReportsService {
     private readonly incidents: IncidentsService,
   ) {}
 
-  // Toujours borné à 100 (les plus récents) — historique conservé en
-  // intégralité en base, mais une seule requête ne doit jamais ramener une
-  // table entière sans limite. includeArchived lève le filtre archived,
-  // pas la limite.
+  // Nombre maximal de rapports renvoyés par une recherche (l'historique complet reste en base).
   private static readonly MAX_RESULTS = 100;
 
+  // Liste les rapports (filtrables par projet), les plus récents d'abord, bornés à MAX_RESULTS.
   async findAll(projectId?: string, includeArchived?: boolean) {
     const where: any = {};
     if (projectId) where.projectId = projectId;
@@ -43,44 +44,30 @@ export class ReportsService {
     return reports.map(r => sanitizeEntityProject(r));
   }
 
+  // Récupère un rapport par id.
   async findOne(id: string) {
     const report = await this.repo.findOne({ where: { id }, relations: ['project'] });
     return sanitizeEntityProject(report);
   }
 
+  /** Crée et enregistre un nouvel élément. */
   async create(dto: Partial<Report>) {
     const report = this.repo.create(dto);
-    // Generate AI summary
     report.aiSummary = (dto as any).aiSummary || await this.generateAiSummary(dto.type, dto.rawData);
-    // Score de sécurité : TOUJOURS le calcul déterministe sur les findings
-    // normalisés — jamais dto.securityScore/riskLevel (valeurs LLM ignorées).
     const normalized = normalizeReport(dto.rawData);
     const { score, incomplete } = calculateSecurityScore(normalized);
-    // QA-SCANNER-RUNTIME-TRUTH-CORRECTION-R1 §5 : un scanner requis absent du
-    // calcul (incomplete=true) rend le score numérique non significatif — 100
-    // signifierait "vérifié et propre", pas "on n'a mesuré qu'une partie".
-    // null + riskLevel='INDETERMINE' (déjà correct ci-dessous) est le contrat
-    // honnête ; jamais un nombre qui laisse croire à un scan complet.
     report.securityScore = incomplete ? null : score;
     report.riskLevel = getRiskLevel(score, incomplete);
-    // Décision Judge exposée séparément — n'influence jamais le score ci-dessus.
     report.judgeDecision = (dto as any).judgeDecision ?? null;
     report.judgeConfidence = (dto as any).judgeConfidence ?? null;
 
     const saved = await this.repo.save(report);
 
-    // Mettre à jour le score du projet depuis ce dernier report combined —
-    // l'historique complet est conservé (aucune suppression/archivage auto).
     if (dto.type === 'combined' && dto.projectId) {
-      // incomplete → jamais 'healthy' (ProjectStatus n'a pas de 4e valeur
-      // "indéterminé" ; 'warning' est le palier existant le plus honnête en
-      // attendant une éventuelle extension de l'enum, décision produit à part).
       const projectStatus = incomplete
         ? 'warning'
         : (report.securityScore >= 80 ? 'healthy' : report.securityScore >= 40 ? 'warning' : 'critical');
       await this.projectRepo.update(dto.projectId, {
-        // report.securityScore est déjà null si incomplete (voir ci-dessus) —
-        // propagé tel quel, jamais un nombre fabriqué pour combler le null.
         securityScore: report.securityScore,
         status: projectStatus as any,
       });
@@ -91,13 +78,10 @@ export class ReportsService {
     return saved;
   }
 
-  // Met à jour UNIQUEMENT judgeDecision/judgeConfidence — jamais
-  // securityScore/riskLevel/rawData, jamais de recalcul. Le reste du body
-  // est ignoré silencieusement (pas une source de vérité pour ces champs).
-  // FIX_PROPOSED is the explicit "proposal awaiting human review" decision
-  // emitted by WF1. It is intentionally distinct from approval or execution.
+  // Décisions de Judge acceptées en mise à jour.
   private static readonly VALID_DECISIONS = ['BLOCK', 'AUTO_FIX', 'FIX_PROPOSED', 'NOTIFY_ONLY'];
 
+  /** Met à jour Judge décision. */
   async updateJudgeDecision(id: string, dto: any) {
     const update: { judgeDecision?: string; judgeConfidence?: number } = {};
 
@@ -114,9 +98,6 @@ export class ReportsService {
       );
     }
 
-    // Le report qui peut faire basculer isReadyToDeploy est toujours le
-    // dernier report combined du projet — inutile de vérifier ici s'il l'est
-    // encore après l'update, syncDeployReadyNotification relit l'état réel.
     const report = await this.repo.findOne({ where: { id } });
 
     await this.repo.update(id, update);
@@ -130,11 +111,8 @@ export class ReportsService {
     return updated;
   }
 
-  // Notification "prêt à déployer" — greffée sur le système d'incidents
-  // existant (pas d'entité Notification dédiée, voir diagnostic). Idempotence
-  // via le flag persisté Project.deployReadyNotified (Option A), pas via un
-  // snapshot avant/après : plus robuste (survit à un redémarrage backend
-  // entre deux écritures) et permet la re-notification après régression.
+  // Crée (ou efface) l'incident de notification "prêt à déployer" selon la transition de readiness,
+  // avec idempotence via le flag Project.deployReadyNotified.
   private async syncDeployReadyNotification(projectId: string, after: DeployReadiness) {
     const project = await this.projectRepo.findOne({ where: { id: projectId } });
     if (!project) return;
@@ -152,18 +130,19 @@ export class ReportsService {
       } as any);
       await this.projectRepo.update(projectId, { deployReadyNotified: true });
     } else if (!after.ready && project.deployReadyNotified) {
-      // Régression : le projet redevient non-prêt, on réarme le flag pour
-      // qu'un futur retour au vert redéclenche une notification.
       await this.projectRepo.update(projectId, { deployReadyNotified: false });
     }
   }
 
+  // Supprime un rapport.
   async remove(id: string) {
     const r = await this.repo.findOne({ where: { id } });
     if (r) await this.repo.remove(r);
     return { message: 'Rapport supprimé.' };
   }
 
+  // Demande à n8n (webhook report-summary) de générer un résumé IA du rapport ; retombe sur un résumé
+  // par défaut si n8n est injoignable.
   private async generateAiSummary(type: ReportType, data: any): Promise<string> {
     const n8nUrl = this.config.get('N8N_URL', 'http://n8n:5678');
     try {
@@ -176,6 +155,7 @@ export class ReportsService {
     }
   }
 
+  // Résumé textuel par défaut (sans IA), utilisé en repli si n8n est indisponible.
   private getDefaultSummary(type: ReportType, data: any): string {
     if (type === ReportType.SONARQUBE) {
       const bugs = data?.bugs || 0;

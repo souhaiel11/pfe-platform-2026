@@ -1,0 +1,28 @@
+{
+  "E2E_PROJECT_ID": "ebe3bd94-8240-4c30-a2d9-6de2106a28bc",
+  "E2E_PROJECT_NAME": "remediation-retry-e2e-fixture",
+  "E2E_REPOSITORY": "souhaiel11/remediation-retry-e2e-fixture",
+  "E2E_BASELINE_COMMIT": "24630265ea4ed764bbb22c76d4d7dc689b5fe0bf",
+  "E2E_INCIDENT_ID": "f84e7464-eac7-4bb3-a050-369797ed632f",
+  "E2E_FINDING_ID": "CVE-2022-45868",
+  "E2E_FINDING_FINGERPRINT": "513d498a97206dd164a58140053ddd2350ec44e11136fd8b155d1c7c3d5ba3f9",
+  "E2E_TASK_ID": "a390e383-42b7-4348-894c-5e02a7e5f98d",
+  "SCANNER": "TRIVY",
+  "VULNERABILITY_ID": "CVE-2022-45868",
+  "PACKAGE": "com.h2database:h2",
+  "INSTALLED_VERSION": "2.1.212",
+  "FIXED_VERSION": "2.2.220",
+  "ATTEMPTS_CREATED": 0,
+  "ATTEMPT_COUNT": 0,
+  "E2E_TARGET_TYPE": "FILE",
+  "E2E_TARGET_PATH": "pom.xml",
+  "EXPECTED_4G_KEY": [
+    "ebe3bd94-8240-4c30-a2d9-6de2106a28bc",
+    "FILE",
+    "pom.xml"
+  ],
+  "DATABASE_TARGET_KEY": "[\"v1\",\"FILE\",\"pom.xml\"]",
+  "TARGET_RESOLUTION_DYNAMIC": "YES",
+  "TARGET_RESOLUTION_SOURCE": "productionTargetResolver / MAVEN_ROOT_DESCRIPTOR / immutable Git tree membership",
+  "expectedCandidate": "2.2.220"
+}

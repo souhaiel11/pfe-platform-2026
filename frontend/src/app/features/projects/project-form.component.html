@@ -1,3 +1,4 @@
+<!-- Présente la configuration d’un projet. -->
 <div class="pf-container">
 
   <!-- Header -->
@@ -5,10 +6,11 @@
     <button class="btn-back" (click)="goBack()"><span aria-hidden="true">←</span> Retour</button>
     <h1>{{ isEdit ? 'Modifier le projet' : 'Nouveau projet' }}</h1>
     <div class="pf-actions">
-      <button class="btn-validate" (click)="validateProject()" [disabled]="!projectId || validating">
-        {{ validating ? 'Vérification…' : 'Vérifier la configuration' }}
+      <button class="btn-validate" (click)="testerConfiguration()" [disabled]="testEnCours">
+        {{ testEnCours ? 'Test en cours…' : 'Tester la configuration' }}
       </button>
-      <button class="btn-save" (click)="save()" [disabled]="loading || projectLoading">
+      <button class="btn-save" (click)="save()" [disabled]="!enregistrementPossible"
+              [attr.title]="raisonBlocage() || null">
         {{ loading ? 'Sauvegarde…' : 'Sauvegarder' }}
       </button>
     </div>
@@ -16,26 +18,52 @@
 
   <!-- Alerts -->
   <div class="alert success" *ngIf="saveSuccess" role="status"><span aria-hidden="true">✓</span> Projet enregistré.</div>
-  <div class="alert error"   *ngIf="saveError" role="alert"><span aria-hidden="true">✕</span> {{ saveError }}</div>
+  <div class="alert error"   *ngIf="saveError" role="alert">
+    <div class="alert-line"><span aria-hidden="true">✕</span> {{ saveError }}</div>
+    <!-- Liste exacte de ce qui manque : champ, onglet et raison. Cliquer une
+         ligne ouvre l'onglet concerné et place le curseur dans le champ. -->
+    <ul class="missing-list" *ngIf="champsEnFaute.length">
+      <li *ngFor="let e of champsEnFaute">
+        <button type="button" class="missing-jump" (click)="allerAuChamp(e)">
+          <span class="missing-tab">{{ e.sectionLabel }}</span>
+          <span class="missing-field">{{ e.label }}</span>
+        </button>
+        <span class="missing-why">— {{ e.raison }}</span>
+      </li>
+    </ul>
+  </div>
 
-  <!-- Validation résultats -->
-  <div class="validation-box" *ngIf="validationResult">
-    <div class="vbox-title" [class.ok]="validationResult.overallValid">
-      <span aria-hidden="true">{{ validationResult.overallValid ? '✓' : '!' }}</span>
-      {{ validationResult.overallValid ? 'Configuration valide' : 'Problèmes détectés' }}
+  <!-- Résultat du test de configuration — c'est lui qui débloque Sauvegarder -->
+  <div class="conn-hint" *ngIf="!test && !testEnCours && !testErreur">
+    L’enregistrement est conditionné au test : renseignez la configuration puis
+    cliquez sur <strong>Tester la configuration</strong>.
+  </div>
+
+  <div class="alert error" *ngIf="testErreur" role="alert">
+    <div class="alert-line"><span aria-hidden="true">✕</span> {{ testErreur }}</div>
+  </div>
+
+  <div class="conn-box" *ngIf="test" [class.conn-ko]="test.bloquant" [class.conn-ok]="!test.bloquant">
+    <div class="conn-title">
+      <span aria-hidden="true">{{ test.bloquant ? '✕' : '✓' }}</span>
+      {{ test.bloquant
+          ? 'Configuration incomplète — corrigez les points en rouge avant d’enregistrer'
+          : 'Toutes les connexions vérifiables sont établies — vous pouvez enregistrer' }}
     </div>
-    <div class="vbox-items">
-      <div class="vbox-item" *ngIf="validationResult.results?.jenkins">
-        <span class="valid-glyph" aria-hidden="true">{{ getValidIcon('jenkins') }}</span>
-        <span class="vbox-label">Jenkins</span>
-        <span class="vbox-msg">{{ getValidMsg('jenkins') }}</span>
-      </div>
-      <div class="vbox-item" *ngIf="validationResult.results?.sonarqube">
-        <span class="valid-glyph" aria-hidden="true">{{ getValidIcon('sonarqube') }}</span>
-        <span class="vbox-label">SonarQube</span>
-        <span class="vbox-msg">{{ getValidMsg('sonarqube') }}</span>
-      </div>
-    </div>
+
+    <ul class="conn-rows">
+      <li *ngFor="let c of test.controles" class="conn-row" [attr.data-statut]="c.etat">
+        <span class="conn-glyph" aria-hidden="true">{{ c.etat === 'ok' ? '✓' : c.etat === 'ko' ? '✕' : '—' }}</span>
+        <button type="button" class="conn-name conn-jump" (click)="setSection(c.section)">{{ c.champ }}</button>
+        <span class="conn-msg">{{ c.message }}</span>
+      </li>
+    </ul>
+
+    <p class="conn-foot">
+      <strong>—</strong> signifie « non vérifié » : la plateforme n’a pas eu de quoi
+      interroger la cible. Ce n’est pas un défaut et cela ne bloque pas
+      l’enregistrement. Seul un <strong>✕</strong> le bloque.
+    </p>
   </div>
 
   <!-- Sections nav -->
@@ -86,17 +114,35 @@
       <div class="field-row">
         <div class="field">
           <label>Jenkins URL interne <span class="hint">(appels serveur, jamais un lien navigateur)</span></label>
-          <input formControlName="jenkinsInternalUrl" placeholder="URL interne réelle de Jenkins">
+          <input formControlName="jenkinsInternalUrl"
+             [placeholder]="suggestionPour('jenkinsInternalUrl') || 'URL interne réelle de Jenkins'"
+             (keydown.enter)="accepterSuggestion('jenkinsInternalUrl'); $event.preventDefault()">
+      <button type="button" class="suggestion" *ngIf="suggestionDisponible('jenkinsInternalUrl')"
+              (click)="accepterSuggestion('jenkinsInternalUrl')">
+        Entrée pour reprendre <code>{{ suggestionPour('jenkinsInternalUrl') }}</code>
+      </button>
         </div>
         <div class="field">
           <label>Jenkins URL publique <span class="hint">(liens ouverts dans le navigateur)</span></label>
-          <input formControlName="jenkinsPublicUrl" placeholder="URL publique réelle de Jenkins">
+          <input formControlName="jenkinsPublicUrl"
+             [placeholder]="suggestionPour('jenkinsPublicUrl') || 'URL publique réelle de Jenkins'"
+             (keydown.enter)="accepterSuggestion('jenkinsPublicUrl'); $event.preventDefault()">
+      <button type="button" class="suggestion" *ngIf="suggestionDisponible('jenkinsPublicUrl')"
+              (click)="accepterSuggestion('jenkinsPublicUrl')">
+        Entrée pour reprendre <code>{{ suggestionPour('jenkinsPublicUrl') }}</code>
+      </button>
         </div>
       </div>
       <div class="field-row">
         <div class="field">
           <label>Nom du job</label>
-          <input formControlName="jenkinsJobName" placeholder="Nom réel du job Jenkins">
+          <input formControlName="jenkinsJobName"
+             [placeholder]="suggestionPour('jenkinsJobName') || 'Nom réel du job Jenkins'"
+             (keydown.enter)="accepterSuggestion('jenkinsJobName'); $event.preventDefault()">
+      <button type="button" class="suggestion" *ngIf="suggestionDisponible('jenkinsJobName')"
+              (click)="accepterSuggestion('jenkinsJobName')">
+        Entrée pour reprendre <code>{{ suggestionPour('jenkinsJobName') }}</code>
+      </button>
           <div class="field-error" *ngIf="isInvalid('jenkinsJobName')">Requis. Lettres, chiffres, points, tirets et underscores uniquement.</div>
         </div>
       </div>
@@ -122,7 +168,7 @@
             <input type="password" [(ngModel)]="jenkinsCredToken" [ngModelOptions]="{standalone: true}" autocomplete="new-password" placeholder="••••••••">
           </div>
         </div>
-        <button type="button" class="btn btn-sm" [disabled]="jenkinsCredBusy || !jenkinsCredUsername || !jenkinsCredToken" (click)="saveJenkinsCredentials()">
+        <button type="button" class="btn btn-sm" *ngIf="isEdit" [disabled]="jenkinsCredBusy || !jenkinsCredUsername || !jenkinsCredToken" (click)="saveJenkinsCredentials()">
           {{ jenkinsCredBusy ? 'Vérification…' : 'Enregistrer les identifiants' }}
         </button>
         <p *ngIf="jenkinsCredMessage" [class]="jenkinsCredSuccess ? 'field-success' : 'field-error'">{{ jenkinsCredMessage }}</p>
@@ -143,17 +189,35 @@
       <div class="field-row">
         <div class="field">
           <label>SonarQube URL interne <span class="hint">(appels serveur, jamais un lien navigateur)</span></label>
-          <input formControlName="sonarqubeUrl" placeholder="URL interne réelle de SonarQube">
+          <input formControlName="sonarqubeUrl"
+             [placeholder]="suggestionPour('sonarqubeUrl') || 'URL interne réelle de SonarQube'"
+             (keydown.enter)="accepterSuggestion('sonarqubeUrl'); $event.preventDefault()">
+      <button type="button" class="suggestion" *ngIf="suggestionDisponible('sonarqubeUrl')"
+              (click)="accepterSuggestion('sonarqubeUrl')">
+        Entrée pour reprendre <code>{{ suggestionPour('sonarqubeUrl') }}</code>
+      </button>
         </div>
         <div class="field">
           <label>SonarQube URL publique <span class="hint">(liens ouverts dans le navigateur)</span></label>
-          <input formControlName="sonarqubePublicUrl" placeholder="URL publique réelle de SonarQube">
+          <input formControlName="sonarqubePublicUrl"
+             [placeholder]="suggestionPour('sonarqubePublicUrl') || 'URL publique réelle de SonarQube'"
+             (keydown.enter)="accepterSuggestion('sonarqubePublicUrl'); $event.preventDefault()">
+      <button type="button" class="suggestion" *ngIf="suggestionDisponible('sonarqubePublicUrl')"
+              (click)="accepterSuggestion('sonarqubePublicUrl')">
+        Entrée pour reprendre <code>{{ suggestionPour('sonarqubePublicUrl') }}</code>
+      </button>
         </div>
       </div>
       <div class="field-row">
         <div class="field">
           <label>Clé du projet</label>
-          <input formControlName="sonarqubeKey" placeholder="Clé réelle du projet SonarQube">
+          <input formControlName="sonarqubeKey"
+             [placeholder]="suggestionPour('sonarqubeKey') || 'Clé réelle du projet SonarQube'"
+             (keydown.enter)="accepterSuggestion('sonarqubeKey'); $event.preventDefault()">
+      <button type="button" class="suggestion" *ngIf="suggestionDisponible('sonarqubeKey')"
+              (click)="accepterSuggestion('sonarqubeKey')">
+        Entrée pour reprendre <code>{{ suggestionPour('sonarqubeKey') }}</code>
+      </button>
         </div>
       </div>
       <p class="hint">L'identifiant SonarQube est géré par la plateforme.</p>
@@ -201,10 +265,11 @@
   <!-- Footer -->
   <div class="pf-footer">
     <button class="btn-back" (click)="goBack()">Annuler</button>
-    <button class="btn-validate" (click)="validateProject()" [disabled]="!projectId || validating">
-      {{ validating ? 'Vérification…' : 'Vérifier la configuration' }}
+    <button class="btn-validate" (click)="testerConfiguration()" [disabled]="testEnCours">
+      {{ testEnCours ? 'Test en cours…' : 'Tester la configuration' }}
     </button>
-    <button class="btn-save" (click)="save()" [disabled]="loading || projectLoading">
+    <button class="btn-save" (click)="save()" [disabled]="!enregistrementPossible"
+            [attr.title]="raisonBlocage() || null">
       {{ loading ? 'Sauvegarde…' : 'Sauvegarder' }}
     </button>
   </div>

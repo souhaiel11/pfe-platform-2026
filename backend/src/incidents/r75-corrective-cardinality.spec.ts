@@ -1,3 +1,5 @@
+// Teste le composant « r75-corrective-cardinality » et ses cas d’erreur.
+import { emptyReservationQuery } from './sonar-file-reservation.test-double';
 import * as assert from 'node:assert/strict';
 import { IncidentsService } from './incidents.service';
 
@@ -13,6 +15,7 @@ const SHA1 = 'a'.repeat(40);
 const SHA2 = 'b'.repeat(40);
 const REPO = 'owner/repo';
 
+/** Prépare les données nécessaires à ce scénario. */
 function fixture(blockingCauses: any[], findingIds: string[]) {
   const incident: any = {
     id: 'i', projectId: 'p', status: 'blocked', buildNumber: 1,
@@ -30,15 +33,28 @@ function fixture(blockingCauses: any[], findingIds: string[]) {
   };
   const project: any = { id: 'p', githubRepo: REPO };
   incident.project = project;
-  const repo: any = { findOne: async () => incident, update: async (_id: string, patch: any) => Object.assign(incident, patch) };
-  const projects: any = { findOne: async () => project };
-  repo.manager = { transaction: async (fn: any) => fn({ getRepository: (e: any) => e?.name === 'Project' ? projects : repo }) };
-  const service = new IncidentsService(repo, projects, { emit: () => undefined } as any, {} as any, {} as any);
-  // Never let the automatic PR-validation side effect leave this unit harness.
+  const repo: any = {
+  /** Recherche l’élément correspondant à l’identifiant. */
+  findOne: async () => incident,
+  /** Applique les modifications autorisées à l’élément. */
+  update: async (_id: string, patch: any) => Object.assign(incident, patch) };
+  const projects: any = {
+  /** Recherche l’élément correspondant à l’identifiant. */
+  findOne: async () => project };
+  repo.manager = {
+  /** Exécute les opérations dans le cadre transactionnel prévu. */
+  transaction: async (fn: any) => fn({
+  /** Simule la lecture des données demandées par le composant. */
+  query: emptyReservationQuery, getRepository: (e: any) => e?.name === 'Project' ? projects : repo }) };
+  const service = new IncidentsService(repo, projects, {
+  /** Diffuse ou construit le résultat prévu. */
+  emit: () => undefined } as any, {} as any, {} as any);
+  /** Prépare les données nécessaires à ce scénario. */
   (service as any).dispatchAutomaticInitialPrValidation = async () => undefined;
   return { incident, service };
 }
 
+/** Traite le retour de l’opération du scénario. */
 function callback(overrides: any = {}) {
   return {
     incidentId: 'i', requestId: 'req', batchId: BATCH_ID, batchKey: BATCH_ID, attemptCount: 1,
@@ -48,6 +64,7 @@ function callback(overrides: any = {}) {
   };
 }
 
+/** Exécute les étapes principales de ce programme. */
 async function main() {
   // Case 1: canonical corrective issue (no cause.findingId) -> synthetic
   // candidateId identity. Backend must accept it WITHOUT requiring the 2

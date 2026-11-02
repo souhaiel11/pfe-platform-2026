@@ -1,12 +1,9 @@
-// Tests unitaires pour report-normalizer.ts — le repo n'a pas de framework de
-// test installé (pas de jest), donc ce fichier s'exécute directement via
-// ts-node avec `assert`, dans le même esprit que les scripts src/seed/*.
-//
-//   npx ts-node src/common/report-normalizer.spec.ts
+// Tests unitaires pour report-normalizer.ts.
 import * as assert from 'assert';
 import { normalizeReport } from './report-normalizer';
 
 let passed = 0;
+/** Vérifie les données dans ce scénario de test. */
 function check(label: string, condition: boolean) {
   assert.ok(condition, `ÉCHEC: ${label}`);
   passed++;

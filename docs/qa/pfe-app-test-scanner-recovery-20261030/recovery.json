@@ -1,0 +1,20 @@
+{
+  "reportId": "44dd246d-7d55-497b-be2d-55010661987f",
+  "originalReportId": "faa172c1-6751-4799-aee0-775b59464409",
+  "buildNumber": 163,
+  "imageId": "sha256:2a308fba0b0bbd3de78f8b53d81eeed22246cd8c3ed205fa7855aad1590728f2",
+  "commitSha": "f5cff781d31731ae220f8b63d16ff23b24fbb4d9",
+  "rescannedAt": "2026-10-30T15:42:12.823Z",
+  "sha256": "077536586f9751e6f02b411ce43e858b408987659d21a0bdfd4d3153c1738d1a",
+  "sourcePath": "pfe-app-test/main/163/trivy-report.json",
+  "note": "Scan local de récupération après le build, sur son image exacte. OWASP et les autres scanners restent issus du rapport initial.",
+  "trivy": {
+    "critical": 15,
+    "high": 50,
+    "total": 113
+  },
+  "owasp": {
+    "critical": 41,
+    "high": 76
+  }
+}

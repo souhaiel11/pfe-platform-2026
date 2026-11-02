@@ -1,0 +1,28 @@
+{
+  "status": 201,
+  "body": {
+    "id": "b97f9a56-b128-4986-8e20-780633b0660d",
+    "projectId": "ebe3bd94-8240-4c30-a2d9-6de2106a28bc",
+    "taskId": "a390e383-42b7-4348-894c-5e02a7e5f98d",
+    "state": "ACTIVE",
+    "plan": {
+      "enabled": true,
+      "projectId": "ebe3bd94-8240-4c30-a2d9-6de2106a28bc",
+      "taskId": "a390e383-42b7-4348-894c-5e02a7e5f98d",
+      "expiresAt": "2026-10-07T15:28:02.402252+00:00",
+      "findingIdentity": "98654734b3f69bd8939a63707ef468499e7332c9a6780f1987c2349ef1d892eb",
+      "attempt1Mode": "FORCE_VERIFIER_TIMEOUT_ONCE",
+      "attempt2Mode": "STOP_BEFORE_GIT_WRITE_ONCE",
+      "consumedAttempt1": false,
+      "consumedAttempt2": false,
+      "events": [
+        {
+          "hook": "CREATED",
+          "at": "2026-10-07T15:03:02.599Z"
+        }
+      ]
+    },
+    "createdAt": "2026-10-07T15:03:02.581Z",
+    "updatedAt": "2026-10-07T15:03:02.581Z"
+  }
+}

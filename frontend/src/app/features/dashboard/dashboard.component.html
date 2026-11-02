@@ -1,53 +1,99 @@
+<!-- Présente le tableau de bord. -->
 <div class="dash">
+  <header class="observatory-header">
+    <div class="observatory-intro">
+      <p class="atelier-eyebrow"><span class="index-tick" aria-hidden="true"></span>01 / L’OBSERVATOIRE</p>
+      <h1>Voir clair.<br><em>Agir juste.</em></h1>
+      <p class="observatory-description">Du premier signal à la décision.<br>Une lecture précise de vos projets et de leurs risques.</p>
+      <a class="observatory-link" routerLink="/projects">Explorer les projets <span aria-hidden="true">↗</span></a>
+    </div>
+    <div class="observatory-drawing" aria-hidden="true">
+      <svg class="atelier-diagram" viewBox="0 0 400 260" fill="none">
+        <path d="M28 60h66l28 28M278 172l28 28h65" stroke="currentColor" opacity=".4"/>
+        <text x="28" y="52" fill="currentColor" font-size="9" font-family="monospace" letter-spacing="2">SIGNAL</text>
+        <text x="306" y="218" fill="currentColor" font-size="9" font-family="monospace" letter-spacing="2">DÉCISION</text>
+        <path d="M20 130h360M200 12v236" stroke="currentColor" opacity=".15" stroke-dasharray="3 7"/>
+        <circle cx="200" cy="130" r="99" stroke="currentColor" opacity=".2"/>
+        <circle cx="200" cy="130" r="76" stroke="currentColor" opacity=".1"/>
+        <path d="M200 23v16M200 221v16M93 130h16M291 130h16" stroke="currentColor"/>
+        <path d="M120 71l8 8M272 181l8 8M120 189l8-8M272 79l8-8" stroke="currentColor" opacity=".45"/>
+        <path d="M156 93h30v30h-30zM214 93h30v30h-30zM185 152h30v30h-30z" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M186 108h28M171 123v44h14M229 123v44h-14" stroke="currentColor" stroke-width="1.5"/>
+        <circle cx="200" cy="31" r="5" fill="currentColor"/>
+        <path d="M20 40V20h20M360 20h20v20M20 220v20h20M360 240h20v-20" stroke="currentColor" opacity=".35"/>
+        <text x="26" y="132" fill="currentColor" font-size="9" font-family="monospace">01</text>
+        <text x="358" y="132" fill="currentColor" font-size="9" font-family="monospace">03</text>
+      </svg>
+      <div class="diagram-caption"><span>OBSERVER</span><span>COMPRENDRE</span><span>DÉCIDER</span></div>
+    </div>
+  </header>
 
   <app-zone-label kind="information"
     note="Synthèse de la plateforme. Chaque élément renvoie vers la page où l’action est possible."></app-zone-label>
 
-  <!-- ══ 1 · Sécurité plateforme ══════════════════════════════════════
-       §4 — l'état d'ensemble d'abord, le détail ensuite. -->
-  <section class="panel" *ngIf="securitySummaryLoading">
-    <div class="loading-overlay" role="status"><div class="spinner"></div><span>Chargement…</span></div>
-  </section>
-  <!-- §17 — un échec de requête est dit explicitement, jamais rendu comme
-       « aucune vulnérabilité ». -->
-  <section class="panel" *ngIf="!securitySummaryLoading && dataErrors['security']" role="alert">
-    <div class="panel-header"><h3><i class="ti ti-shield-check" aria-hidden="true"></i> Sécurité plateforme</h3></div>
-    <p class="panel-error">{{dataErrors['security']}}</p>
-    <button type="button" class="btn btn-secondary btn-sm" (click)="loadSecuritySummary()">Réessayer</button>
-  </section>
-  <section class="sec-panel" *ngIf="!securitySummaryLoading && securitySummary">
-    <div class="sec-panel-head">
-      <div class="sec-panel-title">
-        <i class="ti ti-shield-check" aria-hidden="true"></i>
-        Sécurité plateforme
-        <span class="sec-panel-sub">{{securitySummary.totalProjects}} {{securitySummary.totalProjects === 1 ? 'projet analysé' : 'projets analysés'}}</span>
+  <section class="overview-grid" aria-label="Synthèse sécurité, incidents et risque">
+    <article class="overview-card security-overview">
+      <div class="overview-heading"><h2><i class="ti ti-shield-check" aria-hidden="true"></i> Sécurité</h2><a routerLink="/security" aria-label="Voir la page Sécurité">Voir tout <span aria-hidden="true">↗</span></a></div>
+      <p class="overview-state" *ngIf="securitySummaryLoading" role="status">Chargement des résultats…</p>
+      <div *ngIf="!securitySummaryLoading && dataErrors['security']" role="alert">
+        <p class="panel-error">{{dataErrors['security']}}</p>
+        <button class="btn btn-secondary btn-sm" (click)="loadSecuritySummary()">Réessayer</button>
       </div>
-      <a class="panel-link" routerLink="/security">Voir Trivy / OWASP <span aria-hidden="true">→</span></a>
-    </div>
-    <div class="sec-kpi-grid">
-      <div class="sec-kpi">
-        <span class="sec-kpi-label">CVE critiques</span>
-        <span class="sec-kpi-value" style="color:var(--accent-red)">{{securitySummary.totalCriticalCves}}</span>
+      <ng-container *ngIf="!securitySummaryLoading && !dataErrors['security']">
+        <ng-container *ngIf="securitySummary; else noSecuritySummary">
+          <div class="overview-primary"><strong>{{securitySummary.totalCriticalCves ?? '—'}}</strong><span>CVE critiques</span></div>
+          <dl class="overview-details">
+            <div><dt>CVE élevées</dt><dd>{{securitySummary.totalHighCves ?? '—'}}</dd></div>
+            <div><dt>Alertes ZAP élevées</dt><dd>{{securitySummary.zapHighAlerts ?? '—'}}</dd></div>
+            <div><dt>Score de sécurité moyen</dt><dd>{{securitySummary.avgSecurityScore ?? '—'}}<small *ngIf="securitySummary.avgSecurityScore != null"> /100</small></dd></div>
+          </dl>
+          <p class="overview-note">Derniers scans · {{securitySummary.totalProjects}} projet(s). Une CVE peut apparaître dans plusieurs sources.</p>
+        </ng-container>
+        <ng-template #noSecuritySummary><p class="overview-state">Aucun résultat de sécurité disponible.</p></ng-template>
+      </ng-container>
+    </article>
+
+    <article class="overview-card incidents-overview">
+      <div class="overview-heading"><h2><i class="ti ti-alert-triangle" aria-hidden="true"></i> Incidents</h2><a routerLink="/incidents" aria-label="Voir la page Incidents">Voir tout <span aria-hidden="true">↗</span></a></div>
+      <p class="overview-state" *ngIf="activitiesLoading" role="status">Chargement des incidents…</p>
+      <div *ngIf="!activitiesLoading && dataErrors['incidents']" role="alert">
+        <p class="panel-error">{{dataErrors['incidents']}}</p>
+        <button class="btn btn-secondary btn-sm" (click)="loadIncidentFeeds()">Réessayer</button>
       </div>
-      <div class="sec-kpi">
-        <span class="sec-kpi-label">CVE élevées</span>
-        <span class="sec-kpi-value" style="color:var(--accent-orange)">{{securitySummary.totalHighCves}}</span>
+      <ng-container *ngIf="!activitiesLoading && incidentSummary">
+        <div class="overview-primary"><strong>{{incidentSummary.total}}</strong><span>incident{{incidentSummary.total === 1 ? '' : 's'}} {{incidentSummary.limited ? 'récents' : 'détectés'}}</span></div>
+        <dl class="overview-details">
+          <div><dt>En attente</dt><dd>{{incidentSummary.pending}}</dd></div>
+          <div><dt>Terminés</dt><dd>{{incidentSummary.completed}}</dd></div>
+          <div><dt>Autres statuts</dt><dd>{{incidentSummary.total - incidentSummary.pending - incidentSummary.completed}}</dd></div>
+        </dl>
+        <p class="overview-note">{{incidentSummary.limited ? 'Synthèse limitée aux 50 incidents les plus récents.' : 'Tous les incidents enregistrés, sans filtre de statut.'}}</p>
+      </ng-container>
+    </article>
+
+    <article class="overview-card risk-overview">
+      <div class="overview-heading"><h2><i class="ti ti-gauge" aria-hidden="true"></i> Prédiction · Risque</h2><a routerLink="/prediction" aria-label="Voir les indicateurs de risque">Voir tout <span aria-hidden="true">↗</span></a></div>
+      <p class="overview-state" *ngIf="riskSummaryLoading" role="status">Calcul des indicateurs…</p>
+      <div *ngIf="!riskSummaryLoading && dataErrors['risk']" role="alert">
+        <p class="panel-error">{{dataErrors['risk']}}</p>
+        <button class="btn btn-secondary btn-sm" (click)="loadRiskSummary()">Réessayer</button>
       </div>
-      <div class="sec-kpi">
-        <span class="sec-kpi-label">Problèmes SonarQube</span>
-        <span class="sec-kpi-value">{{securitySummary.sonarBugs + securitySummary.sonarVulnerabilities}}</span>
-      </div>
-      <div class="sec-kpi">
-        <span class="sec-kpi-label">Score moyen<app-info-hint term="security-score"></app-info-hint></span>
-        <span class="sec-kpi-value" [style.color]="scoreColor(securitySummary.avgSecurityScore)">{{securitySummary.avgSecurityScore}}</span>
-      </div>
-    </div>
+      <ng-container *ngIf="!riskSummaryLoading && riskSummary">
+        <div class="overview-primary"><strong>{{riskSummary.average ?? '—'}}<small *ngIf="riskSummary.average != null">/100</small></strong><span>Risque moyen</span></div>
+        <dl class="overview-details">
+          <div><dt>Projets évalués</dt><dd>{{riskSummary.total}}</dd></div>
+          <div><dt>Risque élevé ou critique</dt><dd>{{riskSummary.elevated}}</dd></div>
+          <div><dt>Risque maximal</dt><dd>{{riskSummary.highest ?? '—'}}<small *ngIf="riskSummary.highest != null"> /100</small></dd></div>
+        </dl>
+        <p class="overview-note">{{riskSummary.total ? 'Score par règles : CVE, builds, incidents et SonarQube.' : 'Aucun indicateur calculé pour le moment.'}}</p>
+      </ng-container>
+    </article>
   </section>
 
   <!-- ══ 2 · À traiter en priorité ════════════════════════════════════
        §28 — la question à laquelle un tableau de bord doit répondre en
        premier : lesquels de mes projets demandent une action, et pourquoi. -->
-  <section class="panel">
+  <section class="panel attention-panel">
     <div class="panel-header">
       <h3><i class="ti ti-alert-triangle" aria-hidden="true"></i> À traiter en priorité</h3>
       <span class="panel-count" *ngIf="!projectsLoading && !dataErrors['projects']">{{attentionItems.length}}</span>
@@ -86,7 +132,7 @@
        Vue de comparaison, pas une copie de la page de détail (§28) : les
        mêmes quatre faits que la liste des projets, dans le même ordre, et
        un lien pour aller à la liste complète. -->
-  <section class="panel">
+  <section class="panel portfolio-panel">
     <div class="panel-header">
       <h3><i class="ti ti-folder" aria-hidden="true"></i> Projets</h3>
       <a class="panel-link" routerLink="/projects">Voir tous les projets <span aria-hidden="true">→</span></a>

@@ -1,3 +1,4 @@
+// Valide la mise à jour dédiée des identifiants Jenkins, séparée des réglages ordinaires d'un projet.
 import { IsString, MinLength } from 'class-validator';
 
 // Endpoint dédié ADMIN-ONLY (PUT /projects/:id/jenkins-credentials) —

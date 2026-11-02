@@ -1,31 +1,18 @@
+// Normalise les plans de correction avant leur application.
 import fs from 'node:fs';
 
 const sourcePath = new URL('../pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.R75-CORRECTIVE-CARDINALITY-INVARIANT.json', import.meta.url);
 const outputPath = new URL('../pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.R77-CORRECTIVE-PLAN-CANONICALIZATION.json', import.meta.url);
 
+/** Normalise les plans de correction avant leur application. */
 export function hardenCorrectivePlanCanonicalization(workflow) {
+  /** Retrouve ou construit le nœud du workflow demandé. */
   const node = name => {
     const found = workflow.nodes.find(candidate => candidate.name === name);
     if (!found) throw new Error('R77_NODE_NOT_FOUND:' + name);
     return found;
   };
 
-  // Execution 2036 (attempt 11) proved R75's identity CHECK correct but
-  // insufficient on its own: the model produced 2 byte-identical plans
-  // (differing only in `findingId`), each keyed by a historical Sonar id,
-  // both correctly targeting the grounded file (TaskDTO.java) -- R73/R74
-  // grounding held perfectly. R75 compared the model's own chosen
-  // identity/cardinality against the expected canonical set and correctly
-  // rejected the mismatch, but the identity/cardinality itself was still
-  // entirely model-controlled: nothing forced the model to key its plan(s)
-  // by correctiveIssues[].candidateId rather than by however many
-  // historicalFindings[] entries it saw. R77 moves that decision onto the
-  // platform: raw plans are deterministically canonicalized -- mapped to
-  // exactly one correctiveIssue each via candidateId match or unique
-  // grounded-target-file membership, semantically-identical duplicates
-  // mapping to the same issue are collapsed (never picked arbitrarily), and
-  // any real disagreement fails closed -- before the plan ever reaches
-  // R75's identity check, which now always sees platform-assigned identity.
   const preparePlan = node('Prepare Generic Remediation Plan');
   {
     const before = preparePlan.parameters.jsCode;

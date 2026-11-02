@@ -1,3 +1,4 @@
+// Crée et nettoie des fixtures WF2 jetables (projet + incident marqués INTEGRATION_TEST) pour tester l'environnement, réservé aux admins et désactivé en production.
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -14,12 +15,14 @@ export type Wf2FixtureInput = {
 
 @Injectable()
 export class IntegrationFixturesService {
+  /** Initialise les dépendances et l’état de ce composant. */
   constructor(
     @InjectRepository(Incident) private readonly incidents: Repository<Incident>,
     @InjectRepository(Project) private readonly projects: Repository<Project>,
     private readonly config: ConfigService,
   ) {}
 
+  /** Autorise uniquement un admin, et seulement si l'environnement n'est pas la production et que le flag INTEGRATION_FIXTURES_ENABLED est actif. */
   private authorize(user: any) {
     if (this.config.get('NODE_ENV', process.env.NODE_ENV) === 'production'
       || this.config.get('INTEGRATION_FIXTURES_ENABLED', process.env.INTEGRATION_FIXTURES_ENABLED) !== 'true') {
@@ -30,6 +33,7 @@ export class IntegrationFixturesService {
     }
   }
 
+  /** Crée un projet et un incident jetables, marqués INTEGRATION_TEST, portant un fixRequest WF2 prêt pour un test d'environnement — valide la cohérence des findings fournis avant d'écrire. */
   async provisionWf2Context(input: Wf2FixtureInput, user: any) {
     this.authorize(user);
     const repository = String(input?.repository?.fullName || '').trim();
@@ -92,6 +96,7 @@ export class IntegrationFixturesService {
     });
   }
 
+  /** Supprime un fixture jetable et son projet, après avoir vérifié qu'il appartient bien à l'appelant et ne contient aucune donnée étrangère à la fixture. */
   async cleanup(fixtureId: string, user: any) {
     this.authorize(user);
     return this.incidents.manager.transaction(async manager => {

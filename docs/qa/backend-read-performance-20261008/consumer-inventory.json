@@ -1,0 +1,2798 @@
+[
+  {
+    "file": "backend/src/incidents/finding-task-id-exposure.spec.ts",
+    "line": 5,
+    "references": [
+      "getDecisions"
+    ]
+  },
+  {
+    "file": "backend/src/manual-remediation/manual-remediation.service.ts",
+    "line": 160,
+    "references": [
+      "getDecisions"
+    ]
+  },
+  {
+    "file": "frontend/src/app/core/services/api.service.ts",
+    "line": 56,
+    "references": [
+      "getIncidents"
+    ]
+  },
+  {
+    "file": "frontend/src/app/core/services/api.service.ts",
+    "line": 78,
+    "references": [
+      "getDecisions"
+    ]
+  },
+  {
+    "file": "frontend/src/app/core/services/api.service.ts",
+    "line": 84,
+    "references": [
+      "getDecisions"
+    ]
+  },
+  {
+    "file": "frontend/src/app/core/services/api.service.ts",
+    "line": 85,
+    "references": [
+      "getProjectReports"
+    ]
+  },
+  {
+    "file": "frontend/src/app/features/projects/project-detail.component.ts",
+    "line": 1017,
+    "references": [
+      "getIncidents"
+    ]
+  },
+  {
+    "file": "frontend/src/app/features/dashboard/dashboard.component.ts",
+    "line": 113,
+    "references": [
+      "getIncidents"
+    ]
+  },
+  {
+    "file": "frontend/src/app/features/incidents/incidents.component.ts",
+    "line": 38,
+    "references": [
+      "getIncidents"
+    ]
+  },
+  {
+    "file": "frontend/src/app/features/analysis/analysis.component.ts",
+    "line": 46,
+    "references": [
+      "getDecisions"
+    ]
+  },
+  {
+    "file": "n8n-workflows/active/wf-chat-v4-6BVXqAsePEPAjiIQ.json",
+    "line": 41,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.LOCAL-DRAFT-DTO-DECOUPLING.json",
+    "line": 230,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.LOCAL-DRAFT-DTO-DECOUPLING.json",
+    "line": 258,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.LOCAL-DRAFT-DTO-DECOUPLING.json",
+    "line": 276,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/archive-wf1-inactive/wf1-incident-intake-analysis-v3-1-ivsIaEz0cRSQPRuq.json",
+    "line": 469,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/archive-wf1-inactive/wf1-incident-intake-analysis-v3-1-ivsIaEz0cRSQPRuq.json",
+    "line": 576,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/archive-wf1-inactive/wf1-incident-intake-analysis-v3-1-ivsIaEz0cRSQPRuq.json",
+    "line": 670,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/active/wf4-human-approval-governance-YEQyUpH3bVm6CFxL.json",
+    "line": 146,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/active/wf4-human-approval-governance-YEQyUpH3bVm6CFxL.json",
+    "line": 203,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/archive-wf1-inactive/wf1-incident-intake-analysis-6tjZzJip4o2gjfEK.json",
+    "line": 270,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/archive-wf1-inactive/wf1-incident-intake-analysis-6tjZzJip4o2gjfEK.json",
+    "line": 313,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/archive-wf1-inactive/wf1-incident-intake-analysis-6tjZzJip4o2gjfEK.json",
+    "line": 342,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/archive-wf1-inactive/wf1-incident-intake-analysis-v5-developer-guidance-xVdIiXD0sj0lSdAH.json",
+    "line": 469,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/archive-wf1-inactive/wf1-incident-intake-analysis-v5-developer-guidance-xVdIiXD0sj0lSdAH.json",
+    "line": 576,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/archive-wf1-inactive/wf1-incident-intake-analysis-v5-developer-guidance-xVdIiXD0sj0lSdAH.json",
+    "line": 670,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/active/wf2-git-patch-pr-v2-5-fixed-vWWrhwuXjcAxmO2B.json",
+    "line": 174,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-r83-sticky-notes-20261002T213500Z/wf2-u3eeMwTuhCsetfcS.WF2_DRAFT_BEFORE_R83.json",
+    "line": 1,
+    "references": [
+      "/api/incidents",
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/wf3-post-pr-validation-v4-4JiOKpyHhx1znTYw.LIVE-BACKUP-20260901T113550Z.json",
+    "line": 109,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/WF2-R90-DTO-DISCOVERY.REBASE-BASELINE.json",
+    "line": 216,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/WF2-R90-DTO-DISCOVERY.REBASE-BASELINE.json",
+    "line": 659,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.R77-CORRECTIVE-PLAN-CANONICALIZATION.json",
+    "line": 229,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.R77-CORRECTIVE-PLAN-CANONICALIZATION.json",
+    "line": 257,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.R77-CORRECTIVE-PLAN-CANONICALIZATION.json",
+    "line": 275,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/archive-wf1-inactive/wf1-incident-intake-analysis-v3-1-1iUgu9tKzHf5Wspq.json",
+    "line": 469,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/archive-wf1-inactive/wf1-incident-intake-analysis-v3-1-1iUgu9tKzHf5Wspq.json",
+    "line": 576,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/archive-wf1-inactive/wf1-incident-intake-analysis-v3-1-1iUgu9tKzHf5Wspq.json",
+    "line": 670,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/wf1-incident-intake-analysis-v5-1-vNOQiEgnXg9Zqn2q.LIVE-BACKUP-20260901T110307Z.json",
+    "line": 412,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/wf1-incident-intake-analysis-v5-1-vNOQiEgnXg9Zqn2q.LIVE-BACKUP-20260901T110307Z.json",
+    "line": 480,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/wf1-incident-intake-analysis-v5-1-vNOQiEgnXg9Zqn2q.LIVE-BACKUP-20260901T110307Z.json",
+    "line": 512,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/active/wf1-incident-intake-analysis-v5-1-vNOQiEgnXg9Zqn2q.json",
+    "line": 458,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/active/wf1-incident-intake-analysis-v5-1-vNOQiEgnXg9Zqn2q.json",
+    "line": 526,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/active/wf1-incident-intake-analysis-v5-1-vNOQiEgnXg9Zqn2q.json",
+    "line": 558,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/active/wf3-post-pr-validation-v4-4JiOKpyHhx1znTYw.json",
+    "line": 103,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/active/wf2-git-patch-pr-v4-1-9adcV31eaIgJyMR0.json",
+    "line": 226,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/active/wf2-git-patch-pr-v4-1-9adcV31eaIgJyMR0.json",
+    "line": 254,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/active/wf2-git-patch-pr-v4-1-9adcV31eaIgJyMR0.json",
+    "line": 272,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/archive-wf1-inactive/wf1-incident-intake-analysis-v2-1-wS4AH1SRyCa25R2e.json",
+    "line": 560,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/archive-wf1-inactive/wf1-incident-intake-analysis-v2-1-wS4AH1SRyCa25R2e.json",
+    "line": 664,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/archive-wf1-inactive/wf1-incident-intake-analysis-v2-1-wS4AH1SRyCa25R2e.json",
+    "line": 758,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.R74-CORRECTIVE-ISSUE-CANONICALIZATION.json",
+    "line": 229,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.R74-CORRECTIVE-ISSUE-CANONICALIZATION.json",
+    "line": 257,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.R74-CORRECTIVE-ISSUE-CANONICALIZATION.json",
+    "line": 275,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-2757fab-20260915T180937Z/4JiOKpyHhx1znTYw.json",
+    "line": 109,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.PROMOTION-TARGET.json",
+    "line": 229,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.PROMOTION-TARGET.json",
+    "line": 257,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.PROMOTION-TARGET.json",
+    "line": 275,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-611dac4-20260919T121715Z/wf2-u3eeMwTuhCsetfcS-live-before.json",
+    "line": 1,
+    "references": [
+      "/api/incidents",
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/archive-wf1-inactive/wf1-incident-intake-analysis-may-4-at-09-54-34-aBe6jka0hptPtkaB.json",
+    "line": 270,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/archive-wf1-inactive/wf1-incident-intake-analysis-may-4-at-09-54-34-aBe6jka0hptPtkaB.json",
+    "line": 313,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/archive-wf1-inactive/wf1-incident-intake-analysis-may-4-at-09-54-34-aBe6jka0hptPtkaB.json",
+    "line": 342,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.R81_2-WRITER-PROMPT.json",
+    "line": 229,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.R81_2-WRITER-PROMPT.json",
+    "line": 257,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.R81_2-WRITER-PROMPT.json",
+    "line": 275,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/wf1-incident-intake-analysis-v5-1-vNOQiEgnXg9Zqn2q.LIVE-BACKUP-20260901T113550Z.json",
+    "line": 412,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/wf1-incident-intake-analysis-v5-1-vNOQiEgnXg9Zqn2q.LIVE-BACKUP-20260901T113550Z.json",
+    "line": 480,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/wf1-incident-intake-analysis-v5-1-vNOQiEgnXg9Zqn2q.LIVE-BACKUP-20260901T113550Z.json",
+    "line": 512,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-2757fab-20260915T180937Z/u3eeMwTuhCsetfcS.json",
+    "line": 230,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-2757fab-20260915T180937Z/u3eeMwTuhCsetfcS.json",
+    "line": 258,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-2757fab-20260915T180937Z/u3eeMwTuhCsetfcS.json",
+    "line": 276,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/WF2-R83-STICKY-NOTES.PROMOTION-TARGET.json",
+    "line": 227,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/WF2-R83-STICKY-NOTES.PROMOTION-TARGET.json",
+    "line": 255,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/WF2-R83-STICKY-NOTES.PROMOTION-TARGET.json",
+    "line": 273,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/archive-wf1-inactive/wf1-incident-intake-analysis-v2-1-gaimC1KQHAOnLifl.json",
+    "line": 560,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/archive-wf1-inactive/wf1-incident-intake-analysis-v2-1-gaimC1KQHAOnLifl.json",
+    "line": 664,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/archive-wf1-inactive/wf1-incident-intake-analysis-v2-1-gaimC1KQHAOnLifl.json",
+    "line": 758,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-r85-sticky-zone-labels-20261003T000000Z/wf2-u3eeMwTuhCsetfcS.LIVE-BEFORE-R85.json",
+    "line": 229,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-r85-sticky-zone-labels-20261003T000000Z/wf2-u3eeMwTuhCsetfcS.LIVE-BEFORE-R85.json",
+    "line": 257,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-r85-sticky-zone-labels-20261003T000000Z/wf2-u3eeMwTuhCsetfcS.LIVE-BEFORE-R85.json",
+    "line": 275,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/wf1-incident-intake-analysis-v5-1-vNOQiEgnXg9Zqn2q.LIVE-BACKUP-20260824T184847Z.json",
+    "line": 412,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/wf1-incident-intake-analysis-v5-1-vNOQiEgnXg9Zqn2q.LIVE-BACKUP-20260824T184847Z.json",
+    "line": 480,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/wf1-incident-intake-analysis-v5-1-vNOQiEgnXg9Zqn2q.LIVE-BACKUP-20260824T184847Z.json",
+    "line": 512,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-2757fab-20260915T180937Z/vNOQiEgnXg9Zqn2q.json",
+    "line": 458,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-2757fab-20260915T180937Z/vNOQiEgnXg9Zqn2q.json",
+    "line": 526,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-2757fab-20260915T180937Z/vNOQiEgnXg9Zqn2q.json",
+    "line": 558,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/wf2-git-patch-pr-v4-1-9adcV31eaIgJyMR0.LIVE-BACKUP-20260902T084535Z.json",
+    "line": 221,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/wf2-git-patch-pr-v4-1-9adcV31eaIgJyMR0.LIVE-BACKUP-20260902T084535Z.json",
+    "line": 249,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/wf2-git-patch-pr-v4-1-9adcV31eaIgJyMR0.LIVE-BACKUP-20260902T084535Z.json",
+    "line": 267,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/archive-wf1-inactive/wf1-incident-intake-analysis-v3-0-b6Cr5Wa2GZiGmv6N.json",
+    "line": 560,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/archive-wf1-inactive/wf1-incident-intake-analysis-v3-0-b6Cr5Wa2GZiGmv6N.json",
+    "line": 667,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/archive-wf1-inactive/wf1-incident-intake-analysis-v3-0-b6Cr5Wa2GZiGmv6N.json",
+    "line": 761,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-fixE-1b145699-20260916T103143Z/4JiOKpyHhx1znTYw.json",
+    "line": 109,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.R72-PLANNER-OUTPUT-BUDGET.json",
+    "line": 229,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.R72-PLANNER-OUTPUT-BUDGET.json",
+    "line": 257,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.R72-PLANNER-OUTPUT-BUDGET.json",
+    "line": 275,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-digest-c3a6685-20260917T0859Z/wf2-u3eeMwTuhCsetfcS-live-87514fb8-before.json",
+    "line": 230,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-digest-c3a6685-20260917T0859Z/wf2-u3eeMwTuhCsetfcS-live-87514fb8-before.json",
+    "line": 258,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-digest-c3a6685-20260917T0859Z/wf2-u3eeMwTuhCsetfcS-live-87514fb8-before.json",
+    "line": 276,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-2757fab-20260915T180937Z/9adcV31eaIgJyMR0.json",
+    "line": 230,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-2757fab-20260915T180937Z/9adcV31eaIgJyMR0.json",
+    "line": 258,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-2757fab-20260915T180937Z/9adcV31eaIgJyMR0.json",
+    "line": 276,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-defect-closure-20260827-172309/wf1-incident-intake-analysis-v5-1-vNOQiEgnXg9Zqn2q.json",
+    "line": 412,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-defect-closure-20260827-172309/wf1-incident-intake-analysis-v5-1-vNOQiEgnXg9Zqn2q.json",
+    "line": 480,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-defect-closure-20260827-172309/wf1-incident-intake-analysis-v5-1-vNOQiEgnXg9Zqn2q.json",
+    "line": 512,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/archive-wf1-inactive/wf1-incident-intake-analysis-v2-1-9sunXAFOWGwADEhv.json",
+    "line": 560,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/archive-wf1-inactive/wf1-incident-intake-analysis-v2-1-9sunXAFOWGwADEhv.json",
+    "line": 664,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/archive-wf1-inactive/wf1-incident-intake-analysis-v2-1-9sunXAFOWGwADEhv.json",
+    "line": 758,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/archive-wf1-inactive/wf1-incident-intake-analysis-v2-0-zSmzjLLKs4CbsEmc.json",
+    "line": 537,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/archive-wf1-inactive/wf1-incident-intake-analysis-v2-0-zSmzjLLKs4CbsEmc.json",
+    "line": 641,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/archive-wf1-inactive/wf1-incident-intake-analysis-v2-0-zSmzjLLKs4CbsEmc.json",
+    "line": 735,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-fixE-1b145699-20260916T103143Z/WAiqNGhkGICvDh4A.json",
+    "line": 230,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-fixE-1b145699-20260916T103143Z/WAiqNGhkGICvDh4A.json",
+    "line": 258,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-fixE-1b145699-20260916T103143Z/WAiqNGhkGICvDh4A.json",
+    "line": 276,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-e64ebb2-20260913T230730Z/wf1-before.json",
+    "line": 1,
+    "references": [
+      "/api/incidents",
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/archive-wf1-inactive/wf1-incident-intake-analysis-v2-1-z4NxjOgyuKq6M0yU.json",
+    "line": 560,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/archive-wf1-inactive/wf1-incident-intake-analysis-v2-1-z4NxjOgyuKq6M0yU.json",
+    "line": 664,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/archive-wf1-inactive/wf1-incident-intake-analysis-v2-1-z4NxjOgyuKq6M0yU.json",
+    "line": 758,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-r81_2-writer-prompt-20260921T221911Z/wf2-u3eeMwTuhCsetfcS-live-before.json",
+    "line": 1,
+    "references": [
+      "/api/incidents",
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-9cc3096-20260919T235235Z/wf2-u3eeMwTuhCsetfcS-live-before.json",
+    "line": 1,
+    "references": [
+      "/api/incidents",
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/archive-wf1-inactive/wf1-incident-intake-analysis-v3-1-fixed-LQFTcomdfK4IQSFS.json",
+    "line": 578,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/archive-wf1-inactive/wf1-incident-intake-analysis-v3-1-fixed-LQFTcomdfK4IQSFS.json",
+    "line": 686,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/archive-wf1-inactive/wf1-incident-intake-analysis-v3-1-fixed-LQFTcomdfK4IQSFS.json",
+    "line": 758,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-fixE-1b145699-20260916T103143Z/u3eeMwTuhCsetfcS.json",
+    "line": 230,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-fixE-1b145699-20260916T103143Z/u3eeMwTuhCsetfcS.json",
+    "line": 258,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-fixE-1b145699-20260916T103143Z/u3eeMwTuhCsetfcS.json",
+    "line": 276,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-e64ebb2-20260913T230730Z/wf2-live-before.json",
+    "line": 1,
+    "references": [
+      "/api/incidents",
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/wf3-post-pr-validation-v4-4JiOKpyHhx1znTYw.LIVE-BACKUP-20260901T123406Z.json",
+    "line": 109,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/archive-wf1-inactive/wf1-incident-intake-analysis-v2-1-nFUzVPJjZOSOq4yr.json",
+    "line": 560,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/archive-wf1-inactive/wf1-incident-intake-analysis-v2-1-nFUzVPJjZOSOq4yr.json",
+    "line": 664,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/archive-wf1-inactive/wf1-incident-intake-analysis-v2-1-nFUzVPJjZOSOq4yr.json",
+    "line": 772,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-fixE-1b145699-20260916T103143Z/vNOQiEgnXg9Zqn2q.json",
+    "line": 458,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-fixE-1b145699-20260916T103143Z/vNOQiEgnXg9Zqn2q.json",
+    "line": 526,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-fixE-1b145699-20260916T103143Z/vNOQiEgnXg9Zqn2q.json",
+    "line": 558,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-phase1-63c367c-20260917/wf2-u3eeMwTuhCsetfcS-live-before.json",
+    "line": 1,
+    "references": [
+      "/api/incidents",
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-fixE-1b145699-20260916T103143Z/9adcV31eaIgJyMR0.json",
+    "line": 230,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-fixE-1b145699-20260916T103143Z/9adcV31eaIgJyMR0.json",
+    "line": 258,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-fixE-1b145699-20260916T103143Z/9adcV31eaIgJyMR0.json",
+    "line": 276,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-r88-opus-retry-backoff-20261004T003819Z/wf2-u3eeMwTuhCsetfcS.LIVE-BEFORE-R88.json",
+    "line": 1,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-e64ebb2-20260913T230730Z/wf1-after.json",
+    "line": 1,
+    "references": [
+      "/api/incidents",
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/wf1-incident-intake-analysis-v5-1-vNOQiEgnXg9Zqn2q.LIVE-BACKUP-20260825T113512Z.json",
+    "line": 412,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/wf1-incident-intake-analysis-v5-1-vNOQiEgnXg9Zqn2q.LIVE-BACKUP-20260825T113512Z.json",
+    "line": 480,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/wf1-incident-intake-analysis-v5-1-vNOQiEgnXg9Zqn2q.LIVE-BACKUP-20260825T113512Z.json",
+    "line": 512,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-fixF-cd7dbe5-20260916T153816Z/all-workflows-before.json",
+    "line": 1,
+    "references": [
+      "/api/incidents",
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-r89-mapping-required-filename-fix-20261004T005957Z/wf2-u3eeMwTuhCsetfcS.LIVE-BEFORE-R89.json",
+    "line": 1,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-e64ebb2-20260913T230730Z/wf3-before.json",
+    "line": 1,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-r82-remove-stray-error-edge-20261002T000000Z/wf2-u3eeMwTuhCsetfcS.WF2_EDITOR_DRAFT_BEFORE_FIX.json",
+    "line": 1,
+    "references": [
+      "/api/incidents",
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-fixF-cd7dbe5-20260916T153816Z/wf2-u3eeMwTuhCsetfcS-live-before.json",
+    "line": 1,
+    "references": [
+      "/api/incidents",
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-v4-1-9adcV31eaIgJyMR0.R19_3M-REVIEWER-MAX-TOKENS.json",
+    "line": 224,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-v4-1-9adcV31eaIgJyMR0.R19_3M-REVIEWER-MAX-TOKENS.json",
+    "line": 252,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-v4-1-9adcV31eaIgJyMR0.R19_3M-REVIEWER-MAX-TOKENS.json",
+    "line": 270,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-e64ebb2-20260913T230730Z/wf3-after.json",
+    "line": 1,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-97534ee-20260914T002135Z/wf1-before.json",
+    "line": 1,
+    "references": [
+      "/api/incidents",
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/wf1-incident-intake-analysis-v5-1-vNOQiEgnXg9Zqn2q.LIVE-BACKUP-20260824T174333Z.json",
+    "line": 412,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/wf1-incident-intake-analysis-v5-1-vNOQiEgnXg9Zqn2q.LIVE-BACKUP-20260824T174333Z.json",
+    "line": 480,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/wf1-incident-intake-analysis-v5-1-vNOQiEgnXg9Zqn2q.LIVE-BACKUP-20260824T174333Z.json",
+    "line": 512,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/wf1-incident-intake-analysis-v5-1-vNOQiEgnXg9Zqn2q.LIVE-BACKUP-20260901T084606Z.json",
+    "line": 412,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/wf1-incident-intake-analysis-v5-1-vNOQiEgnXg9Zqn2q.LIVE-BACKUP-20260901T084606Z.json",
+    "line": 480,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/wf1-incident-intake-analysis-v5-1-vNOQiEgnXg9Zqn2q.LIVE-BACKUP-20260901T084606Z.json",
+    "line": 512,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.R78-FINAL-BRANCH-HEAD.json",
+    "line": 229,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.R78-FINAL-BRANCH-HEAD.json",
+    "line": 257,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.R78-FINAL-BRANCH-HEAD.json",
+    "line": 275,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-fixF-cd7dbe5-20260916T153816Z/exact-committed-promotion-target.json",
+    "line": 229,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-fixF-cd7dbe5-20260916T153816Z/exact-committed-promotion-target.json",
+    "line": 257,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-fixF-cd7dbe5-20260916T153816Z/exact-committed-promotion-target.json",
+    "line": 275,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-e64ebb2-20260913T230730Z/wf2-legacy-after.json",
+    "line": 1,
+    "references": [
+      "/api/incidents",
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-97534ee-20260914T002135Z/wf2-live-before.json",
+    "line": 1,
+    "references": [
+      "/api/incidents",
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.R73-CORRECTIVE-TARGET-PROPAGATION.json",
+    "line": 229,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.R73-CORRECTIVE-TARGET-PROPAGATION.json",
+    "line": 257,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.R73-CORRECTIVE-TARGET-PROPAGATION.json",
+    "line": 275,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-r86-sticky-zone-consolidation-20261003T234959Z/wf2-u3eeMwTuhCsetfcS.LIVE-BEFORE-R86.json",
+    "line": 1,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/r92-wf2-colors-20261004T233423Z/WF2-R92-COLORS.json",
+    "line": 212,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/r92-wf2-colors-20261004T233423Z/WF2-R92-COLORS.json",
+    "line": 655,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/r92-wf2-colors-20261004T233423Z/WF2-R92-COLORS.json",
+    "line": 3693,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-e64ebb2-20260913T230730Z/wf2-legacy-before.json",
+    "line": 1,
+    "references": [
+      "/api/incidents",
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-97534ee-20260914T002135Z/wf1-after.json",
+    "line": 1,
+    "references": [
+      "/api/incidents",
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.R71-CORRECTIVE-SOURCE-AUTHORITY.json",
+    "line": 229,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.R71-CORRECTIVE-SOURCE-AUTHORITY.json",
+    "line": 257,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.R71-CORRECTIVE-SOURCE-AUTHORITY.json",
+    "line": 275,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-fixG-b639bd8-20260916T160755Z/all-workflows-before.json",
+    "line": 1,
+    "references": [
+      "/api/incidents",
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-r87-llm-retry-20261004T002841Z/wf2-u3eeMwTuhCsetfcS.LIVE-BEFORE-R87.json",
+    "line": 1,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-005800c-20260919T112933Z/wf2-git-patch-pr-u3eeMwTuhCsetfcS.LIVE-BEFORE-R70.json",
+    "line": 1,
+    "references": [
+      "/api/incidents",
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-97534ee-20260914T002135Z/wf3-before.json",
+    "line": 1,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-e64ebb2-20260913T230730Z/wf2-live-after.json",
+    "line": 1,
+    "references": [
+      "/api/incidents",
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-fixG-b639bd8-20260916T160755Z/wf2-u3eeMwTuhCsetfcS-live-before.json",
+    "line": 1,
+    "references": [
+      "/api/incidents",
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-97534ee-20260914T002135Z/wf3-after.json",
+    "line": 1,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-37846a3-20260919T1530Z/wf2-live-before.json",
+    "line": 1,
+    "references": [
+      "/api/incidents",
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-018f723-20260913T180751Z/wf1-live-after.json",
+    "line": 1,
+    "references": [
+      "/api/incidents",
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-v4-1-9adcV31eaIgJyMR0.R19_3L-STRUCTURE-PREFLIGHT.json",
+    "line": 224,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-v4-1-9adcV31eaIgJyMR0.R19_3L-STRUCTURE-PREFLIGHT.json",
+    "line": 252,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-v4-1-9adcV31eaIgJyMR0.R19_3L-STRUCTURE-PREFLIGHT.json",
+    "line": 270,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-97534ee-20260914T002135Z/wf2-legacy-after.json",
+    "line": 1,
+    "references": [
+      "/api/incidents",
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-fixG-b639bd8-20260916T160755Z/exact-committed-promotion-target.json",
+    "line": 229,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-fixG-b639bd8-20260916T160755Z/exact-committed-promotion-target.json",
+    "line": 257,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-fixG-b639bd8-20260916T160755Z/exact-committed-promotion-target.json",
+    "line": 275,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/wf2-git-patch-pr-v4-1-9adcV31eaIgJyMR0.LIVE-BACKUP-20260903T100849Z.active-31df6eaa.json",
+    "line": 219,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/wf2-git-patch-pr-v4-1-9adcV31eaIgJyMR0.LIVE-BACKUP-20260903T100849Z.active-31df6eaa.json",
+    "line": 247,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/wf2-git-patch-pr-v4-1-9adcV31eaIgJyMR0.LIVE-BACKUP-20260903T100849Z.active-31df6eaa.json",
+    "line": 265,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-r91-20261004T181512Z/WF2-R91-APPROVED-TARGET.json",
+    "line": 212,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-r91-20261004T181512Z/WF2-R91-APPROVED-TARGET.json",
+    "line": 655,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-r91-20261004T181512Z/WF2-R91-APPROVED-TARGET.json",
+    "line": 3688,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/wf2-git-patch-pr-v4-1-9adcV31eaIgJyMR0.LIVE-BACKUP-20260903T100849Z.draft-4b85520d.json",
+    "line": 219,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/wf2-git-patch-pr-v4-1-9adcV31eaIgJyMR0.LIVE-BACKUP-20260903T100849Z.draft-4b85520d.json",
+    "line": 247,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/wf2-git-patch-pr-v4-1-9adcV31eaIgJyMR0.LIVE-BACKUP-20260903T100849Z.draft-4b85520d.json",
+    "line": 265,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-97534ee-20260914T002135Z/wf2-legacy-before.json",
+    "line": 1,
+    "references": [
+      "/api/incidents",
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-018f723-20260913T180751Z/wf2-legacy-after.json",
+    "line": 1,
+    "references": [
+      "/api/incidents",
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-018f723-20260913T180751Z/wf2-live-before.json",
+    "line": 1,
+    "references": [
+      "/api/incidents",
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-97534ee-20260914T002135Z/wf2-live-after.json",
+    "line": 1,
+    "references": [
+      "/api/incidents",
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-9608513-20260917/wf2-live-published-after.json",
+    "line": 230,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-9608513-20260917/wf2-live-published-after.json",
+    "line": 258,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-9608513-20260917/wf2-live-published-after.json",
+    "line": 276,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-018f723-20260913T180751Z/wf2-legacy-before.json",
+    "line": 1,
+    "references": [
+      "/api/incidents",
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-r91-20261004T181512Z/WF2-R91-PRE-PROMOTION-ACTIVE.json",
+    "line": 212,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-r91-20261004T181512Z/WF2-R91-PRE-PROMOTION-ACTIVE.json",
+    "line": 655,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-018f723-20260913T180751Z/wf3-before.json",
+    "line": 1,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-1202df3-20260915T104445Z/wf1-before.json",
+    "line": 458,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-1202df3-20260915T104445Z/wf1-before.json",
+    "line": 526,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-1202df3-20260915T104445Z/wf1-before.json",
+    "line": 558,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.DTO-SOURCE-DISCOVERY.PROMOTION-TARGET-OFFLINE.json",
+    "line": 229,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.DTO-SOURCE-DISCOVERY.PROMOTION-TARGET-OFFLINE.json",
+    "line": 257,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.DTO-SOURCE-DISCOVERY.PROMOTION-TARGET-OFFLINE.json",
+    "line": 275,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-9608513-20260917/wf2-live-current-before.json",
+    "line": 230,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-9608513-20260917/wf2-live-current-before.json",
+    "line": 258,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-9608513-20260917/wf2-live-current-before.json",
+    "line": 276,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-018f723-20260913T180751Z/wf2-live-after.json",
+    "line": 1,
+    "references": [
+      "/api/incidents",
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-018f723-20260913T180751Z/wf1-live-before.json",
+    "line": 1,
+    "references": [
+      "/api/incidents",
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-r91-20261004T181512Z/WF2-R91-PRE-PROMOTION-DRAFT.json",
+    "line": 212,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-r91-20261004T181512Z/WF2-R91-PRE-PROMOTION-DRAFT.json",
+    "line": 655,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-v4-1-9adcV31eaIgJyMR0.R19_3M-ROBUST-JSON-REVIEWER.json",
+    "line": 224,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-v4-1-9adcV31eaIgJyMR0.R19_3M-ROBUST-JSON-REVIEWER.json",
+    "line": 252,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-v4-1-9adcV31eaIgJyMR0.R19_3M-ROBUST-JSON-REVIEWER.json",
+    "line": 270,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/wf1-incident-intake-analysis-v5-1-vNOQiEgnXg9Zqn2q.LIVE-BACKUP-20260825T140654Z.json",
+    "line": 412,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/wf1-incident-intake-analysis-v5-1-vNOQiEgnXg9Zqn2q.LIVE-BACKUP-20260825T140654Z.json",
+    "line": 480,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/wf1-incident-intake-analysis-v5-1-vNOQiEgnXg9Zqn2q.LIVE-BACKUP-20260825T140654Z.json",
+    "line": 512,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-018f723-20260913T180751Z/wf3-after.json",
+    "line": 1,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-1202df3-20260915T104445Z/wf2-live-before.json",
+    "line": 230,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-1202df3-20260915T104445Z/wf2-live-before.json",
+    "line": 258,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-1202df3-20260915T104445Z/wf2-live-before.json",
+    "line": 276,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-9608513-20260917/wf2-live-published-before.json",
+    "line": 230,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-9608513-20260917/wf2-live-published-before.json",
+    "line": 258,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-9608513-20260917/wf2-live-published-before.json",
+    "line": 276,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/r23-source-completeness-prebuild/wf2-promotion-target-PRE-R23.json",
+    "line": 229,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/r23-source-completeness-prebuild/wf2-promotion-target-PRE-R23.json",
+    "line": 257,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/r23-source-completeness-prebuild/wf2-promotion-target-PRE-R23.json",
+    "line": 275,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-1202df3-20260915T104445Z/wf1-after.json",
+    "line": 458,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-1202df3-20260915T104445Z/wf1-after.json",
+    "line": 526,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-1202df3-20260915T104445Z/wf1-after.json",
+    "line": 558,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.R89-MAPPING-REQUIRED-FIX.json",
+    "line": 216,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.R89-MAPPING-REQUIRED-FIX.json",
+    "line": 659,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/r22e2p-prerefresh/wf2-r22e-u3eeMwTuhCsetfcS.PRE-R22E2P-BACKUP-202609-07T13133Z.json",
+    "line": 230,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/r22e2p-prerefresh/wf2-r22e-u3eeMwTuhCsetfcS.PRE-R22E2P-BACKUP-202609-07T13133Z.json",
+    "line": 258,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/r22e2p-prerefresh/wf2-r22e-u3eeMwTuhCsetfcS.PRE-R22E2P-BACKUP-202609-07T13133Z.json",
+    "line": 276,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-1202df3-20260915T104445Z/wf3-before.json",
+    "line": 109,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-1202df3-20260915T104445Z/wf2-legacy-before.json",
+    "line": 230,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-1202df3-20260915T104445Z/wf2-legacy-before.json",
+    "line": 258,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-1202df3-20260915T104445Z/wf2-legacy-before.json",
+    "line": 276,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/WF2-R92-STICKY-COLORS.OFFLINE.json",
+    "line": 212,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/WF2-R92-STICKY-COLORS.OFFLINE.json",
+    "line": 655,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/WF2-R92-STICKY-COLORS.OFFLINE.json",
+    "line": 3693,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-1202df3-20260915T104445Z/wf3-after.json",
+    "line": 109,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/r83-clean-baseline-a2bc0e9e/a2bc-nodes.json",
+    "line": 1,
+    "references": [
+      "/api/incidents",
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/wf3-post-pr-validation-v4-4JiOKpyHhx1znTYw.LIVE-BACKUP-20260901T110307Z.json",
+    "line": 109,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-be85102-20260919T153151Z/wf2-u3eeMwTuhCsetfcS-live-before.json",
+    "line": 1,
+    "references": [
+      "/api/incidents",
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-1202df3-20260915T104445Z/wf2-legacy-after.json",
+    "line": 230,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-1202df3-20260915T104445Z/wf2-legacy-after.json",
+    "line": 258,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-1202df3-20260915T104445Z/wf2-legacy-after.json",
+    "line": 276,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-1202df3-20260915T104445Z/wf2-live-after.json",
+    "line": 230,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-1202df3-20260915T104445Z/wf2-live-after.json",
+    "line": 258,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-1202df3-20260915T104445Z/wf2-live-after.json",
+    "line": 276,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/r19-3c-prebuild/wf2-staged-r19-3c.json",
+    "line": 1,
+    "references": [
+      "/api/incidents",
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-r84-wire-type-coherence-envelope-20261003T000000Z/wf2-u3eeMwTuhCsetfcS.LIVE-BEFORE-R84.json",
+    "line": 229,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-r84-wire-type-coherence-envelope-20261003T000000Z/wf2-u3eeMwTuhCsetfcS.LIVE-BEFORE-R84.json",
+    "line": 257,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-r84-wire-type-coherence-envelope-20261003T000000Z/wf2-u3eeMwTuhCsetfcS.LIVE-BEFORE-R84.json",
+    "line": 275,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/wf3-post-pr-validation-v4-4JiOKpyHhx1znTYw.LIVE-BACKUP-20260901T084606Z.json",
+    "line": 103,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-c778d44-20260915T114320Z/wf2-live-before.json",
+    "line": 230,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-c778d44-20260915T114320Z/wf2-live-before.json",
+    "line": 258,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-c778d44-20260915T114320Z/wf2-live-before.json",
+    "line": 276,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.R75-CORRECTIVE-CLOSURE.json",
+    "line": 229,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.R75-CORRECTIVE-CLOSURE.json",
+    "line": 257,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.R75-CORRECTIVE-CLOSURE.json",
+    "line": 275,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-3c19789-20260920T102652Z/wf2-u3eeMwTuhCsetfcS-live-before-r78.json",
+    "line": 1,
+    "references": [
+      "/api/incidents",
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/r19-3c-prebuild/wf2-current-draft-dcb0e86d.json",
+    "line": 1,
+    "references": [
+      "/api/incidents",
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-v4-1-9adcV31eaIgJyMR0.R19_3I-LLM-TRANSPORT.json",
+    "line": 224,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-v4-1-9adcV31eaIgJyMR0.R19_3I-LLM-TRANSPORT.json",
+    "line": 252,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-v4-1-9adcV31eaIgJyMR0.R19_3I-LLM-TRANSPORT.json",
+    "line": 270,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.R87-LLM-RETRY.json",
+    "line": 216,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.R87-LLM-RETRY.json",
+    "line": 659,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-c778d44-20260915T114320Z/wf1-after.json",
+    "line": 458,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-c778d44-20260915T114320Z/wf1-after.json",
+    "line": 526,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-c778d44-20260915T114320Z/wf1-after.json",
+    "line": 558,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-v4-1-9adcV31eaIgJyMR0.R19_3O-POST-WRITE-BARRIER.json",
+    "line": 224,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-v4-1-9adcV31eaIgJyMR0.R19_3O-POST-WRITE-BARRIER.json",
+    "line": 252,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-v4-1-9adcV31eaIgJyMR0.R19_3O-POST-WRITE-BARRIER.json",
+    "line": 270,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-v4-1-9adcV31eaIgJyMR0.R22E-TWO-PASS-CANDIDATE.json",
+    "line": 229,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-v4-1-9adcV31eaIgJyMR0.R22E-TWO-PASS-CANDIDATE.json",
+    "line": 257,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-v4-1-9adcV31eaIgJyMR0.R22E-TWO-PASS-CANDIDATE.json",
+    "line": 275,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-v4-1-9adcV31eaIgJyMR0.R19_3H-STRUCTURED-CLAUDE-OUTPUT.json",
+    "line": 224,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-v4-1-9adcV31eaIgJyMR0.R19_3H-STRUCTURED-CLAUDE-OUTPUT.json",
+    "line": 252,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-v4-1-9adcV31eaIgJyMR0.R19_3H-STRUCTURED-CLAUDE-OUTPUT.json",
+    "line": 270,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/r19-3c-prebuild/wf2-trusted-f95634ef.json",
+    "line": 1,
+    "references": [
+      "/api/incidents",
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-c778d44-20260915T114320Z/wf3-after.json",
+    "line": 109,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-v4-1-9adcV31eaIgJyMR0.R19_3-DYNAMIC-DRAFT.json",
+    "line": 219,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-v4-1-9adcV31eaIgJyMR0.R19_3-DYNAMIC-DRAFT.json",
+    "line": 247,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-v4-1-9adcV31eaIgJyMR0.R19_3-DYNAMIC-DRAFT.json",
+    "line": 265,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-c778d44-20260915T114320Z/wf2-legacy-after.json",
+    "line": 230,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-c778d44-20260915T114320Z/wf2-legacy-after.json",
+    "line": 258,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-c778d44-20260915T114320Z/wf2-legacy-after.json",
+    "line": 276,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/r19-3c-prebuild/wf2-current-active-31df6eaa.json",
+    "line": 219,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/r19-3c-prebuild/wf2-current-active-31df6eaa.json",
+    "line": 247,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/r19-3c-prebuild/wf2-current-active-31df6eaa.json",
+    "line": 265,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-474ed81-20260920T002932Z/wf2-u3eeMwTuhCsetfcS-live-before-r77.json",
+    "line": 1,
+    "references": [
+      "/api/incidents",
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-v4-1-9adcV31eaIgJyMR0.R19_3F-PATH-POLICY-FIX.json",
+    "line": 224,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-v4-1-9adcV31eaIgJyMR0.R19_3F-PATH-POLICY-FIX.json",
+    "line": 252,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-v4-1-9adcV31eaIgJyMR0.R19_3F-PATH-POLICY-FIX.json",
+    "line": 270,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.R84-WIRE-TYPE-COHERENCE-ENVELOPE.json",
+    "line": 229,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.R84-WIRE-TYPE-COHERENCE-ENVELOPE.json",
+    "line": 257,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.R84-WIRE-TYPE-COHERENCE-ENVELOPE.json",
+    "line": 275,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/wf3-post-pr-validation-v4-4JiOKpyHhx1znTYw.LIVE-BACKUP-20260901T102658Z.json",
+    "line": 109,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-v4-1-9adcV31eaIgJyMR0.R19_3N-DETERMINISTIC-FILE-OPERATIONS.json",
+    "line": 224,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-v4-1-9adcV31eaIgJyMR0.R19_3N-DETERMINISTIC-FILE-OPERATIONS.json",
+    "line": 252,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-v4-1-9adcV31eaIgJyMR0.R19_3N-DETERMINISTIC-FILE-OPERATIONS.json",
+    "line": 270,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-99b370a3-20260916T002934Z/4JiOKpyHhx1znTYw.json",
+    "line": 109,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.R70-CORRECTIVE-TARGET-GROUNDING.json",
+    "line": 229,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.R70-CORRECTIVE-TARGET-GROUNDING.json",
+    "line": 257,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.R70-CORRECTIVE-TARGET-GROUNDING.json",
+    "line": 275,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-cd43cd1-20260919T165138Z/wf2-u3eeMwTuhCsetfcS-live-before.json",
+    "line": 1,
+    "references": [
+      "/api/incidents",
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-99b370a3-20260916T002934Z/u3eeMwTuhCsetfcS.json",
+    "line": 230,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-99b370a3-20260916T002934Z/u3eeMwTuhCsetfcS.json",
+    "line": 258,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-99b370a3-20260916T002934Z/u3eeMwTuhCsetfcS.json",
+    "line": 276,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/WF2-R91-TRUE-CANCELLATION.OFFLINE.json",
+    "line": 212,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/WF2-R91-TRUE-CANCELLATION.OFFLINE.json",
+    "line": 655,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/WF2-R91-TRUE-CANCELLATION.OFFLINE.json",
+    "line": 3688,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.R86-STICKY-ZONE-CONSOLIDATION.json",
+    "line": 216,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.R86-STICKY-ZONE-CONSOLIDATION.json",
+    "line": 659,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-v4-1-9adcV31eaIgJyMR0.R19_3G-SONNET5-COMPAT.json",
+    "line": 224,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-v4-1-9adcV31eaIgJyMR0.R19_3G-SONNET5-COMPAT.json",
+    "line": 252,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-v4-1-9adcV31eaIgJyMR0.R19_3G-SONNET5-COMPAT.json",
+    "line": 270,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/wf1-incident-intake-analysis-v5-1-vNOQiEgnXg9Zqn2q.LIVE-BACKUP-20260901T102658Z.json",
+    "line": 412,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/wf1-incident-intake-analysis-v5-1-vNOQiEgnXg9Zqn2q.LIVE-BACKUP-20260901T102658Z.json",
+    "line": 480,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/wf1-incident-intake-analysis-v5-1-vNOQiEgnXg9Zqn2q.LIVE-BACKUP-20260901T102658Z.json",
+    "line": 512,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-99b370a3-20260916T002934Z/vNOQiEgnXg9Zqn2q.json",
+    "line": 458,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-99b370a3-20260916T002934Z/vNOQiEgnXg9Zqn2q.json",
+    "line": 526,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-99b370a3-20260916T002934Z/vNOQiEgnXg9Zqn2q.json",
+    "line": 558,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-v4-1-9adcV31eaIgJyMR0.R19_3K-PER-ITEM-FIX.json",
+    "line": 224,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-v4-1-9adcV31eaIgJyMR0.R19_3K-PER-ITEM-FIX.json",
+    "line": 252,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-v4-1-9adcV31eaIgJyMR0.R19_3K-PER-ITEM-FIX.json",
+    "line": 270,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-v4-1-9adcV31eaIgJyMR0.R19_3C-TRUSTED-DRAFT.json",
+    "line": 224,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-v4-1-9adcV31eaIgJyMR0.R19_3C-TRUSTED-DRAFT.json",
+    "line": 252,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-v4-1-9adcV31eaIgJyMR0.R19_3C-TRUSTED-DRAFT.json",
+    "line": 270,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/wf1-incident-intake-analysis-v5-1-vNOQiEgnXg9Zqn2q.LIVE-BACKUP-20260825T120312Z.json",
+    "line": 412,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/wf1-incident-intake-analysis-v5-1-vNOQiEgnXg9Zqn2q.LIVE-BACKUP-20260825T120312Z.json",
+    "line": 480,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/wf1-incident-intake-analysis-v5-1-vNOQiEgnXg9Zqn2q.LIVE-BACKUP-20260825T120312Z.json",
+    "line": 512,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-99b370a3-20260916T002934Z/9adcV31eaIgJyMR0.json",
+    "line": 230,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-99b370a3-20260916T002934Z/9adcV31eaIgJyMR0.json",
+    "line": 258,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-99b370a3-20260916T002934Z/9adcV31eaIgJyMR0.json",
+    "line": 276,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/WF2-R90-DTO-DISCOVERY.PROMOTION-TARGET-OFFLINE.json",
+    "line": 216,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/WF2-R90-DTO-DISCOVERY.PROMOTION-TARGET-OFFLINE.json",
+    "line": 659,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/wf3-post-pr-validation-v4-4JiOKpyHhx1znTYw.LIVE-BACKUP-20260901T092510Z.json",
+    "line": 103,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-r90-dto-source-discovery-20261004T133500Z/WF2-R90-LIVE-ACTIVE-POST-RESTART.json",
+    "line": 212,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-r90-dto-source-discovery-20261004T133500Z/WF2-R90-LIVE-ACTIVE-POST-RESTART.json",
+    "line": 655,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.R88-OPUS-RETRY-BACKOFF.json",
+    "line": 216,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.R88-OPUS-RETRY-BACKOFF.json",
+    "line": 659,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-v4-1-9adcV31eaIgJyMR0.R19_3P-PR-LOOKUP-FIX.json",
+    "line": 230,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-v4-1-9adcV31eaIgJyMR0.R19_3P-PR-LOOKUP-FIX.json",
+    "line": 258,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-v4-1-9adcV31eaIgJyMR0.R19_3P-PR-LOOKUP-FIX.json",
+    "line": 276,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-v4-1-9adcV31eaIgJyMR0.CANONICAL-FINAL.json",
+    "line": 229,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-v4-1-9adcV31eaIgJyMR0.CANONICAL-FINAL.json",
+    "line": 257,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-v4-1-9adcV31eaIgJyMR0.CANONICAL-FINAL.json",
+    "line": 275,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.R85-STICKY-ZONE-LABELS.json",
+    "line": 229,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.R85-STICKY-ZONE-LABELS.json",
+    "line": 257,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.R85-STICKY-ZONE-LABELS.json",
+    "line": 275,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-v4-1-9adcV31eaIgJyMR0.R19_1-FIXED.json",
+    "line": 218,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-v4-1-9adcV31eaIgJyMR0.R19_1-FIXED.json",
+    "line": 246,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-v4-1-9adcV31eaIgJyMR0.R19_1-FIXED.json",
+    "line": 264,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.R75-CORRECTIVE-CARDINALITY-INVARIANT.json",
+    "line": 229,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.R75-CORRECTIVE-CARDINALITY-INVARIANT.json",
+    "line": 257,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.R75-CORRECTIVE-CARDINALITY-INVARIANT.json",
+    "line": 275,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-r90-dto-source-discovery-20261004T133500Z/WF2-R90-PRE-PROMOTION.ACTIVE.json",
+    "line": 212,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-r90-dto-source-discovery-20261004T133500Z/WF2-R90-PRE-PROMOTION.ACTIVE.json",
+    "line": 655,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-v4-1-9adcV31eaIgJyMR0.R22E-TWO-PASS-CANDIDATE.baseline.json",
+    "line": 229,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-v4-1-9adcV31eaIgJyMR0.R22E-TWO-PASS-CANDIDATE.baseline.json",
+    "line": 257,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/pending-live-update/wf2-git-patch-pr-v4-1-9adcV31eaIgJyMR0.R22E-TWO-PASS-CANDIDATE.baseline.json",
+    "line": 275,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-r90-dto-source-discovery-20261004T133500Z/WF2-R90-PRE-PROMOTION.DRAFT.json",
+    "line": 212,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-r90-dto-source-discovery-20261004T133500Z/WF2-R90-PRE-PROMOTION.DRAFT.json",
+    "line": 655,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-r90-dto-source-discovery-20261004T133500Z/WF2-R90-PROMOTION-TARGET.json",
+    "line": 216,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-r90-dto-source-discovery-20261004T133500Z/WF2-R90-PROMOTION-TARGET.json",
+    "line": 659,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/scripts/port-brique5-into-r22e.mjs",
+    "line": 26,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-5f33dfc-20260918T221401Z/wf2-u3eeMwTuhCsetfcS-live-before.json",
+    "line": 230,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-5f33dfc-20260918T221401Z/wf2-u3eeMwTuhCsetfcS-live-before.json",
+    "line": 258,
+    "references": [
+      "/api/reports"
+    ]
+  },
+  {
+    "file": "n8n-workflows/backups/pre-promotion-5f33dfc-20260918T221401Z/wf2-u3eeMwTuhCsetfcS-live-before.json",
+    "line": 276,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/scripts/wf2-failure-persistence-audit.spec.mjs",
+    "line": 6,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/scripts/wf2-failure-persistence-audit.spec.mjs",
+    "line": 51,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/scripts/patch-wf-chat-v4.mjs",
+    "line": 49,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/scripts/wf2-canonical-final.spec.mjs",
+    "line": 229,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/scripts/wf2-canonical-final.spec.mjs",
+    "line": 280,
+    "references": [
+      "/api/incidents"
+    ]
+  },
+  {
+    "file": "n8n-workflows/scripts/build-wf2-cancellation.mjs",
+    "line": 46,
+    "references": [
+      "/api/incidents"
+    ]
+  }
+]

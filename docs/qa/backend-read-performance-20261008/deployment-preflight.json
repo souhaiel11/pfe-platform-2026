@@ -1,0 +1,14 @@
+{
+  "flags": {
+    "dispatch": "false",
+    "harness": "false"
+  },
+  "counts": {
+    "plans": 0,
+    "reservations": 0,
+    "writers": 0
+  },
+  "baseImage": "sha256:3835d850600755188f93342f612899d64b4f653c992b062d19bbd8166018c742",
+  "qualifiedImage": "sha256:ca111a808536447282c854e1ba92b232da8427cf8af9df8bd4f4f1995201d1e0",
+  "onlyComponent": "backend"
+}

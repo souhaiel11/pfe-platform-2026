@@ -1,4 +1,4 @@
-// Read-only visual checks. Supply QA_SESSION_FILE with a temporary {token,user} session.
+// Prépare qa frontend finalization pour le frontend.
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
@@ -12,6 +12,7 @@ await context.addInitScript(a=>{localStorage.setItem('token',a.token);localStora
 await context.route('**/*',route=>{const req=route.request();if(!['GET','HEAD','OPTIONS'].includes(req.method())){results.blockedWrites.push({method:req.method(),url:req.url().replace(/token=[^&]+/g,'token=REDACTED')});return route.abort();}return route.continue();});
 const page=await context.newPage();page.on('pageerror',e=>results.errors.push(e.message));page.on('response',async response=>{if(response.url().includes('/azure-deploy/ready/')&&response.ok()){try{const body=await response.json();results.actualStages=(body.requiredStages||[]).map(s=>({stage:s.stage,status:s.status}));}catch{}}});
 const base=process.env.QA_BASE_URL || 'http://127.0.0.1:4200';const project='/projects/'+(process.env.QA_PROJECT_ID || '3aa1c9b9-e114-40e4-884b-ebc7aa32e002');
+/** Capture le résultat utile au contrôle. */
 async function capture(name,path,width=1440){await page.setViewportSize({width,height:1000});if(path)await page.goto(base+path);await page.waitForTimeout(1800);await page.screenshot({path:`${out}/${name}.png`});const dimensions=await page.evaluate(()=>({width:innerWidth,scroll:document.documentElement.scrollWidth}));results.pages.push({name,...dimensions,url:page.url()});assert.ok(dimensions.scroll<=width+1,`${name} page overflow ${dimensions.scroll}/${width}`);assert.equal(await page.locator('a[href="/monitoring"]').count(),0);const body=await page.locator('body').innerText();const raw=body.match(/VALIDATED_RECOMMENDED|NO_COMPATIBLE_CANDIDATE|SECURITY_TARGET_UNKNOWN|MAJOR_UPGRADE_REQUIRES_REVIEW|VALIDATION_FAILED|No repo|No job|\bSKIPPED\b/);assert.ok(!raw, name+' raw token '+raw?.[0]);}
 try{
  await capture('dashboard-desktop','/dashboard');await capture('dashboard-mobile',null,390);

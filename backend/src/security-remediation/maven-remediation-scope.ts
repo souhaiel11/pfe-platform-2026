@@ -1,3 +1,4 @@
+// Regroupe les traitements de Maven correction périmètre.
 import { createHash } from 'crypto';
 import { computeGitBlobSha1 } from '../candidate-verification/candidate-digest';
 import { parseVersion, majorOf } from './version-selection-policy';
@@ -41,10 +42,12 @@ export interface MavenRemediationScope {
   controls: MavenControl[];
 }
 interface XmlNode { name: string; children: XmlNode[]; start: number; end: number; textStart: number; textEnd: number; value: string }
+/** Vérifie et normalise l’identifiant de commit. */
 const sha = (s: string) => createHash('sha256').update(s).digest('hex');
+/** Lève une erreur nommée si la condition de preuve n'est pas satisfaite (garde-fou fail-closed générique). */
 function requireProof(ok: unknown, reason: string): asserts ok { if (!ok) throw new Error(reason); }
 
-/** Small rejecting XML reader. Never resolves entities or guesses namespace/profile semantics. */
+/** Petit lecteur XML volontairement restrictif : ne résout jamais d'entités et ne devine jamais de sémantique de namespace/profil. */
 function xml(text: string, effectiveModel = false): XmlNode {
   requireProof(!/<!DOCTYPE|<!ENTITY|<!\[CDATA\[|<\w+:/.test(text), 'UNSUPPORTED_XML');
   const stack: XmlNode[] = [], roots: XmlNode[] = [];
@@ -62,9 +65,6 @@ function xml(text: string, effectiveModel = false): XmlNode {
       n.end = tags.lastIndex; n.textEnd = m.index;
       n.value = text.slice(n.textStart, n.textEnd).trim();
     } else {
-      // Maven emits plugin configuration attributes in the effective model.
-      // They carry no authority over the dependency/version nodes read here;
-      // source POMs still use the stricter attribute policy.
       requireProof(name === 'project' || /^<[\w.-]+\s*\/?>$/.test(m[0])
         || (effectiveModel && stack.some(n => n.name === 'configuration')), 'UNSUPPORTED_XML_ATTRIBUTES');
       const n: XmlNode = { name, children: [], start: m.index, end: tags.lastIndex, textStart: tags.lastIndex, textEnd: tags.lastIndex, value: '' };
@@ -75,36 +75,41 @@ function xml(text: string, effectiveModel = false): XmlNode {
   requireProof(!stack.length && roots.length === 1 && roots[0].name === 'project' && !text.slice(last).trim(), 'MALFORMED_XML');
   return roots[0];
 }
+/** Renvoie l'unique enfant direct portant ce nom, ou lève si plusieurs existent (ambiguïté refusée). */
 function one(n: XmlNode, name: string): XmlNode | undefined {
   const a = n.children.filter(x => x.name === name); requireProof(a.length <= 1, 'AMBIGUOUS_' + name); return a[0];
 }
+/** Lit la valeur texte d'un nœud enfant simple (sans enfants imbriqués). */
 function value(n: XmlNode, name: string): string { const c = one(n, name); requireProof(!c || !c.children.length, 'NESTED_VALUE'); return c?.value ?? ''; }
+/** Liste les blocs <dependency> directement sous <dependencies>. */
 function dependencies(root: XmlNode): XmlNode[] { return one(root, 'dependencies')?.children.filter(x => x.name === 'dependency') ?? []; }
+/** Construit la coordonnée "groupId:artifactId" d'un bloc <dependency>. */
 function coordinate(d: XmlNode): string { return value(d, 'groupId') + ':' + value(d, 'artifactId'); }
+/** Construit la table coordonnée -> version déclarée pour toutes les dépendances d'une racine XML, en refusant les doublons ambigus. */
 function versions(root: XmlNode, effectiveModel = false): Map<string, string> {
   const out = new Map<string, string>();
   for (const d of dependencies(root)) {
     const k = coordinate(d), v = value(d, 'version');
-    // Maven management may repeat a coordinate for jar/test-jar/classifiers.
-    // Only identical resolved versions can collapse in the effective model.
     requireProof(!out.has(k) || (effectiveModel && out.get(k) === v), 'AMBIGUOUS_DEPENDENCY'); out.set(k, v);
   }
   return out;
 }
+/** Vérifie qu'une chaîne est une version Maven numérique valide. */
 function numeric(s: string): boolean { return /^\d+(?:\.\d+)+(?:[-.][A-Za-z0-9]+)*$/.test(s) && !!parseVersion(s); }
+/** Construit un contrôle de version localisé (offsets exacts) pour un nœud XML littéral. */
 function control(n: XmlNode, text: string, kind: MavenControl['kind'], key: string, targetVersion: string): MavenControl {
   requireProof(!n.children.length && numeric(n.value), 'NON_LITERAL_CONTROL');
   const start = n.textStart + text.slice(n.textStart, n.textEnd).indexOf(n.value);
   return { kind, key, start, end: start + n.value.length, oldVersion: n.value, targetVersion };
 }
 
-/** Enumerate bounded local controls, never edits by groupId or property name convention. */
+/** Énumère les contrôles de version locaux et bornés disponibles pour une dépendance cible, sans jamais éditer par convention de nom. */
 export function localMavenControls(source: string, targetPackage: string, target: string): MavenControl[] {
   const root = xml(source);
   requireProof(!one(root, 'profiles') && !one(root, 'modules'), 'PROFILES_OR_MODULES_UNSUPPORTED');
   const localManagement = one(root, 'dependencyManagement');
   requireProof(!localManagement || !dependencies(localManagement).some(d => value(d, 'scope') === 'import'), 'LOCAL_BOM_IMPORT_UNSUPPORTED');
-  const ds = dependencies(root); versions(root); // Reject duplicate dependency declarations.
+  const ds = dependencies(root); versions(root);
   const d = ds.filter(x => coordinate(x) === targetPackage);
   requireProof(d.length === 1, 'TARGET_NOT_DIRECT');
   const v = one(d[0], 'version'); requireProof(v, 'TARGET_NOT_LOCALLY_CONTROLLED');
@@ -127,6 +132,7 @@ export function localMavenControls(source: string, targetPackage: string, target
   requireProof(all.length <= 8, 'TOO_MANY_LOCAL_CONTROLS');
   return all;
 }
+/** Applique une liste de contrôles de version (splices) au texte source, en vérifiant chaque offset et chaque contrainte de même version majeure. */
 export function applyMavenControls(source: string, controls: MavenControl[]): string {
   let out = source, end = source.length;
   for (const c of [...controls].sort((a, b) => b.start - a.start)) {
@@ -136,7 +142,7 @@ export function applyMavenControls(source: string, controls: MavenControl[]): st
   }
   return out;
 }
-/** Full resolved coordinate/version map, rejecting duplicate/conflicting graph entries. */
+/** Construit la table complète coordonnée -> version résolue à partir d'un arbre de dépendances Maven réel, en refusant toute entrée dupliquée ou contradictoire. */
 export function mavenGraph(tree: string): Map<string, string> {
   const out = new Map<string, string>();
   for (const line of tree.split(/\r?\n/)) {
@@ -147,10 +153,12 @@ export function mavenGraph(tree: string): Map<string, string> {
   }
   requireProof(out.size > 0, 'EMPTY_DEPENDENCY_TREE'); return out;
 }
+/** Liste les coordonnées dont la version résolue diffère entre deux graphes, en exigeant que l'ensemble des dépendances reste identique. */
 function changes(a: Map<string, string>, b: Map<string, string>): string[] {
   requireProof(a.size === b.size && [...a.keys()].every(k => b.has(k)), 'DEPENDENCY_SET_CHANGED');
   return [...a.keys()].filter(k => a.get(k) !== b.get(k)).sort();
 }
+/** Dérive le périmètre minimal et prouvé de contrôles de version à appliquer pour fermer une CVE, en testant chaque combinaison candidate contre des expérimentations réelles. */
 export function deriveMavenRemediationScope(
   source: string, targetPackage: string, target: string, file: string, evidence: MavenScopeEvidence,
 ): MavenRemediationScope {
@@ -185,7 +193,6 @@ export function deriveMavenRemediationScope(
     const changedModel = xml(e.effectivePom, true), nextVersions = versions(changedModel, true);
     const nextManagedNode = one(changedModel, 'dependencyManagement');
     const nextManaged = nextManagedNode ? versions(nextManagedNode, true) : new Map<string, string>();
-    // Prove effective-model participation as well as graph causality.
     requireProof(diff.every(k => (nextVersions.get(k) === target && modelVersions.get(k) !== target)
       || (nextManaged.get(k) === target && managedVersions.get(k) !== target)), 'EFFECTIVE_MODEL_NOT_CORROBORATED');
     candidates.push({ c, covers: diff });
@@ -208,6 +215,7 @@ export function deriveMavenRemediationScope(
     controls: minimal[0].sort((a, b) => a.start - b.start),
   };
 }
+/** Vérifie, en comparant deux arbres de dépendances réels, que le périmètre prévu a bien fermé la CVE sans modifier aucune dépendance en dehors de ce périmètre. */
 export function graphClosesScope(before: string, after: string, scope: MavenRemediationScope): boolean {
   try {
     const a = mavenGraph(before), b = mavenGraph(after);

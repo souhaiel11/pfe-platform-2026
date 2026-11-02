@@ -1,3 +1,4 @@
+// Teste le composant « owasp-finding-normalizer » et ses cas d’erreur.
 import { strict as assert } from 'assert';
 import { readFileSync } from 'fs';
 import { join } from 'path';

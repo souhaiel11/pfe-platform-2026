@@ -1,21 +1,4 @@
-// Increment 1 — multi-CVE remediation, ONE candidate file for N findings.
-//
-// Deliberately does NOT modify writeSecurityPatch() (maven-security-patch-
-// writer.ts) at all: this file only CHAINS it, calling it once per finding
-// with the previous finding's output content threaded in as the next
-// finding's input `sourceContent`. Every one of writeSecurityPatch()'s
-// existing fail-closed checks (OLD_VERSION_MISMATCH, ambiguous
-// declarations, cross-major rejection, ...) keeps running unmodified on
-// each link of the chain.
-//
-// ★ Conflict detection is a DIRECT CONSEQUENCE of chaining, not a separate
-// mechanism: if finding B's controlling declaration/property was already
-// touched by an EARLIER finding A in the chain (same dependency, or a
-// shared <properties> entry), the text writeSecurityPatch() locates for B
-// no longer equals B's own grounded `installedVersion` -> B fails
-// OLD_VERSION_MISMATCH (or an ambiguity/absence code), which this file
-// reports as a NAMED conflict. No new comparison logic was needed for this
-// -- see the design cadrage this increment implements.
+/** Chaîne le patch writer unitaire sur plusieurs CVE pour produire UN seul candidat pom.xml couvrant N findings ; tout conflit entre findings est détecté comme effet direct du chaînage. */
 import { writeSecurityPatch, SecurityPatchWriteFailureReason } from './maven-security-patch-writer';
 import { computeContentSha256, computeGitBlobSha1 } from '../candidate-verification/candidate-digest';
 import { CandidateFile } from '../candidate-verification/candidate-verification.types';
@@ -48,20 +31,10 @@ export interface SecurityPatchBatchFindingOutcome {
 
 export type SecurityPatchWriteBatchResult =
   | { ok: true; file: CandidateFile; perFinding: SecurityPatchBatchFindingOutcome[] }
-  // Atomic: ANY conflict means NOTHING is applied -- the caller never sees
-  // a partially-patched file, only the full list of named conflicts (every
-  // finding is checked, not just the first failure, so a caller gets the
-  // complete picture in one round-trip rather than fixing conflicts one at
-  // a time).
+  /** Atomique : le moindre conflit annule tout le lot — jamais de fichier partiellement patché renvoyé à l'appelant. */
   | { ok: false; conflicts: SecurityPatchBatchConflict[] };
 
-/**
- * Pure. All items MUST share the same controllingFile and the same
- * (pre-batch) sourceContent -- V1 only ever produces ONE candidate file
- * (pom.xml), exactly like the singular writer. Items are applied in a
- * deterministic order (sorted by cveId) so the result — and any conflict —
- * never depends on caller-supplied array order.
- */
+/** Écrit sécurité patch lot. */
 export function writeSecurityPatchBatch(items: SecurityPatchBatchItem[]): SecurityPatchWriteBatchResult {
   if (!items.length) return { ok: false, conflicts: [] };
   const controllingFile = items[0].request.controllingFile;
@@ -85,15 +58,11 @@ export function writeSecurityPatchBatch(items: SecurityPatchBatchItem[]): Securi
   const perFinding: SecurityPatchBatchFindingOutcome[] = [];
 
   for (const { cveId, request } of ordered) {
-    // Thread the chain's CURRENT content in as this finding's own
-    // sourceContent -- everything else about the request (installedVersion,
-    // targetVersion, provenanceKind, ...) is this finding's OWN grounded
-    // evidence, untouched.
     const threaded: SecurityPatchRequest = { ...request, sourceContent: content };
     const result = writeSecurityPatch(threaded);
     if (result.ok !== true) {
       conflicts.push({ cveId, findingIdentity: request.findingIdentity, reason: result.reason, detail: result.detail });
-      continue; // keep checking the rest -- report every conflicting CVE, not just the first
+      continue;
     }
     content = result.candidate.file.content;
     perFinding.push({

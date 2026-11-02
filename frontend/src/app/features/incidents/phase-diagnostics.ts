@@ -1,32 +1,4 @@
-// ─────────────────────────────────────────────────────────────
-//  MIROIR FRONTEND de backend/src/common/phase-diagnostics.ts — même
-//  patron que project-cleanliness.ts (pas de package partagé backend/
-//  frontend dans ce repo). Gardé IDENTIQUE ligne à ligne au fichier
-//  backend ; toute modification doit être répercutée des deux côtés.
-//
-//  Couche d'interprétation — transforme un statut brut ("UNKNOWN") en
-//  diagnostic actionnable. Fonction pure, zéro appel réseau/LLM, zéro
-//  nouvelle collecte : elle lit uniquement des champs qui existent déjà
-//  (enrichedData.*, incident.errorReason/errorStep, enrichedData.build.url).
-//
-//  NE DÉCIDE PAS si le déploiement est bloqué (ça reste project-cleanliness.ts,
-//  inchangé) — ce module produit seulement le TEXTE explicatif que Bloc C
-//  affiche à la place d'un "UNKNOWN" nu.
-//
-//  Trois niveaux de certitude, jamais mélangés dans le texte final :
-//   - CONFIRMÉ   : prouvé par les données de CE run — soit technicalCode
-//     posé par WF1 avec preuve (voir scanner-diagnostics.ts), soit déduit
-//     directement des champs du bloc (ex. Sonar a trouvé des issues réelles
-//     mais le quality gate spécifiquement n'a pas répondu).
-//   - HYPOTHÈSE  : dette déjà diagnostiquée dans une session précédente
-//     (nvd-api-key, timeout ZAP) — probable, PAS reprouvée sur ce run
-//     précis (on n'a pas le log du stage OWASP/ZAP pour ce build). Ce n'est
-//     qu'un FILET DE REPLI : si le bloc porte un technicalCode confirmé
-//     pour ce run (ticket QA-WF1-SCANNER-DIAGNOSTIC-HARDENING §9), cette
-//     hypothèse générique n'est jamais affichée à sa place.
-//   - INCONNU    : rien d'exploitable → filet honnête, jamais un UNKNOWN nu.
-// ─────────────────────────────────────────────────────────────
-
+// Regroupe les traitements de phase diagnostics.
 export type DiagnosticActor = 'agent' | 'humain' | null;
 export type DiagnosticConfidence = 'confirmé' | 'probable' | 'hypothèse' | 'inconnu';
 
@@ -38,10 +10,7 @@ export interface PhaseDiagnostic {
   message: string; // (a) constat (b) cause (c) qui (d) quoi faire — une seule phrase actionnable
 }
 
-// Contexte Incident (errorReason/errorStep) — colonnes DB sur Incident,
-// PAS dans enrichedData (vérifié : incident.entity.ts). Optionnel : un appel
-// depuis un contexte Report seul (sans Incident associé) reste honnête, juste
-// moins précis sur la cause exacte du cascade.
+/** Contexte d'incident (errorReason/errorStep) transmis aux fonctions de diagnostic ; optionnel si l'appel ne provient pas d'un incident. */
 export interface IncidentContext {
   errorReason?: string | null;
   errorStep?: string | null;
@@ -49,51 +18,53 @@ export interface IncidentContext {
 
 const BAD_BUILD_STATUSES = ['FAILURE', 'FAILED', 'UNSTABLE', 'ABORTED'];
 
+/** Extrait l'URL du build Jenkins si elle est présente dans enrichedData. */
 function buildUrl(enrichedData: any): string | null {
   return enrichedData?.build?.url || null;
 }
 
+/** Diagnostic de dernier recours quand aucune cause exploitable n'a été trouvée — toujours avec un lien vers le log Jenkins, jamais un "UNKNOWN" nu. */
 function honestFallback(phase: string, actor: DiagnosticActor, extra: string, enrichedData: any): PhaseDiagnostic {
   const url = buildUrl(enrichedData);
   const link = url ? ` Consultez le log Jenkins : ${url}` : ' Aucun lien de build disponible pour ce run — consultez Jenkins directement.';
   return { phase, green: false, actor, confidence: 'inconnu', message: `${extra} Cause non identifiée automatiquement.${link}` };
 }
 
-// Textes canoniques pour les technicalCode prouvés par WF1 sur CE run (voir
-// scanner-diagnostics.ts::TechnicalCode) — priorité absolue sur cascade/
-// honestFallback, qui restent un repli pour les runs sans preuve technique
-// posée (incidents/reports antérieurs à ce fix, ou scanner qui n'a jamais
-// démarré). N'invente rien : ne lit que block.technicalCode/owner/evidence/
-// route, déjà posés par WF1 avec preuve.
 const TECHNICAL_CODE_MESSAGES: Record<string, (evidence: string, route: string) => string> = {
+  /** Explique que les identifiants du scanner sont invalides. */
   SCANNER_CREDENTIAL_INVALID: (evidence) =>
     `Le scanner a démarré mais la credential requise a été rejetée — l'analyse n'a pas pu se terminer.${evidence} `
       + `ACTION (admin/infrastructure) : renouvelez/corrigez la credential dans Jenkins (Manage Credentials). PR non applicable — ce n'est pas un défaut de code.`,
+  /** Explique que le scanner a dépassé son délai. */
   SCANNER_TIMEOUT: (evidence, route) =>
     `Le scanner a démarré (téléchargement/scan lancé) mais n'a pas terminé dans le délai imparti — timeout technique confirmé, pas une absence de résultat.${evidence} `
       + `ACTION : vérifiez la ressource/réseau du stage${route}.`,
+  /** Explique l’échec de préparation de la base du scanner. */
   SCANNER_DATABASE_DOWNLOAD_FAILED: (evidence) =>
     `Le scanner a démarré mais le téléchargement de sa base de données a échoué.${evidence} ACTION : vérifiez la connectivité réseau du stage vers la source de la base.`,
+  /** Explique l’absence de référence à la tâche SonarQube. */
   SONAR_CE_TASK_ID_MISSING: (evidence) =>
     `Sonar a bien soumis l'analyse au serveur (ANALYSIS SUCCESSFUL côté Sonar) mais Jenkins n'a pas pu obtenir le ceTaskId au moment requis — la corrélation quality gate est donc indisponible pour ce build, ce n'est pas un défaut du code analysé.${evidence} `
       + `ACTION : le statut du quality gate affiché n'est pas fiable pour ce build précis — revalidez après correction de la corrélation.`,
+  /** Explique une configuration Docker invalide ou incomplète. */
   DOCKER_CONFIGURATION_ERROR: (evidence, route) =>
     `L'application a démarré normalement (conteneur up, code de sortie 0) mais le scanner n'a pas pu l'atteindre — mésappariement de topologie Docker/Jenkins (le Docker-in-Docker et l'agent Jenkins sont sur des réseaux distincts malgré le même nom), pas un défaut applicatif.${evidence} `
       + `ACTION : corrigez la configuration Docker/Jenkins${route}.`,
+  /** Explique que la cible à analyser est indisponible. */
   TARGET_UNAVAILABLE: (evidence, route) =>
     `La cible du scan n'était pas disponible/joignable au moment du stage.${evidence} ACTION : vérifiez que la cible démarre et répond avant ce stage${route}.`,
+  /** Explique l’échec de communication réseau. */
   NETWORK_FAILURE: (evidence) =>
     `Le scanner a démarré mais une défaillance réseau a empêché l'analyse de se terminer.${evidence} ACTION : vérifiez la connectivité réseau du stage.`,
+  /** Explique l’indisponibilité des ressources d’exécution. */
   RESOURCE_FAILURE: (evidence) =>
     `Le scanner a démarré mais a échoué par manque de ressources (mémoire/disque/CPU) sur l'agent Jenkins.${evidence} ACTION : vérifiez les ressources allouées à l'agent.`,
+  /** Explique l’absence de rapport après l’étape scanner. */
   SCANNER_REPORT_MISSING: (evidence) =>
     `Le scanner a démarré mais son rapport n'a pas été retrouvé/transmis à la plateforme.${evidence} ACTION : vérifiez la publication du rapport (chemin/volume partagé Jenkins→n8n).`,
 };
 
-// route='WF4'/'WF5' : correction possible via un agent d'optimisation
-// (Jenkinsfile/Dockerfile) → actor 'agent'. Tout le reste (ADMIN_ACTION_
-// REQUIRED, NONE, WF2 credential humaine) reste 'humain' : aucune de ces
-// causes n'est un défaut de code auto-corrigeable par le judge/PR flow.
+/** Construit le diagnostic CONFIRMÉ lorsque WF1 a déjà posé un technicalCode prouvé sur ce bloc scanner ; null si aucun code n'est présent. */
 function technicalCodeDiagnostic(phase: string, block: any): PhaseDiagnostic | null {
   const code = block?.technicalCode;
   if (!code || typeof code !== 'string') return null;
@@ -107,12 +78,7 @@ function technicalCodeDiagnostic(phase: string, block: any): PhaseDiagnostic | n
   return { phase, green: false, actor, confidence: 'confirmé', message };
 }
 
-// Rule 1 — cascade : le build de CE run a échoué/est instable, donc une
-// phase en aval n'a probablement pas eu l'occasion de tourner. On ne prétend
-// PAS savoir avec certitude qu'elle a été sautée (pas de liste stage-par-
-// stage horodatée dans les données actuelles) — d'où "probable", pas
-// "confirmé". On réutilise errorReason/errorStep du MÊME incident plutôt que
-// d'inventer une nouvelle cause pour cette phase.
+/** Diagnostic "probable"/"hypothèse" quand le build de ce run a échoué et a vraisemblablement empêché cette phase de produire un résultat ; null si le build est sain. */
 function cascadeDiagnostic(phase: string, enrichedData: any, ctx: IncidentContext | undefined): PhaseDiagnostic | null {
   const status = String(enrichedData?.build?.status || '').toUpperCase();
   if (!BAD_BUILD_STATUSES.includes(status)) return null;
@@ -129,10 +95,6 @@ function cascadeDiagnostic(phase: string, enrichedData: any, ctx: IncidentContex
         + `ACTION (agent) : corrigez d'abord le build — ${phase} sera réévalué au prochain build réussi.`,
     };
   }
-  // Build FAILURE/UNSTABLE confirmé, mais AUCUNE cause capturée pour ce run
-  // précis (ex. build UNSTABLE : l'extraction de log ne se déclenche
-  // aujourd'hui que sur FAILURE stricte, pas UNSTABLE — vu en base sur de
-  // vrais incidents récents, filet honnête plutôt qu'invention).
   return {
     phase, green: false, actor: 'agent', confidence: 'hypothèse',
     message: `${phase} n'a pas produit de résultat exploitable : le build Jenkins de ce run est en échec/instable (statut ${status}) mais la cause précise n'a pas été capturée pour ce run.${link} `
@@ -140,6 +102,7 @@ function cascadeDiagnostic(phase: string, enrichedData: any, ctx: IncidentContex
   };
 }
 
+/** Diagnostic du scanner Trivy : vert si complété, sinon technicalCode confirmé puis cascade de build puis repli honnête. */
 export function diagnoseTrivy(enrichedData: any, ctx?: IncidentContext): PhaseDiagnostic {
   const t = enrichedData?.trivy;
   if (t?.status === 'COMPLETED') return { phase: 'Trivy', green: true, actor: null, confidence: 'confirmé', message: 'Trivy a tourné et produit un résultat exploitable.' };
@@ -150,9 +113,6 @@ export function diagnoseTrivy(enrichedData: any, ctx?: IncidentContext): PhaseDi
   const cascade = cascadeDiagnostic('Trivy', enrichedData, ctx);
   if (cascade) return cascade;
 
-  // Build vert mais Trivy quand même UNKNOWN : câblage plateforme le plus
-  // probable (volume shared_reports Jenkins→n8n), PAS un problème Trivy
-  // lui-même — hypothèse, pas prouvée sur ce run précis.
   return honestFallback(
     'Trivy',
     'humain',
@@ -162,6 +122,7 @@ export function diagnoseTrivy(enrichedData: any, ctx?: IncidentContext): PhaseDi
   );
 }
 
+/** Diagnostic d'OWASP Dependency-Check : même ordre de priorité que Trivy, avec l'hypothèse connue "nvd-api-key absente" en dernier repli. */
 export function diagnoseOwasp(enrichedData: any, ctx?: IncidentContext): PhaseDiagnostic {
   const o = enrichedData?.owasp;
   if (o?.status === 'COMPLETED') return { phase: 'OWASP', green: true, actor: null, confidence: 'confirmé', message: 'OWASP Dependency-Check a tourné et produit un résultat exploitable.' };
@@ -181,6 +142,7 @@ export function diagnoseOwasp(enrichedData: any, ctx?: IncidentContext): PhaseDi
   );
 }
 
+/** Diagnostic ZAP (DAST) : vert sans alerte haute, rouge confirmé si des alertes hautes existent, sinon même cascade/repli que les autres scanners. */
 export function diagnoseZap(enrichedData: any, ctx?: IncidentContext): PhaseDiagnostic {
   const z = enrichedData?.zap;
   if (z?.status === 'COMPLETED') {
@@ -210,6 +172,7 @@ export function diagnoseZap(enrichedData: any, ctx?: IncidentContext): PhaseDiag
   );
 }
 
+/** Diagnostic SonarQube : lit d'abord le quality gate, puis distingue "Sonar a vraiment tourné mais le gate a échoué" d'un vrai échec d'analyse. */
 export function diagnoseSonar(enrichedData: any, ctx?: IncidentContext): PhaseDiagnostic {
   const s = enrichedData?.sonar;
   const gate = String(s?.quality_gate || '').toUpperCase();
@@ -223,18 +186,9 @@ export function diagnoseSonar(enrichedData: any, ctx?: IncidentContext): PhaseDi
         + `ACTION (agent) : corrigez via WF2 (carte SonarQube).`,
     };
   }
-  // gate ni OK/PASSED ni ERROR/FAILED (typiquement UNKNOWN) — priorité au
-  // technicalCode posé par WF1 avec preuve (ex. SONAR_CE_TASK_ID_MISSING :
-  // analyse soumise, corrélation ceTaskId jamais faite) sur l'heuristique
-  // générique ci-dessous, qui reste un repli pour les runs sans cette preuve.
   const tech = technicalCodeDiagnostic('SonarQube', s);
   if (tech) return tech;
 
-  // Distinction CONFIRMÉE par les données elles-mêmes, pas une hypothèse :
-  // si des issues réelles existent, Sonar A tourné (l'appel Issues a
-  // marché), donc c'est spécifiquement l'appel quality-gate qui a échoué
-  // (dette connue : "Text must not be null" côté SonarQube), pas un
-  // problème d'accès Sonar en général.
   if ((s?.issues?.length || 0) > 0 || (s?.bugs || 0) + (s?.vulnerabilities || 0) + (s?.code_smells || 0) > 0) {
     return {
       phase: 'SonarQube', green: false, actor: 'humain', confidence: 'confirmé',
@@ -248,6 +202,7 @@ export function diagnoseSonar(enrichedData: any, ctx?: IncidentContext): PhaseDi
   return honestFallback('SonarQube', 'humain', `SonarQube n'a renvoyé ni issues ni quality gate exploitable (${gate || 'absent'}).`, enrichedData);
 }
 
+/** Diagnostic des tests applicatifs : rouge confirmé sur échec réel, sinon cascade/repli — jamais présenté comme une correction de pipeline. */
 export function diagnoseTests(enrichedData: any, ctx?: IncidentContext): PhaseDiagnostic {
   const t = enrichedData?.tests;
   const status = String(t?.status || '').toUpperCase();
@@ -272,6 +227,7 @@ export function diagnoseTests(enrichedData: any, ctx?: IncidentContext): PhaseDi
   );
 }
 
+/** Diagnostic du build/push Docker — signale aussi le bug connu où WF1 écrit 'UNKNOWN' en dur quel que soit le résultat réel. */
 export function diagnoseDocker(enrichedData: any): PhaseDiagnostic {
   const d = enrichedData?.docker;
   const build = String(d?.build_status || '').toUpperCase();
@@ -282,9 +238,6 @@ export function diagnoseDocker(enrichedData: any): PhaseDiagnostic {
   if (['FAILURE', 'FAILED'].includes(build)) {
     return { phase: 'Docker', green: false, actor: 'agent', confidence: 'confirmé', message: `Build de l'image Docker en échec. ACTION (agent) : corrigez via WF5.` };
   }
-  // CONFIRMÉ, pas une hypothèse : build_status/push_status sont câblés en
-  // dur à 'UNKNOWN' dans WF1 (Merge All Fetched Data), quel que soit ce que
-  // Jenkins envoie réellement — vérifié dans le code, pas une supposition.
   return {
     phase: 'Docker', green: false, actor: null, confidence: 'confirmé',
     message: `Le statut du build Docker n'est pas remonté à la plateforme — bug de câblage connu et confirmé (WF1 écrit 'UNKNOWN' en dur pour ce champ, quel que soit le résultat réel du build). `

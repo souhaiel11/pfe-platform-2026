@@ -1,3 +1,4 @@
+<!-- Présente la liste des incidents. -->
 <div class="page-container">
 
   <div class="page-header" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
@@ -68,6 +69,11 @@
       <button class="btn btn-secondary btn-sm" style="margin-top:14px;" *ngIf="filters.status" (click)="resetFilters()">Voir tous les incidents</button>
     </div>
   </div>
+
+  <section class="metrics-charts" *ngIf="!loading && !loadError && incidents.length" aria-label="Graphiques des incidents">
+    <app-metrics-chart title="Répartition par statut" [description]="chartScope" type="doughnut" [labels]="statusLabels" [series]="statusSeries" categoryLabel="Statut"></app-metrics-chart>
+    <app-metrics-chart title="Courbe des créations d’incidents" [description]="'Les 30 derniers jours (UTC), parmi les incidents affichés. ' + chartScope" type="line" [labels]="dateLabels" [series]="creationSeries" categoryLabel="Jour (UTC)"></app-metrics-chart>
+  </section>
 
   <!-- §10 — colonnes retenues : ce qu'un développeur lit pour décider.
        L'identifiant technique n'occupe plus une colonne entière ; il reste

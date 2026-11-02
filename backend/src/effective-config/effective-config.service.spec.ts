@@ -1,3 +1,4 @@
+// Teste le composant « effective-config.service » et ses cas d’erreur.
 import * as assert from 'node:assert/strict';
 import 'reflect-metadata';
 import { buildEffectiveConfig } from './effective-config.service';
@@ -15,6 +16,7 @@ for (const key of sensitiveKeys) {
   assert.ok(!json.includes(env[key]!), 'sensitive value excluded: ' + key);
 }
 assert.ok(!json.includes('LEAK_'));
+/** Vérifie clés dans ce scénario de test. */
 function checkKeys(value: unknown) {
   if (!value || typeof value !== 'object') return;
   for (const [key, child] of Object.entries(value)) {

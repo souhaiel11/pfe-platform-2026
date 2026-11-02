@@ -1,0 +1,21 @@
+[
+  {
+    "id": "70bc8f46-5cd2-48a3-9f8b-169cf2ba250b",
+    "buildNumber": 151,
+    "sourceCommitSha": "393816c250f73d907eb5a2dd43b2ec2288c7abcb",
+    "metadataKeys": [
+      "job",
+      "title",
+      "status",
+      "security",
+      "severity",
+      "build_url",
+      "rootCause",
+      "remediation",
+      "build_number",
+      "enrichedData",
+      "developerGuide",
+      "sourceCommitSha"
+    ]
+  }
+]

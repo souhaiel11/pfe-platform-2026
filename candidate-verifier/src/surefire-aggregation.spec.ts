@@ -1,3 +1,4 @@
+// Teste le composant « surefire-aggregation » et ses cas d’erreur.
 import * as assert from 'node:assert/strict';
 import { aggregateSurefireText } from './surefire-aggregation';
 

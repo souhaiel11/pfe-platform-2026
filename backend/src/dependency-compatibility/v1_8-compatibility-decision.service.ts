@@ -1,14 +1,4 @@
-// V1.8 Phase 4 ticket — read-only lookup service over the immutable
-// evidence store (v1_8-evidence-store.json, generated once by
-// v1_8_phase4_generate_evidence_store.ts). Loaded once at module load
-// (require cache), never recomputed per request, never shells out to
-// mvn/git/docker -- see that generator's own header comment for why.
-//
-// This service NEVER writes to Postgres/ManualRemediationTask and is never
-// consulted by WF6 dispatch (manual-remediation.service.ts's
-// launchBatchRemediation()) or by the existing checkbox-eligibility gate
-// (cve-selection-eligibility.ts) -- it is purely additive read access, one
-// new field alongside data those paths already return unchanged.
+// Recherche une décision de compatibilité dans le magasin de preuves pour le contexte demandé. Une preuve inconnue n'est pas remplacée par une validation supposée.
 import { Injectable } from '@nestjs/common';
 import { readFileSync } from 'fs';
 import { join } from 'path';
@@ -20,7 +10,7 @@ export interface V1_8EvidenceStoreFile {
   decisions: Record<string, V1_8CompatibilityDecision>;
 }
 
-/** No binding to fabricate for a finding the evidence store has never seen -- `evidenceId`/`validationRunId` are the empty string (never a real-looking id) and repository/commit echo back whatever the caller asked about, never a guessed "matching" value, so the Phase 3 stale-guard (v1_8-security-remediation-gate.ts) still has SOMETHING to compare against and will correctly find nothing conclusive. */
+/** Prépare le résultat lié à inconnu finding décision. */
 function unknownFindingDecision(source: string, cve: string, pkg: string, installedVersion: string): V1_8CompatibilityDecision {
   return {
     evidenceId: '', schemaVersion: 2, repository: '', validatedCommitSha: '',
@@ -39,21 +29,24 @@ function unknownFindingDecision(source: string, cve: string, pkg: string, instal
 export class V1_8CompatibilityDecisionService {
   private readonly store: V1_8EvidenceStoreFile;
 
+  /** Initialise les dépendances et l’état de ce composant. */
   constructor(evidenceStorePath?: string) {
     const path = evidenceStorePath ?? join(__dirname, 'v1_8-evidence-store.json');
     this.store = JSON.parse(readFileSync(path, 'utf8'));
   }
 
-  /** source is normalized upper-case, matching how ManualRemediationTask.source/ruleOrCve are already persisted (manual-remediation.entity.ts). */
+  /** Recherche la décision correspondant au contexte demandé. */
   lookup(source: string, cve: string, pkg: string, installedVersion = ''): V1_8CompatibilityDecision {
     const key = `${String(source).toUpperCase()}:${cve}:${pkg}`;
     return this.store.decisions[key] ?? unknownFindingDecision(source, cve, pkg, installedVersion);
   }
 
+  /** Renvoie la date de génération du magasin de preuves. */
   get generatedAt(): string {
     return this.store.generatedAt;
   }
 
+  /** Renvoie le nombre d’entrées du magasin de preuves. */
   get entryCount(): number {
     return this.store.entryCount;
   }

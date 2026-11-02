@@ -1,8 +1,10 @@
+// Teste le composant « general-settings » et ses cas d’erreur.
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createRequire} from 'node:module';
 import vm from 'node:vm';
 const ts=createRequire(import.meta.url)('typescript');
+/** Lit les données depuis leur source. */
 const read=p=>readFileSync(new URL(p,import.meta.url),'utf8');
 const exports={};
 vm.runInNewContext(ts.transpileModule(read('../src/app/features/settings/general-settings-presentation.ts'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,{exports});

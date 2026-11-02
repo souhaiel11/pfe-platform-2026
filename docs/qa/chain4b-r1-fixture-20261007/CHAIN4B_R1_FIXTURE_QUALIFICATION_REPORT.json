@@ -1,0 +1,456 @@
+{
+  "E2E_PROJECT_ID": null,
+  "E2E_PROJECT_NAME": "remediation-retry-e2e-fixture (proposed; not registered)",
+  "E2E_REPOSITORY": "souhaiel11/remediation-retry-e2e-fixture (not created)",
+  "E2E_BASELINE_COMMIT": null,
+  "LOCAL_BASELINE_COMMIT": "24630265ea4ed764bbb22c76d4d7dc689b5fe0bf",
+  "E2E_FINDING_ID": null,
+  "E2E_TASK_ID": null,
+  "SCANNER": "OWASP (local evidence only; not ingested)",
+  "VULNERABILITY_ID": "CVE-2022-45868",
+  "PACKAGE": "com.h2database:h2",
+  "INSTALLED_VERSION": "2.1.212",
+  "FIXED_VERSION": null,
+  "EXPECTED_CANDIDATE": "2.2.220",
+  "SCANNER_STATUS": "NOT_INGESTED",
+  "E2E_TARGET_TYPE": null,
+  "E2E_TARGET_PATH": null,
+  "TARGET_RESOLUTION_SOURCE": null,
+  "TARGET_RESOLUTION_DYNAMIC": "NOT_QUALIFIED",
+  "RUNTIME_SPECIAL_CASE": "NO",
+  "ORIGINAL_BUILD_PASS": true,
+  "ORIGINAL_TESTS_PASS": true,
+  "ORIGINAL_TEST_COUNT": 1,
+  "TRIVY_FINDING_REPRODUCIBLE": false,
+  "TRIVY_FINDING": null,
+  "TRIVY_PACKAGE": null,
+  "TRIVY_INSTALLED_VERSION": null,
+  "TRIVY_FIXED_VERSION": null,
+  "OWASP_FINDING_REPRODUCIBLE": true,
+  "OWASP_FINDING": "CVE-2022-45868",
+  "OWASP_DEPENDENCY": "h2-2.1.212.jar",
+  "OWASP_EVIDENCE": {
+    "dependency": "h2-2.1.212.jar",
+    "purl": [
+      {
+        "id": "pkg:maven/com.h2database/h2@2.1.212",
+        "confidence": "HIGH"
+      }
+    ],
+    "vulnerability": "CVE-2022-45868",
+    "evidence": {
+      "vendorEvidence": [
+        {
+          "type": "vendor",
+          "confidence": "HIGH",
+          "source": "file",
+          "name": "name",
+          "value": "h2"
+        },
+        {
+          "type": "vendor",
+          "confidence": "HIGHEST",
+          "source": "jar",
+          "name": "package name",
+          "value": "database"
+        },
+        {
+          "type": "vendor",
+          "confidence": "HIGHEST",
+          "source": "jar",
+          "name": "package name",
+          "value": "engine"
+        },
+        {
+          "type": "vendor",
+          "confidence": "HIGHEST",
+          "source": "jar",
+          "name": "package name",
+          "value": "h2"
+        },
+        {
+          "type": "vendor",
+          "confidence": "MEDIUM",
+          "source": "Manifest",
+          "name": "automatic-module-name",
+          "value": "com.h2database"
+        },
+        {
+          "type": "vendor",
+          "confidence": "LOW",
+          "source": "Manifest",
+          "name": "bundle-category",
+          "value": "jdbc"
+        },
+        {
+          "type": "vendor",
+          "confidence": "MEDIUM",
+          "source": "Manifest",
+          "name": "bundle-symbolicname",
+          "value": "com.h2database"
+        },
+        {
+          "type": "vendor",
+          "confidence": "LOW",
+          "source": "Manifest",
+          "name": "implementation-url",
+          "value": "https://h2database.com"
+        },
+        {
+          "type": "vendor",
+          "confidence": "LOW",
+          "source": "Manifest",
+          "name": "multi-release",
+          "value": "true"
+        },
+        {
+          "type": "vendor",
+          "confidence": "LOW",
+          "source": "Manifest",
+          "name": "provide-capability",
+          "value": "osgi.service;objectClass:List=org.osgi.service.jdbc.DataSourceFactory"
+        },
+        {
+          "type": "vendor",
+          "confidence": "HIGHEST",
+          "source": "pom",
+          "name": "artifactid",
+          "value": "h2"
+        },
+        {
+          "type": "vendor",
+          "confidence": "LOW",
+          "source": "pom",
+          "name": "artifactid",
+          "value": "h2"
+        },
+        {
+          "type": "vendor",
+          "confidence": "LOW",
+          "source": "pom",
+          "name": "developer email",
+          "value": "thomas.tom.mueller at gmail dot com"
+        },
+        {
+          "type": "vendor",
+          "confidence": "MEDIUM",
+          "source": "pom",
+          "name": "developer id",
+          "value": "thomas.tom.mueller"
+        },
+        {
+          "type": "vendor",
+          "confidence": "MEDIUM",
+          "source": "pom",
+          "name": "developer name",
+          "value": "Thomas Mueller"
+        },
+        {
+          "type": "vendor",
+          "confidence": "HIGHEST",
+          "source": "pom",
+          "name": "groupid",
+          "value": "com.h2database"
+        },
+        {
+          "type": "vendor",
+          "confidence": "HIGH",
+          "source": "pom",
+          "name": "name",
+          "value": "H2 Database Engine"
+        },
+        {
+          "type": "vendor",
+          "confidence": "HIGHEST",
+          "source": "pom",
+          "name": "url",
+          "value": "https://h2database.com"
+        }
+      ],
+      "productEvidence": [
+        {
+          "type": "product",
+          "confidence": "HIGH",
+          "source": "file",
+          "name": "name",
+          "value": "h2"
+        },
+        {
+          "type": "product",
+          "confidence": "HIGHEST",
+          "source": "jar",
+          "name": "package name",
+          "value": "database"
+        },
+        {
+          "type": "product",
+          "confidence": "HIGHEST",
+          "source": "jar",
+          "name": "package name",
+          "value": "engine"
+        },
+        {
+          "type": "product",
+          "confidence": "HIGHEST",
+          "source": "jar",
+          "name": "package name",
+          "value": "h2"
+        },
+        {
+          "type": "product",
+          "confidence": "HIGHEST",
+          "source": "jar",
+          "name": "package name",
+          "value": "jdbc"
+        },
+        {
+          "type": "product",
+          "confidence": "HIGHEST",
+          "source": "jar",
+          "name": "package name",
+          "value": "org"
+        },
+        {
+          "type": "product",
+          "confidence": "HIGHEST",
+          "source": "jar",
+          "name": "package name",
+          "value": "service"
+        },
+        {
+          "type": "product",
+          "confidence": "MEDIUM",
+          "source": "Manifest",
+          "name": "automatic-module-name",
+          "value": "com.h2database"
+        },
+        {
+          "type": "product",
+          "confidence": "LOW",
+          "source": "Manifest",
+          "name": "bundle-category",
+          "value": "jdbc"
+        },
+        {
+          "type": "product",
+          "confidence": "MEDIUM",
+          "source": "Manifest",
+          "name": "Bundle-Name",
+          "value": "H2 Database Engine"
+        },
+        {
+          "type": "product",
+          "confidence": "MEDIUM",
+          "source": "Manifest",
+          "name": "bundle-symbolicname",
+          "value": "com.h2database"
+        },
+        {
+          "type": "product",
+          "confidence": "HIGH",
+          "source": "Manifest",
+          "name": "Implementation-Title",
+          "value": "H2 Database Engine"
+        },
+        {
+          "type": "product",
+          "confidence": "LOW",
+          "source": "Manifest",
+          "name": "implementation-url",
+          "value": "https://h2database.com"
+        },
+        {
+          "type": "product",
+          "confidence": "LOW",
+          "source": "Manifest",
+          "name": "multi-release",
+          "value": "true"
+        },
+        {
+          "type": "product",
+          "confidence": "LOW",
+          "source": "Manifest",
+          "name": "provide-capability",
+          "value": "osgi.service;objectClass:List=org.osgi.service.jdbc.DataSourceFactory"
+        },
+        {
+          "type": "product",
+          "confidence": "HIGHEST",
+          "source": "pom",
+          "name": "artifactid",
+          "value": "h2"
+        },
+        {
+          "type": "product",
+          "confidence": "LOW",
+          "source": "pom",
+          "name": "developer email",
+          "value": "thomas.tom.mueller at gmail dot com"
+        },
+        {
+          "type": "product",
+          "confidence": "LOW",
+          "source": "pom",
+          "name": "developer id",
+          "value": "thomas.tom.mueller"
+        },
+        {
+          "type": "product",
+          "confidence": "LOW",
+          "source": "pom",
+          "name": "developer name",
+          "value": "Thomas Mueller"
+        },
+        {
+          "type": "product",
+          "confidence": "HIGHEST",
+          "source": "pom",
+          "name": "groupid",
+          "value": "com.h2database"
+        },
+        {
+          "type": "product",
+          "confidence": "HIGH",
+          "source": "pom",
+          "name": "name",
+          "value": "H2 Database Engine"
+        },
+        {
+          "type": "product",
+          "confidence": "MEDIUM",
+          "source": "pom",
+          "name": "url",
+          "value": "https://h2database.com"
+        }
+      ],
+      "versionEvidence": [
+        {
+          "type": "version",
+          "confidence": "HIGH",
+          "source": "file",
+          "name": "version",
+          "value": "2.1.212"
+        },
+        {
+          "type": "version",
+          "confidence": "HIGH",
+          "source": "Manifest",
+          "name": "Bundle-Version",
+          "value": "2.1.212"
+        },
+        {
+          "type": "version",
+          "confidence": "HIGH",
+          "source": "Manifest",
+          "name": "Implementation-Version",
+          "value": "2.1.212"
+        },
+        {
+          "type": "version",
+          "confidence": "HIGHEST",
+          "source": "pom",
+          "name": "version",
+          "value": "2.1.212"
+        }
+      ]
+    },
+    "references": [
+      {
+        "source": "cve@mitre.org",
+        "url": "https://sites.google.com/sonatype.com/vulnerabilities/sonatype-2022-6243",
+        "name": "EXPLOIT,THIRD_PARTY_ADVISORY"
+      },
+      {
+        "source": "af854a3a-2127-422b-91ae-364da2661108",
+        "url": "https://github.com/h2database/h2database/blob/96832bf5a97cdc0adc1f2066ed61c54990d66ab5/h2/src/main/org/h2/server/web/WebServer.java#L346-L347",
+        "name": "THIRD_PARTY_ADVISORY"
+      },
+      {
+        "source": "af854a3a-2127-422b-91ae-364da2661108",
+        "url": "https://github.com/advisories/GHSA-22wj-vf5f-wrvj"
+      },
+      {
+        "source": "cve@mitre.org",
+        "url": "https://github.com/h2database/h2database/pull/3833"
+      },
+      {
+        "source": "af854a3a-2127-422b-91ae-364da2661108",
+        "url": "https://sites.google.com/sonatype.com/vulnerabilities/sonatype-2022-6243",
+        "name": "EXPLOIT,THIRD_PARTY_ADVISORY"
+      },
+      {
+        "source": "cve@mitre.org",
+        "url": "https://github.com/advisories/GHSA-22wj-vf5f-wrvj"
+      },
+      {
+        "source": "cve@mitre.org",
+        "url": "https://github.com/h2database/h2database/issues/3686"
+      },
+      {
+        "source": "af854a3a-2127-422b-91ae-364da2661108",
+        "url": "https://github.com/h2database/h2database/pull/3833"
+      },
+      {
+        "source": "cve@mitre.org",
+        "url": "https://github.com/h2database/h2database/releases/tag/version-2.2.220"
+      },
+      {
+        "source": "af854a3a-2127-422b-91ae-364da2661108",
+        "url": "https://github.com/h2database/h2database/releases/tag/version-2.2.220"
+      },
+      {
+        "source": "af854a3a-2127-422b-91ae-364da2661108",
+        "url": "https://github.com/h2database/h2database/issues/3686"
+      },
+      {
+        "source": "cve@mitre.org",
+        "url": "https://github.com/h2database/h2database/blob/96832bf5a97cdc0adc1f2066ed61c54990d66ab5/h2/src/main/org/h2/server/web/WebServer.java#L346-L347",
+        "name": "THIRD_PARTY_ADVISORY"
+      }
+    ]
+  },
+  "CANDIDATE_SELECTED": null,
+  "CANDIDATE_BUILD_PASS": "NOT_RUN",
+  "CANDIDATE_TESTS_PASS": "NOT_RUN",
+  "TRIVY_TARGET_FINDING_REMOVED": "NOT_RUN",
+  "OWASP_TARGET_FINDING_REMOVED": "NOT_RUN",
+  "FIXTURE_COMPATIBLE_WITH_PRE_GIT_BARRIER": "NOT_QUALIFIED",
+  "ALL_GIT_WRITERS_AFTER_BARRIER": "NOT_REQUALIFIED",
+  "ATTEMPTS_CREATED": 0,
+  "ATTEMPT_COUNT": "NOT_APPLICABLE_NO_TASK",
+  "BATCHES_CREATED": 0,
+  "ACTIVE_RESERVATIONS": 0,
+  "RESERVATIONS_CREATED": 0,
+  "WF6_EXECUTIONS": 0,
+  "TASK_ELIGIBLE_FOR_SCOPED_E2E": "NOT_ESTABLISHED_NO_TASK",
+  "ACTIVE_E2E_PLANS": 0,
+  "NORMAL_DISPATCH_ENABLED": false,
+  "HARNESS_ENABLED": false,
+  "ACTIVE_4G_RESERVATIONS": 0,
+  "ACTIVE_REMEDIATION_WRITERS": 0,
+  "FIXTURE_BASELINE_COMMIT_CREATED": "LOCAL_ONLY",
+  "FIXTURE_BASELINE_REMOTE_COMMIT_CREATED": false,
+  "REMEDIATION_BRANCHES_CREATED": 0,
+  "REMEDIATION_COMMITS_PUSHED": 0,
+  "REMEDIATION_PRS_CREATED": 0,
+  "UNRELATED_TASK_ROWS_CHANGED": 0,
+  "UNRELATED_FINDING_ROWS_CHANGED": 0,
+  "UNRELATED_PROJECT_ROWS_CHANGED": 0,
+  "UNRELATED_BUSINESS_STATE_CHANGED": "NO",
+  "BUSINESS_ROW_HASH_DIFF": {
+    "projects": 0,
+    "manual_remediation_tasks": 0,
+    "incidents": 0,
+    "reports": 0,
+    "remediation_target_reservations": 0,
+    "security_remediation_retry_e2e_plans": 0
+  },
+  "EXPECTED_4G_KEY": null,
+  "CHAIN4B_FIXTURE_MANIFEST_HASH": null,
+  "READY_TO_RERUN_FINAL_CHAIN4B": "NO",
+  "FINAL_VERDICT": "C \u2014 SCANNER_REPRODUCTION_FAILURE",
+  "STOP_REASON": "Production artifact validator attempts a registry pull for FROM scratch and fails with manifest unknown before Trivy execution. Section 6 STOP gate reached. No live identities or remote baseline were created.",
+  "BACKEND_SOURCE": "0957ab63280b32e4180ba47ae72bfb5a802db15a",
+  "WF6_VERSION": "0470ab42-713a-4097-a9a7-72c8f00bacde",
+  "FINAL_CHAIN4B_EXECUTED": false
+}

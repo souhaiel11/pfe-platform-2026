@@ -1,0 +1,92 @@
+[
+  {
+    "file": "manual-remediation.service.wf6-result.spec.ts",
+    "exit": 0,
+    "tail": ""
+  },
+  {
+    "file": "owasp-resync-safety.spec.ts",
+    "exit": 0,
+    "tail": ""
+  },
+  {
+    "file": "owasp-trivy-fixed-version-correlation.integration.spec.ts",
+    "exit": 0,
+    "tail": ""
+  },
+  {
+    "file": "owasp-enrichment.spec.ts",
+    "exit": 0,
+    "tail": ""
+  },
+  {
+    "file": "owasp-trivy-fixed-version-correlation.spec.ts",
+    "exit": 0,
+    "tail": ""
+  },
+  {
+    "file": "manual-remediation.service.spec.ts",
+    "exit": 0,
+    "tail": ""
+  },
+  {
+    "file": "manual-remediation.service.v1-8-decision.spec.ts",
+    "exit": 0,
+    "tail": ""
+  },
+  {
+    "file": "finding-task-id-enrichment.spec.ts",
+    "exit": 0,
+    "tail": ""
+  },
+  {
+    "file": "reconcile-stale-wf6-dispatch.spec.ts",
+    "exit": 0,
+    "tail": ""
+  },
+  {
+    "file": "manual-remediation.service.v1-8-enforcement.spec.ts",
+    "exit": 0,
+    "tail": ""
+  },
+  {
+    "file": "security-remediation-lifecycle.spec.ts",
+    "exit": 0,
+    "tail": ""
+  },
+  {
+    "file": "manual-remediation.service.finding-task-ids.spec.ts",
+    "exit": 0,
+    "tail": ""
+  },
+  {
+    "file": "manual-remediation.service.batch.spec.ts",
+    "exit": 0,
+    "tail": ""
+  },
+  {
+    "file": "manual-remediation.service.v1-8-fixedversion-override.spec.ts",
+    "exit": 0,
+    "tail": ""
+  },
+  {
+    "file": "wf6-remediation-result.dto.spec.ts",
+    "exit": 0,
+    "tail": ""
+  },
+  {
+    "file": "wf6-batch-remediation-result.dto.spec.ts",
+    "exit": 0,
+    "tail": ""
+  },
+  {
+    "file": "security-remediation.controller.batch.spec.ts",
+    "exit": 0,
+    "tail": ""
+  },
+  {
+    "file": "security-remediation-revalidate-batch.dto.spec.ts",
+    "exit": 0,
+    "tail": ""
+  }
+]

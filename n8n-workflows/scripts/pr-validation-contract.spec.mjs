@@ -1,9 +1,12 @@
+// Vérifie la validation de la PR dans N8N.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
+/** Charge les données nécessaires au composant. */
 const load = file => JSON.parse(fs.readFileSync(file))[0];
 const wf1 = load('n8n-workflows/active/wf1-incident-intake-analysis-v5-1-vNOQiEgnXg9Zqn2q.json');
 const wf3 = load('n8n-workflows/active/wf3-post-pr-validation-v4-4JiOKpyHhx1znTYw.json');
+/** Retrouve l’élément par son nom. */
 const byName = (wf, name) => wf.nodes.find(node => node.name === name);
 const sha = '10e90dd5a0d21941dea1a544c3026d0955a029b1';
 const required = ['validationRequestId','projectId','incidentId','fixRequestId','batchId','batchKey','attemptCount',
@@ -12,6 +15,7 @@ const required = ['validationRequestId','projectId','incidentId','fixRequestId',
 const communityRequired = ['baseSonarProjectKey','validationSonarProjectKey'];
 const validModes = ['COMMUNITY_EXACT_SHA','DEVELOPER_NATIVE_PR'];
 
+/** Vérifie Contract dans ce scénario de test. */
 const assertContract = payload => {
   const missing = required.filter(key => payload[key] === undefined || payload[key] === null || payload[key] === '');
   assert.deepEqual(missing, []);
@@ -73,20 +77,6 @@ assert.ok(prepareCode.includes('SONAR_VALIDATION_PROJECT_KEY_UNAVAILABLE'));
 const communityBranch = prepareCode.slice(prepareCode.indexOf("mode==='COMMUNITY_EXACT_SHA'"), prepareCode.indexOf('}else{'));
 assert.ok(!communityBranch.includes('&pullRequest='));
 
-// R49 -- both Sonar HTTP nodes must have a real credential reference wired up.
-// Proven live: real PR-24 build #3's WF3 execution errored "Credentials not
-// found" on both nodes because neither had ever had one attached.
-// R52 -- the original httpBasicAuth credential subsequently started failing
-// Sonar auth with a real 401 (proven live on build #4); rewired to Header
-// Auth credential 'n8n-sonarqube-api', which also failed (valid=false).
-// R57 -- rewired again to 'sonar' (id bMpqrUPOkyVVn6G2), confirmed by the
-// user as the correct credential after 'sanar' (typo) did not exist -- this
-// also failed (valid=false) despite the token itself being independently
-// proven valid via direct curl. R60 -- rewired to 'sonar-direct-token' (id
-// r60SonarDirectCred1), created directly from the user-provided token and
-// proven live (valid=true, Quality Gate OK, real issue data). No old
-// credential id/name may remain referenced anywhere in either workflow's
-// Sonar-facing nodes.
 const OLD_SONAR_CREDENTIAL_IDS = ['AxQb6AG51EcWcXik', 'DUFtkRTI3V05MJ3X', 'bMpqrUPOkyVVn6G2'];
 for (const nodeName of ['Get SonarQube PR Quality Gate', 'Get SonarQube Approved Findings']) {
   const sonarNode = byName(wf3, nodeName);
@@ -108,18 +98,19 @@ for (const oldId of OLD_SONAR_CREDENTIAL_IDS) {
   assert.ok(!JSON.stringify(wf1SonarNode.credentials).includes(oldId), 'WF1 Fetch SonarQube Issues must not still reference an old Sonar credential');
 }
 
-// R67 -- a matching rule/file/line Sonar issue alone must never prove a
-// finding still exists: on a long-lived, reused validation project, Sonar
-// keeps CLOSED/FIXED issues in its history (proven live on PR-24 build #6 --
-// issue 19a6499c... status=CLOSED resolution=FIXED was wrongly read as
-// "remains open"). These tests execute the REAL generated jsCode (not a
-// reimplementation) against constructed Sonar fixtures, so they exercise
-// exactly what n8n runs.
 assert.ok(byName(wf3, 'Prepare Approved Finding Validation').parameters.jsCode.includes('&resolved=false&'), 'Sonar query must request resolved=false as defense-in-depth (never relied on alone)');
 
+/** Prépare les données nécessaires à ce scénario. */
 const runNodeCode = (jsCode, dollarMap, inputJson) => {
-  const $ = name => ({ first: () => ({ json: dollarMap[name] }) });
-  const $input = { first: () => ({ json: inputJson }), all: () => [{ json: inputJson }] };
+  /** Simule l’accès à un nœud n8n pour le scénario. */
+  const $ = name => ({
+  /** Renvoie le premier élément disponible. */
+  first: () => ({ json: dollarMap[name] }) });
+  const $input = {
+  /** Renvoie le premier élément disponible. */
+  first: () => ({ json: inputJson }),
+  /** Renvoie tous les éléments disponibles. */
+  all: () => [{ json: inputJson }] };
   // eslint-disable-next-line no-new-func
   return new Function('$', '$input', jsCode)($, $input)[0].json;
 };
@@ -135,6 +126,7 @@ const ctxBase = {
   jenkinsStatus: 'SUCCESS', expectedPrHeadSha: sha, checkoutSha: sha, incidentId: 'incident-1',
 };
 const consolidateCodeUnderTest = byName(wf3, 'Consolidate Validation Result').parameters.jsCode;
+/** Prépare les données nécessaires à ce scénario. */
 const runConsolidate = (findings, findingIds, issues, overrides = {}) => {
   const ctx = { ...ctxBase, ...overrides };
   const prepared = { findings, findingIds: findings.map(f => f.findingId), candidateSha: ctx.checkoutSha, analysisId: ctx.analysisId };
@@ -149,6 +141,7 @@ const runConsolidate = (findings, findingIds, issues, overrides = {}) => {
   'Prepare Approved Finding Validation': prepared,
 }, null);
 };
+/** Construit le résultat associé à l’élément demandé. */
 const resultFor = (findingId, findings, findingIds, issues, overrides) => runConsolidate(findings, findingIds, issues, overrides).findingResults.find(r => r.findingId === findingId);
 
 // A. matching issue OPEN => INVALID

@@ -1,3 +1,4 @@
+// Teste le composant « candidate-materializer.service » et ses cas d’erreur.
 import * as assert from 'node:assert/strict';
 import * as fs from 'fs';
 import * as os from 'os';
@@ -6,12 +7,14 @@ import { CandidateMaterializer, MaterializationError } from './candidate-materia
 import { computeContentSha256 } from '../../backend/src/candidate-verification/candidate-digest';
 import { CandidateManifest } from '../../backend/src/candidate-verification/candidate-verification.types';
 
+/** Prépare les données nécessaires à ce scénario. */
 function freshWorkspace(): string {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pfe-materializer-spec-'));
   fs.writeFileSync(path.join(dir, 'Existing.java'), 'old content', 'utf8');
   return dir;
 }
 
+/** Prépare les données nécessaires à ce scénario. */
 function manifestWith(files: CandidateManifest['files']): CandidateManifest {
   return { candidateId: 'c1', requestId: 'r1', batchId: 'b1', candidateAttempt: 0, repository: 'x/y', candidateBaseSha: 'a'.repeat(40), files };
 }

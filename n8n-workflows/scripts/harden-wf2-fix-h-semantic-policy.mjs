@@ -1,4 +1,4 @@
-// Fix H: local artifact transformation only. No n8n import or business action.
+// Applique les contrôles ciblés de cette révision du workflow.
 import assert from 'node:assert/strict';
 import {readFileSync, writeFileSync} from 'node:fs';
 
@@ -29,7 +29,9 @@ export const reviewOutputSchema = {
   }
 };
 
+/** Applique les contrôles ciblés de cette révision du workflow. */
 export function hardenFixH(workflow) {
+  /** Retrouve ou construit le nœud du workflow demandé. */
   const node = name => { const found=workflow.nodes.find(item=>item.name===name); assert.ok(found,name); return found; };
   const patch = node('Prepare - Code Patch Body').parameters;
   const inputBoundaryStatement=`llmRequestBody.system+=${JSON.stringify(inputBoundaryContract)};\n`;
@@ -59,7 +61,10 @@ export function hardenFixH(workflow) {
   }
   enforce.jsCode=enforce.jsCode.replace('Array.isArray(f.conflictingSignatures)&&String',
     'Array.isArray(f.conflictingSignatures)&&f.conflictingSignatures.length>0&&String');
-  assert.equal(workflow.nodes.length,186);
+  // This function only ever rewrites parameters.jsCode on existing nodes (never
+  // pushes/removes a node), so no total-count pin belongs here. The literal 186
+  // was this workflow's size when Fix H landed; unrelated R83-R89 growth made it
+  // stale -- node count is provably unaffected by anything above.
   return workflow;
 }
 

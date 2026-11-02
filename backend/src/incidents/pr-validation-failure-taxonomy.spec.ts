@@ -1,3 +1,4 @@
+// Teste le composant « pr-validation-failure-taxonomy » et ses cas d’erreur.
 import * as assert from 'node:assert/strict';
 import { IncidentsService, classifyJenkinsTriggerStatus } from './incidents.service';
 
@@ -5,6 +6,7 @@ import { IncidentsService, classifyJenkinsTriggerStatus } from './incidents.serv
 // about Jenkins-side failure taxonomy, so HEAD_ONLY is stubbed to always pass
 // for whatever exact SHA it is asked to verify.
 const passingCandidateVerification: any = {
+  /** Vérifie le code exact du HEAD de la PR. */
   verifyHead: async (request: any) => ({
     mode: 'HEAD_ONLY',
     identity: { repository: request.repository, targetSha: String(request.targetSha).toLowerCase(),
@@ -40,6 +42,7 @@ for (const code of [201, 200, 401, 403, 404, 400, 409, 500, 418]) assert.equal(c
 
 // --- End-to-end: requestPrValidation() must persist the granular code ------
 const sha = 'ea6230b79b99f0c5fcb3c7da3f838bb3efbe81be';
+/** Prépare les données nécessaires à ce scénario. */
 const makeIncident = () => {
   const incident: any = {
     id: '65e35d1b-212f-4153-bd63-fba6e8eebc2c', projectId: '3aa1c9b9-e114-40e4-884b-ebc7aa32e002', status: 'fix_generated',
@@ -54,27 +57,45 @@ const makeIncident = () => {
     sonarqubeKey: 'pfe-app-test',
   };
   incident.project = project;
-  const incidentRepo: any = { findOne: async () => incident, update: async (_id: string, patch: any) => Object.assign(incident, patch) };
-  const projectRepo: any = { findOne: async () => project };
+  const incidentRepo: any = {
+  /** Recherche l’élément correspondant à l’identifiant. */
+  findOne: async () => incident,
+  /** Applique les modifications autorisées à l’élément. */
+  update: async (_id: string, patch: any) => Object.assign(incident, patch) };
+  const projectRepo: any = {
+  /** Recherche l’élément correspondant à l’identifiant. */
+  findOne: async () => project };
   let tail = Promise.resolve();
   const repository: any = {
-    manager: { transaction: async (fn: any) => {
+    manager: {
+    /** Exécute les opérations dans le cadre transactionnel prévu. */
+    transaction: async (fn: any) => {
       const previous = tail; let release!: () => void;
       tail = new Promise<void>(resolve => { release = resolve; });
       await previous;
-      try { return await fn({ getRepository: (entity: any) => entity?.name === 'Project' ? projectRepo : incidentRepo }); }
+      try { return await fn({
+      /** Simule la lecture des données demandées par le composant. */
+      getRepository: (entity: any) => entity?.name === 'Project' ? projectRepo : incidentRepo }); }
       finally { release(); }
     } },
     findOne: incidentRepo.findOne, update: incidentRepo.update,
   };
-  const service = new IncidentsService(repository, projectRepo, { emit: () => undefined } as any, { syncIncident: async () => undefined } as any, passingCandidateVerification);
+  const service = new IncidentsService(repository, projectRepo, {
+  /** Diffuse ou construit le résultat prévu. */
+  emit: () => undefined } as any, {
+  /** Prépare les données nécessaires à ce scénario. */
+  syncIncident: async () => undefined } as any, passingCandidateVerification);
   return { incident, project, service };
 };
 
+/** Construit la réponse HTTP prévue par le scénario. */
 const githubOpenPr = () => new Response(JSON.stringify({ state: 'open', head: { sha, ref: 'fix/pfe-65e35d1b-212f-4153-bd63-fba6e8eebc2c-f1af3192-40f0-4400-869a-3854246d7a11' } }), { status: 200 });
+/** Construit la réponse HTTP prévue par le scénario. */
 const validMetadata = () => new Response(JSON.stringify({ buildable: true, _class: 'org.jenkinsci.plugins.workflow.job.WorkflowJob', property: [{ _class: 'hudson.model.ParametersDefinitionProperty', parameterDefinitions: [{ name: 'PFE_VALIDATION_CONTEXT', type: 'StringParameterDefinition', defaultParameterValue: { value: '' } }] }] }), { status: 200 });
+/** Construit la réponse HTTP prévue par le scénario. */
 const validCrumb = () => new Response(JSON.stringify({ crumbRequestField: 'Jenkins-Crumb', crumb: 'opaque' }), { status: 200 });
 
+/** Vérifie échec code dans ce scénario de test. */
 async function expectFailureCode(mockFetch: (url: string) => Promise<Response>, expectedCode: string, label: string) {
   const { incident, service } = makeIncident();
   const user = { id: 'admin-1', role: 'admin' };
@@ -86,6 +107,7 @@ async function expectFailureCode(mockFetch: (url: string) => Promise<Response>, 
   assert.ok(!/Authorization|Basic |token /.test(incident.metadata.prValidationRequest.failureSummary), label + ': no credential leakage');
 }
 
+/** Exécute les étapes principales de ce programme. */
 async function main() {
   // Case 1: job not yet indexed at all -- proven Attempt-15/PR-25 failure #1.
   await expectFailureCode(async url => {
@@ -180,6 +202,7 @@ async function main() {
     }) as any;
     // Force an immediate abort instead of waiting the real 10s.
     const originalTimeout = AbortSignal.timeout;
+    /** Prépare les données nécessaires à ce scénario. */
     (AbortSignal as any).timeout = () => { const c = new AbortController(); c.abort(); return c.signal; };
     try {
       await assert.rejects(() => service.requestPrValidation(incident.id, { id: 'admin-1', role: 'admin' }), /validation PR/);

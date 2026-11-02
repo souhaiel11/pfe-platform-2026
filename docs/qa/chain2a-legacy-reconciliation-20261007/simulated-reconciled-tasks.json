@@ -1,0 +1,1657 @@
+[
+  {
+    "id": "10fe9043-86f9-42eb-a0a2-ce5abaf26631",
+    "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+    "source": "TRIVY",
+    "findingId": "CVE-2022-45143",
+    "ruleOrCve": "CVE-2022-45143",
+    "status": "TODO",
+    "scannerStatus": "DETECTED",
+    "findingFingerprint": "504803c00c586c50e37995bf6c2378d23e7b6afcfcbd1ab72de6ee27f2b86156",
+    "findingSnapshot": {
+      "url": null,
+      "title": "tomcat: JsonErrorReportValve injection",
+      "source": "TRIVY",
+      "evidence": "https://avd.aquasec.com/nvd/cve-2022-45143",
+      "severity": "HIGH",
+      "component": "org.apache.tomcat.embed:tomcat-embed-core",
+      "parameter": null,
+      "ruleOrCve": "CVE-2022-45143",
+      "description": "The JsonErrorReportValve in Apache Tomcat 8.5.83, 9.0.40 to 9.0.68 and 10.1.0-M1 to 10.1.1 did not escape the type, message or description values. In some circumstances these are constructed from user provided data and it was therefore possible for users to supply values that invalidated or manipulated the JSON output.",
+      "fixedVersion": "8.5.84, 9.0.69, 10.1.2",
+      "currentVersion": "9.0.63",
+      "recommendation": "Upgrade to 8.5.84, 9.0.69, 10.1.2",
+      "fixedVersionSource": null,
+      "fixedVersionEvidence": null,
+      "fixedVersionUnavailableReason": null
+    },
+    "securityFindingRemediation": null,
+    "securityRemediationBatchId": null,
+    "events": [
+      {
+        "at": "2026-08-29T15:14:20.903Z",
+        "reason": "CREATED",
+        "actorId": null,
+        "newStatus": "TODO",
+        "oldStatus": null,
+        "buildNumber": 132,
+        "actorDisplayName": "Scanner"
+      },
+      {
+        "at": "SIMULATION_ONLY",
+        "reason": "LEGACY_SINGLE_WRITER_RECONCILIATION",
+        "actorId": null,
+        "newStatus": "TODO",
+        "oldStatus": "TODO",
+        "buildNumber": null,
+        "reconciliation": {
+          "disposition": "RETIRED_LEGACY_REFERENCE",
+          "snapshotDigest": "b7af130e4f123ac8483934878c47f4ceefc24c72de5f30cc5b6c5750d310d572",
+          "archivedLifecycle": {
+            "securityFindingRemediation": {
+              "prUrl": "https://github.com/souhaiel11/pfe-app-test/pull/42",
+              "reason": "TARGET_CVE_CLOSED",
+              "status": "CLOSED",
+              "batchId": "sec-batch-181e0a6587c834e1",
+              "attempts": [
+                {
+                  "at": "2026-09-30T17:13:30.521Z",
+                  "reason": null,
+                  "status": "DISPATCHING",
+                  "attempt": 1,
+                  "batchId": "sec-batch-181e0a6587c834e1"
+                },
+                {
+                  "at": "2026-09-30T17:23:54.279Z",
+                  "prUrl": "https://github.com/souhaiel11/pfe-app-test/pull/42",
+                  "reason": "TARGET_CVE_CLOSED",
+                  "status": "CLOSED",
+                  "attempt": 2,
+                  "batchId": "sec-batch-181e0a6587c834e1",
+                  "prNumber": 42,
+                  "branchName": "security/fix/259beaee267e-3936026f7135",
+                  "executionId": null,
+                  "evaluatedSha": "7ae0f954f99628b69ce9b42f42c1e2acc8568d99",
+                  "patchEvidence": {
+                    "oldVersion": "9.0.63",
+                    "targetVersion": "9.0.83",
+                    "provenanceKind": "PARENT_MANAGED",
+                    "controllingFile": "pom.xml",
+                    "controllingElement": null,
+                    "controllingProperty": null
+                  },
+                  "candidateIdentity": "3936026f7135b1ba47b99b0441f49be91d703685ae054864d664fcc14e670d1b",
+                  "securityValidationEvidence": null
+                }
+              ],
+              "prNumber": 42,
+              "updatedAt": "2026-09-30T17:23:54.279Z",
+              "branchName": "security/fix/259beaee267e-3936026f7135",
+              "attemptCount": 2,
+              "evaluatedSha": "7ae0f954f99628b69ce9b42f42c1e2acc8568d99",
+              "patchEvidence": {
+                "oldVersion": "9.0.63",
+                "targetVersion": "9.0.83",
+                "provenanceKind": "PARENT_MANAGED",
+                "controllingFile": "pom.xml",
+                "controllingElement": null,
+                "controllingProperty": null
+              },
+              "candidateIdentity": "3936026f7135b1ba47b99b0441f49be91d703685ae054864d664fcc14e670d1b",
+              "securityValidationEvidence": null
+            },
+            "securityRemediationBatchId": "sec-batch-181e0a6587c834e1"
+          },
+          "settlementReceipt": {
+            "scope": "SIMULATED_REMOTE_SETTLED",
+            "evidence": "Hypothetical prerequisite; current remote PRs are still OPEN",
+            "noWriter": true,
+            "noInflight": true,
+            "noOpenAuthoringPR": true
+          }
+        },
+        "actorDisplayName": "SIMULATED_OPERATOR"
+      }
+    ]
+  },
+  {
+    "id": "306e8b84-90fe-4344-8fd6-5c38fcabcf40",
+    "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+    "source": "OWASP",
+    "findingId": "CVE-2022-25857",
+    "ruleOrCve": "CVE-2022-25857",
+    "status": "TODO",
+    "scannerStatus": "DETECTED",
+    "findingFingerprint": "41a0eac4ecb4659ca37d7961d2d2de97654c1032d5eb70280d96c559bc3771e5",
+    "findingSnapshot": {
+      "pkg": "org.yaml:snakeyaml",
+      "url": null,
+      "purl": "pkg:maven/org.yaml/snakeyaml@1.29",
+      "title": "CVE-2022-25857",
+      "source": "OWASP",
+      "groupId": null,
+      "evidence": "https://bitbucket.org/snakeyaml/snakeyaml/commits/fc300780da21f4bb92c148bc90257201220cf174",
+      "severity": "HIGH",
+      "component": "org.yaml:snakeyaml",
+      "parameter": null,
+      "ruleOrCve": "CVE-2022-25857",
+      "artifactId": null,
+      "description": "The package org.yaml:snakeyaml from 0 and before 1.31 are vulnerable to Denial of Service (DoS) due missing to nested depth limitation for collections.",
+      "packageType": "maven",
+      "fixedVersion": "1.31",
+      "legacyPackage": "snakeyaml-1.29.jar",
+      "currentVersion": "1.29",
+      "recommendation": null,
+      "installedVersion": "1.29",
+      "fixedVersionSource": "TRIVY_CORRELATED",
+      "fixedVersionEvidence": {
+        "match": "CVE_MAVEN_INSTALLED_VERSION",
+        "source": "TRIVY",
+        "trivyMatchCount": 1,
+        "trivyFixedVersionRaw": "1.31"
+      },
+      "fixedVersionUnavailableReason": null
+    },
+    "securityFindingRemediation": null,
+    "securityRemediationBatchId": null,
+    "events": [
+      {
+        "at": "2026-08-29T15:14:20.537Z",
+        "reason": "CREATED",
+        "actorId": null,
+        "newStatus": "TODO",
+        "oldStatus": null,
+        "buildNumber": 121,
+        "actorDisplayName": "Scanner"
+      },
+      {
+        "at": "SIMULATION_ONLY",
+        "reason": "LEGACY_SINGLE_WRITER_RECONCILIATION",
+        "actorId": null,
+        "newStatus": "TODO",
+        "oldStatus": "TODO",
+        "buildNumber": null,
+        "reconciliation": {
+          "disposition": "RETIRED_LEGACY_REFERENCE",
+          "snapshotDigest": "df36ff90ae530140aaf2464552cabc0ef4044d7aa88b4f5cb46ae225316a39f4",
+          "archivedLifecycle": {
+            "securityFindingRemediation": {
+              "prUrl": "https://github.com/souhaiel11/pfe-app-test/pull/40",
+              "reason": "TARGET_CVE_CLOSED",
+              "status": "CLOSED",
+              "batchId": "sec-batch-215851539abb7f37",
+              "attempts": [
+                {
+                  "at": "2026-09-29T18:13:59.308Z",
+                  "reason": null,
+                  "status": "DISPATCHING",
+                  "attempt": 1,
+                  "batchId": "sec-batch-215851539abb7f37"
+                },
+                {
+                  "at": "2026-09-29T18:19:04.422Z",
+                  "prUrl": "https://github.com/souhaiel11/pfe-app-test/pull/40",
+                  "reason": "TARGET_CVE_CLOSED",
+                  "status": "CLOSED",
+                  "attempt": 2,
+                  "batchId": "sec-batch-215851539abb7f37",
+                  "prNumber": 40,
+                  "branchName": "security/fix/41a0eac4ecb4-022ff90775f4",
+                  "executionId": null,
+                  "evaluatedSha": "7ae0f954f99628b69ce9b42f42c1e2acc8568d99",
+                  "patchEvidence": {
+                    "oldVersion": "1.29",
+                    "targetVersion": "1.31",
+                    "provenanceKind": "DIRECT_EXPLICIT",
+                    "controllingFile": "pom.xml",
+                    "controllingElement": "<version>1.29</version>",
+                    "controllingProperty": null
+                  },
+                  "candidateIdentity": "022ff90775f41d8228ec32f0ee8593249a90b7f44ee1e0442c11dc4e6f9cce56",
+                  "securityValidationEvidence": null
+                }
+              ],
+              "prNumber": 40,
+              "updatedAt": "2026-09-29T18:19:04.422Z",
+              "branchName": "security/fix/41a0eac4ecb4-022ff90775f4",
+              "attemptCount": 2,
+              "evaluatedSha": "7ae0f954f99628b69ce9b42f42c1e2acc8568d99",
+              "patchEvidence": {
+                "oldVersion": "1.29",
+                "targetVersion": "1.31",
+                "provenanceKind": "DIRECT_EXPLICIT",
+                "controllingFile": "pom.xml",
+                "controllingElement": "<version>1.29</version>",
+                "controllingProperty": null
+              },
+              "candidateIdentity": "022ff90775f41d8228ec32f0ee8593249a90b7f44ee1e0442c11dc4e6f9cce56",
+              "securityValidationEvidence": null
+            },
+            "securityRemediationBatchId": "sec-batch-215851539abb7f37"
+          },
+          "settlementReceipt": {
+            "scope": "SIMULATED_REMOTE_SETTLED",
+            "evidence": "Hypothetical prerequisite; current remote PRs are still OPEN",
+            "noWriter": true,
+            "noInflight": true,
+            "noOpenAuthoringPR": true
+          }
+        },
+        "actorDisplayName": "SIMULATED_OPERATOR"
+      }
+    ]
+  },
+  {
+    "id": "64deba0e-f6ab-4da8-a3c9-da8e1b0eb30d",
+    "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+    "source": "TRIVY",
+    "findingId": "CVE-2022-42004",
+    "ruleOrCve": "CVE-2022-42004",
+    "status": "REOPENED",
+    "scannerStatus": "DETECTED",
+    "findingFingerprint": "62ee90d0759af811b6c5c1f9b62c5c132f6270ccb2b6966056aeb7a9cc4bf955",
+    "findingSnapshot": {
+      "url": null,
+      "title": "jackson-databind: use of deeply nested arrays",
+      "source": "TRIVY",
+      "evidence": "https://avd.aquasec.com/nvd/cve-2022-42004",
+      "severity": "HIGH",
+      "component": "com.fasterxml.jackson.core:jackson-databind",
+      "parameter": null,
+      "ruleOrCve": "CVE-2022-42004",
+      "description": "In FasterXML jackson-databind before 2.13.4, resource exhaustion can occur because of a lack of a check in BeanDeserializer._deserializeFromArray to prevent use of deeply nested arrays. An application is vulnerable only with certain customized choices for deserialization.",
+      "fixedVersion": "2.12.7.1, 2.13.4",
+      "currentVersion": "2.13.3",
+      "recommendation": "Upgrade to 2.12.7.1, 2.13.4",
+      "fixedVersionSource": null,
+      "fixedVersionEvidence": null,
+      "fixedVersionUnavailableReason": null
+    },
+    "securityFindingRemediation": null,
+    "securityRemediationBatchId": null,
+    "events": [
+      {
+        "at": "2026-08-29T15:14:20.270Z",
+        "reason": "CREATED",
+        "actorId": null,
+        "newStatus": "TODO",
+        "oldStatus": null,
+        "buildNumber": 110,
+        "actorDisplayName": "Scanner"
+      },
+      {
+        "at": "2026-08-29T15:14:20.464Z",
+        "reason": "VERIFIED_BY_SCANNER",
+        "actorId": null,
+        "newStatus": "VERIFIED",
+        "oldStatus": "TODO",
+        "buildNumber": 120,
+        "actorDisplayName": "Scanner"
+      },
+      {
+        "at": "2026-08-29T15:14:20.878Z",
+        "reason": "REAPPEARED",
+        "actorId": null,
+        "newStatus": "REOPENED",
+        "oldStatus": "VERIFIED",
+        "buildNumber": 132,
+        "actorDisplayName": "Scanner"
+      },
+      {
+        "at": "SIMULATION_ONLY",
+        "reason": "LEGACY_SINGLE_WRITER_RECONCILIATION",
+        "actorId": null,
+        "newStatus": "REOPENED",
+        "oldStatus": "REOPENED",
+        "buildNumber": null,
+        "reconciliation": {
+          "disposition": "RETIRED_LEGACY_REFERENCE",
+          "snapshotDigest": "a4f0dcea573ee9ae0c02bde76d30e32c8586513a15f1273f753cf244140424bb",
+          "archivedLifecycle": {
+            "securityFindingRemediation": {
+              "prUrl": "https://github.com/souhaiel11/pfe-app-test/pull/42",
+              "reason": "TARGET_CVE_CLOSED",
+              "status": "CLOSED",
+              "batchId": "sec-batch-181e0a6587c834e1",
+              "attempts": [
+                {
+                  "at": "2026-09-30T17:13:30.521Z",
+                  "reason": null,
+                  "status": "DISPATCHING",
+                  "attempt": 1,
+                  "batchId": "sec-batch-181e0a6587c834e1"
+                },
+                {
+                  "at": "2026-09-30T17:23:54.279Z",
+                  "prUrl": "https://github.com/souhaiel11/pfe-app-test/pull/42",
+                  "reason": "TARGET_CVE_CLOSED",
+                  "status": "CLOSED",
+                  "attempt": 2,
+                  "batchId": "sec-batch-181e0a6587c834e1",
+                  "prNumber": 42,
+                  "branchName": "security/fix/259beaee267e-3936026f7135",
+                  "executionId": null,
+                  "evaluatedSha": "7ae0f954f99628b69ce9b42f42c1e2acc8568d99",
+                  "patchEvidence": {
+                    "oldVersion": "2.13.3",
+                    "targetVersion": "2.13.5",
+                    "provenanceKind": "PARENT_MANAGED",
+                    "controllingFile": "pom.xml",
+                    "controllingElement": null,
+                    "controllingProperty": null
+                  },
+                  "candidateIdentity": "3936026f7135b1ba47b99b0441f49be91d703685ae054864d664fcc14e670d1b",
+                  "securityValidationEvidence": null
+                }
+              ],
+              "prNumber": 42,
+              "updatedAt": "2026-09-30T17:23:54.279Z",
+              "branchName": "security/fix/259beaee267e-3936026f7135",
+              "attemptCount": 2,
+              "evaluatedSha": "7ae0f954f99628b69ce9b42f42c1e2acc8568d99",
+              "patchEvidence": {
+                "oldVersion": "2.13.3",
+                "targetVersion": "2.13.5",
+                "provenanceKind": "PARENT_MANAGED",
+                "controllingFile": "pom.xml",
+                "controllingElement": null,
+                "controllingProperty": null
+              },
+              "candidateIdentity": "3936026f7135b1ba47b99b0441f49be91d703685ae054864d664fcc14e670d1b",
+              "securityValidationEvidence": null
+            },
+            "securityRemediationBatchId": "sec-batch-181e0a6587c834e1"
+          },
+          "settlementReceipt": {
+            "scope": "SIMULATED_REMOTE_SETTLED",
+            "evidence": "Hypothetical prerequisite; current remote PRs are still OPEN",
+            "noWriter": true,
+            "noInflight": true,
+            "noOpenAuthoringPR": true
+          }
+        },
+        "actorDisplayName": "SIMULATED_OPERATOR"
+      }
+    ]
+  },
+  {
+    "id": "6e6c3597-96bc-4f72-bcd8-eb0d4b8036db",
+    "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+    "source": "TRIVY",
+    "findingId": "CVE-2022-42252",
+    "ruleOrCve": "CVE-2022-42252",
+    "status": "TODO",
+    "scannerStatus": "DETECTED",
+    "findingFingerprint": "fab2898d901d0477e05e777d380b070600b39d9462771f249982e9fcf248048f",
+    "findingSnapshot": {
+      "url": null,
+      "title": "tomcat: request smuggling",
+      "source": "TRIVY",
+      "evidence": "https://avd.aquasec.com/nvd/cve-2022-42252",
+      "severity": "HIGH",
+      "component": "org.apache.tomcat.embed:tomcat-embed-core",
+      "parameter": null,
+      "ruleOrCve": "CVE-2022-42252",
+      "description": "If Apache Tomcat 8.5.0 to 8.5.82, 9.0.0-M1 to 9.0.67, 10.0.0-M1 to 10.0.26 or 10.1.0-M1 to 10.1.0 was configured to ignore invalid HTTP headers via setting rejectIllegalHeader to false (the default for 8.5.x only), Tomcat did not reject a request containing an invalid Content-Length header making a request smuggling attack possible if Tomcat was located behind a reverse proxy that also failed to r",
+      "fixedVersion": "8.5.83, 9.0.68, 10.0.27, 10.1.1",
+      "currentVersion": "9.0.63",
+      "recommendation": "Upgrade to 8.5.83, 9.0.68, 10.0.27, 10.1.1",
+      "fixedVersionSource": null,
+      "fixedVersionEvidence": null,
+      "fixedVersionUnavailableReason": null
+    },
+    "securityFindingRemediation": null,
+    "securityRemediationBatchId": null,
+    "events": [
+      {
+        "at": "2026-08-29T15:14:20.901Z",
+        "reason": "CREATED",
+        "actorId": null,
+        "newStatus": "TODO",
+        "oldStatus": null,
+        "buildNumber": 132,
+        "actorDisplayName": "Scanner"
+      },
+      {
+        "at": "SIMULATION_ONLY",
+        "reason": "LEGACY_SINGLE_WRITER_RECONCILIATION",
+        "actorId": null,
+        "newStatus": "TODO",
+        "oldStatus": "TODO",
+        "buildNumber": null,
+        "reconciliation": {
+          "disposition": "RETIRED_LEGACY_REFERENCE",
+          "snapshotDigest": "b7af130e4f123ac8483934878c47f4ceefc24c72de5f30cc5b6c5750d310d572",
+          "archivedLifecycle": {
+            "securityFindingRemediation": {
+              "prUrl": "https://github.com/souhaiel11/pfe-app-test/pull/42",
+              "reason": "TARGET_CVE_CLOSED",
+              "status": "CLOSED",
+              "batchId": "sec-batch-181e0a6587c834e1",
+              "attempts": [
+                {
+                  "at": "2026-09-30T17:13:30.521Z",
+                  "reason": null,
+                  "status": "DISPATCHING",
+                  "attempt": 1,
+                  "batchId": "sec-batch-181e0a6587c834e1"
+                },
+                {
+                  "at": "2026-09-30T17:23:54.279Z",
+                  "prUrl": "https://github.com/souhaiel11/pfe-app-test/pull/42",
+                  "reason": "TARGET_CVE_CLOSED",
+                  "status": "CLOSED",
+                  "attempt": 2,
+                  "batchId": "sec-batch-181e0a6587c834e1",
+                  "prNumber": 42,
+                  "branchName": "security/fix/259beaee267e-3936026f7135",
+                  "executionId": null,
+                  "evaluatedSha": "7ae0f954f99628b69ce9b42f42c1e2acc8568d99",
+                  "patchEvidence": {
+                    "oldVersion": "9.0.63",
+                    "targetVersion": "9.0.83",
+                    "provenanceKind": "PARENT_MANAGED",
+                    "controllingFile": "pom.xml",
+                    "controllingElement": null,
+                    "controllingProperty": null
+                  },
+                  "candidateIdentity": "3936026f7135b1ba47b99b0441f49be91d703685ae054864d664fcc14e670d1b",
+                  "securityValidationEvidence": null
+                }
+              ],
+              "prNumber": 42,
+              "updatedAt": "2026-09-30T17:23:54.279Z",
+              "branchName": "security/fix/259beaee267e-3936026f7135",
+              "attemptCount": 2,
+              "evaluatedSha": "7ae0f954f99628b69ce9b42f42c1e2acc8568d99",
+              "patchEvidence": {
+                "oldVersion": "9.0.63",
+                "targetVersion": "9.0.83",
+                "provenanceKind": "PARENT_MANAGED",
+                "controllingFile": "pom.xml",
+                "controllingElement": null,
+                "controllingProperty": null
+              },
+              "candidateIdentity": "3936026f7135b1ba47b99b0441f49be91d703685ae054864d664fcc14e670d1b",
+              "securityValidationEvidence": null
+            },
+            "securityRemediationBatchId": "sec-batch-181e0a6587c834e1"
+          },
+          "settlementReceipt": {
+            "scope": "SIMULATED_REMOTE_SETTLED",
+            "evidence": "Hypothetical prerequisite; current remote PRs are still OPEN",
+            "noWriter": true,
+            "noInflight": true,
+            "noOpenAuthoringPR": true
+          }
+        },
+        "actorDisplayName": "SIMULATED_OPERATOR"
+      }
+    ]
+  },
+  {
+    "id": "70fd88ac-2011-437d-a387-57d0fb3fa65d",
+    "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+    "source": "TRIVY",
+    "findingId": "CVE-2023-41080",
+    "ruleOrCve": "CVE-2023-41080",
+    "status": "TODO",
+    "scannerStatus": "DETECTED",
+    "findingFingerprint": "0fe576e02411def8c06d24a07d740f2eeb825d6ce0c923b61205d612f03767c0",
+    "findingSnapshot": {
+      "url": null,
+      "title": "tomcat: Open Redirect vulnerability in FORM authentication",
+      "source": "TRIVY",
+      "evidence": "https://avd.aquasec.com/nvd/cve-2023-41080",
+      "severity": "MEDIUM",
+      "component": "org.apache.tomcat.embed:tomcat-embed-core",
+      "parameter": null,
+      "ruleOrCve": "CVE-2023-41080",
+      "description": "URL Redirection to Untrusted Site ('Open Redirect') vulnerability in FORM authentication feature Apache Tomcat.This issue affects Apache Tomcat: from 11.0.0-M1 through 11.0.0-M10, from 10.1.0-M1 through 10.0.12, from 9.0.0-M1 through 9.0.79 and from 8.5.0 through 8.5.92.\nOlder, EOL versions may also be affected.\n\n\nThe vulnerability is limited to the ROOT (default) web application.",
+      "fixedVersion": "8.5.93, 9.0.80, 10.1.13, 11.0.0-M11",
+      "currentVersion": "9.0.63",
+      "recommendation": "Upgrade to 8.5.93, 9.0.80, 10.1.13, 11.0.0-M11",
+      "fixedVersionSource": null,
+      "fixedVersionEvidence": null,
+      "fixedVersionUnavailableReason": null
+    },
+    "securityFindingRemediation": null,
+    "securityRemediationBatchId": null,
+    "events": [
+      {
+        "at": "2026-08-29T15:14:20.938Z",
+        "reason": "CREATED",
+        "actorId": null,
+        "newStatus": "TODO",
+        "oldStatus": null,
+        "buildNumber": 132,
+        "actorDisplayName": "Scanner"
+      },
+      {
+        "at": "SIMULATION_ONLY",
+        "reason": "LEGACY_SINGLE_WRITER_RECONCILIATION",
+        "actorId": null,
+        "newStatus": "TODO",
+        "oldStatus": "TODO",
+        "buildNumber": null,
+        "reconciliation": {
+          "disposition": "RETIRED_LEGACY_REFERENCE",
+          "snapshotDigest": "b7af130e4f123ac8483934878c47f4ceefc24c72de5f30cc5b6c5750d310d572",
+          "archivedLifecycle": {
+            "securityFindingRemediation": {
+              "prUrl": "https://github.com/souhaiel11/pfe-app-test/pull/42",
+              "reason": "TARGET_CVE_CLOSED",
+              "status": "CLOSED",
+              "batchId": "sec-batch-181e0a6587c834e1",
+              "attempts": [
+                {
+                  "at": "2026-09-30T17:13:30.521Z",
+                  "reason": null,
+                  "status": "DISPATCHING",
+                  "attempt": 1,
+                  "batchId": "sec-batch-181e0a6587c834e1"
+                },
+                {
+                  "at": "2026-09-30T17:23:54.279Z",
+                  "prUrl": "https://github.com/souhaiel11/pfe-app-test/pull/42",
+                  "reason": "TARGET_CVE_CLOSED",
+                  "status": "CLOSED",
+                  "attempt": 2,
+                  "batchId": "sec-batch-181e0a6587c834e1",
+                  "prNumber": 42,
+                  "branchName": "security/fix/259beaee267e-3936026f7135",
+                  "executionId": null,
+                  "evaluatedSha": "7ae0f954f99628b69ce9b42f42c1e2acc8568d99",
+                  "patchEvidence": {
+                    "oldVersion": "9.0.63",
+                    "targetVersion": "9.0.83",
+                    "provenanceKind": "PARENT_MANAGED",
+                    "controllingFile": "pom.xml",
+                    "controllingElement": null,
+                    "controllingProperty": null
+                  },
+                  "candidateIdentity": "3936026f7135b1ba47b99b0441f49be91d703685ae054864d664fcc14e670d1b",
+                  "securityValidationEvidence": null
+                }
+              ],
+              "prNumber": 42,
+              "updatedAt": "2026-09-30T17:23:54.279Z",
+              "branchName": "security/fix/259beaee267e-3936026f7135",
+              "attemptCount": 2,
+              "evaluatedSha": "7ae0f954f99628b69ce9b42f42c1e2acc8568d99",
+              "patchEvidence": {
+                "oldVersion": "9.0.63",
+                "targetVersion": "9.0.83",
+                "provenanceKind": "PARENT_MANAGED",
+                "controllingFile": "pom.xml",
+                "controllingElement": null,
+                "controllingProperty": null
+              },
+              "candidateIdentity": "3936026f7135b1ba47b99b0441f49be91d703685ae054864d664fcc14e670d1b",
+              "securityValidationEvidence": null
+            },
+            "securityRemediationBatchId": "sec-batch-181e0a6587c834e1"
+          },
+          "settlementReceipt": {
+            "scope": "SIMULATED_REMOTE_SETTLED",
+            "evidence": "Hypothetical prerequisite; current remote PRs are still OPEN",
+            "noWriter": true,
+            "noInflight": true,
+            "noOpenAuthoringPR": true
+          }
+        },
+        "actorDisplayName": "SIMULATED_OPERATOR"
+      }
+    ]
+  },
+  {
+    "id": "83555b3a-efa1-45e1-90a8-008debddba92",
+    "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+    "source": "TRIVY",
+    "findingId": "CVE-2022-38749",
+    "ruleOrCve": "CVE-2022-38749",
+    "status": "TODO",
+    "scannerStatus": "DETECTED",
+    "findingFingerprint": "be0d3c1e9cecdda3e67406d883601ab851041127509f69f1ac8e1ddfa219a2e3",
+    "findingSnapshot": {
+      "url": null,
+      "title": "snakeyaml: Uncaught exception in org.yaml.snakeyaml.composer.Composer.composeSequenceNode",
+      "source": "TRIVY",
+      "evidence": "https://avd.aquasec.com/nvd/cve-2022-38749",
+      "severity": "MEDIUM",
+      "component": "org.yaml:snakeyaml",
+      "parameter": null,
+      "ruleOrCve": "CVE-2022-38749",
+      "description": "Using snakeYAML to parse untrusted YAML files may be vulnerable to Denial of Service attacks (DOS). If the parser is running on user supplied input, an attacker may supply content that causes the parser to crash by stackoverflow.",
+      "fixedVersion": "1.31",
+      "currentVersion": "1.29",
+      "recommendation": "Upgrade to 1.31",
+      "fixedVersionSource": null,
+      "fixedVersionEvidence": null,
+      "fixedVersionUnavailableReason": null
+    },
+    "securityFindingRemediation": null,
+    "securityRemediationBatchId": null,
+    "events": [
+      {
+        "at": "2026-08-29T15:14:21.043Z",
+        "reason": "CREATED",
+        "actorId": null,
+        "newStatus": "TODO",
+        "oldStatus": null,
+        "buildNumber": 132,
+        "actorDisplayName": "Scanner"
+      },
+      {
+        "at": "SIMULATION_ONLY",
+        "reason": "LEGACY_SINGLE_WRITER_RECONCILIATION",
+        "actorId": null,
+        "newStatus": "TODO",
+        "oldStatus": "TODO",
+        "buildNumber": null,
+        "reconciliation": {
+          "disposition": "RETIRED_LEGACY_REFERENCE",
+          "snapshotDigest": "768ffae165b2728600c3b26fb57df1435500e3cb3931fdc4e09d21904ed7f6ac",
+          "archivedLifecycle": {
+            "securityFindingRemediation": {
+              "prUrl": null,
+              "reason": "WF6_STALE_DISPATCH_RECONCILED",
+              "status": "TECHNICAL_FAILURE",
+              "batchId": "sec-batch-d359edf8f878f1dd",
+              "attempts": [
+                {
+                  "at": "2026-10-04T21:43:37.711Z",
+                  "reason": null,
+                  "status": "DISPATCHING",
+                  "attempt": 1,
+                  "batchId": "sec-batch-d359edf8f878f1dd"
+                },
+                {
+                  "at": "2026-10-05T11:59:27.181Z",
+                  "prUrl": null,
+                  "reason": "WF6_STALE_DISPATCH_RECONCILED",
+                  "status": "TECHNICAL_FAILURE",
+                  "attempt": 2,
+                  "batchId": "sec-batch-d359edf8f878f1dd",
+                  "prNumber": null,
+                  "branchName": null,
+                  "executionId": null,
+                  "evaluatedSha": null,
+                  "patchEvidence": null,
+                  "candidateIdentity": null,
+                  "securityValidationEvidence": null
+                }
+              ],
+              "prNumber": null,
+              "updatedAt": "2026-10-05T11:59:27.181Z",
+              "branchName": null,
+              "attemptCount": 2,
+              "evaluatedSha": null,
+              "patchEvidence": null,
+              "candidateIdentity": null,
+              "securityValidationEvidence": null
+            },
+            "securityRemediationBatchId": "sec-batch-d359edf8f878f1dd"
+          },
+          "settlementReceipt": {
+            "scope": "SIMULATED_REMOTE_SETTLED",
+            "evidence": "Hypothetical prerequisite; current remote PRs are still OPEN",
+            "noWriter": true,
+            "noInflight": true,
+            "noOpenAuthoringPR": true
+          }
+        },
+        "actorDisplayName": "SIMULATED_OPERATOR"
+      }
+    ]
+  },
+  {
+    "id": "9dc3706b-aabd-4b9a-a888-854641a2e64e",
+    "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+    "source": "TRIVY",
+    "findingId": "CVE-2022-31692",
+    "ruleOrCve": "CVE-2022-31692",
+    "status": "TODO",
+    "scannerStatus": "DETECTED",
+    "findingFingerprint": "bf6887dcccc4abe96221530a7a4d96e51d515d1868c84c76e8ce86250db926af",
+    "findingSnapshot": {
+      "url": null,
+      "title": "spring-security: Authorization rules can be bypassed via forward or include dispatcher types in Spring Security",
+      "source": "TRIVY",
+      "evidence": "https://avd.aquasec.com/nvd/cve-2022-31692",
+      "severity": "CRITICAL",
+      "component": "org.springframework.security:spring-security-core",
+      "parameter": null,
+      "ruleOrCve": "CVE-2022-31692",
+      "description": "Spring Security, versions 5.7 prior to 5.7.5 and 5.6 prior to 5.6.9 could be susceptible to authorization rules bypass via forward or include dispatcher types. Specifically, an application is vulnerable when all of the following are true: The application expects that Spring Security applies security to forward and include dispatcher types. The application uses the AuthorizationFilter either manual",
+      "fixedVersion": "5.7.5, 5.6.9",
+      "currentVersion": "5.6.4",
+      "recommendation": "Upgrade to 5.7.5, 5.6.9",
+      "fixedVersionSource": null,
+      "fixedVersionEvidence": null,
+      "fixedVersionUnavailableReason": null
+    },
+    "securityFindingRemediation": null,
+    "securityRemediationBatchId": null,
+    "events": [
+      {
+        "at": "2026-08-29T15:14:20.976Z",
+        "reason": "CREATED",
+        "actorId": null,
+        "newStatus": "TODO",
+        "oldStatus": null,
+        "buildNumber": 132,
+        "actorDisplayName": "Scanner"
+      },
+      {
+        "at": "SIMULATION_ONLY",
+        "reason": "LEGACY_SINGLE_WRITER_RECONCILIATION",
+        "actorId": null,
+        "newStatus": "TODO",
+        "oldStatus": "TODO",
+        "buildNumber": null,
+        "reconciliation": {
+          "disposition": "RETIRED_LEGACY_REFERENCE",
+          "snapshotDigest": "98a3b7519d709669b74cc888df8efd9196911024a0ab8dab8c6ea0bc7bc9a94b",
+          "archivedLifecycle": {
+            "securityFindingRemediation": {
+              "prUrl": "https://github.com/souhaiel11/pfe-app-test/pull/39",
+              "reason": "TARGET_CVE_CLOSED",
+              "status": "CLOSED",
+              "batchId": "sec-batch-a4646d8385306b84",
+              "attempts": [
+                {
+                  "at": "2026-09-29T08:01:20.905Z",
+                  "reason": null,
+                  "status": "DISPATCHING",
+                  "attempt": 1,
+                  "batchId": "sec-batch-a4646d8385306b84"
+                },
+                {
+                  "at": "2026-09-29T08:06:28.210Z",
+                  "prUrl": "https://github.com/souhaiel11/pfe-app-test/pull/39",
+                  "reason": "TARGET_CVE_CLOSED",
+                  "status": "CLOSED",
+                  "attempt": 2,
+                  "batchId": "sec-batch-a4646d8385306b84",
+                  "prNumber": 39,
+                  "branchName": "security/fix/e9302805d352-0b27c921d9ca",
+                  "executionId": null,
+                  "evaluatedSha": "7ae0f954f99628b69ce9b42f42c1e2acc8568d99",
+                  "patchEvidence": {
+                    "oldVersion": "5.6.4",
+                    "targetVersion": "5.6.9",
+                    "provenanceKind": "DIRECT_EXPLICIT",
+                    "controllingFile": "pom.xml",
+                    "controllingElement": "<version>5.6.4</version>",
+                    "controllingProperty": null
+                  },
+                  "candidateIdentity": "0b27c921d9ca50486a3a0c6fd8a0a13acb53546d586a885d6d6b132d2f790547",
+                  "securityValidationEvidence": null
+                }
+              ],
+              "prNumber": 39,
+              "updatedAt": "2026-09-29T08:06:28.210Z",
+              "branchName": "security/fix/e9302805d352-0b27c921d9ca",
+              "attemptCount": 2,
+              "evaluatedSha": "7ae0f954f99628b69ce9b42f42c1e2acc8568d99",
+              "patchEvidence": {
+                "oldVersion": "5.6.4",
+                "targetVersion": "5.6.9",
+                "provenanceKind": "DIRECT_EXPLICIT",
+                "controllingFile": "pom.xml",
+                "controllingElement": "<version>5.6.4</version>",
+                "controllingProperty": null
+              },
+              "candidateIdentity": "0b27c921d9ca50486a3a0c6fd8a0a13acb53546d586a885d6d6b132d2f790547",
+              "securityValidationEvidence": null
+            },
+            "securityRemediationBatchId": "sec-batch-a4646d8385306b84"
+          },
+          "settlementReceipt": {
+            "scope": "SIMULATED_REMOTE_SETTLED",
+            "evidence": "Hypothetical prerequisite; current remote PRs are still OPEN",
+            "noWriter": true,
+            "noInflight": true,
+            "noOpenAuthoringPR": true
+          }
+        },
+        "actorDisplayName": "SIMULATED_OPERATOR"
+      }
+    ]
+  },
+  {
+    "id": "a84a24c4-8673-4826-a4f2-4990ce7d118b",
+    "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+    "source": "TRIVY",
+    "findingId": "CVE-2022-42003",
+    "ruleOrCve": "CVE-2022-42003",
+    "status": "TODO",
+    "scannerStatus": "DETECTED",
+    "findingFingerprint": "5cb2e380a6174eeba2a10daf039d71f2ff22e71f094fbc55a3d60c7f5402d279",
+    "findingSnapshot": {
+      "url": null,
+      "title": "jackson-databind: deep wrapper array nesting wrt UNWRAP_SINGLE_VALUE_ARRAYS",
+      "source": "TRIVY",
+      "evidence": "https://avd.aquasec.com/nvd/cve-2022-42003",
+      "severity": "HIGH",
+      "component": "com.fasterxml.jackson.core:jackson-databind",
+      "parameter": null,
+      "ruleOrCve": "CVE-2022-42003",
+      "description": "In FasterXML jackson-databind before versions 2.13.4.1 and 2.12.17.1, resource exhaustion can occur because of a lack of a check in primitive value deserializers to avoid deep wrapper array nesting, when the UNWRAP_SINGLE_VALUE_ARRAYS feature is enabled.",
+      "fixedVersion": "2.12.7.1, 2.13.4.2",
+      "currentVersion": "2.13.3",
+      "recommendation": "Upgrade to 2.12.7.1, 2.13.4.2",
+      "fixedVersionSource": null,
+      "fixedVersionEvidence": null,
+      "fixedVersionUnavailableReason": null
+    },
+    "securityFindingRemediation": null,
+    "securityRemediationBatchId": null,
+    "events": [
+      {
+        "at": "2026-08-29T15:14:20.268Z",
+        "reason": "CREATED",
+        "actorId": null,
+        "newStatus": "TODO",
+        "oldStatus": null,
+        "buildNumber": 110,
+        "actorDisplayName": "Scanner"
+      },
+      {
+        "at": "SIMULATION_ONLY",
+        "reason": "LEGACY_SINGLE_WRITER_RECONCILIATION",
+        "actorId": null,
+        "newStatus": "TODO",
+        "oldStatus": "TODO",
+        "buildNumber": null,
+        "reconciliation": {
+          "disposition": "RETIRED_LEGACY_REFERENCE",
+          "snapshotDigest": "a4f0dcea573ee9ae0c02bde76d30e32c8586513a15f1273f753cf244140424bb",
+          "archivedLifecycle": {
+            "securityFindingRemediation": {
+              "prUrl": "https://github.com/souhaiel11/pfe-app-test/pull/42",
+              "reason": "TARGET_CVE_CLOSED",
+              "status": "CLOSED",
+              "batchId": "sec-batch-181e0a6587c834e1",
+              "attempts": [
+                {
+                  "at": "2026-09-30T17:13:30.521Z",
+                  "reason": null,
+                  "status": "DISPATCHING",
+                  "attempt": 1,
+                  "batchId": "sec-batch-181e0a6587c834e1"
+                },
+                {
+                  "at": "2026-09-30T17:23:54.279Z",
+                  "prUrl": "https://github.com/souhaiel11/pfe-app-test/pull/42",
+                  "reason": "TARGET_CVE_CLOSED",
+                  "status": "CLOSED",
+                  "attempt": 2,
+                  "batchId": "sec-batch-181e0a6587c834e1",
+                  "prNumber": 42,
+                  "branchName": "security/fix/259beaee267e-3936026f7135",
+                  "executionId": null,
+                  "evaluatedSha": "7ae0f954f99628b69ce9b42f42c1e2acc8568d99",
+                  "patchEvidence": {
+                    "oldVersion": "2.13.3",
+                    "targetVersion": "2.13.5",
+                    "provenanceKind": "PARENT_MANAGED",
+                    "controllingFile": "pom.xml",
+                    "controllingElement": null,
+                    "controllingProperty": null
+                  },
+                  "candidateIdentity": "3936026f7135b1ba47b99b0441f49be91d703685ae054864d664fcc14e670d1b",
+                  "securityValidationEvidence": null
+                }
+              ],
+              "prNumber": 42,
+              "updatedAt": "2026-09-30T17:23:54.279Z",
+              "branchName": "security/fix/259beaee267e-3936026f7135",
+              "attemptCount": 2,
+              "evaluatedSha": "7ae0f954f99628b69ce9b42f42c1e2acc8568d99",
+              "patchEvidence": {
+                "oldVersion": "2.13.3",
+                "targetVersion": "2.13.5",
+                "provenanceKind": "PARENT_MANAGED",
+                "controllingFile": "pom.xml",
+                "controllingElement": null,
+                "controllingProperty": null
+              },
+              "candidateIdentity": "3936026f7135b1ba47b99b0441f49be91d703685ae054864d664fcc14e670d1b",
+              "securityValidationEvidence": null
+            },
+            "securityRemediationBatchId": "sec-batch-181e0a6587c834e1"
+          },
+          "settlementReceipt": {
+            "scope": "SIMULATED_REMOTE_SETTLED",
+            "evidence": "Hypothetical prerequisite; current remote PRs are still OPEN",
+            "noWriter": true,
+            "noInflight": true,
+            "noOpenAuthoringPR": true
+          }
+        },
+        "actorDisplayName": "SIMULATED_OPERATOR"
+      }
+    ]
+  },
+  {
+    "id": "af1d6556-b782-4faf-b01b-4e87b119d033",
+    "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+    "source": "TRIVY",
+    "findingId": "CVE-2022-25857",
+    "ruleOrCve": "CVE-2022-25857",
+    "status": "TODO",
+    "scannerStatus": "DETECTED",
+    "findingFingerprint": "3f712ca3bae0ea409021e9db06f26b6625552fd4a14791976a88b5f6d9b03411",
+    "findingSnapshot": {
+      "url": null,
+      "title": "snakeyaml: Denial of Service due to missing nested depth limitation for collections",
+      "source": "TRIVY",
+      "evidence": "https://avd.aquasec.com/nvd/cve-2022-25857",
+      "severity": "HIGH",
+      "component": "org.yaml:snakeyaml",
+      "parameter": null,
+      "ruleOrCve": "CVE-2022-25857",
+      "description": "The package org.yaml:snakeyaml from 0 and before 1.31 are vulnerable to Denial of Service (DoS) due missing to nested depth limitation for collections.",
+      "fixedVersion": "1.31",
+      "currentVersion": "1.29",
+      "recommendation": "Upgrade to 1.31",
+      "fixedVersionSource": null,
+      "fixedVersionEvidence": null,
+      "fixedVersionUnavailableReason": null
+    },
+    "securityFindingRemediation": null,
+    "securityRemediationBatchId": null,
+    "events": [
+      {
+        "at": "2026-08-29T15:14:21.041Z",
+        "reason": "CREATED",
+        "actorId": null,
+        "newStatus": "TODO",
+        "oldStatus": null,
+        "buildNumber": 132,
+        "actorDisplayName": "Scanner"
+      },
+      {
+        "at": "SIMULATION_ONLY",
+        "reason": "LEGACY_SINGLE_WRITER_RECONCILIATION",
+        "actorId": null,
+        "newStatus": "TODO",
+        "oldStatus": "TODO",
+        "buildNumber": null,
+        "reconciliation": {
+          "disposition": "RETIRED_LEGACY_REFERENCE",
+          "snapshotDigest": "1d6b717dd80e1ac6b0afa92ab48f5614cf8f6331a89d51aedf10da9efb5b20af",
+          "archivedLifecycle": {
+            "securityFindingRemediation": {
+              "prUrl": "https://github.com/souhaiel11/pfe-app-test/pull/38",
+              "reason": "TARGET_CVE_CLOSED",
+              "status": "CLOSED",
+              "batchId": "sec-batch-c808d8203ba03491",
+              "attempts": [
+                {
+                  "at": "2026-09-29T00:04:03.284Z",
+                  "reason": null,
+                  "status": "DISPATCHING",
+                  "attempt": 1,
+                  "batchId": "sec-batch-c808d8203ba03491"
+                },
+                {
+                  "at": "2026-09-29T00:13:22.079Z",
+                  "reason": null,
+                  "status": "DISPATCHING",
+                  "attempt": 2,
+                  "batchId": "sec-batch-c808d8203ba03491"
+                },
+                {
+                  "at": "2026-09-29T00:24:43.947Z",
+                  "reason": null,
+                  "status": "DISPATCHING",
+                  "attempt": 3,
+                  "batchId": "sec-batch-c808d8203ba03491"
+                },
+                {
+                  "at": "2026-09-29T00:42:46.163Z",
+                  "reason": null,
+                  "status": "DISPATCHING",
+                  "attempt": 4,
+                  "batchId": "sec-batch-c808d8203ba03491"
+                },
+                {
+                  "at": "2026-09-29T07:52:21.894Z",
+                  "reason": null,
+                  "status": "DISPATCHING",
+                  "attempt": 5,
+                  "batchId": "sec-batch-c808d8203ba03491"
+                },
+                {
+                  "at": "2026-09-29T07:57:15.401Z",
+                  "prUrl": "https://github.com/souhaiel11/pfe-app-test/pull/38",
+                  "reason": "TARGET_CVE_CLOSED",
+                  "status": "CLOSED",
+                  "attempt": 6,
+                  "batchId": "sec-batch-c808d8203ba03491",
+                  "prNumber": 38,
+                  "branchName": "security/fix/3f712ca3bae0-55df917c8f87",
+                  "executionId": null,
+                  "evaluatedSha": "7ae0f954f99628b69ce9b42f42c1e2acc8568d99",
+                  "patchEvidence": {
+                    "oldVersion": "1.29",
+                    "targetVersion": "1.31",
+                    "provenanceKind": "DIRECT_EXPLICIT",
+                    "controllingFile": "pom.xml",
+                    "controllingElement": "<version>1.29</version>",
+                    "controllingProperty": null
+                  },
+                  "candidateIdentity": "55df917c8f87b0d148be78fc1fd71e0aa570892d2920c9414e616293f99449ef",
+                  "securityValidationEvidence": null
+                }
+              ],
+              "prNumber": 38,
+              "updatedAt": "2026-09-29T07:57:15.401Z",
+              "branchName": "security/fix/3f712ca3bae0-55df917c8f87",
+              "attemptCount": 6,
+              "evaluatedSha": "7ae0f954f99628b69ce9b42f42c1e2acc8568d99",
+              "patchEvidence": {
+                "oldVersion": "1.29",
+                "targetVersion": "1.31",
+                "provenanceKind": "DIRECT_EXPLICIT",
+                "controllingFile": "pom.xml",
+                "controllingElement": "<version>1.29</version>",
+                "controllingProperty": null
+              },
+              "candidateIdentity": "55df917c8f87b0d148be78fc1fd71e0aa570892d2920c9414e616293f99449ef",
+              "securityValidationEvidence": null
+            },
+            "securityRemediationBatchId": "sec-batch-c808d8203ba03491"
+          },
+          "settlementReceipt": {
+            "scope": "SIMULATED_REMOTE_SETTLED",
+            "evidence": "Hypothetical prerequisite; current remote PRs are still OPEN",
+            "noWriter": true,
+            "noInflight": true,
+            "noOpenAuthoringPR": true
+          }
+        },
+        "actorDisplayName": "SIMULATED_OPERATOR"
+      }
+    ]
+  },
+  {
+    "id": "b52ea617-f5c3-47a3-bc6e-6230ea648d63",
+    "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+    "source": "TRIVY",
+    "findingId": "CVE-2022-38751",
+    "ruleOrCve": "CVE-2022-38751",
+    "status": "TODO",
+    "scannerStatus": "DETECTED",
+    "findingFingerprint": "1ed6889e4bb1863a515acab388bb4a6a1e794de4a646a57353859eebc3285b09",
+    "findingSnapshot": {
+      "url": null,
+      "title": "snakeyaml: Uncaught exception in java.base/java.util.regex.Pattern$Ques.match",
+      "source": "TRIVY",
+      "evidence": "https://avd.aquasec.com/nvd/cve-2022-38751",
+      "severity": "MEDIUM",
+      "component": "org.yaml:snakeyaml",
+      "parameter": null,
+      "ruleOrCve": "CVE-2022-38751",
+      "description": "Using snakeYAML to parse untrusted YAML files may be vulnerable to Denial of Service attacks (DOS). If the parser is running on user supplied input, an attacker may supply content that causes the parser to crash by stackoverflow.",
+      "fixedVersion": "1.31",
+      "currentVersion": "1.29",
+      "recommendation": "Upgrade to 1.31",
+      "fixedVersionSource": null,
+      "fixedVersionEvidence": null,
+      "fixedVersionUnavailableReason": null
+    },
+    "securityFindingRemediation": null,
+    "securityRemediationBatchId": null,
+    "events": [
+      {
+        "at": "2026-08-29T15:14:21.046Z",
+        "reason": "CREATED",
+        "actorId": null,
+        "newStatus": "TODO",
+        "oldStatus": null,
+        "buildNumber": 132,
+        "actorDisplayName": "Scanner"
+      },
+      {
+        "at": "SIMULATION_ONLY",
+        "reason": "LEGACY_SINGLE_WRITER_RECONCILIATION",
+        "actorId": null,
+        "newStatus": "TODO",
+        "oldStatus": "TODO",
+        "buildNumber": null,
+        "reconciliation": {
+          "disposition": "RETIRED_LEGACY_REFERENCE",
+          "snapshotDigest": "6164ad357eebe930ad0ba1ee958e06c3138f77ed046b1e22e8d04206da1c5c47",
+          "archivedLifecycle": {
+            "securityFindingRemediation": {
+              "prUrl": null,
+              "reason": "WF6_STALE_DISPATCH_RECONCILED",
+              "status": "TECHNICAL_FAILURE",
+              "batchId": "sec-batch-bd22285c1649ea80",
+              "attempts": [
+                {
+                  "at": "2026-10-04T22:08:01.557Z",
+                  "reason": null,
+                  "status": "DISPATCHING",
+                  "attempt": 1,
+                  "batchId": "sec-batch-bd22285c1649ea80"
+                },
+                {
+                  "at": "2026-10-05T11:59:47.653Z",
+                  "prUrl": null,
+                  "reason": "WF6_STALE_DISPATCH_RECONCILED",
+                  "status": "TECHNICAL_FAILURE",
+                  "attempt": 2,
+                  "batchId": "sec-batch-bd22285c1649ea80",
+                  "prNumber": null,
+                  "branchName": null,
+                  "executionId": null,
+                  "evaluatedSha": null,
+                  "patchEvidence": null,
+                  "candidateIdentity": null,
+                  "securityValidationEvidence": null
+                }
+              ],
+              "prNumber": null,
+              "updatedAt": "2026-10-05T11:59:47.653Z",
+              "branchName": null,
+              "attemptCount": 2,
+              "evaluatedSha": null,
+              "patchEvidence": null,
+              "candidateIdentity": null,
+              "securityValidationEvidence": null
+            },
+            "securityRemediationBatchId": "sec-batch-bd22285c1649ea80"
+          },
+          "settlementReceipt": {
+            "scope": "SIMULATED_REMOTE_SETTLED",
+            "evidence": "Hypothetical prerequisite; current remote PRs are still OPEN",
+            "noWriter": true,
+            "noInflight": true,
+            "noOpenAuthoringPR": true
+          }
+        },
+        "actorDisplayName": "SIMULATED_OPERATOR"
+      }
+    ]
+  },
+  {
+    "id": "bd9dc6f2-2202-4280-933e-4adb824dc695",
+    "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+    "source": "TRIVY",
+    "findingId": "CVE-2022-38752",
+    "ruleOrCve": "CVE-2022-38752",
+    "status": "TODO",
+    "scannerStatus": "DETECTED",
+    "findingFingerprint": "6c962cad556a99e77fa38c446f649be2e6c06cffc8b822744439a2817a90d92e",
+    "findingSnapshot": {
+      "url": null,
+      "title": "snakeyaml: Uncaught exception in java.base/java.util.ArrayList.hashCode",
+      "source": "TRIVY",
+      "evidence": "https://avd.aquasec.com/nvd/cve-2022-38752",
+      "severity": "MEDIUM",
+      "component": "org.yaml:snakeyaml",
+      "parameter": null,
+      "ruleOrCve": "CVE-2022-38752",
+      "description": "Using snakeYAML to parse untrusted YAML files may be vulnerable to Denial of Service attacks (DOS). If the parser is running on user supplied input, an attacker may supply content that causes the parser to crash by stack-overflow.",
+      "fixedVersion": "1.32",
+      "currentVersion": "1.29",
+      "recommendation": "Upgrade to 1.32",
+      "fixedVersionSource": null,
+      "fixedVersionEvidence": null,
+      "fixedVersionUnavailableReason": null
+    },
+    "securityFindingRemediation": null,
+    "securityRemediationBatchId": null,
+    "events": [
+      {
+        "at": "2026-08-29T15:14:21.048Z",
+        "reason": "CREATED",
+        "actorId": null,
+        "newStatus": "TODO",
+        "oldStatus": null,
+        "buildNumber": 132,
+        "actorDisplayName": "Scanner"
+      },
+      {
+        "at": "SIMULATION_ONLY",
+        "reason": "LEGACY_SINGLE_WRITER_RECONCILIATION",
+        "actorId": null,
+        "newStatus": "TODO",
+        "oldStatus": "TODO",
+        "buildNumber": null,
+        "reconciliation": {
+          "disposition": "RETIRED_LEGACY_REFERENCE",
+          "snapshotDigest": "f68fc0853f79eb30ed80c91a8c8aa9b4b33065324cb1d1e4ae20e06a537fdf38",
+          "archivedLifecycle": {
+            "securityFindingRemediation": {
+              "prUrl": "https://github.com/souhaiel11/pfe-app-test/pull/39",
+              "reason": "TARGET_CVE_CLOSED",
+              "status": "CLOSED",
+              "batchId": "sec-batch-a4646d8385306b84",
+              "attempts": [
+                {
+                  "at": "2026-09-29T08:01:20.905Z",
+                  "reason": null,
+                  "status": "DISPATCHING",
+                  "attempt": 1,
+                  "batchId": "sec-batch-a4646d8385306b84"
+                },
+                {
+                  "at": "2026-09-29T08:06:28.210Z",
+                  "prUrl": "https://github.com/souhaiel11/pfe-app-test/pull/39",
+                  "reason": "TARGET_CVE_CLOSED",
+                  "status": "CLOSED",
+                  "attempt": 2,
+                  "batchId": "sec-batch-a4646d8385306b84",
+                  "prNumber": 39,
+                  "branchName": "security/fix/e9302805d352-0b27c921d9ca",
+                  "executionId": null,
+                  "evaluatedSha": "7ae0f954f99628b69ce9b42f42c1e2acc8568d99",
+                  "patchEvidence": {
+                    "oldVersion": "1.29",
+                    "targetVersion": "1.32",
+                    "provenanceKind": "DIRECT_EXPLICIT",
+                    "controllingFile": "pom.xml",
+                    "controllingElement": "<version>1.29</version>",
+                    "controllingProperty": null
+                  },
+                  "candidateIdentity": "0b27c921d9ca50486a3a0c6fd8a0a13acb53546d586a885d6d6b132d2f790547",
+                  "securityValidationEvidence": null
+                }
+              ],
+              "prNumber": 39,
+              "updatedAt": "2026-09-29T08:06:28.210Z",
+              "branchName": "security/fix/e9302805d352-0b27c921d9ca",
+              "attemptCount": 2,
+              "evaluatedSha": "7ae0f954f99628b69ce9b42f42c1e2acc8568d99",
+              "patchEvidence": {
+                "oldVersion": "1.29",
+                "targetVersion": "1.32",
+                "provenanceKind": "DIRECT_EXPLICIT",
+                "controllingFile": "pom.xml",
+                "controllingElement": "<version>1.29</version>",
+                "controllingProperty": null
+              },
+              "candidateIdentity": "0b27c921d9ca50486a3a0c6fd8a0a13acb53546d586a885d6d6b132d2f790547",
+              "securityValidationEvidence": null
+            },
+            "securityRemediationBatchId": "sec-batch-a4646d8385306b84"
+          },
+          "settlementReceipt": {
+            "scope": "SIMULATED_REMOTE_SETTLED",
+            "evidence": "Hypothetical prerequisite; current remote PRs are still OPEN",
+            "noWriter": true,
+            "noInflight": true,
+            "noOpenAuthoringPR": true
+          }
+        },
+        "actorDisplayName": "SIMULATED_OPERATOR"
+      }
+    ]
+  },
+  {
+    "id": "c8fb2207-c8de-40af-acd4-1d2f96896715",
+    "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+    "source": "TRIVY",
+    "findingId": "CVE-2023-6378",
+    "ruleOrCve": "CVE-2023-6378",
+    "status": "TODO",
+    "scannerStatus": "DETECTED",
+    "findingFingerprint": "a37e178f7ce1805b0b1b0e8ac2d41d20333041c26b4e88490f8af4e9885b7cf2",
+    "findingSnapshot": {
+      "url": null,
+      "title": "logback: serialization vulnerability in logback receiver",
+      "source": "TRIVY",
+      "evidence": "https://avd.aquasec.com/nvd/cve-2023-6378",
+      "severity": "HIGH",
+      "component": "ch.qos.logback:logback-classic",
+      "parameter": null,
+      "ruleOrCve": "CVE-2023-6378",
+      "description": "A serialization vulnerability in logback receiver component part of \nlogback version 1.4.11 allows an attacker to mount a Denial-Of-Service \nattack by sending poisoned data.\n\n",
+      "fixedVersion": "1.3.12, 1.4.12, 1.2.13",
+      "currentVersion": "1.2.11",
+      "recommendation": "Upgrade to 1.3.12, 1.4.12, 1.2.13",
+      "fixedVersionSource": null,
+      "fixedVersionEvidence": null,
+      "fixedVersionUnavailableReason": null
+    },
+    "securityFindingRemediation": null,
+    "securityRemediationBatchId": null,
+    "events": [
+      {
+        "at": "2026-08-29T15:14:20.262Z",
+        "reason": "CREATED",
+        "actorId": null,
+        "newStatus": "TODO",
+        "oldStatus": null,
+        "buildNumber": 110,
+        "actorDisplayName": "Scanner"
+      },
+      {
+        "at": "SIMULATION_ONLY",
+        "reason": "LEGACY_SINGLE_WRITER_RECONCILIATION",
+        "actorId": null,
+        "newStatus": "TODO",
+        "oldStatus": "TODO",
+        "buildNumber": null,
+        "reconciliation": {
+          "disposition": "RETIRED_LEGACY_REFERENCE",
+          "snapshotDigest": "9f11f05a3758bf36fb2d8fe63d0c2318fdcbce39b6ac1c79279bd87fbf2c1179",
+          "archivedLifecycle": {
+            "securityFindingRemediation": {
+              "prUrl": "https://github.com/souhaiel11/pfe-app-test/pull/37",
+              "reason": "DETERMINISTIC_CANDIDATE_READY",
+              "status": "CANDIDATE_READY",
+              "attempts": [
+                {
+                  "at": "2026-09-28T18:26:17.902Z",
+                  "prUrl": "https://github.com/souhaiel11/pfe-app-test/pull/37",
+                  "reason": "DETERMINISTIC_CANDIDATE_READY",
+                  "status": "CANDIDATE_READY",
+                  "attempt": 1,
+                  "prNumber": 37,
+                  "branchName": "security/fix/a37e178f7ce1-71531d5009b1",
+                  "executionId": "2060",
+                  "evaluatedSha": "7ae0f954f99628b69ce9b42f42c1e2acc8568d99",
+                  "patchEvidence": {
+                    "oldVersion": "1.2.11",
+                    "targetVersion": "1.2.13",
+                    "provenanceKind": "DIRECT_EXPLICIT",
+                    "controllingFile": "pom.xml",
+                    "controllingElement": "<version>1.2.11</version>",
+                    "controllingProperty": null
+                  },
+                  "candidateIdentity": "71531d5009b160fbe4d9e41dfe65efc203b676312003ae01c0b8d9596f851d9a",
+                  "securityValidationEvidence": {
+                    "mode": "TRIVY_IMAGE_ARCHIVE",
+                    "tests": "SKIPPED",
+                    "status": "TARGET_CVE_CLOSED",
+                    "targetCve": "CVE-2023-6378",
+                    "buildPassed": true,
+                    "evaluatedSha": "7ae0f954f99628b69ce9b42f42c1e2acc8568d99",
+                    "reportDigest": "a22af75e9d1dab868612ba3ec13cca5ac990616b18ef65dd39c7958b1c8c4b07",
+                    "artifactDigest": "c07fc4cdb2ceb394ca5d4957a8f6c0fe3403fe54a93a8b33ff690eb32e255a39",
+                    "scannerVersion": "Version: 0.72.0",
+                    "targetCveMatchCount": 0,
+                    "candidateContentSha256": "f36d6ecdc90ca0f1964da7064b097b3f8450fea622ec8934b62bb31a26b370c6"
+                  }
+                }
+              ],
+              "prNumber": 37,
+              "updatedAt": "2026-09-28T18:26:17.902Z",
+              "branchName": "security/fix/a37e178f7ce1-71531d5009b1",
+              "attemptCount": 1,
+              "evaluatedSha": "7ae0f954f99628b69ce9b42f42c1e2acc8568d99",
+              "patchEvidence": {
+                "oldVersion": "1.2.11",
+                "targetVersion": "1.2.13",
+                "provenanceKind": "DIRECT_EXPLICIT",
+                "controllingFile": "pom.xml",
+                "controllingElement": "<version>1.2.11</version>",
+                "controllingProperty": null
+              },
+              "candidateIdentity": "71531d5009b160fbe4d9e41dfe65efc203b676312003ae01c0b8d9596f851d9a",
+              "securityValidationEvidence": {
+                "mode": "TRIVY_IMAGE_ARCHIVE",
+                "tests": "SKIPPED",
+                "status": "TARGET_CVE_CLOSED",
+                "targetCve": "CVE-2023-6378",
+                "buildPassed": true,
+                "evaluatedSha": "7ae0f954f99628b69ce9b42f42c1e2acc8568d99",
+                "reportDigest": "a22af75e9d1dab868612ba3ec13cca5ac990616b18ef65dd39c7958b1c8c4b07",
+                "artifactDigest": "c07fc4cdb2ceb394ca5d4957a8f6c0fe3403fe54a93a8b33ff690eb32e255a39",
+                "scannerVersion": "Version: 0.72.0",
+                "targetCveMatchCount": 0,
+                "candidateContentSha256": "f36d6ecdc90ca0f1964da7064b097b3f8450fea622ec8934b62bb31a26b370c6"
+              }
+            },
+            "securityRemediationBatchId": null
+          },
+          "settlementReceipt": {
+            "scope": "SIMULATED_REMOTE_SETTLED",
+            "evidence": "Hypothetical prerequisite; current remote PRs are still OPEN",
+            "noWriter": true,
+            "noInflight": true,
+            "noOpenAuthoringPR": true
+          }
+        },
+        "actorDisplayName": "SIMULATED_OPERATOR"
+      }
+    ]
+  },
+  {
+    "id": "ca8f57e7-3839-4914-8805-d518aafe4c4a",
+    "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+    "source": "TRIVY",
+    "findingId": "CVE-2024-22257",
+    "ruleOrCve": "CVE-2024-22257",
+    "status": "TODO",
+    "scannerStatus": "DETECTED",
+    "findingFingerprint": "5529fe26dcc43c488b2dc9f3e0e094aeaa80325362c7ae568a23e092f46511c4",
+    "findingSnapshot": {
+      "url": null,
+      "title": "spring-security: Broken Access Control With Direct Use of AuthenticatedVoter",
+      "source": "TRIVY",
+      "evidence": "https://avd.aquasec.com/nvd/cve-2024-22257",
+      "severity": "HIGH",
+      "component": "org.springframework.security:spring-security-core",
+      "parameter": null,
+      "ruleOrCve": "CVE-2024-22257",
+      "description": "In Spring Security, versions 5.7.x prior to 5.7.12, 5.8.x prior to \n5.8.11, versions 6.0.x prior to 6.0.9, versions 6.1.x prior to 6.1.8, \nversions 6.2.x prior to 6.2.3, an application is possible vulnerable to \nbroken access control when it directly uses the AuthenticatedVoter#vote passing a null Authentication parameter.",
+      "fixedVersion": "5.7.12, 5.8.11, 6.1.8, 6.2.3",
+      "currentVersion": "5.6.4",
+      "recommendation": "Upgrade to 5.7.12, 5.8.11, 6.1.8, 6.2.3",
+      "fixedVersionSource": null,
+      "fixedVersionEvidence": null,
+      "fixedVersionUnavailableReason": null
+    },
+    "securityFindingRemediation": null,
+    "securityRemediationBatchId": null,
+    "events": [
+      {
+        "at": "2026-08-29T15:14:20.977Z",
+        "reason": "CREATED",
+        "actorId": null,
+        "newStatus": "TODO",
+        "oldStatus": null,
+        "buildNumber": 132,
+        "actorDisplayName": "Scanner"
+      },
+      {
+        "at": "SIMULATION_ONLY",
+        "reason": "LEGACY_SINGLE_WRITER_RECONCILIATION",
+        "actorId": null,
+        "newStatus": "TODO",
+        "oldStatus": "TODO",
+        "buildNumber": null,
+        "reconciliation": {
+          "disposition": "RETIRED_LEGACY_REFERENCE",
+          "snapshotDigest": "8b21f01e4f6f405c582ac1515d5d72b09ec0bd33a64c8aef2f89999203023b0e",
+          "archivedLifecycle": {
+            "securityFindingRemediation": {
+              "prUrl": "https://github.com/souhaiel11/pfe-app-test/pull/41",
+              "reason": "TARGET_CVE_CLOSED",
+              "status": "CLOSED",
+              "batchId": "sec-batch-fb980983352c6d7c",
+              "attempts": [
+                {
+                  "at": "2026-09-30T15:56:55.603Z",
+                  "reason": null,
+                  "status": "DISPATCHING",
+                  "attempt": 1,
+                  "batchId": "sec-batch-fb980983352c6d7c"
+                },
+                {
+                  "at": "2026-09-30T16:02:35.082Z",
+                  "prUrl": "https://github.com/souhaiel11/pfe-app-test/pull/41",
+                  "reason": "TARGET_CVE_CLOSED",
+                  "status": "CLOSED",
+                  "attempt": 2,
+                  "batchId": "sec-batch-fb980983352c6d7c",
+                  "prNumber": 41,
+                  "branchName": "security/fix/5529fe26dcc4-a48178242bb4",
+                  "executionId": null,
+                  "evaluatedSha": "7ae0f954f99628b69ce9b42f42c1e2acc8568d99",
+                  "patchEvidence": {
+                    "oldVersion": "5.6.4",
+                    "targetVersion": "5.7.12",
+                    "provenanceKind": "DIRECT_EXPLICIT",
+                    "controllingFile": "pom.xml",
+                    "controllingElement": "<version>5.6.4</version>",
+                    "controllingProperty": null
+                  },
+                  "candidateIdentity": "a48178242bb4e1cb9eaac726e24ef17f83fb71a30a2cf61f2ad7b39e38719ee0",
+                  "securityValidationEvidence": null
+                }
+              ],
+              "prNumber": 41,
+              "updatedAt": "2026-09-30T16:02:35.082Z",
+              "branchName": "security/fix/5529fe26dcc4-a48178242bb4",
+              "attemptCount": 2,
+              "evaluatedSha": "7ae0f954f99628b69ce9b42f42c1e2acc8568d99",
+              "patchEvidence": {
+                "oldVersion": "5.6.4",
+                "targetVersion": "5.7.12",
+                "provenanceKind": "DIRECT_EXPLICIT",
+                "controllingFile": "pom.xml",
+                "controllingElement": "<version>5.6.4</version>",
+                "controllingProperty": null
+              },
+              "candidateIdentity": "a48178242bb4e1cb9eaac726e24ef17f83fb71a30a2cf61f2ad7b39e38719ee0",
+              "securityValidationEvidence": null
+            },
+            "securityRemediationBatchId": "sec-batch-fb980983352c6d7c"
+          },
+          "settlementReceipt": {
+            "scope": "SIMULATED_REMOTE_SETTLED",
+            "evidence": "Hypothetical prerequisite; current remote PRs are still OPEN",
+            "noWriter": true,
+            "noInflight": true,
+            "noOpenAuthoringPR": true
+          }
+        },
+        "actorDisplayName": "SIMULATED_OPERATOR"
+      }
+    ]
+  },
+  {
+    "id": "f21b69ba-922b-4ccb-8851-c2a43d9ce7ca",
+    "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+    "source": "TRIVY",
+    "findingId": "CVE-2023-34034",
+    "ruleOrCve": "CVE-2023-34034",
+    "status": "TODO",
+    "scannerStatus": "DETECTED",
+    "findingFingerprint": "73931319f8772bf5255318d20bf2e0675ff53a83025ec0408452506e9d5c1264",
+    "findingSnapshot": {
+      "url": null,
+      "title": "spring-security-webflux: path wildcard leads to security bypass",
+      "source": "TRIVY",
+      "evidence": "https://avd.aquasec.com/nvd/cve-2023-34034",
+      "severity": "CRITICAL",
+      "component": "org.springframework.security:spring-security-config",
+      "parameter": null,
+      "ruleOrCve": "CVE-2023-34034",
+      "description": "Using \"**\" as a pattern in Spring Security configuration \nfor WebFlux creates a mismatch in pattern matching between Spring \nSecurity and Spring WebFlux, and the potential for a security bypass.\n\n",
+      "fixedVersion": "5.6.12, 5.7.10, 5.8.5, 6.0.5, 6.1.2",
+      "currentVersion": "5.7.1",
+      "recommendation": "Upgrade to 5.6.12, 5.7.10, 5.8.5, 6.0.5, 6.1.2",
+      "fixedVersionSource": null,
+      "fixedVersionEvidence": null,
+      "fixedVersionUnavailableReason": null
+    },
+    "securityFindingRemediation": null,
+    "securityRemediationBatchId": null,
+    "events": [
+      {
+        "at": "2026-08-29T15:14:20.974Z",
+        "reason": "CREATED",
+        "actorId": null,
+        "newStatus": "TODO",
+        "oldStatus": null,
+        "buildNumber": 132,
+        "actorDisplayName": "Scanner"
+      },
+      {
+        "at": "SIMULATION_ONLY",
+        "reason": "LEGACY_SINGLE_WRITER_RECONCILIATION",
+        "actorId": null,
+        "newStatus": "TODO",
+        "oldStatus": "TODO",
+        "buildNumber": null,
+        "reconciliation": {
+          "disposition": "RETIRED_LEGACY_REFERENCE",
+          "snapshotDigest": "005522e6a407b9541ae61fc6e70a19a260182ec40d00d7adebb8d1cbbc5f04e1",
+          "archivedLifecycle": {
+            "securityFindingRemediation": {
+              "prUrl": "https://github.com/souhaiel11/pfe-app-test/pull/42",
+              "reason": "TARGET_CVE_CLOSED",
+              "status": "CLOSED",
+              "batchId": "sec-batch-181e0a6587c834e1",
+              "attempts": [
+                {
+                  "at": "2026-09-30T17:13:30.521Z",
+                  "reason": null,
+                  "status": "DISPATCHING",
+                  "attempt": 1,
+                  "batchId": "sec-batch-181e0a6587c834e1"
+                },
+                {
+                  "at": "2026-09-30T17:23:54.279Z",
+                  "prUrl": "https://github.com/souhaiel11/pfe-app-test/pull/42",
+                  "reason": "TARGET_CVE_CLOSED",
+                  "status": "CLOSED",
+                  "attempt": 2,
+                  "batchId": "sec-batch-181e0a6587c834e1",
+                  "prNumber": 42,
+                  "branchName": "security/fix/259beaee267e-3936026f7135",
+                  "executionId": null,
+                  "evaluatedSha": "7ae0f954f99628b69ce9b42f42c1e2acc8568d99",
+                  "patchEvidence": {
+                    "oldVersion": "5.7.1",
+                    "targetVersion": "5.7.11",
+                    "provenanceKind": "PARENT_MANAGED",
+                    "controllingFile": "pom.xml",
+                    "controllingElement": null,
+                    "controllingProperty": null
+                  },
+                  "candidateIdentity": "3936026f7135b1ba47b99b0441f49be91d703685ae054864d664fcc14e670d1b",
+                  "securityValidationEvidence": null
+                }
+              ],
+              "prNumber": 42,
+              "updatedAt": "2026-09-30T17:23:54.279Z",
+              "branchName": "security/fix/259beaee267e-3936026f7135",
+              "attemptCount": 2,
+              "evaluatedSha": "7ae0f954f99628b69ce9b42f42c1e2acc8568d99",
+              "patchEvidence": {
+                "oldVersion": "5.7.1",
+                "targetVersion": "5.7.11",
+                "provenanceKind": "PARENT_MANAGED",
+                "controllingFile": "pom.xml",
+                "controllingElement": null,
+                "controllingProperty": null
+              },
+              "candidateIdentity": "3936026f7135b1ba47b99b0441f49be91d703685ae054864d664fcc14e670d1b",
+              "securityValidationEvidence": null
+            },
+            "securityRemediationBatchId": "sec-batch-181e0a6587c834e1"
+          },
+          "settlementReceipt": {
+            "scope": "SIMULATED_REMOTE_SETTLED",
+            "evidence": "Hypothetical prerequisite; current remote PRs are still OPEN",
+            "noWriter": true,
+            "noInflight": true,
+            "noOpenAuthoringPR": true
+          }
+        },
+        "actorDisplayName": "SIMULATED_OPERATOR"
+      }
+    ]
+  }
+]

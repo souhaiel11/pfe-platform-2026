@@ -1,11 +1,13 @@
+// Regroupe les traitements de jest JSON aggregation.
 import * as fs from 'fs';
 import type { SurefireAggregate } from './surefire-aggregation';
 
+/** Construit un résultat vide avec les valeurs initiales. */
 function empty(): SurefireAggregate {
   return { total: 0, failures: 0, errors: 0, skipped: 0, matchCount: 0 };
 }
 
-/** Parse Jest's aggregate counters; matchCount, not total, signals usable data. */
+/** Prépare le résultat lié à aggregate Jest JSON. */
 export function aggregateJestJson(jsonText: string): SurefireAggregate {
   try {
     const report = JSON.parse(jsonText);
@@ -28,7 +30,7 @@ export function aggregateJestJson(jsonText: string): SurefireAggregate {
   }
 }
 
-/** Read the exact --outputFile artifact; missing/unreadable files are unknown. */
+/** Prépare le résultat lié à aggregate Jest rapport. */
 export function aggregateJestReport(outputFilePath: string): SurefireAggregate {
   try {
     return aggregateJestJson(fs.readFileSync(outputFilePath, 'utf8'));

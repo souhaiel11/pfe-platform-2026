@@ -1,9 +1,11 @@
+// Prépare audit plateforme hardcodes pour le frontend.
 import {readFileSync,readdirSync,existsSync,writeFileSync} from 'node:fs';
 import {execFileSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 import path from 'node:path';
 const root=fileURLToPath(new URL('../../',import.meta.url));
 const frontend=path.join(root,'frontend');
+/** Parcourt les données pour en extraire les éléments utiles. */
 const walk=dir=>readdirSync(dir,{withFileTypes:true}).flatMap(e=>e.isDirectory()?walk(path.join(dir,e.name)):[path.join(dir,e.name)]);
 // A reproducible inventory of suspicious literal occurrences, not a claim
 // that every number is an operational fact. CSS sizes/colors, labels, enum

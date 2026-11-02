@@ -1,3 +1,4 @@
+<!-- Présente les autorisations de déploiement. -->
 <section class="dg-box" aria-labelledby="dg-title">
   <div class="dg-header">
     <h3 id="dg-title">Déploiement Azure</h3>
@@ -103,17 +104,14 @@
       <div><dt>Cible de santé</dt><dd>{{healthTargetLabel}}</dd></div>
     </dl>
 
+
+
     <!-- Sources/preuves — délibérément des LIENS SORTANTS, jamais l'action
          de déploiement. Jenkins, le registre et le portail Azure sont des
          endroits où l'on INSPECTE ; ils ne sont pas cette interface. Chaque
          lien est dérivé par le backend ; une cible Azure sans identifiant
          d'abonnement reste un fait affiché, sans lien fabriqué. -->
-    <app-source-evidence-list class="dg-cicd-evidence"
-      title="Sources & preuves"
-      note="Liens d’inspection : aucun n’exécute de déploiement."
-      [sections]="sourceEvidenceSections"
-      [slots]="sourceEvidence">
-    </app-source-evidence-list>
+
 
     <!-- ── §5 — security / quality controls, as returned by the backend ── -->
     <h4 class="dg-sub" id="dg-controls-title">Contrôles de sécurité et de qualité</h4>
@@ -319,6 +317,8 @@
       <dl class="dg-evidence">
         <div><dt>Autorisation</dt><dd><code>{{orNotAvailable(deploySuccessInfo.authorizationId)}}</code></dd></div>
         <div><dt>Digest déployé</dt><dd>{{shortDigest(deploySuccessInfo.artifactDigest)}}</dd></div>
+        <div *ngIf="deploySuccessInfo.appUrl"><dt>Application</dt><dd><a [href]="deploySuccessInfo.appUrl" target="_blank" rel="noopener noreferrer">Ouvrir l’application déployée <span aria-hidden="true">↗</span></a> <code>{{deploySuccessInfo.appUrl}}</code></dd></div>
+        <div *ngIf="deploySuccessInfo.portalUrl"><dt>Azure</dt><dd><a [href]="deploySuccessInfo.portalUrl" target="_blank" rel="noopener noreferrer">Voir le conteneur dans le portail Azure <span aria-hidden="true">↗</span></a></dd></div>
         <div *ngIf="deployAttemptId"><dt>Tentative</dt><dd><code>{{deployAttemptId}}</code></dd></div>
       </dl>
     </div>
@@ -340,10 +340,51 @@
 
     <!-- ── §14 — history: no backend read endpoint exists for
          DeploymentAttempt rows, so no client-side history is fabricated. ── -->
+    <section class="dg-history" *ngIf="!historyDeferred" aria-labelledby="dg-history-title">
+      <h4 id="dg-history-title">Historique des déploiements</h4>
+      <p class="dg-history-app" *ngIf="lastDeployedApp as app">
+        <strong>Application déployée :</strong>
+        <a class="dg-app-btn" [href]="app.appUrl" target="_blank" rel="noopener noreferrer">Ouvrir l’application <span aria-hidden="true">↗</span></a>
+        <code>{{app.appUrl}}</code>
+        <a *ngIf="app.portalUrl" [href]="app.portalUrl" target="_blank" rel="noopener noreferrer">Voir le conteneur dans Azure <span aria-hidden="true">↗</span></a>
+      </p>
+      <p class="dg-history-empty" *ngIf="!deploymentHistory.length">Aucun déploiement enregistré pour ce projet.</p>
+      <table class="dg-history-table" *ngIf="deploymentHistory.length">
+        <thead><tr><th>Date</th><th>Statut</th><th>Build</th><th>Image</th><th>Liens</th></tr></thead>
+        <tbody>
+          <tr *ngFor="let h of deploymentHistory">
+            <td>{{h.completedAt || h.startedAt | date:'dd/MM/yyyy HH:mm'}}</td>
+            <td><span class="dg-history-status" [attr.data-status]="h.status">{{h.status === 'DEPLOYED' ? 'Déployé' : h.status === 'FAILED' ? 'Échec' : 'En cours'}}</span></td>
+            <td>#{{h.mainBuildNumber}}</td>
+            <td><code>{{shortDigest(h.artifactDigest)}}</code></td>
+            <td>
+              <a *ngIf="h.appUrl" [href]="h.appUrl" target="_blank" rel="noopener noreferrer">Application ↗</a>
+              <span *ngIf="h.appUrl && h.portalUrl"> · </span>
+              <a *ngIf="h.portalUrl" [href]="h.portalUrl" target="_blank" rel="noopener noreferrer">Azure ↗</a>
+              <span *ngIf="!h.appUrl && !h.portalUrl">—</span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
     <p class="dg-history-deferred" *ngIf="historyDeferred">
       Historique des déploiements : non disponible — la plateforme enregistre chaque tentative côté serveur,
       mais n'expose pas encore d'API de lecture pour les afficher ici.
     </p>
+
+    <!-- Resources follow governance controls and deployment actions. -->
+    <app-source-evidence-list class="dg-azure-links"
+      title="Liens Azure"
+      [sections]="azureLinkSections"
+      [slots]="sourceEvidence">
+    </app-source-evidence-list>
+
+    <app-source-evidence-list class="dg-cicd-evidence"
+      title="Sources & preuves"
+      note="Liens d’inspection : aucun n’exécute de déploiement."
+      [sections]="sourceEvidenceSections"
+      [slots]="sourceEvidence">
+    </app-source-evidence-list>
 
   </ng-container>
 </section>

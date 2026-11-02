@@ -1,25 +1,12 @@
-// Base de connaissance déterministe (zéro LLM) : erreur de build Jenkins connue
-// -> classification + solution. Aucune correspondance trouvée = type='unknown',
-// solution=null, jamais une réponse inventée.
-//
-// type détermine ce que la plateforme a le droit de proposer :
-//   - 'jenkinsfile'   : erreur DANS le pipeline (syntaxe, chemin, wrapper absent)
-//     -> WF4 peut proposer une correction automatique du Jenkinsfile.
-//   - 'dockerfile'    : erreur DANS le Dockerfile (image de base incompatible,
-//     chemin COPY incohérent, syntaxe invalide) -> WF5 peut proposer une
-//     correction automatique du Dockerfile. Jamais WF4 : éditer le Jenkinsfile
-//     ne corrige rien ici, le problème est dans l'image/le fichier Docker.
-//   - 'vulnerability' : CVE / vulnérabilité détectée (Trivy) -> signalement
-//     SEULEMENT. GARDE-FOU CRITIQUE : ni WF4 ni WF5 ne doivent jamais être
-//     déclenchés sur ce type. Le vrai fix est dans le code applicatif ou les
-//     dépendances, pas dans le Jenkinsfile ni le Dockerfile — "corriger" en
-//     éditant l'un ou l'autre masquerait la vraie vulnérabilité.
-//   - 'infra'         : plugin Jenkins manquant, agent/service injoignable ->
-//     signalement seulement. Ni WF4 ni WF5 ne peuvent installer un plugin ni
-//     réparer un agent en éditant un fichier.
-//   - 'code'          : test applicatif échoué -> signalement seulement.
-//     GARDE-FOU CRITIQUE : ne JAMAIS proposer de "corriger" en modifiant le
-//     pipeline ou le Dockerfile — ça masquerait le vrai problème.
+// Classe certains messages Jenkins en familles de correctifs connus, par exemple liés au pipeline ou à la construction d'image.
+import { RemediationMode } from './remediation-card.component';
+
+/**
+ * Base de connaissance déterministe (zéro LLM) pour classifier une erreur de
+ * build Jenkins (type : jenkinsfile/dockerfile/vulnerability/infra/code) et,
+ * quand c'est pertinent, proposer une solution — ainsi que le mode de
+ * remédiation fixe associé à chaque phase de pipeline.
+ */
 type FixType = 'jenkinsfile' | 'dockerfile' | 'vulnerability' | 'infra' | 'code';
 const KNOWN_FIXES: { pattern: RegExp; type: FixType; solution: string | null }[] = [
   {
@@ -27,13 +14,10 @@ const KNOWN_FIXES: { pattern: RegExp; type: FixType; solution: string | null }[]
     type: 'jenkinsfile',
     solution: "Le wrapper Maven mvnw est absent du dépôt. Utilisez 'mvn' (si un tool Maven est configuré dans Jenkins) ou committez le wrapper avec 'mvn -N wrapper:wrapper'.",
   },
-  // GARDE-FOU : vérifié AVANT les patterns 'dockerfile' — une sortie Trivy
-  // peut mentionner une image ou un chemin, mais reste une vulnérabilité,
-  // jamais une correction Dockerfile/Jenkinsfile.
   {
     pattern: /Trivy.*CRITICAL|vulnerabilities found|CVE-\d+/i,
     type: 'vulnerability',
-    solution: null, // jamais de "solution" pour une vulnérabilité — signalement seul, voir garde-fou
+    solution: null,
   },
   {
     pattern: /COPY failed|failed to compute cache key|no source files/i,
@@ -73,15 +57,17 @@ const KNOWN_FIXES: { pattern: RegExp; type: FixType; solution: string | null }[]
   {
     pattern: /There are test failures|Tests run:\s*\d+,\s*Failures:\s*[1-9]|Tests run:\s*\d+,.*Errors:\s*[1-9]/i,
     type: 'code',
-    solution: null, // jamais de "solution" pour du code applicatif — signalement seul, voir garde-fou
+    solution: null,
   },
 ];
 
+/** Renvoie uniquement le texte de solution pour un message d'erreur donné (ou null si inconnu/non-corrigeable). */
 export function suggestFix(errorMessage: string | null | undefined): string | null {
   const result = classify(errorMessage);
   return result.solution;
 }
 
+/** Teste le message d'erreur contre la base de connaissance déterministe et renvoie son type + sa solution (ou 'unknown'/null si rien ne correspond). */
 export function classify(
   errorMessage: string | null | undefined,
 ): { type: FixType | 'unknown'; solution: string | null } {
@@ -90,36 +76,16 @@ export function classify(
   return hit ? { type: hit.type, solution: hit.solution } : { type: 'unknown', solution: null };
 }
 
-// ── Couche 2 : mode de remédiation par PHASE (pas par texte d'erreur) ──────
-// Une phase du pipeline (Jenkins, Docker, SonarQube, Trivy, OWASP, ZAP) a un
-// type FIXE, connu à l'avance — pas besoin de classify() dessus (ça, c'est
-// pour un texte d'erreur libre, ex. l'errorReason d'un incident Jenkins).
-//
-// ATTENTION FAUX AMI : ne PAS mapper la phase SonarQube sur le FixType
-// 'code' — ce type existe déjà dans classify() et désigne un ÉCHEC DE TEST
-// applicatif (Tests run: N, Failures...), volontairement TOUJOURS
-// signal-only (voir le garde-fou dans incident-detail.component.html,
-// classification.type==='code'). La remédiation SonarQube (bugs/code smells
-// via WF2) est un sens différent du mot "code" — les confondre ferait
-// passer en auto-fix un cas que classify() traite ailleurs comme
-// non-corrigeable. D'où un type dédié, RemediationMode (voir
-// remediation-card.component.ts), séparé de FixType.
-//
-// jenkins/docker -> 'auto-fix-selective' (WF4/WF5, cases à cocher par issue,
-// patron déjà prouvé). sonar -> 'auto-fix-bulk' (WF2 ne cible pas encore une
-// issue précise, correction sur l'ensemble, assumé). trivy/owasp/zap ->
-// 'signal-only' (garde-fou vulnérabilité, jamais de bouton).
-import { RemediationMode } from './remediation-card.component';
-
 export const PHASE_MODE: Record<string, RemediationMode> = {
-  jenkins: 'auto-fix-selective',  // WF4
-  docker: 'auto-fix-selective',   // WF5
-  sonar: 'auto-fix-bulk',         // WF2
+  jenkins: 'auto-fix-selective',
+  docker: 'auto-fix-selective',
+  sonar: 'auto-fix-bulk',
   trivy: 'signal-only',
   owasp: 'signal-only',
   zap: 'signal-only',
 };
 
+/** Donne le mode de remédiation fixe d'une phase de pipeline (jamais déduit d'un texte d'erreur). */
 export function remediationModeForPhase(phaseKey: string): RemediationMode {
-  return PHASE_MODE[phaseKey] || 'signal-only'; // repli fail-closed : phase inconnue = jamais de bouton
+  return PHASE_MODE[phaseKey] || 'signal-only';
 }

@@ -1,20 +1,4 @@
-/** V1.7 final predeploy phase, Phase F/G — REAL orphan-GRANDCHILD sweep
- * proof.
- *
- * security-artifact-validator-real-termination.spec.ts already proves the
- * DIRECT child Node's execFileSync kills is really terminated. It does NOT
- * exercise the actual bug discovered this phase: `--isolation=chroot`
- * shares this container's own pid namespace with the build's RUN-step
- * process, so when the SIGKILLed `podman build` never gets the chance to
- * run its own `--force-rm` teardown, a process THAT BUILD ITSELF SPAWNED
- * survives -- a grandchild from Node's point of view, never directly
- * targeted by execFileSync's own timeout/killSignal.
- *
- * This substitutes a real `sh` that backgrounds a real, long-running
- * marker `sleep` and then blocks in `wait` -- reproducing exactly that
- * shape: the outer process (the one execFileSync's timeout kills) has a
- * real child of its own that does NOT die when the outer one is SIGKILLed.
- */
+// Teste le composant « security-artifact-validator-orphan-sweep » et ses cas d’erreur.
 import * as assert from 'assert';
 import { execFileSync } from 'child_process';
 import * as fs from 'fs';
@@ -27,6 +11,7 @@ const repo = path.join(root, 'repo');
 execFileSync('git', ['clone', '--no-hardlinks', process.env.SECURITY_TEST_REPO || '/home/souhaiel/pfe-2026/pfe-app-test', repo], { stdio: 'pipe' });
 
 const MARKER_SECONDS = '62.831';
+/** Simule la mise à jour de l’état du formulaire. */
 function markerStillRunning(): boolean {
   try { execFileSync('pgrep', ['-f', `sleep ${MARKER_SECONDS}`], { encoding: 'utf8' }); return true; }
   catch { return false; }

@@ -1,3 +1,4 @@
+// Teste le composant « maven-parent-patch-writer » et ses cas d’erreur.
 import * as assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -9,6 +10,7 @@ const FIXTURES_DIR = join(__dirname, 'fixtures');
 const realPomXmlText = readFileSync(join(FIXTURES_DIR, 'pfe-app-test.pom.xml'), 'utf8');
 const EVALUATED_SHA = 'a'.repeat(40);
 
+/** Prépare les données nécessaires à ce scénario. */
 function baseRequest(overrides: Partial<ParentVersionPatchRequest> = {}): ParentVersionPatchRequest {
   return {
     findingIdentity: 'fp-parent-1', evaluatedSha: EVALUATED_SHA, ecosystem: 'MAVEN', editType: 'PARENT_VERSION',

@@ -1,0 +1,6 @@
+[core]
+	repositoryformatversion = 0
+	filemode = true
+	bare = true
+[remote "origin"]
+	url = /home/souhaiel/pfe-2026/platform/docs/qa/chain2c-final-live-20261007/history/legacy-seven-history.bundle

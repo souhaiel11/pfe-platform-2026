@@ -1,0 +1,3758 @@
+[
+  {
+    "file": "frontend/src/app/shared/data-truth.ts",
+    "line": 32,
+    "text": "const combine = (a: number | null, b: number | null) => a === null && b === null ? null : (a ?? 0) + (b ?? 0);",
+    "classification": "SUSPICIOUS",
+    "reason": "AVAILABLE aggregate: both absent returns null; absent contributor contributes nothing, never claims scanner clean.",
+    "disposition": "REVIEWED_CONTROL_OR_PRESENTATION_FALLBACK"
+  },
+  {
+    "file": "frontend/src/app/shared/security-remediation-presentation.ts",
+    "line": 79,
+    "text": "return Math.max(0, r?.attemptNumber ?? r?.attemptCount ?? 0,",
+    "classification": "SUSPICIOUS",
+    "reason": "Existing attempt ordinal / retry visibility control; not a scanner metric; policy unchanged.",
+    "disposition": "REVIEWED_CONTROL_OR_PRESENTATION_FALLBACK"
+  },
+  {
+    "file": "frontend/src/app/shared/security-remediation-presentation.ts",
+    "line": 80,
+    "text": "...(r?.attempts ?? []).map(a => a.attemptNumber ?? a.attempt ?? 0));",
+    "classification": "SUSPICIOUS",
+    "reason": "Existing attempt ordinal / retry visibility control; not a scanner metric; policy unchanged.",
+    "disposition": "REVIEWED_CONTROL_OR_PRESENTATION_FALLBACK"
+  },
+  {
+    "file": "frontend/src/app/shared/platform-capability-presentation.ts",
+    "line": 36,
+    "text": "if (/^[\\w.-]+\\/[\\w.-]+$/.test(value)) return 'https://github.com/'+value;",
+    "classification": "VALID_UI_LABEL",
+    "reason": "URL validation, vendor reference, or endpoint contract; check rendered placeholders separately"
+  },
+  {
+    "file": "frontend/src/app/shared/chat-widget/chat-widget.component.ts",
+    "line": 41,
+    "text": "setTimeout(() => this.scrollToBottom(), 50);",
+    "classification": "VALID_UI_LABEL",
+    "reason": "DOM focus/scroll/chart scheduling, toast lifetime or reconnect; no fabricated business result"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 19,
+    "text": "\"evidence\": \"http://www.openwall.com/lists/oss-security/2025/12/18/1\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 24,
+    "text": "\"description\": \"The Socket Appender in Apache Log4j Core versions 2.0-beta9 through 2.25.2 does not perform TLS hostname verification of the peer certificate, even when the  verifyHostName https://logging.apache.org/log4j/2.x/manual/appenders/network.html#SslConfiguration-attr-verifyHostName  configuration attribute or the  log4j2.sslVerifyHostName https://logging.apache.org/log4j/2.x/manual/systemproperties.html\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 49,
+    "text": "\"evidence\": \"https://gitlab.eclipse.org/security/cve-assignment/-/issues/86\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 79,
+    "text": "\"evidence\": \"https://gitlab.eclipse.org/security/cve-assignment/-/issues/87\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 109,
+    "text": "\"evidence\": \"https://github.com/eclipse-ee4j/glassfish/pull/25106\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 139,
+    "text": "\"evidence\": \"https://logging.apache.org/security.html#CVE-2026-34480\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 144,
+    "text": "\"description\": \"Apache Log4j Core's  XmlLayout https://logging.apache.org/log4j/2.x/manual/layouts.html#XmlLayout , in versions up to and including 2.25.3, fails to sanitize characters forbidden by the  XML 1.0 specification https://www.w3.org/TR/xml/#charsets  producing invalid XML output whenever a log message or MDC value contains such characters.\\n\\nThe impact depends on the StAX implementation in use:\\n\\n  *  JR\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 169,
+    "text": "\"evidence\": \"https://github.com/apache/logging-log4j2/pull/4080\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 174,
+    "text": "\"description\": \"Apache Log4j's  JsonTemplateLayout https://logging.apache.org/log4j/2.x/manual/json-template-layout.html , in versions up to and including 2.25.3, produces invalid JSON output when log events contain non-finite floating-point values (NaN, Infinity, or -Infinity), which are prohibited by RFC 8259. This may cause downstream log processing systems to reject or fail to index affected records.\\n\\nAn atta\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 199,
+    "text": "\"evidence\": \"https://gitlab.eclipse.org/security/cve-assignment/-/issues/87\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 229,
+    "text": "\"evidence\": \"https://gitlab.eclipse.org/security/cve-assignment/-/issues/86\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 259,
+    "text": "\"evidence\": \"https://github.com/eclipse-ee4j/glassfish/pull/25106\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 292,
+    "text": "\"evidence\": \"https://sites.google.com/sonatype.com/vulnerabilities/sonatype-2022-6243\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 337,
+    "text": "\"evidence\": \"https://github.com/FasterXML/jackson-databind/issues/5988\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 377,
+    "text": "\"evidence\": \"https://github.com/FasterXML/jackson-databind/commit/24529da29fdf46ff94ca38de9ebf31cd188f5e8e\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 417,
+    "text": "\"evidence\": \"https://security.gentoo.org/glsa/202210-21\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 457,
+    "text": "\"evidence\": \"https://github.com/FasterXML/jackson-databind/commit/063183589218fec19a9293ed2f17ec53ea80ba88\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 497,
+    "text": "\"evidence\": \"https://github.com/FasterXML/jackson-databind/security/advisories/GHSA-3wrr-7qpf-2prh\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 542,
+    "text": "\"evidence\": \"https://github.com/FasterXML/jackson-databind/security/advisories/GHSA-5jmj-h7xm-6q6v\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 582,
+    "text": "\"evidence\": \"https://lists.apache.org/thread/lkx8cl46t2bvkcwfcb2pd43ygc097lq4\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 588,
+    "text": "\"description\": \"The fix for  CVE-2025-68161 https://logging.apache.org/security.html#CVE-2025-68161  was incomplete: it addressed hostname verification only when enabled via the  log4j2.sslVerifyHostName https://logging.apache.org/log4j/2.x/manual/systemproperties.html#log4j2.sslVerifyHostName  system property, but not when configured through the  verifyHostName https://logging.apache.org/log4j/2.x/manual/appende\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 622,
+    "text": "\"evidence\": \"https://logback.qos.ch/news.html#1.3.12\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 662,
+    "text": "\"evidence\": \"http://www.openwall.com/lists/oss-security/2023/11/19/1\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 707,
+    "text": "\"evidence\": \"https://bitbucket.org/snakeyaml/snakeyaml/commits/fc300780da21f4bb92c148bc90257201220cf174\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 732,
+    "text": "\"prUrl\": \"https://github.com/souhaiel11/pfe-app-test/pull/40\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 746,
+    "text": "\"prUrl\": \"https://github.com/souhaiel11/pfe-app-test/pull/40\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 803,
+    "text": "\"evidence\": \"https://security.netapp.com/advisory/ntap-20240315-0009/\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 848,
+    "text": "\"evidence\": \"https://lists.fedoraproject.org/archives/list/package-announce%40lists.fedoraproject.org/message/7MKE4XWRXTH32757H7QJU4ACS67DYDCR/\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 893,
+    "text": "\"evidence\": \"https://security.gentoo.org/glsa/202305-28\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 938,
+    "text": "\"evidence\": \"https://security.netapp.com/advisory/ntap-20230601-0009/\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 978,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-40974\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 1018,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-22733\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 1058,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-40972\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 1098,
+    "text": "\"evidence\": \"https://bugzilla.redhat.com/show_bug.cgi?id=2463331\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 1138,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-40973\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 1178,
+    "text": "\"evidence\": \"https://security.netapp.com/advisory/ntap-20231221-0010/\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 1218,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-41855\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 1258,
+    "text": "\"evidence\": \"https://security.netapp.com/advisory/ntap-20240524-0002/\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 1264,
+    "text": "\"description\": \"Applications that use UriComponentsBuilder in Spring Framework to parse an externally provided URL (e.g. through a query parameter) AND perform validation checks on the host of the parsed URL may be vulnerable to a  open redirect https://cwe.mitre.org/data/definitions/601.html  attack or to a SSRF attack if the URL is used after passing validation checks.\\n\\nThis is the same as  CVE-2024-22243 https\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 1298,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-41842\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 1338,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-41848\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 1378,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-41851\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 1418,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2023-20861\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 1458,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-41845\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 1498,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-41841\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 1538,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-41843\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 1578,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2024-38820\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 1618,
+    "text": "\"evidence\": \"https://nvd.nist.gov/vuln-metrics/cvss/v3-calculator?vector=AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L&version=3.1\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 1658,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-41847\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 1698,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2024-38808\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 1738,
+    "text": "\"evidence\": \"https://security.netapp.com/advisory/ntap-20221215-0010/\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 1778,
+    "text": "\"evidence\": \"https://security.netapp.com/advisory/ntap-20230814-0008/\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 1818,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-22732\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 1858,
+    "text": "\"evidence\": \"https://security.netapp.com/advisory/ntap-20221215-0010/\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 1898,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-47838\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 1938,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-22748\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 1978,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-41706\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 2018,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-22732\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 2058,
+    "text": "\"evidence\": \"https://security.netapp.com/advisory/ntap-20221215-0010/\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 2098,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-47838\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 2143,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2023-20862\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 2183,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-41706\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 2223,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-41003\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 2263,
+    "text": "\"evidence\": \"https://www.tenable.com/security/research/tra-2016-20\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 2308,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-41855\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 2348,
+    "text": "\"evidence\": \"https://security.netapp.com/advisory/ntap-20240524-0002/\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 2354,
+    "text": "\"description\": \"Applications that use UriComponentsBuilder in Spring Framework to parse an externally provided URL (e.g. through a query parameter) AND perform validation checks on the host of the parsed URL may be vulnerable to a  open redirect https://cwe.mitre.org/data/definitions/601.html  attack or to a SSRF attack if the URL is used after passing validation checks.\\n\\nThis is the same as  CVE-2024-22243 https\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 2388,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-41842\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 2428,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-41849\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 2468,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-41851\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 2508,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2023-20861\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 2548,
+    "text": "\"evidence\": \"https://security.netapp.com/advisory/ntap-20240524-0015/\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 2588,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-22740\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 2628,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-41845\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 2668,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-41846\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 2708,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2024-38820\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 2753,
+    "text": "\"evidence\": \"https://nvd.nist.gov/vuln-metrics/cvss/v3-calculator?vector=AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L&version=3.1\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 2793,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-41852\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 2833,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2024-38808\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 2873,
+    "text": "\"evidence\": \"https://www.cve.org/CVERecord?id=CVE-2024-50379\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 2913,
+    "text": "\"evidence\": \"https://lists.apache.org/thread/vw6lxtlh2qbqwpb61wd3sv1flm2nttw7\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 2953,
+    "text": "\"evidence\": \"https://lists.apache.org/thread/jy09xjlzn6r2qwvqoph8vcmf959yq68v\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 2993,
+    "text": "\"evidence\": \"http://www.openwall.com/lists/oss-security/2025/06/16/3\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 3033,
+    "text": "\"evidence\": \"https://security.gentoo.org/glsa/202305-37\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 3073,
+    "text": "\"evidence\": \"http://www.openwall.com/lists/oss-security/2025/07/10/12\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 3113,
+    "text": "\"evidence\": \"https://lists.apache.org/thread/j1w7304yonlr8vo1tkb5nfs7od1y228b\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 3153,
+    "text": "\"evidence\": \"http://www.openwall.com/lists/oss-security/2026/04/09/28\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 3193,
+    "text": "\"evidence\": \"http://www.openwall.com/lists/oss-security/2026/05/12/14\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 3233,
+    "text": "\"evidence\": \"https://lists.apache.org/thread/rdhpghgfskrdmw9hqzjgjrtw538smpmz\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 3273,
+    "text": "\"evidence\": \"https://lists.apache.org/thread/7fk339o5jvd4mcgsf0chbrn4o525ccjh\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 3313,
+    "text": "\"evidence\": \"https://lists.apache.org/thread/ghct3b6o74bp2vm7q875s1zh0dqrz3h0\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 3353,
+    "text": "\"evidence\": \"https://lists.apache.org/thread/wlt2no8bw45zl1w8byop4zfqphldf5j0\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 3393,
+    "text": "\"evidence\": \"https://lists.debian.org/debian-lts-announce/2023/10/msg00020.html\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 3433,
+    "text": "\"evidence\": \"https://cert-portal.siemens.com/productcert/html/ssa-032379.html\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 3473,
+    "text": "\"evidence\": \"https://lists.apache.org/thread/hdksc59z3s7tm39x0pp33mtwdrt8qr67\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 3513,
+    "text": "\"evidence\": \"https://lists.apache.org/thread/gd0hp6mj17rn3kj279vgy4p7kd4zz5on\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 3553,
+    "text": "\"evidence\": \"https://security.gentoo.org/glsa/202305-28\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 3598,
+    "text": "\"evidence\": \"https://bitbucket.org/snakeyaml/snakeyaml/issues/530/stackoverflow-oss-fuzz-47039\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 3643,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2023-20883\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 3683,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-41846\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 3723,
+    "text": "\"evidence\": \"https://security.netapp.com/advisory/ntap-20230505-0006/\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 3763,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-41838\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 3803,
+    "text": "\"evidence\": \"https://security.netapp.com/advisory/ntap-20240524-0015/\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 3843,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-41840\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 3883,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-41853\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 3923,
+    "text": "\"evidence\": \"https://security.netapp.com/advisory/ntap-20221215-0010/\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 3963,
+    "text": "\"evidence\": \"https://security.netapp.com/advisory/ntap-20230814-0008/\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 4003,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-22748\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 4043,
+    "text": "\"evidence\": \"https://security.netapp.com/advisory/ntap-20230505-0006/\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 4083,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-41838\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 4123,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-41850\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 4163,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-41844\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 4203,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-22737\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 4243,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-41843\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 4283,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-41847\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 4323,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-41853\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 4363,
+    "text": "\"evidence\": \"https://lists.apache.org/thread/lopzlqh91jj9n334g02om08sbysdb928\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 4403,
+    "text": "\"evidence\": \"https://lists.apache.org/list.html?announce@tomcat.apache.org\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 4443,
+    "text": "\"evidence\": \"http://www.openwall.com/lists/oss-security/2026/05/12/13\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 4483,
+    "text": "\"evidence\": \"https://security.gentoo.org/glsa/202305-37\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 4523,
+    "text": "\"evidence\": \"https://github.com/kazu-yamamoto/http2/issues/93\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 4563,
+    "text": "\"evidence\": \"https://security.netapp.com/advisory/ntap-20231214-0009/\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 4603,
+    "text": "\"evidence\": \"https://lists.apache.org/thread/wms60cvbsz3fpbz9psxtfx8r41jl6d4s\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 4643,
+    "text": "\"evidence\": \"http://www.openwall.com/lists/oss-security/2025/06/16/1\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 4683,
+    "text": "\"evidence\": \"http://www.openwall.com/lists/oss-security/2025/10/27/4\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 4723,
+    "text": "\"evidence\": \"https://access.redhat.com/errata/RHSA-2026:20405\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 4763,
+    "text": "\"evidence\": \"https://lists.apache.org/thread/xhqqk9w5q45srcdqhogdk04lhdscv30j\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 4803,
+    "text": "\"evidence\": \"http://www.openwall.com/lists/oss-security/2022/06/23/1\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 4843,
+    "text": "\"evidence\": \"https://lists.debian.org/debian-lts-announce/2023/10/msg00020.html\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 4883,
+    "text": "\"evidence\": \"https://lists.apache.org/thread/tdtbbxpg5trdwc2wnopcth9ccvdftq2n\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 4923,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-40977\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 4963,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-41850\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 5003,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-22740\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 5043,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-22737\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 5083,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-41852\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 5123,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-41848\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 5163,
+    "text": "\"evidence\": \"http://www.openwall.com/lists/oss-security/2024/12/17/4\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 5203,
+    "text": "\"evidence\": \"http://www.openwall.com/lists/oss-security/2025/10/27/5\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 5243,
+    "text": "\"evidence\": \"https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/3UWIS5MMGYDZBLJYT674ZI5AWFHDZ46B/\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 5283,
+    "text": "\"evidence\": \"http://www.openwall.com/lists/oss-security/2025/06/16/2\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 5323,
+    "text": "\"evidence\": \"https://lists.apache.org/thread/ytjcgldshj73lcnd1sh95od5hrghwogp\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 5363,
+    "text": "\"evidence\": \"http://www.openwall.com/lists/oss-security/2026/06/29/25\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 5403,
+    "text": "\"evidence\": \"https://lists.debian.org/debian-lts-announce/2023/10/msg00020.html\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 5443,
+    "text": "\"evidence\": \"https://github.com/FasterXML/jackson-databind/security/advisories/GHSA-hgj6-7826-r7m5\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 5483,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-41844\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 5523,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-40988\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 5563,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-41694\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 5603,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-41841\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 5643,
+    "text": "\"evidence\": \"https://www.vicarius.io/vsociety/posts/cve-2025-24813-detect-apache-tomcat-rce\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 5683,
+    "text": "\"evidence\": \"https://lists.apache.org/thread/746nxfxod0wsocxtmv8pb8nkgmwpc6bb\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 5723,
+    "text": "\"evidence\": \"https://security.netapp.com/advisory/ntap-20240816-0004/\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 5763,
+    "text": "\"evidence\": \"https://lists.apache.org/thread/p09775q0rd185m6zz98krg0fp45j8kr0\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 5803,
+    "text": "\"evidence\": \"http://www.openwall.com/lists/oss-security/2026/05/12/12\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 5843,
+    "text": "\"evidence\": \"https://lists.apache.org/thread/v6bknr96rl7l1qxkl1c03v0qdvbbqs47\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 5883,
+    "text": "\"evidence\": \"http://www.openwall.com/lists/oss-security/2024/03/13/4\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 5923,
+    "text": "\"evidence\": \"https://github.com/FasterXML/jackson-databind/issues/3972\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 5963,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-41849\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 6003,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-41840\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 6043,
+    "text": "\"evidence\": \"https://lists.apache.org/thread/7x09x7o12solvclslw3sz0288xc8wx73\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 6083,
+    "text": "\"evidence\": \"http://www.openwall.com/lists/oss-security/2025/08/13/2\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 6123,
+    "text": "\"evidence\": \"http://www.openwall.com/lists/oss-security/2025/07/10/11\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 6168,
+    "text": "\"evidence\": \"https://lists.apache.org/thread/2c682qnlg2tv4o5knlggqbl9yc2gb5sn\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-tasks.json",
+    "line": 6208,
+    "text": "\"evidence\": \"http://www.openwall.com/lists/oss-security/2026/06/29/24\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/proposed-state-live-regression.json",
+    "line": 18,
+    "text": "\"prUrl\": \"https://github.com/example/project/pull/1\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/proposed-state-live-regression.json",
+    "line": 24,
+    "text": "\"prUrl\": \"https://github.com/example/project/pull/1\"",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/proposed-state-live-regression.json",
+    "line": 44,
+    "text": "\"prUrl\": \"https://github.com/example/project/pull/2\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/proposed-state-live-regression.json",
+    "line": 50,
+    "text": "\"prUrl\": \"https://github.com/example/project/pull/2\"",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/proposed-state-live-regression.json",
+    "line": 70,
+    "text": "\"prUrl\": \"https://github.com/example/project/pull/3\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/proposed-state-live-regression.json",
+    "line": 76,
+    "text": "\"prUrl\": \"https://github.com/example/project/pull/3\"",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/proposed-state-live-regression.json",
+    "line": 96,
+    "text": "\"prUrl\": \"https://github.com/example/project/pull/4\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/proposed-state-live-regression.json",
+    "line": 102,
+    "text": "\"prUrl\": \"https://github.com/example/project/pull/4\"",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/proposed-state-live-regression.json",
+    "line": 122,
+    "text": "\"prUrl\": \"https://github.com/example/project/pull/5\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/proposed-state-live-regression.json",
+    "line": 128,
+    "text": "\"prUrl\": \"https://github.com/example/project/pull/5\"",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/proposed-state-live-regression.json",
+    "line": 148,
+    "text": "\"prUrl\": \"https://github.com/example/project/pull/6\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/proposed-state-live-regression.json",
+    "line": 154,
+    "text": "\"prUrl\": \"https://github.com/example/project/pull/6\"",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/proposed-state-live-regression.json",
+    "line": 174,
+    "text": "\"prUrl\": \"https://github.com/example/project/pull/7\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/proposed-state-live-regression.json",
+    "line": 180,
+    "text": "\"prUrl\": \"https://github.com/example/project/pull/7\"",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/proposed-state-live-regression.json",
+    "line": 200,
+    "text": "\"prUrl\": \"https://github.com/example/project/pull/8\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/proposed-state-live-regression.json",
+    "line": 206,
+    "text": "\"prUrl\": \"https://github.com/example/project/pull/8\"",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/proposed-state-live-regression.json",
+    "line": 226,
+    "text": "\"prUrl\": \"https://github.com/example/project/pull/9\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/proposed-state-live-regression.json",
+    "line": 232,
+    "text": "\"prUrl\": \"https://github.com/example/project/pull/9\"",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/proposed-state-live-regression.json",
+    "line": 252,
+    "text": "\"prUrl\": \"https://github.com/example/project/pull/10\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/proposed-state-live-regression.json",
+    "line": 258,
+    "text": "\"prUrl\": \"https://github.com/example/project/pull/10\"",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/proposed-state-live-regression.json",
+    "line": 278,
+    "text": "\"prUrl\": \"https://github.com/example/project/pull/11\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/proposed-state-live-regression.json",
+    "line": 284,
+    "text": "\"prUrl\": \"https://github.com/example/project/pull/11\"",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/proposed-state-live-regression.json",
+    "line": 304,
+    "text": "\"prUrl\": \"https://github.com/example/project/pull/12\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/proposed-state-live-regression.json",
+    "line": 310,
+    "text": "\"prUrl\": \"https://github.com/example/project/pull/12\"",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 17,
+    "text": "\"evidence\": \"https://sites.google.com/sonatype.com/vulnerabilities/sonatype-2022-6243\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 20,
+    "text": "\"primaryUrl\": \"https://sites.google.com/sonatype.com/vulnerabilities/sonatype-2022-6243\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 40,
+    "text": "\"evidence\": \"https://github.com/FasterXML/jackson-databind/issues/5988\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 43,
+    "text": "\"primaryUrl\": \"https://github.com/FasterXML/jackson-databind/issues/5988\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 63,
+    "text": "\"evidence\": \"https://github.com/FasterXML/jackson-databind/commit/24529da29fdf46ff94ca38de9ebf31cd188f5e8e\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 66,
+    "text": "\"primaryUrl\": \"https://github.com/FasterXML/jackson-databind/commit/24529da29fdf46ff94ca38de9ebf31cd188f5e8e\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 86,
+    "text": "\"evidence\": \"https://security.gentoo.org/glsa/202210-21\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 89,
+    "text": "\"primaryUrl\": \"https://security.gentoo.org/glsa/202210-21\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 109,
+    "text": "\"evidence\": \"https://github.com/FasterXML/jackson-databind/commit/063183589218fec19a9293ed2f17ec53ea80ba88\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 112,
+    "text": "\"primaryUrl\": \"https://github.com/FasterXML/jackson-databind/commit/063183589218fec19a9293ed2f17ec53ea80ba88\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 132,
+    "text": "\"evidence\": \"https://github.com/FasterXML/jackson-databind/security/advisories/GHSA-3wrr-7qpf-2prh\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 135,
+    "text": "\"primaryUrl\": \"https://github.com/FasterXML/jackson-databind/security/advisories/GHSA-3wrr-7qpf-2prh\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 155,
+    "text": "\"evidence\": \"https://github.com/FasterXML/jackson-databind/security/advisories/GHSA-hgj6-7826-r7m5\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 158,
+    "text": "\"primaryUrl\": \"https://github.com/FasterXML/jackson-databind/security/advisories/GHSA-hgj6-7826-r7m5\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 178,
+    "text": "\"evidence\": \"https://github.com/FasterXML/jackson-databind/security/advisories/GHSA-5jmj-h7xm-6q6v\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 181,
+    "text": "\"primaryUrl\": \"https://github.com/FasterXML/jackson-databind/security/advisories/GHSA-5jmj-h7xm-6q6v\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 201,
+    "text": "\"evidence\": \"https://github.com/FasterXML/jackson-databind/issues/3972\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 204,
+    "text": "\"primaryUrl\": \"https://github.com/FasterXML/jackson-databind/issues/3972\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 224,
+    "text": "\"evidence\": \"https://lists.apache.org/thread/gd0hp6mj17rn3kj279vgy4p7kd4zz5on\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 227,
+    "text": "\"primaryUrl\": \"https://lists.apache.org/thread/gd0hp6mj17rn3kj279vgy4p7kd4zz5on\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 247,
+    "text": "\"evidence\": \"https://lists.apache.org/thread/lkx8cl46t2bvkcwfcb2pd43ygc097lq4\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 250,
+    "text": "\"primaryUrl\": \"https://lists.apache.org/thread/lkx8cl46t2bvkcwfcb2pd43ygc097lq4\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 251,
+    "text": "\"description\": \"The fix for  CVE-2025-68161 https://logging.apache.org/security.html#CVE-2025-68161  was incomplete: it addressed hostname verification only when enabled via the  log4j2.sslVerifyHostName https://logging.apache.org/log4j/2.x/manual/systemproperties.html#log4j2.sslVerifyHostName  system property, but not when configured through the  verifyHostName https://logging.apache.org/log4j/2.x/manual/appende\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 270,
+    "text": "\"evidence\": \"https://logback.qos.ch/news.html#1.3.12\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 273,
+    "text": "\"primaryUrl\": \"https://logback.qos.ch/news.html#1.3.12\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 293,
+    "text": "\"evidence\": \"http://www.openwall.com/lists/oss-security/2023/11/19/1\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 296,
+    "text": "\"primaryUrl\": \"http://www.openwall.com/lists/oss-security/2023/11/19/1\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 316,
+    "text": "\"evidence\": \"https://bitbucket.org/snakeyaml/snakeyaml/commits/fc300780da21f4bb92c148bc90257201220cf174\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 319,
+    "text": "\"primaryUrl\": \"https://bitbucket.org/snakeyaml/snakeyaml/commits/fc300780da21f4bb92c148bc90257201220cf174\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 339,
+    "text": "\"evidence\": \"https://security.gentoo.org/glsa/202305-28\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 342,
+    "text": "\"primaryUrl\": \"https://security.gentoo.org/glsa/202305-28\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 362,
+    "text": "\"evidence\": \"https://bitbucket.org/snakeyaml/snakeyaml/issues/530/stackoverflow-oss-fuzz-47039\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 365,
+    "text": "\"primaryUrl\": \"https://bitbucket.org/snakeyaml/snakeyaml/issues/530/stackoverflow-oss-fuzz-47039\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 385,
+    "text": "\"evidence\": \"https://security.netapp.com/advisory/ntap-20240315-0009/\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 388,
+    "text": "\"primaryUrl\": \"https://security.netapp.com/advisory/ntap-20240315-0009/\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 408,
+    "text": "\"evidence\": \"https://lists.fedoraproject.org/archives/list/package-announce%40lists.fedoraproject.org/message/7MKE4XWRXTH32757H7QJU4ACS67DYDCR/\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 411,
+    "text": "\"primaryUrl\": \"https://lists.fedoraproject.org/archives/list/package-announce%40lists.fedoraproject.org/message/7MKE4XWRXTH32757H7QJU4ACS67DYDCR/\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 431,
+    "text": "\"evidence\": \"https://security.gentoo.org/glsa/202305-28\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 434,
+    "text": "\"primaryUrl\": \"https://security.gentoo.org/glsa/202305-28\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 454,
+    "text": "\"evidence\": \"https://security.netapp.com/advisory/ntap-20230601-0009/\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 457,
+    "text": "\"primaryUrl\": \"https://security.netapp.com/advisory/ntap-20230601-0009/\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 477,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-40974\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 480,
+    "text": "\"primaryUrl\": \"https://spring.io/security/cve-2026-40974\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 500,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-22733\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 503,
+    "text": "\"primaryUrl\": \"https://spring.io/security/cve-2026-22733\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 523,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2023-20883\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 526,
+    "text": "\"primaryUrl\": \"https://spring.io/security/cve-2023-20883\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 546,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-40972\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 549,
+    "text": "\"primaryUrl\": \"https://spring.io/security/cve-2026-40972\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 569,
+    "text": "\"evidence\": \"https://bugzilla.redhat.com/show_bug.cgi?id=2463331\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 572,
+    "text": "\"primaryUrl\": \"https://bugzilla.redhat.com/show_bug.cgi?id=2463331\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 592,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-40973\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 595,
+    "text": "\"primaryUrl\": \"https://spring.io/security/cve-2026-40973\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 615,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-40977\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 618,
+    "text": "\"primaryUrl\": \"https://spring.io/security/cve-2026-40977\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 638,
+    "text": "\"evidence\": \"https://security.netapp.com/advisory/ntap-20231221-0010/\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 641,
+    "text": "\"primaryUrl\": \"https://security.netapp.com/advisory/ntap-20231221-0010/\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 661,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-41855\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 664,
+    "text": "\"primaryUrl\": \"https://spring.io/security/cve-2026-41855\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 684,
+    "text": "\"evidence\": \"https://security.netapp.com/advisory/ntap-20240524-0002/\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 687,
+    "text": "\"primaryUrl\": \"https://security.netapp.com/advisory/ntap-20240524-0002/\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 688,
+    "text": "\"description\": \"Applications that use UriComponentsBuilder in Spring Framework to parse an externally provided URL (e.g. through a query parameter) AND perform validation checks on the host of the parsed URL may be vulnerable to a  open redirect https://cwe.mitre.org/data/definitions/601.html  attack or to a SSRF attack if the URL is used after passing validation checks.\\n\\nThis is the same as  CVE-2024-22243 https\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 707,
+    "text": "\"evidence\": \"https://security.netapp.com/advisory/ntap-20230505-0006/\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 710,
+    "text": "\"primaryUrl\": \"https://security.netapp.com/advisory/ntap-20230505-0006/\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 730,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-41838\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 733,
+    "text": "\"primaryUrl\": \"https://spring.io/security/cve-2026-41838\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 753,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-41842\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 756,
+    "text": "\"primaryUrl\": \"https://spring.io/security/cve-2026-41842\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 776,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-41848\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 779,
+    "text": "\"primaryUrl\": \"https://spring.io/security/cve-2026-41848\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 799,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-41849\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 802,
+    "text": "\"primaryUrl\": \"https://spring.io/security/cve-2026-41849\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 822,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-41850\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 825,
+    "text": "\"primaryUrl\": \"https://spring.io/security/cve-2026-41850\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 845,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-41851\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 848,
+    "text": "\"primaryUrl\": \"https://spring.io/security/cve-2026-41851\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 868,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2023-20861\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 871,
+    "text": "\"primaryUrl\": \"https://spring.io/security/cve-2023-20861\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 891,
+    "text": "\"evidence\": \"https://security.netapp.com/advisory/ntap-20240524-0015/\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 894,
+    "text": "\"primaryUrl\": \"https://security.netapp.com/advisory/ntap-20240524-0015/\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 914,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-22740\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 917,
+    "text": "\"primaryUrl\": \"https://spring.io/security/cve-2026-22740\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 937,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-41844\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 940,
+    "text": "\"primaryUrl\": \"https://spring.io/security/cve-2026-41844\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 960,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-41845\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 963,
+    "text": "\"primaryUrl\": \"https://spring.io/security/cve-2026-41845\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 983,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-41846\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 986,
+    "text": "\"primaryUrl\": \"https://spring.io/security/cve-2026-41846\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1006,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-22737\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1009,
+    "text": "\"primaryUrl\": \"https://spring.io/security/cve-2026-22737\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1029,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-41840\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1032,
+    "text": "\"primaryUrl\": \"https://spring.io/security/cve-2026-41840\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1052,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-41841\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1055,
+    "text": "\"primaryUrl\": \"https://spring.io/security/cve-2026-41841\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1075,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-41843\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1078,
+    "text": "\"primaryUrl\": \"https://spring.io/security/cve-2026-41843\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1098,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2024-38820\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1101,
+    "text": "\"primaryUrl\": \"https://spring.io/security/cve-2024-38820\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1121,
+    "text": "\"evidence\": \"https://nvd.nist.gov/vuln-metrics/cvss/v3-calculator?vector=AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L&version=3.1\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1124,
+    "text": "\"primaryUrl\": \"https://nvd.nist.gov/vuln-metrics/cvss/v3-calculator?vector=AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L&version=3.1\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1144,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-41847\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1147,
+    "text": "\"primaryUrl\": \"https://spring.io/security/cve-2026-41847\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1167,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-41852\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1170,
+    "text": "\"primaryUrl\": \"https://spring.io/security/cve-2026-41852\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1190,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-41853\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1193,
+    "text": "\"primaryUrl\": \"https://spring.io/security/cve-2026-41853\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1213,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2024-38808\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1216,
+    "text": "\"primaryUrl\": \"https://spring.io/security/cve-2024-38808\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1236,
+    "text": "\"evidence\": \"https://security.netapp.com/advisory/ntap-20221215-0010/\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1239,
+    "text": "\"primaryUrl\": \"https://security.netapp.com/advisory/ntap-20221215-0010/\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1259,
+    "text": "\"evidence\": \"https://security.netapp.com/advisory/ntap-20230814-0008/\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1262,
+    "text": "\"primaryUrl\": \"https://security.netapp.com/advisory/ntap-20230814-0008/\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1282,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-22732\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1285,
+    "text": "\"primaryUrl\": \"https://spring.io/security/cve-2026-22732\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1305,
+    "text": "\"evidence\": \"https://security.netapp.com/advisory/ntap-20221215-0010/\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1308,
+    "text": "\"primaryUrl\": \"https://security.netapp.com/advisory/ntap-20221215-0010/\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1328,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-47838\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1331,
+    "text": "\"primaryUrl\": \"https://spring.io/security/cve-2026-47838\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1351,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-22748\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1354,
+    "text": "\"primaryUrl\": \"https://spring.io/security/cve-2026-22748\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1374,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-41706\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1377,
+    "text": "\"primaryUrl\": \"https://spring.io/security/cve-2026-41706\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1397,
+    "text": "\"evidence\": \"https://security.netapp.com/advisory/ntap-20221215-0010/\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1400,
+    "text": "\"primaryUrl\": \"https://security.netapp.com/advisory/ntap-20221215-0010/\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1420,
+    "text": "\"evidence\": \"https://security.netapp.com/advisory/ntap-20230814-0008/\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1423,
+    "text": "\"primaryUrl\": \"https://security.netapp.com/advisory/ntap-20230814-0008/\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1443,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-22732\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1446,
+    "text": "\"primaryUrl\": \"https://spring.io/security/cve-2026-22732\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1466,
+    "text": "\"evidence\": \"https://security.netapp.com/advisory/ntap-20221215-0010/\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1469,
+    "text": "\"primaryUrl\": \"https://security.netapp.com/advisory/ntap-20221215-0010/\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1489,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-47838\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1492,
+    "text": "\"primaryUrl\": \"https://spring.io/security/cve-2026-47838\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1512,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-40988\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1515,
+    "text": "\"primaryUrl\": \"https://spring.io/security/cve-2026-40988\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1535,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-22748\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1538,
+    "text": "\"primaryUrl\": \"https://spring.io/security/cve-2026-22748\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1558,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2023-20862\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1561,
+    "text": "\"primaryUrl\": \"https://spring.io/security/cve-2023-20862\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1581,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-41706\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1584,
+    "text": "\"primaryUrl\": \"https://spring.io/security/cve-2026-41706\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1604,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-41003\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1607,
+    "text": "\"primaryUrl\": \"https://spring.io/security/cve-2026-41003\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1627,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-41694\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1630,
+    "text": "\"primaryUrl\": \"https://spring.io/security/cve-2026-41694\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1650,
+    "text": "\"evidence\": \"https://www.tenable.com/security/research/tra-2016-20\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1653,
+    "text": "\"primaryUrl\": \"https://www.tenable.com/security/research/tra-2016-20\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1673,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-41855\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1676,
+    "text": "\"primaryUrl\": \"https://spring.io/security/cve-2026-41855\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1696,
+    "text": "\"evidence\": \"https://security.netapp.com/advisory/ntap-20240524-0002/\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1699,
+    "text": "\"primaryUrl\": \"https://security.netapp.com/advisory/ntap-20240524-0002/\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1700,
+    "text": "\"description\": \"Applications that use UriComponentsBuilder in Spring Framework to parse an externally provided URL (e.g. through a query parameter) AND perform validation checks on the host of the parsed URL may be vulnerable to a  open redirect https://cwe.mitre.org/data/definitions/601.html  attack or to a SSRF attack if the URL is used after passing validation checks.\\n\\nThis is the same as  CVE-2024-22243 https\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1719,
+    "text": "\"evidence\": \"https://security.netapp.com/advisory/ntap-20230505-0006/\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1722,
+    "text": "\"primaryUrl\": \"https://security.netapp.com/advisory/ntap-20230505-0006/\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1742,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-41838\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1745,
+    "text": "\"primaryUrl\": \"https://spring.io/security/cve-2026-41838\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1765,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-41842\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1768,
+    "text": "\"primaryUrl\": \"https://spring.io/security/cve-2026-41842\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1788,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-41848\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1791,
+    "text": "\"primaryUrl\": \"https://spring.io/security/cve-2026-41848\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1811,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-41849\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1814,
+    "text": "\"primaryUrl\": \"https://spring.io/security/cve-2026-41849\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1834,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-41850\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1837,
+    "text": "\"primaryUrl\": \"https://spring.io/security/cve-2026-41850\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1857,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-41851\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1860,
+    "text": "\"primaryUrl\": \"https://spring.io/security/cve-2026-41851\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1880,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2023-20861\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1883,
+    "text": "\"primaryUrl\": \"https://spring.io/security/cve-2023-20861\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1903,
+    "text": "\"evidence\": \"https://security.netapp.com/advisory/ntap-20240524-0015/\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1906,
+    "text": "\"primaryUrl\": \"https://security.netapp.com/advisory/ntap-20240524-0015/\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1926,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-22740\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1929,
+    "text": "\"primaryUrl\": \"https://spring.io/security/cve-2026-22740\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1949,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-41844\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1952,
+    "text": "\"primaryUrl\": \"https://spring.io/security/cve-2026-41844\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1972,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-41845\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1975,
+    "text": "\"primaryUrl\": \"https://spring.io/security/cve-2026-41845\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1995,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-41846\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 1998,
+    "text": "\"primaryUrl\": \"https://spring.io/security/cve-2026-41846\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 2018,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-22737\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 2021,
+    "text": "\"primaryUrl\": \"https://spring.io/security/cve-2026-22737\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 2041,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-41840\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 2044,
+    "text": "\"primaryUrl\": \"https://spring.io/security/cve-2026-41840\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 2064,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-41841\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 2067,
+    "text": "\"primaryUrl\": \"https://spring.io/security/cve-2026-41841\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 2087,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-41843\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 2090,
+    "text": "\"primaryUrl\": \"https://spring.io/security/cve-2026-41843\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 2110,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2024-38820\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 2113,
+    "text": "\"primaryUrl\": \"https://spring.io/security/cve-2024-38820\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 2133,
+    "text": "\"evidence\": \"https://nvd.nist.gov/vuln-metrics/cvss/v3-calculator?vector=AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L&version=3.1\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 2136,
+    "text": "\"primaryUrl\": \"https://nvd.nist.gov/vuln-metrics/cvss/v3-calculator?vector=AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L&version=3.1\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 2156,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-41847\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 2159,
+    "text": "\"primaryUrl\": \"https://spring.io/security/cve-2026-41847\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 2179,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-41852\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 2182,
+    "text": "\"primaryUrl\": \"https://spring.io/security/cve-2026-41852\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 2202,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2026-41853\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 2205,
+    "text": "\"primaryUrl\": \"https://spring.io/security/cve-2026-41853\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 2225,
+    "text": "\"evidence\": \"https://spring.io/security/cve-2024-38808\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 2228,
+    "text": "\"primaryUrl\": \"https://spring.io/security/cve-2024-38808\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 2248,
+    "text": "\"evidence\": \"http://www.openwall.com/lists/oss-security/2024/12/17/4\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 2251,
+    "text": "\"primaryUrl\": \"http://www.openwall.com/lists/oss-security/2024/12/17/4\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 2271,
+    "text": "\"evidence\": \"https://lists.apache.org/thread/lopzlqh91jj9n334g02om08sbysdb928\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 2274,
+    "text": "\"primaryUrl\": \"https://lists.apache.org/thread/lopzlqh91jj9n334g02om08sbysdb928\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 2294,
+    "text": "\"evidence\": \"https://www.cve.org/CVERecord?id=CVE-2024-50379\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 2297,
+    "text": "\"primaryUrl\": \"https://www.cve.org/CVERecord?id=CVE-2024-50379\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 2317,
+    "text": "\"evidence\": \"https://www.vicarius.io/vsociety/posts/cve-2025-24813-detect-apache-tomcat-rce\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 2320,
+    "text": "\"primaryUrl\": \"https://www.vicarius.io/vsociety/posts/cve-2025-24813-detect-apache-tomcat-rce\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 2340,
+    "text": "\"evidence\": \"https://lists.apache.org/list.html?announce@tomcat.apache.org\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 2343,
+    "text": "\"primaryUrl\": \"https://lists.apache.org/list.html?announce@tomcat.apache.org\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 2363,
+    "text": "\"evidence\": \"http://www.openwall.com/lists/oss-security/2026/05/12/13\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 2366,
+    "text": "\"primaryUrl\": \"http://www.openwall.com/lists/oss-security/2026/05/12/13\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 2386,
+    "text": "\"evidence\": \"https://lists.apache.org/thread/7x09x7o12solvclslw3sz0288xc8wx73\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 2389,
+    "text": "\"primaryUrl\": \"https://lists.apache.org/thread/7x09x7o12solvclslw3sz0288xc8wx73\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 2409,
+    "text": "\"evidence\": \"http://www.openwall.com/lists/oss-security/2025/10/27/5\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 2412,
+    "text": "\"primaryUrl\": \"http://www.openwall.com/lists/oss-security/2025/10/27/5\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 2432,
+    "text": "\"evidence\": \"https://lists.apache.org/thread/vw6lxtlh2qbqwpb61wd3sv1flm2nttw7\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 2435,
+    "text": "\"primaryUrl\": \"https://lists.apache.org/thread/vw6lxtlh2qbqwpb61wd3sv1flm2nttw7\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 2455,
+    "text": "\"evidence\": \"https://lists.apache.org/thread/746nxfxod0wsocxtmv8pb8nkgmwpc6bb\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 2458,
+    "text": "\"primaryUrl\": \"https://lists.apache.org/thread/746nxfxod0wsocxtmv8pb8nkgmwpc6bb\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 2478,
+    "text": "\"evidence\": \"https://lists.apache.org/thread/jy09xjlzn6r2qwvqoph8vcmf959yq68v\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 2481,
+    "text": "\"primaryUrl\": \"https://lists.apache.org/thread/jy09xjlzn6r2qwvqoph8vcmf959yq68v\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 2501,
+    "text": "\"evidence\": \"http://www.openwall.com/lists/oss-security/2025/06/16/3\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 2504,
+    "text": "\"primaryUrl\": \"http://www.openwall.com/lists/oss-security/2025/06/16/3\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 2524,
+    "text": "\"evidence\": \"https://security.gentoo.org/glsa/202305-37\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 2527,
+    "text": "\"primaryUrl\": \"https://security.gentoo.org/glsa/202305-37\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 2547,
+    "text": "\"evidence\": \"https://security.gentoo.org/glsa/202305-37\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 2550,
+    "text": "\"primaryUrl\": \"https://security.gentoo.org/glsa/202305-37\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 2570,
+    "text": "\"evidence\": \"https://github.com/kazu-yamamoto/http2/issues/93\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 2573,
+    "text": "\"primaryUrl\": \"https://github.com/kazu-yamamoto/http2/issues/93\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 2593,
+    "text": "\"evidence\": \"https://security.netapp.com/advisory/ntap-20231214-0009/\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 2596,
+    "text": "\"primaryUrl\": \"https://security.netapp.com/advisory/ntap-20231214-0009/\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 2616,
+    "text": "\"evidence\": \"https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/3UWIS5MMGYDZBLJYT674ZI5AWFHDZ46B/\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 2619,
+    "text": "\"primaryUrl\": \"https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/3UWIS5MMGYDZBLJYT674ZI5AWFHDZ46B/\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 2639,
+    "text": "\"evidence\": \"https://security.netapp.com/advisory/ntap-20240816-0004/\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 2642,
+    "text": "\"primaryUrl\": \"https://security.netapp.com/advisory/ntap-20240816-0004/\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 2662,
+    "text": "\"evidence\": \"https://lists.apache.org/thread/wms60cvbsz3fpbz9psxtfx8r41jl6d4s\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 2665,
+    "text": "\"primaryUrl\": \"https://lists.apache.org/thread/wms60cvbsz3fpbz9psxtfx8r41jl6d4s\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 2685,
+    "text": "\"evidence\": \"http://www.openwall.com/lists/oss-security/2025/06/16/1\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 2688,
+    "text": "\"primaryUrl\": \"http://www.openwall.com/lists/oss-security/2025/06/16/1\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 2708,
+    "text": "\"evidence\": \"http://www.openwall.com/lists/oss-security/2025/08/13/2\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 2711,
+    "text": "\"primaryUrl\": \"http://www.openwall.com/lists/oss-security/2025/08/13/2\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 2731,
+    "text": "\"evidence\": \"http://www.openwall.com/lists/oss-security/2025/06/16/2\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 2734,
+    "text": "\"primaryUrl\": \"http://www.openwall.com/lists/oss-security/2025/06/16/2\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 2754,
+    "text": "\"evidence\": \"http://www.openwall.com/lists/oss-security/2025/07/10/11\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 2757,
+    "text": "\"primaryUrl\": \"http://www.openwall.com/lists/oss-security/2025/07/10/11\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 2777,
+    "text": "\"evidence\": \"http://www.openwall.com/lists/oss-security/2025/07/10/12\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 2780,
+    "text": "\"primaryUrl\": \"http://www.openwall.com/lists/oss-security/2025/07/10/12\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 2800,
+    "text": "\"evidence\": \"https://lists.apache.org/thread/p09775q0rd185m6zz98krg0fp45j8kr0\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 2803,
+    "text": "\"primaryUrl\": \"https://lists.apache.org/thread/p09775q0rd185m6zz98krg0fp45j8kr0\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 2823,
+    "text": "\"evidence\": \"http://www.openwall.com/lists/oss-security/2025/10/27/4\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 2826,
+    "text": "\"primaryUrl\": \"http://www.openwall.com/lists/oss-security/2025/10/27/4\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 2846,
+    "text": "\"evidence\": \"https://lists.apache.org/thread/2c682qnlg2tv4o5knlggqbl9yc2gb5sn\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 2849,
+    "text": "\"primaryUrl\": \"https://lists.apache.org/thread/2c682qnlg2tv4o5knlggqbl9yc2gb5sn\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 2869,
+    "text": "\"evidence\": \"https://access.redhat.com/errata/RHSA-2026:20405\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 2872,
+    "text": "\"primaryUrl\": \"https://access.redhat.com/errata/RHSA-2026:20405\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 2892,
+    "text": "\"evidence\": \"https://lists.apache.org/thread/j1w7304yonlr8vo1tkb5nfs7od1y228b\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 2895,
+    "text": "\"primaryUrl\": \"https://lists.apache.org/thread/j1w7304yonlr8vo1tkb5nfs7od1y228b\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 2915,
+    "text": "\"evidence\": \"http://www.openwall.com/lists/oss-security/2026/04/09/28\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 2918,
+    "text": "\"primaryUrl\": \"http://www.openwall.com/lists/oss-security/2026/04/09/28\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 2938,
+    "text": "\"evidence\": \"http://www.openwall.com/lists/oss-security/2026/05/12/12\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 2941,
+    "text": "\"primaryUrl\": \"http://www.openwall.com/lists/oss-security/2026/05/12/12\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 2961,
+    "text": "\"evidence\": \"https://lists.apache.org/thread/ytjcgldshj73lcnd1sh95od5hrghwogp\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 2964,
+    "text": "\"primaryUrl\": \"https://lists.apache.org/thread/ytjcgldshj73lcnd1sh95od5hrghwogp\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 2984,
+    "text": "\"evidence\": \"https://lists.apache.org/thread/xhqqk9w5q45srcdqhogdk04lhdscv30j\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 2987,
+    "text": "\"primaryUrl\": \"https://lists.apache.org/thread/xhqqk9w5q45srcdqhogdk04lhdscv30j\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 3007,
+    "text": "\"evidence\": \"http://www.openwall.com/lists/oss-security/2026/05/12/14\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 3010,
+    "text": "\"primaryUrl\": \"http://www.openwall.com/lists/oss-security/2026/05/12/14\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 3030,
+    "text": "\"evidence\": \"https://lists.apache.org/thread/rdhpghgfskrdmw9hqzjgjrtw538smpmz\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 3033,
+    "text": "\"primaryUrl\": \"https://lists.apache.org/thread/rdhpghgfskrdmw9hqzjgjrtw538smpmz\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 3053,
+    "text": "\"evidence\": \"https://lists.apache.org/thread/7fk339o5jvd4mcgsf0chbrn4o525ccjh\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 3056,
+    "text": "\"primaryUrl\": \"https://lists.apache.org/thread/7fk339o5jvd4mcgsf0chbrn4o525ccjh\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 3076,
+    "text": "\"evidence\": \"https://lists.apache.org/thread/v6bknr96rl7l1qxkl1c03v0qdvbbqs47\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 3079,
+    "text": "\"primaryUrl\": \"https://lists.apache.org/thread/v6bknr96rl7l1qxkl1c03v0qdvbbqs47\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 3099,
+    "text": "\"evidence\": \"http://www.openwall.com/lists/oss-security/2026/06/29/24\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 3102,
+    "text": "\"primaryUrl\": \"http://www.openwall.com/lists/oss-security/2026/06/29/24\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 3122,
+    "text": "\"evidence\": \"http://www.openwall.com/lists/oss-security/2026/06/29/25\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 3125,
+    "text": "\"primaryUrl\": \"http://www.openwall.com/lists/oss-security/2026/06/29/25\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 3145,
+    "text": "\"evidence\": \"http://www.openwall.com/lists/oss-security/2024/03/13/4\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 3148,
+    "text": "\"primaryUrl\": \"http://www.openwall.com/lists/oss-security/2024/03/13/4\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 3168,
+    "text": "\"evidence\": \"http://www.openwall.com/lists/oss-security/2022/06/23/1\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 3171,
+    "text": "\"primaryUrl\": \"http://www.openwall.com/lists/oss-security/2022/06/23/1\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 3191,
+    "text": "\"evidence\": \"https://lists.debian.org/debian-lts-announce/2023/10/msg00020.html\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 3194,
+    "text": "\"primaryUrl\": \"https://lists.debian.org/debian-lts-announce/2023/10/msg00020.html\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 3214,
+    "text": "\"evidence\": \"https://lists.apache.org/thread/ghct3b6o74bp2vm7q875s1zh0dqrz3h0\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 3217,
+    "text": "\"primaryUrl\": \"https://lists.apache.org/thread/ghct3b6o74bp2vm7q875s1zh0dqrz3h0\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 3237,
+    "text": "\"evidence\": \"https://lists.apache.org/thread/wlt2no8bw45zl1w8byop4zfqphldf5j0\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 3240,
+    "text": "\"primaryUrl\": \"https://lists.apache.org/thread/wlt2no8bw45zl1w8byop4zfqphldf5j0\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 3260,
+    "text": "\"evidence\": \"https://lists.debian.org/debian-lts-announce/2023/10/msg00020.html\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 3263,
+    "text": "\"primaryUrl\": \"https://lists.debian.org/debian-lts-announce/2023/10/msg00020.html\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 3283,
+    "text": "\"evidence\": \"https://lists.debian.org/debian-lts-announce/2023/10/msg00020.html\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 3286,
+    "text": "\"primaryUrl\": \"https://lists.debian.org/debian-lts-announce/2023/10/msg00020.html\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 3306,
+    "text": "\"evidence\": \"https://lists.apache.org/thread/tdtbbxpg5trdwc2wnopcth9ccvdftq2n\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 3309,
+    "text": "\"primaryUrl\": \"https://lists.apache.org/thread/tdtbbxpg5trdwc2wnopcth9ccvdftq2n\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 3329,
+    "text": "\"evidence\": \"https://cert-portal.siemens.com/productcert/html/ssa-032379.html\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 3332,
+    "text": "\"primaryUrl\": \"https://cert-portal.siemens.com/productcert/html/ssa-032379.html\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 3352,
+    "text": "\"evidence\": \"https://lists.apache.org/thread/hdksc59z3s7tm39x0pp33mtwdrt8qr67\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/shared/fixtures/owasp-149-live-cves.json",
+    "line": 3355,
+    "text": "\"primaryUrl\": \"https://lists.apache.org/thread/hdksc59z3s7tm39x0pp33mtwdrt8qr67\",",
+    "classification": "VALID_TEST_FIXTURE",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/features/analysis/analysis.component.ts",
+    "line": 110,
+    "text": "decisionCounts[key] = (decisionCounts[key] || 0) + 1;",
+    "classification": "SUSPICIOUS",
+    "reason": "Histogram accumulator for actual loaded records; genuine empty group, not missing scanner evidence.",
+    "disposition": "REVIEWED_CONTROL_OR_PRESENTATION_FALLBACK"
+  },
+  {
+    "file": "frontend/src/app/features/analysis/analysis.component.ts",
+    "line": 128,
+    "text": "severityCounts[key] = (severityCounts[key] || 0) + 1;",
+    "classification": "SUSPICIOUS",
+    "reason": "Histogram accumulator for actual loaded records; genuine empty group, not missing scanner evidence.",
+    "disposition": "REVIEWED_CONTROL_OR_PRESENTATION_FALLBACK"
+  },
+  {
+    "file": "frontend/src/app/features/incidents/phase-diagnostics.ts",
+    "line": 187,
+    "text": "if ((z.alerts_high || 0) > 0) {",
+    "classification": "SUSPICIOUS",
+    "reason": "Positive-finding conditional only; missing status handled separately. No displayed numeric zero from this branch.",
+    "disposition": "REVIEWED_CONTROL_OR_PRESENTATION_FALLBACK"
+  },
+  {
+    "file": "frontend/src/app/features/incidents/phase-diagnostics.ts",
+    "line": 238,
+    "text": "if ((s?.issues?.length || 0) > 0 || (s?.bugs || 0) + (s?.vulnerabilities || 0) + (s?.code_smells || 0) > 0) {",
+    "classification": "SUSPICIOUS",
+    "reason": "Positive-finding conditional only; missing status handled separately. No displayed numeric zero from this branch.",
+    "disposition": "REVIEWED_CONTROL_OR_PRESENTATION_FALLBACK"
+  },
+  {
+    "file": "frontend/src/app/features/incidents/phase-diagnostics.ts",
+    "line": 254,
+    "text": "if ((t?.failures || 0) > 0) {",
+    "classification": "SUSPICIOUS",
+    "reason": "Positive-finding conditional only; missing status handled separately. No displayed numeric zero from this branch.",
+    "disposition": "REVIEWED_CONTROL_OR_PRESENTATION_FALLBACK"
+  },
+  {
+    "file": "frontend/src/app/features/incidents/incident-detail.component.html",
+    "line": 459,
+    "text": "<div [style.width]=\"(r.confidence||0)*100+'%'\"",
+    "classification": "SUSPICIOUS",
+    "reason": "CSS width only; nullable text remains Non disponible and no score fabricated.",
+    "disposition": "REVIEWED_CONTROL_OR_PRESENTATION_FALLBACK"
+  },
+  {
+    "file": "frontend/src/app/features/incidents/project-cleanliness.ts",
+    "line": 55,
+    "text": "return (block?.critical || 0) > 0;",
+    "classification": "SUSPICIOUS",
+    "reason": "Existing frontend mirror of qualified cleanliness policy; explicit COMPLETED/test status gates. Not altered. Missing-count contract must not be treated as a numeric scanner display.",
+    "disposition": "REVIEWED_CONTROL_OR_PRESENTATION_FALLBACK"
+  },
+  {
+    "file": "frontend/src/app/features/incidents/project-cleanliness.ts",
+    "line": 93,
+    "text": "if ((trivy.high || 0) > 0) {",
+    "classification": "SUSPICIOUS",
+    "reason": "Existing frontend mirror of qualified cleanliness policy; explicit COMPLETED/test status gates. Not altered. Missing-count contract must not be treated as a numeric scanner display.",
+    "disposition": "REVIEWED_CONTROL_OR_PRESENTATION_FALLBACK"
+  },
+  {
+    "file": "frontend/src/app/features/incidents/project-cleanliness.ts",
+    "line": 106,
+    "text": "if ((owasp.high || 0) > 0) {",
+    "classification": "SUSPICIOUS",
+    "reason": "Existing frontend mirror of qualified cleanliness policy; explicit COMPLETED/test status gates. Not altered. Missing-count contract must not be treated as a numeric scanner display.",
+    "disposition": "REVIEWED_CONTROL_OR_PRESENTATION_FALLBACK"
+  },
+  {
+    "file": "frontend/src/app/features/incidents/project-cleanliness.ts",
+    "line": 115,
+    "text": "} else if ((zap.alerts_high || 0) > 0) {",
+    "classification": "SUSPICIOUS",
+    "reason": "Existing frontend mirror of qualified cleanliness policy; explicit COMPLETED/test status gates. Not altered. Missing-count contract must not be treated as a numeric scanner display.",
+    "disposition": "REVIEWED_CONTROL_OR_PRESENTATION_FALLBACK"
+  },
+  {
+    "file": "frontend/src/app/features/incidents/project-cleanliness.ts",
+    "line": 122,
+    "text": "if ((tests?.failures || 0) > 0) {",
+    "classification": "SUSPICIOUS",
+    "reason": "Existing frontend mirror of qualified cleanliness policy; explicit COMPLETED/test status gates. Not altered. Missing-count contract must not be treated as a numeric scanner display.",
+    "disposition": "REVIEWED_CONTROL_OR_PRESENTATION_FALLBACK"
+  },
+  {
+    "file": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "line": 227,
+    "text": "return ra !== rb ? ra - rb : (b?.cvss || 0) - (a?.cvss || 0);",
+    "classification": "SUSPICIOUS",
+    "reason": "Sorting missing scores only; displayed score retains missing state.",
+    "disposition": "REVIEWED_CONTROL_OR_PRESENTATION_FALLBACK"
+  },
+  {
+    "file": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "line": 243,
+    "text": "const total = (t?.critical || 0) + (t?.high || 0);",
+    "classification": "SUSPICIOUS",
+    "reason": "Only creates warning when positive actual counters exist; otherwise no synthetic finding row.",
+    "disposition": "REVIEWED_CONTROL_OR_PRESENTATION_FALLBACK"
+  },
+  {
+    "file": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "line": 760,
+    "text": "const githubRepo = (project?.githubRepo || '').replace('https://github.com/', '');",
+    "classification": "VALID_UI_LABEL",
+    "reason": "URL validation, vendor reference, or endpoint contract; check rendered placeholders separately"
+  },
+  {
+    "file": "frontend/src/app/features/incidents/incident-detail.component.ts",
+    "line": 803,
+    "text": "const githubRepo = (project?.githubRepo || '').replace('https://github.com/', '');",
+    "classification": "VALID_UI_LABEL",
+    "reason": "URL validation, vendor reference, or endpoint contract; check rendered placeholders separately"
+  },
+  {
+    "file": "frontend/src/app/features/incidents/developer-guide/developer-guide-tab.component.ts",
+    "line": 294,
+    "text": "setTimeout(() =>",
+    "classification": "VALID_UI_LABEL",
+    "reason": "DOM focus/scroll/chart scheduling, toast lifetime or reconnect; no fabricated business result"
+  },
+  {
+    "file": "frontend/src/app/features/dashboard/dashboard.component.ts",
+    "line": 97,
+    "text": "? { rate: s.aggregateSuccessRate ?? null, sampleSize: s.aggregateSampleSize ?? 0 }",
+    "classification": "SUSPICIOUS",
+    "reason": "Sample count belongs to explicit success-rate API contract, rate remains null if absent. Backend supplies real sample count in observed responses.",
+    "disposition": "REVIEWED_CONTROL_OR_PRESENTATION_FALLBACK"
+  },
+  {
+    "file": "frontend/src/app/features/dashboard/dashboard.component.ts",
+    "line": 156,
+    "text": "setTimeout(() => this.buildRiskRings(), 50);",
+    "classification": "VALID_UI_LABEL",
+    "reason": "DOM focus/scroll/chart scheduling, toast lifetime or reconnect; no fabricated business result"
+  },
+  {
+    "file": "frontend/src/app/features/dashboard/dashboard.component.ts",
+    "line": 264,
+    "text": "setTimeout(() => this.buildRiskRings(), 50);",
+    "classification": "VALID_UI_LABEL",
+    "reason": "DOM focus/scroll/chart scheduling, toast lifetime or reconnect; no fabricated business result"
+  },
+  {
+    "file": "frontend/src/app/features/projects/deployment-governance.component.ts",
+    "line": 656,
+    "text": "this.deployRequestId = globalThis.crypto?.randomUUID?.() || `deploy-${Date.now()}-${Math.random().toString(16).slice(2)}`;",
+    "classification": "VALID_UI_LABEL",
+    "reason": "Client request id only; not a displayed business metric"
+  },
+  {
+    "file": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 581,
+    "text": "<div class=\"kpi-card\" *ngIf=\"!isScannerMissing(ed.trivy)\" [class.kpi-alert]=\"(ed.trivy?.critical||0)>0\">",
+    "classification": "SUSPICIOUS",
+    "reason": "Alert class only for positive measured value; displayed count uses scannerMetric and is nullable.",
+    "disposition": "REVIEWED_CONTROL_OR_PRESENTATION_FALLBACK"
+  },
+  {
+    "file": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 583,
+    "text": "<div class=\"kpi-value\" [style.color]=\"scannerMetric(ed.trivy, 'critical') === null ? 'var(--text-muted)' : ((ed.trivy?.critical||0)>0?'var(--accent-red)':'var(--accent-green)')\">",
+    "classification": "SUSPICIOUS",
+    "reason": "Explicit null guards give missing scanner metrics neutral text-muted.",
+    "disposition": "REVIEWED_PRESENTATION_FALLBACK"
+  },
+  {
+    "file": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 594,
+    "text": "<div class=\"kpi-card\" *ngIf=\"!isScannerMissing(ed.owasp)\" [class.kpi-alert]=\"(ed.owasp?.critical||0)>0\">",
+    "classification": "SUSPICIOUS",
+    "reason": "Alert class only for positive measured value; displayed count uses scannerMetric and is nullable.",
+    "disposition": "REVIEWED_CONTROL_OR_PRESENTATION_FALLBACK"
+  },
+  {
+    "file": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 596,
+    "text": "<div class=\"kpi-value\" [style.color]=\"scannerMetric(ed.owasp, 'critical') === null ? 'var(--text-muted)' : ((ed.owasp?.critical||0)>0?'var(--accent-red)':'var(--accent-green)')\">",
+    "classification": "SUSPICIOUS",
+    "reason": "Explicit null guards give missing scanner metrics neutral text-muted.",
+    "disposition": "REVIEWED_PRESENTATION_FALLBACK"
+  },
+  {
+    "file": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 607,
+    "text": "<div class=\"kpi-card\" *ngIf=\"!isScannerMissing(ed.zap)\" [class.kpi-alert]=\"(ed.zap?.alerts_high||0)>0\">",
+    "classification": "SUSPICIOUS",
+    "reason": "Alert class only for positive measured value; displayed count uses scannerMetric and is nullable.",
+    "disposition": "REVIEWED_CONTROL_OR_PRESENTATION_FALLBACK"
+  },
+  {
+    "file": "frontend/src/app/features/projects/project-detail.component.html",
+    "line": 609,
+    "text": "<div class=\"kpi-value\" [style.color]=\"scannerMetric(ed.zap, 'alerts_high') === null || scannerMetric(ed.zap, 'alerts_medium') === null ? 'var(--text-muted)' : ((ed.zap?.alerts_high||0)>0?'var(--accent-red)':((ed.zap?.alerts_medium||0)>0?'var(--accent-orange)':'var(--accent-green)'))\">",
+    "classification": "SUSPICIOUS",
+    "reason": "Explicit null guards give missing scanner metrics neutral text-muted.",
+    "disposition": "REVIEWED_PRESENTATION_FALLBACK"
+  },
+  {
+    "file": "frontend/src/app/features/projects/project-overview.component.ts",
+    "line": 315,
+    "text": "const critical = key === 'sonar' ? (data.issues || []).filter((x:any) => ['BLOCKER','CRITICAL'].includes(String(x.severity).toUpperCase())).length : (data.critical || data.alerts_high || 0);",
+    "classification": "SUSPICIOUS",
+    "reason": "Positive-finding selection, not displayed zero; absent values do not fabricate a finding.",
+    "disposition": "REVIEWED_CONTROL_OR_PRESENTATION_FALLBACK"
+  },
+  {
+    "file": "frontend/src/app/features/projects/project-overview.component.ts",
+    "line": 455,
+    "text": "tone: governedTone('trivy', d?.trivy?.critical ?? 0, d?.trivy?.high ?? 0) },",
+    "classification": "SUSPICIOUS",
+    "reason": "Color gated by explicit production stage PASSED; non-passed states remain skip/warning/failure. Display count remains nullable.",
+    "disposition": "REVIEWED_CONTROL_OR_PRESENTATION_FALLBACK"
+  },
+  {
+    "file": "frontend/src/app/features/projects/project-overview.component.ts",
+    "line": 458,
+    "text": "tone: governedTone('owasp', d?.owasp?.critical ?? 0, d?.owasp?.high ?? 0) },",
+    "classification": "SUSPICIOUS",
+    "reason": "Color gated by explicit production stage PASSED; non-passed states remain skip/warning/failure. Display count remains nullable.",
+    "disposition": "REVIEWED_CONTROL_OR_PRESENTATION_FALLBACK"
+  },
+  {
+    "file": "frontend/src/app/features/projects/project-overview.component.ts",
+    "line": 461,
+    "text": "tone: governedTone('zap', d?.zap?.alerts_high ?? 0, d?.zap?.alerts_medium ?? 0) },",
+    "classification": "SUSPICIOUS",
+    "reason": "Color gated by explicit production stage PASSED; non-passed states remain skip/warning/failure. Display count remains nullable.",
+    "disposition": "REVIEWED_CONTROL_OR_PRESENTATION_FALLBACK"
+  },
+  {
+    "file": "frontend/src/app/features/projects/project-overview.component.ts",
+    "line": 464,
+    "text": "tone: governedTone('tests', d?.tests?.failures ?? 0, 0) },",
+    "classification": "SUSPICIOUS",
+    "reason": "Color gated by explicit production stage PASSED; non-passed states remain skip/warning/failure. Display count remains nullable.",
+    "disposition": "REVIEWED_CONTROL_OR_PRESENTATION_FALLBACK"
+  },
+  {
+    "file": "frontend/src/app/features/projects/project-overview.component.ts",
+    "line": 481,
+    "text": ".reduce((a, i) => a + (Number(i.estimatedEffortMinutes) || 0), 0));",
+    "classification": "SUSPICIOUS",
+    "reason": "Sum of supplied issue effort estimates; presentation is estimated effort, not measured execution duration.",
+    "disposition": "REVIEWED_CONTROL_OR_PRESENTATION_FALLBACK"
+  },
+  {
+    "file": "frontend/src/app/features/projects/projects.component.html",
+    "line": 53,
+    "text": "<div [style.width]=\"(p.securityScore ?? 0)+'%'\"",
+    "classification": "SUSPICIOUS",
+    "reason": "CSS width only; nullable text remains Non disponible and no score fabricated.",
+    "disposition": "REVIEWED_CONTROL_OR_PRESENTATION_FALLBACK"
+  },
+  {
+    "file": "frontend/src/app/features/projects/project-detail.component.ts",
+    "line": 328,
+    "text": "setTimeout(() => this.sonarDrawer?.nativeElement.focus());",
+    "classification": "VALID_UI_LABEL",
+    "reason": "DOM focus/scroll/chart scheduling, toast lifetime or reconnect; no fabricated business result"
+  },
+  {
+    "file": "frontend/src/app/features/projects/project-detail.component.ts",
+    "line": 333,
+    "text": "setTimeout(() => this.sonarTrigger?.focus());",
+    "classification": "VALID_UI_LABEL",
+    "reason": "DOM focus/scroll/chart scheduling, toast lifetime or reconnect; no fabricated business result"
+  },
+  {
+    "file": "frontend/src/app/features/projects/project-detail.component.ts",
+    "line": 366,
+    "text": "// confusing/alarming during a demo. Generic on (severity, remediationType)",
+    "classification": "VALID_DOCUMENTATION",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/features/projects/project-detail.component.ts",
+    "line": 676,
+    "text": "setTimeout(() => this.batchDialog?.nativeElement.focus());",
+    "classification": "VALID_UI_LABEL",
+    "reason": "DOM focus/scroll/chart scheduling, toast lifetime or reconnect; no fabricated business result"
+  },
+  {
+    "file": "frontend/src/app/features/projects/project-detail.component.ts",
+    "line": 1088,
+    "text": "// est faux (non configuré/erreur/timeout — plus aucun mock possible),",
+    "classification": "VALID_DOCUMENTATION",
+    "reason": "See fallback ledger and issue review; accumulator/sort/CSS defaults do not assert business values"
+  },
+  {
+    "file": "frontend/src/app/features/projects/project-detail.component.ts",
+    "line": 1091,
+    "text": "this.buildReliability = { rate: d?.buildSuccessRate ?? null, sampleSize: d?.sampleSize ?? 0 };",
+    "classification": "SUSPICIOUS",
+    "reason": "Sample count belongs to explicit success-rate API contract, rate remains null if absent. Backend supplies real sample count in observed responses.",
+    "disposition": "REVIEWED_CONTROL_OR_PRESENTATION_FALLBACK"
+  },
+  {
+    "file": "frontend/src/app/features/projects/cve-table.component.ts",
+    "line": 395,
+    "text": "(b.cvss ?? 0) - (a.cvss ?? 0)",
+    "classification": "SUSPICIOUS",
+    "reason": "Sorting missing scores only; displayed score retains missing state.",
+    "disposition": "REVIEWED_CONTROL_OR_PRESENTATION_FALLBACK"
+  },
+  {
+    "file": "frontend/src/app/features/projects/cve-table.component.ts",
+    "line": 540,
+    "text": "if (id.startsWith('GHSA')) return 'https://github.com/advisories/' + id;",
+    "classification": "VALID_UI_LABEL",
+    "reason": "URL validation, vendor reference, or endpoint contract; check rendered placeholders separately"
+  },
+  {
+    "file": "frontend/src/app/features/projects/cve-table.component.ts",
+    "line": 541,
+    "text": "return 'https://nvd.nist.gov/vuln/detail/' + id;",
+    "classification": "VALID_UI_LABEL",
+    "reason": "URL validation, vendor reference, or endpoint contract; check rendered placeholders separately"
+  },
+  {
+    "file": "frontend/src/app/core/http-error-message.ts",
+    "line": 4,
+    "text": "const status = error instanceof HttpErrorResponse ? error.status : Number((error as any)?.status || 0);",
+    "classification": "VALID_UI_LABEL",
+    "reason": "URL validation, vendor reference, or endpoint contract; check rendered placeholders separately"
+  },
+  {
+    "file": "frontend/src/app/core/services/websocket.service.ts",
+    "line": 22,
+    "text": "this.ws.onclose = () => setTimeout(() => this.connect(), 5000);",
+    "classification": "VALID_UI_LABEL",
+    "reason": "DOM focus/scroll/chart scheduling, toast lifetime or reconnect; no fabricated business result"
+  },
+  {
+    "file": "frontend/src/app/core/services/toast.service.ts",
+    "line": 25,
+    "text": "setTimeout(() => this.remove(id), 4000);",
+    "classification": "VALID_UI_LABEL",
+    "reason": "DOM focus/scroll/chart scheduling, toast lifetime or reconnect; no fabricated business result"
+  }
+]

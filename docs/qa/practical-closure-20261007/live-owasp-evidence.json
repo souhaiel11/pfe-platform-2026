@@ -1,0 +1,12 @@
+[
+  {
+    "event": "OWASP_RESCAN_COMPLETED",
+    "scannerVersion": "12.2.2",
+    "sourceDigest": "97926d67652ff58e77501cc66b6adc56390fb84699ba3c766bc8cbe0e1518722",
+    "reportDigest": "3e946dd7294183bde74f3b3f6cb4898227808368fae3c2408666154278e029e4",
+    "targetCves": [
+      "CVE-2022-45868"
+    ],
+    "targetFindingRemoved": true
+  }
+]

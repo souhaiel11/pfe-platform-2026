@@ -1,15 +1,8 @@
+// Teste le composant « default-value-corrective-loop » et ses cas d’erreur.
 import * as assert from 'node:assert/strict';
 import { IncidentsService, buildPrValidationJobName } from './incidents.service';
 import { buildCorrectiveContext } from '../validation/corrective-context';
 
-// R68 §9/§11 — full offline corrective-loop simulation: existing MERGE_READY
-// -> R67 same-SHA policy reevaluation -> R66 PROVEN_DEFECT -> BLOCKED ->
-// correctiveActionAllowed true -> buildCorrectiveContext -> semantic
-// BlockingCause -> correctAndRevalidate's own precondition checks,
-// reproduced verbatim and evaluated against REAL persisted state, WITHOUT
-// ever calling correctAndRevalidate itself (no WF2 dispatch risk). Offline,
-// mocked fetch/repo, exact real PR #34 source text and blob SHAs (same
-// fixtures as R66/R67) — nothing PR34-specific in production code.
 
 const BASE_SHA = '6ed56ff791acbf3e111431285bef7b30c8076084';
 const HEAD_SHA = 'dc1aa978719ca40e6339e075cfe52a79875b2342';
@@ -57,6 +50,7 @@ const CONTENT_TABLE: Record<string, Record<string, { content: string; blobSha: s
 
 const admin = { id: 'admin-1', role: 'admin' };
 
+/** Prépare les données nécessaires à ce scénario. */
 function makeFixture() {
   const incidentId = 'incident-pr34';
   const requestId = 'req-r67';
@@ -91,24 +85,41 @@ function makeFixture() {
   };
   const project: any = { id: 'project-1', githubRepo: REPO, githubToken: null, jenkinsUrl: 'http://jenkins', jenkinsToken: 'user:x', jenkinsJobName: JOB, sonarqubeKey: 'key' };
   incident.project = project;
-  const incidentRepo: any = { findOne: async () => incident, update: async (_id: string, patch: any) => Object.assign(incident, patch) };
-  const projectRepo: any = { findOne: async () => project };
+  const incidentRepo: any = {
+  /** Recherche l’élément correspondant à l’identifiant. */
+  findOne: async () => incident,
+  /** Applique les modifications autorisées à l’élément. */
+  update: async (_id: string, patch: any) => Object.assign(incident, patch) };
+  const projectRepo: any = {
+  /** Recherche l’élément correspondant à l’identifiant. */
+  findOne: async () => project };
   let tail = Promise.resolve();
   const repository: any = {
-    manager: { transaction: async (fn: any) => {
+    manager: {
+    /** Exécute les opérations dans le cadre transactionnel prévu. */
+    transaction: async (fn: any) => {
       const previous = tail; let release!: () => void;
       tail = new Promise<void>(resolve => { release = resolve; });
       await previous;
-      try { return await fn({ getRepository: (entity: any) => entity?.name === 'Project' ? projectRepo : incidentRepo }); }
+      try { return await fn({
+      /** Simule la lecture des données demandées par le composant. */
+      getRepository: (entity: any) => entity?.name === 'Project' ? projectRepo : incidentRepo }); }
       finally { release(); }
     } },
     findOne: incidentRepo.findOne, update: incidentRepo.update,
   };
   let wf2Dispatched = false;
-  const service = new IncidentsService(repository, projectRepo, { emit: () => undefined } as any, { syncIncident: async () => undefined } as any, {} as any);
-  return { incident, project, service, incidentId, requestId, batchId, expectedBranch, wf2CallTracker: () => wf2Dispatched };
+  const service = new IncidentsService(repository, projectRepo, {
+  /** Diffuse ou construit le résultat prévu. */
+  emit: () => undefined } as any, {
+  /** Prépare les données nécessaires à ce scénario. */
+  syncIncident: async () => undefined } as any, {} as any);
+  return { incident, project, service, incidentId, requestId, batchId, expectedBranch,
+  /** Prépare les données nécessaires à ce scénario. */
+  wf2CallTracker: () => wf2Dispatched };
 }
 
+/** Simule les dépendances nécessaires au scénario. */
 function mockGithub(expectedBranch: string, callLog: string[]) {
   return (async (url: any) => {
     const value = String(url);
@@ -130,6 +141,7 @@ function mockGithub(expectedBranch: string, callLog: string[]) {
   }) as any;
 }
 
+/** Exécute les étapes principales de ce programme. */
 async function main() {
   const originalFetch = globalThis.fetch;
   try {

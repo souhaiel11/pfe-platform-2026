@@ -1,10 +1,4 @@
-// R22-E2G — structural proof that the three pre-CandidateVerification LLM
-// httpRequest nodes now carry an explicit, bounded, deliberate timeout
-// (LLM_TIMEOUT_MS=180000), that no automatic retry was introduced, that
-// their existing onError/Failure Envelope wiring is untouched, and that
-// every other R22-E/R22-E2B safety invariant still holds on the
-// regenerated artifact. Pure static checks against the JSON file on disk
-// -- nothing here imports/publishes/activates/invokes anything.
+// Teste le composant « wf2-r22e2g-llm-timeout » et ses cas d’erreur.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -21,6 +15,7 @@ const PRODUCTION_WORKFLOW_ID = '9adcV31eaIgJyMR0';
 const PRODUCTION_WEBHOOK_PATH = 'wf2-approve';
 
 const nodeByName = new Map(workflow.nodes.map(n => [n.name, n]));
+/** Retrouve ou construit le nœud du workflow demandé. */
 const node = name => {
   const n = nodeByName.get(name);
   assert.ok(n, `expected node '${name}' to exist`);
@@ -64,12 +59,13 @@ for (const name of LLM_NODES) {
   console.log(`Test 7 PASS - '${name}' error output -> ${errorTargets.join(', ')}`);
 }
 
-// --- Test 8: CandidateVerification remains downstream of all three (graph reachability) ---
+/** Prépare les données nécessaires à ce scénario. */
 function successors(name) {
   const c = workflow.connections[name];
   if (!c) return [];
   return c.main.flatMap(outputArr => (outputArr || []).map(t => t.node));
 }
+/** Prépare les données nécessaires à ce scénario. */
 function reachableFrom(startName) {
   const seen = new Set(); const queue = [startName];
   while (queue.length) {
@@ -87,6 +83,7 @@ console.log('Test 8 PASS - Call Candidate Verification remains downstream of all
 
 // --- Test 9: zero Git mutation reachable before CandidateVerification PASS (unchanged invariant) ---
 const webhookNode = workflow.nodes.find(n => n.type === 'n8n-nodes-base.webhook');
+/** Prépare les données nécessaires à ce scénario. */
 function reachableFromStoppingAt(startName, stopAt) {
   const seen = new Set(); const queue = [startName];
   while (queue.length) {

@@ -1,12 +1,19 @@
+// Vérifie la classification et le retour des échecs dans WF2.
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 const w=JSON.parse(readFileSync(new URL('../pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.PROMOTION-TARGET.json',import.meta.url)))[0];
+/** Retrouve ou construit le nœud du workflow demandé. */
 const node=name=>w.nodes.find(n=>n.name===name);
 const envelope={incidentId:'i',requestId:'r',batchId:'b',batchKey:'b',attemptCount:5,workflowId:'u3eeMwTuhCsetfcS'};
 const verification={overall:'FAIL',failureClass:'CANDIDATE_COMPILE_FAILURE',compile:{status:'FAILED',exitCode:1,evidenceRef:'cannot find symbol: method isCompleted()'},tests:{regression:{status:'NOT_RUN'}},staticAnalysis:{status:'NOT_RUN'}};
 const persisted=new Function('$','$items','$json','$execution',node('Persist Verification Failure').parameters.jsCode)(
- name=>({first:()=>({json:name==='Call Candidate Verification'?verification:{candidateDigest:'digest',candidateBaseSha:'a'.repeat(40)}})}),()=>[{json:{correlationEnvelope:envelope}}],{reason:'VERIFICATION_NOT_PASS'},{id:1994})[0].json;
-const prepare=input=>new Function('$input','$execution',node('Prepare WF2 Failure Status').parameters.jsCode)({first:()=>({json:input})},{id:1994})[0].json;
+ name=>({
+ /** Renvoie le premier élément disponible. */
+ first:()=>({json:name==='Call Candidate Verification'?verification:{candidateDigest:'digest',candidateBaseSha:'a'.repeat(40)}})}),()=>[{json:{correlationEnvelope:envelope}}],{reason:'VERIFICATION_NOT_PASS'},{id:1994})[0].json;
+/** Prépare les données attendues par le traitement. */
+const prepare=input=>new Function('$input','$execution',node('Prepare WF2 Failure Status').parameters.jsCode)({
+/** Renvoie le premier élément disponible. */
+first:()=>({json:input})},{id:1994})[0].json;
 const prepared=prepare(persisted);
 assert.strictEqual(prepared.verificationEvidence,persisted.verificationEvidence,'forward existing bounded evidence without rebuilding it');
 const body=node('Persist WF2 Failure Status').parameters.jsonBody;

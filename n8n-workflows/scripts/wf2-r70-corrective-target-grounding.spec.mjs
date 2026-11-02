@@ -1,3 +1,4 @@
+// Vérifie le rattachement aux fichiers réellement observés dans WF2.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
@@ -9,19 +10,31 @@ const baseline = JSON.parse(readFileSync(new URL(
   '../pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.PROMOTION-TARGET.json',
   import.meta.url,
 )))[0];
+/** Retrouve ou construit le nœud du workflow demandé. */
 const node = name => wf.nodes.find(n => n.name === name);
+/** Prépare les données nécessaires à ce scénario. */
 const baselineNode = name => baseline.nodes.find(n => n.name === name);
 
+/** Exécute le traitement et collecte son résultat. */
 function run(name, jsonInput, refs = {}) {
+  /** Simule l’accès à un nœud n8n pour le scénario. */
   const $ = key => {
     assert.ok(refs[key], 'unexpected reference ' + key);
     const items = refs[key];
-    return { first: () => ({ json: items[0] }), all: () => items.map(json => ({ json })) };
+    return {
+    /** Renvoie le premier élément disponible. */
+    first: () => ({ json: items[0] }),
+    /** Renvoie tous les éléments disponibles. */
+    all: () => items.map(json => ({ json })) };
   };
   const env = { N8N_INTERNAL_SECRET: 'secret-r70' };
   return new Function('$input', '$json', '$', 'Buffer', '$env',
     node(name).parameters.jsCode,
-  )({ first: () => ({ json: jsonInput }), all: () => [{ json: jsonInput }] }, jsonInput, $, Buffer, env);
+  )({
+  /** Renvoie le premier élément disponible. */
+  first: () => ({ json: jsonInput }),
+  /** Renvoie tous les éléments disponibles. */
+  all: () => [{ json: jsonInput }] }, jsonInput, $, Buffer, env);
 }
 
 // R70.1 — permanent syntax coverage is derived from the actual workflow
@@ -128,6 +141,7 @@ function run(name, jsonInput, refs = {}) {
     { type: 'blob', path: 'src/main/java/com/pfe/devsecops/service/TaskService.java' },
     { type: 'blob', path: 'pom.xml' },
   ];
+  /** Prépare les données nécessaires à ce scénario. */
   const correctiveCtx = (ctx) => ({
     findings: [{ file: 'src/main/java/com/pfe/devsecops/controller/TaskController.java' }],
     correctiveAttempt: true,
@@ -153,9 +167,18 @@ function run(name, jsonInput, refs = {}) {
   const ordinaryCtx = { findings: [{ file: 'src/main/java/com/pfe/devsecops/controller/TaskController.java' }] };
   const [outOrdinary] = run('Build Independent Repository Policy', { tree }, { 'Prepare Batch Context': [ordinaryCtx] });
   const [outOrdinaryBaseline] = (() => {
-    const $ = key => ({ first: () => ({ json: [ordinaryCtx][0] }), all: () => [ordinaryCtx].map(json => ({ json })) });
+    /** Simule l’accès à un nœud n8n pour le scénario. */
+    const $ = key => ({
+    /** Renvoie le premier élément disponible. */
+    first: () => ({ json: [ordinaryCtx][0] }),
+    /** Renvoie tous les éléments disponibles. */
+    all: () => [ordinaryCtx].map(json => ({ json })) });
     return new Function('$input', '$json', '$', 'Buffer', baselineNode('Build Independent Repository Policy').parameters.jsCode)(
-      { first: () => ({ json: { tree } }), all: () => [{ json: { tree } }] }, { tree }, $, Buffer,
+      {
+      /** Renvoie le premier élément disponible. */
+      first: () => ({ json: { tree } }),
+      /** Renvoie tous les éléments disponibles. */
+      all: () => [{ json: { tree } }] }, { tree }, $, Buffer,
     );
   })();
   assert.deepEqual(outOrdinary.json.repositoryPolicy.targetFiles, outOrdinaryBaseline.json.repositoryPolicy.targetFiles);
@@ -190,13 +213,16 @@ function run(name, jsonInput, refs = {}) {
     validationStrategy: { compile: true, tests: true, scanner: 'SONARQUBE' },
     requiredRelationshipApis: [], relationshipOperations: [],
   };
+  /** Prépare les données nécessaires à ce scénario. */
   const claudeResponse = (plans) => ({ model: 'x', stop_reason: 'end_turn', content: [{ type: 'text', text: JSON.stringify({ plans }) }] });
+  /** Prépare les données nécessaires à ce scénario. */
   const prepared = (overrides, target) => ({
     findingIds: ['f1'], repositoryPolicy: policy,
     remediationContract: { sourceGrounding: { groundedRelationshipApis: [] }, sourceSnapshots: overrides.sourceSnapshots || [] },
     correctiveAttempt: overrides.correctiveAttempt, correctiveContext: overrides.correctiveContext,
   });
 
+  /** Vérifie les données et renvoie leur forme utilisable. */
   function validate(overrides, target) {
     const plans = [{ ...basePlanFields, findingId: 'f1', source: 'SONARQUBE', rule: 'java:S4684', target: { file: target, line: 1 }, filesToModify: [target], filesToCreate: [], proposedPaths: [target] }];
     return run('Validate Generic Remediation Plan', claudeResponse(plans), { 'Prepare Generic Remediation Plan': [prepared(overrides)] });
@@ -301,7 +327,9 @@ function run(name, jsonInput, refs = {}) {
     };
     assert.throws(
       () => new Function('$input', '$json', '$', 'Buffer', node('Generic Candidate Preflight').parameters.jsCode)(
-        { first: () => ({ json: patch }) }, patch, () => ({}), Buffer,
+        {
+        /** Renvoie le premier élément disponible. */
+        first: () => ({ json: patch }) }, patch, () => ({}), Buffer,
       ),
       /WF2_PATCH_NOT_EFFECTIVE/,
     );
@@ -349,7 +377,9 @@ function run(name, jsonInput, refs = {}) {
     validationStrategy: { compile: true, tests: true, scanner: 'SONARQUBE' },
     requiredRelationshipApis: [], relationshipOperations: [],
   };
+  /** Prépare les données nécessaires à ce scénario. */
   const claudeResponse = (plans) => ({ model: 'x', stop_reason: 'end_turn', content: [{ type: 'text', text: JSON.stringify({ plans }) }] });
+  /** Prépare les données nécessaires à ce scénario. */
   const preparedFor = (target) => ({
     findingIds: ['f1'], repositoryPolicy: policy,
     remediationContract: { sourceGrounding: { groundedRelationshipApis: [] }, sourceSnapshots: [] },

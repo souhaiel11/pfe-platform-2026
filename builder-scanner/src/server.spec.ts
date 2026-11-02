@@ -1,14 +1,4 @@
-// V1.7 Phase E — real HTTP contract proof for the dedicated builder's
-// `POST /internal/build-scan` (and `/healthz`), spawned exactly like
-// candidate-verifier's own security-remediation-http.spec.ts spawns its
-// server.ts: the real process, real HTTP parsing/dispatch, real port.
-// Podman is not installed on this host (a separate, already-documented
-// environmental fact — see n8n-workflows/WF6-V1_7-RUNTIME-INTEGRATION-
-// AUDIT.md), so the /internal/build-scan case here proves the HTTP
-// CONTRACT (structured request validation, deterministic failure mapping,
-// no arbitrary stdout becomes authority, never a fabricated success) against
-// a REAL, honestly-absent-Podman environment, not a fixture standing in for
-// one.
+// Teste le composant « server » et ses cas d’erreur.
 import * as assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import * as net from 'node:net';
@@ -16,6 +6,7 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 
+/** Prépare les données nécessaires à ce scénario. */
 async function reservePort(): Promise<number> {
   const reservation = net.createServer();
   await new Promise<void>(resolve => reservation.listen(0, '127.0.0.1', resolve));
@@ -26,20 +17,18 @@ async function reservePort(): Promise<number> {
 
 const TEST_SECRET = 'v17-final-predeploy-test-secret-do-not-reuse';
 
+/** Envoie une requête HTTP JSON et lit sa réponse. */
 async function postJson(port: number, path_: string, body: string, headers: Record<string, string> = {}): Promise<{ status: number; json: any }> {
   const res = await fetch(`http://127.0.0.1:${port}${path_}`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...headers }, body });
   return { status: res.status, json: await res.json() };
 }
 
-// V1.7 final predeploy phase — Phase A: every request-shape test below
-// (malformed JSON, missing field, etc.) needs to reach the SAME validation
-// logic it always tested, now that authentication runs first -- so those
-// calls carry a valid header, and authentication itself gets its own
-// dedicated NO_AUTH/BAD_AUTH/VALID_AUTH cases.
+/** Prépare les données nécessaires à ce scénario. */
 function postAuthed(port: number, path_: string, body: string) {
   return postJson(port, path_, body, { 'x-internal-secret': TEST_SECRET });
 }
 
+/** Exécute les étapes principales de ce programme. */
 async function main() {
   const port = await reservePort();
   const child = spawn(process.execPath, ['-r', 'ts-node/register/transpile-only', path.join(__dirname, 'server.ts')], {

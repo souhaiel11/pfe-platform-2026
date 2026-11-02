@@ -1,28 +1,9 @@
-// ═══════════════════════════════════════════════════════════════════════
-//  Correctifs P1 post-gel — tests de non-régression.
-//
-//  Deux défauts signalés après le gel, tous deux de ma propre passe de
-//  finition :
-//
-//   P1-A  La liste des projets et le tableau de bord attendaient
-//         /dashboard/jenkins-global dans un forkJoin BLOQUANT. Cette lecture
-//         met 5 008 ms sur le backend live (son plafond de 5 000 ms, atteint
-//         dès qu'un projet pointe vers une adresse Jenkins injoignable),
-//         contre 27 ms pour les deux lectures qui portent l'écran. Cinq
-//         secondes d'attente pour des données déjà disponibles.
-//
-//   P1-B  Un projet SANS job Jenkins est absent de jenkins-global, et était
-//         rendu « Indisponible — les données Jenkins n'ont pas été
-//         chargées ». C'est une panne affirmée sans avoir été constatée :
-//         rien n'a échoué, il n'y a simplement rien à lire.
-//
-//  Ces tests verrouillent les deux corrections. Charges utiles = formes
-//  réelles relevées sur le backend live le 2026-10-10.
-// ═══════════════════════════════════════════════════════════════════════
+// Teste le composant « post-freeze-p1 » et ses cas d’erreur.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { loadFrontend } from './security-lifecycle-test-loader.mjs';
 
+/** Lit les données depuis leur source. */
 const read = p => readFileSync(new URL(p, import.meta.url), 'utf8');
 const frenchFormat = loadFrontend('../src/app/shared/french-format.ts');
 const row = loadFrontend('../src/app/features/projects/project-list-row.ts', {
@@ -153,16 +134,7 @@ const labels = loadFrontend('../src/app/shared/status-labels.ts');
 }
 
 
-// ── S3 (levée ciblée du gel) — boutons d'action des tables de scanners ──
-//
-//  Signalé par l'opérateur : « la partie action dans OWASP, ZAP, Trivy, les
-//  boutons ne sont pas beaux. » Diagnostic : ce n'était pas une question de
-//  goût. Les trois boutons de la colonne Action étaient des <button> SANS
-//  AUCUNE CLASSE, et styles.scss ne définit aucune règle pour un `button`
-//  nu. Le navigateur leur appliquait donc son propre rendu — boîte grise
-//  système, police système — qui ne suit ni le thème clair/sombre ni le
-//  système `.btn` de la plateforme, et qui les rendait tous les trois
-//  identiques, donc sans hiérarchie lisible (§6/§7).
+// ── S3 (levée ciblée du gel) — boutons d'action des tables de scanners ── Signalé par l'opérateur : « la partie action dans OWASP, ZAP, Trivy, les boutons ne sont pas beaux.
 {
   const platformBtn = /class="[^"]*\bbtn\b[^"]*"/;
 
@@ -221,20 +193,6 @@ const labels = loadFrontend('../src/app/shared/status-labels.ts');
 }
 
 
-// ── P1-D — Vue Déploiement : l'attente Azure est dite, et payée une fois ──
-//
-//  Mesures sur la plateforme live : GET /azure-deploy/governance/:id prend
-//  10,7 à 12,4 s pour les deux projets qui ont un artefact publié. Ce n'est
-//  pas un défaut : le serveur interroge réellement le registre Azure
-//  (France Central) — /resolve-digest 4,88 s et /inspect-artifact 5,92 s,
-//  dont la somme recouvre la mesure totale. C'est le prix de la garantie :
-//  la décision n'est jamais rendue sur une copie locale.
-//
-//  Deux choses restaient corrigeables côté interface, et elles le sont :
-//   1. l'attente n'était pas expliquée — 12 s de squelette muet se lisent
-//      comme une interface figée ;
-//   2. le composant étant sous `*ngIf` seul, il était détruit à chaque
-//      changement d'onglet et repayait les 12 s à CHAQUE retour.
 {
   const dg = read('../src/app/features/projects/deployment-governance.component.html');
 

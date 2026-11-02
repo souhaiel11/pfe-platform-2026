@@ -1,5 +1,9 @@
 {
+  "id": "6BVXqAsePEPAjiIQ",
   "name": "WF-Chat-V4",
+  "active": true,
+  "versionId": "f3a3c2c4-cd48-4ed9-83a4-765566d4c089",
+  "activeVersionId": "f3a3c2c4-cd48-4ed9-83a4-765566d4c089",
   "nodes": [
     {
       "parameters": {
@@ -20,7 +24,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const question = $('Fetch Context').first().json.question;\nconst history = $('Fetch Context').first().json.history || [];\n\n// Récupère tous les incidents\nlet incidents = [];\ntry {\n  incidents = $('Get Incidents').all().map(i => i.json);\n} catch(e) { incidents = []; }\n\n// Résumé compact pour Claude\nconst summary = incidents.slice(0, 20).map(i => ({\n  ref: i.incidentRef,\n  project: i.projectName,\n  source: i.source,\n  status: i.status,\n  severity: i.severity,\n  title: i.title,\n  created: i.createdAt\n}));\n\n// Formater l'historique\nconst historyText = history.length > 0\n  ? '\\nHISTORIQUE DE LA CONVERSATION :\\n' + history.slice(-5).map(h => \n      `${h.role === 'user' ? 'Utilisateur' : 'Assistant'}: ${h.content.substring(0, 200)}`\n    ).join('\\n') + '\\n'\n  : '';\n\nconst prompt = `Tu es un assistant DevSecOps expert intégré dans la plateforme Vermeg.\nTu as accès aux données réelles de la plateforme.\n${historyText}\nDONNÉES DE LA PLATEFORME :\n${JSON.stringify(summary, null, 2).substring(0, 4000)}\n\nINSTRUCTIONS :\n- Vérifier les projets disponibles avant chaque réponse\n- Réponds toujours en français\n- Si on te demande un projet spécifique, filtre les données correspondantes\n- Sois précis, utilise les données réelles\n- Réponse claire et correcte\n- Si tu ne trouves pas de données → dis-le clairement\n- Pour les questions de suivi, utilise l'historique ci-dessus\n\nQUESTION : ${question}`;\n\nreturn [{ json: { prompt, question, history } }];"
+        "jsCode": "const question = $('Fetch Context').first().json.question;\nconst rawHistory = $('Fetch Context').first().json.history;\nconst history = Array.isArray(rawHistory) ? rawHistory.filter(h => h && (h.role === 'user' || h.role === 'assistant') && typeof h.content === 'string').slice(-5) : [];\n\n// Récupère tous les incidents\nlet incidents = [];\ntry {\n  incidents = $('Get Incidents').all().map(i => i.json);\n} catch(e) { incidents = []; }\n\n// Résumé compact pour Claude\nconst summary = incidents.slice(0, 20).map(i => ({\n  ref: i.incidentRef,\n  project: i.projectName,\n  source: i.source,\n  status: i.status,\n  severity: i.severity,\n  title: i.title,\n  created: i.createdAt\n}));\n\n// Formater l'historique\nconst historyText = history.length > 0\n  ? '\\nHISTORIQUE DE LA CONVERSATION :\\n' + history.slice(-5).map(h => \n      `${h.role === 'user' ? 'Utilisateur' : 'Assistant'}: ${h.content.substring(0, 200)}`\n    ).join('\\n') + '\\n'\n  : '';\n\nconst prompt = `Tu es un assistant DevSecOps expert intégré dans la plateforme Vermeg.\nTu as accès aux données réelles de la plateforme.\n${historyText}\nDONNÉES DE LA PLATEFORME :\n${JSON.stringify(summary, null, 2).substring(0, 4000)}\n\nINSTRUCTIONS :\n- Vérifier les projets disponibles avant chaque réponse\n- Réponds toujours en français\n- Si on te demande un projet spécifique, filtre les données correspondantes\n- Sois précis, utilise les données réelles\n- Réponse claire et correcte\n- Si tu ne trouves pas de données → dis-le clairement\n- Pour les questions de suivi, utilise l'historique ci-dessus\n\nQUESTION : ${question}`;\n\nreturn [{ json: { prompt, question, history } }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -29,11 +33,12 @@
         304
       ],
       "id": "32c2a8f2-f072-48b4-8ce1-d569b6aa6ad2",
-      "name": "Build Prompt"
+      "name": "Build Prompt",
+      "onError": "continueErrorOutput"
     },
     {
       "parameters": {
-        "url": "=http://backend:3001/api/incidents?projectId={{ $json.projectId }}&size=20",
+        "url": "={{ 'http://backend:3001/api/incidents?size=20' + ($json.projectId ? '&projectId=' + encodeURIComponent($json.projectId) : '') }}",
         "options": {},
         "sendHeaders": true,
         "headerParameters": {
@@ -53,11 +58,12 @@
       ],
       "id": "d8d0e026-a741-496b-a304-4b057e308fc6",
       "name": "Get Incidents",
-      "alwaysOutputData": true
+      "alwaysOutputData": true,
+      "onError": "continueErrorOutput"
     },
     {
       "parameters": {
-        "jsCode": "// Récupère la question, le projectId et l'historique\nconst question = $input.first().json.body.question;\nconst projectId = $input.first().json.body.projectId;\nconst history = $input.first().json.body.history || [];\n\nreturn [{\n  json: {\n    question: question,\n    projectId: projectId,\n    history: history\n  }\n}];"
+        "jsCode": "const body = $input.first()?.json?.body;\nif (!body || typeof body.question !== 'string' || !body.question.trim()) {\n  throw new Error('CHAT_INVALID_REQUEST');\n}\nconst history = Array.isArray(body.history)\n  ? body.history.filter(h => h && (h.role === 'user' || h.role === 'assistant') && typeof h.content === 'string').slice(-5)\n  : [];\nreturn [{ json: {\n  question: body.question.trim(),\n  ...(typeof body.projectId === 'string' && body.projectId.trim() ? { projectId: body.projectId.trim() } : {}),\n  history,\n} }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -66,7 +72,8 @@
         288
       ],
       "id": "60a88cea-cc42-412d-94e3-205546027f8c",
-      "name": "Fetch Context"
+      "name": "Fetch Context",
+      "onError": "continueErrorOutput"
     },
     {
       "parameters": {
@@ -102,11 +109,12 @@
           "id": "Ee9vVedmz84oXg5W",
           "name": "Claude API"
         }
-      }
+      },
+      "onError": "continueErrorOutput"
     },
     {
       "parameters": {
-        "jsCode": "const response = $input.first().json;\nconst answer   = response.content[0].text;\n\nreturn [{\n  json: {\n    answer: answer,\n    model: response.model,\n    timestamp: new Date().toISOString()\n  }\n}];"
+        "jsCode": "const response = $input.first()?.json;\nif (!response || !Array.isArray(response.content) || response.content.length === 0) {\n  throw new Error('CHAT_INVALID_PROVIDER_RESPONSE');\n}\nconst textBlocks = response.content.filter(block => block && block.type === 'text');\nif (textBlocks.length === 0 || textBlocks.some(block => typeof block.text !== 'string' || !block.text.trim())) {\n  throw new Error('CHAT_INVALID_PROVIDER_RESPONSE');\n}\nconst answer = textBlocks.map(block => block.text.trim()).join('\\n');\nreturn [{ json: { ok: true, answer } }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -115,13 +123,16 @@
         304
       ],
       "id": "af1b54d3-8c7d-4d29-a09f-b411c5b79493",
-      "name": "Parse Response"
+      "name": "Parse Response",
+      "onError": "continueErrorOutput"
     },
     {
       "parameters": {
         "respondWith": "json",
         "responseBody": "={{ $json }}",
-        "options": {}
+        "options": {
+          "responseCode": "={{ $json.ok === true ? 200 : 502 }}"
+        }
       },
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.5,
@@ -143,7 +154,22 @@
         304
       ],
       "id": "e07d4acb-5c0f-4b85-b337-5475f73cfa0b",
-      "name": "Prepare Claude Body"
+      "name": "Prepare Claude Body",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "ae8121ca-f6a3-4354-8e43-4931b596d3f7",
+      "name": "Chat Error Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        560
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "return [{ json: {\n  ok: false,\n  answer: null,\n  error: { code: 'CHAT_WORKFLOW_ERROR', message: 'Unable to process the chat request.' },\n} }];"
+      }
     }
   ],
   "connections": {
@@ -166,6 +192,13 @@
             "type": "main",
             "index": 0
           }
+        ],
+        [
+          {
+            "node": "Chat Error Response",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
@@ -174,6 +207,13 @@
         [
           {
             "node": "Get Incidents",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Chat Error Response",
             "type": "main",
             "index": 0
           }
@@ -188,6 +228,13 @@
             "type": "main",
             "index": 0
           }
+        ],
+        [
+          {
+            "node": "Chat Error Response",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
@@ -196,6 +243,13 @@
         [
           {
             "node": "Parse Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Chat Error Response",
             "type": "main",
             "index": 0
           }
@@ -210,6 +264,13 @@
             "type": "main",
             "index": 0
           }
+        ],
+        [
+          {
+            "node": "Chat Error Response",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
@@ -221,41 +282,32 @@
             "type": "main",
             "index": 0
           }
+        ],
+        [
+          {
+            "node": "Chat Error Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chat Error Response": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     }
   },
-  "active": true,
   "settings": {
     "executionOrder": "v1",
-    "binaryMode": "separate"
-  },
-  "id": "6BVXqAsePEPAjiIQ",
-  "meta": {},
-  "pinData": {
-    "Webhook": [
-      {
-        "json": {
-          "headers": {
-            "host": "172.31.172.61:5678",
-            "user-agent": "curl/7.81.0",
-            "accept": "*/*",
-            "content-type": "application/json",
-            "content-length": "86"
-          },
-          "params": {},
-          "query": {},
-          "body": {
-            "question": "Incidents en cours ?",
-            "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002"
-          },
-          "webhookUrl": "http://localhost:5678/webhook/chat-agent",
-          "executionMode": "production"
-        },
-        "pairedItem": {
-          "item": 0
-        }
-      }
-    ]
+    "binaryMode": "separate",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
   }
 }

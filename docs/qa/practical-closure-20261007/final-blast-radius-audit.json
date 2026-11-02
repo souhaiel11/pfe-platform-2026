@@ -1,0 +1,33 @@
+{
+  "changes": {
+    "projects": [],
+    "manual_remediation_tasks": [
+      "9d2ff915-23e1-4f0b-8f4a-561b4d95845f",
+      "a390e383-42b7-4348-894c-5e02a7e5f98d"
+    ],
+    "incidents": [
+      "492b38c7-99bc-49f7-aa03-df11828c71ba"
+    ],
+    "reports": [],
+    "remediation_target_reservations": [
+      "c1f66d9c-622a-404a-9075-b5494b72177a"
+    ],
+    "security_remediation_retry_e2e_plans": [
+      "0d8f4253-8213-41ce-9ddf-91b8e1add3a2"
+    ]
+  },
+  "unrelatedRowsChanged": 0,
+  "historicalAttemptsUnchanged": true,
+  "attemptCount": 2,
+  "activeReservations": 0,
+  "activePlans": 0,
+  "wf6Executions": [
+    2092,
+    2093
+  ],
+  "gitWritersExecuted": [],
+  "flags": {
+    "dispatch": "false",
+    "harness": "false"
+  }
+}

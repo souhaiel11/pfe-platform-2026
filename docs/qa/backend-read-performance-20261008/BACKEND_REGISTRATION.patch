@@ -1,0 +1,15 @@
+--- before/backend/src/app.module.ts
++++ after/backend/src/app.module.ts
+@@ -1,3 +1,4 @@
++import { ProjectReadsModule } from './project-reads/project-reads.module';
+ import { HealthController } from './health.controller';
+ import { Module } from '@nestjs/common';
+ import { TypeOrmModule } from '@nestjs/typeorm';
+@@ -42,6 +43,7 @@
+       }),
+       inject: [ConfigService],
+     }),
++    ProjectReadsModule,
+     AuthModule,
+     ProjectsModule,
+     IncidentsModule,

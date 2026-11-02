@@ -1,0 +1,17 @@
+[
+  {
+    "file": "frontend/src/app/features/projects/project-detail.component.html",
+    "beforeSha256": "484d9039ce90a005c63aa2f0a0be3c626206799993f3da206c25936a4fdd3220",
+    "afterSha256": "95df6df72c3cd086279ed4064cd938066bded0330c89950756b75ea25789c46c"
+  },
+  {
+    "file": "frontend/src/app/features/projects/project-detail.component.ts",
+    "beforeSha256": "e7417f40ca3dc39f3db588cd50043494088799e94773c5b19c851fbb40cf9b55",
+    "afterSha256": "030c6406a233960cf59950559493feba947c233479844688c1453cd9ff150093"
+  },
+  {
+    "file": "frontend/src/app/features/projects/cve-table.component.ts",
+    "beforeSha256": "54a518c2b8c5ca88d6e2281065da3dcbb2ffeb98ff12dfcac758aa8cfceebb62",
+    "afterSha256": "7d15eb0cb3bb2f23f1c06fed1475d47a8cc9ccd4b9f509686a03f4da60cbd4f8"
+  }
+]

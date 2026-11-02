@@ -1,0 +1,11 @@
+{
+  "initialStrictComparison": "flagged embedded repository-wide metadata",
+  "onlyDifferences": [
+    "head/base.repo.open_issues",
+    "head/base.repo.open_issues_count",
+    "head/base.repo.pushed_at"
+  ],
+  "openIssuesBefore": 10,
+  "openIssuesAfter": 3,
+  "reason": "Seven approved PR closures and branch-ref deletions update repository-wide metadata; all other embedded and PR fields remain compared exactly."
+}

@@ -1,5 +1,4 @@
-// Offline contract tests for WF1's native HTTP baseline pagination and pure
-// consolidation node. No n8n execution, network or business action.
+// Vérifie le choix de la référence de comparaison dans WF1.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 const wf = JSON.parse(readFileSync(new URL('../active/wf1-incident-intake-analysis-v5-1-vNOQiEgnXg9Zqn2q.json', import.meta.url)))[0];
@@ -13,11 +12,16 @@ assert.equal(http.parameters.options.pagination.pagination.maxRequests, 40);
 assert.doesNotMatch(JSON.stringify(http), /httpRequestWithAuthentication|requestWithAuthenticationPaginated/);
 assert.doesNotMatch(JSON.stringify(node), /httpRequestWithAuthentication|requestWithAuthenticationPaginated/);
 const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
+/** Prépare les données nécessaires à ce scénario. */
 const issue = i => ({ key:`k${i}`, rule:'x', component:`p:F${i}.java`, status:'OPEN' });
+/** Prépare les données nécessaires à ce scénario. */
 const page = (issues,total,p=1) => ({issues,total,paging:{total,pageIndex:p,pageSize:500}});
+/** Exécute le traitement et collecte son résultat. */
 async function run(pages) {
  const fn = new AsyncFunction('$input', node.parameters.jsCode);
- return (await fn({ all: () => pages.map(json => ({json})) }))[0].json;
+ return (await fn({
+ /** Renvoie tous les éléments disponibles. */
+ all: () => pages.map(json => ({json})) }))[0].json;
 }
 let out = await run([page(Array.from({length:16},(_,i)=>issue(i)),16)]);
 assert.equal(out.complete,true); assert.equal(out.collectedCount,16); assert.equal(out.total,16); assert.equal(out.issues.length,16);

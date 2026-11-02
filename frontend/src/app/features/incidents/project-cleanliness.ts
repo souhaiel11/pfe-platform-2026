@@ -1,26 +1,4 @@
-// ─────────────────────────────────────────────────────────────
-//  MIROIR FRONTEND de backend/src/common/project-cleanliness.ts.
-//  Le frontend et le backend sont deux packages npm séparés dans ce repo
-//  (pas de package "shared" — même patron déjà en place pour les CVE, voir
-//  cve-table.component.ts::NormCve qui réimplémente sa propre normalisation
-//  plutôt que d'importer report-normalizer.ts du backend). Fonction pure,
-//  gardée IDENTIQUE ligne à ligne au fichier backend — toute modification
-//  de logique doit être répercutée des deux côtés.
-//
-//  Calcul déterministe "projet propre" — brique pour le verrou de
-//  déploiement (Couche 3). Opère directement sur enrichedData BRUT
-//  (incident.metadata.enrichedData, déjà chargé tel quel dans
-//  IncidentDetailComponent.enrichedData).
-//
-//  Philosophie fail-closed : une phase dont le statut est absent/inattendu
-//  est BLOQUANTE par défaut, jamais assimilée à "ok". ZAP suivait
-//  auparavant une exception (non bloquant tant que non complété) —
-//  supprimée (ticket QA-WF1-SCANNER-DIAGNOSTIC-HARDENING §8) : ZAP est un
-//  scanner requis au même titre que Trivy/OWASP.
-//  Seule la sévérité CRITICAL bloque sur Trivy/OWASP (décision explicite) ;
-//  HIGH/MEDIUM/LOW sont signalées (nonBlockingFindings), jamais bloquantes.
-// ─────────────────────────────────────────────────────────────
-
+// Calcule si le pipeline rend le projet propre à partir du build, de Docker, de SonarQube, des scanners et des tests.
 export type PhaseType = 'agent' | 'humain';
 
 export interface BlockingPhase {
@@ -51,16 +29,17 @@ const GOOD_BUILD_STATUSES = ['SUCCESS'];
 const BAD_BUILD_STATUSES = ['FAILURE', 'FAILED', 'UNSTABLE', 'ABORTED'];
 const GOOD_TEST_STATUSES = ['SUCCESS', 'PASSED', 'COMPLETED'];
 
+/** Vrai si le bloc scanner donné porte au moins une vulnérabilité CRITICAL ouverte. */
 function hasOpenCritical(block: any): boolean {
   return (block?.critical || 0) > 0;
 }
 
+/** Calcule si un projet est "propre" en passant chaque phase (build Jenkins, build Docker, SonarQube, Trivy, OWASP, ZAP, tests) au crible. */
 export function evaluateProjectCleanliness(enrichedData: any): ProjectCleanliness {
   const blockingPhases: BlockingPhase[] = [];
   const nonExecutedPhases: NonExecutedPhase[] = [];
   const nonBlockingFindings: NonBlockingFinding[] = [];
 
-  // ── Jenkinsfile (agent : WF4) ──
   const buildStatus = String(enrichedData?.build?.status || '').toUpperCase();
   if (BAD_BUILD_STATUSES.includes(buildStatus)) {
     blockingPhases.push({ phase: 'Jenkinsfile', raison: `Build Jenkins en échec (${buildStatus})`, type: 'agent' });
@@ -68,7 +47,6 @@ export function evaluateProjectCleanliness(enrichedData: any): ProjectCleanlines
     blockingPhases.push({ phase: 'Jenkinsfile', raison: `Statut de build inconnu (${buildStatus || 'absent'})`, type: 'agent' });
   }
 
-  // ── Docker (agent : WF5) ──
   const dockerStatus = String(enrichedData?.docker?.build_status || '').toUpperCase();
   if (BAD_BUILD_STATUSES.includes(dockerStatus)) {
     blockingPhases.push({ phase: 'Docker', raison: `Build image Docker en échec (${dockerStatus})`, type: 'agent' });
@@ -76,13 +54,11 @@ export function evaluateProjectCleanliness(enrichedData: any): ProjectCleanlines
     blockingPhases.push({ phase: 'Docker', raison: `Statut de build Docker inconnu (${dockerStatus || 'absent'})`, type: 'agent' });
   }
 
-  // ── SonarQube (agent : WF2) ──
   const qualityGate = String(enrichedData?.sonar?.quality_gate || '').toUpperCase();
   if (!OK_QUALITY_GATES.includes(qualityGate)) {
     blockingPhases.push({ phase: 'SonarQube', raison: `Quality gate ${qualityGate || 'indéterminée'}`, type: 'agent' });
   }
 
-  // ── Trivy — vulnérabilités conteneur (humain) ──
   const trivy = enrichedData?.trivy;
   if (trivy?.status !== 'COMPLETED') {
     blockingPhases.push({ phase: 'Vulnérabilités conteneur (Trivy)', raison: `Scanner non exécuté (statut ${trivy?.status || 'absent'})`, type: 'humain' });
@@ -95,7 +71,6 @@ export function evaluateProjectCleanliness(enrichedData: any): ProjectCleanlines
     }
   }
 
-  // ── OWASP Dependency-Check — vulnérabilités dépendances (humain) ──
   const owasp = enrichedData?.owasp;
   if (owasp?.status !== 'COMPLETED') {
     blockingPhases.push({ phase: 'Vulnérabilités dépendances (OWASP)', raison: `Scanner non exécuté (statut ${owasp?.status || 'absent'})`, type: 'humain' });
@@ -108,7 +83,6 @@ export function evaluateProjectCleanliness(enrichedData: any): ProjectCleanlines
     }
   }
 
-  // ── ZAP — DAST (humain) — fail-closed, même traitement que Trivy/OWASP ──
   const zap = enrichedData?.zap;
   if (zap?.status !== 'COMPLETED') {
     blockingPhases.push({ phase: 'DAST (ZAP)', raison: `Scanner non exécuté ou incomplet (statut ${zap?.status || 'absent'}${zap?.technicalCode ? `, cause : ${zap.technicalCode}` : ''}) — résultat DAST indisponible, bloquant par défaut.`, type: 'humain' });
@@ -116,7 +90,6 @@ export function evaluateProjectCleanliness(enrichedData: any): ProjectCleanlines
     blockingPhases.push({ phase: 'DAST (ZAP)', raison: `${zap.alerts_high} alerte(s) haute(s) ouverte(s)`, type: 'humain' });
   }
 
-  // ── Tests (humain) ──
   const tests = enrichedData?.tests;
   const testStatus = String(tests?.status || '').toUpperCase();
   if ((tests?.failures || 0) > 0) {

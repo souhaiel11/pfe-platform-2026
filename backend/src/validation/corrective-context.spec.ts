@@ -1,9 +1,8 @@
+// Teste le composant « corrective-context » et ses cas d’erreur.
 import * as assert from 'node:assert/strict';
 import { extractBlockingCauses, buildCorrectiveContext } from './corrective-context';
 
-// BRIQUE 5 — pure extraction contract: never invents evidence, never mixes
-// TARGET_FINDING_INVALID with NEW_BLOCKING_FINDING for the same record,
-// carries line as supporting evidence only (never identity).
+/** Exécute les étapes principales de ce programme. */
 
 function main() {
   // A validation record shaped exactly like saveValidation() persists.
@@ -89,11 +88,7 @@ function main() {
 
   console.log('Corrective context extraction (Brique 5): PASS');
 
-  // ══════════════════════════════════════════════════════════════════════
-  // R68 — DEFAULT_VALUE_SEMANTICS_DEFECT cause extraction. Synthetic
-  // evidence shape only (no rule/entity/field name from any real project) —
-  // proves the generic contract, not a specific defect.
-  // ══════════════════════════════════════════════════════════════════════
+  /** Prépare les données nécessaires à ce scénario. */
   const semanticEvidence = (over: any = {}) => ({
     sourceType: 'Widget', sourceField: 'mode', sourceDefault: 'Mode.STANDARD',
     candidateType: 'WidgetDto', candidateField: 'mode', candidateDefault: null,
@@ -102,6 +97,7 @@ function main() {
     mappingPath: 'WidgetService.update(Long, WidgetDto): existing.setMode(parseMode(updated.getMode()))',
     ...over,
   });
+  /** Prépare les données nécessaires à ce scénario. */
   const semanticValidation = (over: any = {}) => ({
     checkoutSha: sha,
     findingResults: [{ findingId: 'a', result: 'VALID', evidence: 'a' }, { findingId: 'b', result: 'VALID', evidence: 'b' }],

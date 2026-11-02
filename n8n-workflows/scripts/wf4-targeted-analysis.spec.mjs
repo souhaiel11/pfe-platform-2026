@@ -1,0 +1,28 @@
+// Vérifie la reconstruction exacte et les refus des corrections ambiguës.
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+import {patchWf4Analysis,analysisSchema} from './wf4-targeted-analysis.mjs';
+let source=JSON.parse(fs.readFileSync(process.argv[2]||'n8n-workflows/active/wf4-jenkinsfile-optimizer-v5-x4oTJ4HbkC1R526b.json'));if(Array.isArray(source))source=source[0];
+const w=patchWf4Analysis(source),node=name=>w.nodes.find(n=>n.name===name);
+assert.deepEqual(patchWf4Analysis(w),w);
+assert.equal(w.nodes.length,source.nodes.length);assert.deepEqual(w.connections,source.connections);
+for(const n of source.nodes.filter(n=>!['Prepare - Optimizer Body','Build Project Context','Parse - Optimizer Output','Jenkinsfile Optimizer Agent'].includes(n.name)))assert.deepEqual(node(n.name),n);
+const prepared=new Function('$input',node('Prepare - Optimizer Body').parameters.jsCode)({first:()=>({json:{body:{jenkinsfile:'pipeline { agent any; stages {} }'}}})})[0].json;
+assert.equal(prepared.apiBody.max_tokens,6500);
+assert.deepEqual(prepared.apiBody.output_config.format.schema,analysisSchema);
+assert.match(prepared.apiBody.system,/ANTI-FAUX-POSITIFS/);
+const parse=new Function('$input','$',node('Parse - Optimizer Output').parameters.jsCode);
+const issue={id:'JF-1',category:'FIABILITE',severity:'MOYEN',title:'Délai',problem:'Délai absent',recommendation:'Ajouter un délai',lineHint:'echo',needsConfirmation:false,confirmationNote:''};
+const original='pipeline { stages { echo "before" } }';
+const call=(p,text=original,stop='end_turn')=>parse({first:()=>({json:{stop_reason:stop,content:[{type:'text',text:JSON.stringify(p)}]}})},name=>({first:()=>({json:name==='Webhook - Optimize'?{body:{jenkinsfile:text}}:{projectContext:{}}})}))[0].json;
+const plan={score:70,summary:'Analyse du pipeline.',issues:[issue],edits:[{ref:'JF-1',before:'echo "before"',after:'echo "after"'}]};
+let r=call(plan);assert.equal(r.success,true);assert.equal(r.optimizedJenkinsfile,'pipeline { stages { echo "after" } }');assert.equal(r.changes.length,1);
+r=call({...plan,edits:[]});assert.equal(r.optimizedJenkinsfile,original);assert.equal(r.changes.length,0);
+assert.equal(call(plan,original+original).success,false);
+assert.equal(call({...plan,edits:[...plan.edits,...plan.edits]}).success,false);
+assert.equal(call({...plan,score:101}).success,false);
+assert.equal(call({...plan,issues:[{...issue,needsConfirmation:true}]}).success,false);
+assert.equal(call({...plan,edits:[{ref:'unknown',before:'before',after:'after'}]}).success,false);
+assert.equal(call(plan,original,'max_tokens').success,false);
+assert.equal(node('Jenkinsfile Optimizer Agent').retryOnFail,false);
+console.log('PASS : contrats, reconstruction, ambiguïtés, chevauchements, confirmations, troncature et graphe inchangé.');

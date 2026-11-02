@@ -1,21 +1,11 @@
+// Teste le composant « wf2-source-provenance » et ses cas d’erreur.
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {SANDBOX_SHADOWED} from './wf2-code-node-sandbox.spec.mjs';
 
-// Source-evidence provenance contract.
-//
-// The three source fetch nodes read at baseSha. What the grounding evidence
-// DECLARES as its frozen source must therefore be baseSha too -- on a first pass
-// and, critically, on a corrective second pass where a remediation branch already
-// exists at a different HEAD. Declaring the branch tip while reading baseSha
-// attributed content to a commit it never came from.
-//
-// Provenance is taken from the ref the GitHub contents response echoes back, never
-// from `sha`: that field is a BLOB id, a different identity from a commit id, and
-// comparing the two would be meaningless. Production node bodies are executed
-// as-is from the promotion target; nothing is re-implemented here.
 const wf=JSON.parse(readFileSync(new URL('../pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.PROMOTION-TARGET.json',import.meta.url)))[0];
 const fixture=JSON.parse(readFileSync(new URL('./fixtures/wf2-relationship-source-grounding.json',import.meta.url)));
+/** Retrouve ou construit le nœud du workflow demandé. */
 const node=name=>{const n=wf.nodes.find(n=>n.name===name);assert.ok(n,name);return n;};
 
 const A=fixture.sourceCommitSha;                                  // baseSha (frozen baseline)
@@ -35,34 +25,48 @@ assert.match(frozenLine,/Prepare Batch Context'\)\.first\(\)\.json\.baseSha/,'fr
 assert.doesNotMatch(frozenLine,/Lookup Remediation Branch/,'frozenSourceSha no longer follows the remediation branch tip');
 assert.match(expandCode,/SOURCE_SHA_FROZEN_REQUIRED/,'frozen SHA is still mandatory');
 
-// ── Harness ───────────────────────────────────────────────────────────────────
+/** Prépare les données nécessaires à ce scénario. */
 const atRef=(path,ref)=>({url:'https://api.github.com/repos/souhaiel11/pfe-app-test/contents/'+path+'?ref='+ref,
   download_url:'https://raw.githubusercontent.com/souhaiel11/pfe-app-test/'+ref+'/'+path,
   html_url:'https://github.com/souhaiel11/pfe-app-test/blob/'+ref+'/'+path,
   git_url:'https://api.github.com/repos/souhaiel11/pfe-app-test/git/blobs/'+'c'.repeat(40)});
+/** Prépare l’élément transmis au nœud suivant. */
 const item=(source,ref)=>({json:{path:source.path,sha:source.sha,
   content:Buffer.from(source.content).toString('base64'),...atRef(source.path,ref)}});
 const ctx={repository_owner:'souhaiel11',repository_name:'pfe-app-test',baseSha:A,
   repositoryPolicy:{existingFiles:fixture.repositoryTree},findings:[]};
-// Node bodies run with the sandbox-unavailable globals REMOVED, so this suite
-// reproduces the n8n Code-node contract instead of full Node. Running under plain
-// Node is what let execution 2008 through: `new URL(...)` resolved here and threw
-// there. See wf2-code-node-sandbox.spec.mjs for the deny-list and the static scan.
+/** Prépare les données nécessaires à ce scénario. */
 const runNode=(name,$input,$json,$)=>{
   const args=['$input','$json','$','Buffer',...SANDBOX_SHADOWED];
   return new Function(...args,node(name).parameters.jsCode)(
     $input,$json,$,Buffer,...SANDBOX_SHADOWED.map(()=>undefined));
 };
-// branchStatus 404 = first pass (no remediation branch); 200 = corrective second pass at B.
+/** Prépare les données nécessaires à ce scénario. */
 function expand(branchStatus) {
   const lookup=branchStatus===200?{statusCode:200,body:{object:{sha:B}}}:{statusCode:404};
   const values={'Build Independent Repository Policy':[ctx],'Prepare Batch Context':[ctx],'Lookup Remediation Branch':[lookup]};
-  const $=k=>({first:()=>({json:values[k][0]}),all:()=>values[k].map(json=>({json}))});
+  /** Simule l’accès à un nœud n8n pour le scénario. */
+  const $=k=>({
+  /** Renvoie le premier élément disponible. */
+  first:()=>({json:values[k][0]}),
+  /** Renvoie tous les éléments disponibles. */
+  all:()=>values[k].map(json=>({json}))});
   const initial=fixture.sources.filter(s=>fixture.initialPaths.includes(s.path)).map(s=>item(s,A));
-  return runNode('Expand Required Dependency Sources',{all:()=>initial,first:()=>initial[0]},initial[0].json,$);
+  return runNode('Expand Required Dependency Sources',{
+  /** Renvoie tous les éléments disponibles. */
+  all:()=>initial,
+  /** Renvoie le premier élément disponible. */
+  first:()=>initial[0]},initial[0].json,$);
 }
+/** Évalue la condition qui autorise l’étape suivante. */
 const gate=(requests,items)=>runNode('Validate Required Dependency Sources',
-  {all:()=>items,first:()=>items[0]},items[0]?.json,()=>({all:()=>requests}));
+  {
+  /** Renvoie tous les éléments disponibles. */
+  all:()=>items,
+  /** Renvoie le premier élément disponible. */
+  first:()=>items[0]},items[0]?.json,()=>({
+  /** Renvoie tous les éléments disponibles. */
+  all:()=>requests}));
 
 // ── 5. First pass: no remediation branch ──────────────────────────────────────
 const firstPass=expand(404);
@@ -107,7 +111,7 @@ assert.equal(gate(firstPass,blobs).length,6,'blob sha is irrelevant to provenanc
 const blobRescue=fixture.sources.map(s=>{const it=item(s,B);it.json.sha=s.sha;return it;});
 assert.throws(()=>gate(firstPass,blobRescue),/SOURCE_API_CONTEXT_INCOMPLETE/,'matching blob sha cannot launder wrong-commit content');
 
-// ── Fix E matrix: typed commit provenance vs Git blob identity ───────────────
+/** Prépare les données nécessaires à ce scénario. */
 const withAllUrls=(ref,blob='c'.repeat(40),download='d'.repeat(40),html='e'.repeat(40))=>fixture.sources.map(s=>{
   const it=item(s,ref);it.json.sha=blob;it.json.git_url='https://api.github.com/repos/o/r/git/blobs/'+blob;
   it.json.download_url='https://raw.githubusercontent.com/o/r/'+download+'/'+s.path;

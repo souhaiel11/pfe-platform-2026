@@ -1,3 +1,4 @@
+// Teste le composant « head-verification » et ses cas d’erreur.
 import * as assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
@@ -10,9 +11,11 @@ import { CandidateVerificationController } from '../../backend/src/candidate-ver
 import { CandidateVerificationService } from '../../backend/src/candidate-verification/candidate-verification.service';
 import { assertCandidateStillValidForWrite } from '../../backend/src/candidate-verification/write-guard';
 
+/** Exécute les étapes principales de ce programme. */
 async function main() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'head-verification-'));
   const repo = path.join(root, 'repo'); fs.mkdirSync(repo);
+  /** Prépare les données nécessaires à ce scénario. */
   const git = (...args: string[]) => execFileSync('git', ['-C', repo, ...args], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
   const originalFetch = globalThis.fetch;
   try {
@@ -29,12 +32,22 @@ async function main() {
     const sha = git('rev-parse', 'HEAD');
     const request: HeadVerificationRequest = { verifyHeadOnly: true, repository: 'owner/repo', targetSha: sha.toUpperCase(), validationRequestId: 'v1', requestId: 'r1', batchId: 'b1', candidateAttempt: 1 };
     let calls = 0;
-    const adapter: any = { supports: () => true, compile: (ws: string) => {
+    const adapter: any = {
+    /** Indique si cet adaptateur prend en charge les données. */
+    supports: () => true,
+    /** Compile le projet dans le délai disponible. */
+    compile: (ws: string) => {
       calls++; assert.equal(fs.readFileSync(path.join(ws, proofPath), 'utf8'), proofBytes);
       return { status: 'SUCCESS', exitCode: 0, durationMs: 1, evidenceTail: 'compile proof' };
-    }, runRegressionTests: () => ({ status: 'SUCCESS', total: 1, failures: 0, errors: 0, skipped: 0, durationMs: 1, evidenceRef: 'test proof' }) };
+    },
+    /** Exécute les tests pour détecter les régressions. */
+    runRegressionTests: () => ({ status: 'SUCCESS', total: 1, failures: 0, errors: 0, skipped: 0, durationMs: 1, evidenceRef: 'test proof' }) };
     const manager = new WorkspaceManager(path.join(root, 'workspaces'));
-    const executor = new CandidateVerificationExecutor(manager, { materialize: () => { throw Error('must not materialize'); } } as any, { ensureRepo: () => repo } as any, [adapter]);
+    const executor = new CandidateVerificationExecutor(manager, {
+    /** Prépare les fichiers du candidat dans son espace de travail. */
+    materialize: () => { throw Error('must not materialize'); } } as any, {
+    /** Prépare le dépôt et la révision nécessaires. */
+    ensureRepo: () => repo } as any, [adapter]);
     const result = executor.executeHead(request);
     assert.equal(result.overall, 'PASS'); assert.equal(result.workspace.checkoutSha, sha);
     assert.equal(result.workspace.exactShaVerified, true); assert.equal(result.workspace.cleaned, true);
@@ -46,16 +59,27 @@ async function main() {
     const missing = executor.executeHead({ ...request, targetSha: 'f'.repeat(40) });
     assert.equal(missing.overall, 'INCONCLUSIVE'); assert.equal(missing.failureClass, 'SHA_UNAVAILABLE');
     assert.equal(missing.workspace.checkoutSha, null); assert.equal(calls, 1);
-    const mismatch = new CandidateVerificationExecutor({ workspaceId: () => 'w', createWorkspace: () => ({ path: repo, exactShaVerified: true, checkoutSha: 'e'.repeat(40) }), cleanupWorkspace: () => {} } as any, {} as any, { ensureRepo: () => repo } as any, [adapter]).executeHead(request);
+    const mismatch = new CandidateVerificationExecutor({
+    /** Construit l’identifiant de l’espace de travail. */
+    workspaceId: () => 'w',
+    /** Crée un espace isolé pour la vérification. */
+    createWorkspace: () => ({ path: repo, exactShaVerified: true, checkoutSha: 'e'.repeat(40) }),
+    /** Nettoie l’espace de travail après l’opération. */
+    cleanupWorkspace: () => {} } as any, {} as any, {
+    /** Prépare le dépôt et la révision nécessaires. */
+    ensureRepo: () => repo } as any, [adapter]).executeHead(request);
     assert.equal(mismatch.overall, 'INCONCLUSIVE'); assert.equal(mismatch.failureClass, 'SHA_UNAVAILABLE'); assert.equal(calls, 1);
     const passingTests = adapter.runRegressionTests;
     for (const status of ['FAILED', 'UNKNOWN', 'NOT_RUN']) {
+      /** Exécute les tests pour détecter les régressions. */
       adapter.runRegressionTests = () => ({ ...passingTests(), status });
       const checked = executor.executeHead(request);
       assert.equal(checked.overall, status === 'FAILED' ? 'FAIL' : 'INCONCLUSIVE');
       assert.equal(checked.workspace.cleaned, true);
     }
+    /** Exécute les tests pour détecter les régressions. */
     adapter.runRegressionTests = () => { throw Error('tests must not run after compile failure'); };
+    /** Compile le projet dans le délai disponible. */
     adapter.compile = () => ({ status: 'FAILED', exitCode: 1, durationMs: 1, evidenceTail: 'compile failed' });
     const compileFailed = executor.executeHead(request);
     assert.equal(compileFailed.overall, 'FAIL'); assert.equal(compileFailed.tests.regression.status, 'NOT_RUN');
@@ -64,7 +88,9 @@ async function main() {
     assert.throws(() => executor.executeHead({ ...request, targetSha: 'main' }), /INVALID_HEAD/);
     const empty = executor.execute({ candidateId: 'c', requestId: 'r', batchId: 'b', candidateAttempt: 0, repository: 'owner/repo', candidateBaseSha: sha, files: [] });
     assert.equal(empty.failureClass, 'CANDIDATE_MANIFEST_INVALID'); assert.equal(empty.overall, 'FAIL');
-    const controller = new CandidateVerificationController({ verifyHead: (r: any) => { assert.deepEqual(r, request); return result; } } as any);
+    const controller = new CandidateVerificationController({
+    /** Vérifie le code exact du HEAD de la PR. */
+    verifyHead: (r: any) => { assert.deepEqual(r, request); return result; } } as any);
     assert.equal(await controller.verify(request), result);
     assert.throws(() => controller.verify({ ...request, manifest: { files: [] } } as any), /INVALID_HEAD/);
     const service = new CandidateVerificationService();

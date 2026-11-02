@@ -1,0 +1,17 @@
+[
+  {
+    "suite": "phase4g",
+    "exitCode": 0,
+    "evidence": "phase4g-postgres.log"
+  },
+  {
+    "suite": "runner",
+    "exitCode": 0,
+    "evidence": "oneshot-qualification.json"
+  },
+  {
+    "suite": "harness",
+    "exitCode": 0,
+    "evidence": "harness-postgres.log"
+  }
+]

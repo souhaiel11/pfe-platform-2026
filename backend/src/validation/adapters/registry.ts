@@ -1,7 +1,4 @@
-// R80 §9 — the ONLY place that lists which adapters this platform trusts.
-// incidents.service.ts (core policy wiring) selects an adapter purely by
-// `reportFormat` string — it never imports a concrete adapter class itself
-// and never branches on project name, language, or framework.
+// Seul endroit qui liste les adaptateurs de preuve sémantique que la plateforme reconnaît.
 
 import { SemanticEvidenceAdapter } from '../semantic-evidence-core';
 import { JUnitSemanticEvidenceAdapter } from './junit-semantic-evidence-adapter';
@@ -12,7 +9,8 @@ const ADAPTERS: SemanticEvidenceAdapter[] = [
   new StructuredJsonSemanticEvidenceAdapter(),
 ];
 
-/** Returns the platform-approved adapter for a report format, or undefined for an unsupported/unrecognized one — never a best-effort guess. */
+// Renvoie l'adaptateur approuvé par la plateforme pour un format de rapport donné,
+// ou `undefined` pour un format non supporté/non reconnu — jamais une supposition.
 export function resolveSemanticEvidenceAdapter(reportFormat: string | undefined | null): SemanticEvidenceAdapter | undefined {
   return ADAPTERS.find(a => a.supports(String(reportFormat || '')));
 }

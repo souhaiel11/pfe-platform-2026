@@ -1,18 +1,4 @@
-/** V1.7 runtime stabilization phase, Phase I — orphan-process validation
- * across additional real failure shapes beyond the one already covered by
- * security-artifact-validator-orphan-sweep.spec.ts (kill during the
- * IMAGE_BUILD/Podman-build RUN step, idle-sleeping descendant).
- *
- * Covers:
- *   3. kill while the nested child is CPU-ACTIVE (a real busy loop, not an
- *      idle sleep -- proves a genuinely computing process is really
- *      terminated, not merely one blocked on I/O).
- *   4. kill during/around Trivy (the SAME orphan shape, at the TRIVY_SCAN
- *      stage instead of IMAGE_BUILD).
- *   5. repeated timeout runs (the fix holds across multiple consecutive
- *      real kills in the same process -- no accumulation, no residual
- *      state leaking between independent inspect() calls).
- */
+// Teste le composant « orphan-validation-extended » et ses cas d’erreur.
 import * as assert from 'assert';
 import { execFileSync } from 'child_process';
 import * as fs from 'fs';
@@ -24,10 +10,12 @@ const root = fs.mkdtempSync(path.join(os.tmpdir(), 'v17-orphan-extended-'));
 const repo = path.join(root, 'repo');
 execFileSync('git', ['clone', '--no-hardlinks', process.env.SECURITY_TEST_REPO || '/home/souhaiel/pfe-2026/pfe-app-test', repo], { stdio: 'pipe' });
 
+/** Simule la mise à jour de l’état du formulaire. */
 function markerStillRunning(marker: string): boolean {
   try { execFileSync('pgrep', ['-f', marker], { encoding: 'utf8' }); return true; }
   catch { return false; }
 }
+/** Attend la disparition du processus ou de la ressource. */
 function waitUntilGone(marker: string, ms = 5_000): void {
   const deadline = Date.now() + ms;
   while (markerStillRunning(marker) && Date.now() < deadline) { /* brief poll, no sleep-in-JS needed at this timescale */ }
@@ -46,13 +34,6 @@ try {
       if (command === 'trivy' && args[0] === '--version') return 'Version: 0.72.0';
       if (command === 'podman' && args[0] === 'pull') return '';
       if (command === 'podman' && args[0] === 'build') {
-        // The marker is embedded as literal TEXT in the INNER shell
-        // script string, which is itself one argv entry of the inner
-        // process -- `pgrep -f` matches the whole command line, so this
-        // reliably identifies the real busy-loop process, not merely the
-        // outer wrapper. A real busy loop (`while true; do :; done`), not
-        // an idle `sleep`, so this genuinely proves an ACTIVELY COMPUTING
-        // process is really killed.
         return execFileSync('sh', ['-c', `sh -c "true ${marker}; while true; do :; done" & wait`], {
           timeout: options.timeout, killSignal: options.killSignal, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'],
         });

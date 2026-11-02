@@ -1,3 +1,4 @@
+// Teste le composant « pr-validation-parameter-bootstrap » et ses cas d’erreur.
 import * as assert from 'node:assert/strict';
 import { IncidentsService, jenkinsWorkflowFullName, buildParameterBootstrapScript } from './incidents.service';
 
@@ -23,7 +24,7 @@ const hostileButCharacterValid = "pfe-app-test-multibranch/PR-25'; Jenkins.insta
 const escapedScript = buildParameterBootstrapScript(hostileButCharacterValid);
 assert.ok(escapedScript.includes("getItemByFullName('pfe-app-test-multibranch/PR-25\\'; Jenkins.instance.doSafeExit(null); //', WorkflowJob.class)"), 'single quotes are escaped, not left to break out of the literal');
 
-// --- Service-level behavior --------------------------------------------------
+/** Prépare les données nécessaires à ce scénario. */
 const makeHarness = () => {
   const incident: any = {
     id: '65e35d1b-212f-4153-bd63-fba6e8eebc2c', projectId: '3aa1c9b9-e114-40e4-884b-ebc7aa32e002', status: 'fix_generated',
@@ -37,16 +38,33 @@ const makeHarness = () => {
     jenkinsUrl: 'http://jenkins', jenkinsToken: 'user:not-printed', jenkinsJobName: 'pfe-app-test', sonarqubeKey: 'pfe-app-test',
   };
   incident.project = project;
-  const incidentRepo: any = { findOne: async () => incident, update: async (_id: string, patch: any) => Object.assign(incident, patch) };
-  const projectRepo: any = { findOne: async () => project };
-  const repository: any = { findOne: incidentRepo.findOne, update: incidentRepo.update, manager: { transaction: async (fn: any) => fn({ getRepository: () => incidentRepo }) } };
-  const service = new IncidentsService(repository, projectRepo, { emit: () => undefined } as any, { syncIncident: async () => undefined } as any, {} as any);
+  const incidentRepo: any = {
+  /** Recherche l’élément correspondant à l’identifiant. */
+  findOne: async () => incident,
+  /** Applique les modifications autorisées à l’élément. */
+  update: async (_id: string, patch: any) => Object.assign(incident, patch) };
+  const projectRepo: any = {
+  /** Recherche l’élément correspondant à l’identifiant. */
+  findOne: async () => project };
+  const repository: any = { findOne: incidentRepo.findOne, update: incidentRepo.update, manager: {
+  /** Exécute les opérations dans le cadre transactionnel prévu. */
+  transaction: async (fn: any) => fn({
+  /** Simule la lecture des données demandées par le composant. */
+  getRepository: () => incidentRepo }) } };
+  const service = new IncidentsService(repository, projectRepo, {
+  /** Diffuse ou construit le résultat prévu. */
+  emit: () => undefined } as any, {
+  /** Prépare les données nécessaires à ce scénario. */
+  syncIncident: async () => undefined } as any, {} as any);
   return { incident, project, service };
 };
 
+/** Prépare les données nécessaires à ce scénario. */
 const withParam = () => ({ buildable: true, _class: 'org.jenkinsci.plugins.workflow.job.WorkflowJob', property: [{ _class: 'hudson.model.ParametersDefinitionProperty', parameterDefinitions: [{ name: 'PFE_VALIDATION_CONTEXT', type: 'StringParameterDefinition', defaultParameterValue: { value: '' } }] }] });
+/** Prépare les données nécessaires à ce scénario. */
 const withoutParam = (extra: any[] = []) => ({ buildable: true, _class: 'org.jenkinsci.plugins.workflow.job.WorkflowJob', property: [{ _class: 'hudson.model.ParametersDefinitionProperty', parameterDefinitions: extra }] });
 
+/** Exécute les étapes principales de ce programme. */
 async function main() {
   const user = { id: 'admin-1', role: 'admin' };
 

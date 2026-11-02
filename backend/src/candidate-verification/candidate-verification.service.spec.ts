@@ -1,16 +1,13 @@
-// R22-E2C2 — CandidateVerificationService is now a thin HTTP client to the
-// candidate-verifier worker. These tests mock global fetch (the ONLY
-// dependency this class has) rather than exercising real git/Maven --
-// that real, unmocked, real-repository proof now lives in
-// candidate-verifier/src/candidate-verification-executor.spec.ts, moved
-// along with the execution logic it tests.
+// Teste le composant « candidate-verification.service » et ses cas d’erreur.
 import * as assert from 'node:assert/strict';
-import { CandidateVerificationService } from './candidate-verification.service';
+import { CandidateVerificationService, transportDispatcherTimeoutsMs } from './candidate-verification.service';
+import { Agent } from 'undici';
 import { computeCandidateDigest, computeContentSha256 } from './candidate-digest';
 import { CandidateManifest, CandidateVerification } from './candidate-verification.types';
 import { computeSecurityCandidateIdentity } from '../security-remediation/security-candidate-identity';
 import { WORKER_DEADLINE_MS, BACKEND_TRANSPORT_SLACK_MS, BACKEND_HTTP_TIMEOUT_MS } from '../security-remediation/security-remediation-deadline-contract';
 
+/** Prépare les données nécessaires à ce scénario. */
 function manifest(overrides: Partial<CandidateManifest> = {}): CandidateManifest {
   const m: CandidateManifest = {
     candidateId: 'c1', requestId: 'r1', batchId: 'b1', candidateAttempt: 0,
@@ -22,6 +19,7 @@ function manifest(overrides: Partial<CandidateManifest> = {}): CandidateManifest
   return m;
 }
 
+/** Simule les dépendances nécessaires au scénario. */
 function fakeVerification(m: CandidateManifest, overrides: Partial<CandidateVerification> = {}): CandidateVerification {
   return {
     identity: { candidateId: m.candidateId, requestId: m.requestId, batchId: m.batchId, candidateAttempt: m.candidateAttempt, candidateBaseSha: m.candidateBaseSha, candidateDigest: m.candidateDigest! },
@@ -37,6 +35,7 @@ function fakeVerification(m: CandidateManifest, overrides: Partial<CandidateVeri
   };
 }
 
+/** Exécute les étapes principales de ce programme. */
 async function main() {
   const originalFetch = globalThis.fetch;
   const originalTimeout = AbortSignal.timeout;
@@ -78,6 +77,7 @@ async function main() {
       if (init?.signal?.aborted) throw Object.assign(new Error('The operation was aborted'), { name: 'TimeoutError' });
       throw new Error('unreachable: signal was not pre-aborted');
     }) as any;
+    /** Prépare les données nécessaires à ce scénario. */
     (AbortSignal as any).timeout = () => { const c = new AbortController(); c.abort(); return c.signal; };
     const service = new CandidateVerificationService();
     const result = await service.verify(manifest());
@@ -196,6 +196,7 @@ async function main() {
       if (init?.signal?.aborted) throw Object.assign(new Error('The operation was aborted'), { name: 'TimeoutError' });
       throw new Error('unreachable: signal was not pre-aborted');
     }) as any;
+    /** Prépare les données nécessaires à ce scénario. */
     (AbortSignal as any).timeout = () => { const c = new AbortController(); c.abort(); return c.signal; };
     const service = new CandidateVerificationService();
     const result: any = await service.evaluateSecurityRemediation(secInput);
@@ -262,6 +263,58 @@ async function main() {
   }
   console.log(`CandidateVerificationService: WORKER_DEADLINE_MS/BACKEND_HTTP_TIMEOUT_MS shared-contract invariant: PASS (${WORKER_DEADLINE_MS - 1}/${WORKER_DEADLINE_MS} forwarded unchanged; clamping itself is the worker's own responsibility, proven in worker-deadline.spec.ts)`);
   console.log('CandidateVerificationService.evaluateSecurityRemediation (thin HTTP client, R-SEC-V1.4): PASS');
+
+  {
+    // L1: the pure timeout-computation function itself -- always strictly
+    // greater than the governing deadline it is derived from, by exactly
+    // the documented fixed margin, for any realistic input.
+    for (const governing of [1, 1000, WORKER_DEADLINE_MS, BACKEND_HTTP_TIMEOUT_MS, 2_000_000]) {
+      const { headersTimeout, bodyTimeout } = transportDispatcherTimeoutsMs(governing);
+      assert.equal(headersTimeout, governing + 30_000, `L1: headersTimeout is exactly the governing deadline plus the fixed margin (governing=${governing})`);
+      assert.equal(bodyTimeout, governing + 30_000, `L1: bodyTimeout matches headersTimeout`);
+      assert.ok(headersTimeout > governing, 'L1: the transport ceiling must always exceed the governing AbortSignal deadline, never equal or below it');
+    }
+    console.log('CandidateVerificationService Test L1: PASS (transportDispatcherTimeoutsMs always exceeds its governing deadline)');
+  }
+  {
+    // L2: this specifically reproduces the execution-2055 shape -- a real
+    // dispatcher is actually threaded into the fetch() call (not merely
+    // computed and discarded), with a ceiling that is NOT the vulnerable
+    // undici default (300_000ms) and NOT equal to the governing deadline
+    // itself (which would risk a same-instant race), but comfortably above
+    // it -- proven by capturing the exact object the real code passes.
+    let capturedDispatcher: any;
+    let capturedSignalTimeoutMs: number | undefined;
+    const originalAbortTimeout = AbortSignal.timeout;
+    /** Prépare les données nécessaires à ce scénario. */
+    (AbortSignal as any).timeout = (ms: number) => { capturedSignalTimeoutMs = ms; return originalAbortTimeout(ms); };
+    globalThis.fetch = (async (_url: any, init: any) => {
+      capturedDispatcher = init.dispatcher;
+      return new Response(JSON.stringify({ status: 'TECHNICAL_FAILURE', failureClass: 'VERIFIER_UNAVAILABLE', reason: 'x', decision: { findingIdentity: 'fp-x' } }));
+    }) as any;
+    await new CandidateVerificationService().evaluateSecurityRemediation(secInput, WORKER_DEADLINE_MS);
+    (AbortSignal as any).timeout = originalAbortTimeout;
+    assert.ok(capturedDispatcher instanceof Agent, 'L2: a real undici Agent is actually passed as the fetch dispatcher, not merely computed');
+    assert.equal(capturedSignalTimeoutMs, WORKER_DEADLINE_MS + BACKEND_TRANSPORT_SLACK_MS, 'L2: the governing AbortSignal deadline is completely unchanged by this fix');
+    console.log('CandidateVerificationService Test L2: PASS (a real Agent above the vulnerable 300s default is actually wired into the fetch call, governing deadline itself unchanged)');
+  }
+  {
+    // L3: the pre-existing abort/timeout classification path (Test I,
+    // above) is untouched by this fix -- a real AbortSignal-driven timeout
+    // is still classified VERIFIER_TIMEOUT, never VERIFIER_UNAVAILABLE,
+    // confirming the fix only widens the UNRELATED undici default and does
+    // not alter the governing deadline's own error classification.
+    globalThis.fetch = (async (_url: any, init: any) => {
+      if (init?.signal?.aborted) throw Object.assign(new Error('The operation was aborted'), { name: 'TimeoutError' });
+      throw new Error('unreachable: signal was not pre-aborted');
+    }) as any;
+    /** Prépare les données nécessaires à ce scénario. */
+    (AbortSignal as any).timeout = () => { const c = new AbortController(); c.abort(); return c.signal; };
+    const result: any = await new CandidateVerificationService().evaluateSecurityRemediation(secInput);
+    assert.equal(result.failureClass, 'VERIFIER_TIMEOUT', 'L3: real deadline exhaustion is still classified as a timeout, unaffected by the dispatcher fix');
+    (AbortSignal as any).timeout = originalTimeout;
+    console.log('CandidateVerificationService Test L3: PASS (existing abort-timeout classification unaffected by the dispatcher fix)');
+  }
 
   globalThis.fetch = originalFetch;
   (AbortSignal as any).timeout = originalTimeout;

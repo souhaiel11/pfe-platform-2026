@@ -1,3 +1,5 @@
+// Teste le composant « automatic-pr-validation » et ses cas d’erreur.
+import { emptyReservationQuery } from './sonar-file-reservation.test-double';
 import * as assert from 'node:assert/strict';
 import { IncidentsService } from './incidents.service';
 
@@ -12,6 +14,7 @@ const MOVED_SHA = 'd'.repeat(40);
 const REPO = 'owner/repo';
 const JOB = 'project-job';
 
+/** Prépare les données nécessaires à ce scénario. */
 function passingHeadVerification(request: any) {
   return {
     mode: 'HEAD_ONLY',
@@ -27,6 +30,7 @@ function passingHeadVerification(request: any) {
   };
 }
 
+/** Prépare les données nécessaires à ce scénario. */
 function makeFixture(candidateVerification: any) {
   const incident: any = {
     id: 'incident-auto', projectId: 'project-1', status: 'blocked', prUrl: null, jenkinsJobName: JOB,
@@ -44,23 +48,38 @@ function makeFixture(candidateVerification: any) {
     sonarqubeKey: 'project-key',
   };
   incident.project = project;
-  const incidentRepo: any = { findOne: async () => incident, update: async (_id: string, patch: any) => Object.assign(incident, patch) };
-  const projectRepo: any = { findOne: async () => project };
+  const incidentRepo: any = {
+  /** Recherche l’élément correspondant à l’identifiant. */
+  findOne: async () => incident,
+  /** Applique les modifications autorisées à l’élément. */
+  update: async (_id: string, patch: any) => Object.assign(incident, patch) };
+  const projectRepo: any = {
+  /** Recherche l’élément correspondant à l’identifiant. */
+  findOne: async () => project };
   let tail = Promise.resolve();
   const repository: any = {
-    manager: { transaction: async (fn: any) => {
+    manager: {
+    /** Exécute les opérations dans le cadre transactionnel prévu. */
+    transaction: async (fn: any) => {
       const previous = tail; let release!: () => void;
       tail = new Promise<void>(resolve => { release = resolve; });
       await previous;
-      try { return await fn({ getRepository: (entity: any) => entity?.name === 'Project' ? projectRepo : incidentRepo }); }
+      try { return await fn({
+      /** Simule la lecture des données demandées par le composant. */
+      query: emptyReservationQuery, getRepository: (entity: any) => entity?.name === 'Project' ? projectRepo : incidentRepo }); }
       finally { release(); }
     } },
     findOne: incidentRepo.findOne, update: incidentRepo.update,
   };
-  const service = new IncidentsService(repository, projectRepo, { emit: () => undefined } as any, { syncIncident: async () => undefined } as any, candidateVerification);
+  const service = new IncidentsService(repository, projectRepo, {
+  /** Diffuse ou construit le résultat prévu. */
+  emit: () => undefined } as any, {
+  /** Prépare les données nécessaires à ce scénario. */
+  syncIncident: async () => undefined } as any, candidateVerification);
   return { incident, service };
 }
 
+/** Prépare les données nécessaires à ce scénario. */
 function prCreatedCallback(overrides: any = {}) {
   return {
     status: 'PR_CREATED' as const, workflowId: '9adcV31eaIgJyMR0', executionId: '5001', incidentId: 'incident-auto',
@@ -74,6 +93,7 @@ function prCreatedCallback(overrides: any = {}) {
   };
 }
 
+/** Prépare les données nécessaires à ce scénario. */
 async function flush(): Promise<void> {
   // Lets the fire-and-forget dispatchAutomaticInitialPrValidation() promise
   // chain (started synchronously up to its first await) actually complete
@@ -81,6 +101,7 @@ async function flush(): Promise<void> {
   await new Promise(resolve => setTimeout(resolve, 20));
 }
 
+/** Exécute les étapes principales de ce programme. */
 async function main() {
   const originalFetch = globalThis.fetch;
 
@@ -90,7 +111,9 @@ async function main() {
   // ------------------------------------------------------------------
   {
     let headOnlyCalls = 0;
-    const candidateVerification = { verifyHead: async (req: any) => { headOnlyCalls++; return passingHeadVerification(req); } };
+    const candidateVerification = {
+    /** Vérifie le code exact du HEAD de la PR. */
+    verifyHead: async (req: any) => { headOnlyCalls++; return passingHeadVerification(req); } };
     const { incident, service } = makeFixture(candidateVerification);
     let triggers = 0;
     globalThis.fetch = (async (url: any, init?: RequestInit) => {
@@ -119,7 +142,9 @@ async function main() {
   // ------------------------------------------------------------------
   {
     let headOnlyCalls = 0;
-    const candidateVerification = { verifyHead: async (req: any) => { headOnlyCalls++; return passingHeadVerification(req); } };
+    const candidateVerification = {
+    /** Vérifie le code exact du HEAD de la PR. */
+    verifyHead: async (req: any) => { headOnlyCalls++; return passingHeadVerification(req); } };
     const { incident, service } = makeFixture(candidateVerification);
     let triggers = 0;
     globalThis.fetch = (async (url: any) => {
@@ -147,7 +172,9 @@ async function main() {
   // ------------------------------------------------------------------
   {
     let headOnlyCalls = 0;
-    const candidateVerification = { verifyHead: async (req: any) => { headOnlyCalls++; return passingHeadVerification(req); } };
+    const candidateVerification = {
+    /** Vérifie le code exact du HEAD de la PR. */
+    verifyHead: async (req: any) => { headOnlyCalls++; return passingHeadVerification(req); } };
     const { incident, service } = makeFixture(candidateVerification);
     globalThis.fetch = (async (url: any) => {
       const value = String(url);

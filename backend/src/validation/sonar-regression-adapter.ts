@@ -1,12 +1,4 @@
-// BRIQUE 3 — SonarQube adapter for the generic regression engine
-// (pr-regression-engine.ts). This is the ONLY file allowed to know what a
-// Sonar issue looks like; the engine itself never mentions Sonar. Per
-// Phase 7: an adapter may normalize scanner-specific structures, but it may
-// NOT decide global business/lifecycle state -- it never computes
-// "blocking" (that is the caller-supplied RegressionPolicy's job) and never
-// touches the global Sonar Quality Gate (deliberately unread here: Phase 10
-// of Brique 3 requires a QG ERROR caused only by pre-existing findings to
-// leave `result` at CLEAN).
+// Adaptateur SonarQube pour le moteur générique de régression : le seul fichier autorisé à connaître la forme d'un issue Sonar.
 
 import { RegressionFinding } from './pr-regression-engine';
 
@@ -22,15 +14,7 @@ export interface RawSonarIssue {
   issueStatus?: string;
 }
 
-/**
- * Ported verbatim (semantics unchanged) from WF3's own proven
- * "Consolidate Validation Result" node (R67): a matching rule/file/line
- * alone never proves a Sonar issue is still open -- a long-lived, reused
- * validation project keeps CLOSED/FIXED issues in its history (proven live
- * on PR-24 build #6). `resolution` set => never active, regardless of
- * status. No usable status field at all => fail closed (treated as still
- * active, never silently dropped without positive proof of resolution).
- */
+/** Détermine si un issue Sonar est toujours actif. */
 export function isActiveSonarIssue(issue: RawSonarIssue | null | undefined): boolean {
   if (!issue) return false;
   if (issue.resolution) return false;
@@ -43,13 +27,8 @@ export function isActiveSonarIssue(issue: RawSonarIssue | null | undefined): boo
   return true;
 }
 
-/**
- * Normalizes a raw Sonar `issues[]` array (e.g. `api/issues/search`, or the
- * shape already persisted at `incident.metadata.enrichedData.sonar.issues`)
- * into the engine's generic RegressionFinding[]. Filters out inactive
- * issues -- a CLOSED/FIXED issue is not a live finding to compare. Pure,
- * no I/O, no severity/blocking judgement.
- */
+// Convertit un tableau brut d'issues Sonar en RegressionFinding[] génériques, en
+// écartant au passage les issues qui ne sont plus actives.
 export function normalizeSonarFindings(issues: readonly RawSonarIssue[] | null | undefined): RegressionFinding[] {
   if (!Array.isArray(issues)) return [];
   return issues.filter(isActiveSonarIssue).map(issue => ({

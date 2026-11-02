@@ -1,62 +1,27 @@
-// R22-C — pure digest functions. No filesystem/process access here, so
-// these are trivially testable and reusable by both the verification
-// service and the future Git Writer's assertCandidateStillValidForWrite
-// guard (write-guard.ts) without either depending on the other.
+// Fonctions pures de calcul d'empreintes (hash) pour les candidats de remédiation.
 import { createHash } from 'crypto';
 import { CandidateFile, CandidateManifest } from './candidate-verification.types';
 
+// Calcule le hash SHA-256 du contenu texte d'un fichier, utilisé comme empreinte de son contenu.
 export function computeContentSha256(content: string): string {
   return createHash('sha256').update(content, 'utf8').digest('hex');
 }
 
-/**
- * V1.7 image-provisioning phase — extracted verbatim from incidents.service.ts
- * (its original home) into this existing pure/dependency-free module rather
- * than a new file: `security-patch-guard.ts` and
- * `security-finding-resolver.service.ts` (backend/src/security-remediation/)
- * are compiled into the isolated candidate-verifier worker image, and
- * previously imported this one predicate from incidents.service.ts purely
- * for its type/shape check -- pulling in that file's full NestJS/TypeORM/
- * business-service graph (InjectRepository, ManualRemediationService,
- * CandidateVerificationService, ...) along with it, which candidate-verifier
- * deliberately never provisions (no DB, no TypeORM -- see
- * candidate-verifier/isolation.spec.ts). incidents.service.ts now imports
- * and re-exports this SAME function instead of defining its own -- one
- * implementation, not two.
- */
+// Vérifie que la valeur est bien un SHA git complet (40 caractères hexadécimaux).
 export function isFullGitSha(value: unknown): value is string {
   return typeof value === 'string' && /^[a-f0-9]{40}$/i.test(value);
 }
 
-/**
- * R81.3 — the exact SHA-1 git itself uses to identify a blob's content:
- * sha1("blob " + byteLength + "\0" + content). Pure, no I/O, no git binary
- * invoked. This lets the write-guard independently RE-DERIVE the hash of a
- * candidate-supplied `sourceContent` string and compare it against
- * `originalBlobSha` -- a value GitHub itself already reports for that exact
- * path/ref at fetch time, before any LLM runs (see write-guard.ts's
- * trust-binding check and generated-comment-guard.ts's INTEGRITY_MISMATCH
- * verdict). Deliberately reuses this ALREADY-THREADED field instead of
- * inventing a parallel SHA-256 that WF2 would need a new node to compute:
- * `originalBlobSha` has the identical trust property (sourced from GitHub's
- * API before the writer LLM ever runs, never overwritten by writer output --
- * proven by WF2's own object-spread ordering) and is already carried,
- * unconditionally, on every MODIFY CandidateFile. Verified byte-for-byte
- * against real `git hash-object` output for empty/ASCII/real source content
- * in this function's own test file -- not merely assumed to match git.
- */
+// Calcule le SHA-1 "blob git" d'un contenu, exactement comme `git hash-object`, pour
+// comparer un contenu candidat au blob SHA connu côté GitHub sans appeler git.
 export function computeGitBlobSha1(content: string): string {
   const bytes = Buffer.from(content, 'utf8');
   const header = Buffer.from(`blob ${bytes.length}\0`, 'utf8');
   return createHash('sha1').update(Buffer.concat([header, bytes])).digest('hex');
 }
 
-/**
- * CRITICAL INVARIANT 2: computed from candidateBaseSha + sorted file paths +
- * operation + contentSha256 -- never from the raw file content directly, so
- * the digest is cheap to recompute and compare even for large candidates.
- * Deterministic regardless of input file array order.
- */
+// Calcule l'empreinte globale d'un manifeste candidat (SHA de base + fichiers triés +
+// opération + hash de contenu), pour comparer deux manifestes sans relire tout le contenu.
 export function computeCandidateDigest(manifest: Pick<CandidateManifest, 'candidateBaseSha' | 'files'>): string {
   const canonicalFiles = manifest.files
     .map((file: CandidateFile) => ({ path: file.path, operation: file.operation, contentSha256: file.contentSha256 }))

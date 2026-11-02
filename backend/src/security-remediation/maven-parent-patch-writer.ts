@@ -1,19 +1,4 @@
-// V1.8 Phase 7 — deterministic <parent> version patch writer. Mirrors
-// maven-security-patch-writer.ts's own discipline exactly (exact-offset
-// splice located via regex, never a blind find-and-replace-first-
-// occurrence; fails closed on anything ambiguous or unexpected) but is a
-// SEPARATE function/type family, not a branch inside that file: a
-// PARENT_VERSION edit's target (the <parent> groupId:artifactId) is a
-// fundamentally different coordinate than the CVE's own affected package
-// (finding.package) that writeSecurityPatch()/DependencyProvenanceKind is
-// built around -- conflating the two would mean stretching
-// DependencyProvenanceKind ('DIRECT_EXPLICIT'/'PROPERTY_MANAGED') to cover
-// a case it was never designed for, or lying about `provenanceKind` on the
-// resulting candidate. This is the ONLY place PARENT_VERSION plans are
-// actually executed; nothing here discovers or chooses a parent version --
-// every field is taken from an already-validated V1.8 plan (editType,
-// actualEditTarget, fromVersion, toVersion) and re-verified fail-closed
-// against the real pom.xml text, never trusted blindly, never guessed.
+/** Écrit de façon déterministe un patch de version sur le bloc `<parent>` d'un pom.xml, en exécutant un plan V1.8 déjà validé (ne découvre et ne choisit rien lui-même). */
 import { CandidateFile } from '../candidate-verification/candidate-verification.types';
 import { computeContentSha256, computeGitBlobSha1 } from '../candidate-verification/candidate-digest';
 import { majorOf, parseVersion } from './version-selection-policy';
@@ -38,13 +23,13 @@ export interface ParentVersionPatchRequest {
   evaluatedSha: string;
   ecosystem: 'MAVEN';
   editType: 'PARENT_VERSION';
-  /** groupId:artifactId of the <parent> this ALREADY-VALIDATED V1.8 plan targets -- never discovered here, always supplied by the caller from the plan. */
+  /** groupId:artifactId du `<parent>` ciblé par ce plan V1.8 déjà validé — jamais découvert ici. */
   actualEditTarget: string;
   fromVersion: string;
   toVersion: string;
-  /** Always 'pom.xml' in practice; kept explicit (not hardcoded) for the same reason SecurityPatchRequest.controllingFile is. */
+  /** Toujours 'pom.xml' en pratique ; gardé explicite plutôt que codé en dur. */
   controllingFile: string;
-  /** The exact, real pom.xml text at `evaluatedSha`. Never LLM-authored, never synthesized. */
+  /** Texte réel et exact du pom.xml à `evaluatedSha`. Jamais généré par une IA, jamais synthétisé. */
   sourceContent: string;
 }
 
@@ -62,17 +47,19 @@ export type ParentPatchWriteResult =
   | { ok: true; candidate: ParentVersionPatchCandidate }
   | { ok: false; reason: ParentPatchWriteFailureReason; detail: string };
 
+/** Construit un résultat d'échec typé avec son détail explicatif. */
 function fail(reason: ParentPatchWriteFailureReason, detail: string): ParentPatchWriteResult {
   return { ok: false, reason, detail };
 }
 
+/** Découpe une coordonnée Maven "groupId:artifactId" en ses deux parties, ou null si le format est invalide. */
 function splitCoordinate(pkg: string): { groupId: string; artifactId: string } | null {
   const parts = String(pkg || '').trim().split(':');
   if (parts.length !== 2 || !parts[0] || !parts[1]) return null;
   return { groupId: parts[0], artifactId: parts[1] };
 }
 
-/** Same non-`d`-flag offset-location technique as maven-security-patch-writer.ts's own groupOffsetWithin(). */
+/** Localise la position exacte d'un texte capturé à l'intérieur de son match complet, pour spliccer sans décalage. */
 function groupOffsetWithin(fullMatchText: string, groupText: string, searchFrom: number): number {
   const idx = fullMatchText.indexOf(groupText, searchFrom);
   if (idx === -1) throw new Error('Internal error: capture group text not found within its own match.');
@@ -80,7 +67,7 @@ function groupOffsetWithin(fullMatchText: string, groupText: string, searchFrom:
 }
 
 interface ParentBlockLocation {
-  /** Absolute [start,end) of the ENTIRE <parent>...</parent> text, for the post-write round-trip proof only -- never spliced directly. */
+  /** Bornes absolues [début,fin) du bloc `<parent>...</parent>` entier, pour la preuve de round-trip uniquement. */
   blockRange: [number, number];
   groupId: string | null;
   artifactId: string | null;
@@ -88,14 +75,7 @@ interface ParentBlockLocation {
   versionValue: string | null;
 }
 
-/**
- * Locates every top-level <parent>...</parent> block in the FULL pom.xml
- * text. A POM has at most one <parent> by the Maven model itself, but this
- * never assumes that -- more than one match (a genuinely malformed/unusual
- * pom) is reported to the caller as ambiguous, exactly like
- * locateDependencyBlocks() refuses multiple <dependency> candidates rather
- * than picking the first.
- */
+/** Localise chaque bloc `<parent>...</parent>` de premier niveau dans le texte complet du pom.xml, en refusant plutôt que de choisir si plusieurs existent. */
 function locateParentBlocks(pomXmlText: string): ParentBlockLocation[] {
   const blocks: ParentBlockLocation[] = [];
   const blockRe = /<parent>[\s\S]*?<\/parent>/g;
@@ -120,6 +100,7 @@ function locateParentBlocks(pomXmlText: string): ParentBlockLocation[] {
   return blocks;
 }
 
+/** Vérifie que l'ancienne et la nouvelle version appartiennent à la même version majeure, refuse sinon. */
 function checkSameMajor(oldVersion: string, targetVersion: string): ParentPatchWriteFailureReason | null {
   const oldParsed = parseVersion(oldVersion);
   const targetParsed = parseVersion(targetVersion);
@@ -128,10 +109,12 @@ function checkSameMajor(oldVersion: string, targetVersion: string): ParentPatchW
   return null;
 }
 
+/** Remplace le contenu d'une plage de texte par une valeur de remplacement. */
 function spliceValue(text: string, range: [number, number], replacement: string): string {
   return text.slice(0, range[0]) + replacement + text.slice(range[1]);
 }
 
+/** Construit l'objet CandidateFile final (chemin, contenu, empreintes) à partir du patch produit. */
 function buildCandidateFile(request: ParentVersionPatchRequest, content: string): CandidateFile {
   const sourceContent = request.sourceContent;
   return {
@@ -144,13 +127,7 @@ function buildCandidateFile(request: ParentVersionPatchRequest, content: string)
   };
 }
 
-/**
- * Pure. Executes an ALREADY-VALIDATED V1.8 PARENT_VERSION plan against the
- * real pom.xml text -- discovers nothing, chooses nothing: every
- * groupId/artifactId/fromVersion/toVersion re-check below exists ONLY to
- * fail closed the moment the real file no longer matches what V1.8
- * validated, never to pick a different target/version than the plan says.
- */
+/** Exécute un plan V1.8 PARENT_VERSION déjà validé contre le vrai texte du pom.xml, en revérifiant chaque coordonnée/version et en refusant au moindre écart. */
 export function writeParentVersionPatch(request: ParentVersionPatchRequest): ParentPatchWriteResult {
   if (request.ecosystem !== 'MAVEN') {
     return fail('UNSUPPORTED_ECOSYSTEM', `Ecosystem "${request.ecosystem}" is not supported by this writer (Maven only).`);
@@ -184,9 +161,6 @@ export function writeParentVersionPatch(request: ParentVersionPatchRequest): Par
   if (!block.versionValueRange || block.versionValue === null) {
     return fail('PARENT_VERSION_ELEMENT_NOT_FOUND', `<parent> for ${request.actualEditTarget} has no literal <version> element.`);
   }
-  // Fails closed on a property/expression version (e.g. "${revision}") --
-  // parseVersion() requires a leading digit run, so a placeholder never
-  // parses and this never silently overwrites an inherited/computed value.
   if (!parseVersion(block.versionValue)) {
     return fail('PARENT_VERSION_NOT_LITERAL', `<parent> version for ${request.actualEditTarget} is "${block.versionValue}" -- not a literal Maven version (property/expression forms are unsupported).`);
   }
@@ -196,14 +170,6 @@ export function writeParentVersionPatch(request: ParentVersionPatchRequest): Par
 
   const content = spliceValue(request.sourceContent, block.versionValueRange, request.toVersion);
 
-  // Post-write verification (§5): re-locate the parent block in the
-  // PRODUCED content and prove, independently, that (a) groupId/artifactId
-  // are unchanged, (b) the new version is exactly toVersion, (c) the old
-  // version no longer appears in that node, and (d) a byte-exact round-trip
-  // (re-splicing toVersion back to fromVersion) reconstructs the ORIGINAL
-  // sourceContent -- the cheapest possible proof that nothing else in the
-  // file was touched, since the only authorized edit is this one
-  // [start,end) range.
   const reVerifyBlocks = locateParentBlocks(content);
   const rv = reVerifyBlocks[0];
   const roundTrip = rv?.versionValueRange ? spliceValue(content, rv.versionValueRange, request.fromVersion) : null;

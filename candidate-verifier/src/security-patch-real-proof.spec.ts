@@ -1,23 +1,4 @@
-// R-SEC-V1.2 §8/§9 — REAL, end-to-end proof against the real
-// souhaiel11/pfe-app-test repository at the exact grounded SHA already
-// used throughout V1/V1.1 (a81be457..., real merged main, this session's
-// own R81 work). Same symlink-scratch pattern as grounded-maven-provenance.
-// spec.ts / candidate-verification-executor.spec.ts — no network clone
-// needed, but every checkout/Maven run below is real, unmocked I/O.
-//
-// §8 — real logback-classic CVE-2023-6378 (fixedVersion "1.3.12, 1.4.12,
-// 1.2.13", a genuinely observed real Trivy value from this session's own
-// earlier report-normalizer work) grounds to a real AUTO_FIX_ELIGIBLE
-// decision; the deterministic writer produces a real, inspectable diff;
-// the guard passes it. tomcat-embed-core (real TRANSITIVE, the task's own
-// worked example) must produce NO patch at all -- the writer refuses
-// before ever touching pom.xml.
-//
-// §9 — the produced patch is written into a SECOND, independent real
-// exact-SHA worktree (never the same worktree grounding read from) and
-// `mvn dependency:tree` is re-run for real against the patched file to
-// prove the resolved version actually becomes targetVersion -- not just
-// that the XML text looks right.
+// Teste le composant « security-patch-real-proof » et ses cas d’erreur.
 import * as assert from 'node:assert/strict';
 import * as fs from 'fs';
 import * as os from 'os';
@@ -45,6 +26,7 @@ const provenanceService = new GroundedMavenProvenanceService(workspaceManager, r
 const decisionService = new SecurityFindingDecisionService(provenanceService);
 
 let counter = 0;
+/** Prépare les données nécessaires à ce scénario. */
 const nextId = (label: string) => `${label}-${++counter}`;
 
 // ============================================================================
@@ -144,12 +126,7 @@ if (tomcatDecision.provenance) {
 }
 console.log('§8.B) real tomcat-embed-core: real TRANSITIVE grounding -> writer refuses, no patch: PASS');
 
-// ============================================================================
-// §9 — Maven resolution pre-validation. Write the real patched pom.xml
-// into a SECOND, independent, real exact-SHA worktree and re-run
-// `mvn dependency:tree` for real. No external scanner is invoked -- only
-// the same MavenBuildAdapter.dependencyTree() already used for grounding.
-// ============================================================================
+/** Prépare les données nécessaires à ce scénario. */
 function dependencyTreeResolvesTo(treeText: string, groupArtifact: string, version: string): boolean {
   // Real `mvn dependency:tree -DoutputType=text` lines look like:
   // "+- ch.qos.logback:logback-classic:jar:1.2.13:compile" (or "\- " for the

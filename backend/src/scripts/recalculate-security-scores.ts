@@ -1,13 +1,4 @@
-// Backfill ponctuel — recalcule Report.securityScore/riskLevel pour TOUS les
-// reports existants avec le calcul déterministe (calculateSecurityScore sur
-// normalizeReport(rawData)), pour remplacer les anciennes valeurs LLM
-// (dto.securityScore/riskLevel) écrites avant ce fix. Met aussi à jour
-// Project.securityScore/status depuis le dernier report "combined" de
-// chaque projet, comme le fait reports.service.ts::create().
-//
-// Dry-run par défaut. Écriture réelle avec --apply.
-//   npx ts-node src/scripts/recalculate-security-scores.ts           (dry-run)
-//   npx ts-node src/scripts/recalculate-security-scores.ts --apply   (écrit en base)
+// Regroupe les traitements de recalculate sécurité scores.
 import 'reflect-metadata';
 import { DataSource } from 'typeorm';
 import { Project } from '../projects/project.entity';
@@ -26,11 +17,13 @@ const dataSource = new DataSource({
   synchronize: false,
 });
 
+/** Déduit le statut du projet à partir du score recalculé (ou "warning" si le report est incomplet). */
 function statusFor(score: number, incomplete = false): string {
   if (incomplete) return 'warning';
   return score >= 80 ? 'healthy' : score >= 40 ? 'warning' : 'critical';
 }
 
+/** Point d'entrée du script : parcourt tous les reports, recalcule leur score, puis met à jour le projet depuis son dernier report combined. */
 async function main() {
   const apply = process.argv.includes('--apply');
 

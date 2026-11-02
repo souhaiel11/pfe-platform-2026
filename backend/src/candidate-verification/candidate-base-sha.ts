@@ -1,26 +1,23 @@
-// R22-C — CRITICAL INVARIANT 1: candidateBaseSha must never be silently
-// equated to main/baseline SHA. This function makes the two real cases
-// (remediation branch already exists vs. does not exist yet) explicit and
-// fails closed on anything else -- it never fetches/infers anything itself
-// (that stays the caller's job, same as WF2's own `Branch Exists?` node),
-// it only refuses to guess when given inconsistent inputs.
+// Calcule le SHA de base à partir duquel un candidat de remédiation doit être comparé : le HEAD de la branche de remédiation si elle existe déjà, sinon le SHA baseline fourni.
 import { isFullGitSha } from './candidate-digest';
 
 export interface CandidateBaseShaInput {
   remediationBranchExists: boolean;
-  /** Required and used only when remediationBranchExists is true. */
   remediationBranchHeadSha?: string | null;
-  /** Required and used only when remediationBranchExists is false. */
   baselineSha?: string | null;
 }
 
+// Erreur levée quand le SHA de base ne peut pas être résolu de façon sûre.
 export class CandidateBaseShaResolutionError extends Error {
+  /** Initialise l’erreur avec son contexte. */
   constructor(message: string) {
     super(message);
     this.name = 'CandidateBaseShaResolutionError';
   }
 }
 
+// Détermine le SHA de base d'un candidat : HEAD de la branche de remédiation si elle
+// existe, sinon le SHA baseline ; lève une erreur plutôt que de retourner une valeur fausse.
 export function resolveCandidateBaseSha(input: CandidateBaseShaInput): string {
   if (input.remediationBranchExists) {
     if (!isFullGitSha(input.remediationBranchHeadSha)) {

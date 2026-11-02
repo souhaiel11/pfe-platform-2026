@@ -1,0 +1,29 @@
+{
+  "workflowId": "x4oTJ4HbkC1R526b",
+  "publishedVersionId": "ff78c308-a9d1-4193-8778-fe98ce7c7456",
+  "jobId": "26ea5224-d633-4785-a85d-15212752ee0f",
+  "e2eStatus": "done",
+  "durationMs": 24817,
+  "score": 82,
+  "issues": [
+    {
+      "title": "Image Trivy épinglée sur ':latest' — non reproductible",
+      "needsConfirmation": true
+    },
+    {
+      "title": "Image ZAP épinglée sur ':latest' — non reproductible",
+      "needsConfirmation": true
+    }
+  ],
+  "automaticChanges": 0,
+  "completeFilePreserved": true,
+  "parserTests": "PASS",
+  "structuredOutputDocs": "https://platform.claude.com/docs/en/build-with-claude/structured-outputs",
+  "changedNodes": [
+    "Prepare - Optimizer Body",
+    "Build Project Context",
+    "Parse - Optimizer Output",
+    "Jenkinsfile Optimizer Agent"
+  ],
+  "graphAndApplyPathUnchanged": true
+}

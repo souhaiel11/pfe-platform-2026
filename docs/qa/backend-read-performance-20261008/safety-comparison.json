@@ -1,0 +1,15 @@
+{
+  "flagsUnchanged": true,
+  "allBusinessRowsUnchanged": true,
+  "allWorkflowDefinitionsUnchanged": true,
+  "verifierUnchanged": true,
+  "scannerUnchanged": true,
+  "changedRows": {
+    "projects": 0,
+    "manual_remediation_tasks": 0,
+    "incidents": 0,
+    "reports": 0,
+    "remediation_target_reservations": 0,
+    "security_remediation_retry_e2e_plans": 0
+  }
+}

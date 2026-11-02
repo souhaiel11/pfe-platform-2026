@@ -1,3 +1,4 @@
+// Vérifie le commit final de la branche dans WF2.
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
 
@@ -9,35 +10,43 @@ const workflow = (json => Array.isArray(json) ? json[0] : json)(JSON.parse(fs.re
 const r77Workflow = (json => Array.isArray(json) ? json[0] : json)(JSON.parse(fs.readFileSync(r77Path)));
 const fixture = JSON.parse(fs.readFileSync(fixturePath));
 
+/** Retrouve ou construit le nœud du workflow demandé. */
 const node = (wf, name) => {
   const found = wf.nodes.find(n => n.name === name);
   if (!found) throw new Error('NODE_NOT_FOUND:' + name);
   return found;
 };
 
-// ---- sandbox helpers -------------------------------------------------
-// The real jsCode reads `$json` (the incoming HTTP response from `Update
-// File in Branch`), `$runIndex` (n8n's built-in loop-pass index), and
-// `$('Expand Manifest Files').item.json` (the candidate for this pass).
+/** Prépare les données nécessaires à ce scénario. */
 function runBuildFileResult(httpResponse, runIndex, candidateJson) {
   const code = node(workflow, 'Build File Result (Pass 2)').parameters.jsCode;
+  /** Simule l’accès à un nœud n8n pour le scénario. */
   const $ = () => ({ item: { json: candidateJson } });
   const wrapped = new Function('$json', '$runIndex', '$', code);
   return wrapped(httpResponse, runIndex, $).json;
 }
 
+/** Simule l’échec attendu par ce scénario. */
 function runValidateBatchCompleteness({ ctx, manifest, incomingResults }) {
   const code = node(workflow, 'Validate Batch Completeness').parameters.jsCode;
+  /** Simule l’accès à un nœud n8n pour le scénario. */
   const $ = (name) => {
-    if (name === 'Prepare Batch Context') return { first: () => ({ json: ctx }) };
-    if (name === 'Assemble Candidate Manifest') return { first: () => ({ json: manifest }) };
+    if (name === 'Prepare Batch Context') return {
+    /** Renvoie le premier élément disponible. */
+    first: () => ({ json: ctx }) };
+    if (name === 'Assemble Candidate Manifest') return {
+    /** Renvoie le premier élément disponible. */
+    first: () => ({ json: manifest }) };
     throw new Error('UNEXPECTED_$_CALL:' + name);
   };
-  const $input = { all: () => incomingResults.map(json => ({ json })) };
+  const $input = {
+  /** Renvoie tous les éléments disponibles. */
+  all: () => incomingResults.map(json => ({ json })) };
   const wrapped = new Function('$', '$input', code);
   return wrapped($, $input)[0].json;
 }
 
+/** Vérifie les résultats attendus dans ce scénario. */
 function runSaveResultBodyExpression(validateBatchOutput) {
   const raw = node(workflow, 'Save Execution Result to Backend').parameters.jsonBody;
   assert.ok(raw.includes("$('Validate Batch Completeness').first().json.finalBranchHead"),
@@ -46,9 +55,12 @@ function runSaveResultBodyExpression(validateBatchOutput) {
   // (the full jsonBody references many other nodes we don't need to mock).
   const match = raw.match(/prHeadSha: (\$\('Validate Batch Completeness'\)\.first\(\)\.json\.finalBranchHead \|\| '')/);
   assert.ok(match, 'prHeadSha expression not found verbatim');
+  /** Simule l’accès à un nœud n8n pour le scénario. */
   const $ = (name) => {
     if (name !== 'Validate Batch Completeness') throw new Error('UNEXPECTED_$_CALL:' + name);
-    return { first: () => ({ json: validateBatchOutput }) };
+    return {
+    /** Renvoie le premier élément disponible. */
+    first: () => ({ json: validateBatchOutput }) };
   };
   return new Function('$', `return ${match[1]};`)($);
 }
@@ -98,16 +110,18 @@ console.log('R77_PRESERVED_ELSEWHERE: PASS (only the 3 intended nodes differ fro
   console.log('ATTEMPT_13_REPLAY = PASS');
 }
 
-// ---- 6. REGRESSION MATRIX ----------------------------------------------
+/** Prépare les données nécessaires à ce scénario. */
 function baseCtx() {
   return { correctiveAttempt: false, findingIds: ['finding-1', 'finding-2'] };
 }
+/** Prépare les données nécessaires à ce scénario. */
 function baseManifest(files) {
   return {
     candidateDigest: 'd'.repeat(64),
     files: files.map(f => ({ path: f.path, operation: 'MODIFY', originalBlobSha: f.oldSha, contentSha256: f.contentSha256 })),
   };
 }
+/** Prépare les données nécessaires à ce scénario. */
 function fileResult({ path, oldSha, newSha, commitSha, contentSha256, writeSequence, findingId = 'finding-1' }) {
   return {
     targetFile: path, approvedFindingIds: [findingId], processedFindingIds: [findingId],

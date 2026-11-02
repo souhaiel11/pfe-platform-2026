@@ -1,21 +1,4 @@
-// R22-A Phase 7 — WF3 data separation.
-//
-// The raw `metadata.validation` payload (persisted verbatim from Jenkins/WF3
-// since before this change, see incidents.service.ts#saveValidation) mixes
-// two things that must never be conflated: whether an individual approved
-// finding is still a real problem (scanner-produced, per-finding), and
-// whether the pipeline that ran around it was healthy (build/tests/docker/
-// scanners). `deriveFindingsAndHealth` is a pure, additive projection of the
-// existing raw shape into the two — it changes no existing field and is not
-// itself the source of truth; the raw payload remains that (Phase 8
-// compatibility).
-//
-// Invariant this file exists to make mechanically true, not just documented:
-// a finding's verdict here can NEVER be influenced by pipelineHealth, and
-// pipelineHealth can never be influenced by finding verdicts. Proven live on
-// PR-25 build #2 (docker/build FAILED, both target S4684 findings still
-// correctly VALID) and build #3 (build/docker SUCCESS, Sonar Quality Gate
-// ERROR, findings still VALID) -- see finding-pipeline-separation.spec.ts.
+// Sépare le payload brut metadata.validation (persisté tel quel depuis Jenkins/WF3) en deux ensembles qui ne doivent jamais s'influencer.
 
 export type FindingVerdict = 'VALID' | 'INVALID' | 'INCONCLUSIVE';
 
@@ -43,11 +26,7 @@ export interface FindingPipelineSeparation {
   pipelineHealth: PipelineHealth;
 }
 
-/**
- * Pure projection of the raw persisted validation payload. Never throws;
- * absent/malformed input degrades to empty findings and UNKNOWN health
- * fields, never a fabricated VALID/PASSED.
- */
+/** Projette le payload brut de validation en deux ensembles séparés : les verdicts par finding et la santé globale du pipeline, sans jamais laisser l'un influencer l'autre. */
 export function deriveFindingsAndHealth(raw: any): FindingPipelineSeparation {
   const rawFindingResults = Array.isArray(raw?.findingResults) ? raw.findingResults : [];
   const findings: FindingValidation[] = rawFindingResults.map((entry: any) => {
@@ -63,6 +42,7 @@ export function deriveFindingsAndHealth(raw: any): FindingPipelineSeparation {
     };
   });
 
+  // Lit le statut d'une étape du pipeline, 'UNKNOWN' si absente.
   const stage = (name: string): string => {
     const value = raw?.buildStageStatus?.[name];
     return value != null ? String(value) : 'UNKNOWN';

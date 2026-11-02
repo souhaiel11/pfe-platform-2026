@@ -1,0 +1,18 @@
+{
+  "launch": {
+    "status": 503,
+    "body": {
+      "statusCode": 503,
+      "code": "SECURITY_REMEDIATION_TEMPORARILY_DISABLED",
+      "message": "Remediation dispatch is frozen or exact operator test authorization is unavailable."
+    }
+  },
+  "retry": {
+    "status": 503,
+    "body": {
+      "statusCode": 503,
+      "code": "SECURITY_REMEDIATION_TEMPORARILY_DISABLED",
+      "message": "Remediation dispatch is frozen or exact operator test authorization is unavailable."
+    }
+  }
+}

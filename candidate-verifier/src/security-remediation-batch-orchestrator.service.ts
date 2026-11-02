@@ -1,47 +1,4 @@
-// Increment 1 — multi-CVE remediation, ONE candidate/build/scan/PR for N
-// findings. A DELIBERATELY SEPARATE service from
-// SecurityRemediationOrchestratorService (security-remediation-orchestrator.
-// service.ts), which stays byte-for-byte untouched — this increment's own
-// non-regression requirement is that a 1-element batch must come from a NEW
-// code path, never a modification of the proven single-CVE one (PR #37).
-//
-// Reuses every collaborator the singular orchestrator already reuses
-// (decisionService/workspaceManager/repoCache/mavenAdapter/
-// securityValidator) and every pure building block already proven there
-// (writeSecurityPatch via writeSecurityPatchBatch's chaining,
-// dependencyTreeResolvesTo, computeSecurityCandidateIdentity) — nothing
-// here reimplements grounding, patch-writing, or Maven/Trivy execution.
-//
-// ★ Coordinated scope (MavenRemediationScope/deriveMavenRemediationScope —
-// one CVE needing several synchronized edits in the SAME file, e.g. the
-// REAL CVE-2023-6378/logback case this increment's own non-regression test
-// replays) IS derived here, per finding, via the EXACT SAME control-
-// experiment mechanism the singular orchestrator already uses — looped
-// once per finding instead of once total. Each finding's scope is derived
-// against the batch's ORIGINAL (pre-chain) content, exactly like the
-// singular flow derives it against the sole content it ever sees.
-//
-// ★ Disclosed Increment-1 limitation: a coordinated finding is only safely
-// batchable when it is the ONLY finding in the batch, or otherwise happens
-// to be applied FIRST in writeSecurityPatchBatch()'s deterministic
-// (cveId-sorted) chain order. A coordinated finding applied AFTER another
-// finding has already touched the same file fails closed automatically
-// (COORDINATED_SCOPE_INVALID, surfaced as a named PATCH_CONFLICT) — its own
-// scopeEvidence.originalBlobSha no longer matches the by-then-already-
-// patched content, exactly the same "never guess" discipline
-// deriveMavenRemediationScope already enforces for the singular flow. No
-// special-case code was added for this; it is a direct, correct consequence
-// of scope being derived against pre-chain content and re-verified by
-// writeSecurityPatch() itself at write time.
-//
-// ★ Also deliberately deferred: assertSecurityPatchSafeToWrite() per-finding
-// guard re-validation (the singular flow's defense-in-depth re-derivation
-// step). writeSecurityPatchBatch()'s own chaining already proves each
-// finding's declaration exists, is unambiguous, and matches its grounded
-// installedVersion; the post-patch dependency:tree resolution check and the
-// Trivy closure intersection below are the two REAL safety nets this
-// increment relies on. Re-adding the guard as a third, per-finding layer is
-// a reasonable follow-up, not required to ship a safe Increment 1.
+// Vérifie un candidat commun à plusieurs corrections de sécurité.
 import { performance } from 'perf_hooks';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -75,6 +32,7 @@ const BUILD_STAGE_CAP_MS = 5 * 60 * 1000;
 
 @Injectable()
 export class SecurityRemediationBatchOrchestratorService {
+  /** Initialise les dépendances et l’état de ce composant. */
   constructor(
     @Optional() private readonly decisionService: SecurityFindingDecisionService = new SecurityFindingDecisionService(),
     @Optional() private readonly workspaceManager: WorkspaceManager = new WorkspaceManager(),
@@ -83,6 +41,7 @@ export class SecurityRemediationBatchOrchestratorService {
     @Optional() private readonly securityValidator: SecurityArtifactValidator = new RemoteBuilderArtifactValidator(),
   ) {}
 
+  /** Enchaîne les contrôles de correction et rassemble les preuves. */
   orchestrate(input: SecurityRemediationBatchOrchestrationInput): SecurityRemediationBatchCandidateResult {
     const started = performance.now(), timings: Record<string, number> = {};
     const deadline = createWorkerDeadline(input.overallDeadlineMs);
@@ -91,11 +50,14 @@ export class SecurityRemediationBatchOrchestratorService {
     return { ...result, executionTimings: timings };
   }
 
+  /** Évalue les données et retourne la décision correspondante. */
   private evaluate(input: SecurityRemediationBatchOrchestrationInput, timings: Record<string, number>, deadline: WorkerDeadline): SecurityRemediationBatchCandidateResult {
+    /** Mesure la durée de l’étape exécutée. */
     const measure = <T>(key: string, operation: () => T): T => {
       const start = performance.now();
       try { return operation(); } finally { timings[key] = (timings[key] ?? 0) + Math.round(performance.now() - start); }
     };
+    /** Construit un résultat indiquant que le délai est dépassé. */
     const deadlineExceeded = (stage: string) => new ArtifactRuntimeError('WORKER_DEADLINE_EXCEEDED', stage);
     const cveIds = input.findings.map(f => f.cveId);
 
@@ -109,6 +71,7 @@ export class SecurityRemediationBatchOrchestratorService {
         timeoutMs: deadline.budgetFor(GROUNDING_STAGE_CAP_MS),
       })));
 
+    /** Prépare les preuves des étapes encore non exécutées. */
     const pendingEvidence = (upTo: number, exceptIndex?: number, exceptStatus?: SecurityRemediationBatchFindingEvidence['status'], exceptReason?: string): SecurityRemediationBatchFindingEvidence[] =>
       decisions.map((d, i) => ({
         findingIdentity: d.findingIdentity, cveId: cveIds[i],
@@ -117,9 +80,11 @@ export class SecurityRemediationBatchOrchestratorService {
         patchEvidence: null,
       })).slice(0, upTo);
 
+    /** Construit le résultat d’inéligibilité à la correction automatique. */
     const notEligible = (status: SecurityRemediationBatchCandidateResult['status'], reason: string, findings: SecurityRemediationBatchFindingEvidence[]): SecurityRemediationBatchCandidateResult => ({
       status, reason, findings, decisions, candidateIdentity: null, candidateManifest: null, guardResult: null,
     });
+    /** Construit le résultat exécution échec. */
     const runtimeFailure = (error: ArtifactRuntimeError, findings: SecurityRemediationBatchFindingEvidence[]): SecurityRemediationBatchCandidateResult => ({
       ...notEligible('TECHNICAL_FAILURE', error.message, findings),
       failureClass: (error.code === 'RUNTIME_OPERATION_TIMEOUT' || error.code === 'WORKER_DEADLINE_EXCEEDED') ? 'VERIFIER_TIMEOUT' : 'VERIFIER_UNAVAILABLE',
@@ -150,14 +115,7 @@ export class SecurityRemediationBatchOrchestratorService {
       return notEligible('NOT_ELIGIBLE', 'CONTROLLING_FILE_MUST_BE_IDENTICAL_ACROSS_A_BATCH', pendingEvidence(decisions.length));
     }
 
-    // V1.8 Phase 7B — a batch is either ENTIRELY PARENT_VERSION findings (one
-    // shared owner plan, applied once, independent per-CVE closure below) or
-    // ENTIRELY non-parent findings (the existing DEPENDENCY_VERSION/
-    // PROPERTY_VERSION chained-write path, untouched) -- NEVER a mix. Mixing
-    // would mean two structurally different patch-generation mechanisms
-    // writing to the SAME file in one candidate, which neither path's own
-    // conflict detection is built to reason about; fail closed rather than
-    // guess an ordering.
+    /** Vérifie l’état suivant : parent décision. */
     const isParentDecision = (d: SecurityFindingDecision) => d.editType === 'PARENT_VERSION';
     const allParent = decisions.every(isParentDecision);
     const anyParent = decisions.some(isParentDecision);
@@ -220,25 +178,6 @@ export class SecurityRemediationBatchOrchestratorService {
         return notEligible('CANDIDATE_SECURITY_VALIDATION_FAILED', String(err?.message || 'Baseline security scan unavailable.'), pendingEvidence(decisions.length));
       }
 
-      // ★ Per-finding scope derivation — the EXACT SAME control-experiment
-      // mechanism the singular orchestrator uses (localMavenControls ->
-      // apply one control at a time -> real dependency:tree/effectivePom ->
-      // restore), looped once per finding, always against the SAME pristine
-      // `sourceContent` (never an intermediate chained value — see this
-      // file's own header for why that is the correct, fail-closed choice).
-      // A finding whose grounded decision does not actually need
-      // coordination (the common case) still goes through this — its own
-      // localMavenControls() simply returns a single candidate, and
-      // deriveMavenRemediationScope() naturally settles on 'SINGLE_CONTROL'.
-      //
-      // V1.8 Phase 7B — NEVER entered for an all-PARENT_VERSION batch:
-      // localMavenControls() only knows how to bind a DIRECT/PROPERTY-
-      // managed dependency declaration (decision.provenance.package) that is
-      // actually present in <dependencies> -- exactly the shape a parent-
-      // managed package structurally is NOT (that is the whole reason it
-      // needed a parent fix). Running it anyway would fail closed
-      // (TARGET_NOT_LOCALLY_CONTROLLED), which is safe but wrong: the parent
-      // batch has its own, separate write-generation branch below.
       const scopeEvidenceByCve = new Map<string, MavenScopeEvidence>();
       if (!allParent) {
         for (let i = 0; i < decisions.length; i++) {
@@ -278,16 +217,6 @@ export class SecurityRemediationBatchOrchestratorService {
       let writeResult: { ok: true; file: CandidateFile; perFinding: SecurityPatchBatchFindingOutcome[] };
 
       if (allParent) {
-        // V1.8 Phase 7B — ONE shared owner/parent plan, applied ONCE against
-        // this batch's own shared `sourceContent` (never the 11 separately-
-        // grounded candidates decide() already produced during grounding
-        // above -- those only PROVE feasibility per-finding; the candidate
-        // that is actually scanned/built is always constructed fresh here,
-        // exactly like the non-parent path already does with
-        // decision.provenance!.package/selectedTargetVersion, never by
-        // reusing a whole pre-built candidate file). Every decision's own
-        // plan must agree byte-for-byte -- a batch that somehow carries two
-        // different parent plans is never silently collapsed to one.
         const plan = decisions[0].parentRemediationPlan!;
         const inconsistent = decisions.find(d => !d.parentRemediationPlan
           || d.parentRemediationPlan.actualEditTarget !== plan.actualEditTarget
@@ -337,21 +266,6 @@ export class SecurityRemediationBatchOrchestratorService {
           })),
         };
       } else {
-        // §2/★ — chain N single-CVE patch requests into ONE candidate file.
-        // Conflict detection is writeSecurityPatchBatch()'s own chaining
-        // (see that file's header) — nothing extra to do here.
-        // writeSecurityPatch()'s coordinated-scope branch re-derives and
-        // requires `computeGitBlobSha1(source) === scopeEvidence.
-        // originalBlobSha` -- true only against the PRISTINE, pre-chain
-        // content. For the common SINGLE_CONTROL case that requirement is
-        // unnecessary machinery (the plain provenanceKind-based write already
-        // proves everything needed) AND actively incompatible with chaining
-        // (a SINGLE_CONTROL finding applied anywhere but first would falsely
-        // "conflict" against its own already-satisfied scope). Only a
-        // genuinely COORDINATED_SAME_FILE finding needs remediationScope/
-        // scopeEvidence carried through to the write step at all -- see this
-        // file's own header for the disclosed ordering limitation that
-        // still applies to that case.
         const items: SecurityPatchBatchItem[] = decisions.map((d, i) => {
           const coordinated = d.remediationScope?.kind === 'COORDINATED_SAME_FILE';
           return {
@@ -446,7 +360,7 @@ export class SecurityRemediationBatchOrchestratorService {
       try {
         if (trackedSourceDigest(workspacePath) !== expectedDigest) throw new Error('BUILD_MUTATED_SOURCE');
         if (deadline.expired()) throw deadlineExceeded('CANDIDATE_SECURITY_VALIDATION');
-        closureScan = measure('ARTIFACT_VALIDATION_DURATION_MS', () => this.securityValidator.inspect(workspacePath, deadline.remainingMs()));
+        closureScan = measure('ARTIFACT_VALIDATION_DURATION_MS', () => this.securityValidator.inspect(workspacePath, deadline.remainingMs(), cveIds));
         if (closureScan.sourceDigest !== expectedDigest || trackedSourceDigest(workspacePath) !== expectedDigest) throw new Error('CANDIDATE_SCAN_SOURCE_BINDING_FAILED');
       } catch (err: any) {
         if (err instanceof ArtifactRuntimeError) return { ...runtimeFailure(err, pendingEvidence(decisions.length)), applicationTests };
@@ -456,6 +370,7 @@ export class SecurityRemediationBatchOrchestratorService {
       // §4/§6 — per-CVE closure via baseline/candidate CVE-id intersection.
       const candidateCveIds = allVulnerabilityIds(closureScan);
       const verdict = deriveBatchClosureVerdict(cveIds, baselineCveIds, candidateCveIds);
+      /** Associe le résultat à son motif explicatif. */
       const reasonFor = (status: string) => status === 'CLOSED' ? 'TARGET_CVE_CLOSED'
         : status === 'STILL_OPEN' ? 'TARGET_CVE_STILL_OPEN_AFTER_PATCH' : 'TARGET_CVE_NEVER_OBSERVED_IN_BASELINE';
       const verdictByCve = new Map(verdict.perCve.map(v => [v.cveId, v.status]));
@@ -499,6 +414,7 @@ export class SecurityRemediationBatchOrchestratorService {
       })));
 
       return {
+        ...{ scannerEvidence: { TRIVY: closureScan, OWASP: (closureScan as any).owasp } },
         status: 'CANDIDATE_READY', reason: 'DETERMINISTIC_BATCH_CANDIDATE_READY',
         findings: findingsEvidence, decisions, candidateIdentity, candidateManifest, guardResult: null, applicationTests,
       };

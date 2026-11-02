@@ -1,3 +1,4 @@
+// Présente les risques et les autorisations de déploiement Azure.
 import { Component, Input, OnChanges, OnInit, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -10,19 +11,7 @@ import { CopyableIdComponent } from '../../shared/copyable-id/copyable-id.compon
 import { InfoHintComponent } from '../../shared/info-hint/info-hint.component';
 import { EvidenceSection, SourceEvidence } from '../../shared/source-evidence/source-evidence.types';
 
-// ─────────────────────────────────────────────────────────────────────
-//  Phase 2B.3 — Interface de gouvernance du déploiement.
-//
-//  Le backend reste l'unique source de vérité (Phase 2B.2.2) : ce
-//  composant n'importe AUCUNE logique de classification (READY /
-//  CONDITIONAL / CRITICAL_RISK / TECHNICALLY_IMPOSSIBLE) — il se contente
-//  d'afficher `preview.decision` / `preview.failedControls` /
-//  `preview.warnings` / `preview.authorizationPolicy`, et de soumettre
-//  l'intention humaine (mode/reason/acknowledgements/confirmationPhrase)
-//  à POST /authorize, qui recalcule tout indépendamment.
-//
-//  Usage : <app-deployment-governance [projectId]="id"></app-deployment-governance>
-// ─────────────────────────────────────────────────────────────────────
+// ───────────────────────────────────────────────────────────────────── Phase 2B.3 — Interface de gouvernance du déploiement.
 
 export type GovernanceClass = 'READY' | 'CONDITIONAL' | 'CRITICAL_RISK' | 'TECHNICALLY_IMPOSSIBLE';
 export type SecurityValidationApplicability = 'APPLICABLE' | 'NOT_APPLICABLE' | 'MISSING' | 'FAILED' | 'AMBIGUOUS';
@@ -34,7 +23,7 @@ export interface GovernancePreview {
   mainBuildNumber: number | null;
   decision: GovernanceClass;
   buildIdentity: { resolved: boolean; commitSha: string | null };
-  artifact: { provenanceVerified: boolean; digest: string | null; registry: string | null; repository: string | null; tag: string | null };
+  artifact: { provenanceVerified: boolean; artifactIdentityProven?: boolean; publicationSource?: 'PIPELINE_VERIFIED' | 'MANUAL_ATTESTED' | 'UNKNOWN'; digest: string | null; registry: string | null; repository: string | null; tag: string | null };
   // `name` and `resourceGroup` are declared optional on purpose: the current
   // backend GovernancePreview does not return them (see
   // deployment-authorization.service.ts getGovernancePreview), so the UI
@@ -77,33 +66,6 @@ export const DECISION_PRESENTATION: Record<GovernanceClass, { label: string; ico
   TECHNICALLY_IMPOSSIBLE: { label: 'Déploiement techniquement impossible', icon: '🚫', tone: 'impossible' },
 };
 
-// R48 — « pas de configuration Azure » n'est pas « techniquement impossible ».
-//
-// Le backend renvoie TECHNICALLY_IMPOSSIBLE pour un projet sans aucune
-// configuration Azure, ce qui est correct de son point de vue : rien n'est
-// deployable. Mais lu par un humain, « Déploiement techniquement impossible »
-// affirme que ce projet ne pourra JAMAIS etre deploye, alors que la realite est
-// « Azure n'est pas encore configure pour ce projet ». Les deux etats demandent
-// des actions opposees : l'un configure, l'autre enquete.
-//
-// Cette presentation ne s'applique QUE lorsque la plateforme sait explicitement
-// que le deploiement n'est pas configure (`deploymentConfigured === false`). Un
-// projet configure qui recoit TECHNICALLY_IMPOSSIBLE garde son etiquette, et
-// READY / CONDITIONAL / CRITICAL_RISK ne sont jamais reinterpretes : la
-// decision de gouvernance du backend reste la seule source, seule sa
-// formulation est precisee.
-/**
- * R53 — etats precis de l'identite d'artefact (§11).
- *
- * Le backend calcule un motif exact quand aucun artefact deployable ne peut
- * etre resolu. Les fondre tous en « Deploiement impossible » efface la seule
- * information utile : ce qui manque, et donc quoi faire. Chaque code a donc sa
- * phrase, et son action.
- *
- * `null` est le cas normal quand la provenance est acquise. Un code inconnu --
- * y compris l'absence du champ, parce que le backend servi peut etre anterieur
- * a son ajout -- reste « Non disponible » : on n'invente pas un motif.
- */
 const ARTIFACT_STATE_PRESENTATION: Record<string, { label: string; detail: string }> = {
   DEPLOY_ARTIFACT_PROVENANCE_UNAVAILABLE: {
     label: 'Image non publiée',
@@ -120,6 +82,13 @@ const ARTIFACT_STATE_PRESENTATION: Record<string, { label: string; detail: strin
   DEPLOY_ARTIFACT_COMMIT_MISMATCH: {
     label: 'Commit divergent',
     detail: 'L’artefact trouvé appartient à un autre commit que celui gouverné pour ce build.',
+  },
+  // QA-DEF-11 — l'identite du code source peut etre prouvee alors que rien
+  // ne prouve QUI a publie l'image. Le libelle ne doit donc jamais parler du
+  // commit : ce n'est pas lui qui est en cause.
+  DEPLOY_ARTIFACT_PUBLICATION_UNVERIFIED: {
+    label: 'Publication non prouvée',
+    detail: 'Le code source de cette image est bien identifié, mais aucune preuve n’établit qui l’a publiée dans le registre : ni reçu de poussée du pipeline, ni attestation manuelle nominative. Le déploiement reste bloqué tant que la publication n’est pas prouvée.',
   },
   DEPLOY_BUILD_MISMATCH: {
     label: 'Artefact d’un autre build',
@@ -177,9 +146,7 @@ export interface BackendStage {
   findingCount?: number | null;
 }
 
-// §5 — faithful mapping of the backend stage vocabulary onto display
-// statuses. Anything unrecognised becomes UNKNOWN; NOT_RUN and UNKNOWN are
-// NEVER promoted to PASS.
+/** Renvoie étape contrôle statut pour le traitement ou l’affichage. */
 export function stageControlStatus(raw: string | null | undefined): ControlStatus {
   const value = String(raw || '').toUpperCase();
   if (['PASS', 'PASSED', 'SUCCESS', 'OK', 'STABLE'].includes(value)) return 'PASS';
@@ -189,9 +156,7 @@ export function stageControlStatus(raw: string | null | undefined): ControlStatu
   return 'UNKNOWN';
 }
 
-// §5 — the security-validation applicability vocabulary is distinct and keeps
-// its own faithful mapping: NOT_APPLICABLE and MISSING mean "not run against
-// this exact artefact", never a pass.
+/** Renvoie sécurité validation contrôle statut pour le traitement ou l’affichage. */
 export function securityValidationControlStatus(a: SecurityValidationApplicability | null | undefined): ControlStatus {
   switch (a) {
     case 'APPLICABLE': return 'PASS';
@@ -258,15 +223,7 @@ export const CAPABILITY_PRESENTATION: Record<DeploymentCapability, { label: stri
   },
 };
 
-/**
- * Derives the deployment capability from backend data only.
- *
- * `deploymentConfigured` comes from GET /azure-deploy/ready (whether the
- * project carries an azureConfig at all); `environment.resolved` comes from
- * GET /azure-deploy/governance (whether that config resolves to a usable
- * target identity). Together they separate "never configured" from
- * "configured but unusable" without any project-specific knowledge.
- */
+/** Détermine déploiement capacité. */
 export function deriveDeploymentCapability(input: {
   previewFailed: boolean;
   deploymentConfigured: boolean | null;
@@ -283,7 +240,7 @@ export function deriveDeploymentCapability(input: {
   return 'DEPLOYMENT_CONFIGURED';
 }
 
-/** Only a configured project may ever expose a deployment action. */
+/** Renvoie capacité Allows déploiement action pour le traitement ou l’affichage. */
 export function capabilityAllowsDeployAction(c: DeploymentCapability): boolean {
   return c === 'DEPLOYMENT_CONFIGURED';
 }
@@ -292,7 +249,7 @@ export function capabilityAllowsDeployAction(c: DeploymentCapability): boolean {
 // endpoint for them (azure-deploy.module.ts injects attemptsRepo and never
 // queries it; there is no GET .../attempts route). A history panel is
 // therefore deliberately NOT implemented rather than faked client-side.
-export const DEPLOYMENT_HISTORY_UI_DEFERRED = true;
+export const DEPLOYMENT_HISTORY_UI_DEFERRED = false;
 
 // §6 — exact backend phrase (deployment-authorization-policy.ts). Never
 // pre-filled into the input's value, never autocompleted — the user must
@@ -328,6 +285,9 @@ export class DeploymentGovernanceComponent implements OnInit, OnChanges {
   // of its own; it previously received a pre-built Jenkins URL, which hid
   // the fact that the URL was assembled from an overloaded project field.
   @Input() sourceEvidence: Record<string, SourceEvidence> | null = null;
+  readonly azureLinkSections: EvidenceSection[] = [
+    { id: 'azure', title: 'Ressources Azure', slots: ['AZURE_TARGET', 'ACR_IMAGE', 'ACR_REGISTRY', 'AZURE_RESOURCE_GROUP'] },
+  ];
   @Input() sourceEvidenceSections: EvidenceSection[] | null = null;
 
   readonly criticalOverridePhrase = CRITICAL_OVERRIDE_PHRASE;
@@ -350,7 +310,19 @@ export class DeploymentGovernanceComponent implements OnInit, OnChanges {
   deploying = false;
   deployAmbiguous = false;
   deployErrorMessage: string | null = null;
-  deploySuccessInfo: { state: string; health: string; authorizationId: string; artifactDigest: string | null } | null = null;
+  deploySuccessInfo: { state: string; health: string; authorizationId: string; artifactDigest: string | null; appUrl: string | null; portalUrl: string | null } | null = null;
+
+  /** Lien vers l'application déployée, seulement s'il s'agit d'une URL http(s) (valeur renvoyée par l'agent). */
+  private safeAppUrl(value: unknown): string | null {
+    try { const u = new URL(String(value || '')); return (u.protocol === 'http:' || u.protocol === 'https:') && !u.username && !u.password ? u.toString() : null; }
+    catch { return null; }
+  }
+
+  /** Lien vers la ressource dans le portail Azure, seulement sur le domaine officiel du portail. */
+  private safePortalUrl(value: unknown): string | null {
+    const url = String(value || '');
+    return url.startsWith('https://portal.azure.com/') ? url : null;
+  }
 
   // §11 — current lifecycle phase, derived only from what the backend has
   // actually confirmed.
@@ -385,8 +357,10 @@ export class DeploymentGovernanceComponent implements OnInit, OnChanges {
   criticalAcks = { criticalRiskAccepted: false, securityControlsMayHaveFailed: false, deploymentMayExposeKnownRisk: false };
   criticalPhrase = '';
 
+  /** Initialise les dépendances et l’état de ce composant. */
   constructor(private api: ApiService, private toast: ToastService, public auth: AuthService) {}
 
+  /** Charge les données nécessaires à l’ouverture du composant. */
   ngOnInit(): void { this.loadPreview(); }
 
   // Un changement de projet affiché (navigation sans recréation du
@@ -407,11 +381,12 @@ export class DeploymentGovernanceComponent implements OnInit, OnChanges {
     }
   }
 
-  /** True only while `preview` actually belongs to the project now displayed. */
+  /** Renvoie aperçu état pour courant projet pour le traitement ou l’affichage. */
   get previewIsForCurrentProject(): boolean {
     return !!this.preview && !!this.projectId && this.loadedForProjectId === this.projectId;
   }
 
+  /** Réinitialise les formulaires et messages temporaires. */
   private resetTransientState(): void {
     this.authorization = null;
     this.deployRequestId = null;
@@ -428,24 +403,39 @@ export class DeploymentGovernanceComponent implements OnInit, OnChanges {
     this.controlsExpanded = false;
   }
 
-  // §10 — fetched on open (ngOnInit) and again right before opening an
-  // authorization modal; also exposed as an explicit manual action.
+  /** Derniers déploiements (serveur) : survit à l'actualisation de la page, contrairement au bloc de résultat. */
+  deploymentHistory: any[] = [];
+  /** Dernier déploiement réussi ayant un lien vers l'application. */
+  get lastDeployedApp(): any | null { return this.deploymentHistory.find(h => h.status === 'DEPLOYED' && h.appUrl) || null; }
+  /** Charge l'historique des déploiements du projet. */
+  loadHistory(): void {
+    if (!this.projectId) return;
+    const requested = this.projectId;
+    this.api.getDeploymentHistory(requested).subscribe({
+      next: (rows) => { if (this.projectId === requested) this.deploymentHistory = (rows || []).map(r => ({ ...r, appUrl: this.safeAppUrl(r.appUrl), portalUrl: this.safePortalUrl(r.portalUrl) })); },
+      error: () => { if (this.projectId === requested) this.deploymentHistory = []; },
+    });
+  }
+
+  /** Charge aperçu. */
   loadPreview(): void {
     if (!this.projectId) return;
+    this.loadHistory();
     const requestedProjectId = this.projectId;
     const generation = ++this.loadGeneration;
-    // A response is stale if the project changed, or a newer load was issued
-    // for the same project, while it was in flight.
+    /** Renvoie courant pour le traitement ou l’affichage. */
     const current = () => generation === this.loadGeneration && this.projectId === requestedProjectId;
     this.previewLoading = true;
     this.previewError = null;
     this.api.getGovernancePreview(requestedProjectId).subscribe({
+      /** Traite le résultat reçu et actualise les données locales. */
       next: (preview: GovernancePreview) => {
         if (!current()) return;
         this.preview = preview;
         this.loadedForProjectId = requestedProjectId;
         this.previewLoading = false;
       },
+      /** Traite l’erreur reçue et termine le suivi de la demande. */
       error: () => {
         if (!current()) return;
         this.preview = null;
@@ -456,14 +446,15 @@ export class DeploymentGovernanceComponent implements OnInit, OnChanges {
     });
   }
 
+  /** Recharge la décision avec les preuves courantes. */
   reevaluate(): void { this.loadPreview(); }
 
-  // Never report a decision from a preview that belongs to another project.
+  /** Renvoie décision pour le traitement ou l’affichage. */
   get decision(): GovernanceClass | null {
     return this.previewIsForCurrentProject ? (this.preview?.decision ?? null) : null;
   }
 
-  // ── Deployment capability (§7) — derived from backend fields only ──
+  /** Renvoie capacité pour le traitement ou l’affichage. */
   get capability(): DeploymentCapability {
     return deriveDeploymentCapability({
       previewFailed: !!this.previewError,
@@ -473,26 +464,26 @@ export class DeploymentGovernanceComponent implements OnInit, OnChanges {
     });
   }
 
+  /** Décrit la capacité de déploiement disponible. */
   get capabilityInfo(): { label: string; icon: string; tone: string; detail: string } {
     return CAPABILITY_PRESENTATION[this.capability];
   }
 
-  /** The deployment action area is rendered only for a configured project. */
+  /** Renvoie shows déploiement action pour le traitement ou l’affichage. */
   get showsDeployAction(): boolean { return capabilityAllowsDeployAction(this.capability); }
 
-  /** The section always exists; only the action area is conditional. */
+  /** Vérifie l’état suivant : Configured. */
   get isConfigured(): boolean { return this.capability === 'DEPLOYMENT_CONFIGURED'; }
+  /** Renvoie le rôle de l’utilisateur courant. */
   get role(): string { return String(this.auth.currentUser?.role || 'viewer'); }
+  /** Indique si l’utilisateur possède le rôle administrateur. */
   get isAdmin(): boolean { return this.role === 'admin'; }
-  // Optimistic UI gating only (§5) — the backend's own authorizationPolicy
-  // (and, independently, evaluateAuthorizationRequest at authorize time)
-  // remains authoritative regardless of what this computes.
+  /** Renvoie rôles Allowed pour courant décision pour le traitement ou l’affichage. */
   get rolesAllowedForCurrentDecision(): string[] { return this.preview?.authorizationPolicy?.rolesAllowed || []; }
+  /** Vérifie si le rôle peut autoriser ce déploiement. */
   get canAuthorizeCurrentDecision(): boolean { return this.rolesAllowedForCurrentDecision.includes(this.role); }
 
-  // §9 — exact, distinct wording per applicability. NOT_APPLICABLE is
-  // NEVER rendered as "commit corruption" — it just means an existing
-  // validation targets a different artifact/commit.
+  /** Renvoie sécurité validation libellé pour le traitement ou l’affichage. */
   securityValidationLabel(applicability: SecurityValidationApplicability | undefined | null): string {
     switch (applicability) {
       case 'MISSING': return 'Aucune validation sécurité applicable à cet artefact';
@@ -507,12 +498,7 @@ export class DeploymentGovernanceComponent implements OnInit, OnChanges {
     }
   }
 
-  // §4 — the status card reads the backend decision, nothing else.
-  /**
-   * Etat precis de l'identite d'artefact, pour ne pas reduire tous les cas a
-   * « deploiement impossible ». Retourne null quand il n'y a rien a expliquer
-   * (provenance acquise) ou quand le motif est inconnu du front.
-   */
+  /** Renvoie artefact état Presentation pour le traitement ou l’affichage. */
   get artifactStatePresentation(): { label: string; detail: string } | null {
     const art: any = this.preview?.artifact;
     if (!art || art.provenanceVerified === true) return null;
@@ -523,6 +509,7 @@ export class DeploymentGovernanceComponent implements OnInit, OnChanges {
   /** Artefact pret : dit par le backend, jamais deduit d'un digest non nul. */
   get artifactReady(): boolean { return this.preview?.artifact?.provenanceVerified === true; }
 
+  /** Prépare le libellé et la tonalité de la décision. */
   get decisionPresentation(): { label: string; icon: string; tone: string } | null {
     const d = this.decision;
     if (!d) return null;
@@ -534,13 +521,13 @@ export class DeploymentGovernanceComponent implements OnInit, OnChanges {
     return DECISION_PRESENTATION[d];
   }
 
-  /** Tone modifier class for the status card; empty while no decision is known. */
+  /** Renvoie décision tonalité classe pour le traitement ou l’affichage. */
   get decisionToneClass(): string {
     const p = this.decisionPresentation;
     return p ? `dg-tone-${p.tone}` : '';
   }
 
-  /** §11 — health target, from the project's non-secret config. Never invented. */
+  /** Renvoie santé cible libellé pour le traitement ou l’affichage. */
   get healthTargetLabel(): string {
     const hc = this.deploymentTarget?.healthCheck;
     if (!hc || (!hc.path && !hc.port)) return 'Non disponible';
@@ -548,17 +535,14 @@ export class DeploymentGovernanceComponent implements OnInit, OnChanges {
     return `${port}${hc.path || ''}` || 'Non disponible';
   }
 
-  // §3 — never fabricate a value; an absent field reads "Non disponible".
+  /** Prépare le résultat lié à ou absent disponible. */
   orNotAvailable(value: string | number | null | undefined): string {
     if (value === null || value === undefined) return 'Non disponible';
     const text = String(value).trim();
     return text.length ? text : 'Non disponible';
   }
 
-  // §5 — every row is backend-supplied: either a boolean/applicability the
-  // governance preview already computed, or a pipeline stage returned by
-  // /azure-deploy/ready. `blocking` stays null wherever the backend does not
-  // express blocking semantics for that control.
+  /** Renvoie contrôle lignes pour le traitement ou l’affichage. */
   get controlRows(): ControlRow[] {
     const p = this.preview;
     if (!p) return [];
@@ -571,14 +555,40 @@ export class DeploymentGovernanceComponent implements OnInit, OnChanges {
           : "Le commit du build principal n'a pas pu être résolu.",
         blocking: p.buildIdentity.resolved ? null : true,
       },
-      {
-        name: "Provenance de l'artefact",
-        status: p.artifact.provenanceVerified ? 'PASS' : 'FAIL',
-        explanation: p.artifact.provenanceVerified
-          ? "La provenance de l'image a été prouvée pour ce commit exact."
-          : "La provenance de l'image n'est pas prouvée pour ce commit.",
-        blocking: p.artifact.provenanceVerified ? null : true,
-      },
+      ...(p.artifact.artifactIdentityProven === undefined && p.artifact.publicationSource === undefined
+        ? ([{
+            name: "Provenance de l'artefact",
+            status: p.artifact.provenanceVerified ? 'PASS' : 'FAIL',
+            explanation: p.artifact.provenanceVerified
+              ? "La provenance de l'image a été prouvée pour ce commit exact. Ce backend ne distingue pas encore l'identité du code source de la provenance de la publication (QA-DEF-11)."
+              : "La provenance de l'image n'est pas prouvée pour ce commit.",
+            blocking: p.artifact.provenanceVerified ? null : true,
+          }] as ControlRow[])
+        : ([{
+            name: "Identité du code source de l'artefact",
+            status: p.artifact.artifactIdentityProven === undefined ? 'NOT_RUN' : p.artifact.artifactIdentityProven ? 'PASS' : 'FAIL',
+            explanation: p.artifact.artifactIdentityProven === undefined
+              ? "Non évalué : ce backend ne rapporte pas cette affirmation séparément."
+              : p.artifact.artifactIdentityProven
+                ? "Les octets de l'image ont été prouvés issus de ce commit exact."
+                : "Il n'est pas prouvé que les octets de l'image proviennent de ce commit.",
+            blocking: p.artifact.artifactIdentityProven === false ? true : null,
+          },
+          {
+            name: "Provenance de la publication",
+            status: p.artifact.publicationSource === undefined ? 'NOT_RUN'
+              : (p.artifact.publicationSource === 'PIPELINE_VERIFIED' || p.artifact.publicationSource === 'MANUAL_ATTESTED') ? 'PASS' : 'FAIL',
+            explanation: p.artifact.publicationSource === undefined
+              ? "Non évalué : ce backend ne rapporte pas la provenance de publication séparément."
+              : p.artifact.publicationSource === 'PIPELINE_VERIFIED'
+                ? "Publication prouvée par le pipeline : reçu de poussée recoupé avec le digest confirmé par le registre."
+                : p.artifact.publicationSource === 'MANUAL_ATTESTED'
+                  ? "Publication attestée manuellement par un administrateur nommé — connue, mais non prouvée par un pipeline."
+                  : "Publication inconnue : aucune preuve n'établit qui a publié cette image dans le registre. Distinct de l'identité du code source, qui peut être prouvée par ailleurs.",
+            blocking: p.artifact.publicationSource !== undefined
+              && p.artifact.publicationSource !== 'PIPELINE_VERIFIED'
+              && p.artifact.publicationSource !== 'MANUAL_ATTESTED' ? true : null,
+          }] as ControlRow[])),
       {
         name: 'Registre / digest immuable',
         status: p.artifact.digest ? 'PASS' : 'NOT_RUN',
@@ -616,21 +626,22 @@ export class DeploymentGovernanceComponent implements OnInit, OnChanges {
     return rows;
   }
 
+  /** Sélectionne les contrôles actuellement visibles. */
   get visibleControlRows(): ControlRow[] {
     const rows = this.controlRows;
     return this.controlsExpanded ? rows : rows.slice(0, CONTROLS_COLLAPSED_LIMIT);
   }
 
+  /** Indique si des contrôles restent masqués. */
   get hasHiddenControls(): boolean { return this.controlRows.length > CONTROLS_COLLAPSED_LIMIT; }
 
+  /** Bascule contrôles. */
   toggleControls(): void { this.controlsExpanded = !this.controlsExpanded; }
 
-  // §13 — a new authorization is required after a dead/consumed one, so the
-  // only legitimate retry is the ambiguous-transport reconciliation, which
-  // deliberately reuses the SAME authorizationId + requestId.
+  /** Vérifie si l’action est autorisée : relance déploiement. */
   get canRetryDeploy(): boolean { return this.deployAmbiguous && !this.deploying && !!this.authorization; }
 
-  // §17 — spoken explanation of why a submit control is disabled.
+  /** Renvoie conditionnel désactivé motif pour le traitement ou l’affichage. */
   get conditionalDisabledReason(): string | null {
     if (this.conditionalFormValid) return null;
     if (this.conditionalReason.trim().length < MIN_MEANINGFUL_REASON_LENGTH) {
@@ -639,6 +650,7 @@ export class DeploymentGovernanceComponent implements OnInit, OnChanges {
     return 'Cochez la case d’acceptation des risques identifiés.';
   }
 
+  /** Explique pourquoi la dérogation critique est désactivée. */
   get criticalDisabledReason(): string | null {
     if (this.criticalFormValid) return null;
     if (this.criticalReason.trim().length < MIN_MEANINGFUL_REASON_LENGTH) {
@@ -651,10 +663,12 @@ export class DeploymentGovernanceComponent implements OnInit, OnChanges {
     return 'Saisissez exactement la phrase de confirmation demandée.';
   }
 
+  /** Abrège le SHA pour l’affichage. */
   shortSha(sha: string | null | undefined): string { return sha ? sha.slice(0, 12) : 'Non disponible'; }
+  /** Abrège le digest pour l’affichage. */
   shortDigest(digest: string | null | undefined): string { return digest ? digest.replace(/^sha256:/, 'sha256:').slice(0, 19) + '…' : 'Non disponible'; }
 
-  // ── READY ────────────────────────────────────────────────────────
+  /** Prépare le résultat lié à submit Normal autorisation. */
   submitNormalAuthorization(): void {
     // Capability guard first: a project with no resolved deployment
     // environment can never reach an authorization, whatever the decision.
@@ -663,7 +677,7 @@ export class DeploymentGovernanceComponent implements OnInit, OnChanges {
     this.runAuthorization({ mode: 'NORMAL' });
   }
 
-  // ── CONDITIONAL ──────────────────────────────────────────────────
+  /** Ouvre conditionnel formulaire. */
   openConditionalForm(): void {
     if (!this.showsDeployAction) return;
     if (this.decision !== 'CONDITIONAL' || !this.canAuthorizeCurrentDecision) return;
@@ -673,10 +687,13 @@ export class DeploymentGovernanceComponent implements OnInit, OnChanges {
     this.showConditionalForm = true;
     this.loadPreview();
   }
+  /** Annule conditionnel formulaire. */
   cancelConditionalForm(): void { if (this.authorizing) return; this.showConditionalForm = false; }
+  /** Vérifie les champs exigés pour l’autorisation conditionnelle. */
   get conditionalFormValid(): boolean {
     return this.conditionalReason.trim().length >= MIN_MEANINGFUL_REASON_LENGTH && this.conditionalAck === true;
   }
+  /** Envoie l’autorisation conditionnelle avec son motif. */
   submitConditionalAuthorization(): void {
     if (!this.conditionalFormValid || this.authorizing) return;
     this.runAuthorization({
@@ -686,7 +703,7 @@ export class DeploymentGovernanceComponent implements OnInit, OnChanges {
     });
   }
 
-  // ── CRITICAL_RISK ────────────────────────────────────────────────
+  /** Ouvre critique formulaire. */
   openCriticalForm(): void {
     if (!this.showsDeployAction) return;
     if (this.decision !== 'CRITICAL_RISK' || !this.isAdmin) return;
@@ -697,7 +714,9 @@ export class DeploymentGovernanceComponent implements OnInit, OnChanges {
     this.showCriticalForm = true;
     this.loadPreview();
   }
+  /** Annule critique formulaire. */
   cancelCriticalForm(): void { if (this.authorizing) return; this.showCriticalForm = false; }
+  /** Vérifie le motif et les confirmations de la dérogation critique. */
   get criticalFormValid(): boolean {
     return this.criticalReason.trim().length >= MIN_MEANINGFUL_REASON_LENGTH
       && this.criticalAcks.criticalRiskAccepted === true
@@ -705,6 +724,7 @@ export class DeploymentGovernanceComponent implements OnInit, OnChanges {
       && this.criticalAcks.deploymentMayExposeKnownRisk === true
       && this.criticalPhrase === CRITICAL_OVERRIDE_PHRASE;
   }
+  /** Envoie la dérogation critique avec les confirmations exigées. */
   submitCriticalAuthorization(): void {
     if (!this.criticalFormValid || this.authorizing) return;
     this.runAuthorization({
@@ -715,8 +735,7 @@ export class DeploymentGovernanceComponent implements OnInit, OnChanges {
     });
   }
 
-  // Shared by NORMAL/CONDITIONAL_EXCEPTION/CRITICAL_OVERRIDE — one
-  // createAuthorization() call, one success/failure handling path.
+  /** Exécute autorisation. */
   private runAuthorization(input: { mode: AuthorizationMode; reason?: string; acknowledgements?: Record<string, boolean>; confirmationPhrase?: string }): void {
     if (this.authorizing || this.deploying || !this.projectId || !this.showsDeployAction) return;
     this.authorizing = true;
@@ -727,6 +746,7 @@ export class DeploymentGovernanceComponent implements OnInit, OnChanges {
     this.authorizationConsumed = false;
     this.deployPhase = 'AUTHORISING';
     this.api.authorizeDeployment(this.projectId, input).subscribe({
+      /** Traite le résultat reçu et actualise les données locales. */
       next: (r: any) => {
         this.authorizing = false;
         this.showConditionalForm = false;
@@ -736,6 +756,7 @@ export class DeploymentGovernanceComponent implements OnInit, OnChanges {
         this.deployRequestId = null;
         this.startDeploy();
       },
+      /** Traite l’erreur reçue et termine le suivi de la demande. */
       error: (err: any) => {
         this.authorizing = false;
         this.showConditionalForm = false;
@@ -751,10 +772,7 @@ export class DeploymentGovernanceComponent implements OnInit, OnChanges {
     });
   }
 
-  // §13/§15 — always sends {projectId, requestId, authorizationId};
-  // never imageTag (not a selection authority once an authorization
-  // exists) and never force/ignoreRisks/riskAccepted (do not exist on
-  // ApiService.deployGoverned at all — not merely unset).
+  /** Démarre déploiement. */
   private startDeploy(): void {
     if (!this.authorization || !this.projectId || this.deploying || !this.showsDeployAction) return;
     if (!this.deployRequestId) {
@@ -767,6 +785,7 @@ export class DeploymentGovernanceComponent implements OnInit, OnChanges {
     this.deploySuccessInfo = null;
     this.deployPhase = 'DISPATCHING';
     this.api.deployGoverned(this.projectId, this.deployRequestId, this.authorization.authorizationId).subscribe({
+      /** Traite le résultat reçu et actualise les données locales. */
       next: (r: any) => {
         this.deploying = false;
         // §12/§15 — an idempotent replay returns { duplicate: true, ...the
@@ -785,9 +804,11 @@ export class DeploymentGovernanceComponent implements OnInit, OnChanges {
         // barrier so a contract change can never silently render DEPLOYED.
         if (r?.success === true && r?.healthOk === true) {
           this.deployPhase = 'DEPLOYED';
-          this.deploySuccessInfo = { state: r.state, health: 'Disponible', authorizationId: r.authorizationId, artifactDigest: r.artifactDigest ?? null };
+          this.deploySuccessInfo = { state: r.state, health: 'Disponible', authorizationId: r.authorizationId, artifactDigest: r.artifactDigest ?? null,
+            appUrl: this.safeAppUrl(r.appUrl), portalUrl: this.safePortalUrl(r.portalUrl) };
           this.authorizationConsumed = true;
           this.toast.success('Déploiement réussi', `Conteneur ${r.state} — application disponible`);
+          this.loadHistory();
           return;
         }
         this.deployPhase = 'FAILED';
@@ -798,7 +819,9 @@ export class DeploymentGovernanceComponent implements OnInit, OnChanges {
           ? "Le conteneur a démarré mais le contrôle de santé de l'application a échoué — le déploiement n'est pas considéré comme réussi."
           : `Déploiement non confirmé par l'agent (état : ${this.orNotAvailable(r?.state)}).`;
         this.toast.error('Déploiement échoué', this.deployErrorMessage);
+        this.loadHistory();
       },
+      /** Traite l’erreur reçue et termine le suivi de la demande. */
       error: (err: any) => {
         this.deploying = false;
         const code = err?.error?.error;
@@ -841,10 +864,7 @@ export class DeploymentGovernanceComponent implements OnInit, OnChanges {
     });
   }
 
-  // §12/§15 — reconcile an idempotent replay from the backend's persisted
-  // dispatch state. DEPLOYED here is the backend's own terminal status,
-  // which it only writes when classifyAgentDeploymentResult() proved
-  // success AND healthOk; it is never inferred from HTTP 200.
+  /** Applique Duplicate envoi état. */
   private applyDuplicateDispatchState(r: any): void {
     const status = String(r?.status || '').toUpperCase();
     this.deployAttemptId = r?.attemptId ?? null;
@@ -857,6 +877,7 @@ export class DeploymentGovernanceComponent implements OnInit, OnChanges {
         health: 'Disponible',
         authorizationId: r?.authorizationId ?? this.authorization?.authorizationId ?? '',
         artifactDigest: r?.result?.artifactDigest ?? null,
+        appUrl: this.safeAppUrl(r?.result?.appUrl), portalUrl: this.safePortalUrl(r?.result?.portalUrl),
       };
       this.toast.success('Déploiement déjà confirmé', 'Cette requête avait déjà abouti — état réconcilié.');
       return;
@@ -877,8 +898,7 @@ export class DeploymentGovernanceComponent implements OnInit, OnChanges {
     this.toast.error('Déploiement échoué', this.deployErrorMessage);
   }
 
-  // §15 — explicit, human-triggered reconciliation only; never automatic,
-  // and only ever with the SAME authorizationId + requestId pair.
+  /** Relance Ambiguous déploiement. */
   retryAmbiguousDeploy(): void {
     if (!this.canRetryDeploy) return;
     this.startDeploy();

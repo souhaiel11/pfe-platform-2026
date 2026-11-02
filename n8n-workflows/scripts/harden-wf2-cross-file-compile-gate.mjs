@@ -1,15 +1,21 @@
+// Prépare les relations entre fichiers du correctif dans WF2.
 import fs from 'node:fs';
 import crypto from 'node:crypto';
 
 const input=process.argv[2], output=process.argv[3]||input;
 if(!input) throw new Error('usage: node harden-wf2-cross-file-compile-gate.mjs <input.json> [output.json]');
 const root=JSON.parse(fs.readFileSync(input,'utf8'));const wf=Array.isArray(root)?root[0]:root;
+/** Retrouve l’élément par son nom. */
 const byName=name=>{const n=wf.nodes.find(x=>x.name===name);if(!n)throw new Error('missing node '+name);return n};
 const protectedNames=['Parse - Code Patch Output','Generic Candidate Preflight','Independent Semantic Review','Enforce Independent Review','Build File Result','Build Reconciled File Result','Call Candidate Verification','Call Write Guard','Write Guard Passed?','Create Missing Branch','Create File in Branch','Update File in Branch'];
 const protectedBefore=Object.fromEntries(protectedNames.map(n=>[n,crypto.createHash('sha256').update(JSON.stringify(byName(n))).digest('hex')]));
+/** Ajoute l’élément au résultat en cours. */
 const add=node=>{if(!wf.nodes.some(n=>n.name===node.name))wf.nodes.push(node)};
+/** Calcule la position de l’élément. */
 const pos=(x,y)=>[x,y];
+/** Lit le code du nœud de workflow. */
 const code=(name,id,jsCode,position)=>({parameters:{mode:'runOnceForAllItems',jsCode},id,name,type:'n8n-nodes-base.code',typeVersion:2,position,onError:'continueErrorOutput'});
+/** Construit l’appel HTTP du traitement. */
 const http=(name,id,position,body)=>({parameters:{method:'POST',url:'=http://backend:3001/api/candidate-verification/verify',sendHeaders:true,headerParameters:{parameters:[{name:'X-Internal-Secret',value:'={{ $env.N8N_INTERNAL_SECRET }}'}]},sendBody:true,specifyBody:'json',jsonBody:body,options:{timeout:300000}},id,name,type:'n8n-nodes-base.httpRequest',typeVersion:4.2,position,onError:'continueErrorOutput'});
 const classifier={parameters:{conditions:{options:{caseSensitive:true,leftValue:'',typeValidation:'strict',version:3},conditions:[{id:'cross-file-count',leftValue:'={{ $json.files.length }}',rightValue:2,operator:{type:'number',operation:'gte'}}],combinator:'and'},options:{}},id:'wf2-cross-file-route',name:'Classify Candidate Coordination Scope',type:'n8n-nodes-base.if',typeVersion:2.2,position:pos(7600,1960)};
 add(classifier);
@@ -28,6 +34,7 @@ if(!/^[a-f0-9]{40}$/.test(String(m.candidateBaseSha||'')))throw new Error('CANDI
 if(!/^[a-f0-9]{64}$/.test(String(m.candidateDigest||'')))throw new Error('CANDIDATE_MANIFEST_INVALID:candidateDigest missing/invalid');
 if(typeof m._canonicalJson!=='string'||!m._canonicalJson)throw new Error('CANDIDATE_MANIFEST_INVALID:canonical serialization missing');
 return [{json:m}];`,pos(7900,1780)));
+/** Prépare les données attendues par le traitement. */
 const prepare=(mode,seq,phase,previous,position)=>code(`Prepare Cross-File ${mode}`,`wf2-cross-prepare-${seq}`,`
 const source=${previous?`$('${previous}').first().json`:'$input.first().json'};
 const manifest=source.candidateManifest||source;
@@ -36,6 +43,7 @@ const digest=String(manifest.candidateDigest||'');if(!/^[a-f0-9]{64}$/.test(dige
 const verificationStep={sequence:${seq},phase:'${phase}',stateDigest:digest};
 const verificationRequest={manifest,allowedPaths:manifest.files.map(f=>f.path),options:{mode:'${mode}',timeoutMs:300000},verificationStep};
 return [{json:{candidateManifest:manifest,candidateDigest:digest,coordinationScope:'CROSS_FILE_REPAIR',verificationEvidence:source.verificationEvidence||{},verificationStep,verificationRequest}}];`,position);
+/** Applique les contrôles obligatoires du traitement. */
 const enforce=(mode,seq,prepareName,position)=>code(`Enforce Cross-File ${mode}`,`wf2-cross-enforce-${seq}`,`
 const prepared=$('${prepareName}').first().json;const result=$input.first().json||{};
 const infra=new Set(['VERIFIER_UNAVAILABLE','VERIFIER_TIMEOUT','VERIFIER_PROTOCOL_ERROR','WORKSPACE_CREATION_FAILED','WORKSPACE_SHA_MISMATCH','WORKSPACE_INFRA_FAILURE','WORKSPACE_TIMEOUT','BUILD_TYPE_UNSUPPORTED','VERIFICATION_MODE_UNSUPPORTED']);
@@ -124,6 +132,7 @@ for(const name of ['Hash Cross-File Candidate Manifest','Validate Cross-File Can
   let js=failureTemplate.parameters.jsCode.replace('failedNode:"Enforce Independent Review"',`failedNode:${JSON.stringify(name)}`);
   add({...structuredClone(failureTemplate),id,name:failureName,position:pos(10600,2200+failureNodes.length*80),parameters:{...structuredClone(failureTemplate.parameters),jsCode:js}});failureNodes.push(failureName);
 }
+/** Affecte la valeur prévue au champ. */
 const set=(from,outputs)=>{wf.connections[from]={main:outputs}};
 set('Prepare Candidate Manifest',[[{node:'Classify Candidate Coordination Scope',type:'main',index:0}],[{node:'Failure Envelope - Assemble Candidate Manifest',type:'main',index:0}]]);
 set('Classify Candidate Coordination Scope',[[{node:'Hash Cross-File Candidate Manifest',type:'main',index:0}],[{node:'Independent Semantic Review',type:'main',index:0}]]);

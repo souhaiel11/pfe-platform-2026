@@ -1,11 +1,4 @@
-// Execution-2060 follow-up, point 3 of the persistence task — proves
-// against the REAL, complete, unabridged execution 2060 payload (captured
-// verbatim from n8n's own executions API) that every field this DTO is
-// meant to keep survives class-validator's real whitelist machinery, and
-// every field deliberately excluded is accounted for, not silently
-// dropped by omission. Same technique as
-// security-remediation-evaluate.dto.spec.ts: the REAL ValidationPipe
-// machinery (whitelist:true), not a hand-rolled approximation.
+// Teste le composant « wf6-remediation-result.dto » et ses cas d’erreur.
 import 'reflect-metadata'; // @Type()/ValidateNested (class-transformer) need this polyfill; NestJS's own bootstrap loads it implicitly, a standalone script does not.
 import * as assert from 'node:assert/strict';
 import { plainToInstance } from 'class-transformer';
@@ -19,6 +12,7 @@ import { Wf6RemediationResultDto } from './wf6-remediation-result.dto';
 // Field-for-field identical values to the real payload -- not
 // reconstructed from memory.
 const REAL_2060_PAYLOAD = {
+  attemptId: '11111111-1111-4111-8111-111111111111', attemptNumber: 1, batchId: 'offline-batch',
   projectId: '3aa1c9b9-e114-40e4-884b-ebc7aa32e002',
   findingTaskId: 'c8fb2207-c8de-40af-acd4-1d2f96896715',
   status: 'CANDIDATE_READY',
@@ -59,7 +53,7 @@ const REAL_2060_PAYLOAD = {
 };
 
 const KEPT_FIELDS = [
-  'projectId', 'findingTaskId', 'status', 'reason', 'candidateIdentity', 'evaluatedSha',
+  'attemptId', 'attemptNumber', 'batchId', 'projectId', 'findingTaskId', 'status', 'reason', 'candidateIdentity', 'evaluatedSha',
   'branchName', 'prUrl', 'prNumber', 'executionId', 'patchEvidence', 'securityValidationEvidence',
 ];
 const DELIBERATELY_EXCLUDED_FIELDS = [
@@ -67,6 +61,7 @@ const DELIBERATELY_EXCLUDED_FIELDS = [
   'cveId', 'title', 'source', 'repository', 'commitMessage', 'prTitle', 'prBody',
 ];
 
+/** Exécute les étapes principales de ce programme. */
 async function main() {
   const instance = plainToInstance(Wf6RemediationResultDto, REAL_2060_PAYLOAD, { excludeExtraneousValues: false });
   const errors = await validate(instance, { whitelist: true, forbidNonWhitelisted: false });
@@ -75,10 +70,7 @@ async function main() {
   for (const field of KEPT_FIELDS) {
     assert.notEqual((instance as any)[field], undefined, `"${field}" must survive -- it is a declared, kept field`);
   }
-  // JSON round-trip: assert/strict's deepEqual also compares prototypes,
-  // and class-transformer legitimately turns the nested plain object into
-  // a Wf6SecurityValidationEvidenceDto instance -- only the VALUES matter
-  // here, not the class identity.
+  /** Prépare les données nécessaires à ce scénario. */
   const plain = (v: unknown) => JSON.parse(JSON.stringify(v));
   assert.deepEqual(plain((instance as any).securityValidationEvidence), REAL_2060_PAYLOAD.securityValidationEvidence, 'securityValidationEvidence must survive INTACT, every sub-field, not partially stripped');
   assert.deepEqual(plain((instance as any).patchEvidence), REAL_2060_PAYLOAD.patchEvidence);
@@ -109,7 +101,7 @@ async function main() {
   // all) -> still validates cleanly, nothing required beyond identity+status.
   {
     const minimal = plainToInstance(Wf6RemediationResultDto, {
-      projectId: '3aa1c9b9-e114-40e4-884b-ebc7aa32e002', findingTaskId: 'c8fb2207-c8de-40af-acd4-1d2f96896715', status: 'GROUNDING_FAILED',
+      attemptId: REAL_2060_PAYLOAD.attemptId, attemptNumber: 1, batchId: 'offline-batch', projectId: '3aa1c9b9-e114-40e4-884b-ebc7aa32e002', findingTaskId: 'c8fb2207-c8de-40af-acd4-1d2f96896715', status: 'GROUNDING_FAILED',
     }, { excludeExtraneousValues: false });
     const minimalErrors = await validate(minimal, { whitelist: true });
     assert.equal(minimalErrors.length, 0, `a minimal, older-shaped payload (no evidence fields at all) must still be accepted: ${JSON.stringify(minimalErrors)}`);

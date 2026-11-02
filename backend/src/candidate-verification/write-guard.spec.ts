@@ -1,7 +1,9 @@
+// Teste le composant « write-guard » et ses cas d’erreur.
 import * as assert from 'node:assert/strict';
 import { assertCandidateStillValidForWrite } from './write-guard';
 import { CandidateVerification, CandidateManifest, HeadVerification } from './candidate-verification.types';
 
+/** Prépare les données nécessaires à ce scénario. */
 function headOnlyVerification(): HeadVerification {
   return {
     mode: 'HEAD_ONLY',
@@ -16,6 +18,7 @@ function headOnlyVerification(): HeadVerification {
   };
 }
 
+/** Prépare les données nécessaires à ce scénario. */
 function passingVerification(overrides: Partial<CandidateVerification['identity']> = {}): CandidateVerification {
   return {
     mode: 'FULL_TEST',
@@ -40,6 +43,7 @@ function passingVerification(overrides: Partial<CandidateVerification['identity'
   assert.deepEqual(result, { ok: false, reason: 'FULL_TEST_REQUIRED' });
 }
 
+/** Prépare les données nécessaires à ce scénario. */
 function manifest(overrides: Partial<CandidateManifest> = {}): CandidateManifest {
   return { candidateId: 'c1', requestId: 'r1', batchId: 'b1', candidateAttempt: 0, repository: 'x/y', candidateBaseSha: 'a'.repeat(40), files: [], candidateDigest: 'digest-1', ...overrides };
 }

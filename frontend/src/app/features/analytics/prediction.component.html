@@ -1,3 +1,4 @@
+<!-- Présente les prévisions. -->
 <div class="page">
   <div class="page-header">
     <div class="page-icon" style="background:var(--accent-blue-bg)"><i class="ti ti-gauge" aria-hidden="true" style="color:var(--accent-blue)"></i></div>
@@ -40,11 +41,22 @@
     </div>
   </div>
 
-  <div class="risk-card" *ngFor="let p of projects">
+  <h3 *ngIf="!loading && !loadError && projects.length">Vue d’ensemble · tous les projets</h3>
+  <section class="metrics-charts" *ngIf="!loading && !loadError && projects.length" aria-label="Graphiques des indicateurs de risque">
+    <app-metrics-chart title="Courbe du risque par projet" description="Scores des projets sur 100, dans l’ordre de la liste ci-dessous. Comparaison entre projets, sans dimension temporelle. Un score élevé signale plus de risque." type="line" [maximum]="100" [labels]="chartLabels" [series]="riskSeries"></app-metrics-chart>
+    <app-metrics-chart title="Répartition des niveaux de risque" description="Nombre de projets pour chaque niveau calculé : faible, modéré, élevé ou critique." type="doughnut" [labels]="levelLabels" [series]="levelSeries" categoryLabel="Niveau de risque"></app-metrics-chart>
+  </section>
+
+  <div *ngIf="selectedProject" id="selected-risk-project">
+    <button class="btn btn-secondary btn-sm" (click)="selectedProject = null">Fermer la vue du projet</button>
+    <app-project-metrics [projectId]="selectedProject.projectId" [projectName]="selectedProject.projectName"></app-project-metrics>
+  </div>
+  <p *ngIf="!loading && !loadError && projects.length">Sélectionnez un projet ci-dessous pour afficher ses courbes Trivy, OWASP et son risque.</p>
+  <div class="risk-card" *ngFor="let p of projects" [class.selected]="selectedProject?.projectId === p.projectId">
     <div class="risk-head">
       <!-- §25 — le nom mène au projet : la page d'indicateurs n'est pas un
            cul-de-sac de navigation. -->
-      <a class="risk-name" [routerLink]="['/projects', p.projectId]">{{p.projectName}}</a>
+      <button class="risk-name project-chart-button" (click)="selectProject(p)" [attr.aria-pressed]="selectedProject?.projectId === p.projectId">{{p.projectName}} <span aria-hidden="true">↗</span></button>
       <!-- §24 — glyphe + libellé + chiffre : jamais la couleur seule. -->
       <div class="risk-badge" [class]="p.levelClass">
         <span aria-hidden="true">{{riskGlyph(p.levelClass)}}</span>

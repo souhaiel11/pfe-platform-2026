@@ -1,13 +1,23 @@
+// Teste le composant « settings-navigation » et ses cas d’erreur.
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createRequire} from 'node:module';
 import vm from 'node:vm';
 const ts=createRequire(import.meta.url)('typescript');
+/** Lit les données depuis leur source. */
 const read=p=>readFileSync(new URL(p,import.meta.url),'utf8');
 const exports={};
-vm.runInNewContext(ts.transpileModule(read('../src/app/features/settings/settings.component.ts'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,experimentalDecorators:true}}).outputText,{exports,Intl,Number,console,URL,Set,require:n=>n==='@angular/core'?{Component:()=>v=>v}: {}});
+vm.runInNewContext(ts.transpileModule(read('../src/app/features/settings/settings.component.ts'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,experimentalDecorators:true}}).outputText,{exports,Intl,Number,console,URL,Set,
+/** Charge la dépendance prévue pour le scénario. */
+require:n=>n==='@angular/core'?{
+/** Simule le décorateur de composant Angular. */
+Component:()=>v=>v}: {}});
 const {SettingsComponent}=exports;
-let reads=0,observer;const api={getDeployReadiness:()=>({subscribe:value=>{reads++;observer=value;}})};
+let reads=0,observer;const api={
+/** Simule la lecture des données demandées par le composant. */
+getDeployReadiness:()=>({
+/** Prépare les données nécessaires à ce scénario. */
+subscribe:value=>{reads++;observer=value;}})};
 const component=new SettingsComponent({},api,{});
 assert.equal(component.activeSection,'general');assert.equal(component.settingsSections.map(s=>s.label).join('|'),'Général|Intégrations|Sécurité|CI/CD et déploiement|Diagnostics');
 component.setSettingsSection('integrations');const connections=component.visibleProjectSections.flatMap(s=>s.fields.map(f=>f.key));
@@ -20,7 +30,13 @@ component.loadDeployReadiness();observer.error(new Error('network'));assert.equa
 component.loadDeployReadiness();const stale=observer;component.project={id:'second'};component.loadDeployReadiness();stale.next({ready:true});assert.equal(component.readinessState,'LOADING');observer.next({ready:false});assert.equal(component.deployReadiness.ready,false,'second project owns gate result');
 component.capabilities={security:[{id:'trivy'},{id:'sonar'}]};assert.equal(component.securityScanners.map(s=>s.id).join(),'trivy,sonar');
 component.setSettingsSection('unknown');assert.equal(component.activeSection,'delivery');
-let prevented=false,focused=false;component.navigateSettings({key:'Home',preventDefault:()=>prevented=true,currentTarget:{parentElement:{querySelectorAll:()=>[{focus:()=>focused=true}]}}},3);assert.equal(component.activeSection,'general');assert.ok(prevented&&focused);
+let prevented=false,focused=false;component.navigateSettings({key:'Home',
+/** Prépare les données nécessaires à ce scénario. */
+preventDefault:()=>prevented=true,currentTarget:{parentElement:{
+/** Prépare les données nécessaires à ce scénario. */
+querySelectorAll:()=>[{
+/** Prépare les données nécessaires à ce scénario. */
+focus:()=>focused=true}]}}},3);assert.equal(component.activeSection,'general');assert.ok(prevented&&focused);
 const html=read('../src/app/features/settings/settings.component.html');
 assert.match(html,/role="tablist"/);assert.match(html,/aria-selected/);assert.match(html,/activeSection === 'general'/);assert.match(html,/activeSection === 'diagnostics'/);assert.match(html,/activeSection === 'security'/);
 const general=html.split('aria-label="Paramètres généraux"')[1].split('</section>')[0];assert.doesNotMatch(general,/Diagnostics Jenkins|Scanners déclarés|Prometheus|Tester la connexion|lastChecked/);

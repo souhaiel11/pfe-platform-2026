@@ -1,0 +1,124 @@
+From 47a9f01701a6518c56a05dcb99ca4aa25ed08868 Mon Sep 17 00:00:00 2001
+From: souhaiel amri <131708236+souhaiel11@users.noreply.github.com>
+Date: Sun, 4 Oct 2026 22:03:17 +0100
+Subject: [PATCH] fix(security): candidate remediation for batch
+ 9130545b675567c0ad1d1d3060b5f71d0434727952d093096b423c2c59d83bfa
+
+---
+ .../java/com/pfe/devsecops/dto/TaskDTO.java   | 91 +++++++++++++++----
+ 1 file changed, 74 insertions(+), 17 deletions(-)
+
+diff --git a/src/main/java/com/pfe/devsecops/dto/TaskDTO.java b/src/main/java/com/pfe/devsecops/dto/TaskDTO.java
+index f810c08..978e06e 100644
+--- a/src/main/java/com/pfe/devsecops/dto/TaskDTO.java
++++ b/src/main/java/com/pfe/devsecops/dto/TaskDTO.java
+@@ -16,6 +16,11 @@
+  * <p>The status field additionally tracks whether it was actually present in
+  * the incoming payload, so the service layer can distinguish an omitted
+  * status (leave the current value untouched) from an explicit null status.</p>
++ *
++ * <p>Instances are created either with the no-args constructor plus setters
++ * (used by the JSON binder) or with the {@link Builder} returned by
++ * {@link #builder()}, which assigns fields one by one instead of exposing a
++ * long parameter list.</p>
+  */
+ public class TaskDTO {
+ 
+@@ -46,23 +51,11 @@ public TaskDTO() {
+         // Default constructor for JSON deserialization.
+     }
+ 
+-    public TaskDTO(Long id,
+-                   String title,
+-                   String description,
+-                   String status,
+-                   Integer priority,
+-                   LocalDateTime createdAt,
+-                   LocalDateTime updatedAt,
+-                   Long userId) {
+-        this.id = id;
+-        this.title = title;
+-        this.description = description;
+-        this.status = status;
+-        this.statusPresent = true;
+-        this.priority = priority;
+-        this.createdAt = createdAt;
+-        this.updatedAt = updatedAt;
+-        this.userId = userId;
++    /**
++     * @return a new builder for constructing a {@link TaskDTO} field by field.
++     */
++    public static Builder builder() {
++        return new Builder();
+     }
+ 
+     public Long getId() {
+@@ -137,4 +130,68 @@ public Long getUserId() {
+     public void setUserId(Long userId) {
+         this.userId = userId;
+     }
++
++    /**
++     * Fluent builder for {@link TaskDTO}. The status presence flag is raised only
++     * when {@link #status(String)} is explicitly invoked, matching the semantics
++     * of {@link TaskDTO#setStatus(String)}.
++     */
++    public static final class Builder {
++
++        private final TaskDTO instance = new TaskDTO();
++
++        private Builder() {
++            // Instantiated through TaskDTO.builder().
++        }
++
++        public Builder id(Long id) {
++            instance.setId(id);
++            return this;
++        }
++
++        public Builder title(String title) {
++            instance.setTitle(title);
++            return this;
++        }
++
++        public Builder description(String description) {
++            instance.setDescription(description);
++            return this;
++        }
++
++        /**
++         * Sets the status name and marks it as explicitly supplied.
++         *
++         * @param status one of the members declared by TaskStatus, or null for an
++         *               explicitly cleared status.
++         */
++        public Builder status(String status) {
++            instance.setStatus(status);
++            return this;
++        }
++
++        public Builder priority(Integer priority) {
++            instance.setPriority(priority);
++            return this;
++        }
++
++        public Builder createdAt(LocalDateTime createdAt) {
++            instance.setCreatedAt(createdAt);
++            return this;
++        }
++
++        public Builder updatedAt(LocalDateTime updatedAt) {
++            instance.setUpdatedAt(updatedAt);
++            return this;
++        }
++
++        public Builder userId(Long userId) {
++            instance.setUserId(userId);
++            return this;
++        }
++
++        public TaskDTO build() {
++            return instance;
++        }
++    }
+ }

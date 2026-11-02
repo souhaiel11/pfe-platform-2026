@@ -1,13 +1,6 @@
-// R-SEC-V1.4/V1.5 — internal endpoint only, same trust pattern already used
-// by CandidateVerificationController (InternalSecretGuard, the n8n->backend
-// pattern -- see incidents.controller.ts's saveValidation/saveWorkflowStatus
-// too). NOT public, NOT wired into frontend routing this phase.
-//
-// Both endpoints accept ONLY a narrow whitelist DTO -- neither ever reads
-// any other field from the request body, so a caller cannot influence WHAT
-// is evaluated/revalidated beyond WHICH finding, let alone HOW the patch
-// is produced (§8 of V1.4).
-import { Body, Controller, Post, UseGuards, BadRequestException } from '@nestjs/common';
+// Expose l'évaluation et la revalidation des corrections de sécurité, seules ou par lot, puis reçoit les résultats WF6.
+import { RetryE2EHarnessService } from './retry-e2e-harness.service';
+import { Body, Controller, Post, UseGuards, BadRequestException, Optional } from '@nestjs/common';
 import { createHash } from 'crypto';
 import { InternalSecretGuard } from '../auth/internal-secret.guard';
 import { SecurityFindingResolverService, TrustedFindingResolution } from './security-finding-resolver.service';
@@ -15,6 +8,7 @@ import { CandidateVerificationService } from '../candidate-verification/candidat
 import { SecurityRemediationEvaluateDto } from './security-remediation-evaluate.dto';
 import { SecurityRemediationEvaluateBatchDto } from './security-remediation-evaluate-batch.dto';
 import { SecurityRemediationRevalidateDto } from './security-remediation-revalidate.dto';
+import { SecurityRemediationRevalidateBatchDto } from './security-remediation-revalidate-batch.dto';
 import { Wf6RemediationResultDto } from './wf6-remediation-result.dto';
 import { Wf6BatchRemediationResultDto } from './wf6-batch-remediation-result.dto';
 import { ManualRemediationService } from '../manual-remediation/manual-remediation.service';
@@ -37,12 +31,7 @@ type ResolutionSuccess = Extract<TrustedFindingResolution, { ok: true }>;
 // cosmetic (never influence the decision at all).
 interface ResponseMeta { cveId: string | null; title: string | null; source: string | null; repository: string | null }
 
-// R-SEC-V1.5 §6/§9/§10 -- WF6 needs ZERO text-authoring/naming logic of its
-// own: branchName/commitMessage/prTitle/prBody are all computed HERE,
-// server-side, deterministically, from already-trusted fields, and
-// returned directly on every CANDIDATE_READY/WRITE_AUTHORIZED response.
-// Absent (null) for every other status -- there is nothing safe to name/
-// write about a non-eligible or failed evaluation.
+/** Prépare le résultat lié à avec Git Authoring Metadata. */
 function withGitAuthoringMetadata<T extends { status: string; decision?: any; candidateIdentity?: string | null }>(value: T, cosmetic: ResponseMeta) {
   const base = { ...value, ...cosmetic };
   if (value.status !== 'CANDIDATE_READY' && value.status !== 'WRITE_AUTHORIZED') {
@@ -53,7 +42,7 @@ function withGitAuthoringMetadata<T extends { status: string; decision?: any; ca
     return { ...base, branchName: null, commitMessage: null, prTitle: null, prBody: null };
   }
   try {
-    const branchName = computeSecurityBranchName(value.decision.findingIdentity, value.candidateIdentity);
+    const branchName = computeSecurityBranchName(value.decision.findingIdentity, value.candidateIdentity, value.decision.evaluatedSha);
     const gitMetaInput = {
       cveId: cosmetic.cveId, package: provenance.package, installedVersion: provenance.installedVersion,
       targetVersion: value.decision.selectedTargetVersion, source: cosmetic.source || 'UNKNOWN',
@@ -75,30 +64,16 @@ function withGitAuthoringMetadata<T extends { status: string; decision?: any; ca
   }
 }
 
-// Increment 1 (WF6 multi-CVE wiring) — the batch counterpart of
-// withGitAuthoringMetadata() above. Deliberately NOT a modification of
-// that function (it stays untouched, still used unmodified by /evaluate
-// and /revalidate) — a separate function so a mono-CVE run keeps going
-// through the EXACT code path proven by PR #37, never through a
-// generalized-for-N branch of it. `cosmetics` is aligned by index with
-// `value.decisions`.
-//
-// ★ Caught by field-by-field contract review against WF6's OWN unchanged
-// nodes (before writing a single line of graph diff): the "Trusted
-// Candidate" node -- one of the ~45 git/build/scan nodes this increment
-// must NOT touch -- reads `body.repository` (top-level, not nested under
-// candidateManifest) and `body.decision.evaluatedSha` (SINGULAR `decision`,
-// not the plural `decisions` array this type actually carries). Both are
-// added here as compatibility fields so that unchanged node keeps working
-// unmodified: `repository` is genuinely singular for a whole batch
-// (enforced identical across findings upstream), and `decision` is simply
-// `decisions[0]` -- correct for ANY N, not just N=1, because
-// evaluatedSha is verified identical across every finding in the batch.
+/** Prépare le résultat lié à avec lot Git Authoring Metadata. */
 function withBatchGitAuthoringMetadata<T extends { status: string; decisions?: any[]; candidateIdentity?: string | null }>(value: T, cosmetics: ResponseMeta[]) {
   const repository = cosmetics.find(c => c.repository)?.repository ?? null;
   const decision = Array.isArray(value.decisions) && value.decisions.length ? value.decisions[0] : null;
   const base = { ...value, repository, decision };
-  if (value.status !== 'CANDIDATE_READY') {
+  // WRITE_AUTHORIZED (revalidate-batch's own success outcome, mirroring the
+  // singular endpoint's withGitAuthoringMetadata()) must ALSO compute the
+  // git-authoring fields -- only a genuinely non-ready/non-authorized
+  // status nulls them out.
+  if (value.status !== 'CANDIDATE_READY' && value.status !== 'WRITE_AUTHORIZED') {
     return { ...base, branchName: null, commitMessage: null, prTitle: null, prBody: null };
   }
   const decisions = value.decisions;
@@ -108,7 +83,8 @@ function withBatchGitAuthoringMetadata<T extends { status: string; decisions?: a
   }
   try {
     const findingsFingerprint = computeSecurityBatchFindingsFingerprint(decisions.map(d => d.findingIdentity));
-    const branchName = computeSecurityBranchName(findingsFingerprint, value.candidateIdentity);
+    const branchName = computeSecurityBranchName(findingsFingerprint, value.candidateIdentity, new Set(decisions.map(d => d.evaluatedSha)).size === 1 ? decisions[0].evaluatedSha : null,
+      typeof (value as any).batchId === 'string' && (value as any).batchId.startsWith('sec-batch-') ? (value as any).batchId : null);
     const gitMetaInputs = decisions.map((d, i) => ({
       cveId: cosmetics[i].cveId, package: d.provenance.package, installedVersion: d.provenance.installedVersion,
       targetVersion: d.selectedTargetVersion, source: cosmetics[i].source || 'UNKNOWN',
@@ -127,83 +103,79 @@ function withBatchGitAuthoringMetadata<T extends { status: string; decisions?: a
 
 @Controller('internal/security-remediation')
 export class SecurityRemediationController {
+  /** Initialise les dépendances et l’état de ce composant. */
   constructor(
     private readonly resolver: SecurityFindingResolverService,
     private readonly candidateVerification: CandidateVerificationService,
     private readonly manualRemediation: ManualRemediationService,
+    @Optional() private readonly retryE2E?: RetryE2EHarnessService,
   ) {}
 
+  /** Évalue les données et retourne la décision correspondante. */
   @UseGuards(InternalSecretGuard)
   @Post('evaluate')
   async evaluate(@Body() body: SecurityRemediationEvaluateDto) {
     if (!body?.projectId || !body?.findingTaskId) {
       throw new BadRequestException('projectId and findingTaskId are required.');
     }
+    await this.manualRemediation.verifyWf6TargetOwnership(body.projectId, [body.findingTaskId]);
     const outcome = await this.resolveAndEvaluate(body.projectId, body.findingTaskId);
+    await this.manualRemediation.verifyWf6TargetOwnership(body.projectId, [body.findingTaskId]);
     return withGitAuthoringMetadata(outcome.result, { cveId: outcome.cveId, title: outcome.title, source: outcome.source, repository: outcome.repository });
   }
 
-  // Increment 1 (WF6 multi-CVE wiring) — the batch counterpart of
-  // /evaluate. Every findingTaskId is resolved through the SAME trusted
-  // SecurityFindingResolverService.resolve(), one call per id, never a new
-  // resolution path -- then cross-checked that they all agree on
-  // repository/candidateBaseSha (they must: findings selected together in
-  // one project necessarily share both) before ever reaching the worker.
+  /** Évalue lot. */
   @UseGuards(InternalSecretGuard)
   @Post('evaluate-batch')
   async evaluateBatch(@Body() body: SecurityRemediationEvaluateBatchDto) {
     if (!body?.projectId || !Array.isArray(body?.findingTaskIds) || !body.findingTaskIds.length) {
       throw new BadRequestException('projectId and a non-empty findingTaskIds array are required.');
     }
-    const outcome = await this.resolveAndEvaluateBatch(body.projectId, body.findingTaskIds);
+    const correlated = body.batchId !== undefined || body.attempts !== undefined;
+    await this.manualRemediation.verifyWf6TargetOwnership(body.projectId, body.findingTaskIds, correlated);
+    if (correlated) await this.manualRemediation.verifyWf6AttemptContext(body.projectId, body.findingTaskIds, body.batchId, body.attempts);
+    if (this.retryE2E) await this.retryE2E.assertInitialScope(body.projectId, body.findingTaskIds, correlated);
+    const outcome = await this.resolveAndEvaluateBatch(body.projectId, body.findingTaskIds, correlated ? { batchId: body.batchId, attempts: body.attempts } : undefined, true);
+    await this.manualRemediation.verifyWf6TargetOwnership(body.projectId, body.findingTaskIds, correlated);
+    if (correlated) {
+      await this.manualRemediation.verifyWf6AttemptContext(body.projectId, body.findingTaskIds, body.batchId, body.attempts);
+      outcome.result = { ...outcome.result, batchId: body.batchId, attempts: body.attempts };
+      if (body.findingTaskIds.length === 1 && this.retryE2E) {
+        const identity = body.attempts[0];
+        const action = await this.retryE2E.hook({ projectId: body.projectId, taskId: body.findingTaskIds[0],
+          ...identity, batchId: body.batchId }, outcome.result.status === 'CANDIDATE_READY' ? 'CANDIDATE_READY' : 'EVALUATION_ABORTED');
+        if (action === 'BARRIER' || action === 'BARRIER_REPLAY') return { status: 'OPERATOR_TEST_STOPPED', operatorTestBarrier: true,
+          operatorTestEvaluationPassed: outcome.result.status === 'CANDIDATE_READY',
+          batchId: body.batchId, attempts: body.attempts }; // no writable candidate or business callback
+      }
+    }
     return withBatchGitAuthoringMetadata(outcome.result, outcome.cosmetics);
   }
 
-  // Execution-2060 follow-up — persistence layer only (see
-  // ManualRemediationService.recordWf6Result's own header comment). WF6's
-  // own n8n workflow graph is NOT the caller of this endpoint and is not
-  // modified to become one -- this is deliberately reachable only by
-  // whatever ALREADY calls the WF6 webhook and already has its response
-  // (or n8n's own execution record) in hand, exactly the same
-  // InternalSecretGuard/n8n-only trust boundary as /evaluate and
-  // /revalidate above.
+  /** Enregistre le résultat. */
   @UseGuards(InternalSecretGuard)
   @Post('result')
   async recordResult(@Body() body: Wf6RemediationResultDto) {
     return this.manualRemediation.recordWf6Result(body);
   }
 
-  // Increment 1 — multi-CVE remediation callback. Same trust boundary and
-  // "caller persists WF6's response" design as /result above; WF6's own
-  // n8n workflow is not modified to become internally aware of this
-  // endpoint's existence as part of this increment (see the design
-  // cadrage's "least invasive" recommendation).
+  /** Enregistre lot résultat. */
   @UseGuards(InternalSecretGuard)
   @Post('batch-result')
   async recordBatchResult(@Body() body: Wf6BatchRemediationResultDto) {
     return this.manualRemediation.recordWf6BatchResult(body);
   }
 
-  // R-SEC-V1.5 §4 — write-time revalidation. WF6 must call this
-  // IMMEDIATELY before a GitHub write, passing back ONLY the
-  // candidateIdentity it received from an earlier /evaluate call (never
-  // candidate bytes -- see the DTO's own header comment). This method
-  // re-resolves the trusted finding and re-runs the FULL deterministic
-  // pipeline (grounding -> classification -> patch -> guard) completely
-  // FRESH -- exactly the same call /evaluate makes, proven deterministic
-  // and side-effect-free across repeated invocations (V1.3/V1.4's own
-  // idempotency tests). It NEVER trusts the caller's own copy of the
-  // candidate for the write itself: on a match, it returns its OWN
-  // freshly-recomputed candidateManifest as the thing to actually write --
-  // a caller cannot substitute different bytes even if it tried, because
-  // the response WF6 must act on is never built from caller input.
+  /** Contrôle à nouveau les preuves avant l’écriture. */
   @UseGuards(InternalSecretGuard)
   @Post('revalidate')
   async revalidate(@Body() body: SecurityRemediationRevalidateDto) {
     if (!body?.projectId || !body?.findingTaskId || !body?.expectedCandidateIdentity) {
       throw new BadRequestException('projectId, findingTaskId and expectedCandidateIdentity are required.');
     }
+    await this.manualRemediation.verifyWf6TargetOwnership(body.projectId, [body.findingTaskId]);
     const outcome = await this.resolveAndEvaluate(body.projectId, body.findingTaskId);
+    await this.manualRemediation.verifyWf6TargetOwnership(body.projectId, [body.findingTaskId]);
     const fresh: any = outcome.result;
     const cosmetic: ResponseMeta = { cveId: outcome.cveId, title: outcome.title, source: outcome.source, repository: outcome.repository };
 
@@ -215,13 +187,6 @@ export class SecurityRemediationController {
       return withGitAuthoringMetadata(fresh, cosmetic);
     }
 
-    // §4's core invariant: "current write candidate == deterministically
-    // authorized candidate". Comparing the STABLE identity (sha256 of
-    // findingIdentity+evaluatedSha+package+installedVersion+targetVersion+
-    // controllingFile) is sufficient and safer than comparing raw file
-    // bytes supplied by the caller: identity mismatch can only mean the
-    // underlying trusted evidence (repository state, persisted finding
-    // snapshot) has genuinely changed since the earlier /evaluate call.
     if (fresh.candidateIdentity !== body.expectedCandidateIdentity) {
       return {
         status: 'CANDIDATE_DRIFTED',
@@ -234,6 +199,39 @@ export class SecurityRemediationController {
     return withGitAuthoringMetadata({ ...fresh, status: 'WRITE_AUTHORIZED' }, cosmetic);
   }
 
+  /** Prépare le résultat lié à revalidate lot. */
+  @UseGuards(InternalSecretGuard)
+  @Post('revalidate-batch')
+  async revalidateBatch(@Body() body: SecurityRemediationRevalidateBatchDto) {
+    if (!body?.projectId || !Array.isArray(body?.findingTaskIds) || !body.findingTaskIds.length || !body?.expectedCandidateIdentity) {
+      throw new BadRequestException('projectId, a non-empty findingTaskIds array, and expectedCandidateIdentity are required.');
+    }
+    const correlated = body.batchId !== undefined || body.attempts !== undefined;
+    await this.manualRemediation.verifyWf6TargetOwnership(body.projectId, body.findingTaskIds, correlated);
+    if (correlated) await this.manualRemediation.verifyWf6AttemptContext(body.projectId, body.findingTaskIds, body.batchId, body.attempts);
+    const outcome = await this.resolveAndEvaluateBatch(body.projectId, body.findingTaskIds, correlated ? { batchId: body.batchId, attempts: body.attempts } : undefined);
+    await this.manualRemediation.verifyWf6TargetOwnership(body.projectId, body.findingTaskIds, correlated);
+    if (correlated) {
+      await this.manualRemediation.verifyWf6AttemptContext(body.projectId, body.findingTaskIds, body.batchId, body.attempts);
+      outcome.result = { ...outcome.result, batchId: body.batchId, attempts: body.attempts };
+    }
+    const fresh: any = outcome.result;
+
+    if (fresh.status !== 'CANDIDATE_READY') {
+      return withBatchGitAuthoringMetadata(fresh, outcome.cosmetics);
+    }
+    if (fresh.candidateIdentity !== body.expectedCandidateIdentity) {
+      return {
+        status: 'CANDIDATE_DRIFTED',
+        reason: 'Freshly recomputed batch candidateIdentity no longer matches the identity authorized at evaluation time -- trusted evidence changed between evaluate-batch and write.',
+        expectedCandidateIdentity: body.expectedCandidateIdentity,
+        freshCandidateIdentity: fresh.candidateIdentity,
+      };
+    }
+    return withBatchGitAuthoringMetadata({ ...fresh, status: 'WRITE_AUTHORIZED' }, outcome.cosmetics);
+  }
+
+  /** Résout et évaluation. */
   private async resolveAndEvaluate(projectId: string, findingTaskId: string): Promise<{ result: SecurityRemediationEvaluationResult | { status: 'REJECTED'; reason: string; detail: string }; cveId: string | null; title: string | null; source: string | null; repository: string | null }> {
     // §3 — trusted resolution happens BEFORE the worker is ever called.
     // Everything past this point (finding/repository/candidateBaseSha) is
@@ -263,14 +261,9 @@ export class SecurityRemediationController {
     };
   }
 
-  // Increment 1 (WF6 multi-CVE wiring) — batch counterpart of
-  // resolveAndEvaluate() above. Each findingTaskId goes through the EXACT
-  // same trusted resolve() call, one at a time, in the caller's own order
-  // (so a caller can rely on `outcome.cosmetics[i]` lining up with its own
-  // findingTaskIds[i]) — no new resolution logic. §3's "resolution before
-  // the worker is ever called" holds for every finding in the batch, not
-  // just the first.
-  private async resolveAndEvaluateBatch(projectId: string, findingTaskIds: string[]): Promise<{ result: any; cosmetics: ResponseMeta[] }> {
+  /** Résout et évaluation lot. */
+  private async resolveAndEvaluateBatch(projectId: string, findingTaskIds: string[], correlation?: { batchId: string; attempts: { findingTaskId: string; attemptId: string; attemptNumber: number }[] }, initialEvaluation = false): Promise<{ result: any; cosmetics: ResponseMeta[] }> {
+    /** Refuse la demande et en précise la raison. */
     const reject = (reason: string, detail: string) => ({ result: { status: 'REJECTED', reason, detail }, cosmetics: findingTaskIds.map(() => ({ cveId: null, title: null, source: null, repository: null })) });
 
     const resolutions = await Promise.all(findingTaskIds.map(id => this.resolver.resolve(projectId, id)));
@@ -302,6 +295,13 @@ export class SecurityRemediationController {
       return reject('MISSING_CVE_IDENTITY', `findingTaskId "${findingTaskIds[missingCveIndex]}" has no advisory id -- cannot be named individually in a batch.`);
     }
 
+    if (initialEvaluation && correlation && findingTaskIds.length === 1 && this.retryE2E) {
+      const action = await this.retryE2E.hook({ projectId, taskId: findingTaskIds[0],
+        ...correlation.attempts[0], batchId: correlation.batchId }, 'INITIAL');
+      if (action === 'TIMEOUT' || action === 'TIMEOUT_REPLAY') return { result: { status: 'TECHNICAL_FAILURE', failureClass: 'VERIFIER_TIMEOUT',
+        reason: 'VERIFIER_TIMEOUT' }, cosmetics: successes.map(s => ({ cveId: s.cveId, title: s.title,
+        source: s.finding.source, repository: s.repository })) };
+    }
     const findings: SecurityRemediationBatchFindingInput[] = successes.map(s => ({ ...s.finding, cveId: s.cveId! }));
     const input: SecurityRemediationBatchOrchestrationInput = {
       findings, repository, candidateBaseSha,
@@ -309,9 +309,9 @@ export class SecurityRemediationController {
       // requestId -- no random/timestamp value, matches
       // ManualRemediationService.launchBatchRemediation()'s own batchId
       // derivation (sha256 of the sorted findingTaskIds).
-      requestId: `sec-eval-batch-${createHash('sha256').update([...findingTaskIds].sort().join(',')).digest('hex').slice(0, 16)}`,
-      batchId: 'internal-security-evaluate-batch',
-      candidateAttempt: 0,
+      requestId: `sec-eval-batch-${createHash('sha256').update(correlation?.batchId || [...findingTaskIds].sort().join(',')).digest('hex').slice(0, 16)}`,
+      batchId: correlation?.batchId || 'internal-security-evaluate-batch',
+      candidateAttempt: correlation ? Math.max(...correlation.attempts.map(a => a.attemptNumber)) : 0,
     };
     const result = await this.candidateVerification.evaluateSecurityRemediationBatch(input);
     const cosmetics: ResponseMeta[] = successes.map(s => ({ cveId: s.cveId, title: s.title, source: s.finding.source, repository: s.repository }));

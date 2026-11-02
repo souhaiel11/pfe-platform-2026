@@ -1,0 +1,934 @@
+{
+  "criticalFindingOccurrences": 23,
+  "uniqueCves": 19,
+  "findings": [
+    {
+      "CVE": "CVE-2022-1471",
+      "DEPENDENCY": "pkg:maven/org.yaml/snakeyaml@1.29",
+      "CURRENT_VERSION": "1.29",
+      "FIXED_VERSION_REPORT_BOUNDARY": [
+        "2.0"
+      ],
+      "SAFE_VERSION": "No fully safe compatible application candidate proven; boundaries are per-CVE report claims",
+      "DIRECT_OR_TRANSITIVE": "DIRECT",
+      "VERSION_OWNER": "pom.xml dependency literal 1.29 (line 71); snakeyaml.version property also 1.29 but literal wins",
+      "INTRODUCED_BY": "project \u2192 org.yaml:snakeyaml",
+      "EVIDENCE_CONFIDENCE": "HIGH artifact/version identity; vulnerability applicability and severity require contextual review",
+      "PLAN_CLASSIFICATION": "B; upgrade compatible Boot parent first; minimum CVE fix >=2.0",
+      "DESCRIPTION": "SnakeYaml's Constructor() class does not restrict types which can be instantiated during deserialization.\u00a0Deserializing yaml content provided by an attacker can lead to remote code execution. We recommend using SnakeYaml's SafeConsturctor when parsing untrusted content to restrict deserialization. We recommend upgrading to version 2.0 and beyond.",
+      "REPORT_SEVERITY": "CRITICAL",
+      "REPORT_CVSS": 9.8,
+      "REFERENCES": [
+        {
+          "source": "cve-coordination@google.com",
+          "url": "http://www.openwall.com/lists/oss-security/2023/11/19/1"
+        },
+        {
+          "source": "cve-coordination@google.com",
+          "url": "https://github.com/google/security-research/security/advisories/GHSA-mjmj-j48q-9wg2",
+          "name": "EXPLOIT,THIRD_PARTY_ADVISORY"
+        },
+        {
+          "source": "cve-coordination@google.com",
+          "url": "https://infosecwriteups.com/%EF%B8%8F-inside-the-160-comment-fight-to-fix-snakeyamls-rce-default-1a20c5ca4d4c"
+        },
+        {
+          "source": "cve-coordination@google.com",
+          "url": "https://groups.google.com/g/kubernetes-security-announce/c/mwrakFaEdnc"
+        },
+        {
+          "source": "af854a3a-2127-422b-91ae-364da2661108",
+          "url": "https://github.com/mbechler/marshalsec",
+          "name": "EXPLOIT,THIRD_PARTY_ADVISORY"
+        },
+        {
+          "source": "af854a3a-2127-422b-91ae-364da2661108",
+          "url": "http://packetstormsecurity.com/files/175095/PyTorch-Model-Server-Registration-Deserialization-Remote-Code-Execution.html"
+        },
+        {
+          "source": "af854a3a-2127-422b-91ae-364da2661108",
+          "url": "https://www.github.com/mbechler/marshalsec/blob/master/marshalsec.pdf?raw=true",
+          "name": "EXPLOIT,THIRD_PARTY_ADVISORY"
+        },
+        {
+          "source": "cve-coordination@google.com",
+          "url": "https://bitbucket.org/snakeyaml/snakeyaml/issues/561/cve-2022-1471-vulnerability-in#comment-64581479",
+          "name": "ISSUE_TRACKING,THIRD_PARTY_ADVISORY"
+        },
+        {
+          "source": "af854a3a-2127-422b-91ae-364da2661108",
+          "url": "https://security.netapp.com/advisory/ntap-20240621-0006/"
+        },
+        {
+          "source": "af854a3a-2127-422b-91ae-364da2661108",
+          "url": "https://github.com/google/security-research/security/advisories/GHSA-mjmj-j48q-9wg2",
+          "name": "EXPLOIT,THIRD_PARTY_ADVISORY"
+        },
+        {
+          "source": "cve-coordination@google.com",
+          "url": "https://github.com/mbechler/marshalsec",
+          "name": "EXPLOIT,THIRD_PARTY_ADVISORY"
+        },
+        {
+          "source": "af854a3a-2127-422b-91ae-364da2661108",
+          "url": "https://groups.google.com/g/kubernetes-security-announce/c/mwrakFaEdnc"
+        },
+        {
+          "source": "cve-coordination@google.com",
+          "url": "https://confluence.atlassian.com/security/cve-2022-1471-snakeyaml-library-rce-vulnerability-in-multiple-products-1296171009.html"
+        },
+        {
+          "source": "af854a3a-2127-422b-91ae-364da2661108",
+          "url": "https://bitbucket.org/snakeyaml/snakeyaml/issues/561/cve-2022-1471-vulnerability-in#comment-64581479",
+          "name": "ISSUE_TRACKING,THIRD_PARTY_ADVISORY"
+        },
+        {
+          "source": "cve-coordination@google.com",
+          "url": "https://security.netapp.com/advisory/ntap-20240621-0006/"
+        },
+        {
+          "source": "cve-coordination@google.com",
+          "url": "https://www.github.com/mbechler/marshalsec/blob/master/marshalsec.pdf?raw=true",
+          "name": "EXPLOIT,THIRD_PARTY_ADVISORY"
+        },
+        {
+          "source": "af854a3a-2127-422b-91ae-364da2661108",
+          "url": "https://security.netapp.com/advisory/ntap-20230818-0015/"
+        },
+        {
+          "source": "cve-coordination@google.com",
+          "url": "http://packetstormsecurity.com/files/175095/PyTorch-Model-Server-Registration-Deserialization-Remote-Code-Execution.html"
+        },
+        {
+          "source": "cve-coordination@google.com",
+          "url": "https://security.netapp.com/advisory/ntap-20230818-0015/"
+        },
+        {
+          "source": "af854a3a-2127-422b-91ae-364da2661108",
+          "url": "http://www.openwall.com/lists/oss-security/2023/11/19/1"
+        }
+      ]
+    },
+    {
+      "CVE": "CVE-2023-20873",
+      "DEPENDENCY": "pkg:maven/org.springframework.boot/spring-boot@2.7.0",
+      "CURRENT_VERSION": "2.7.0",
+      "FIXED_VERSION_REPORT_BOUNDARY": [
+        "2.7.11"
+      ],
+      "SAFE_VERSION": "No fully safe compatible application candidate proven; boundaries are per-CVE report claims",
+      "DIRECT_OR_TRANSITIVE": "TRANSITIVE",
+      "VERSION_OWNER": "Spring Boot parent/BOM 2.7.0",
+      "INTRODUCED_BY": "spring-boot-starter-web \u2192 spring-boot-starter \u2192 spring-boot",
+      "EVIDENCE_CONFIDENCE": "HIGH artifact/version identity; vulnerability applicability and severity require contextual review",
+      "PLAN_CLASSIFICATION": "B/D; aligned parent upgrade; commercial 2.7.33 or Java17+ migration candidate requires validation",
+      "DESCRIPTION": "In Spring Boot versions 3.0.0 - 3.0.5, 2.7.0 - 2.7.10, and older unsupported versions, an application that is deployed to Cloud Foundry could be susceptible to a security bypass. Users of affected versions should apply the following mitigation: 3.0.x users should upgrade to 3.0.6+. 2.7.x users should upgrade to 2.7.11+. Users of older, unsupported versions should upgrade to 3.0.6+ or 2.7.11+.",
+      "REPORT_SEVERITY": "CRITICAL",
+      "REPORT_CVSS": 9.8,
+      "REFERENCES": [
+        {
+          "source": "security@vmware.com",
+          "url": "https://security.netapp.com/advisory/ntap-20230601-0009/",
+          "name": "THIRD_PARTY_ADVISORY"
+        },
+        {
+          "source": "af854a3a-2127-422b-91ae-364da2661108",
+          "url": "https://security.netapp.com/advisory/ntap-20230601-0009/",
+          "name": "THIRD_PARTY_ADVISORY"
+        },
+        {
+          "source": "security@vmware.com",
+          "url": "https://spring.io/security/cve-2023-20873",
+          "name": "VENDOR_ADVISORY"
+        },
+        {
+          "source": "af854a3a-2127-422b-91ae-364da2661108",
+          "url": "https://spring.io/security/cve-2023-20873",
+          "name": "VENDOR_ADVISORY"
+        },
+        {
+          "source": "security@vmware.com",
+          "url": "https://spring.io/blog/2023/05/18/spring-boot-2-5-15-and-2-6-15-available-now"
+        },
+        {
+          "source": "af854a3a-2127-422b-91ae-364da2661108",
+          "url": "https://spring.io/blog/2023/05/18/spring-boot-2-5-15-and-2-6-15-available-now"
+        }
+      ]
+    },
+    {
+      "CVE": "CVE-2026-40974",
+      "DEPENDENCY": "pkg:maven/org.springframework.boot/spring-boot@2.7.0",
+      "CURRENT_VERSION": "2.7.0",
+      "FIXED_VERSION_REPORT_BOUNDARY": [
+        "2.7.33"
+      ],
+      "SAFE_VERSION": "No fully safe compatible application candidate proven; boundaries are per-CVE report claims",
+      "DIRECT_OR_TRANSITIVE": "TRANSITIVE",
+      "VERSION_OWNER": "Spring Boot parent/BOM 2.7.0",
+      "INTRODUCED_BY": "spring-boot-starter-web \u2192 spring-boot-starter \u2192 spring-boot",
+      "EVIDENCE_CONFIDENCE": "HIGH artifact/version identity; vulnerability applicability and severity require contextual review",
+      "PLAN_CLASSIFICATION": "B/D; aligned parent upgrade; commercial 2.7.33 or Java17+ migration candidate requires validation",
+      "DESCRIPTION": "Spring Boot's Cassandra auto-configuration does not perform hostname verification when establishing an SSL connection to Cassandra.\n\nAffected: Spring Boot 4.0.0\u20134.0.5 (fix 4.0.6), 3.5.0\u20133.5.13 (fix 3.5.14), 3.4.0\u20133.4.15 (fix 3.4.16), 3.3.0\u20133.3.18 (fix 3.3.19), 2.7.0\u20132.7.32 (fix 2.7.33); Cassandra SSL auto-configuration. Versions that are no longer supported are also affected per vendor advisory.",
+      "REPORT_SEVERITY": "CRITICAL",
+      "REPORT_CVSS": 9.8,
+      "REFERENCES": [
+        {
+          "source": "security@vmware.com",
+          "url": "https://spring.io/security/cve-2026-40974",
+          "name": "VENDOR_ADVISORY"
+        }
+      ]
+    },
+    {
+      "CVE": "CVE-2026-41855",
+      "DEPENDENCY": "pkg:maven/org.springframework/spring-core@5.3.20",
+      "CURRENT_VERSION": "5.3.20",
+      "FIXED_VERSION_REPORT_BOUNDARY": [
+        "5.3.49"
+      ],
+      "SAFE_VERSION": "No fully safe compatible application candidate proven; boundaries are per-CVE report claims",
+      "DIRECT_OR_TRANSITIVE": "TRANSITIVE",
+      "VERSION_OWNER": "Boot BOM spring-framework.version=5.3.20 / imported Spring Framework BOM",
+      "INTRODUCED_BY": "spring-security-core:5.6.4 \u2192 spring-core:5.3.20",
+      "EVIDENCE_CONFIDENCE": "HIGH artifact/version identity; vulnerability applicability and severity require contextual review",
+      "PLAN_CLASSIFICATION": "E/D; JMS-specific component attribution review; no compatible public 5.3.49 candidate proven",
+      "DESCRIPTION": "In an untrusted JMS environment, org.springframework.jms.support.converter.MappingJackson2MessageConverter and org.springframework.jms.support.converter.JacksonJsonMessageConverter allow arbitrary class instantiation, which can lead to unauthorized actions via gadget class deserialization.\n\nAffected versions:\nSpring Framework 7.0.0 through 7.0.7; 6.2.0 through 6.2.18; 6.1.0 through 6.1.27; 5.3.0 through 5.3.48.",
+      "REPORT_SEVERITY": "CRITICAL",
+      "REPORT_CVSS": 9.8,
+      "REFERENCES": [
+        {
+          "source": "security@vmware.com",
+          "url": "https://spring.io/security/cve-2026-41855",
+          "name": "VENDOR_ADVISORY"
+        }
+      ]
+    },
+    {
+      "CVE": "CVE-2022-31692",
+      "DEPENDENCY": "pkg:maven/org.springframework.security/spring-security-core@5.6.4",
+      "CURRENT_VERSION": "5.6.4",
+      "FIXED_VERSION_REPORT_BOUNDARY": [
+        "5.6.9"
+      ],
+      "SAFE_VERSION": "No fully safe compatible application candidate proven; boundaries are per-CVE report claims",
+      "DIRECT_OR_TRANSITIVE": "DIRECT",
+      "VERSION_OWNER": "pom.xml direct literal 5.6.4 overrides Boot security.version=5.7.1",
+      "INTRODUCED_BY": "project \u2192 spring-security-core",
+      "EVIDENCE_CONFIDENCE": "HIGH artifact/version identity; vulnerability applicability and severity require contextual review",
+      "PLAN_CLASSIFICATION": "B/D; remove direct core/test pins and align whole Security BOM; 5.7.22 is commercial",
+      "DESCRIPTION": "Spring Security, versions 5.7 prior to 5.7.5 and 5.6 prior to 5.6.9 could be susceptible to authorization rules bypass via forward or include dispatcher types. Specifically, an application is vulnerable when all of the following are true: The application expects that Spring Security applies security to forward and include dispatcher types. The application uses the AuthorizationFilter either manually or via the authorizeHttpRequests() method. The application configures the FilterChainProxy to apply to forward and/or include requests (e.g. spring.security.filter.dispatcher-types = request, error, async, forward, include). The application may forward or include the request to a higher privilege-secured endpoint.The application configures Spring Security to apply to every dispatcher type via authorizeHttpRequests().shouldFilterAllDispatcherTypes(true)",
+      "REPORT_SEVERITY": "CRITICAL",
+      "REPORT_CVSS": 9.8,
+      "REFERENCES": [
+        {
+          "source": "af854a3a-2127-422b-91ae-364da2661108",
+          "url": "https://security.netapp.com/advisory/ntap-20221215-0010/",
+          "name": "THIRD_PARTY_ADVISORY"
+        },
+        {
+          "source": "security@vmware.com",
+          "url": "https://tanzu.vmware.com/security/cve-2022-31692",
+          "name": "MITIGATION,VENDOR_ADVISORY"
+        },
+        {
+          "source": "af854a3a-2127-422b-91ae-364da2661108",
+          "url": "https://tanzu.vmware.com/security/cve-2022-31692",
+          "name": "MITIGATION,VENDOR_ADVISORY"
+        },
+        {
+          "source": "security@vmware.com",
+          "url": "https://security.netapp.com/advisory/ntap-20221215-0010/",
+          "name": "THIRD_PARTY_ADVISORY"
+        }
+      ]
+    },
+    {
+      "CVE": "CVE-2023-34034",
+      "DEPENDENCY": "pkg:maven/org.springframework.security/spring-security-core@5.6.4",
+      "CURRENT_VERSION": "5.6.4",
+      "FIXED_VERSION_REPORT_BOUNDARY": [
+        "5.6.12"
+      ],
+      "SAFE_VERSION": "No fully safe compatible application candidate proven; boundaries are per-CVE report claims",
+      "DIRECT_OR_TRANSITIVE": "DIRECT",
+      "VERSION_OWNER": "pom.xml direct literal 5.6.4 overrides Boot security.version=5.7.1",
+      "INTRODUCED_BY": "project \u2192 spring-security-core",
+      "EVIDENCE_CONFIDENCE": "HIGH artifact/version identity; vulnerability applicability and severity require contextual review",
+      "PLAN_CLASSIFICATION": "B/D; remove direct core/test pins and align whole Security BOM; 5.7.22 is commercial",
+      "DESCRIPTION": "Using \"**\" as a pattern in Spring Security configuration \nfor WebFlux creates a mismatch in pattern matching between Spring \nSecurity and Spring WebFlux, and the potential for a security bypass.\n\n",
+      "REPORT_SEVERITY": "CRITICAL",
+      "REPORT_CVSS": 9.8,
+      "REFERENCES": [
+        {
+          "source": "security@vmware.com",
+          "url": "https://security.netapp.com/advisory/ntap-20230814-0008/"
+        },
+        {
+          "source": "af854a3a-2127-422b-91ae-364da2661108",
+          "url": "https://security.netapp.com/advisory/ntap-20230814-0008/"
+        },
+        {
+          "source": "security@vmware.com",
+          "url": "https://spring.io/security/cve-2023-34034",
+          "name": "VENDOR_ADVISORY"
+        },
+        {
+          "source": "af854a3a-2127-422b-91ae-364da2661108",
+          "url": "https://spring.io/security/cve-2023-34034",
+          "name": "VENDOR_ADVISORY"
+        }
+      ]
+    },
+    {
+      "CVE": "CVE-2026-22732",
+      "DEPENDENCY": "pkg:maven/org.springframework.security/spring-security-core@5.6.4",
+      "CURRENT_VERSION": "5.6.4",
+      "FIXED_VERSION_REPORT_BOUNDARY": [
+        "5.7.22"
+      ],
+      "SAFE_VERSION": "No fully safe compatible application candidate proven; boundaries are per-CVE report claims",
+      "DIRECT_OR_TRANSITIVE": "DIRECT",
+      "VERSION_OWNER": "pom.xml direct literal 5.6.4 overrides Boot security.version=5.7.1",
+      "INTRODUCED_BY": "project \u2192 spring-security-core",
+      "EVIDENCE_CONFIDENCE": "HIGH artifact/version identity; vulnerability applicability and severity require contextual review",
+      "PLAN_CLASSIFICATION": "B/D; remove direct core/test pins and align whole Security BOM; 5.7.22 is commercial",
+      "DESCRIPTION": "When applications specify HTTP response headers for servlet applications using Spring Security, there is the possibility that the HTTP Headers will not be written.\u00a0\nThis issue affects Spring Security\u00a0Servlet applications using lazy (default) writing of HTTP Headers:\n\n: from 5.7.0 through 5.7.21, from 5.8.0 through 5.8.23, from 6.3.0 through 6.3.14, from 6.4.0 through 6.4.14, from 6.5.0 through 6.5.8, from 7.0.0 through 7.0.3.",
+      "REPORT_SEVERITY": "CRITICAL",
+      "REPORT_CVSS": 9.1,
+      "REFERENCES": [
+        {
+          "source": "security@vmware.com",
+          "url": "https://spring.io/security/cve-2026-22732",
+          "name": "EXPLOIT,VENDOR_ADVISORY"
+        }
+      ]
+    },
+    {
+      "CVE": "CVE-2022-31692",
+      "DEPENDENCY": "pkg:maven/org.springframework.security/spring-security-web@5.7.1",
+      "CURRENT_VERSION": "5.7.1",
+      "FIXED_VERSION_REPORT_BOUNDARY": [
+        "5.7.5"
+      ],
+      "SAFE_VERSION": "No fully safe compatible application candidate proven; boundaries are per-CVE report claims",
+      "DIRECT_OR_TRANSITIVE": "TRANSITIVE",
+      "VERSION_OWNER": "Boot BOM spring-security.version=5.7.1 / imported Spring Security BOM",
+      "INTRODUCED_BY": "spring-boot-starter-security \u2192 spring-security-web",
+      "EVIDENCE_CONFIDENCE": "HIGH artifact/version identity; vulnerability applicability and severity require contextual review",
+      "PLAN_CLASSIFICATION": "B/D; align whole Security BOM; 5.7.22 is commercial",
+      "DESCRIPTION": "Spring Security, versions 5.7 prior to 5.7.5 and 5.6 prior to 5.6.9 could be susceptible to authorization rules bypass via forward or include dispatcher types. Specifically, an application is vulnerable when all of the following are true: The application expects that Spring Security applies security to forward and include dispatcher types. The application uses the AuthorizationFilter either manually or via the authorizeHttpRequests() method. The application configures the FilterChainProxy to apply to forward and/or include requests (e.g. spring.security.filter.dispatcher-types = request, error, async, forward, include). The application may forward or include the request to a higher privilege-secured endpoint.The application configures Spring Security to apply to every dispatcher type via authorizeHttpRequests().shouldFilterAllDispatcherTypes(true)",
+      "REPORT_SEVERITY": "CRITICAL",
+      "REPORT_CVSS": 9.8,
+      "REFERENCES": [
+        {
+          "source": "af854a3a-2127-422b-91ae-364da2661108",
+          "url": "https://security.netapp.com/advisory/ntap-20221215-0010/",
+          "name": "THIRD_PARTY_ADVISORY"
+        },
+        {
+          "source": "security@vmware.com",
+          "url": "https://tanzu.vmware.com/security/cve-2022-31692",
+          "name": "MITIGATION,VENDOR_ADVISORY"
+        },
+        {
+          "source": "af854a3a-2127-422b-91ae-364da2661108",
+          "url": "https://tanzu.vmware.com/security/cve-2022-31692",
+          "name": "MITIGATION,VENDOR_ADVISORY"
+        },
+        {
+          "source": "security@vmware.com",
+          "url": "https://security.netapp.com/advisory/ntap-20221215-0010/",
+          "name": "THIRD_PARTY_ADVISORY"
+        }
+      ]
+    },
+    {
+      "CVE": "CVE-2023-34034",
+      "DEPENDENCY": "pkg:maven/org.springframework.security/spring-security-web@5.7.1",
+      "CURRENT_VERSION": "5.7.1",
+      "FIXED_VERSION_REPORT_BOUNDARY": [
+        "5.7.10"
+      ],
+      "SAFE_VERSION": "No fully safe compatible application candidate proven; boundaries are per-CVE report claims",
+      "DIRECT_OR_TRANSITIVE": "TRANSITIVE",
+      "VERSION_OWNER": "Boot BOM spring-security.version=5.7.1 / imported Spring Security BOM",
+      "INTRODUCED_BY": "spring-boot-starter-security \u2192 spring-security-web",
+      "EVIDENCE_CONFIDENCE": "HIGH artifact/version identity; vulnerability applicability and severity require contextual review",
+      "PLAN_CLASSIFICATION": "B/D; align whole Security BOM; 5.7.22 is commercial",
+      "DESCRIPTION": "Using \"**\" as a pattern in Spring Security configuration \nfor WebFlux creates a mismatch in pattern matching between Spring \nSecurity and Spring WebFlux, and the potential for a security bypass.\n\n",
+      "REPORT_SEVERITY": "CRITICAL",
+      "REPORT_CVSS": 9.8,
+      "REFERENCES": [
+        {
+          "source": "security@vmware.com",
+          "url": "https://security.netapp.com/advisory/ntap-20230814-0008/"
+        },
+        {
+          "source": "af854a3a-2127-422b-91ae-364da2661108",
+          "url": "https://security.netapp.com/advisory/ntap-20230814-0008/"
+        },
+        {
+          "source": "security@vmware.com",
+          "url": "https://spring.io/security/cve-2023-34034",
+          "name": "VENDOR_ADVISORY"
+        },
+        {
+          "source": "af854a3a-2127-422b-91ae-364da2661108",
+          "url": "https://spring.io/security/cve-2023-34034",
+          "name": "VENDOR_ADVISORY"
+        }
+      ]
+    },
+    {
+      "CVE": "CVE-2026-22732",
+      "DEPENDENCY": "pkg:maven/org.springframework.security/spring-security-web@5.7.1",
+      "CURRENT_VERSION": "5.7.1",
+      "FIXED_VERSION_REPORT_BOUNDARY": [
+        "5.7.22"
+      ],
+      "SAFE_VERSION": "No fully safe compatible application candidate proven; boundaries are per-CVE report claims",
+      "DIRECT_OR_TRANSITIVE": "TRANSITIVE",
+      "VERSION_OWNER": "Boot BOM spring-security.version=5.7.1 / imported Spring Security BOM",
+      "INTRODUCED_BY": "spring-boot-starter-security \u2192 spring-security-web",
+      "EVIDENCE_CONFIDENCE": "HIGH artifact/version identity; vulnerability applicability and severity require contextual review",
+      "PLAN_CLASSIFICATION": "B/D; align whole Security BOM; 5.7.22 is commercial",
+      "DESCRIPTION": "When applications specify HTTP response headers for servlet applications using Spring Security, there is the possibility that the HTTP Headers will not be written.\u00a0\nThis issue affects Spring Security\u00a0Servlet applications using lazy (default) writing of HTTP Headers:\n\n: from 5.7.0 through 5.7.21, from 5.8.0 through 5.8.23, from 6.3.0 through 6.3.14, from 6.4.0 through 6.4.14, from 6.5.0 through 6.5.8, from 7.0.0 through 7.0.3.",
+      "REPORT_SEVERITY": "CRITICAL",
+      "REPORT_CVSS": 9.1,
+      "REFERENCES": [
+        {
+          "source": "security@vmware.com",
+          "url": "https://spring.io/security/cve-2026-22732",
+          "name": "EXPLOIT,VENDOR_ADVISORY"
+        }
+      ]
+    },
+    {
+      "CVE": "CVE-2016-1000027",
+      "DEPENDENCY": "pkg:maven/org.springframework/spring-web@5.3.20",
+      "CURRENT_VERSION": "5.3.20",
+      "FIXED_VERSION_REPORT_BOUNDARY": [
+        "6.0.0"
+      ],
+      "SAFE_VERSION": "No fully safe compatible application candidate proven; boundaries are per-CVE report claims",
+      "DIRECT_OR_TRANSITIVE": "TRANSITIVE",
+      "VERSION_OWNER": "Boot BOM spring-framework.version=5.3.20 / imported Spring Framework BOM",
+      "INTRODUCED_BY": "spring-boot-starter-web \u2192 spring-web",
+      "EVIDENCE_CONFIDENCE": "HIGH artifact/version identity; vulnerability applicability and severity require contextual review",
+      "PLAN_CLASSIFICATION": "E/D; HttpInvoker/JMS reachability review; Framework 6 migration is broad",
+      "DESCRIPTION": "Pivotal Spring Framework through 5.3.16 suffers from a potential remote code execution (RCE) issue if used for Java deserialization of untrusted data. Depending on how the library is implemented within a product, this issue may or not occur, and authentication may be required. NOTE: the vendor's position is that untrusted data is not an intended use case. The product's behavior will not be changed because some users rely on deserialization of trusted data.",
+      "REPORT_SEVERITY": "CRITICAL",
+      "REPORT_CVSS": 9.8,
+      "REFERENCES": [
+        {
+          "source": "af854a3a-2127-422b-91ae-364da2661108",
+          "url": "https://www.tenable.com/security/research/tra-2016-20",
+          "name": "EXPLOIT,THIRD_PARTY_ADVISORY"
+        },
+        {
+          "source": "cve@mitre.org",
+          "url": "https://raw.githubusercontent.com/distributedweaknessfiling/cvelist/master/2016/1000xxx/CVE-2016-1000027.json",
+          "name": "BROKEN_LINK,EXPLOIT,THIRD_PARTY_ADVISORY"
+        },
+        {
+          "source": "af854a3a-2127-422b-91ae-364da2661108",
+          "url": "https://bugzilla.redhat.com/show_bug.cgi?id=CVE-2016-1000027",
+          "name": "ISSUE_TRACKING,THIRD_PARTY_ADVISORY"
+        },
+        {
+          "source": "af854a3a-2127-422b-91ae-364da2661108",
+          "url": "https://github.com/spring-projects/spring-framework/issues/24434#issuecomment-744519525",
+          "name": "ISSUE_TRACKING,THIRD_PARTY_ADVISORY"
+        },
+        {
+          "source": "cve@mitre.org",
+          "url": "https://spring.io/blog/2022/05/11/spring-framework-5-3-20-and-5-2-22-available-now",
+          "name": "RELEASE_NOTES,THIRD_PARTY_ADVISORY"
+        },
+        {
+          "source": "af854a3a-2127-422b-91ae-364da2661108",
+          "url": "https://spring.io/blog/2022/05/11/spring-framework-5-3-20-and-5-2-22-available-now",
+          "name": "RELEASE_NOTES,THIRD_PARTY_ADVISORY"
+        },
+        {
+          "source": "af854a3a-2127-422b-91ae-364da2661108",
+          "url": "https://github.com/spring-projects/spring-framework/issues/24434#issuecomment-579669626",
+          "name": "ISSUE_TRACKING,THIRD_PARTY_ADVISORY"
+        },
+        {
+          "source": "af854a3a-2127-422b-91ae-364da2661108",
+          "url": "https://security.netapp.com/advisory/ntap-20230420-0009/"
+        },
+        {
+          "source": "cve@mitre.org",
+          "url": "https://bugzilla.redhat.com/show_bug.cgi?id=CVE-2016-1000027",
+          "name": "ISSUE_TRACKING,THIRD_PARTY_ADVISORY"
+        },
+        {
+          "source": "cve@mitre.org",
+          "url": "https://www.tenable.com/security/research/tra-2016-20",
+          "name": "EXPLOIT,THIRD_PARTY_ADVISORY"
+        },
+        {
+          "source": "af854a3a-2127-422b-91ae-364da2661108",
+          "url": "https://raw.githubusercontent.com/distributedweaknessfiling/cvelist/master/2016/1000xxx/CVE-2016-1000027.json",
+          "name": "BROKEN_LINK,EXPLOIT,THIRD_PARTY_ADVISORY"
+        },
+        {
+          "source": "cve@mitre.org",
+          "url": "https://security-tracker.debian.org/tracker/CVE-2016-1000027",
+          "name": "THIRD_PARTY_ADVISORY"
+        },
+        {
+          "source": "cve@mitre.org",
+          "url": "https://security.netapp.com/advisory/ntap-20230420-0009/"
+        },
+        {
+          "source": "cve@mitre.org",
+          "url": "https://github.com/spring-projects/spring-framework/issues/24434#issuecomment-582313417",
+          "name": "ISSUE_TRACKING,THIRD_PARTY_ADVISORY"
+        },
+        {
+          "source": "af854a3a-2127-422b-91ae-364da2661108",
+          "url": "https://github.com/spring-projects/spring-framework/issues/24434#issuecomment-582313417",
+          "name": "ISSUE_TRACKING,THIRD_PARTY_ADVISORY"
+        },
+        {
+          "source": "cve@mitre.org",
+          "url": "https://github.com/spring-projects/spring-framework/issues/24434#issuecomment-579669626",
+          "name": "ISSUE_TRACKING,THIRD_PARTY_ADVISORY"
+        },
+        {
+          "source": "cve@mitre.org",
+          "url": "https://github.com/spring-projects/spring-framework/issues/24434#issuecomment-744519525",
+          "name": "ISSUE_TRACKING,THIRD_PARTY_ADVISORY"
+        },
+        {
+          "source": "af854a3a-2127-422b-91ae-364da2661108",
+          "url": "https://security-tracker.debian.org/tracker/CVE-2016-1000027",
+          "name": "THIRD_PARTY_ADVISORY"
+        }
+      ]
+    },
+    {
+      "CVE": "CVE-2026-41855",
+      "DEPENDENCY": "pkg:maven/org.springframework/spring-web@5.3.20",
+      "CURRENT_VERSION": "5.3.20",
+      "FIXED_VERSION_REPORT_BOUNDARY": [
+        "5.3.49"
+      ],
+      "SAFE_VERSION": "No fully safe compatible application candidate proven; boundaries are per-CVE report claims",
+      "DIRECT_OR_TRANSITIVE": "TRANSITIVE",
+      "VERSION_OWNER": "Boot BOM spring-framework.version=5.3.20 / imported Spring Framework BOM",
+      "INTRODUCED_BY": "spring-boot-starter-web \u2192 spring-web",
+      "EVIDENCE_CONFIDENCE": "HIGH artifact/version identity; vulnerability applicability and severity require contextual review",
+      "PLAN_CLASSIFICATION": "E/D; HttpInvoker/JMS reachability review; Framework 6 migration is broad",
+      "DESCRIPTION": "In an untrusted JMS environment, org.springframework.jms.support.converter.MappingJackson2MessageConverter and org.springframework.jms.support.converter.JacksonJsonMessageConverter allow arbitrary class instantiation, which can lead to unauthorized actions via gadget class deserialization.\n\nAffected versions:\nSpring Framework 7.0.0 through 7.0.7; 6.2.0 through 6.2.18; 6.1.0 through 6.1.27; 5.3.0 through 5.3.48.",
+      "REPORT_SEVERITY": "CRITICAL",
+      "REPORT_CVSS": 9.8,
+      "REFERENCES": [
+        {
+          "source": "security@vmware.com",
+          "url": "https://spring.io/security/cve-2026-41855",
+          "name": "VENDOR_ADVISORY"
+        }
+      ]
+    },
+    {
+      "CVE": "CVE-2024-50379",
+      "DEPENDENCY": "pkg:maven/org.apache.tomcat.embed/tomcat-embed-core@9.0.63",
+      "CURRENT_VERSION": "9.0.63",
+      "FIXED_VERSION_REPORT_BOUNDARY": [
+        "9.0.98"
+      ],
+      "SAFE_VERSION": "No fully safe compatible application candidate proven; boundaries are per-CVE report claims",
+      "DIRECT_OR_TRANSITIVE": "TRANSITIVE",
+      "VERSION_OWNER": "Boot BOM tomcat.version=9.0.63",
+      "INTRODUCED_BY": "spring-boot-starter-web \u2192 spring-boot-starter-tomcat \u2192 tomcat-embed-core",
+      "EVIDENCE_CONFIDENCE": "HIGH artifact/version identity; vulnerability applicability and severity require contextual review",
+      "PLAN_CLASSIFICATION": "D pending compatible candidate validation; aligned tomcat.version >=9.0.119 is the per-report floor, not a proven safe upgrade",
+      "DESCRIPTION": "Time-of-check Time-of-use (TOCTOU) Race Condition vulnerability during JSP compilation in Apache Tomcat permits an RCE on case insensitive file systems when the default servlet is enabled for write (non-default configuration).\n\nThis issue affects Apache Tomcat: from 11.0.0-M1 through 11.0.1, from 10.1.0-M1 through 10.1.33, from 9.0.0.M1 through 9.0.97.\n\nThe following versions were EOL at the time the CVE was created but are \nknown to be affected: 8.5.0 though 8.5.100. Other, older, EOL versions may also be affected.\n\nUsers are recommended to upgrade to version 11.0.2, 10.1.34 or 9.0.98, which fixes the issue.",
+      "REPORT_SEVERITY": "CRITICAL",
+      "REPORT_CVSS": 9.8,
+      "REFERENCES": [
+        {
+          "source": "af854a3a-2127-422b-91ae-364da2661108",
+          "url": "http://www.openwall.com/lists/oss-security/2024/12/17/4",
+          "name": "MAILING_LIST"
+        },
+        {
+          "source": "af854a3a-2127-422b-91ae-364da2661108",
+          "url": "https://lists.debian.org/debian-lts-announce/2025/01/msg00009.html"
+        },
+        {
+          "source": "af854a3a-2127-422b-91ae-364da2661108",
+          "url": "http://www.openwall.com/lists/oss-security/2024/12/18/2",
+          "name": "MAILING_LIST"
+        },
+        {
+          "source": "security@apache.org",
+          "url": "https://lists.apache.org/thread/y6lj6q1xnp822g6ro70tn19sgtjmr80r",
+          "name": "MAILING_LIST,VENDOR_ADVISORY"
+        },
+        {
+          "source": "af854a3a-2127-422b-91ae-364da2661108",
+          "url": "https://security.netapp.com/advisory/ntap-20250103-0003/",
+          "name": "THIRD_PARTY_ADVISORY"
+        }
+      ]
+    },
+    {
+      "CVE": "CVE-2024-52316",
+      "DEPENDENCY": "pkg:maven/org.apache.tomcat.embed/tomcat-embed-core@9.0.63",
+      "CURRENT_VERSION": "9.0.63",
+      "FIXED_VERSION_REPORT_BOUNDARY": [
+        "9.0.96"
+      ],
+      "SAFE_VERSION": "No fully safe compatible application candidate proven; boundaries are per-CVE report claims",
+      "DIRECT_OR_TRANSITIVE": "TRANSITIVE",
+      "VERSION_OWNER": "Boot BOM tomcat.version=9.0.63",
+      "INTRODUCED_BY": "spring-boot-starter-web \u2192 spring-boot-starter-tomcat \u2192 tomcat-embed-core",
+      "EVIDENCE_CONFIDENCE": "HIGH artifact/version identity; vulnerability applicability and severity require contextual review",
+      "PLAN_CLASSIFICATION": "D pending compatible candidate validation; aligned tomcat.version >=9.0.119 is the per-report floor, not a proven safe upgrade",
+      "DESCRIPTION": "Unchecked Error Condition vulnerability in Apache Tomcat. If Tomcat is configured to use a custom Jakarta Authentication (formerly JASPIC)\u00a0ServerAuthContext component which may throw an exception during the authentication process without explicitly setting an HTTP status to indicate failure, the authentication may not fail, allowing the user to bypass the authentication process. There are no known Jakarta\u00a0Authentication components that behave in this way.\n\nThis issue affects Apache Tomcat: from 11.0.0-M1 through 11.0.0-M26, from 10.1.0-M1 through 10.1.30, from 9.0.0-M1 through 9.0.95.\n\nThe following versions were EOL at the time the CVE was created but are \nknown to be affected: 8.5.0 though 8.5.100.\u00a0Other EOL versions may also be affected.\n\n\nUsers are recommended to upgrade to version 11.0.0, 10.1.31 or 9.0.96, which fix the issue.",
+      "REPORT_SEVERITY": "CRITICAL",
+      "REPORT_CVSS": 9.8,
+      "REFERENCES": [
+        {
+          "source": "security@apache.org",
+          "url": "https://lists.apache.org/thread/lopzlqh91jj9n334g02om08sbysdb928",
+          "name": "MAILING_LIST,VENDOR_ADVISORY"
+        },
+        {
+          "source": "af854a3a-2127-422b-91ae-364da2661108",
+          "url": "http://www.openwall.com/lists/oss-security/2024/11/18/2",
+          "name": "MAILING_LIST,THIRD_PARTY_ADVISORY"
+        },
+        {
+          "source": "af854a3a-2127-422b-91ae-364da2661108",
+          "url": "https://security.netapp.com/advisory/ntap-20250124-0003/",
+          "name": "THIRD_PARTY_ADVISORY"
+        },
+        {
+          "source": "af854a3a-2127-422b-91ae-364da2661108",
+          "url": "https://lists.debian.org/debian-lts-announce/2025/01/msg00009.html",
+          "name": "THIRD_PARTY_ADVISORY"
+        }
+      ]
+    },
+    {
+      "CVE": "CVE-2024-56337",
+      "DEPENDENCY": "pkg:maven/org.apache.tomcat.embed/tomcat-embed-core@9.0.63",
+      "CURRENT_VERSION": "9.0.63",
+      "FIXED_VERSION_REPORT_BOUNDARY": [
+        "9.0.98"
+      ],
+      "SAFE_VERSION": "No fully safe compatible application candidate proven; boundaries are per-CVE report claims",
+      "DIRECT_OR_TRANSITIVE": "TRANSITIVE",
+      "VERSION_OWNER": "Boot BOM tomcat.version=9.0.63",
+      "INTRODUCED_BY": "spring-boot-starter-web \u2192 spring-boot-starter-tomcat \u2192 tomcat-embed-core",
+      "EVIDENCE_CONFIDENCE": "HIGH artifact/version identity; vulnerability applicability and severity require contextual review",
+      "PLAN_CLASSIFICATION": "D pending compatible candidate validation; aligned tomcat.version >=9.0.119 is the per-report floor, not a proven safe upgrade",
+      "DESCRIPTION": "Time-of-check Time-of-use (TOCTOU) Race Condition vulnerability in Apache Tomcat.\n\nThis issue affects Apache Tomcat: from 11.0.0-M1 through 11.0.1, from 10.1.0-M1 through 10.1.33, from 9.0.0.M1 through 9.0.97.\nThe following versions were EOL at the time the CVE was created but are \nknown to be affected: 8.5.0 though 8.5.100. Other, older, EOL versions \nmay also be affected.\n\n\nThe mitigation for CVE-2024-50379 was incomplete.\n\nUsers running Tomcat on a case insensitive file system with the default servlet write enabled (readonly initialisation \nparameter set to the non-default value of false) may need additional configuration to fully mitigate CVE-2024-50379 depending on which version of Java they are using with Tomcat:\n- running on Java 8 or Java 11: the system property\u00a0sun.io.useCanonCaches must be explicitly set to false (it defaults to true)\n- running on Java 17: the\u00a0system property sun.io.useCanonCaches, if set, must be set to false\u00a0(it defaults to false)\n- running on Java 21 onwards: no further configuration is required\u00a0(the system property and the problematic cache have been removed)\n\nTomcat 11.0.3, 10.1.35 and 9.0.99 onwards will include checks that\u00a0sun.io.useCanonCaches is set appropriately before allowing the default servlet to be write enabled on a case insensitive file system. Tomcat will also set\u00a0sun.io.useCanonCaches to false by default where it can.",
+      "REPORT_SEVERITY": "CRITICAL",
+      "REPORT_CVSS": 9.8,
+      "REFERENCES": [
+        {
+          "source": "security@apache.org",
+          "url": "https://www.cve.org/CVERecord?id=CVE-2024-50379",
+          "name": "THIRD_PARTY_ADVISORY"
+        },
+        {
+          "source": "af854a3a-2127-422b-91ae-364da2661108",
+          "url": "https://lists.debian.org/debian-lts-announce/2025/01/msg00009.html"
+        },
+        {
+          "source": "af854a3a-2127-422b-91ae-364da2661108",
+          "url": "https://security.netapp.com/advisory/ntap-20250103-0002/",
+          "name": "THIRD_PARTY_ADVISORY"
+        },
+        {
+          "source": "security@apache.org",
+          "url": "https://lists.apache.org/thread/b2b9qrgjrz1kvo4ym8y2wkfdvwoq6qbp",
+          "name": "MAILING_LIST,VENDOR_ADVISORY"
+        }
+      ]
+    },
+    {
+      "CVE": "CVE-2025-24813",
+      "DEPENDENCY": "pkg:maven/org.apache.tomcat.embed/tomcat-embed-core@9.0.63",
+      "CURRENT_VERSION": "9.0.63",
+      "FIXED_VERSION_REPORT_BOUNDARY": [
+        "9.0.99"
+      ],
+      "SAFE_VERSION": "No fully safe compatible application candidate proven; boundaries are per-CVE report claims",
+      "DIRECT_OR_TRANSITIVE": "TRANSITIVE",
+      "VERSION_OWNER": "Boot BOM tomcat.version=9.0.63",
+      "INTRODUCED_BY": "spring-boot-starter-web \u2192 spring-boot-starter-tomcat \u2192 tomcat-embed-core",
+      "EVIDENCE_CONFIDENCE": "HIGH artifact/version identity; vulnerability applicability and severity require contextual review",
+      "PLAN_CLASSIFICATION": "D pending compatible candidate validation; aligned tomcat.version >=9.0.119 is the per-report floor, not a proven safe upgrade",
+      "DESCRIPTION": "Path Equivalence: 'file.Name' (Internal Dot) leading to\u00a0Remote Code Execution and/or Information disclosure\u00a0and/or malicious content added to uploaded files via write enabled\u00a0Default Servlet\u00a0in Apache Tomcat.\n\nThis issue affects Apache Tomcat: from 11.0.0-M1 through 11.0.2, from 10.1.0-M1 through 10.1.34, from 9.0.0.M1 through 9.0.98.\nThe following versions were EOL at the time the CVE was created but are \nknown to be affected: 8.5.0 though 8.5.100. Other, older, EOL versions \nmay also be affected.\n\n\nIf all of the following were true, a malicious user was able to view       security sensitive files and/or inject content into those files:\n-\u00a0writes enabled for the default servlet (disabled by default)\n- support for partial PUT (enabled by default)\n- a target URL for security sensitive uploads that was a sub-directory of\u00a0a target URL for public uploads\n-\u00a0attacker knowledge of the names of security sensitive files being\u00a0uploaded\n-\u00a0the security sensitive files also being uploaded via partial PUT\n\nIf all of the following were true, a malicious user was able to       perform remote code execution:\n- writes enabled for the default servlet (disabled by default)\n-\u00a0support for partial PUT (enabled by default)\n-\u00a0application was using Tomcat's file based session persistence with the\u00a0default storage location\n-\u00a0application included a library that may be leveraged in a\u00a0deserialization attack\n\nUsers are recommended to upgrade to version 11.0.3, 10.1.35 or 9.0.99, which fixes the issue.",
+      "REPORT_SEVERITY": "CRITICAL",
+      "REPORT_CVSS": 9.8,
+      "REFERENCES": [
+        {
+          "source": "af854a3a-2127-422b-91ae-364da2661108",
+          "url": "https://www.vicarius.io/vsociety/posts/cve-2025-24813-detect-apache-tomcat-rce",
+          "name": "ISSUE_TRACKING"
+        },
+        {
+          "source": "134c704f-9b21-4f2e-91b3-4a467353bcc0",
+          "url": "https://www.cisa.gov/known-exploited-vulnerabilities-catalog?field_cve=CVE-2025-24813",
+          "name": "THIRD_PARTY_ADVISORY,US_GOVERNMENT_RESOURCE"
+        },
+        {
+          "source": "af854a3a-2127-422b-91ae-364da2661108",
+          "url": "http://www.openwall.com/lists/oss-security/2025/03/10/5",
+          "name": "MAILING_LIST,THIRD_PARTY_ADVISORY"
+        },
+        {
+          "source": "af854a3a-2127-422b-91ae-364da2661108",
+          "url": "https://lists.debian.org/debian-lts-announce/2025/04/msg00003.html",
+          "name": "MAILING_LIST,THIRD_PARTY_ADVISORY"
+        },
+        {
+          "source": "security@apache.org",
+          "url": "https://lists.apache.org/thread/j5fkjv2k477os90nczf2v9l61fb0kkgq",
+          "name": "VENDOR_ADVISORY"
+        },
+        {
+          "source": "af854a3a-2127-422b-91ae-364da2661108",
+          "url": "https://www.vicarius.io/vsociety/posts/cve-2025-24813-tomcat-mitigation-vulnerability",
+          "name": "ISSUE_TRACKING"
+        },
+        {
+          "source": "134c704f-9b21-4f2e-91b3-4a467353bcc0",
+          "url": "https://github.com/absholi7ly/POC-CVE-2025-24813/blob/main/README.md",
+          "name": "EXPLOIT"
+        },
+        {
+          "source": "af854a3a-2127-422b-91ae-364da2661108",
+          "url": "https://www.vicarius.io/vsociety/posts/cve-2025-24813-mitigate-apache-tomcat-rce",
+          "name": "ISSUE_TRACKING"
+        },
+        {
+          "source": "af854a3a-2127-422b-91ae-364da2661108",
+          "url": "https://security.netapp.com/advisory/ntap-20250321-0001/",
+          "name": "THIRD_PARTY_ADVISORY"
+        },
+        {
+          "source": "af854a3a-2127-422b-91ae-364da2661108",
+          "url": "https://www.vicarius.io/vsociety/posts/cve-2025-24813-tomcat-detect-vulnerability",
+          "name": "ISSUE_TRACKING"
+        }
+      ]
+    },
+    {
+      "CVE": "CVE-2025-31651",
+      "DEPENDENCY": "pkg:maven/org.apache.tomcat.embed/tomcat-embed-core@9.0.63",
+      "CURRENT_VERSION": "9.0.63",
+      "FIXED_VERSION_REPORT_BOUNDARY": [
+        "9.0.104"
+      ],
+      "SAFE_VERSION": "No fully safe compatible application candidate proven; boundaries are per-CVE report claims",
+      "DIRECT_OR_TRANSITIVE": "TRANSITIVE",
+      "VERSION_OWNER": "Boot BOM tomcat.version=9.0.63",
+      "INTRODUCED_BY": "spring-boot-starter-web \u2192 spring-boot-starter-tomcat \u2192 tomcat-embed-core",
+      "EVIDENCE_CONFIDENCE": "HIGH artifact/version identity; vulnerability applicability and severity require contextual review",
+      "PLAN_CLASSIFICATION": "D pending compatible candidate validation; aligned tomcat.version >=9.0.119 is the per-report floor, not a proven safe upgrade",
+      "DESCRIPTION": "Improper Neutralization of Escape, Meta, or Control Sequences vulnerability in Apache Tomcat.\u00a0For a subset of unlikely rewrite rule configurations, it was possible \nfor a specially crafted request to bypass some rewrite rules. If those \nrewrite rules effectively enforced security constraints, those \nconstraints could be bypassed.\n\nThis issue affects Apache Tomcat: from 11.0.0-M1 through 11.0.5, from 10.1.0-M1 through 10.1.39, from 9.0.0.M1 through 9.0.102.\nThe following versions were EOL at the time the CVE was created but are \nknown to be affected: 8.5.0 though 8.5.100. Other, older, EOL versions \nmay also be affected.\n\n\nUsers are recommended to upgrade to version [FIXED_VERSION], which fixes the issue.",
+      "REPORT_SEVERITY": "CRITICAL",
+      "REPORT_CVSS": 9.8,
+      "REFERENCES": [
+        {
+          "source": "security@apache.org",
+          "url": "https://lists.apache.org/list.html?announce@tomcat.apache.org",
+          "name": "MAILING_LIST,VENDOR_ADVISORY"
+        },
+        {
+          "source": "af854a3a-2127-422b-91ae-364da2661108",
+          "url": "http://www.openwall.com/lists/oss-security/2025/04/28/3",
+          "name": "MAILING_LIST,THIRD_PARTY_ADVISORY"
+        },
+        {
+          "source": "af854a3a-2127-422b-91ae-364da2661108",
+          "url": "https://lists.debian.org/debian-lts-announce/2025/07/msg00009.html"
+        }
+      ]
+    },
+    {
+      "CVE": "CVE-2026-41293",
+      "DEPENDENCY": "pkg:maven/org.apache.tomcat.embed/tomcat-embed-core@9.0.63",
+      "CURRENT_VERSION": "9.0.63",
+      "FIXED_VERSION_REPORT_BOUNDARY": [
+        "9.0.118"
+      ],
+      "SAFE_VERSION": "No fully safe compatible application candidate proven; boundaries are per-CVE report claims",
+      "DIRECT_OR_TRANSITIVE": "TRANSITIVE",
+      "VERSION_OWNER": "Boot BOM tomcat.version=9.0.63",
+      "INTRODUCED_BY": "spring-boot-starter-web \u2192 spring-boot-starter-tomcat \u2192 tomcat-embed-core",
+      "EVIDENCE_CONFIDENCE": "HIGH artifact/version identity; vulnerability applicability and severity require contextual review",
+      "PLAN_CLASSIFICATION": "D pending compatible candidate validation; aligned tomcat.version >=9.0.119 is the per-report floor, not a proven safe upgrade",
+      "DESCRIPTION": "Improper Input Validation vulnerability in Apache Tomcat.\n\nThis issue affects Apache Tomcat: from 11.0.0-M1 through 11.0.21, from 10.1.0-M1 through 10.1.54, from 9.0.0.M1 through 9.0.117, from 10.0.0-M1 through 10.0.27.\nOlder, end of support versions may also be affected.\n\nUsers are recommended to upgrade to version [FIXED_VERSION], which fixes the issue.",
+      "REPORT_SEVERITY": "CRITICAL",
+      "REPORT_CVSS": 9.8,
+      "REFERENCES": [
+        {
+          "source": "af854a3a-2127-422b-91ae-364da2661108",
+          "url": "http://www.openwall.com/lists/oss-security/2026/05/12/13",
+          "name": "MAILING_LIST,THIRD_PARTY_ADVISORY"
+        },
+        {
+          "source": "security@apache.org",
+          "url": "https://lists.apache.org/thread/qwg0q16z7xkb2qrr853wdll5531mvl1r",
+          "name": "MAILING_LIST,VENDOR_ADVISORY"
+        }
+      ]
+    },
+    {
+      "CVE": "CVE-2026-43512",
+      "DEPENDENCY": "pkg:maven/org.apache.tomcat.embed/tomcat-embed-core@9.0.63",
+      "CURRENT_VERSION": "9.0.63",
+      "FIXED_VERSION_REPORT_BOUNDARY": [
+        "9.0.118"
+      ],
+      "SAFE_VERSION": "No fully safe compatible application candidate proven; boundaries are per-CVE report claims",
+      "DIRECT_OR_TRANSITIVE": "TRANSITIVE",
+      "VERSION_OWNER": "Boot BOM tomcat.version=9.0.63",
+      "INTRODUCED_BY": "spring-boot-starter-web \u2192 spring-boot-starter-tomcat \u2192 tomcat-embed-core",
+      "EVIDENCE_CONFIDENCE": "HIGH artifact/version identity; vulnerability applicability and severity require contextual review",
+      "PLAN_CLASSIFICATION": "D pending compatible candidate validation; aligned tomcat.version >=9.0.119 is the per-report floor, not a proven safe upgrade",
+      "DESCRIPTION": "DEPRECATED: Authentication Bypass Issues vulnerability in digest authentication in Apache Tomcat.\n\nThis issue affects Apache Tomcat: from 11.0.0-M1 through 11.0.21, from 10.1.0-M1 through 10.1.54, from 9.0.0.M1 through 9.0.117, from 8.5.0 through 8.5.100, from before 7.0.0.\nOlder unsupported versions any also be affect\n\nUsers are recommended to upgrade to version 11.0.22, 10.1.55 or 9.0.118 which fix the issue.",
+      "REPORT_SEVERITY": "CRITICAL",
+      "REPORT_CVSS": 9.8,
+      "REFERENCES": [
+        {
+          "source": "security@apache.org",
+          "url": "https://lists.apache.org/thread/7x09x7o12solvclslw3sz0288xc8wx73",
+          "name": "MAILING_LIST,VENDOR_ADVISORY"
+        },
+        {
+          "source": "af854a3a-2127-422b-91ae-364da2661108",
+          "url": "http://www.openwall.com/lists/oss-security/2026/05/12/8",
+          "name": "MAILING_LIST,THIRD_PARTY_ADVISORY"
+        }
+      ]
+    },
+    {
+      "CVE": "CVE-2025-55754",
+      "DEPENDENCY": "pkg:maven/org.apache.tomcat.embed/tomcat-embed-core@9.0.63",
+      "CURRENT_VERSION": "9.0.63",
+      "FIXED_VERSION_REPORT_BOUNDARY": [
+        "9.0.109"
+      ],
+      "SAFE_VERSION": "No fully safe compatible application candidate proven; boundaries are per-CVE report claims",
+      "DIRECT_OR_TRANSITIVE": "TRANSITIVE",
+      "VERSION_OWNER": "Boot BOM tomcat.version=9.0.63",
+      "INTRODUCED_BY": "spring-boot-starter-web \u2192 spring-boot-starter-tomcat \u2192 tomcat-embed-core",
+      "EVIDENCE_CONFIDENCE": "HIGH artifact/version identity; vulnerability applicability and severity require contextual review",
+      "PLAN_CLASSIFICATION": "D pending compatible candidate validation; aligned tomcat.version >=9.0.119 is the per-report floor, not a proven safe upgrade",
+      "DESCRIPTION": "Improper Neutralization of Escape, Meta, or Control Sequences vulnerability in Apache Tomcat.\n\nTomcat did not escape ANSI escape sequences in log messages. If Tomcat was running in a console on a Windows operating system, and the console supported ANSI escape sequences, it was possible for an attacker to use a specially crafted URL to inject ANSI escape sequences to manipulate the console and the clipboard and attempt to trick an administrator into running an attacker controlled command. While no attack vector was found, it may have been possible to mount this attack on other operating systems.\n\n\n\nThis issue affects Apache Tomcat: from 11.0.0-M1 through 11.0.10, from 10.1.0-M1 through 10.1.44, from 9.0.40 through 9.0.108.\n\nThe following versions were EOL at the time the CVE was created but are \nknown to be affected: 8.5.60 though 8.5.100. Other, older, EOL versions may also be affected.\nUsers are recommended to upgrade to version 11.0.11 or later, 10.1.45 or later or 9.0.109 or later, which fix the issue.",
+      "REPORT_SEVERITY": "CRITICAL",
+      "REPORT_CVSS": 9.6,
+      "REFERENCES": [
+        {
+          "source": "af854a3a-2127-422b-91ae-364da2661108",
+          "url": "http://www.openwall.com/lists/oss-security/2025/10/27/5",
+          "name": "MAILING_LIST,THIRD_PARTY_ADVISORY"
+        },
+        {
+          "source": "0b142b55-0307-4c5a-b3c9-f314f3fb7c5e",
+          "url": "https://cert-portal.siemens.com/productcert/html/ssa-032379.html"
+        },
+        {
+          "source": "security@apache.org",
+          "url": "https://lists.apache.org/thread/j7w54hqbkfcn0xb9xy0wnx8w5nymcbqd",
+          "name": "MAILING_LIST,VENDOR_ADVISORY"
+        }
+      ]
+    },
+    {
+      "CVE": "CVE-2025-66614",
+      "DEPENDENCY": "pkg:maven/org.apache.tomcat.embed/tomcat-embed-core@9.0.63",
+      "CURRENT_VERSION": "9.0.63",
+      "FIXED_VERSION_REPORT_BOUNDARY": [
+        "9.0.113"
+      ],
+      "SAFE_VERSION": "No fully safe compatible application candidate proven; boundaries are per-CVE report claims",
+      "DIRECT_OR_TRANSITIVE": "TRANSITIVE",
+      "VERSION_OWNER": "Boot BOM tomcat.version=9.0.63",
+      "INTRODUCED_BY": "spring-boot-starter-web \u2192 spring-boot-starter-tomcat \u2192 tomcat-embed-core",
+      "EVIDENCE_CONFIDENCE": "HIGH artifact/version identity; vulnerability applicability and severity require contextual review",
+      "PLAN_CLASSIFICATION": "D pending compatible candidate validation; aligned tomcat.version >=9.0.119 is the per-report floor, not a proven safe upgrade",
+      "DESCRIPTION": "Improper Input Validation vulnerability.\n\nThis issue affects Apache Tomcat: from 11.0.0-M1 through 11.0.14, from 10.1.0-M1 through 10.1.49, from 9.0.0-M1 through 9.0.112.\n\nThe following versions were EOL at the time the CVE was created but are \nknown to be affected: 8.5.0 through 8.5.100. Older EOL versions are not affected.\nTomcat did not validate that the host name provided via the SNI \nextension was the same as the host name provided in the HTTP host header \nfield. If Tomcat was configured with more than one virtual host and the \nTLS configuration for one of those hosts did not require client \ncertificate authentication but another one did, it was possible for a \nclient to bypass the client certificate authentication by sending \ndifferent host names in the SNI extension and the HTTP host header field.\n\n\n\nThe vulnerability only applies if client certificate authentication is \nonly enforced at the Connector. It does not apply if client certificate \nauthentication is enforced at the web application.\n\n\nUsers are recommended to upgrade to version 11.0.15 or later, 10.1.50 or later or 9.0.113 or later, which fix the issue.",
+      "REPORT_SEVERITY": "CRITICAL",
+      "REPORT_CVSS": 9.1,
+      "REFERENCES": [
+        {
+          "source": "security@apache.org",
+          "url": "https://lists.apache.org/thread/vw6lxtlh2qbqwpb61wd3sv1flm2nttw7",
+          "name": "MAILING_LIST,VENDOR_ADVISORY"
+        }
+      ]
+    },
+    {
+      "CVE": "CVE-2026-43515",
+      "DEPENDENCY": "pkg:maven/org.apache.tomcat.embed/tomcat-embed-core@9.0.63",
+      "CURRENT_VERSION": "9.0.63",
+      "FIXED_VERSION_REPORT_BOUNDARY": [
+        "9.0.118"
+      ],
+      "SAFE_VERSION": "No fully safe compatible application candidate proven; boundaries are per-CVE report claims",
+      "DIRECT_OR_TRANSITIVE": "TRANSITIVE",
+      "VERSION_OWNER": "Boot BOM tomcat.version=9.0.63",
+      "INTRODUCED_BY": "spring-boot-starter-web \u2192 spring-boot-starter-tomcat \u2192 tomcat-embed-core",
+      "EVIDENCE_CONFIDENCE": "HIGH artifact/version identity; vulnerability applicability and severity require contextual review",
+      "PLAN_CLASSIFICATION": "D pending compatible candidate validation; aligned tomcat.version >=9.0.119 is the per-report floor, not a proven safe upgrade",
+      "DESCRIPTION": "Improper Authorization vulnerability when multiple method constraints define an HTTP method for the same extension in Apache Tomcat.\n\nThis issue affects Apache Tomcat: from 11.0.0-M1 through 11.0.21, from 10.1.0-M1 through 10.1.54, from 9.0.0.M1 through 9.0.117, from 8.5.0 through 8.5.100, from 7.0.0 through 7.0.109.\n\nUsers are recommended to upgrade to version 11.0.22, 10.1.55 or 9.0.118 which fix the issue.",
+      "REPORT_SEVERITY": "CRITICAL",
+      "REPORT_CVSS": 9.1,
+      "REFERENCES": [
+        {
+          "source": "security@apache.org",
+          "url": "https://lists.apache.org/thread/746nxfxod0wsocxtmv8pb8nkgmwpc6bb",
+          "name": "MAILING_LIST,VENDOR_ADVISORY"
+        },
+        {
+          "source": "af854a3a-2127-422b-91ae-364da2661108",
+          "url": "http://www.openwall.com/lists/oss-security/2026/05/12/11",
+          "name": "MAILING_LIST,THIRD_PARTY_ADVISORY"
+        }
+      ]
+    },
+    {
+      "CVE": "CVE-2026-55276",
+      "DEPENDENCY": "pkg:maven/org.apache.tomcat.embed/tomcat-embed-core@9.0.63",
+      "CURRENT_VERSION": "9.0.63",
+      "FIXED_VERSION_REPORT_BOUNDARY": [
+        "9.0.119"
+      ],
+      "SAFE_VERSION": "No fully safe compatible application candidate proven; boundaries are per-CVE report claims",
+      "DIRECT_OR_TRANSITIVE": "TRANSITIVE",
+      "VERSION_OWNER": "Boot BOM tomcat.version=9.0.63",
+      "INTRODUCED_BY": "spring-boot-starter-web \u2192 spring-boot-starter-tomcat \u2192 tomcat-embed-core",
+      "EVIDENCE_CONFIDENCE": "HIGH artifact/version identity; vulnerability applicability and severity require contextual review",
+      "PLAN_CLASSIFICATION": "D pending compatible candidate validation; aligned tomcat.version >=9.0.119 is the per-report floor, not a proven safe upgrade",
+      "DESCRIPTION": "Always-Incorrect Control Flow Implementation vulnerability in Apache Tomcat meant that special roles and empty authorisation constraints were not included when the effective web.xml was logged.\n\nThis issue affects Apache Tomcat: from 11.0.0-M1 through 11.0.22, from 10.1.0-M1 through 10.1.55, from 9.0.0.M1 through 9.0.118, from 8.5.0 through 8.5.100.\u00a0Other versions that have reached end of support may also be affected.\n\nUsers are recommended to upgrade to version 11.0.23, 10.1.56 or 9.0.119 which fixes the issue.",
+      "REPORT_SEVERITY": "CRITICAL",
+      "REPORT_CVSS": 9.1,
+      "REFERENCES": [
+        {
+          "source": "security@apache.org",
+          "url": "https://lists.apache.org/thread/jy09xjlzn6r2qwvqoph8vcmf959yq68v",
+          "name": "MAILING_LIST,VENDOR_ADVISORY"
+        },
+        {
+          "source": "af854a3a-2127-422b-91ae-364da2661108",
+          "url": "http://www.openwall.com/lists/oss-security/2026/06/29/23",
+          "name": "THIRD_PARTY_ADVISORY"
+        }
+      ]
+    }
+  ]
+}

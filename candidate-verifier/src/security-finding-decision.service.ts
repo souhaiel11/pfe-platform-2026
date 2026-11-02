@@ -1,11 +1,4 @@
-// R-SEC-V1.1 §8 — composes GroundedMavenProvenanceService (I/O, real
-// checkout + real Maven) with the pure classifySecurityAutoFixEligibility()
-// (backend/src/security-remediation) into one decision record.
-//
-// DECISION/EVIDENCE ONLY. Deliberately does NOT call remediationWorkflowFor()
-// and does NOT touch WF2/WF6 routing — see incidents.service.ts, untouched
-// this phase. A caller (not built here) would persist/inspect this record;
-// nothing here ever writes to GitHub, n8n, or dispatches anything.
+// Évalue la correction possible à partir d’un finding fiable.
 import { Injectable, Optional } from '@nestjs/common';
 import { GroundedMavenProvenanceService } from './grounded-maven-provenance.service';
 import { GroundedMavenProvenanceRequest, GroundedMavenProvenanceResult } from '../../backend/src/security-remediation/grounded-maven-provenance.types';
@@ -25,10 +18,12 @@ type GroundingSuccess = Extract<GroundedMavenProvenanceResult, { ok: true }>;
 
 @Injectable()
 export class SecurityFindingDecisionService {
+  /** Initialise les dépendances et l’état de ce composant. */
   constructor(
     @Optional() private readonly provenanceService: GroundedMavenProvenanceService = new GroundedMavenProvenanceService(),
   ) {}
 
+  /** Détermine la décision à partir des preuves disponibles. */
   decide(
     finding: SecurityFindingDecisionInput,
     workspace: Omit<GroundedMavenProvenanceRequest, 'package' | 'expectedInstalledVersion'>,
@@ -46,15 +41,6 @@ export class SecurityFindingDecisionService {
       return { findingIdentity: finding.findingIdentity, evaluatedSha: null, provenance: null, fixedVersions, selectedTargetVersion: null, remediationType: 'DEVELOPER_ACTION_REQUIRED', reason: `SOURCE_NOT_SUPPORTED_V1:${sourceUpper || 'UNKNOWN'}` };
     }
 
-    // V1.8 Phase 7B — an owner/parent-targeted plan is evaluated on an
-    // ENTIRELY SEPARATE branch, taken BEFORE the fixedVersion fast-fail and
-    // BEFORE classifySecurityAutoFixEligibility() are ever reached: neither
-    // is meaningful here (the scanner's own fixedVersion list describes
-    // `finding.package`, not the <parent> this plan actually edits; the
-    // classifier only ever knows DIRECT_EXPLICIT/PROPERTY_MANAGED). No
-    // fallback exists FROM this branch back to the normal path below --
-    // every failure here returns directly, fail-closed, never falls
-    // through to legacy dependency/property selection.
     if (finding.parentRemediationPlan) {
       return this.decideParentVersion(finding, finding.parentRemediationPlan, workspace, fixedVersions);
     }
@@ -103,26 +89,14 @@ export class SecurityFindingDecisionService {
     };
   }
 
-  /**
-   * V1.8 Phase 7B — the ONLY place a ParentVersionRemediationPlan is ever
-   * executed. Discovers nothing, chooses nothing: `plan` is already the
-   * exact, already-validated V1.8 authoritative plan (forwarded verbatim by
-   * SecurityFindingResolverService) -- this method's whole job is to
-   * REUSE the same real checkout GroundedMavenProvenanceService already
-   * performs (never a second, parallel checkout mechanism) to obtain the
-   * real pom.xml text, then hand `plan` to maven-parent-patch-writer.ts,
-   * which does its OWN independent fail-closed re-verification against
-   * that real text. Any failure here — grounding, or the writer rejecting
-   * the plan — returns DEVELOPER_ACTION_REQUIRED with the writer's own
-   * named reason; there is no path from here back into the normal
-   * DIRECT_EXPLICIT/PROPERTY_MANAGED classification below.
-   */
+  /** Prépare le résultat lié à decide parent version. */
   private decideParentVersion(
     finding: SecurityFindingDecisionInput,
     plan: NonNullable<SecurityFindingDecisionInput['parentRemediationPlan']>,
     workspace: Omit<GroundedMavenProvenanceRequest, 'package' | 'expectedInstalledVersion'>,
     fixedVersions: string[],
   ): SecurityFindingDecision {
+    /** Construit une décision bloquée avec sa raison. */
     const blocked = (evaluatedSha: string | null, reason: string): SecurityFindingDecision => ({
       findingIdentity: finding.findingIdentity, evaluatedSha, provenance: null, fixedVersions,
       selectedTargetVersion: null, remediationType: 'DEVELOPER_ACTION_REQUIRED', reason,

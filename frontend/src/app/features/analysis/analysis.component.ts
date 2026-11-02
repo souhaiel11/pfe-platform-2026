@@ -1,3 +1,4 @@
+// Gère l’affichage et les actions de analysis.
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
@@ -12,12 +13,10 @@ import { InfoHintComponent } from '../../shared/info-hint/info-hint.component';
 import { ZoneLabelComponent } from '../../shared/zone-label/zone-label.component';
 import { statusColor } from '../../shared/status-chip/status-tone';
 
-// ═══════════════════════════════════════════════════════════════════
-//  AGENTS IA — Performance Dashboard v2.0
-//  Remplace la liste plate de rapports (redondante avec /incidents)
-//  par une vue analytique transversale : KPIs, tendances, top incidents
-// ═══════════════════════════════════════════════════════════════════
-
+/**
+ * Tableau de bord analytique des décisions des agents IA : KPIs globaux,
+ * répartition par décision/sévérité et liste des incidents récents.
+ */
 @Component({
   selector: 'app-analysis',
   standalone: true,
@@ -40,18 +39,21 @@ export class AnalysisComponent implements OnInit {
   severityBars: any[] = [];
   recentReports: any[] = [];
 
+  /** Initialise les dépendances et l’état de ce composant. */
   constructor(private api: ApiService, private toast: ToastService) {}
 
+  /** Charge les statistiques d'analyse IA dès l'affichage de la page. */
   ngOnInit() { this.load(); }
 
+  /** Récupère les décisions d'incidents, ne garde que celles à l'analyse JSON valide, puis dérive les statistiques et la liste des rapports récents. */
   load() {
     this.loadError = '';
     this.loading = true;
     this.api.getDecisions().subscribe({
+      /** Traite le résultat reçu et actualise les données locales. */
       next: (r: any) => {
         const list: any[] = Array.isArray(r) ? r : (r?.data || []);
 
-        // Ne garder que les incidents avec une vraie analyse JSON valide
         const parsed = list
           .filter(inc => inc.aiAnalysis && typeof inc.aiAnalysis === 'string' && inc.aiAnalysis.trim().startsWith('{'))
           .map(inc => {
@@ -76,10 +78,12 @@ export class AnalysisComponent implements OnInit {
 
         this.loading = false;
       },
+      /** Traite l’erreur reçue et termine le suivi de la demande. */
       error: () => { this.loadError = 'Impossible de charger les analyses.'; this.loading = false; }
     });
   }
 
+  /** Calcule les KPIs (confiance moyenne, % auto-corrigeable, nb CRITICAL) et les répartitions décision/sévérité à partir des incidents déjà analysés. */
   private computeStats(parsed: any[]) {
     const total = parsed.length;
     this.stats.total = total;
@@ -93,24 +97,14 @@ export class AnalysisComponent implements OnInit {
       return;
     }
 
-    // Confiance moyenne
     const measured = parsed.filter(x => x.confidence !== null);
     this.stats.avgConfidence = measured.length ? Math.round(measured.reduce((s, x) => s + x.confidence, 0) / measured.length) : null;
 
-    // % correctifs auto-proposés (FIX_PROPOSED + AUTO_FIX)
     const autoFixable = parsed.filter(x => x.decision === 'FIX_PROPOSED' || x.decision === 'AUTO_FIX').length;
     this.stats.autoFixablePct = Math.round((autoFixable / total) * 100);
 
-    // Incidents CRITICAL
     this.stats.criticalCount = parsed.filter(x => x.securityLevel === 'CRITICAL').length;
 
-    // Répartition décisions.
-    //
-    // Les couleurs viennent de la table de tonalités partagée
-    // (shared/status-chip/status-tone.ts) et non d'un barème local en
-    // hexadécimal : les anciennes valeurs (#38bdf8, #22c55e…) ne suivaient
-    // ni le thème clair ni le thème sombre, et donnaient à cet écran une
-    // sémantique de couleur différente de tous les autres.
     const decisionCounts: any = {};
     parsed.forEach(x => {
       const key = x.decision || 'INCONNU';
@@ -125,7 +119,6 @@ export class AnalysisComponent implements OnInit {
         color: statusColor(raw),
       }));
 
-    // Répartition sévérité — même table de tonalités partagée.
     const severityCounts: any = {};
     parsed.forEach(x => {
       const key = x.securityLevel || 'INCONNU';

@@ -1,40 +1,32 @@
-// Offline contract tests for WF2's R23 source-context completeness gate
-// ("Validate Source Context Completeness").
-//
-// Context: real fixRequest 591853f3-9538-4df7-9b2d-7df1f8fca1f8 (batch
-// cc610d36782e1d115fb997dad92312e78ce92c0c575d698702ef288f2ec77666,
-// java:S4684 TaskController.java:34), execution 1997. "Fetch Referenced API
-// Sources" transiently DNS-failed on 2 of the 3 expanded referenced sources
-// (Task.java, TaskService.java missing; TaskController.java fetched). The
-// 1-of-3 partial result reached "Prepare Generic Remediation Plan" on the
-// node's success output while the 2 failures independently reached
-// "Prepare WF2 Failure Status" on the error output, in the same execution --
-// a double-fire with partial context reaching the planner.
-//
-// This gate sits between "Fetch Referenced API Sources" (both of its
-// outputs) and the planner: it diffs the originally-requested source set
-// (read from "Expand Referenced API Sources"' own output) against the
-// successfully-fetched set and fails closed on any gap.
-//
-// No n8n execution, network or business action.
+// Teste le composant « wf2-source-context-completeness » et ses cas d’erreur.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 const wf = JSON.parse(readFileSync(new URL('../pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.PROMOTION-TARGET.json', import.meta.url)))[0];
+/** Retrouve ou construit le nœud du workflow demandé. */
 const node = name => wf.nodes.find(n => n.name === name);
 const gate = node('Validate Source Context Completeness');
 const jsCode = gate.parameters.jsCode;
 
+/** Prépare les données nécessaires à ce scénario. */
 const requestedItems = paths => paths.map(p => ({ json: { target_file_path: p } }));
+/** Vérifie les résultats attendus dans ce scénario. */
 const dollar = requested => name => {
   assert.equal(name, 'Expand Referenced API Sources');
-  return { all: () => requestedItems(requested) };
+  return {
+  /** Renvoie tous les éléments disponibles. */
+  all: () => requestedItems(requested) };
 };
+/** Exécute le traitement et collecte son résultat. */
 const run = (requested, fetchedItems) => new Function('$input', '$', jsCode)(
-  { all: () => fetchedItems },
+  {
+  /** Renvoie tous les éléments disponibles. */
+  all: () => fetchedItems },
   dollar(requested),
 );
+/** Prépare les données nécessaires à ce scénario. */
 const successItem = (path, content = 'c') => ({ json: { path, content, sha: 's-' + path } });
+/** Prépare les données nécessaires à ce scénario. */
 const errorItem = (path, message = 'DNS error') => ({ json: { target_file_path: path, error: message } });
 
 // ── Structural wiring: both of "Fetch Referenced API Sources"' outputs fan
@@ -148,10 +140,25 @@ const errorItem = (path, message = 'DNS error') => ({ json: { target_file_path: 
   assert.equal(planner.waitBetweenTries, 1000);
   const MUTATING_NODES = [
     'Update File in Branch', 'Create Pull Request1', 'Create Missing Branch', 'Create File in Branch',
-    'Save Execution Result to Backend', 'Log Fetch Error', 'Persist File Update Failure',
-    'Persist PR Creation Failure', 'Persist WF2 Failure Status',
+    'Save Execution Result to Backend', 'Persist WF2 Failure Status',
   ];
-  for (const name of MUTATING_NODES) assert.notEqual(node(name).retryOnFail, true, `${name}: mutating node must NOT receive automatic retry`);
+  const cancellationWriters = ['Register WF2 Execution', 'Pre-Git Cancellation Gate'];
+  const presentCancellationWriters = cancellationWriters.filter(name => node(name));
+  assert.ok(presentCancellationWriters.length === 0 || presentCancellationWriters.length === 2, 'cancellation persistence endpoints must be installed together');
+  MUTATING_NODES.push(...presentCancellationWriters);
+  for (const name of MUTATING_NODES) {
+    assert.ok(node(name), `${name}: expected mutating node is present in the current graph`);
+    assert.notEqual(node(name).retryOnFail, true, `${name}: mutating node must NOT receive automatic retry`);
+  }
+  // No other write-shaped node (GitHub file edit/create, or a POST into the
+  // backend's own incident/workflow-status routes) escaped the list above.
+  for (const n of wf.nodes) {
+    const p = n.parameters || {};
+    const isGithubWrite = n.type === 'n8n-nodes-base.github' && (p.operation === 'edit' || (p.fileContent !== undefined));
+    const isBackendWrite = n.type === 'n8n-nodes-base.httpRequest' && p.method === 'POST' &&
+      /http:\/\/backend:3001\/api\/(incidents|workflow)/.test(String(p.url || ''));
+    if (isGithubWrite || isBackendWrite) assert.ok(MUTATING_NODES.includes(n.name), `${n.name}: write-shaped node must be covered by MUTATING_NODES`);
+  }
   assert.notEqual(gate.retryOnFail, true, 'the completeness gate is a deterministic code node, not a network call -- no retry semantics apply');
 }
 

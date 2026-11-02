@@ -1,18 +1,4 @@
-// R80 §5 — SECOND-STACK PROOF. A concrete (not merely conceptual) second
-// adapter, deliberately trivial, proving the core/policy layer needs zero
-// changes for a genuinely different report format and framework family.
-//
-// Represents any test runner whose structured report format ALREADY
-// carries arbitrary custom metadata per test result — e.g. Python's
-// `pytest --json-report` (each result's `user_properties`/`keywords`), or
-// a Jest custom reporter emitting `testResults[].properties`. Unlike
-// JUnit's XML (empirically proven to drop @Tag/@DisplayName — see the
-// JUnit adapter), these formats commonly preserve exactly the semantic
-// identity this platform needs WITHOUT any method-name-grammar encoding
-// at all — a stack-specific advantage the JUnit adapter cannot rely on.
-// This is intentionally a DIFFERENT decoding strategy from the JUnit
-// adapter, to prove semantic-metadata encoding really is adapter-specific
-// (R80 §6), not a universal platform concept.
+// Second adaptateur de preuve sémantique, pour tout format de rapport structuré en JSON qui porte déjà des métadonnées personnalisées par résultat de test (ex.
 
 import { CanonicalCase, CanonicalExecutedEvidence, RULE_REGISTRY, SemanticEvidenceAdapter, computeCanonicalEvidenceResult } from '../semantic-evidence-core';
 
@@ -34,10 +20,12 @@ const STATUS_MAP: Record<StructuredJsonTestResult['status'], CanonicalCase['stat
 export class StructuredJsonSemanticEvidenceAdapter implements SemanticEvidenceAdapter {
   readonly reportFormat = 'STRUCTURED_JSON_PROPERTIES';
 
+  // Indique si ce format de rapport est bien celui que cet adaptateur sait lire.
   supports(reportFormat: string): boolean {
     return reportFormat === this.reportFormat;
   }
 
+  /** Lit les données et les convertit au format attendu. */
   parse(rawInput: unknown, context: { evaluatedSha: string; executionIdentity: { provider: string; buildId: string | number } }): CanonicalExecutedEvidence[] {
     const input = rawInput as StructuredJsonSemanticEvidenceInput | null | undefined;
     if (!input || !Array.isArray(input.results)) return [];
@@ -45,8 +33,8 @@ export class StructuredJsonSemanticEvidenceAdapter implements SemanticEvidenceAd
     const groups = new Map<string, { ruleType: string; subjectIdentity: Record<string, string>; cases: CanonicalCase[] }>();
     for (const entry of input.results) {
       const rule = RULE_REGISTRY[entry.ruleType];
-      if (!rule) continue; // unregistered rule type -- never guessed
-      if (!rule.identityKeys.every(k => typeof entry.subjectIdentity?.[k] === 'string')) continue; // incomplete identity -- ignored, never guessed
+      if (!rule) continue;
+      if (!rule.identityKeys.every(k => typeof entry.subjectIdentity?.[k] === 'string')) continue;
       if (!rule.requiredCaseIds.includes(entry.caseId)) continue;
       const key = entry.ruleType + '|' + rule.identityKeys.map(k => entry.subjectIdentity[k]).join('|');
       if (!groups.has(key)) groups.set(key, { ruleType: entry.ruleType, subjectIdentity: entry.subjectIdentity, cases: [] });

@@ -1,12 +1,4 @@
-// R80 multi-project finalization — proves the CORE evidence/policy engine
-// (semantic-evidence-core.ts) is genuinely framework/rule-type-agnostic:
-// two independent adapters (JUnit XML, a structured-JSON format) feed the
-// SAME canonical shape into the SAME merge/policy code, and a SECOND,
-// entirely synthetic rule type (never seen by pfe-app-test) is proven to
-// work with zero changes to core or to computeMergeAuthorization. See
-// r80-executed-semantic-evidence.spec.ts's predecessor content — the
-// negative-matrix scenarios (B-O) are preserved here against the new
-// generic core; this file adds the multi-project/multi-adapter proof.
+// Teste le composant « r80-multi-project-semantic-evidence » et ses cas d’erreur.
 
 import * as assert from 'node:assert/strict';
 import {
@@ -24,13 +16,16 @@ const OTHER_SHA = '1'.repeat(40);
 const JENKINS = { provider: 'JENKINS', buildId: 4 };
 
 const causesForTaskStatus = [{ type: 'DEFAULT_VALUE_SEMANTICS_DEFECT', sourceType: 'Task', sourceField: 'status', candidateType: 'TaskDTO', candidateField: 'status' }];
+/** Prépare les données nécessaires à ce scénario. */
 const fixRequestFor = (causes: any[] | null) => causes ? { correctiveDispatch: { correctiveContext: { blockingCauses: causes } } } : null;
 const staticVerificationRequired = { verdict: 'VERIFICATION_REQUIRED' as const, checkedPairs: 0, checkedFieldPairs: [] as any[], evaluatedSha: SHA };
+/** Prépare les données nécessaires à ce scénario. */
 const staticProvenDefect = (identity: any, ruleType: string) => ({
   verdict: 'PROVEN_DEFECT' as const, checkedPairs: 1,
   checkedFieldPairs: [{ ...identity, ruleType, verdict: 'PROVEN_DEFECT' }], evaluatedSha: SHA,
 });
 
+/** Prépare les données nécessaires à ce scénario. */
 function policyFor(staticAudit: any, evidence: CanonicalExecutedEvidence[], fixRequest: any, otherGatesReady = true) {
   const merged = mergeCanonicalEvidenceWithStatic(
     staticAudit, evidence,
@@ -50,10 +45,13 @@ function policyFor(staticAudit: any, evidence: CanonicalExecutedEvidence[], fixR
   });
 }
 
+/** Prépare les données nécessaires à ce scénario. */
 function tc(name: string, status: RawJUnitTestcase['status'] = 'PASS'): RawJUnitTestcase {
   return { classname: 'com.example.SomeTest', name, status };
 }
+/** Prépare les données nécessaires à ce scénario. */
 const junitName = (c: string) => `semantic_v1__DEFAULT_VALUE_SEMANTICS_DEFECT__Task__status__TaskDTO__status__case_${c}`;
+/** Prépare les données nécessaires à ce scénario. */
 const allFourJunit = () => ['ABSENT', 'EXPLICIT_NULL', 'EXPLICIT_VALUE', 'INVALID_VALUE'].map(c => tc(junitName(c)));
 
 // A. Java/JUnit adapter -> canonical evidence

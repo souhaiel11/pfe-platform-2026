@@ -1,3 +1,4 @@
+// Teste le composant « security-candidate-identity » et ses cas d’erreur.
 import * as assert from 'node:assert/strict';
 import { computeSecurityCandidateIdentity, computeSecurityBatchCandidateIdentity, computeSecurityBatchFindingsFingerprint } from './security-candidate-identity';
 

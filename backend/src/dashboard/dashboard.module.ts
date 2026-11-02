@@ -1,4 +1,4 @@
-// dashboard.module.ts
+// Déclaration NestJS du module dashboard : branche le contrôleur/service sur Projects, Bugs et Report.
 import { Module } from '@nestjs/common';
 import { HttpModule } from '@nestjs/axios';
 import { TypeOrmModule } from '@nestjs/typeorm';

@@ -1,0 +1,261 @@
+[
+  {
+    "at": "2026-10-07T11:19:11.027269+00:00",
+    "action": "PR_CLOSE_AUTHORIZED_BEGIN",
+    "data": {
+      "pr": 36,
+      "headSha": "4402e8977e4984f5ab759e0af0010901abd10a45",
+      "historicalReference": false,
+      "findingDisposition": "UNRESOLVED_DETECTED; NO FIXED OR VERIFIED CLAIM"
+    }
+  },
+  {
+    "at": "2026-10-07T11:19:12.758142+00:00",
+    "action": "PR_CLOSED_UNMERGED",
+    "data": {
+      "pr": 36,
+      "headSha": "4402e8977e4984f5ab759e0af0010901abd10a45",
+      "closedAt": "2026-10-07T11:19:11Z",
+      "merged": false
+    }
+  },
+  {
+    "at": "2026-10-07T11:19:13.517225+00:00",
+    "action": "PR_CLOSE_AUTHORIZED_BEGIN",
+    "data": {
+      "pr": 37,
+      "headSha": "a27fc820efdb96a53d92834b17546f128392a735",
+      "historicalReference": true,
+      "findingDisposition": "UNRESOLVED_DETECTED; NO FIXED OR VERIFIED CLAIM"
+    }
+  },
+  {
+    "at": "2026-10-07T11:19:14.804293+00:00",
+    "action": "PR_CLOSED_UNMERGED",
+    "data": {
+      "pr": 37,
+      "headSha": "a27fc820efdb96a53d92834b17546f128392a735",
+      "closedAt": "2026-10-07T11:19:13Z",
+      "merged": false
+    }
+  },
+  {
+    "at": "2026-10-07T11:19:15.796983+00:00",
+    "action": "PR_CLOSE_AUTHORIZED_BEGIN",
+    "data": {
+      "pr": 38,
+      "headSha": "1097ba035e6b2d88cd12f6af7cc1285e889f8aed",
+      "historicalReference": false,
+      "findingDisposition": "UNRESOLVED_DETECTED; NO FIXED OR VERIFIED CLAIM"
+    }
+  },
+  {
+    "at": "2026-10-07T11:19:17.185690+00:00",
+    "action": "PR_CLOSED_UNMERGED",
+    "data": {
+      "pr": 38,
+      "headSha": "1097ba035e6b2d88cd12f6af7cc1285e889f8aed",
+      "closedAt": "2026-10-07T11:19:16Z",
+      "merged": false
+    }
+  },
+  {
+    "at": "2026-10-07T11:19:18.078158+00:00",
+    "action": "PR_CLOSE_AUTHORIZED_BEGIN",
+    "data": {
+      "pr": 39,
+      "headSha": "cd3ab899af5ea1fca5cfa5b10f80348f8803430d",
+      "historicalReference": false,
+      "findingDisposition": "UNRESOLVED_DETECTED; NO FIXED OR VERIFIED CLAIM"
+    }
+  },
+  {
+    "at": "2026-10-07T11:19:19.623642+00:00",
+    "action": "PR_CLOSED_UNMERGED",
+    "data": {
+      "pr": 39,
+      "headSha": "cd3ab899af5ea1fca5cfa5b10f80348f8803430d",
+      "closedAt": "2026-10-07T11:19:18Z",
+      "merged": false
+    }
+  },
+  {
+    "at": "2026-10-07T11:19:20.803253+00:00",
+    "action": "PR_CLOSE_AUTHORIZED_BEGIN",
+    "data": {
+      "pr": 40,
+      "headSha": "c5a3846d40f8358737d8d76085564fc5fb4edb4b",
+      "historicalReference": false,
+      "findingDisposition": "UNRESOLVED_DETECTED; NO FIXED OR VERIFIED CLAIM"
+    }
+  },
+  {
+    "at": "2026-10-07T11:19:22.154278+00:00",
+    "action": "PR_CLOSED_UNMERGED",
+    "data": {
+      "pr": 40,
+      "headSha": "c5a3846d40f8358737d8d76085564fc5fb4edb4b",
+      "closedAt": "2026-10-07T11:19:21Z",
+      "merged": false
+    }
+  },
+  {
+    "at": "2026-10-07T11:19:23.272705+00:00",
+    "action": "PR_CLOSE_AUTHORIZED_BEGIN",
+    "data": {
+      "pr": 41,
+      "headSha": "cb1432c97f601ef1ffbf436a3f3f9215bdaa03f9",
+      "historicalReference": false,
+      "findingDisposition": "UNRESOLVED_DETECTED; NO FIXED OR VERIFIED CLAIM"
+    }
+  },
+  {
+    "at": "2026-10-07T11:19:24.840331+00:00",
+    "action": "PR_CLOSED_UNMERGED",
+    "data": {
+      "pr": 41,
+      "headSha": "cb1432c97f601ef1ffbf436a3f3f9215bdaa03f9",
+      "closedAt": "2026-10-07T11:19:23Z",
+      "merged": false
+    }
+  },
+  {
+    "at": "2026-10-07T11:19:25.759089+00:00",
+    "action": "PR_CLOSE_AUTHORIZED_BEGIN",
+    "data": {
+      "pr": 42,
+      "headSha": "7f57eec0f47b5b47c7320c65662348ec6b2404b4",
+      "historicalReference": false,
+      "findingDisposition": "UNRESOLVED_DETECTED; NO FIXED OR VERIFIED CLAIM"
+    }
+  },
+  {
+    "at": "2026-10-07T11:19:27.471951+00:00",
+    "action": "PR_CLOSED_UNMERGED",
+    "data": {
+      "pr": 42,
+      "headSha": "7f57eec0f47b5b47c7320c65662348ec6b2404b4",
+      "closedAt": "2026-10-07T11:19:26Z",
+      "merged": false
+    }
+  },
+  {
+    "at": "2026-10-07T11:19:34.455961+00:00",
+    "action": "APPROVED_BRANCH_REF_DELETE_BEGIN",
+    "data": {
+      "branch": "security/fix/a37e178f7ce1-1ebe4cecc872",
+      "headSha": "4402e8977e4984f5ab759e0af0010901abd10a45",
+      "backupBundleSHA256": "eb6a2a0bcafe76fac4e25ee3eef702e2875d5d46b48873ec8b6b440bcfd965bb"
+    }
+  },
+  {
+    "at": "2026-10-07T11:19:35.754834+00:00",
+    "action": "APPROVED_BRANCH_REF_REMOVED",
+    "data": {
+      "branch": "security/fix/a37e178f7ce1-1ebe4cecc872",
+      "oldHeadSha": "4402e8977e4984f5ab759e0af0010901abd10a45"
+    }
+  },
+  {
+    "at": "2026-10-07T11:19:36.397674+00:00",
+    "action": "APPROVED_BRANCH_REF_DELETE_BEGIN",
+    "data": {
+      "branch": "security/fix/a37e178f7ce1-71531d5009b1",
+      "headSha": "a27fc820efdb96a53d92834b17546f128392a735",
+      "backupBundleSHA256": "eb6a2a0bcafe76fac4e25ee3eef702e2875d5d46b48873ec8b6b440bcfd965bb"
+    }
+  },
+  {
+    "at": "2026-10-07T11:19:37.513998+00:00",
+    "action": "APPROVED_BRANCH_REF_REMOVED",
+    "data": {
+      "branch": "security/fix/a37e178f7ce1-71531d5009b1",
+      "oldHeadSha": "a27fc820efdb96a53d92834b17546f128392a735"
+    }
+  },
+  {
+    "at": "2026-10-07T11:19:38.027125+00:00",
+    "action": "APPROVED_BRANCH_REF_DELETE_BEGIN",
+    "data": {
+      "branch": "security/fix/3f712ca3bae0-55df917c8f87",
+      "headSha": "1097ba035e6b2d88cd12f6af7cc1285e889f8aed",
+      "backupBundleSHA256": "eb6a2a0bcafe76fac4e25ee3eef702e2875d5d46b48873ec8b6b440bcfd965bb"
+    }
+  },
+  {
+    "at": "2026-10-07T11:19:39.137933+00:00",
+    "action": "APPROVED_BRANCH_REF_REMOVED",
+    "data": {
+      "branch": "security/fix/3f712ca3bae0-55df917c8f87",
+      "oldHeadSha": "1097ba035e6b2d88cd12f6af7cc1285e889f8aed"
+    }
+  },
+  {
+    "at": "2026-10-07T11:19:39.755100+00:00",
+    "action": "APPROVED_BRANCH_REF_DELETE_BEGIN",
+    "data": {
+      "branch": "security/fix/e9302805d352-0b27c921d9ca",
+      "headSha": "cd3ab899af5ea1fca5cfa5b10f80348f8803430d",
+      "backupBundleSHA256": "eb6a2a0bcafe76fac4e25ee3eef702e2875d5d46b48873ec8b6b440bcfd965bb"
+    }
+  },
+  {
+    "at": "2026-10-07T11:19:40.810231+00:00",
+    "action": "APPROVED_BRANCH_REF_REMOVED",
+    "data": {
+      "branch": "security/fix/e9302805d352-0b27c921d9ca",
+      "oldHeadSha": "cd3ab899af5ea1fca5cfa5b10f80348f8803430d"
+    }
+  },
+  {
+    "at": "2026-10-07T11:19:41.607031+00:00",
+    "action": "APPROVED_BRANCH_REF_DELETE_BEGIN",
+    "data": {
+      "branch": "security/fix/41a0eac4ecb4-022ff90775f4",
+      "headSha": "c5a3846d40f8358737d8d76085564fc5fb4edb4b",
+      "backupBundleSHA256": "eb6a2a0bcafe76fac4e25ee3eef702e2875d5d46b48873ec8b6b440bcfd965bb"
+    }
+  },
+  {
+    "at": "2026-10-07T11:19:42.670047+00:00",
+    "action": "APPROVED_BRANCH_REF_REMOVED",
+    "data": {
+      "branch": "security/fix/41a0eac4ecb4-022ff90775f4",
+      "oldHeadSha": "c5a3846d40f8358737d8d76085564fc5fb4edb4b"
+    }
+  },
+  {
+    "at": "2026-10-07T11:19:43.276996+00:00",
+    "action": "APPROVED_BRANCH_REF_DELETE_BEGIN",
+    "data": {
+      "branch": "security/fix/5529fe26dcc4-a48178242bb4",
+      "headSha": "cb1432c97f601ef1ffbf436a3f3f9215bdaa03f9",
+      "backupBundleSHA256": "eb6a2a0bcafe76fac4e25ee3eef702e2875d5d46b48873ec8b6b440bcfd965bb"
+    }
+  },
+  {
+    "at": "2026-10-07T11:19:44.433529+00:00",
+    "action": "APPROVED_BRANCH_REF_REMOVED",
+    "data": {
+      "branch": "security/fix/5529fe26dcc4-a48178242bb4",
+      "oldHeadSha": "cb1432c97f601ef1ffbf436a3f3f9215bdaa03f9"
+    }
+  },
+  {
+    "at": "2026-10-07T11:19:44.911881+00:00",
+    "action": "APPROVED_BRANCH_REF_DELETE_BEGIN",
+    "data": {
+      "branch": "security/fix/259beaee267e-3936026f7135",
+      "headSha": "7f57eec0f47b5b47c7320c65662348ec6b2404b4",
+      "backupBundleSHA256": "eb6a2a0bcafe76fac4e25ee3eef702e2875d5d46b48873ec8b6b440bcfd965bb"
+    }
+  },
+  {
+    "at": "2026-10-07T11:19:46.140709+00:00",
+    "action": "APPROVED_BRANCH_REF_REMOVED",
+    "data": {
+      "branch": "security/fix/259beaee267e-3936026f7135",
+      "oldHeadSha": "7f57eec0f47b5b47c7320c65662348ec6b2404b4"
+    }
+  }
+]

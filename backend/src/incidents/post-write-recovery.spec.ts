@@ -1,3 +1,4 @@
+// Teste le composant « post-write-recovery » et ses cas d’erreur.
 import * as assert from 'node:assert/strict';
 import { createHash } from 'crypto';
 import { ServiceUnavailableException } from '@nestjs/common';
@@ -10,6 +11,7 @@ const CONTENT_SHA = createHash('sha256').update(CONTENT).digest('hex');
 const INCIDENT = 'incident-recovery', REQUEST = 'request-recovery', BATCH = 'batch-recovery';
 const BRANCH = `fix/pfe-${INCIDENT}-${REQUEST}`;
 
+/** Prépare les données nécessaires à ce scénario. */
 function input(): PostWriteRecoveryInput {
   const files: any[] = [{ path: 'src/Candidate.java', operation: 'CREATE', originalBlobSha: null, contentSha256: CONTENT_SHA }];
   return {
@@ -27,6 +29,7 @@ function input(): PostWriteRecoveryInput {
   };
 }
 
+/** Prépare les données nécessaires à ce scénario. */
 function fixture() {
   const incident: any = { id: INCIDENT, projectId: 'project-1', status: 'blocked', prUrl: null, jenkinsJobName: 'job',
     metadata: { defaultBranch: 'main', fixRequest: { requestId: REQUEST, batchId: BATCH, workflow: 'WF2', status: 'FIX_FAILED',
@@ -37,18 +40,39 @@ function fixture() {
       ], workflowEvents: [] } } };
   const project: any = { id: 'project-1', githubRepo: 'owner/repo', githubToken: null, jenkinsUrl: 'http://jenkins', jenkinsJobName: 'job' };
   incident.project = project;
-  const incidentRepo: any = { findOne: async () => incident, update: async (_id: string, patch: any) => Object.assign(incident, patch) };
-  const projectRepo: any = { findOne: async () => project };
-  const repository: any = { findOne: incidentRepo.findOne, update: incidentRepo.update, manager: { transaction: async (fn: any) =>
-    fn({ getRepository: (entity: any) => entity?.name === 'Project' ? projectRepo : incidentRepo }) } };
-  const service: any = new IncidentsService(repository, projectRepo, { emit: () => undefined } as any,
-    { syncIncident: async () => undefined } as any, {} as any);
+  const incidentRepo: any = {
+  /** Recherche l’élément correspondant à l’identifiant. */
+  findOne: async () => incident,
+  /** Applique les modifications autorisées à l’élément. */
+  update: async (_id: string, patch: any) => Object.assign(incident, patch) };
+  const projectRepo: any = {
+  /** Recherche l’élément correspondant à l’identifiant. */
+  findOne: async () => project };
+  const repository: any = { findOne: incidentRepo.findOne, update: incidentRepo.update, manager: {
+  /** Exécute les opérations dans le cadre transactionnel prévu. */
+  transaction: async (fn: any) =>
+    fn({
+    /** Simule la lecture des données demandées par le composant. */
+    getRepository: (entity: any) => entity?.name === 'Project' ? projectRepo : incidentRepo }) } };
+  const service: any = new IncidentsService(repository, projectRepo, {
+  /** Diffuse ou construit le résultat prévu. */
+  emit: () => undefined } as any,
+    {
+    /** Prépare les données nécessaires à ce scénario. */
+    syncIncident: async () => undefined } as any, {} as any);
+  /** Prépare les données nécessaires à ce scénario. */
   service.hasActiveWf2Execution = async () => false;
   let validationDispatches = 0; let validationTarget: string | null = null;
+  /** Prépare les données nécessaires à ce scénario. */
   service.dispatchAutomaticInitialPrValidation = async () => { validationDispatches++; validationTarget = incident.metadata.fixRequest.prHeadSha; };
-  return { incident, service, dispatches: () => validationDispatches, target: () => validationTarget };
+  return { incident, service,
+  /** Prépare les données nécessaires à ce scénario. */
+  dispatches: () => validationDispatches,
+  /** Prépare les données nécessaires à ce scénario. */
+  target: () => validationTarget };
 }
 
+/** Simule l’échec attendu par ce scénario. */
 function remote(overrides: any = {}) {
   globalThis.fetch = (async (url: any) => {
     const value = String(url);
@@ -62,6 +86,7 @@ function remote(overrides: any = {}) {
   }) as any;
 }
 
+/** Lit le code du nœud de workflow. */
 async function code(promise: Promise<any>, expected: string) {
   await assert.rejects(promise, (error: any) => {
     assert.equal(error?.response?.code, expected);
@@ -69,6 +94,7 @@ async function code(promise: Promise<any>, expected: string) {
   });
 }
 
+/** Exécute les étapes principales de ce programme. */
 async function main() {
   const originalFetch = globalThis.fetch;
   const originalWorkflowId = process.env.N8N_WF2_ID;
@@ -111,9 +137,13 @@ async function main() {
     // 13 fixRequest must be FIX_FAILED.
     { const { incident, service } = fixture(); incident.metadata.fixRequest.status = 'DISPATCHED'; remote(); await code(service.recoverPostWrite(INCIDENT, input(), admin), 'POST_WRITE_RECOVERY_FIX_NOT_FAILED'); }
     // 14 active WF2 execution.
-    { const { service } = fixture(); service.hasActiveWf2Execution = async () => true; remote(); await code(service.recoverPostWrite(INCIDENT, input(), admin), 'POST_WRITE_RECOVERY_ACTIVE_WF2_EXECUTION'); }
+    { const { service } = fixture();
+    /** Prépare les données nécessaires à ce scénario. */
+    service.hasActiveWf2Execution = async () => true; remote(); await code(service.recoverPostWrite(INCIDENT, input(), admin), 'POST_WRITE_RECOVERY_ACTIVE_WF2_EXECUTION'); }
 
-    { const { service } = fixture(); service.hasActiveWf2Execution = async () => { throw new ServiceUnavailableException({ code: 'POST_WRITE_RECOVERY_ACTIVE_EXECUTION_UNVERIFIED' }); }; remote(); await code(service.recoverPostWrite(INCIDENT, input(), admin), 'POST_WRITE_RECOVERY_ACTIVE_EXECUTION_UNVERIFIED'); }
+    { const { service } = fixture();
+    /** Simule l’échec attendu par ce scénario. */
+    service.hasActiveWf2Execution = async () => { throw new ServiceUnavailableException({ code: 'POST_WRITE_RECOVERY_ACTIVE_EXECUTION_UNVERIFIED' }); }; remote(); await code(service.recoverPostWrite(INCIDENT, input(), admin), 'POST_WRITE_RECOVERY_ACTIVE_EXECUTION_UNVERIFIED'); }
 
     // Execution-2020 exact evidence fixture: six exact receipts and digest.
     const exact: any = input();
@@ -145,10 +175,13 @@ async function main() {
       incident.metadata.fixRequest.batchId = exact.batchId;
       incident.metadata.fixRequest.findingIds = ['f11d4686-a7ba-4c0c-abbb-a12998c57220'];
       incident.metadata.fixRequest.findings = [{ findingId: 'f11d4686-a7ba-4c0c-abbb-a12998c57220', file: rows[0][0] }];
+      /** Prépare les données nécessaires à ce scénario. */
       service.githubBranchHead = async () => exact.expectedHeadSha;
+      /** Prépare les données nécessaires à ce scénario. */
       service.githubPullRequest = async () => ({ state: 'open', html_url: 'https://github.com/owner/repo/pull/33',
         head: { sha: exact.expectedHeadSha, ref: exact.expectedBranch, repo: { full_name: 'owner/repo' } },
         base: { ref: 'main', repo: { full_name: 'owner/repo' } } });
+      /** Vérifie récupération distant fichiers dans ce scénario de test. */
       service.verifyRecoveryRemoteFiles = async () => undefined; // exact remote equality is independently covered above by mismatch cases
       const before = JSON.stringify(incident.metadata.fixRequest.attempts);
       const recovered = await service.recoverPostWrite(incident.id, exact, admin); await new Promise(r => setTimeout(r, 0));

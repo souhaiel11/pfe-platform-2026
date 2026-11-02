@@ -1,9 +1,12 @@
+// Rattache la correction aux sources fiables du dépôt.
 import fs from 'node:fs';
 
 const sourcePath = new URL('../pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.R70-CORRECTIVE-TARGET-GROUNDING.json', import.meta.url);
 const outputPath = new URL('../pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.R71-CORRECTIVE-SOURCE-AUTHORITY.json', import.meta.url);
 
+/** Rattache la correction aux sources fiables du dépôt. */
 export function hardenCorrectiveSourceAuthority(workflow) {
+  /** Retrouve ou construit le nœud du workflow demandé. */
   const node = name => {
     const found = workflow.nodes.find(candidate => candidate.name === name);
     if (!found) throw new Error('R71_NODE_NOT_FOUND:' + name);

@@ -1,26 +1,12 @@
+// Précise les marqueurs interdits dans le code proposé.
 import fs from 'node:fs';
 
-// R81.2 — sources from a FRESH live snapshot of u3eeMwTuhCsetfcS (fetched
-// via the n8n API immediately before this script ran, versionId
-// 02b659eb-5f8e-4e64-8abe-18de1facb49a, 186 nodes, active=true), not a
-// stale repo copy, so this transform is guaranteed to apply to what is
-// actually running today.
-//
-// R81.2 §3 TRUST-BINDING AUDIT CORRECTION: an earlier draft of this change
-// (R81.1) also modified "Accumulate Candidate File" to thread pre-edit
-// source text through as a NEW field. That turned out to be unnecessary —
-// verified directly against a real historical execution (id 2038):
-// "Prepare Candidate Manifest" ALREADY includes `sourceContent:it.sourceContent`
-// on every file, unconditionally, sourced from the writer node's own decoded
-// pre-edit fetch (before the LLM ever runs, so the LLM cannot influence it).
-// That field already reaches candidateManifest.files[] today, with ZERO n8n
-// change. So R81.2 touches ONLY the writer prompt — the backend's own
-// generated-comment-guard.ts was updated instead, to read the EXISTING
-// `sourceContent` field name rather than invent a parallel one.
 const sourcePath = '/tmp/claude-1000/-home-souhaiel-pfe-2026-platform/01c0d742-940d-4342-ae7c-03d4b38f435f/scratchpad/wf2_presnapshot_r81_1.json';
 const outputPath = new URL('../pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.R81_2-WRITER-PROMPT.json', import.meta.url);
 
+/** Précise les marqueurs interdits dans le code proposé. */
 export function hardenWriterPromptTodoFixmeInstruction(workflow) {
+  /** Retrouve ou construit le nœud du workflow demandé. */
   const node = name => {
     const found = workflow.nodes.find(candidate => candidate.name === name);
     if (!found) throw new Error('R81_2_NODE_NOT_FOUND:' + name);

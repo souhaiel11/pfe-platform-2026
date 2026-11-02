@@ -1,0 +1,661 @@
+[
+  {
+    "file": "backend/src/azure-deploy/build-identity.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/azure-deploy/deployment-artifact.service.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/azure-deploy/deployment-authorization-policy.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/azure-deploy/deployment-authorization-transition.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/azure-deploy/deployment-authorization.service.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/azure-deploy/deployment-governance-preview.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/azure-deploy/deployment-identity.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/azure-deploy/digest-pinned-dispatch.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/azure-deploy/governance-decision.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/azure-deploy/security-validation-applicability.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/bugs/bugs-quarantine.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/candidate-verification/candidate-base-sha.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/candidate-verification/candidate-digest.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/candidate-verification/candidate-verification.controller.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/candidate-verification/candidate-verification.service.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/candidate-verification/generated-comment-guard.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/candidate-verification/remote-head-drift.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/candidate-verification/transport-dispatcher.integration.spec.ts",
+    "exitCode": 0,
+    "skipped": false,
+    "initialSandboxFailure": true,
+    "rerunEvidence": "docs/qa/backend-read-performance-20261008/backend-tests/backend-src-candidate-verification-transport-dispatcher.integration.spec.ts.rerun.log"
+  },
+  {
+    "file": "backend/src/candidate-verification/verification-evidence.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/candidate-verification/write-guard.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/chat/chat.controller.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/common/owasp-finding-normalizer.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/common/project-cleanliness.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/common/report-normalizer.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/common/sanitize-project.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/context/context-sufficiency.service.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/context/r22a-governance.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/context/repository-research.service.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/context/scope-lock.service.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/context/wf2-state-model.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/dashboard/platform-capabilities.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/dependency-compatibility/candidate-existence-checker.spec.ts",
+    "exitCode": 0,
+    "skipped": false,
+    "initialSandboxFailure": true,
+    "rerunEvidence": "docs/qa/backend-read-performance-20261008/backend-tests/backend-src-dependency-compatibility-candidate-existence-checker.spec.ts.rerun.log"
+  },
+  {
+    "file": "backend/src/dependency-compatibility/candidate-version-policy.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/dependency-compatibility/dependency-compatibility-decision.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/dependency-compatibility/dependency-control-profile-resolver.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/dependency-compatibility/maven-qualifier-comparator.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/dependency-compatibility/owner-discovery-trial.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/dependency-compatibility/owner-pom-edit.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/dependency-compatibility/owner-version-discovery.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/dependency-compatibility/report-149-offline-analysis.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/dependency-compatibility/security-candidate-collector.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/dependency-compatibility/unified-report-149.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/dependency-compatibility/v1_8-compatibility-decision.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/dependency-compatibility/v1_8-remediation-plan-payload.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/dependency-compatibility/v1_8-security-remediation-gate.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/effective-config/effective-config.service.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/incidents/automatic-pr-validation.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/incidents/baseline-sha-freeze.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/incidents/corrective-convergence.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/incidents/default-value-corrective-loop.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/incidents/execution-binding-security.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/incidents/finding-id-normalization.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/incidents/finding-task-id-exposure.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/incidents/merge-authorization-acceptance.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/incidents/merge-authorization-wiring.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/incidents/modify-failed-selection.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/incidents/n8n-execution-client.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/incidents/post-write-recovery.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/incidents/pr-regression-wiring.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/incidents/pr-validation-contract.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/incidents/pr-validation-failure-taxonomy.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/incidents/pr-validation-head-verification.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/incidents/pr-validation-parameter-bootstrap.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/incidents/r75-corrective-cardinality.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/incidents/reconcile-sha-fallback.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/incidents/remediation-batch.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/incidents/same-sha-policy-reevaluation.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/incidents/same-sha-revalidation-epoch.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/incidents/stale-dispatch-recovery.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/incidents/verification-evidence-persistence.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/incidents/wf2-cancellation.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/incidents/workflow-attempt-identity.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/integration-fixtures/integration-fixtures.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/manual-remediation/finding-task-id-enrichment.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/manual-remediation/legacy-reconciliation.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/manual-remediation/manual-remediation.service.batch.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/manual-remediation/manual-remediation.service.finding-task-ids.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/manual-remediation/manual-remediation.service.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/manual-remediation/manual-remediation.service.v1-8-decision.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/manual-remediation/manual-remediation.service.v1-8-enforcement.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/manual-remediation/manual-remediation.service.v1-8-fixedversion-override.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/manual-remediation/manual-remediation.service.wf6-result.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/manual-remediation/owasp-enrichment.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/manual-remediation/owasp-resync-safety.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/manual-remediation/owasp-trivy-fixed-version-correlation.integration.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/manual-remediation/owasp-trivy-fixed-version-correlation.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/manual-remediation/reconcile-stale-wf6-dispatch.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/manual-remediation/remediation-target-reservation.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/manual-remediation/security-remediation-bridge.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/manual-remediation/security-remediation-lifecycle.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/project-reads/project-reads.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/projects/azure-runtime-health.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/projects/jenkins-credentials.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/projects/settings-integration.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/security-remediation/fixed-version-normalizer.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/security-remediation/maven-dependency-resolution-check.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/security-remediation/maven-parent-patch-writer.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/security-remediation/maven-provenance-resolver.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/security-remediation/maven-remediation-scope.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/security-remediation/maven-security-patch-writer-batch.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/security-remediation/maven-security-patch-writer.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/security-remediation/parent-version-effective-model-check.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/security-remediation/retry-e2e-harness.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/security-remediation/security-branch-name.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/security-remediation/security-candidate-identity.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/security-remediation/security-eligibility-classifier.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/security-remediation/security-finding-resolver.service.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/security-remediation/security-patch-guard.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/security-remediation/security-remediation-batch-closure.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/security-remediation/security-remediation-batch-git-metadata.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/security-remediation/security-remediation-evaluate.dto.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/security-remediation/security-remediation-git-metadata.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/security-remediation/security-remediation-revalidate-batch.dto.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/security-remediation/security-remediation-revalidate.dto.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/security-remediation/security-remediation.controller.batch.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/security-remediation/security-remediation.controller.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/security-remediation/target-reservation-entrypoints.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/security-remediation/version-selection-policy.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/security-remediation/wf6-batch-remediation-result.dto.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/security-remediation/wf6-remediation-result.dto.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/validation/corrective-context.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/validation/default-value-semantics-assembler.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/validation/default-value-semantics-r70-target-grounding.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/validation/default-value-semantics.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/validation/finding-pipeline-separation.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/validation/merge-authorization.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/validation/pr-regression-engine.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/validation/pr34-offline-revalidation.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/validation/r79-default-value-semantics-merge-policy.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/validation/r80-multi-project-semantic-evidence.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  },
+  {
+    "file": "backend/src/validation/regression-verdict.spec.ts",
+    "exitCode": 0,
+    "skipped": false
+  }
+]

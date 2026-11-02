@@ -1,10 +1,4 @@
-// R22-E2C2 — real, unmocked end-to-end proof of the execution-plane logic,
-// moved here from backend/src/candidate-verification/candidate-verification.service.spec.ts
-// (R22-C) along with the code it tests. Same real repository, real commits,
-// real git worktree, real Maven compile/test as before -- only the class
-// name changed (CandidateVerificationService -> CandidateVerificationExecutor)
-// and repoPath is no longer passed in (RepoCacheService, also moved here,
-// now resolves it internally from manifest.repository).
+// Teste le composant « candidate-verification-executor » et ses cas d’erreur.
 import * as assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import * as fs from 'fs';
@@ -20,8 +14,7 @@ import { CandidateManifest } from '../../backend/src/candidate-verification/cand
 const REPO_PATH = '/home/souhaiel/pfe-2026/pfe-app-test';
 const FIXED_SHA = '8a315b0dd508eb9843bb3037fe2827f02f6faa78';
 
-// Derive fixtures from the same immutable commit as the workspace. No
-// dependency on a temporary file left behind by an earlier audit session.
+/** Prépare les données nécessaires à ce scénario. */
 const fixtureAtCommit = (file: string) => execFileSync('git', ['-C', REPO_PATH, 'show', `${FIXED_SHA}:${file}`], { encoding: 'utf8' });
 const fixedTaskDTOTest = fixtureAtCommit('src/test/java/com/pfe/devsecops/dto/TaskDTOTest.java');
 const sourceDTO = fixtureAtCommit('src/main/java/com/pfe/devsecops/dto/TaskDTO.java');
@@ -32,10 +25,12 @@ const testRegressionContent = fixedTaskDTOTest.replace(
   'assertEquals(Task.TaskStatus.DONE, dto.toEntity().getStatus());',
 );
 
+/** Renvoie le fichier documentaire sélectionné. */
 function file(p: string, content: string, operation: 'MODIFY' = 'MODIFY') {
   return { path: p, operation, content, contentSha256: computeContentSha256(content) };
 }
 
+/** Prépare les données nécessaires à ce scénario. */
 function buildManifest(requestId: string, files: CandidateManifest['files']): CandidateManifest {
   const manifest: CandidateManifest = {
     candidateId: `cand-${requestId}`, requestId, batchId: 'r22e2c2-batch', candidateAttempt: 0,
@@ -59,6 +54,7 @@ const executor = new CandidateVerificationExecutor(workspaceManager, new Candida
 
 const allVerificationLevels = new Set<string>();
 
+/** Exécute les étapes principales de ce programme. */
 async function main() {
   // --- PASS scenario, executor resolves repoPath itself from manifest.repository ---
   {

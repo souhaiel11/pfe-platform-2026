@@ -5,6 +5,7 @@ import * as assert from 'assert';
 import { sanitizeProject, sanitizeEntityProject } from './sanitize-project';
 
 let passed = 0;
+/** Vérifie les données dans ce scénario de test. */
 function check(label: string, condition: boolean) {
   assert.ok(condition, `ÉCHEC: ${label}`);
   passed++;
@@ -57,13 +58,6 @@ console.log('Test 3 — robustesse null/undefined (ne doit jamais planter)');
     (sanitizeEntityProject({ id: 'x' } as any) as any).id === 'x');
 }
 
-// ── 4. Documente la limite connue de la deny-list ───────────────────────
-// Si tu ajoutes un NOUVEAU champ sensible à Project (ex: apiKey, webhookSecret),
-// ce test doit être mis à jour EN MÊME TEMPS que sanitizeProject : ajoute le
-// champ ci-dessous ET dans SENSITIVE_PROJECT_FIELDS. Tant que ce n'est fait
-// qu'ici (fixture) et pas dans sanitizeProject, ce test le prouve : la valeur
-// fuit toujours. C'est la limite structurelle d'une deny-list — une allow-list
-// n'aurait pas ce problème (elle bloquerait tout par défaut).
 console.log('Test 4 — démonstration de la fragilité de la deny-list (champ non listé)');
 {
   const projectWithForgottenSecret = { ...fakeProject, futureApiKey: 'LEAK_forgotten_secret_value' };

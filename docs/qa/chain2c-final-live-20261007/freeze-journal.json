@@ -1,0 +1,63 @@
+[
+  {
+    "at": "2026-10-07T11:15:24.892338+00:00",
+    "action": "AUTHORIZED_FREEZE_BEGIN",
+    "details": {
+      "oldId": "947f8a7909a96342070ba5f8ba810d11b0343dc69aa937b05050095ea0806d2e",
+      "artifact": "sha256:a16efe450112320b1f81c814023f82bac27e8ce08770879ae7e603f1cf19c685",
+      "dispatchBefore": true,
+      "dispatchAfter": false,
+      "onlyEnvironmentChange": "SECURITY_REMEDIATION_DISPATCH_ENABLED"
+    }
+  },
+  {
+    "at": "2026-10-07T11:15:56.863557+00:00",
+    "action": "OLD_BACKEND_STOPPED",
+    "details": {
+      "id": "947f8a7909a96342070ba5f8ba810d11b0343dc69aa937b05050095ea0806d2e"
+    }
+  },
+  {
+    "at": "2026-10-07T11:15:56.872870+00:00",
+    "action": "OLD_BACKEND_RETAINED",
+    "details": {
+      "name": "pfe-backend-pre-chain2c-20261007"
+    }
+  },
+  {
+    "at": "2026-10-07T11:15:56.889473+00:00",
+    "action": "OLD_ENDPOINTS_RELEASED",
+    "details": {
+      "networks": [
+        "pfe-network",
+        "platform_candidate-verification-net"
+      ]
+    }
+  },
+  {
+    "at": "2026-10-07T11:15:56.940243+00:00",
+    "action": "FROZEN_BACKEND_CREATED",
+    "details": {
+      "id": "4771d91e86b6fd3e8f73fa572c0b8fe2cc3ae4d6a1d89b4d859f89d393059297",
+      "warnings": []
+    }
+  },
+  {
+    "at": "2026-10-07T11:15:57.377608+00:00",
+    "action": "FROZEN_BACKEND_STARTED",
+    "details": {
+      "id": "4771d91e86b6fd3e8f73fa572c0b8fe2cc3ae4d6a1d89b4d859f89d393059297"
+    }
+  },
+  {
+    "at": "2026-10-07T11:15:57.614279+00:00",
+    "action": "FREEZE_VERIFIED",
+    "details": {
+      "LIVE_EXECUTABLE_HASHES_UNCHANGED": true,
+      "runtimeFiles": 977,
+      "executableJS": 330,
+      "dispatch": "false",
+      "networkIPsPreserved": true
+    }
+  }
+]

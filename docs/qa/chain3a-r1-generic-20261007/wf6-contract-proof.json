@@ -1,0 +1,42 @@
+{
+  "workflowId": "RdYyfjVpOm2LxS95",
+  "versionId": "0470ab42-713a-4097-a9a7-72c8f00bacde",
+  "workflowHash": "0f3eaba95b0b2520a76638cb40b6823c238a9c976238c98f82cbb39711b8af1f",
+  "intakeExpression": "={{ (() => { const body = ( ({projectId: $(\"Webhook - Security Remediation Request\").first().json.body?.projectId, findingTaskIds: $(\"Webhook - Security Remediation Request\").first().json.body?.findingTaskIds}) ); const req = $(\"Webhook - Security Remediation Request\").first().json.body; return {...body, batchId:req?.batchId, attempts:req?.attempts}; })() }}",
+  "twoArbitraryProjectsPassed": true,
+  "exactModernIdentityForwarded": true,
+  "projectAgnosticPayload": true,
+  "noWorkflowExecution": true,
+  "scannerAndRepository": "Resolved from trusted backend finding/project state, not caller-supplied fields",
+  "existingPR36SafetyGuardsPreserved": true,
+  "outputs": [
+    {
+      "projectId": "baf59ce1-3285-4295-a23a-e9e34048c737",
+      "findingTaskIds": [
+        "a699c5f8-f739-4810-a1d2-64c56c0a4cf0"
+      ],
+      "batchId": "sec-batch-4039a8e9-87e5-46cb-b74d-43d2557bff3d",
+      "attempts": [
+        {
+          "findingTaskId": "a699c5f8-f739-4810-a1d2-64c56c0a4cf0",
+          "attemptId": "93fefab2-7734-4d27-825a-d74edc91f0fa",
+          "attemptNumber": 1
+        }
+      ]
+    },
+    {
+      "projectId": "e48eb308-6a37-47e0-a45d-ca77e5b01fcb",
+      "findingTaskIds": [
+        "f6c2feff-ce2c-4a7c-be48-20e7349cb515"
+      ],
+      "batchId": "sec-batch-7e7787dc-e8d6-48cb-8499-34936694eae8",
+      "attempts": [
+        {
+          "findingTaskId": "f6c2feff-ce2c-4a7c-be48-20e7349cb515",
+          "attemptId": "78acaf9d-8eab-49cb-ae37-7b767afd8e06",
+          "attemptNumber": 2
+        }
+      ]
+    }
+  ]
+}

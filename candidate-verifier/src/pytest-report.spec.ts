@@ -1,3 +1,4 @@
+// Teste le composant « pytest-report » et ses cas d’erreur.
 import * as assert from 'node:assert/strict';
 import * as fs from 'fs';
 import * as os from 'os';

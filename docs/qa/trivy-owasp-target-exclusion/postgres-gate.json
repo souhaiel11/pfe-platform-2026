@@ -1,0 +1,182 @@
+{
+  "database": "phase4g_target_exclusion",
+  "network": "none",
+  "productionAccess": false,
+  "checks": {
+    "migrationUp": true,
+    "T3_unchangedCount": true,
+    "T2_noLoserAttempt": true,
+    "T1_singleWinner": true,
+    "legacyBypassBlocked": true,
+    "H2_singleWriter": true,
+    "T7_operatorStopRelease": true,
+    "T5_siblingRetryWindow": true,
+    "T4_retryOwner": true,
+    "batchRetrySingleWriter": true,
+    "T6_nonretryableRelease": true,
+    "uncertainGitRetains": true,
+    "candidateRetains": true,
+    "projectVerifiedFinalization": true,
+    "unknownOutcomeRetains": true,
+    "manualAbandon": true,
+    "abandonRetryAtomic": true,
+    "T8_differentSafeTargets": true,
+    "T10_fileGranularity": true,
+    "T9_staleQuarantined": true,
+    "postgresPartialUnique": true,
+    "migrationDown": true,
+    "unknownCutoverRetained": true,
+    "cutoverBackfill": true,
+    "cutoverRejectsExistingRace": true
+  },
+  "race": {
+    "ready": [
+      {
+        "ready": true,
+        "pid": 14,
+        "pgPid": 66
+      },
+      {
+        "ready": true,
+        "pid": 15,
+        "pgPid": 65
+      }
+    ],
+    "results": [
+      {
+        "ok": false,
+        "error": {
+          "code": "REMEDIATION_TARGET_ALREADY_IN_PROGRESS",
+          "status": "TARGET_BUSY",
+          "message": "Correction déjà en cours sur le même fichier de dépendances.",
+          "targetKey": "[\"v1\",\"FILE\",\"pom.xml\"]"
+        },
+        "dispatches": 0
+      },
+      {
+        "ok": true,
+        "result": {
+          "projectId": "2846abd0-5cb2-432c-869b-f23b4bc3f042",
+          "batchId": "sec-batch-70ddaeee-d886-4abf-8f42-eb460dcf9758",
+          "findingTaskIds": [
+            "e0173640-c475-40d4-946b-57b2e3490161"
+          ],
+          "attempts": [
+            {
+              "findingTaskId": "e0173640-c475-40d4-946b-57b2e3490161",
+              "attemptId": "30eb265b-f667-4a24-9ced-2881bd150cc7",
+              "attemptNumber": 1
+            }
+          ],
+          "status": "DISPATCHING"
+        },
+        "dispatches": 1
+      }
+    ]
+  },
+  "batchRetryRace": {
+    "ready": [
+      {
+        "ready": true,
+        "pid": 28,
+        "pgPid": 68
+      },
+      {
+        "ready": true,
+        "pid": 29,
+        "pgPid": 67
+      }
+    ],
+    "results": [
+      {
+        "ok": true,
+        "result": {
+          "projectId": "29d25cb3-0a4c-4220-b324-ac0f84947936",
+          "batchId": "sec-batch-7b58c15b-6be2-42af-9215-402700bba1b5",
+          "findingTaskIds": [
+            "0f1bc4f4-c79d-497b-950e-72f5ce8d6070"
+          ],
+          "attempts": [
+            {
+              "findingTaskId": "0f1bc4f4-c79d-497b-950e-72f5ce8d6070",
+              "attemptId": "2a62b0b4-a613-4def-826b-e9e5d346a58b",
+              "attemptNumber": 2
+            }
+          ],
+          "status": "DISPATCHING"
+        },
+        "dispatches": 1
+      },
+      {
+        "ok": false,
+        "error": {
+          "code": "REMEDIATION_TARGET_ALREADY_IN_PROGRESS",
+          "status": "TARGET_BUSY",
+          "message": "Correction déjà en cours sur le même fichier de dépendances.",
+          "targetKey": "[\"v1\",\"FILE\",\"pom.xml\"]"
+        },
+        "dispatches": 0
+      }
+    ]
+  },
+  "abandonRetryRace": {
+    "ready": [
+      {
+        "ready": true,
+        "pid": 42,
+        "pgPid": 69
+      },
+      {
+        "ready": true,
+        "pid": 43,
+        "pgPid": 70
+      }
+    ],
+    "results": [
+      {
+        "ok": false,
+        "error": {
+          "message": "État terminal non pris en charge pour le réessai.",
+          "error": "Conflict",
+          "statusCode": 409
+        },
+        "dispatches": 0
+      },
+      {
+        "ok": true,
+        "result": {
+          "taskId": "3426e45b-052e-4c5e-9066-41024b0c3d7b",
+          "status": "REMEDIATION_ABANDONED"
+        },
+        "dispatches": 0
+      }
+    ]
+  },
+  "differentFiles": {
+    "ready": [
+      {
+        "ready": true,
+        "pid": 56,
+        "pgPid": 72
+      },
+      {
+        "ready": true,
+        "pid": 57,
+        "pgPid": 71
+      }
+    ],
+    "results": [
+      {
+        "ok": true,
+        "result": "c9ef93e5-2083-4745-bfb6-235c814b9858",
+        "dispatches": 0
+      },
+      {
+        "ok": true,
+        "result": "f7d07970-1861-462d-ae69-05bf1e140222",
+        "dispatches": 0
+      }
+    ]
+  }
+}
+

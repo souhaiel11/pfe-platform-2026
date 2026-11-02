@@ -1,23 +1,4 @@
-/** Bounded-git-operations fix, Part 3 item 3 — proves
- * CandidateVerificationExecutor.run() now propagates an actual remaining
- * budget (derived from options.timeoutMs via the shared WorkerDeadline
- * abstraction) into RepoCacheService.ensureRepo(), instead of the previous
- * unconditional call with no timeoutMs at all (which always fell back to
- * RepoCacheService's own flat GIT_OPERATION_CAP_MS default regardless of
- * what the caller actually requested).
- *
- * Also proves the ONE thing this fix must NOT change: compile/regression
- * test timeout semantics. Each still receives the full, undiminished
- * options.timeoutMs, exactly as before -- the new WorkerDeadline governs
- * ONLY the repo-materialization step.
- *
- * Real WorkspaceManager + a real local git worktree checkout (same fixture
- * repo as candidate-verification-executor.spec.ts), so createWorkspace()
- * succeeds for real -- only RepoCacheService is wrapped (not replaced) so
- * its real ensureRepo() still runs, with the supplied timeoutMs captured
- * for assertion. The build adapter is a fake so this stays fast and
- * deterministic.
- */
+// Teste le composant « candidate-verification-executor.repo-budget » et ses cas d’erreur.
 import * as assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import * as fs from 'fs';
@@ -34,6 +15,7 @@ import { CandidateManifest } from '../../backend/src/candidate-verification/cand
 const REPO_PATH = process.env.SECURITY_TEST_REPO || '/home/souhaiel/pfe-2026/pfe-app-test';
 const HEAD_SHA = execFileSync('git', ['-C', REPO_PATH, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
 
+/** Prépare les données nécessaires à ce scénario. */
 function buildManifest(requestId: string): CandidateManifest {
   const content = 'irrelevant to this fixture -- the fake build adapter never reads it';
   const manifest: CandidateManifest = {
@@ -51,11 +33,13 @@ const repoCacheRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'pfe-executor-repo-b
 fs.symlinkSync(REPO_PATH, path.join(repoCacheRoot, 'souhaiel11__pfe-app-test'));
 const realRepoCache = new RepoCacheService(repoCacheRoot);
 
+/** Prépare les données nécessaires à ce scénario. */
 function makeExecutor(capturedTimeouts: Array<number | undefined>, compileTimeouts: number[], testTimeouts: number[]) {
   // Delegates to the REAL RepoCacheService (a real local fetch still
   // happens) while recording exactly what timeoutMs it was called with --
   // a spy, not a behavioral replacement.
   const spyRepoCache: any = {
+    /** Prépare le dépôt et la révision nécessaires. */
     ensureRepo: (repository: string, timeoutMs?: number) => {
       capturedTimeouts.push(timeoutMs);
       return realRepoCache.ensureRepo(repository, timeoutMs);
@@ -63,8 +47,11 @@ function makeExecutor(capturedTimeouts: Array<number | undefined>, compileTimeou
   };
   const fakeAdapter: BuildAdapter = {
     buildType: 'fake',
+    /** Indique si cet adaptateur prend en charge les données. */
     supports: () => true,
+    /** Compile le projet dans le délai disponible. */
     compile: (_w, timeoutMs) => { compileTimeouts.push(timeoutMs); return { status: 'SUCCESS', exitCode: 0, durationMs: 1, evidenceTail: '' }; },
+    /** Exécute les tests pour détecter les régressions. */
     runRegressionTests: (_w, timeoutMs) => { testTimeouts.push(timeoutMs); return { status: 'SUCCESS', total: 0, failures: 0, errors: 0, skipped: 0, durationMs: 1, evidenceRef: null }; },
   };
   return new CandidateVerificationExecutor(workspaceManager, new CandidateMaterializer(), spyRepoCache, [fakeAdapter]);

@@ -1,19 +1,6 @@
-// R-SEC-V1.1 — request/result contract for the grounded provenance
-// resolution service (candidate-verifier/src/grounded-maven-provenance.
-// service.ts). Types live here (backend) rather than in candidate-verifier,
-// matching the existing cross-import convention already used for
-// CandidateManifest/CandidateVerification (see maven-build-adapter.ts's own
-// import of RegressionTestResult) — candidate-verifier depends on backend's
-// types, never the reverse.
+/** Contrat de requête/résultat du service de résolution de provenance Maven « groundée » (exécuté côté candidate-verifier, sur un checkout réel). */
 import { DependencyProvenance } from './dependency-provenance.types';
 
-/**
- * Reuses the platform's EXISTING identity fields (repository/requestId/
- * batchId/candidateAttempt — the same ones CandidateManifest and
- * HeadVerificationRequest already carry) rather than inventing a parallel
- * identity scheme. `candidateBaseSha` matches the exact field name
- * WorkspaceManager.createWorkspace() already expects.
- */
 export interface GroundedMavenProvenanceRequest {
   repository: string; // "owner/name"
   candidateBaseSha: string;
@@ -26,18 +13,6 @@ export interface GroundedMavenProvenanceRequest {
   timeoutMs?: number;
 }
 
-/**
- * Failure vocabulary deliberately reuses WorkspaceError's own failureClass
- * values (WORKSPACE_CREATION_FAILED / WORKSPACE_SHA_MISMATCH /
- * WORKSPACE_INFRA_FAILURE) for every failure mode this service shares with
- * the rest of candidate-verifier, and adds only the few genuinely new ones
- * this phase introduces (pom.xml absent, dependency:tree itself failing).
- *
- * Best-effort warm-up always precedes the offline sufficiency probe.
- * WARMUP_* describes infrastructure/ambiguous preparation when the probe
- * also failed, never a candidate defect. DEPENDENCY_NOT_IN_CACHE is a
- * local absence with exact coordinates, not proof of nonexistence remotely.
- */
 export type GroundedMavenProvenanceFailureClass =
   | 'WORKSPACE_CREATION_FAILED'
   | 'WORKSPACE_SHA_MISMATCH'
@@ -50,8 +25,7 @@ export type GroundedMavenProvenanceFailureClass =
   | 'WARMUP_FAILED'
   | 'DEPENDENCY_NOT_IN_CACHE';
 
-/** Bounded, redacted command evidence; tree text is consumed by the resolver,
- * not duplicated in the response. Kept for success as well as failure. */
+/** Preuve bornée et expurgée de l'exécution d'une commande Maven (succès ou échec), sans jamais dupliquer le texte complet de l'arbre de dépendances. */
 export interface MavenStepEvidence {
   status: 'SUCCESS' | 'FAILED';
   timedOut: boolean;
@@ -72,18 +46,9 @@ export interface GroundedMavenProvenanceEvidence {
   };
   requestedSha: string;
   checkoutSha: string | null;
-  /** Only set once checkoutSha has been proven === requestedSha — see §3. */
+  /** Renseigné uniquement une fois prouvé que checkoutSha === requestedSha. */
   evaluatedSha: string | null;
-  /**
-   * V1.8 Phase 7B — the real, raw pom.xml text read from the exact-SHA
-   * worktree (BEFORE any patch), additive alongside the existing
-   * dependency-classification result. Exists so a PARENT_VERSION decision
-   * (which needs the raw source text for maven-parent-patch-writer.ts, not
-   * a dependency-tree classification of an unrelated package) can reuse
-   * this SAME checkout instead of a second one — "no second validation
-   * architecture" (V1.8 Phase 7B's own instruction). Null whenever pom.xml
-   * itself was never successfully read (workspace/checkout failures).
-   */
+  /** Texte brut réel du pom.xml lu sur le checkout exact-SHA, avant tout patch ; null si jamais lu avec succès. */
   pomXmlText: string | null;
 }
 

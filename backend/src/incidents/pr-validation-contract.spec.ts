@@ -1,3 +1,4 @@
+// Teste le composant « pr-validation-contract » et ses cas d’erreur.
 import * as assert from 'node:assert/strict';
 import { IncidentsService, buildPrValidationJobName } from './incidents.service';
 
@@ -8,6 +9,7 @@ import { IncidentsService, buildPrValidationJobName } from './incidents.service'
 // meaningful (it was never about HEAD_ONLY); the dedicated HEAD_ONLY
 // lifecycle matrix lives in pr-validation-head-verification.spec.ts.
 const passingCandidateVerification: any = {
+  /** Vérifie le code exact du HEAD de la PR. */
   verifyHead: async (request: any) => ({
     mode: 'HEAD_ONLY',
     identity: { repository: request.repository, targetSha: String(request.targetSha).toLowerCase(),
@@ -22,6 +24,7 @@ const passingCandidateVerification: any = {
   }),
 };
 
+/** Vérifie les résultats attendus dans ce scénario. */
 function decodePrValidationContext(body: unknown): any {
   const form = new URLSearchParams(String(body));
   const encoded = form.get('PFE_VALIDATION_CONTEXT');
@@ -45,29 +48,43 @@ const project: any = {
 };
 incident.project = project;
 const incidentRepo: any = {
+  /** Recherche l’élément correspondant à l’identifiant. */
   findOne: async () => incident,
+  /** Applique les modifications autorisées à l’élément. */
   update: async (_id: string, patch: any) => Object.assign(incident, patch),
 };
-const projectRepo: any = { findOne: async () => project };
+const projectRepo: any = {
+/** Recherche l’élément correspondant à l’identifiant. */
+findOne: async () => project };
 let tail = Promise.resolve();
 const repository: any = {
-  manager: { transaction: async (fn: any) => {
+  manager: {
+  /** Exécute les opérations dans le cadre transactionnel prévu. */
+  transaction: async (fn: any) => {
     const previous = tail;
     let release!: () => void;
     tail = new Promise<void>(resolve => { release = resolve; });
     await previous;
-    try { return await fn({ getRepository: (entity: any) => entity?.name === 'Project' ? projectRepo : incidentRepo }); }
+    try { return await fn({
+    /** Simule la lecture des données demandées par le composant. */
+    getRepository: (entity: any) => entity?.name === 'Project' ? projectRepo : incidentRepo }); }
     finally { release(); }
   } },
   findOne: incidentRepo.findOne,
   update: incidentRepo.update,
 };
 
+/** Exécute les étapes principales de ce programme. */
 async function main() {
-  const service = new IncidentsService(repository, projectRepo, { emit: () => undefined } as any, { syncIncident: async () => undefined } as any, passingCandidateVerification);
+  const service = new IncidentsService(repository, projectRepo, {
+  /** Diffuse ou construit le résultat prévu. */
+  emit: () => undefined } as any, {
+  /** Prépare les données nécessaires à ce scénario. */
+  syncIncident: async () => undefined } as any, passingCandidateVerification);
   const originalFetch = globalThis.fetch;
   let triggers = 0;
   let lastTriggerContext: any = null;
+  /** Envoie la requête et lit la réponse distante. */
   globalThis.fetch = async (url: any, init?: RequestInit) => {
     const value = String(url);
     if (value.includes('api.github.com')) {
@@ -101,6 +118,7 @@ async function main() {
     const originalSonarqubeKey = project.sonarqubeKey;
     project.sonarqubeKey = null;
     let triggeredWithoutSonarKey = false;
+    /** Envoie la requête et lit la réponse distante. */
     globalThis.fetch = async (url: any) => {
       const value = String(url);
       if (value.includes('api.github.com')) return new Response(JSON.stringify({ state: 'open', head: { sha, ref: `fix/pfe-${incident.id}-${incident.metadata.fixRequest.requestId}` } }), { status: 200 });
@@ -112,6 +130,7 @@ async function main() {
     project.sonarqubeKey = originalSonarqubeKey;
 
     incident.metadata.prValidationRequest = null;
+    /** Envoie la requête et lit la réponse distante. */
     globalThis.fetch = async (url: any) => {
       if (String(url).includes('api.github.com')) return new Response(JSON.stringify({ state: 'open', head: { sha: 'b'.repeat(40), ref: `fix/pfe-${incident.id}-${incident.metadata.fixRequest.requestId}` } }), { status: 200 });
       triggers++;
@@ -133,6 +152,7 @@ async function main() {
     };
     const priorFailed = incident.metadata.prValidationRequest;
     triggers = 0;
+    /** Envoie la requête et lit la réponse distante. */
     globalThis.fetch = async (url: any, init?: RequestInit) => {
       const value = String(url);
       if (value.includes('api.github.com')) {
@@ -181,6 +201,7 @@ async function main() {
     // R42A-TEST A: queue item's build not found among recent builds (queueId
     // 1261 unmatched) -- genuinely still queued/unresolved, no write.
     incident.metadata.prValidationRequest = { ...queuedWithHistory };
+    /** Envoie la requête et lit la réponse distante. */
     globalThis.fetch = async (url: any) => {
       const value = String(url);
       if (value.includes('/job/PR-24/api/json')) return new Response(JSON.stringify({ builds: [] }), { status: 200 });
@@ -191,7 +212,7 @@ async function main() {
     assert.equal(stillQueued.reason, 'STILL_QUEUED');
     assert.equal(incident.metadata.prValidationRequest.status, 'QUEUED', 'no DB write when the build has not started yet');
 
-    // R42A-TEST B: matching build found by queueId but still building -- no write yet.
+    /** Envoie la requête et lit la réponse distante. */
     globalThis.fetch = async (url: any) => {
       const value = String(url);
       if (value.includes('/job/PR-24/api/json')) return new Response(JSON.stringify({ builds: [{ number: 1, queueId: 1261, building: true, result: null }] }), { status: 200 });
@@ -202,10 +223,7 @@ async function main() {
     assert.equal(stillRunning.reason, 'STILL_RUNNING');
     assert.equal(incident.metadata.prValidationRequest.status, 'QUEUED', 'no DB write while the build is still executing');
 
-    // R42A-TEST C: matching build (by queueId, not the ephemeral queue endpoint --
-    // proven necessary: the real queue/item/1261 had already 404'd by the time
-    // reconciliation ran) terminal FAILURE, no callback ever received -- reconciles
-    // to FAILED/JENKINS_PIPELINE_FAILED, preserves prior history, never touches fixRequest.
+    /** Envoie la requête et lit la réponse distante. */
     globalThis.fetch = async (url: any) => {
       const value = String(url);
       if (value.includes('/job/PR-24/api/json')) return new Response(JSON.stringify({ builds: [{ number: 1, queueId: 1261, building: false, result: 'FAILURE' }] }), { status: 200 });
@@ -222,8 +240,7 @@ async function main() {
     assert.equal(incident.metadata.prValidationRequest.previousAttempts[0].failureCode, 'JENKINS_TRIGGER_FAILED', 'original attempt-1 evidence preserved verbatim');
     assert.equal(incident.metadata.fixRequest.status, fixRequestStatusBefore, 'reconciliation never touches fixRequest.status (stays PR_CREATED)');
 
-    // R42A-TEST D: a genuinely reconciled FAILED state is retry-eligible again,
-    // same governance as any other FAILED -> retryAttempt increments, identity preserved.
+    /** Envoie la requête et lit la réponse distante. */
     globalThis.fetch = async (url: any, init?: RequestInit) => {
       const value = String(url);
       if (value.includes('api.github.com')) return new Response(JSON.stringify({ state: 'open', head: { sha, ref: `fix/pfe-${incident.id}-${incident.metadata.fixRequest.requestId}` } }), { status: 200 });
@@ -241,6 +258,7 @@ async function main() {
 
     // R42A-TEST E: fail-closed refusal to auto-reconcile a SUCCESS build with no callback.
     incident.metadata.prValidationRequest = { ...queuedWithHistory, status: 'QUEUED' };
+    /** Envoie la requête et lit la réponse distante. */
     globalThis.fetch = async (url: any) => {
       const value = String(url);
       if (value.includes('/job/PR-24/api/json')) return new Response(JSON.stringify({ builds: [{ number: 1, queueId: 1261, building: false, result: 'SUCCESS' }] }), { status: 200 });
@@ -249,16 +267,10 @@ async function main() {
     await assert.rejects(() => service.reconcilePrValidation(incident.id, user), /SUCCESS sans callback/);
     assert.equal(incident.metadata.prValidationRequest.status, 'QUEUED', 'a SUCCESS build is never auto-reconciled to VALIDATED');
 
-    // R47-TEST F — UNSTABLE must NOT be mislabeled as "no callback sent"
-    // (JENKINS_PIPELINE_FAILED): the Shared Library wraps scanner stages in
-    // catchError(buildResult:'UNSTABLE'), so an UNSTABLE build always still
-    // reaches its terminal report/callback step. Proven directly against real
-    // PR-24 build #2: its callback DID reach n8n (WF1 execution 1894), which
-    // rejected the contract fail-closed on missing ceTaskId/analysisId because
-    // SonarQube Community Edition cannot produce native PR analysis evidence.
     const unstableWithHistory = { ...queuedWithHistory, status: 'QUEUED', queueUrl: 'http://jenkins:8080/queue/item/1899/', retryAttempt: 2, previousAttempts: [priorFailed, { ...priorFailed, failureCode: 'JENKINS_PIPELINE_FAILED' }] };
     incident.metadata.prValidationRequest = unstableWithHistory;
     const fixRequestStatusBeforeUnstable = incident.metadata.fixRequest.status;
+    /** Envoie la requête et lit la réponse distante. */
     globalThis.fetch = async (url: any) => {
       const value = String(url);
       if (value.includes('/job/PR-24/api/json')) return new Response(JSON.stringify({ builds: [{ number: 2, queueId: 1899, building: false, result: 'UNSTABLE' }] }), { status: 200 });
@@ -289,6 +301,7 @@ async function main() {
     const evidenceInconclusiveState = { ...queuedWithHistory, status: 'QUEUED', queueUrl: 'http://jenkins:8080/queue/item/1369/', retryAttempt: 3, previousAttempts: [priorFailed] };
     incident.metadata.prValidationRequest = evidenceInconclusiveState;
     const fixRequestStatusBeforeEvidence = incident.metadata.fixRequest.status;
+    /** Envoie la requête et lit la réponse distante. */
     globalThis.fetch = async (url: any) => {
       const value = String(url);
       if (value.includes('/job/PR-24/api/json')) return new Response(JSON.stringify({ builds: [{ number: 3, queueId: 1369, building: false, result: 'UNSTABLE' }] }), { status: 200 });
@@ -313,10 +326,12 @@ async function main() {
     // used the canonical `.../job/PR-24` form issued at request time and was
     // wrongly 409'd by a second, independently-written `/PR-${n}` formula).
     const r49ValidationRequestId = 'r49-job-format-test-vrid';
+    /** Prépare les données nécessaires à ce scénario. */
     const resetR49State = () => {
       incident.metadata.prValidationRequest = { validationRequestId: r49ValidationRequestId, status: 'QUEUED', expectedPrHeadSha: sha };
       incident.metadata.fixRequest = { ...incident.metadata.fixRequest, status: 'PR_CREATED' };
     };
+    /** Prépare les données nécessaires à ce scénario. */
     const r49Payload = (overrides: any = {}) => ({
       projectId: incident.projectId,
       fixRequestId: incident.metadata.fixRequest.requestId,
@@ -383,6 +398,20 @@ async function main() {
       /HEAD attendu/,
       'correct job format combined with a SHA mismatch must still fail closed on the SHA gate',
     );
+
+    // R49-TEST F — main job multibranch : l'incident porte « <job>/<branche> »,
+    // la validation porte l'identité du projet émise par requestPrValidation().
+    const originalIncidentJob = incident.jenkinsJobName;
+    incident.jenkinsJobName = 'pfe-app-test/main';
+    resetR49State();
+    assert.ok(await service.saveValidation(incident.id, r49Payload()), 'multibranch main job: project identity is accepted');
+    resetR49State();
+    await assert.rejects(
+      () => service.saveValidation(incident.id, r49Payload({ jenkinsJob: 'pfe-app-test/main' })),
+      /job Jenkins attendu/,
+      'the branch-qualified incident job is not the identity issued at request time',
+    );
+    incident.jenkinsJobName = originalIncidentJob;
     assert.equal(incident.metadata.prValidationRequest.status, 'QUEUED', 'no write on a rejected SHA correlation');
 
     // R65 — governed PR-head refresh. Proven live on real PR-24: a genuine
@@ -395,6 +424,7 @@ async function main() {
     const r65NewSha = '5cf69aaed7a89953fc0eab882bf269b4509a36cc';
     const r65EvenNewerSha = 'c'.repeat(40);
     const r65Branch = `fix/pfe-${incident.id}-9b62e087-02a8-409d-bfb1-a951629a8814`;
+    /** Prépare les données nécessaires à ce scénario. */
     const resetR65Fix = (overrides: any = {}) => {
       incident.metadata = {
         ...incident.metadata,
@@ -407,11 +437,13 @@ async function main() {
         prValidationRequest: null,
       };
     };
+    /** Prépare les données nécessaires à ce scénario. */
     const githubPull = (headSha: string, opts: { state?: string; ref?: string; base?: string } = {}) => ({
       state: opts.state ?? 'open',
       head: { sha: headSha, ref: opts.ref ?? r65Branch },
       base: { ref: opts.base ?? 'main' },
     });
+    /** Vérifie les résultats attendus dans ce scénario. */
     const mockGithubOnly = (pull: any) => async (url: any) => {
       if (String(url).includes('api.github.com')) {
         assert.ok(String(url).includes('souhaiel11/pfe-app-test'), 'refresh-target must query the project-scoped repository (H: correlation is structural, not user-suppliable)');
@@ -422,6 +454,7 @@ async function main() {
 
     // R65-TEST A — unchanged PR (stored target == live HEAD): validation allowed.
     resetR65Fix();
+    /** Envoie la requête et lit la réponse distante. */
     globalThis.fetch = async (url: any, init?: RequestInit) => {
       const value = String(url);
       if (value.includes('api.github.com')) return new Response(JSON.stringify(githubPull(r65OriginalSha)), { status: 200 });
@@ -459,7 +492,7 @@ async function main() {
     assert.equal(incident.metadata.fixRequest.validationTargetHistory[0].event, 'PR_VALIDATION_TARGET_REFRESHED');
     assert.equal(incident.metadata.fixRequest.validationTargetHistory[0].refreshedBy, user.id);
 
-    // R65-TEST D — validation after refresh: allowed, expectedPrHeadSha snapshots the NEW SHA.
+    /** Envoie la requête et lit la réponse distante. */
     globalThis.fetch = async (url: any) => {
       const value = String(url);
       if (value.includes('api.github.com')) return new Response(JSON.stringify(githubPull(r65NewSha)), { status: 200 });

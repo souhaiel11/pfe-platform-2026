@@ -1,0 +1,289 @@
+{
+  "task": {
+    "id": "9d2ff915-23e1-4f0b-8f4a-561b4d95845f",
+    "projectId": "ebe3bd94-8240-4c30-a2d9-6de2106a28bc",
+    "incidentId": "492b38c7-99bc-49f7-aa03-df11828c71ba",
+    "findingId": "CVE-2022-45868",
+    "findingFingerprint": "b544b5130483492b860463543ccd506bafd0543189c34d749f87019ac7952738",
+    "source": "OWASP",
+    "ruleOrCve": "CVE-2022-45868",
+    "title": "CVE-2022-45868",
+    "severity": "HIGH",
+    "remediationType": "DEVELOPER_ACTION_REQUIRED",
+    "findingSnapshot": {
+      "pkg": "com.h2database:h2",
+      "url": null,
+      "purl": "pkg:maven/com.h2database/h2@2.1.212",
+      "title": "CVE-2022-45868",
+      "source": "OWASP",
+      "groupId": "com.h2database",
+      "evidence": "https://sites.google.com/sonatype.com/vulnerabilities/sonatype-2022-6243",
+      "severity": "HIGH",
+      "component": "com.h2database:h2",
+      "parameter": null,
+      "ruleOrCve": "CVE-2022-45868",
+      "artifactId": "h2",
+      "description": "The web-based admin console in H2 Database Engine before 2.2.220 can be started via the CLI with the argument -webAdminPassword, which allows the user to specify the password in cleartext for the web admin console. Consequently, a local user (or an attacker that has obtained local access through some means) would be able to discover the password by listing processes and their arguments. NOTE: the ",
+      "packageType": "maven",
+      "fixedVersion": "2.2.220",
+      "legacyPackage": "h2-2.1.212.jar",
+      "currentVersion": "2.1.212",
+      "recommendation": null,
+      "installedVersion": "2.1.212",
+      "fixedVersionSource": "TRIVY_CORRELATED",
+      "fixedVersionEvidence": {
+        "match": "CVE_MAVEN_INSTALLED_VERSION",
+        "source": "TRIVY",
+        "trivyMatchCount": 1,
+        "trivyFixedVersionRaw": "2.2.220"
+      },
+      "fixedVersionUnavailableReason": null
+    },
+    "status": "TODO",
+    "scannerStatus": "DETECTED",
+    "completedByUserId": null,
+    "completedByDisplayName": null,
+    "completedAt": null,
+    "completionNote": null,
+    "lastSeenBuild": null,
+    "verifiedBuild": null,
+    "verifiedAt": null,
+    "events": [
+      {
+        "at": "2026-10-07T19:00:52.976Z",
+        "reason": "CREATED",
+        "actorId": null,
+        "newStatus": "TODO",
+        "oldStatus": null,
+        "buildNumber": null,
+        "actorDisplayName": "Scanner"
+      }
+    ],
+    "createdAt": "2026-10-07T19:00:52.97652",
+    "updatedAt": "2026-10-07T19:11:56.439936",
+    "securityFindingRemediation": {
+      "prUrl": null,
+      "reason": null,
+      "status": "DISPATCHING",
+      "batchId": "sec-batch-4285b874-1b51-4fe3-8983-09eab7777107",
+      "attempts": [
+        {
+          "prUrl": null,
+          "reason": "VERIFIER_TIMEOUT",
+          "status": "TECHNICAL_FAILURE",
+          "batchId": "sec-batch-0637f733-42d1-4aa8-a58e-48c373a7c3d5",
+          "prNumber": null,
+          "attemptId": "238c2d38-5f09-44d9-aaf3-54253a2fc453",
+          "retryable": true,
+          "startedAt": "2026-10-07T19:08:13.429Z",
+          "branchName": null,
+          "finishedAt": "2026-10-07T19:08:13.757Z",
+          "reasonCode": "VERIFIER_TIMEOUT",
+          "batchStatus": "TECHNICAL_FAILURE",
+          "executionId": "2092",
+          "candidateSha": null,
+          "evaluatedSha": null,
+          "attemptNumber": 1,
+          "patchEvidence": null,
+          "reasonMessage": "Une erreur technique temporaire a interrompu la correction.",
+          "candidateStatus": "TECHNICAL_FAILURE",
+          "contractVersion": 2,
+          "failureCategory": "RETRYABLE_TECHNICAL",
+          "completionDigest": "8aff44a9c12af84f731accb4e2e4594275b6a77956aff38255321097a5ddf6ff",
+          "candidateIdentity": null,
+          "verificationEvidence": {
+            "candidateStatus": "TECHNICAL_FAILURE",
+            "securityValidationEvidence": null
+          },
+          "unresolvedGitSideEffect": false,
+          "securityValidationEvidence": null
+        },
+        {
+          "prUrl": null,
+          "status": "DISPATCHING",
+          "batchId": "sec-batch-4285b874-1b51-4fe3-8983-09eab7777107",
+          "attemptId": "09d7b431-dca3-4fd3-a45d-bc93afa432f6",
+          "retryable": false,
+          "startedAt": "2026-10-07T19:11:57.038Z",
+          "branchName": null,
+          "finishedAt": null,
+          "reasonCode": null,
+          "executionId": null,
+          "candidateSha": null,
+          "attemptNumber": 2,
+          "reasonMessage": null,
+          "contractVersion": 2,
+          "verificationEvidence": null
+        }
+      ],
+      "prNumber": null,
+      "v1_8Plan": null,
+      "attemptId": "09d7b431-dca3-4fd3-a45d-bc93afa432f6",
+      "retryable": false,
+      "startedAt": "2026-10-07T19:11:57.038Z",
+      "updatedAt": "2026-10-07T19:11:57.038Z",
+      "branchName": null,
+      "finishedAt": null,
+      "reasonCode": null,
+      "batchStatus": null,
+      "executionId": null,
+      "attemptCount": 2,
+      "candidateSha": null,
+      "evaluatedSha": null,
+      "attemptNumber": 2,
+      "patchEvidence": null,
+      "reasonMessage": null,
+      "candidateStatus": null,
+      "contractVersion": 2,
+      "failureCategory": null,
+      "completionDigest": null,
+      "candidateIdentity": null,
+      "reservationTarget": {
+        "projectId": "ebe3bd94-8240-4c30-a2d9-6de2106a28bc",
+        "targetKey": "[\"v1\",\"FILE\",\"pom.xml\"]",
+        "repository": "souhaiel11/remediation-retry-e2e-fixture",
+        "targetFile": "pom.xml",
+        "targetType": "FILE",
+        "lockGranularity": "FILE",
+        "trustedTargetPath": "pom.xml",
+        "dependencyCoordinate": "com.h2database:h2"
+      },
+      "underlyingReasonCode": null,
+      "verificationEvidence": null,
+      "unresolvedGitSideEffect": false,
+      "securityValidationEvidence": null,
+      "legacyCallbackCompletionDigest": null
+    },
+    "securityRemediationBatchId": "sec-batch-4285b874-1b51-4fe3-8983-09eab7777107"
+  },
+  "reservations": [
+    {
+      "id": "a67231b2-3c85-451a-a3ec-66e52e7229b7",
+      "projectId": "ebe3bd94-8240-4c30-a2d9-6de2106a28bc",
+      "targetKey": "[\"v1\",\"FILE\",\"pom.xml\"]",
+      "targetFile": "pom.xml",
+      "ownerTaskId": "a390e383-42b7-4348-894c-5e02a7e5f98d",
+      "ownerAttemptId": "39c77b06-e1cc-4366-be96-b1cd98a437e1",
+      "ownerBatchId": "sec-batch-4e6f6ec2-8523-4b1e-b9a9-2e25488b1bfc",
+      "claims": {},
+      "state": "RELEASED",
+      "createdAt": "2026-10-07T15:03:07.511468+00:00",
+      "updatedAt": "2026-10-07T15:04:04.190181+00:00",
+      "expiresAt": null,
+      "releasedAt": "2026-10-07T15:04:04.190181+00:00",
+      "releaseReason": "OPERATOR_TEST_STOPPED"
+    },
+    {
+      "id": "c1f66d9c-622a-404a-9075-b5494b72177a",
+      "projectId": "ebe3bd94-8240-4c30-a2d9-6de2106a28bc",
+      "targetKey": "[\"v1\",\"FILE\",\"pom.xml\"]",
+      "targetFile": "pom.xml",
+      "ownerTaskId": "9d2ff915-23e1-4f0b-8f4a-561b4d95845f",
+      "ownerAttemptId": "09d7b431-dca3-4fd3-a45d-bc93afa432f6",
+      "ownerBatchId": "sec-batch-4285b874-1b51-4fe3-8983-09eab7777107",
+      "claims": {
+        "9d2ff915-23e1-4f0b-8f4a-561b4d95845f": {
+          "status": "DISPATCHING",
+          "batchId": "sec-batch-4285b874-1b51-4fe3-8983-09eab7777107",
+          "attemptId": "09d7b431-dca3-4fd3-a45d-bc93afa432f6"
+        }
+      },
+      "state": "ACTIVE",
+      "createdAt": "2026-10-07T19:08:12.846314+00:00",
+      "updatedAt": "2026-10-07T19:11:56.439936+00:00",
+      "expiresAt": null,
+      "releasedAt": null,
+      "releaseReason": null
+    }
+  ],
+  "plans": [
+    {
+      "id": "b97f9a56-b128-4986-8e20-780633b0660d",
+      "projectId": "ebe3bd94-8240-4c30-a2d9-6de2106a28bc",
+      "taskId": "a390e383-42b7-4348-894c-5e02a7e5f98d",
+      "state": "COMPLETED",
+      "plan": {
+        "events": [
+          {
+            "at": "2026-10-07T15:03:02.599Z",
+            "hook": "CREATED"
+          },
+          {
+            "at": "2026-10-07T15:03:08.507Z",
+            "hook": "FORCE_VERIFIER_TIMEOUT_ONCE",
+            "batchId": "sec-batch-61727477-9c75-4445-857d-69da14e4636f",
+            "attemptId": "93c68aed-1fcb-4917-8493-1dfe89b30f0d"
+          },
+          {
+            "at": "2026-10-07T15:04:04.192Z",
+            "hook": "CONTROLLED_TEST_ABORT",
+            "batchId": "sec-batch-4e6f6ec2-8523-4b1e-b9a9-2e25488b1bfc",
+            "attemptId": "39c77b06-e1cc-4366-be96-b1cd98a437e1"
+          }
+        ],
+        "taskId": "a390e383-42b7-4348-894c-5e02a7e5f98d",
+        "enabled": true,
+        "attempt1": {
+          "batchId": "sec-batch-61727477-9c75-4445-857d-69da14e4636f",
+          "attemptId": "93c68aed-1fcb-4917-8493-1dfe89b30f0d",
+          "attemptNumber": 1
+        },
+        "attempt2": {
+          "batchId": "sec-batch-4e6f6ec2-8523-4b1e-b9a9-2e25488b1bfc",
+          "attemptId": "39c77b06-e1cc-4366-be96-b1cd98a437e1",
+          "attemptNumber": 2
+        },
+        "expiresAt": "2026-10-07T15:28:02.402252+00:00",
+        "projectId": "ebe3bd94-8240-4c30-a2d9-6de2106a28bc",
+        "attempt1Mode": "FORCE_VERIFIER_TIMEOUT_ONCE",
+        "attempt2Mode": "STOP_BEFORE_GIT_WRITE_ONCE",
+        "findingIdentity": "98654734b3f69bd8939a63707ef468499e7332c9a6780f1987c2349ef1d892eb",
+        "consumedAttempt1": true,
+        "consumedAttempt2": true
+      },
+      "createdAt": "2026-10-07T15:03:02.581154+00:00",
+      "updatedAt": "2026-10-07T15:04:04.190181+00:00"
+    },
+    {
+      "id": "0d8f4253-8213-41ce-9ddf-91b8e1add3a2",
+      "projectId": "ebe3bd94-8240-4c30-a2d9-6de2106a28bc",
+      "taskId": "9d2ff915-23e1-4f0b-8f4a-561b4d95845f",
+      "state": "ACTIVE",
+      "plan": {
+        "events": [
+          {
+            "at": "2026-10-07T19:08:12.529Z",
+            "hook": "CREATED"
+          },
+          {
+            "at": "2026-10-07T19:08:13.647Z",
+            "hook": "FORCE_VERIFIER_TIMEOUT_ONCE",
+            "batchId": "sec-batch-0637f733-42d1-4aa8-a58e-48c373a7c3d5",
+            "attemptId": "238c2d38-5f09-44d9-aaf3-54253a2fc453"
+          }
+        ],
+        "taskId": "9d2ff915-23e1-4f0b-8f4a-561b4d95845f",
+        "enabled": true,
+        "attempt1": {
+          "batchId": "sec-batch-0637f733-42d1-4aa8-a58e-48c373a7c3d5",
+          "attemptId": "238c2d38-5f09-44d9-aaf3-54253a2fc453",
+          "attemptNumber": 1
+        },
+        "attempt2": {
+          "batchId": "sec-batch-4285b874-1b51-4fe3-8983-09eab7777107",
+          "attemptId": "09d7b431-dca3-4fd3-a45d-bc93afa432f6",
+          "attemptNumber": 2
+        },
+        "expiresAt": "2026-10-07T19:33:12.326677+00:00",
+        "projectId": "ebe3bd94-8240-4c30-a2d9-6de2106a28bc",
+        "attempt1Mode": "FORCE_VERIFIER_TIMEOUT_ONCE",
+        "attempt2Mode": "STOP_BEFORE_GIT_WRITE_ONCE",
+        "findingIdentity": "15898e33b0fdecb3462a51ba05f23dd69db4d96febac234b8032da4e8d1c50c0",
+        "consumedAttempt1": true,
+        "consumedAttempt2": false
+      },
+      "createdAt": "2026-10-07T19:08:12.509679+00:00",
+      "updatedAt": "2026-10-07T19:11:56.439936+00:00"
+    }
+  ]
+}

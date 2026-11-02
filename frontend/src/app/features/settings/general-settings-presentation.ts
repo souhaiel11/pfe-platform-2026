@@ -1,4 +1,6 @@
-// Presentation labels only. Operational values are supplied by project/API.
+// Regroupe les traitements de general paramètres presentation.
+/** Résume les options générales réellement configurées. */
+/** Résume les options générales réellement configurées. */
 export function generalSettingsSummary(project: any, capabilities: any) {
   const remediation = capabilities?.remediation;
   const modes: Record<string,string> = { ENFORCED: 'Contrôle appliqué', SHADOW: 'Mode observation' };

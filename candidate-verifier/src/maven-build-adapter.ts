@@ -1,6 +1,4 @@
-// R22-C — Maven build adapter. Only build type proven safe this phase (R22-B
-// Phase 6 audit); the interface (build-adapter.ts) is generic so Gradle/npm
-// can follow later without touching the orchestrating service.
+// Compile et teste les projets Maven dans un espace isolé.
 import { execFileSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -13,19 +11,14 @@ import { redactSensitiveStderr } from './repo-cache.service';
 const DEFAULT_TIMEOUT_MS = 5 * 60 * 1000;
 const EVIDENCE_TAIL_CHARS = 20_000;
 
+/** Conserve les dernières lignes du journal. */
 function tail(text: string, maxChars = EVIDENCE_TAIL_CHARS): string {
   return text.length <= maxChars ? text : text.slice(text.length - maxChars);
 }
 
-// Execution-2058 traceability fix — a timed-out `mvn dependency:tree` used
-// to leave ZERO forensic trail beyond total elapsed duration (see
-// dependencyTree()'s own comment below). Bounded to the last N lines
-// (never unbounded), and redacted with the SAME discipline
-// repo-cache.service.ts already applies to git's own remote-controlled
-// text -- Maven's resolver output is equally not content this process
-// controls the shape of.
 const TIMEOUT_EVIDENCE_MAX_LINES = 40;
 
+/** Extrait les dernières lignes utiles au diagnostic. */
 function tailLines(text: string, maxLines: number): string {
   const lines = text.split('\n').filter(l => l.length > 0);
   return (lines.length <= maxLines ? lines : lines.slice(-maxLines)).join('\n');
@@ -51,6 +44,7 @@ export interface MavenTimeoutEvidence {
 const ARTIFACT_TRANSFER_LINE = /^Download(?:ing|ed) from ([^:]+): (\S+)/;
 const RETRY_KEYWORDS = /\b(retry|retrying|connection reset|could not transfer)\b/i;
 
+/** Retrouve l’artefact Maven mentionné dans la sortie du build. */
 function lastArtifactFrom(text: string): string | null {
   const lines = text.split('\n');
   for (let i = lines.length - 1; i >= 0; i--) {
@@ -60,6 +54,7 @@ function lastArtifactFrom(text: string): string | null {
   return null;
 }
 
+/** Relance nombre depuis. */
 function retryCountFrom(text: string): number {
   const startedCounts = new Map<string, number>();
   let retries = 0;
@@ -77,6 +72,7 @@ function retryCountFrom(text: string): number {
   return retries;
 }
 
+/** Construit les preuves du dépassement de délai Maven. */
 function mavenTimeoutEvidence(rawStdout: string, rawStderr: string): MavenTimeoutEvidence {
   const stdout = redactSensitiveStderr(rawStdout);
   const stderr = redactSensitiveStderr(rawStderr);
@@ -88,6 +84,7 @@ function mavenTimeoutEvidence(rawStdout: string, rawStderr: string): MavenTimeou
   };
 }
 
+/** Formate délai dépassé preuve fin du journal. */
 function formatTimeoutEvidenceTail(goal: string, durationMs: number, budgetMs: number, evidence: MavenTimeoutEvidence): string {
   return tail([
     `WORKSPACE_TIMEOUT during mvn ${goal} (after ${durationMs}ms, budget ${budgetMs}ms)`,
@@ -98,13 +95,7 @@ function formatTimeoutEvidenceTail(goal: string, durationMs: number, budgetMs: n
   ].join('\n'));
 }
 
-/**
- * Deliberately NOT `...process.env`: this backend process's own env holds
- * DB_PASS/JWT_SECRET/etc. A Maven subprocess compiling/testing candidate
- * code has no legitimate need to see them, and "no secret values in stored
- * evidence" is easiest to guarantee by never handing them to the child
- * process in the first place.
- */
+/** Prépare le résultat lié à sûr Maven environnement. */
 function safeMavenEnv(): NodeJS.ProcessEnv {
   const keep = ['PATH', 'HOME', 'JAVA_HOME', 'M2_HOME', 'MAVEN_HOME', 'MAVEN_OPTS', 'LANG', 'LC_ALL'];
   const env: NodeJS.ProcessEnv = {};
@@ -112,6 +103,7 @@ function safeMavenEnv(): NodeJS.ProcessEnv {
   return env;
 }
 
+/** Exécute Maven avec les paramètres et délais prévus. */
 function runMaven(args: string[], cwd: string, timeoutMs: number): { status: number | null; stdout: string; stderr: string; timedOut: boolean; durationMs: number } {
   const start = Date.now();
   try {
@@ -134,19 +126,6 @@ function runMaven(args: string[], cwd: string, timeoutMs: number): { status: num
   }
 }
 
-// CORRECTIF 2 (offline-mode fail-closed diagnosis) -- Maven's own real,
-// stable wording when `-o` hits an artifact it has never cached (verified
-// against a real `mvn -o dependency:tree` run against this exact Maven
-// 3.8.7 install, not invented -- see this file's own spec for the full
-// captured transcript this was derived from):
-//   "Cannot access central (https://repo.maven.apache.org/maven2) in
-//    offline mode and the artifact <GAV> has not been downloaded from it
-//    before."
-// Distinguishing this from a generic FAILED lets a caller give a fail-
-// closed but EXPLICIT, exploitable diagnosis (which artifact, not just
-// "dependency:tree exited non-zero") instead of the opaque failure an
-// offline miss would otherwise be -- never a silent/muted timeout either,
-// since an offline miss fails fast (no network wait at all).
 const OFFLINE_MISSING_ARTIFACT = /Cannot access \S+ \([^)]*\) in offline mode and the artifact (\S+) has not been downloaded from it before/g;
 
 export interface OfflineResolutionFailure {
@@ -162,6 +141,7 @@ export interface OfflineResolutionFailure {
   primaryMissingArtifact: string;
 }
 
+/** Détecte un échec de résolution des dépendances hors ligne. */
 function offlineResolutionFailureFrom(text: string): OfflineResolutionFailure | null {
   const seen: string[] = [];
   OFFLINE_MISSING_ARTIFACT.lastIndex = 0;
@@ -190,6 +170,7 @@ export interface WarmupNetworkFailure {
   detail: string;
 }
 
+/** Détecte une panne réseau pendant la préparation Maven. */
 function warmupNetworkFailureFrom(text: string): WarmupNetworkFailure | null {
   for (const pattern of NETWORK_FAILURE_SIGNATURES) {
     const m = pattern.exec(text);
@@ -212,6 +193,7 @@ export interface WarmupResult {
   timeoutEvidence?: MavenTimeoutEvidence;
 }
 
+/** Classe le résultat de préparation des dépendances Maven. */
 function warmupResultFrom(r: ReturnType<typeof runMaven>, budgetMs: number): WarmupResult {
   const combined = redactSensitiveStderr(r.stdout + '\n' + r.stderr);
   const networkFailure = r.status !== 0 && !r.timedOut ? warmupNetworkFailureFrom(combined) ?? undefined : undefined;
@@ -249,17 +231,6 @@ export interface DependencyTreeResult {
   offlineFailure?: OfflineResolutionFailure;
 }
 
-// Security-remediation V1.8 — full pre-CANDIDATE_READY validation. A single
-// `mvn clean package` (no -DskipTests) is used rather than a separate `mvn
-// test` followed by `mvn clean package`: Maven's own lifecycle already binds
-// `test` before `package`, so one invocation compiles, runs the application
-// test suite, AND packages -- exactly the phases needed, with no second full
-// compile. Surefire (`target/surefire-reports/*.txt`) is written as each
-// test class finishes, REGARDLESS of the overall goal's final exit code, so
-// `aggregateSurefireReports` (the SAME aggregator runRegressionTests() above
-// already uses, reused verbatim here) reliably distinguishes "tests ran and
-// some failed" (reports exist, failures>0) from "compilation/packaging never
-// reached the test phase" (no reports at all) even on a non-zero exit.
 export interface SecurityPackageResult {
   status: 'SUCCESS' | 'FAILED';
   exitCode: number | null;
@@ -283,16 +254,14 @@ export interface SecurityPackageResult {
 export class MavenBuildAdapter implements BuildAdapter {
   readonly buildType = 'maven';
 
+  /** Construit le paquet du candidat avec ses paramètres de test. */
   packageCandidate(workspacePath: string, timeoutMs: number = DEFAULT_TIMEOUT_MS): CompileResult {
     const r = runMaven(['clean', 'package', '-DskipTests', '-B'], workspacePath, timeoutMs);
     return { status: r.status === 0 ? 'SUCCESS' : 'FAILED', exitCode: r.status, durationMs: r.durationMs,
       evidenceTail: tail(r.stdout + '\n' + r.stderr) };
   }
 
-  /** Security-remediation orchestrators' ONLY package call (V1.8) -- see
-   *  header comment above. `packageCandidate()` above is kept unchanged for
-   *  its other existing caller(s) (the general-purpose candidate-
-   *  verification-executor / test-fixtures proof runner), never reused here. */
+  /** Prépare le résultat lié à package candidat avec tests. */
   packageCandidateWithTests(workspacePath: string, timeoutMs: number = DEFAULT_TIMEOUT_MS): SecurityPackageResult {
     const r = runMaven(['clean', 'package', '-B'], workspacePath, timeoutMs);
     if (r.timedOut) {
@@ -319,6 +288,7 @@ export class MavenBuildAdapter implements BuildAdapter {
     };
   }
 
+  /** Produit le POM effectif pour établir les versions Maven. */
   effectivePom(workspacePath: string, timeoutMs: number = DEFAULT_TIMEOUT_MS): DependencyTreeResult {
     const output = path.join(workspacePath, '.pfe-effective-pom.xml');
     const r = runMaven(['help:effective-pom', '-Dverbose', '-B', '-Doutput=' + output], workspacePath, timeoutMs);
@@ -328,12 +298,15 @@ export class MavenBuildAdapter implements BuildAdapter {
     } finally { try { fs.unlinkSync(output); } catch {} }
   }
 
+  /** Indique si cet adaptateur prend en charge les données. */
   supports(workspacePath: string): boolean {
     return fs.existsSync(path.join(workspacePath, 'pom.xml'));
   }
 
+  /** Indique si ce mode est pris en charge. */
   supportsMode(): boolean { return true; }
 
+  /** Compile le projet dans le délai disponible. */
   compile(workspacePath: string, timeoutMs: number = DEFAULT_TIMEOUT_MS): CompileResult {
     const result = runMaven(['-q', 'compile'], workspacePath, timeoutMs);
     if (result.timedOut) {
@@ -347,6 +320,7 @@ export class MavenBuildAdapter implements BuildAdapter {
     };
   }
 
+  /** Compile les tests du projet. */
   compileTests(workspacePath: string, timeoutMs: number = DEFAULT_TIMEOUT_MS): CompileResult {
     const result = runMaven(['-q', 'test-compile'], workspacePath, timeoutMs);
     if (result.timedOut) return { status: 'FAILED', exitCode: result.status, durationMs: result.durationMs, evidenceTail: 'WORKSPACE_TIMEOUT during mvn test-compile' };
@@ -354,6 +328,7 @@ export class MavenBuildAdapter implements BuildAdapter {
       durationMs: result.durationMs, evidenceTail: tail(result.stdout + '\n' + result.stderr) };
   }
 
+  /** Exécute les tests pour détecter les régressions. */
   runRegressionTests(workspacePath: string, timeoutMs: number = DEFAULT_TIMEOUT_MS): RegressionTestResult {
     const result = runMaven(['test', '-B'], workspacePath, timeoutMs);
     if (result.timedOut) {
@@ -376,42 +351,13 @@ export class MavenBuildAdapter implements BuildAdapter {
     };
   }
 
-  // R-SEC-V1.1 §4 — the ONE extra Maven goal this phase needs, read-only,
-  // no candidate files involved (used by GroundedMavenProvenanceService
-  // against an exact-SHA worktree, never against a candidate patch).
-  // -DoutputFile writes clean, unprefixed tree text (no "[INFO] " noise to
-  // strip) -- the same approach used to capture this module's own real
-  // fixtures (backend/src/security-remediation/fixtures/pfe-app-test.
-  // dependency-tree.txt). Deliberately NOT `help:effective-pom`: the pure
-  // resolver (resolveMavenProvenance) already fails closed (UNRESOLVED) on
-  // a property inherited from a parent POM rather than needing the merged
-  // model to chase it down -- so that goal is not run here, honoring
-  // "do not run arbitrary Maven goals" by only running what is actually used.
-  //
-  // Offline analysis resolves through Maven's local cache only. Warm-up
-  // health is interpreted by resolveDependencyTreeOffline(), not here.
+  /** Prépare le résultat lié à dépendance arbre. */
   dependencyTree(workspacePath: string, timeoutMs: number = DEFAULT_TIMEOUT_MS, options: { offline?: boolean } = {}): DependencyTreeResult {
     const outputFile = path.join(workspacePath, '.pfe-dependency-tree-output.txt');
     const args = ['dependency:tree', '-B', `-DoutputFile=${outputFile}`, '-DoutputType=text'];
     if (options.offline) args.unshift('-o');
     const result = runMaven(args, workspacePath, timeoutMs);
     if (result.timedOut) {
-      // Execution-2058 observability gap: this previously discarded
-      // whatever stdout/stderr execFileSync HAD already captured before the
-      // SIGKILL (runMaven() itself always captures it into result.stdout/
-      // result.stderr -- see its own catch branch) and replaced it with a
-      // fixed string, so the ONLY forensic evidence for a real grounding
-      // timeout was the total elapsed duration -- exactly the gap that made
-      // this exact incident's root cause (a large, legitimately in-progress,
-      // cold-cache dependency download, not a stall/DNS/lock issue)
-      // reconstructable only via the .m2 repository's own file timestamps,
-      // never from application evidence. Now: bounded, redacted last lines,
-      // the last artifact/repo transfer line seen, and a retry-count lower
-      // bound (mavenTimeoutEvidence(), above) -- both folded into
-      // evidenceTail as free text (WORKSPACE_TIMEOUT kept first for any
-      // caller that still greps for it defensively -- DependencyTreeResult's
-      // own callers already branch on the typed `timedOut` field, never on
-      // this string) AND exposed structurally via `timeoutEvidence`.
       const timeoutEvidence = mavenTimeoutEvidence(result.stdout, result.stderr);
       return {
         status: 'FAILED', text: null, timedOut: true, timeoutEvidence,
@@ -420,13 +366,6 @@ export class MavenBuildAdapter implements BuildAdapter {
     }
     if (result.status !== 0) {
       const combined = redactSensitiveStderr(result.stdout + '\n' + result.stderr);
-      // CORRECTIF 2 -- an offline miss fails FAST (no network wait at all,
-      // never a timeout), so it is checked here, never on the timedOut
-      // branch above. Only attempted when options.offline was actually
-      // requested: the same real error text could theoretically appear in
-      // ONLINE stderr too (e.g. a misconfigured local mirror), where it
-      // would not mean the same thing -- never inferred from text content
-      // alone, only from the caller's own declared intent.
       const offlineFailure = options.offline ? offlineResolutionFailureFrom(combined) ?? undefined : undefined;
       return { status: 'FAILED', text: null, evidenceTail: tail(combined), timedOut: false, offlineFailure };
     }
@@ -440,17 +379,12 @@ export class MavenBuildAdapter implements BuildAdapter {
     }
   }
 
-  // Online preparation runs only against the caller's verified baseline.
-  // go-offline is best-effort: only the later offline tree proves sufficiency.
+  /** Prépare le résultat lié à dépendance Go Offline. */
   dependencyGoOffline(workspacePath: string, timeoutMs: number = DEFAULT_TIMEOUT_MS): WarmupResult {
     return warmupResultFrom(runMaven(['dependency:go-offline', '-B'], workspacePath, timeoutMs), timeoutMs);
   }
 
-  /** Resolve an approved target GAV against the same trusted baseline.
-   * Can also run in an empty directory; when run in a project Maven still
-   * reads its model/configuration. No candidate worktree is passed here.
-   * Non-transitive by design: this does not prove a patched graph is cached;
-   * the mandatory offline tree performs that check. */
+  /** Résout artefact. */
   resolveArtifact(cwd: string, gav: string, timeoutMs: number = DEFAULT_TIMEOUT_MS): WarmupResult {
     return warmupResultFrom(runMaven(['dependency:get', '-B', `-Dartifact=${gav}`, '-Dtransitive=false'], cwd, timeoutMs), timeoutMs);
   }

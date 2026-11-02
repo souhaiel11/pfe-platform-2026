@@ -1,3 +1,4 @@
+// Teste le composant « score-display » et ses cas d’erreur.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -5,6 +6,7 @@ import vm from 'node:vm';
 
 const require = createRequire(import.meta.url);
 const ts = require('typescript');
+/** Lit les données depuis leur source. */
 const read = path => readFileSync(new URL(path, import.meta.url), 'utf8');
 
 // Charge le module PARTAGÉ réel (score-display.ts).
@@ -12,7 +14,9 @@ const moduleSource = read('../src/app/shared/score-display.ts');
 const moduleExports = {};
 vm.runInNewContext(
   ts.transpileModule(moduleSource, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText,
-  { exports: moduleExports, require: () => ({}), console },
+  { exports: moduleExports,
+  /** Charge la dépendance prévue pour le scénario. */
+  require: () => ({}), console },
 );
 const { isValidScoreOn100, formatScoreOn100 } = moduleExports;
 
@@ -23,13 +27,17 @@ const statusLabelsSource = read('../src/app/shared/status-labels.ts');
 const statusLabelsExports = {};
 vm.runInNewContext(
   ts.transpileModule(statusLabelsSource, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText,
-  { exports: statusLabelsExports, require: () => ({}), console },
+  { exports: statusLabelsExports,
+  /** Charge la dépendance prévue pour le scénario. */
+  require: () => ({}), console },
 );
 const findingPresentationSource = read('../src/app/shared/finding-presentation.ts');
 const findingPresentationExports = {};
 vm.runInNewContext(
   ts.transpileModule(findingPresentationSource, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText,
-  { exports: findingPresentationExports, require: () => ({}), console },
+  { exports: findingPresentationExports,
+  /** Charge la dépendance prévue pour le scénario. */
+  require: () => ({}), console },
 );
 const componentSource = read('../src/app/features/projects/project-detail.component.ts');
 const componentTemplate = read('../src/app/features/projects/project-detail.component.html');
@@ -39,12 +47,16 @@ const componentCode = ts.transpileModule(componentSource, {
 }).outputText;
 vm.runInNewContext(componentCode, {
   exports: componentExports,
+  /** Charge la dépendance prévue pour le scénario. */
   require: (spec) => {
     if (spec.endsWith('status-labels')) return statusLabelsExports;
     if (spec.endsWith('finding-presentation')) return findingPresentationExports;
     if (spec.endsWith('score-display')) return moduleExports;
-    return new Proxy({}, { get: () => () => () => {} });
+    return new Proxy({}, {
+    /** Récupère les données demandées. */
+    get: () => () => () => {} });
   },
+  /** Simule la modification demandée par le composant. */
   setTimeout: () => 0, console,
 });
 const component = Object.create(componentExports.ProjectDetailComponent.prototype);
@@ -131,7 +143,9 @@ console.log('score-display F) pas de double mise à l’échelle: PASS');
   const backendExports = {};
   vm.runInNewContext(
     ts.transpileModule(backendSource, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText,
-    { exports: backendExports, require: () => ({}), console },
+    { exports: backendExports,
+    /** Charge la dépendance prévue pour le scénario. */
+    require: () => ({}), console },
   );
   const { calculateSecurityScore } = backendExports;
 
@@ -161,13 +175,7 @@ console.log('score-display F) pas de double mise à l’échelle: PASS');
 }
 console.log('score-display G) RAW -> NORMALIZED -> DISPLAYED (vraie formule backend): PASS');
 
-// ============================================================================
-// H. la logique de formatage reste scanner-agnostic : elle ne connaît aucun
-// nom d'outil/projet, seulement un nombre. Prouvé en l'appliquant à des
-// scores conceptuellement issus de sources différentes (report combiné
-// Trivy+Sonar+ZAP ci-dessus vs. un score déjà agrégé "dashboard live") sans
-// aucune branche par source.
-// ============================================================================
+// H. la logique de formatage reste scanner-agnostic : elle ne connaît aucun nom d'outil/projet, seulement un nombre.
 {
   assert.doesNotMatch(moduleSource, /sonar|trivy|owasp|zap|jenkins/i, 'H: score-display.ts contains no scanner/tool-specific literal');
   // Même fonction, même résultat, qu'importe la provenance conceptuelle du nombre.

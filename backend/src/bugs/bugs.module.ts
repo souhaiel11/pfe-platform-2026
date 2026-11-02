@@ -1,3 +1,4 @@
+// Déclaration NestJS du module legacy "bugs" : entité, service, contrôleur et passerelle websocket.
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Bug } from './bug.entity';

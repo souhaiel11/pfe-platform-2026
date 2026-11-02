@@ -1,14 +1,4 @@
-// ─────────────────────────────────────────────────────────────
-//  Gardien "prêt à déployer" — le seul endroit qui décide si un projet
-//  peut être déployé. FAIL-CLOSED de bout en bout : toute donnée absente,
-//  vide ou de forme inattendue est traitée comme "pas prêt", jamais comme
-//  "prêt par défaut". Trois critères, alignés normes DevOps :
-//    1. Gouvernance — judgeDecision du Judge agent ≠ BLOCK
-//    2. Sécurité    — 0 CVE critique (Trivy + OWASP)
-//    3. Qualité     — quality gate SonarQube au vert
-//  Utilisé à la fois par GET /ready/:projectId (pour le bouton front) et par
-//  POST /deploy (vérification serveur, jamais contournable depuis le front).
-// ─────────────────────────────────────────────────────────────
+// Gardien « prêt à déployer » — le seul endroit qui décide si un projet peut être déployé.
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -17,7 +7,16 @@ import { Project } from '../projects/project.entity';
 import { normalizeReport } from '../common/report-normalizer';
 import { Incident } from '../incidents/incident.entity';
 import { evaluateReadiness, GovernedStage } from '../common/governance';
+import {
+  buildDeploymentIdentity,
+  deriveDeploymentEnvironmentIdentity,
+  evaluateArtifactIdentity,
+  resolveValidatedDeploymentCommit,
+} from './deployment-identity';
+import { extractSecurityValidationEvidence, resolveBuildIdentity as resolveBuildIdentityCore } from './build-identity';
+import { AcrDigestLookup, ArtifactResolutionResult, BuildIdentityResolutionResult, CommitResolutionResult, DeploymentIdentity, EnvironmentResolutionResult, SecurityValidationEvidence } from './deployment-identity.types';
 
+/** Verdict complet de disponibilité au déploiement pour un projet, incluant la Strong Deployment Identity à titre informatif. */
 export interface DeployReadiness {
   ready: boolean;
   reasons: string[];
@@ -33,22 +32,43 @@ export interface DeployReadiness {
   reportCreatedAt?: Date;
   deploymentConfigured?: boolean;
   deploymentTarget?: Record<string, string | undefined> | null;
+  identityResolved?: boolean;
+  identityReasons?: string[];
+  deploymentIdentity?: DeploymentIdentity | null;
 }
 
-// Seules valeurs qui prouvent positivement un quality gate au vert — une
-// valeur absente ou inattendue (ex: "UNKNOWN") n'est JAMAIS assimilée à "OK"
-// simplement parce qu'elle n'est pas explicitement ERROR/FAILED.
+/** Télémétrie de publication qu'un build a rapportée sur sa propre image — jamais une affirmation sur le code source. */
+export interface BuildPublicationEvidence {
+  incidentId: string | null;
+  buildNumber: number | null;
+  reportedPushStatus: string | null;
+  reportedImageTag: string | null;
+  reportedBuildStatus: string | null;
+}
+
+/** Résultat complet de résolution d'identité de déploiement (commit, artefact, environnement). */
+export interface DeploymentIdentityResolution {
+  identityResolved: boolean;
+  identityReasons: string[];
+  deploymentIdentity: DeploymentIdentity | null;
+  commit: CommitResolutionResult;
+  artifact: ArtifactResolutionResult;
+  environment: EnvironmentResolutionResult;
+}
+
 const OK_QUALITY_GATES = ['OK', 'PASSED'];
 const BLOCKING_QUALITY_GATES = ['ERROR', 'FAILED'];
 
 @Injectable()
 export class AzureDeployReadinessService {
+  /** Initialise les dépendances et l’état de ce composant. */
   constructor(
     @InjectRepository(Report) private readonly reportRepo: Repository<Report>,
     @InjectRepository(Project) private readonly projectRepo: Repository<Project>,
     @InjectRepository(Incident) private readonly incidentRepo: Repository<Incident>,
   ) {}
 
+  /** Le verdict "prêt à déployer" complet pour un projet. */
   async isReadyToDeploy(projectId: string): Promise<DeployReadiness> {
     const project = await this.projectRepo.findOne({ where: { id: projectId } });
     if (!project) return { ready: false, status: 'NOT_READY', reasons: ['Projet introuvable'], blockingReasons: ['Projet introuvable'], deploymentConfigured: false };
@@ -124,26 +144,44 @@ export class AzureDeployReadinessService {
     const reasons: string[] = [...result.blockingReasons];
     if (!deploymentConfigured) reasons.push('Le déploiement Azure n’est pas configuré pour ce projet');
 
-    // 1. Gouvernance — une valeur absente/inconnue n'est JAMAIS traitée comme
-    // "différente de BLOCK" : elle doit être explicitement AUTO_FIX ou
-    // NOTIFY_ONLY pour compter comme une décision de gouvernance confirmée.
     if (report.judgeDecision === 'BLOCK') {
       reasons.push('La décision de gouvernance bloque explicitement ce build');
     }
 
-    // 2. Sécurité
     const trivyCritical = normalized.trivy.critical || 0;
     const owaspCritical = normalized.owasp.critical || 0;
     if (trivyCritical > 0) reasons.push(`${trivyCritical} ${trivyCritical === 1 ? 'CVE critique' : 'CVE critiques'} Trivy`);
     if (owaspCritical > 0) reasons.push(`${owaspCritical} ${owaspCritical === 1 ? 'CVE critique' : 'CVE critiques'} OWASP Dependency-Check`);
 
-    // 3. Qualité — même logique fail-closed que pour judgeDecision : seule
-    // une valeur positivement connue comme "verte" fait passer le critère.
     if (BLOCKING_QUALITY_GATES.includes(gate)) {
       reasons.push(`Le Quality Gate SonarQube est en échec (${gate})`);
     } else if (!OK_QUALITY_GATES.includes(gate)) {
       reasons.push(`Le Quality Gate SonarQube est indéterminé (${gate ?? 'valeur indisponible'}) — refus par défaut`);
     }
+
+    const validationForIdentity = metadata.validation || null;
+    const commit = resolveValidatedDeploymentCommit({
+      reportBuildNumber: currentBuild,
+      reportCommitSha: raw?.enrichedData?.build?.commitSha ?? raw?.build?.commitSha ?? null,
+      validation: validationForIdentity,
+    });
+    const environment = deriveDeploymentEnvironmentIdentity(project.azureConfig as any);
+    const artifact = evaluateArtifactIdentity({
+      targetRegistry: project.azureConfig?.registry || null,
+      targetRepository: project.azureConfig?.imageRepository || null,
+      requestedTag: null,
+      lookup: null,
+    });
+    const identityReasons: string[] = [];
+    if (!commit.ok) identityReasons.push(`Identité de commit non résolue (${commit.failureCode})`);
+    if (!environment.ok) identityReasons.push(`Identité d'environnement non résolue (${environment.failureCode})`);
+    if (!artifact.ok) identityReasons.push(`Identité d'artefact non résolue (${artifact.failureCode})`);
+    const deploymentIdentity = buildDeploymentIdentity({
+      projectId,
+      commit,
+      artifact: { ...artifact, registry: project.azureConfig?.registry || '', repository: project.azureConfig?.imageRepository || '', tag: '' },
+      environment,
+    });
 
     return {
       ...result,
@@ -155,10 +193,105 @@ export class AzureDeployReadinessService {
       reportCreatedAt: report.createdAt,
       deploymentConfigured,
       deploymentTarget,
+      identityResolved: commit.ok && artifact.ok && environment.ok,
+      identityReasons,
+      deploymentIdentity,
     };
   }
 
-  // Compatibilité lecture seule pour les anciens consommateurs par nom.
+  /** Résolution complète de l'identité de déploiement AVEC une vraie recherche de digest ACR (via le résolveur injecté. */
+  async resolveDeploymentIdentity(
+    projectId: string,
+    requestedTag: string,
+    artifactLookup?: (params: { registry: string; repository: string; tag: string }) => Promise<AcrDigestLookup>,
+  ): Promise<DeploymentIdentityResolution> {
+    const project = await this.projectRepo.findOne({ where: { id: projectId } });
+    const emptyCommit: CommitResolutionResult = { ok: false, buildNumber: null, commitSha: null, evidence: {}, failureCode: 'DEPLOY_COMMIT_MISSING' };
+    const emptyEnvironment: EnvironmentResolutionResult = { ok: false, environmentIdentity: null, failureCode: 'DEPLOY_ENVIRONMENT_UNRESOLVED' };
+    const emptyArtifact: ArtifactResolutionResult = { ok: false, imageReference: null, artifactDigest: null, evidence: {}, failureCode: 'DEPLOY_ARTIFACT_PROVENANCE_UNAVAILABLE' };
+    if (!project) {
+      return { identityResolved: false, identityReasons: ['Projet introuvable'], deploymentIdentity: null, commit: emptyCommit, artifact: emptyArtifact, environment: emptyEnvironment };
+    }
+
+    const report = await this.reportRepo.findOne({ where: { projectId, type: ReportType.COMBINED }, order: { createdAt: 'DESC' } });
+    const incident = await this.incidentRepo.findOne({ where: { projectId }, order: { createdAt: 'DESC' } });
+    const raw: any = report?.rawData || {};
+    const reportBuildNumber = Number(raw?.enrichedData?.build?.number ?? raw?.build?.number ?? raw?.buildNumber) || null;
+    const reportCommitSha = raw?.enrichedData?.build?.commitSha ?? raw?.build?.commitSha ?? null;
+    const validation = (incident?.metadata as any)?.validation || null;
+
+    const commit = resolveValidatedDeploymentCommit({ reportBuildNumber, reportCommitSha, validation });
+    const environment = deriveDeploymentEnvironmentIdentity(project.azureConfig as any);
+
+    let artifact: ArtifactResolutionResult = emptyArtifact;
+    const registry = project.azureConfig?.registry || null;
+    const repository = project.azureConfig?.imageRepository || null;
+    if (artifactLookup && registry && repository && requestedTag) {
+      let lookup: AcrDigestLookup | null = null;
+      try {
+        lookup = await artifactLookup({ registry, repository, tag: requestedTag });
+      } catch {
+        lookup = null;
+      }
+      artifact = evaluateArtifactIdentity({ targetRegistry: registry, targetRepository: repository, requestedTag, lookup });
+    } else {
+      artifact = evaluateArtifactIdentity({ targetRegistry: registry, targetRepository: repository, requestedTag: requestedTag || null, lookup: null });
+    }
+
+    const identityReasons: string[] = [];
+    if (!commit.ok) identityReasons.push(`Identité de commit non résolue (${commit.failureCode})`);
+    if (!environment.ok) identityReasons.push(`Identité d'environnement non résolue (${environment.failureCode})`);
+    if (!artifact.ok) identityReasons.push(`Identité d'artefact non résolue (${artifact.failureCode})`);
+
+    const deploymentIdentity = buildDeploymentIdentity({
+      projectId,
+      commit,
+      artifact: { ...artifact, registry: registry || '', repository: repository || '', tag: requestedTag || '' },
+      environment,
+    });
+
+    return { identityResolved: commit.ok && artifact.ok && environment.ok, identityReasons, deploymentIdentity, commit, artifact, environment };
+  }
+
+  /** Résout l'identité de build à partir des SEULES preuves propres au build (sourceCommitSha, id/numéro d'incident, dépôt GitHub du projet). */
+  async resolveBuildIdentity(projectId: string, mainBuildNumber?: number): Promise<{ buildIdentity: BuildIdentityResolutionResult; validation: SecurityValidationEvidence }> {
+    const project = await this.projectRepo.findOne({ where: { id: projectId } });
+    const incident = mainBuildNumber
+      ? await this.incidentRepo.findOne({ where: { projectId, buildNumber: mainBuildNumber }, order: { createdAt: 'DESC' } })
+      : await this.incidentRepo.findOne({ where: { projectId }, order: { createdAt: 'DESC' } });
+
+    const metadata: any = incident?.metadata || {};
+    const validation = extractSecurityValidationEvidence(metadata.validation);
+
+    const result = resolveBuildIdentityCore({
+      projectId,
+      incidentId: incident?.id ?? null,
+      mainBuildNumber: incident?.buildNumber ?? null,
+      sourceCommitSha: metadata.sourceCommitSha ?? null,
+      repository: project?.githubRepo ?? null,
+      branchOrRef: metadata.branch ?? null,
+    });
+    const buildIdentity: BuildIdentityResolutionResult = { ...result, securityValidationMissing: !validation.present };
+    return { buildIdentity, validation };
+  }
+
+  /** Lit la télémétrie de PUBLICATION que le pipeline a lui-même rapportée pour un build (incident.metadata.enrichedData.docker). */
+  async resolveBuildPublicationEvidence(projectId: string, mainBuildNumber?: number): Promise<BuildPublicationEvidence> {
+    const incident = mainBuildNumber
+      ? await this.incidentRepo.findOne({ where: { projectId, buildNumber: mainBuildNumber }, order: { createdAt: 'DESC' } })
+      : await this.incidentRepo.findOne({ where: { projectId }, order: { createdAt: 'DESC' } });
+    const docker: any = (incident?.metadata as any)?.enrichedData?.docker || null;
+    const rawStatus = docker?.push_status;
+    return {
+      incidentId: incident?.id ?? null,
+      buildNumber: incident?.buildNumber ?? null,
+      reportedPushStatus: typeof rawStatus === 'string' && rawStatus.trim() ? rawStatus.trim().toUpperCase() : null,
+      reportedImageTag: typeof docker?.image_tag === 'string' && docker.image_tag.trim() ? docker.image_tag.trim() : null,
+      reportedBuildStatus: typeof docker?.build_status === 'string' && docker.build_status.trim() ? docker.build_status.trim().toUpperCase() : null,
+    };
+  }
+
+  /** Compatibilité lecture seule pour les anciens consommateurs qui identifient un projet par son nom plutôt que par son id — délègue entièrement à isReadyToDeploy(). */
   async isReadyToDeployByProjectName(name: string): Promise<DeployReadiness> {
     const project = await this.projectRepo.findOne({ where: { name } });
     if (!project) {

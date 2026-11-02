@@ -1,25 +1,8 @@
+// Composant d'affichage d'un identifiant technique long (digest, UUID, référence d'image) :
+// montre une forme courte lisible, garde la valeur complète dans l'attribut title et un bouton copier.
+
 import { Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
-
-// ─────────────────────────────────────────────────────────────────────
-//  <app-copyable-id> — un identifiant technique long, sans casser la mise
-//  en page (§20) et avec une copie là où elle sert vraiment (§21).
-//
-//  Un digest sha256 fait 71 caractères, un UUID 36, une référence d'image
-//  publiée davantage encore. Collés tels quels dans une <dd> ou une cellule,
-//  ils débordent de la grille et poussent la colonne voisine hors de l'écran
-//  — c'est exactement ce que §23 interdit. Mais les tronquer SANS donner
-//  accès à la valeur complète casse l'auditabilité : un digest à moitié lu
-//  ne prouve rien.
-//
-//  Donc les deux : forme courte lisible à l'écran, valeur intégrale dans
-//  l'attribut `title` ET derrière le bouton copier.
-//
-//  Discipline de données : une valeur absente n'affiche RIEN (pas de « — »
-//  décoratif, pas de bouton copier inerte). Un appelant qui veut dire
-//  « non disponible » l'écrit lui-même, car lui seul sait si l'absence est
-//  un échec de lecture ou une donnée jamais enregistrée (§17).
-// ─────────────────────────────────────────────────────────────────────
 
 @Component({
   selector: 'app-copyable-id',
@@ -50,19 +33,17 @@ import { CommonModule } from '@angular/common';
 })
 export class CopyableIdComponent {
   @Input() value: string | null = null;
-  /** Nombre de caractères conservés dans la forme courte. */
+  // Nombre de caractères conservés dans la forme courte.
   @Input() length = 12;
-  /** Nommé dans l'aria-label du bouton — « Copier le digest … ». */
+  // Nommé dans l'aria-label du bouton — « Copier le digest … ».
   @Input() label = '';
-  /** Préfixe gardé intact (« sha256: ») avant la troncature. */
+  // Préfixe gardé intact (« sha256: ») avant la troncature.
   @Input() keepPrefix = '';
 
   copied = false;
 
-  /**
-   * Forme courte. Une valeur déjà assez courte n'est JAMAIS tronquée ni
-   * suffixée d'une ellipse qui laisserait croire qu'il manque quelque chose.
-   */
+  // Construit la forme courte affichée : garde le préfixe connu intact, tronque le reste à `length`
+  // caractères avec une ellipse ; une valeur déjà assez courte est renvoyée telle quelle.
   shortForm(): string | null {
     const raw = this.value;
     if (!raw) return null;
@@ -72,11 +53,12 @@ export class CopyableIdComponent {
     return `${prefix}${body.slice(0, this.length)}…`;
   }
 
-  /** Pas de bouton inerte sur un navigateur sans presse-papiers. */
+  // Indique si la copie est possible (valeur présente et API presse-papiers disponible).
   canCopy(): boolean {
     return !!(this.value && (navigator as any)?.clipboard?.writeText);
   }
 
+  // Copie la valeur complète (non tronquée) dans le presse-papiers et affiche brièvement une confirmation visuelle.
   doCopy() {
     const raw = this.value;
     if (!raw) return;

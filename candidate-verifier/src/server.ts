@@ -1,12 +1,4 @@
-// R22-E2C2 — minimal HTTP entry point for the candidate-verifier worker.
-// Deliberately plain Node `http`, no framework: this worker exposes exactly
-// one route to exactly one caller (the backend, over an isolated internal
-// network per R22-E2C1 Phase 5/7 -- network isolation IS the trust boundary
-// here, not a shared secret), so a full web framework would be
-// "unnecessary packages" for what this is.
-//
-// This process reads NO secret env vars. Its only env inputs are PORT and
-// WORKSPACE_ROOT/REPO_CACHE_ROOT (plain configuration, never a credential).
+// Reçoit les demandes de vérification et les confie aux exécuteurs.
 import 'reflect-metadata';
 import * as http from 'http';
 import { CandidateVerificationExecutor } from './candidate-verification-executor';
@@ -26,14 +18,6 @@ const PORT = Number(process.env.PORT) || 4100;
 const WORKSPACE_ROOT = process.env.WORKSPACE_ROOT || undefined;
 const REPO_CACHE_ROOT = process.env.REPO_CACHE_ROOT || undefined;
 
-// R-SEC-V1.4 §4 — the security-remediation orchestrator reuses the SAME
-// WorkspaceManager/RepoCacheService instances (same WORKSPACE_ROOT/
-// REPO_CACHE_ROOT config, no new env var) as the existing candidate-
-// verification executor above. No collision risk: workspace identities are
-// namespaced by requestId/batchId/candidateAttempt/verificationStep, and
-// the two flows never share those values -- if they ever did,
-// createWorkspace() fails loudly (WORKSPACE_CREATION_FAILED), never
-// silently corrupts state.
 const workspaceManager = new WorkspaceManager(WORKSPACE_ROOT as any);
 const repoCache = new RepoCacheService(REPO_CACHE_ROOT as any);
 const mavenAdapter = new MavenBuildAdapter();
@@ -63,6 +47,7 @@ const securityBatchOrchestrator = new SecurityRemediationBatchOrchestratorServic
   mavenAdapter,
 );
 
+/** Lit et décode le corps de la requête HTTP. */
 function readBody(req: http.IncomingMessage): Promise<string> {
   return new Promise((resolve, reject) => {
     let data = '';
@@ -72,6 +57,7 @@ function readBody(req: http.IncomingMessage): Promise<string> {
   });
 }
 
+/** Envoie une réponse HTTP au format JSON. */
 function sendJson(res: http.ServerResponse, status: number, body: unknown): void {
   const payload = JSON.stringify(body);
   res.writeHead(status, { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) });

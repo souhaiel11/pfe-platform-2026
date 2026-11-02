@@ -1,0 +1,13 @@
+{
+  "allGitWritersBehindCandidateReadyTrue": true,
+  "candidateReadyCondition": "={{ Boolean($json.body?.status === \"CANDIDATE_READY\") }}",
+  "writers": [
+    "Close Drifted Created PR",
+    "Create Missing Branch",
+    "Create Pull Request",
+    "Write File To Branch"
+  ],
+  "barrierStatus": "OPERATOR_TEST_STOPPED",
+  "backendEnvelopeContainsWritableCandidate": false,
+  "workflowExecuted": false
+}

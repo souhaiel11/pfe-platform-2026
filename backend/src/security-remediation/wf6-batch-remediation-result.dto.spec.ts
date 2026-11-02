@@ -1,11 +1,4 @@
-// Increment 1 — batch callback DTO. No real batch execution exists yet
-// (WF6's own n8n graph is not deployed this increment — see the design
-// cadrage), so unlike wf6-remediation-result.dto.spec.ts this cannot
-// replay a REAL captured payload; the payload below is honestly synthetic,
-// shaped exactly like SecurityRemediationBatchCandidateResult's own real
-// fields (security-remediation-batch-orchestration.types.ts) plus the
-// same GitHub-side fields (branchName/prUrl/prNumber) the singular DTO's
-// own real execution 2060 payload carries.
+// Teste le composant « wf6-batch-remediation-result.dto » et ses cas d’erreur.
 import 'reflect-metadata';
 import * as assert from 'node:assert/strict';
 import { plainToInstance } from 'class-transformer';
@@ -25,12 +18,12 @@ const SYNTHETIC_BATCH_PAYLOAD = {
   executionId: '2100',
   findings: [
     {
-      findingTaskId: 'c8fb2207-c8de-40af-acd4-1d2f96896715', cveId: 'CVE-2023-6378', status: 'CLOSED', reason: 'TARGET_CVE_CLOSED',
+      attemptId: '11111111-1111-4111-8111-111111111111', attemptNumber: 1, findingTaskId: 'c8fb2207-c8de-40af-acd4-1d2f96896715', cveId: 'CVE-2023-6378', status: 'CLOSED', reason: 'TARGET_CVE_CLOSED',
       patchEvidence: { provenanceKind: 'DIRECT_EXPLICIT', oldVersion: '1.2.11', targetVersion: '1.2.13', controllingFile: 'pom.xml', controllingElement: '<version>1.2.11</version>', controllingProperty: null },
       securityValidationEvidence: { status: 'TARGET_CVE_CLOSED', targetCve: 'CVE-2023-6378', mode: 'TRIVY_IMAGE_ARCHIVE', evaluatedSha: '7ae0f954f99628b69ce9b42f42c1e2acc8568d99', candidateContentSha256: 'f'.repeat(64), artifactDigest: 'a'.repeat(64), reportDigest: 'b'.repeat(64), scannerVersion: 'Version: 0.72.0', targetCveMatchCount: 0, buildPassed: true, tests: 'SKIPPED' },
     },
     {
-      findingTaskId: '9d1e2f30-1234-4abc-9def-0123456789ab', cveId: 'CVE-2020-36518', status: 'CLOSED', reason: 'TARGET_CVE_CLOSED',
+      attemptId: '11111111-1111-4111-8111-111111111111', attemptNumber: 1, findingTaskId: '9d1e2f30-1234-4abc-9def-0123456789ab', cveId: 'CVE-2020-36518', status: 'CLOSED', reason: 'TARGET_CVE_CLOSED',
       patchEvidence: { provenanceKind: 'DIRECT_EXPLICIT', oldVersion: '2.13.3', targetVersion: '2.13.5', controllingFile: 'pom.xml', controllingElement: '<version>2.13.3</version>', controllingProperty: null },
     },
   ],
@@ -43,6 +36,7 @@ const SYNTHETIC_BATCH_PAYLOAD = {
 const KEPT_TOP_LEVEL = ['projectId', 'batchId', 'status', 'reason', 'candidateIdentity', 'evaluatedSha', 'branchName', 'prUrl', 'prNumber', 'executionId', 'findings'];
 const EXCLUDED_TOP_LEVEL = ['decisions', 'candidateManifest', 'repository', 'commitMessage'];
 
+/** Exécute les étapes principales de ce programme. */
 async function main() {
   const instance = plainToInstance(Wf6BatchRemediationResultDto, SYNTHETIC_BATCH_PAYLOAD, { excludeExtraneousValues: false });
   const errors = await validate(instance, { whitelist: true, forbidNonWhitelisted: false });
@@ -56,6 +50,7 @@ async function main() {
   assert.deepEqual(allKeys.filter(k => !accounted.has(k)), [], 'every top-level field must be either kept or explicitly excluded');
 
   assert.equal((instance as any).findings.length, 2, 'both per-CVE entries survive');
+  /** Prépare les données nécessaires à ce scénario. */
   const plain = (v: unknown) => JSON.parse(JSON.stringify(v));
   assert.deepEqual(plain((instance as any).findings[0].securityValidationEvidence), SYNTHETIC_BATCH_PAYLOAD.findings[0].securityValidationEvidence, 'nested per-CVE evidence survives intact');
   assert.deepEqual(plain((instance as any).findings[1].patchEvidence), SYNTHETIC_BATCH_PAYLOAD.findings[1].patchEvidence);
@@ -69,8 +64,8 @@ async function main() {
     const minimal = plainToInstance(Wf6BatchRemediationResultDto, {
       projectId: '3aa1c9b9-e114-40e4-884b-ebc7aa32e002', batchId: 'sec-batch-conflict', status: 'PATCH_CONFLICT', reason: '1 conflicting CVE(s): CVE-2023-6378',
       findings: [
-        { findingTaskId: 'c8fb2207-c8de-40af-acd4-1d2f96896715', cveId: 'CVE-2023-6378', status: 'PATCH_CONFLICT', reason: 'OLD_VERSION_MISMATCH: ...' },
-        { findingTaskId: '9d1e2f30-1234-4abc-9def-0123456789ab', cveId: 'CVE-2020-36518', status: 'PENDING', reason: 'BATCH_ABORTED_BY_SIBLING_CONFLICT' },
+        { attemptId: '11111111-1111-4111-8111-111111111111', attemptNumber: 1, findingTaskId: 'c8fb2207-c8de-40af-acd4-1d2f96896715', cveId: 'CVE-2023-6378', status: 'PATCH_CONFLICT', reason: 'OLD_VERSION_MISMATCH: ...' },
+        { attemptId: '22222222-2222-4222-8222-222222222222', attemptNumber: 1, findingTaskId: '9d1e2f30-1234-4abc-9def-0123456789ab', cveId: 'CVE-2020-36518', status: 'PENDING', reason: 'BATCH_ABORTED_BY_SIBLING_CONFLICT' },
       ],
     }, { excludeExtraneousValues: false });
     const minimalErrors = await validate(minimal, { whitelist: true });

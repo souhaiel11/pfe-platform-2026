@@ -1,3 +1,4 @@
+// Teste le composant « security-remediation-batch-closure » et ses cas d’erreur.
 import * as assert from 'node:assert/strict';
 import { deriveBatchClosureVerdict, deriveCveClosureStatus, allVulnerabilityIds } from './security-remediation-batch-closure';
 import { SecurityArtifactScan } from './security-artifact-scan';

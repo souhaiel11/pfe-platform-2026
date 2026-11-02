@@ -1,3 +1,4 @@
+// Teste le composant « maven-remediation-scope » et ses cas d’erreur.
 import * as assert from 'assert';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -17,6 +18,7 @@ const evidence: MavenScopeEvidence = {
   experiments: controls.map(c => { const data = f[c.kind === 'LOCAL_PROPERTY' ? 'property-only' : 'v16'];
     return { control: c, sourceSha256: createHash('sha256').update(data.source).digest('hex'), dependencyTree: data.tree, effectivePom: data.effective }; }),
 };
+/** Prépare les données nécessaires à ce scénario. */
 const derive = (e = evidence) => deriveMavenRemediationScope(f.source, pkg, target, 'pom.xml', e);
 const scope = derive();
 assert.equal(scope.kind, 'COORDINATED_SAME_FILE');
@@ -66,7 +68,9 @@ assert.deepEqual(derive(reordered), scope);
 // Property-managed single-control behavior remains valid without changing provenance.
 const propertySource = '<project><properties><v>1.2.11</v></properties><dependencies><dependency><groupId>g</groupId><artifactId>a</artifactId><version>${v}</version></dependency></dependencies></project>';
 const pc = localMavenControls(propertySource, 'g:a', target)[0], patched = applyMavenControls(propertySource, [pc]);
+/** Prépare les données nécessaires à ce scénario. */
 const model = (v: string) => '<project><dependencies><dependency><groupId>g</groupId><artifactId>a</artifactId><version>' + v + '</version></dependency></dependencies></project>';
+/** Prépare les données nécessaires à ce scénario. */
 const tree = (v: string) => 'root:p:jar:1\n+- g:a:jar:' + v + ':compile\n';
 const pe: MavenScopeEvidence = { targetCve: 'CVE-2023-6378', evaluatedSha: f.sha, originalBlobSha: computeGitBlobSha1(propertySource), baselineTree: tree('1.2.11'), baselineEffectivePom: model('1.2.11'),
  cveTargets: [{ package: 'g:a', installedVersion: '1.2.11', fixedVersions: [target], location: 'app.jar' }],

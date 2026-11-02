@@ -1,3 +1,4 @@
+// Teste le composant « parent-version-effective-model-check » et ses cas d’erreur.
 import * as assert from 'node:assert/strict';
 import { verifyParentUpgradeEffectiveVersions } from './parent-version-effective-model-check';
 

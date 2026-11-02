@@ -1,23 +1,4 @@
-// ═══════════════════════════════════════════════════════════════════════
-//  Gel UI/UX final — garde-fous de la passe de finition.
-//
-//  Ce qui est vérifié ici n'est pas « l'écran est joli » mais les deux
-//  propriétés qu'une passe UI peut casser sans que rien ne plante :
-//
-//   1. la DISCIPLINE DE DONNÉES — inconnu reste inconnu, un échec de
-//      requête ne se présente jamais comme une absence de problème, et
-//      aucune colonne ne se remplit d'un zéro ou d'une valeur empruntée
-//      à un autre projet (§17/§31) ;
-//   2. la COHÉRENCE DE PRÉSENTATION — un seul système de statut, un seul
-//      modèle de ligne partagé entre la liste des projets et le tableau
-//      de bord, donc impossible que les deux écrans affirment deux
-//      choses différentes du même projet (§5/§6/§27).
-//
-//  Les charges utiles de test sont des RÉPONSES RÉELLES relevées sur le
-//  backend live (GET /projects, /dashboard/security-global,
-//  /dashboard/jenkins-global, /azure-deploy/ready/:id) — pas des formes
-//  inventées qui valideraient un contrat que le backend ne sert pas.
-// ═══════════════════════════════════════════════════════════════════════
+// Teste le composant « final-ui-freeze » et ses cas d’erreur.
 import assert from 'node:assert/strict';
 import { deepEqual as looseDeepEqual } from 'node:assert';
 
@@ -29,6 +10,7 @@ assert.deepStrictEqualLoose = looseDeepEqual;
 import { readFileSync } from 'node:fs';
 import { loadFrontend } from './security-lifecycle-test-loader.mjs';
 
+/** Lit les données depuis leur source. */
 const read = p => readFileSync(new URL(p, import.meta.url), 'utf8');
 const frenchFormat = loadFrontend('../src/app/shared/french-format.ts');
 const row = loadFrontend('../src/app/features/projects/project-list-row.ts', {
@@ -215,6 +197,7 @@ const LIVE_READINESS_NOT_CONFIGURED = {
 
 // ── 5. §28 — tri « ce qui va mal d'abord », inconnu en dernier ────────
 {
+  /** Prépare les données nécessaires à ce scénario. */
   const make = (name, score, open) => row.buildProjectListRow(
     { id: name, name, jenkinsJobName: name, openIncidents: open, updatedAt: '2026-10-10T12:00:00.000Z' },
     score === null ? undefined : { securityScore: score, incomplete: false, missingScanners: [] },

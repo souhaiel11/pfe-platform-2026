@@ -1,30 +1,34 @@
-// Increment 1 (sélection multiple CVE) -- offline contract tests for
-// ManualRemediationService.attachFindingTaskIds(), the I/O half (batched
-// DB lookup) of finding-task-id-enrichment.ts's pure merge (proven
-// separately in finding-task-id-enrichment.spec.ts). Same hand-rolled fake
-// TypeORM repo convention as manual-remediation.service.batch.spec.ts,
-// including its In([...]) shape.
-//
-// Run: npx ts-node backend/src/manual-remediation/manual-remediation.service.finding-task-ids.spec.ts
+// Teste le composant « manual-remediation.service.finding-task-ids » et ses cas d’erreur.
 import * as assert from 'node:assert/strict';
 import { ManualRemediationService } from './manual-remediation.service';
 import { findingFingerprint } from './finding-fingerprint';
 
+/** Prépare les données nécessaires à ce scénario. */
 function matches(row: any, where: any): boolean {
   return Object.entries(where).every(([k, v]: [string, any]) => {
     if (v && typeof v === 'object' && v.type === 'in' && Array.isArray(v.value)) return v.value.includes(row[k]);
     return row[k] === v;
   });
 }
+/** Prépare les données nécessaires à ce scénario. */
 function makeService(taskRows: any[]) {
-  const repo: any = { find: async ({ where }: any) => taskRows.filter(r => matches(r, where)) };
-  const incidents: any = { find: async () => [], findOne: async () => null };
-  return new ManualRemediationService(repo, incidents, { dispatch: async () => undefined });
+  const repo: any = {
+  /** Recherche les éléments correspondants. */
+  find: async ({ where }: any) => taskRows.filter(r => matches(r, where)) };
+  const incidents: any = {
+  /** Recherche les éléments correspondants. */
+  find: async () => [],
+  /** Recherche l’élément correspondant à l’identifiant. */
+  findOne: async () => null };
+  return new ManualRemediationService(repo, incidents, {
+  /** Transmet la demande au service chargé de l’exécuter. */
+  dispatch: async () => undefined });
 }
 
 const PROJECT_A = '3aa1c9b9-e114-40e4-884b-ebc7aa32e002';
 const PROJECT_B = 'b1c9a3aa-e114-40e4-884b-ebc7aa32e003';
 
+/** Exécute les étapes principales de ce programme. */
 async function main() {
   // 1. Un CVE avec une ManualRemediationTask correspondante (même
   // findingFingerprint, même projet) reçoit son id -- fingerprint calculé
@@ -67,9 +71,17 @@ async function main() {
   // (In([...projectIds])), jamais une requête par incident.
   {
     let findCalls = 0;
-    const repo: any = { find: async ({ where }: any) => { findCalls++; return []; } };
-    const incidentsRepo: any = { find: async () => [], findOne: async () => null };
-    const service = new ManualRemediationService(repo, incidentsRepo, { dispatch: async () => undefined });
+    const repo: any = {
+    /** Recherche les éléments correspondants. */
+    find: async ({ where }: any) => { findCalls++; return []; } };
+    const incidentsRepo: any = {
+    /** Recherche les éléments correspondants. */
+    find: async () => [],
+    /** Recherche l’élément correspondant à l’identifiant. */
+    findOne: async () => null };
+    const service = new ManualRemediationService(repo, incidentsRepo, {
+    /** Transmet la demande au service chargé de l’exécuter. */
+    dispatch: async () => undefined });
     const incidents: any[] = Array.from({ length: 5 }, (_, i) => ({ projectId: PROJECT_A, metadata: { enrichedData: { trivy: { cves: [{ id: `CVE-${i}`, pkg: 'x' }] } } } }));
     await service.attachFindingTaskIds(incidents);
     assert.equal(findCalls, 1, 'must be exactly one batched query for the whole list, not N');
@@ -90,9 +102,17 @@ async function main() {
   // (garde explicite dans attachFindingTaskIds, pas une coïncidence).
   {
     let findCalls = 0;
-    const repo: any = { find: async () => { findCalls++; return []; } };
-    const incidentsRepo: any = { find: async () => [], findOne: async () => null };
-    const service = new ManualRemediationService(repo, incidentsRepo, { dispatch: async () => undefined });
+    const repo: any = {
+    /** Recherche les éléments correspondants. */
+    find: async () => { findCalls++; return []; } };
+    const incidentsRepo: any = {
+    /** Recherche les éléments correspondants. */
+    find: async () => [],
+    /** Recherche l’élément correspondant à l’identifiant. */
+    findOne: async () => null };
+    const service = new ManualRemediationService(repo, incidentsRepo, {
+    /** Transmet la demande au service chargé de l’exécuter. */
+    dispatch: async () => undefined });
     await service.attachFindingTaskIds([{ projectId: null, metadata: { enrichedData: {} } } as any]);
     assert.equal(findCalls, 0, 'must not query the DB at all when no incident carries a usable projectId');
   }

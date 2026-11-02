@@ -1,3 +1,5 @@
+// Page affichée pour toute route inconnue (404), avec un lien de retour au tableau de bord.
+
 import { Component } from '@angular/core';
 import { RouterModule } from '@angular/router';
 

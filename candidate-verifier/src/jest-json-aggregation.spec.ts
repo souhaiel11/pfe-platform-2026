@@ -1,3 +1,4 @@
+// Teste le composant « jest-json-aggregation » et ses cas d’erreur.
 import * as assert from 'node:assert/strict';
 import * as fs from 'fs';
 import * as os from 'os';
@@ -7,6 +8,7 @@ import { aggregateJestJson, aggregateJestReport } from './jest-json-aggregation'
 const green = { numTotalTests: 3, numFailedTests: 0, numPassedTests: 3,
   numPendingTests: 0, numFailedTestSuites: 0 };
 const empty = { total: 0, failures: 0, errors: 0, skipped: 0, matchCount: 0 };
+/** Lit les données et les convertit au format attendu. */
 const parse = (overrides = {}) => aggregateJestJson(JSON.stringify({ ...green, ...overrides }));
 
 assert.deepEqual(parse({ numFailedTests: 1, numPassedTests: 2, numFailedTestSuites: 1 }),

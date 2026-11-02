@@ -1,7 +1,4 @@
-/** V1.7 final predeploy phase — Phase A: candidate-verifier -> builder-
- * scanner authentication. Pure unit tests for the shared-secret header
- * check, same style as the rest of this codebase (plain assertions, no
- * test framework). */
+// Teste le composant « internal-auth » et ses cas d’erreur.
 import * as assert from 'assert';
 import { checkInternalAuth, INTERNAL_AUTH_HEADER } from './internal-auth';
 

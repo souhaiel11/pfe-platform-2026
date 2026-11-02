@@ -1,3 +1,4 @@
+// Teste le composant « jenkins-credentials » et ses cas d’erreur.
 import * as assert from 'node:assert/strict';
 import { of, throwError } from 'rxjs';
 import { ProjectsService } from './projects.service';
@@ -7,22 +8,31 @@ const project: any = {
   jenkinsToken: 'stale:invalid-token', jenkinsJobName: 'pfe-app-test',
 };
 const repo: any = {
+  /** Recherche l’élément correspondant à l’identifiant. */
   findOne: async () => project,
+  /** Applique les modifications autorisées à l’élément. */
   update: async (_id: string, patch: any) => Object.assign(project, patch),
 };
-const incidentRepo: any = { find: async () => [] };
+const incidentRepo: any = {
+/** Recherche les éléments correspondants. */
+find: async () => [] };
 
+/** Exécute les étapes principales de ce programme. */
 async function main() {
-  const http: { get: (url: string, opts: any) => any } = { get: () => throwError(() => new Error('unset')) };
+  const http: { get: (url: string, opts: any) => any } = {
+  /** Récupère les données demandées. */
+  get: () => throwError(() => new Error('unset')) };
   const service = new ProjectsService(repo as any, incidentRepo as any, http as any);
   const debugLogs: string[] = [];
   const warnLogs: string[] = [];
   (service as any).logger = {
+    /** Prépare les données nécessaires à ce scénario. */
     debug: (message: string) => debugLogs.push(message),
+    /** Prépare les données nécessaires à ce scénario. */
     warn: (message: string) => warnLogs.push(message),
   };
 
-  // 1) Valid credential — Jenkins whoAmI confirms real authentication.
+  /** Récupère les données demandées. */
   http.get = (url: string, opts: any) => {
     assert.equal(url, 'http://jenkins:8080/whoAmI/api/json');
     assert.equal(opts.timeout, 8000);
@@ -39,6 +49,7 @@ async function main() {
   // 2) Jenkins reachable but reports authenticated:false (e.g. wrong token,
   //    Jenkins still answers 200 — must NOT be treated as success).
   project.jenkinsToken = 'platform-build:good-token';
+  /** Récupère les données demandées. */
   http.get = () => of({ data: { authenticated: false, name: 'anonymous' } });
   await assert.rejects(
     () => service.updateJenkinsCredentials('project-1', { username: 'platform-build', token: 'wrong-token' }),
@@ -46,7 +57,7 @@ async function main() {
   );
   assert.equal(project.jenkinsToken, 'platform-build:good-token', 'rejected credential must not overwrite the stored one');
 
-  // 3) Network/auth failure (e.g. HTTP 401/500) — same fail-closed outcome.
+  /** Récupère les données demandées. */
   http.get = () => throwError(() => Object.assign(new Error('raw-remote-error-must-not-be-logged'), {
     code: 'ECONNREFUSED',
     response: {
@@ -70,8 +81,14 @@ async function main() {
 
   // 4) No internal URL configured — rejected before ever contacting Jenkins.
   const noUrlProject = { id: 'project-2', jenkinsInternalUrl: null, jenkinsUrl: null };
-  const noUrlRepo: any = { findOne: async () => noUrlProject, update: async () => undefined };
-  const service2 = new ProjectsService(noUrlRepo as any, incidentRepo as any, { get: () => throwError(() => new Error('must not be called')) } as any);
+  const noUrlRepo: any = {
+  /** Recherche l’élément correspondant à l’identifiant. */
+  findOne: async () => noUrlProject,
+  /** Applique les modifications autorisées à l’élément. */
+  update: async () => undefined };
+  const service2 = new ProjectsService(noUrlRepo as any, incidentRepo as any, {
+  /** Récupère les données demandées. */
+  get: () => throwError(() => new Error('must not be called')) } as any);
   await assert.rejects(() => service2.updateJenkinsCredentials('project-2', { username: 'x', token: 'y' }), /URL Jenkins interne/);
 
   console.log('jenkins credentials contract: PASS');

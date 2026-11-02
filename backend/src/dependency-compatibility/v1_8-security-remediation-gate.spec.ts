@@ -1,5 +1,4 @@
-// V1.8 Phase 5 ticket — Phase 10 (all 10 required decision classes) +
-// Phase 11 (known real cases) for canDispatchSecurityRemediationV1_8().
+// Teste le composant « v1_8-security-remediation-gate » et ses cas d’erreur.
 import { strict as assert } from 'assert';
 import { canDispatchSecurityRemediationV1_8, isEvidenceStale, SecurityRemediationDispatchContext, LIVE_WRITER_SUPPORTED_EDIT_TYPES } from './v1_8-security-remediation-gate';
 import { V1_8CompatibilityDecisionService } from './v1_8-compatibility-decision.service';
@@ -7,7 +6,7 @@ import { V1_8CompatibilityDecision } from './v1_8-compatibility-decision.types';
 
 const service = new V1_8CompatibilityDecisionService();
 
-/** Builds a task context that EXACTLY matches a real evidence entry -- the only way this helper can ever produce ALLOW. */
+/** Vérifie exact contexte dans ce scénario de test. */
 function exactContext(evidence: V1_8CompatibilityDecision, overrides: Partial<SecurityRemediationDispatchContext> = {}): SecurityRemediationDispatchContext {
   return {
     repository: evidence.repository, commitSha: evidence.validatedCommitSha, source: evidence.findingSource,
@@ -99,13 +98,6 @@ console.log('8. MAJOR_UPGRADE_REQUIRES_REVIEW -> BLOCK: PASS');
 }
 console.log('9. evidence missing -> BLOCK: PASS');
 
-// 10. current old classifier says AUTO_FIX but this gate is V1.8-only and
-// never reads the old classifier at all -- proven structurally: passing
-// the SAME exact context/evidence for a case the old classifier would
-// reject (H2, ADMIN_ACTION_REQUIRED in production) still evaluates
-// PURELY on V1.8 evidence, and blocks for a V1.8 reason, never an
-// old-classifier one. (See Phase 5's own "no fallback to old auto-fix"
-// rule -- this function has no code path that could even consult it.)
 {
   const result = canDispatchSecurityRemediationV1_8(exactContext(h2), h2);
   assert.equal(result.decision, 'BLOCK');

@@ -1,10 +1,10 @@
+// Construit l'état effectif de configuration de la plateforme à partir des variables d'environnement, sans jamais exposer de valeur sensible.
 import { Injectable } from '@nestjs/common';
 
-// Explicit allowlist: never serialize environment/configuration objects.
-// Repository/branch are project-specific. Trivy configuration and DB metadata
-// live in the isolated scanner; no server-side source is available here.
+/** Construit l'état honnête de configuration de la plateforme à partir des variables d'environnement — ne jamais exposer de valeur sensible, seulement "configuré/non configuré". */
 export function buildEffectiveConfig(env: NodeJS.ProcessEnv = process.env) {
   const transportConfigured = !!env.N8N_INTERNAL_SECRET;
+  /** Prépare l’accès à la base de données. */
   const database = () => ({ ageMs: null, maxAgeMs: null, available: null });
   return {
     generatedAt: new Date().toISOString(),
@@ -27,7 +27,6 @@ export function buildEffectiveConfig(env: NodeJS.ProcessEnv = process.env) {
       },
     },
     policies: {
-      // Architecture invariants, not inferred runtime status or editable flags.
       invariants: [
         'Aucune fusion automatique : la fusion des Pull Requests reste humaine.',
         'Verdict par vulnérabilité, jamais par lot agrégé.',
@@ -40,5 +39,6 @@ export function buildEffectiveConfig(env: NodeJS.ProcessEnv = process.env) {
 
 @Injectable()
 export class EffectiveConfigService {
+  /** Renvoie l'état effectif de configuration construit par buildEffectiveConfig(). */
   getEffectiveConfig() { return buildEffectiveConfig(); }
 }

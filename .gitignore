@@ -9,3 +9,46 @@ dist/
 *.old
 __pycache__/
 infra/azure-deploy-agent/allowlists.env
+
+# Paramètres locaux des assistants de développement
+.claude/
+CLAUDE.md
+
+# Sauvegardes locales privées des remises à zéro.
+/.local-backups/
+
+# Rapport, audits et exports : hors code de la plateforme
+/RAPPORT_PFE_7_CHAPITRES/
+/FIGURES_RAPPORT/
+/PREUVES_RAPPORT/
+/AUDIT_NETTOYAGE_SECURISÉ_PFE/
+/audit-pfe-7chapitres-*/
+/exports/
+/rapport-evidence/
+/rapport-pfe-enrichi/
+/technical-explorer/
+/testbeds/
+/backups/
+/.local-audit/
+/.fs-write-check-*
+/docker-compose.r99.yml
+
+# Sauvegardes et artefacts volumineux
+/n8n-workflows/backups/
+*.tar.gz
+*.bundle
+*.zip
+
+# Frontend : sorties de build égarées et anciennes releases
+/frontend/dist-*/
+/frontend/chunk-*.js
+/frontend/*.map
+/frontend/main.js
+/frontend/polyfills.js
+/frontend/styles.css
+/frontend/releases/*
+!/frontend/releases/security-score-label-r2-20261030/
+
+# Scripts ponctuels locaux du backend
+/backend/config-check-compile/
+/backend/correctifs-score/

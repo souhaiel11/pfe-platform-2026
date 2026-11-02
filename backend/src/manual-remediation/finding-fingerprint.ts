@@ -1,9 +1,12 @@
+// Calcule une empreinte stable d'un finding à partir de son identité et de son emplacement pour le comparer entre observations.
 import { createHash } from 'crypto';
 
+/** Calcule une empreinte stable et comparable pour un finding de sécurité, indépendante du scanner d'origine. */
 function norm(value: unknown): string {
   return String(value ?? '').trim().toLowerCase().replace(/\s+/g, ' ');
 }
 
+/** Normalise une URL (retire le hash, trie les paramètres) pour que deux URLs équivalentes donnent la même empreinte. */
 function normalizedUrl(value: unknown): string {
   try {
     const url = new URL(String(value || ''));
@@ -15,13 +18,7 @@ function normalizedUrl(value: unknown): string {
   }
 }
 
-/**
- * Stable identity across builds (SHA-256 of non-secret canonical facts):
- * TRIVY = source + CVE/advisory + package; OWASP = source + CVE + dependency;
- * ZAP = source + alert/rule + normalized URL + parameter;
- * SONAR = source + rule + file. Version, severity and scanner finding IDs are
- * deliberately excluded because they may legitimately change between builds.
- */
+/** Calcule l'empreinte SHA-256 d'un finding à partir de ses champs stables (hors version/sévérité/id scanner, qui peuvent changer entre deux builds). */
 export function findingFingerprint(sourceValue: unknown, finding: any): string {
   const source = norm(sourceValue || finding?.source).toUpperCase();
   let parts: string[];

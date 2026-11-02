@@ -1,3 +1,4 @@
+// Vérifie le nombre de findings transmis à la correction dans WF2.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
@@ -6,38 +7,60 @@ const priorArtifact = new URL('../pending-live-update/wf2-git-patch-pr-u3eeMwTuh
 const fixturePath = new URL('./fixtures/wf2-r75-execution-2035-cardinality.json', import.meta.url);
 const wf = JSON.parse(readFileSync(artifact))[0];
 const prior = JSON.parse(readFileSync(priorArtifact))[0];
+/** Retrouve ou construit le nœud du workflow demandé. */
 const node = name => wf.nodes.find(candidate => candidate.name === name);
+/** Prépare les données nécessaires à ce scénario. */
 const priorNode = name => prior.nodes.find(candidate => candidate.name === name);
 const fixture10 = JSON.parse(readFileSync(fixturePath)).attempt10;
 
+/** Exécute le traitement et collecte son résultat. */
 function run(name, jsonInput, refs = {}) {
+  /** Simule l’accès à un nœud n8n pour le scénario. */
   const $ = key => {
     assert.ok(refs[key], `unexpected reference ${key}`);
-    return { first: () => ({ json: refs[key][0] }), all: () => refs[key].map(json => ({ json })) };
+    return {
+    /** Renvoie le premier élément disponible. */
+    first: () => ({ json: refs[key][0] }),
+    /** Renvoie tous les éléments disponibles. */
+    all: () => refs[key].map(json => ({ json })) };
   };
   return new Function('$input', '$json', '$', 'Buffer', node(name).parameters.jsCode)(
-    { first: () => ({ json: jsonInput }), all: () => [{ json: jsonInput }] }, jsonInput, $, Buffer,
+    {
+    /** Renvoie le premier élément disponible. */
+    first: () => ({ json: jsonInput }),
+    /** Renvoie tous les éléments disponibles. */
+    all: () => [{ json: jsonInput }] }, jsonInput, $, Buffer,
   );
 }
 
+/** Prépare les données nécessaires à ce scénario. */
 const runBuildPolicy = (batch, tree, lookup) =>
   run('Build Independent Repository Policy', tree, { 'Prepare Batch Context': [batch], 'Lookup Remediation Branch': [lookup] })[0].json;
 
+/** Vérifie les résultats attendus dans ce scénario. */
 function runPreparePlan(fixture) {
   const policyOut = runBuildPolicy(fixture.batch, fixture.tree_resp, fixture.lookup);
   const items = fixture.rawFetchItems.map((raw, i) => ({
     json: i === 0 ? { ...raw, sourceGrounding: fixture.sourceGrounding } : raw,
   }));
+  /** Simule l’accès à un nœud n8n pour le scénario. */
   const $ = key => {
     assert.equal(key, 'Build Independent Repository Policy');
-    return { first: () => ({ json: policyOut }) };
+    return {
+    /** Renvoie le premier élément disponible. */
+    first: () => ({ json: policyOut }) };
   };
   const out = new Function('$input', '$json', '$', 'Buffer', node('Prepare Generic Remediation Plan').parameters.jsCode)(
-    { all: () => items, first: () => items[0] }, items[0].json, $, Buffer,
+    {
+    /** Renvoie tous les éléments disponibles. */
+    all: () => items,
+    /** Renvoie le premier élément disponible. */
+    first: () => items[0] }, items[0].json, $, Buffer,
   );
   return out[0].json;
 }
 
+/** Prépare les données nécessaires à ce scénario. */
 const runValidatePlan = (preparedJson, claudeResponse) =>
   run('Validate Generic Remediation Plan', claudeResponse, { 'Prepare Generic Remediation Plan': [preparedJson] });
 
@@ -102,6 +125,7 @@ const runValidatePlan = (preparedJson, claudeResponse) =>
 // either historical id alone is rejected as incomplete/mismatched.
 {
   const prepared = runPreparePlan(fixture10);
+  /** Prépare les données nécessaires à ce scénario. */
   const oneIssuePlan = (findingId) => ({
     stop_reason: 'end_turn',
     content: [{ type: 'text', text: JSON.stringify({ plans: [{
@@ -152,14 +176,25 @@ console.log('BACKEND_CARDINALITY_FIX_MIRRORS_SAME_FORMULA = batchId + ":issue-" 
     genericPreflightPassed: true, applicablePlans: [validatedPlanItem.remediationPlans[0].findingId],
     llmRequestBody: { model: 'claude-sonnet-5', system: 'reviewer', messages: [{ role: 'user', content: 'placeholder' }] },
   };
+  /** Simule l’échec attendu par ce scénario. */
   const $manifest = key => {
-    if (key === 'Prepare Batch Context') return { first: () => ({ json: prepared }) };
-    if (key === 'Validate Generic Remediation Plan') return { all: () => [{ json: validatedPlanItem }] };
-    if (key === 'Prepare Generic Remediation Plan') return { first: () => ({ json: prepared }) };
+    if (key === 'Prepare Batch Context') return {
+    /** Renvoie le premier élément disponible. */
+    first: () => ({ json: prepared }) };
+    if (key === 'Validate Generic Remediation Plan') return {
+    /** Renvoie tous les éléments disponibles. */
+    all: () => [{ json: validatedPlanItem }] };
+    if (key === 'Prepare Generic Remediation Plan') return {
+    /** Renvoie le premier élément disponible. */
+    first: () => ({ json: prepared }) };
     throw new Error('unexpected ref ' + key);
   };
   const manifestOut = new Function('$input', '$json', '$', 'Buffer', node('Prepare Candidate Manifest').parameters.jsCode)(
-    { all: () => [{ json: candidateItem }], first: () => ({ json: candidateItem }) }, candidateItem, $manifest, Buffer,
+    {
+    /** Renvoie tous les éléments disponibles. */
+    all: () => [{ json: candidateItem }],
+    /** Renvoie le premier élément disponible. */
+    first: () => ({ json: candidateItem }) }, candidateItem, $manifest, Buffer,
   );
   const messageText = JSON.stringify(manifestOut[0].json.llmRequestBody.messages || manifestOut[0].json.llmRequestBody);
   assert.ok(messageText.includes('b8db9c11-ddf9-4a23-9bf3-1d2ff15a59ef'),
@@ -182,6 +217,7 @@ console.log('BACKEND_CARDINALITY_FIX_MIRRORS_SAME_FORMULA = batchId + ":issue-" 
     findingIds: fixture10.batch.findingIds,
   };
   const manifest = { files: [{ path: FILE, operation: 'MODIFY', originalBlobSha: '2fd6e4ab674261fa26e93849eae01f96c132a9a9', contentSha256: CONTENT_SHA }], candidateDigest: DIGEST };
+  /** Prépare les données nécessaires à ce scénario. */
   const validReceipt = () => ({
     targetFile: FILE, approvedFindingIds: [CANDIDATE_ID], processedFindingIds: [CANDIDATE_ID],
     candidateAcceptedFindingIds: [CANDIDATE_ID], validationEvidence: { ok: true },
@@ -189,10 +225,18 @@ console.log('BACKEND_CARDINALITY_FIX_MIRRORS_SAME_FORMULA = batchId + ":issue-" 
     fileOperation: 'MODIFY', newSha: NEW_SHA, commitSha: COMMIT_SHA, contentSha256: CONTENT_SHA,
     oldSha: manifest.files[0].originalBlobSha,
   });
+  /** Prépare les données nécessaires à ce scénario. */
   const runValidateBatch = incoming => {
-    const $ = key => key === 'Prepare Batch Context' ? { first: () => ({ json: bctx }) } : { first: () => ({ json: manifest }) };
+    /** Simule l’accès à un nœud n8n pour le scénario. */
+    const $ = key => key === 'Prepare Batch Context' ? {
+    /** Renvoie le premier élément disponible. */
+    first: () => ({ json: bctx }) } : {
+    /** Renvoie le premier élément disponible. */
+    first: () => ({ json: manifest }) };
     return new Function('$input', '$json', '$', 'Buffer', node('Validate Batch Completeness').parameters.jsCode)(
-      { all: () => incoming.map(json => ({ json })) }, null, $, Buffer);
+      {
+      /** Renvoie tous les éléments disponibles. */
+      all: () => incoming.map(json => ({ json })) }, null, $, Buffer);
   };
   const [result] = runValidateBatch([validReceipt()]);
   assert.equal(result.json.completenessPassed, true);

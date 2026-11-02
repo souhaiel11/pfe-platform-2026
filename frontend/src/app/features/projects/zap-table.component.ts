@@ -1,3 +1,4 @@
+// Affiche les alertes ZAP et leur prise en charge.
 import { zapAlertLabel } from '../../shared/status-labels';
 import { Component, EventEmitter, Input, Output, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -8,15 +9,7 @@ import { PresentationLabelPipe } from '../../shared/presentation-label.pipe';
 import { SourceEvidenceLinkComponent } from '../../shared/source-evidence/source-evidence-link.component';
 import { FindingEvidence, SourceEvidence } from '../../shared/source-evidence/source-evidence.types';
 
-// ─────────────────────────────────────────────────────────────────────
-//  Tableau des alertes ZAP (DAST) — clic sur une ligne = description
-//  complète + recommandation. Même patron d'interaction que
-//  <app-cve-table> (Trivy/OWASP), adapté à la forme des alertes ZAP
-//  telle que normalisée par WF1 (id/risk/title/message/evidence/
-//  recommendation — pas de package/CVSS/version ici).
-//  Usage :
-//    <app-zap-table [alerts]="enrichedData.zap.alerts"></app-zap-table>
-// ─────────────────────────────────────────────────────────────────────
+// ───────────────────────────────────────────────────────────────────── Tableau des alertes ZAP (DAST) — clic sur une ligne = description complète + recommandation.
 
 type RawZapAlert = any;
 
@@ -168,6 +161,7 @@ interface NormZapAlert {
 })
 export class ZapTableComponent {
   zapAlertLabel = zapAlertLabel;
+  /** Renvoie les alertes ZAP transmises au tableau. */
   @Input() set alerts(value: RawZapAlert[] | null | undefined) { this._raw.set(value ?? []); }
   @Input() tasks: any[] = [];
   @Input() statusFilter = 'ALL'; @Input() severityFilter = 'ALL'; @Input() userRole = 'viewer';
@@ -195,10 +189,12 @@ export class ZapTableComponent {
 
   private sevRank: Record<string, number> = { HIGH: 0, MEDIUM: 1, LOW: 2 };
 
+  /** Retire les balises HTML d'un champ texte brut (ex. la référence ZAP). */
   private stripHtml(v: string | null | undefined): string {
     return (v ?? '').replace(/<\/?[a-z][^>]*>/gi, '').trim();
   }
 
+  /** Normalise les alertes ZAP brutes vers une forme stable et les trie par sévérité (HIGH → MEDIUM → LOW). */
   normalized = computed<NormZapAlert[]>(() => {
     const out = this._raw().map((r: any, i: number): NormZapAlert => ({
       id: r.id ?? r.pluginid ?? r.alertRef ?? String(i),
@@ -217,19 +213,28 @@ export class ZapTableComponent {
     }));
     return out.sort((a, b) => (this.sevRank[a.severity] ?? 9) - (this.sevRank[b.severity] ?? 9));
   });
+  /** Applique les filtres sévérité/statut de traitement à la liste normalisée. */
   filtered(): NormZapAlert[] { return this.normalized().filter(a => { const task = this.taskFor(a); return (this.severityFilter === 'ALL' || a.severity === this.severityFilter) && (this.statusFilter === 'ALL' || (this.statusFilter === 'STILL_DETECTED' ? task?.scannerStatus === 'STILL_DETECTED' : task?.status === this.statusFilter)); }); }
 
+  /** Vérifie l’état suivant : ouvert. */
   isOpen(id: string): boolean { return this.openKeys().has(id); }
 
+  /** Ouvre ou referme la ligne de détail d'une alerte. */
   toggle(id: string): void {
     const next = new Set(this.openKeys());
     next.has(id) ? next.delete(id) : next.add(id);
     this.openKeys.set(next);
   }
+  /** Retrouve la tâche de remédiation correspondant à une alerte ZAP (règle + URL + paramètre, insensible à la casse). */
   taskFor(a: NormZapAlert): any { return this.tasks.find(t => t.source === 'ZAP' && String(t.findingSnapshot?.ruleOrCve).toLowerCase() === a.id.toLowerCase() && String(t.findingSnapshot?.url || '').replace(/\/$/, '').toLowerCase() === String(a.url || '').replace(/\/$/, '').toLowerCase() && String(t.findingSnapshot?.parameter || '').toLowerCase() === a.param.toLowerCase()); }
+  /** Un admin peut toujours marquer une tâche traitée ; un développeur seulement si elle n'exige pas une action admin. */
   canComplete(task: any): boolean { return this.userRole === 'admin' || (this.userRole === 'developer' && task.remediationType !== 'ADMIN_ACTION_REQUIRED'); }
+  /** Libellé lisible de l'état réel du scanner sur cette tâche (détecté/non détecté/toujours présent/indisponible). */
   scannerLabel(task: any): string { return task.scannerStatus === 'NOT_DETECTED' ? 'Non détecté' : task.scannerStatus === 'UNAVAILABLE' ? 'Analyse indisponible' : task.scannerStatus === 'STILL_DETECTED' ? `Toujours détecté${task.lastSeenBuild ? ' au build #' + task.lastSeenBuild : ''}` : task.scannerStatus === 'DETECTED' ? 'Détecté' : 'État d’analyse non disponible'; }
+  /** Ouvre la boîte de confirmation avant de marquer une tâche comme traitée manuellement. */
   openConfirmation(task: any, finding: NormZapAlert) { this.pendingTask.set(task); this.pendingFinding.set(finding); this.completionNote = ''; }
+  /** Annule la confirmation en cours sans rien émettre. */
   cancelConfirmation() { this.pendingTask.set(null); this.pendingFinding.set(null); this.completionNote = ''; }
+  /** Émet l'événement de traitement manuel avec la note facultative, puis referme la boîte de confirmation. */
   confirmCompletion() { const task = this.pendingTask(); if (task) this.completeTask.emit({ task, note: this.completionNote }); this.cancelConfirmation(); }
 }

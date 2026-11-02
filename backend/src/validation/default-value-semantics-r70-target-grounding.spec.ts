@@ -1,3 +1,4 @@
+// Teste le composant « default-value-semantics-r70-target-grounding » et ses cas d’erreur.
 import * as assert from 'node:assert/strict';
 import { evaluateDefaultValueSemantics, FetchedFile, AssemblyProvenance } from './default-value-semantics-assembler';
 import { extractBlockingCauses } from './corrective-context';

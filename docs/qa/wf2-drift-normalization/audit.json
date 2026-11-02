@@ -1,0 +1,40 @@
+{
+  "R91_EXECUTABLE_SHA256": "817f3f4e9e986aad98d059175396c06341144b0b39279ac1e45bbfeb02e275fb",
+  "CURRENT_EXECUTABLE_SHA256": "817f3f4e9e986aad98d059175396c06341144b0b39279ac1e45bbfeb02e275fb",
+  "EXECUTABLE_HASH_MATCH": true,
+  "R91_PRESENTATION_SHA256": "be6d62460923108822192d068cb90fe571335f50998207f80aca4dfa6d672d1e",
+  "CURRENT_PRESENTATION_SHA256": "e4ea50e96206590671c636df5ef0036c615745033ba467aafb4bb87d509db3f4",
+  "PRESENTATION_HASH_MATCH": false,
+  "EXECUTABLE_DRIFT": false,
+  "PRESENTATION_DRIFT": true,
+  "SECURITY_INVARIANT_DRIFT": false,
+  "W1_W12_EXECUTABLE_PASS": true,
+  "PRESENTATION_DIFF": {
+    "positions": [
+      "Execution May Continue?",
+      "Git Write Allowed?",
+      "Pre-Git Cancellation Gate",
+      "Register WF2 Execution",
+      "Restore Pre-Git Context",
+      "Restore Registered Intake",
+      "WF2 Cancellation Terminal"
+    ],
+    "stickyNotes": [
+      "Sticky - Zone 1 - Blocs 1 2 3 et chaine morte Pass-1",
+      "Sticky - Zone 2 - Blocs 4 5 et extension cross-fichiers",
+      "Sticky - Zone 3 - Bloc 8 debut verification et garde ecriture",
+      "Sticky - Zone 4 - Bloc 8 boucle Pass-2 ecriture et reconciliation",
+      "Sticky - Zone 5 - Bloc 8 fin completude et pull request",
+      "Sticky - Zone 6 - Chemins echec transversal"
+    ]
+  },
+  "PRE_WRITE_GATE_DOMINATES_CREATE_BRANCH": true,
+  "PRE_WRITE_GATE_DOMINATES_UPDATE_FILE": true,
+  "PRE_WRITE_GATE_DOMINATES_CREATE_FILE": true,
+  "PRE_WRITE_GATE_DOMINATES_CREATE_PR": true,
+  "PRE_WRITE_GATE_DOMINANCE_PROVEN": true,
+  "CANCELLATION_TERMINAL_ISOLATED": true,
+  "R91_CANCELLATION_NODES_PRESENT": true,
+  "CURRENT_ACTIVE_VERSION_ID": "6f258934-86ea-4dd9-8617-e80afc420373",
+  "FINAL_VERDICT": "A — EXECUTABLE_R91_BEHAVIOR_PRESERVED"
+}

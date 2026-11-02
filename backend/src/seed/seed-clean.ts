@@ -1,13 +1,9 @@
-// Supprime UNIQUEMENT les projets de démo (source='demo') et, via CASCADE
-// (onDelete: 'CASCADE' sur Report/Incident/Bug → Project), leurs reports,
-// incidents et bugs. Ne touche jamais un projet dont source est null/autre
-// (ex. pfe-app-test).
-//
-// Usage : npm run seed:clean   (depuis backend/)
+// Script (npm run seed:clean) qui supprime uniquement les projets de démonstration (source='demo') et, par cascade, leurs reports, incidents et bugs — ne touche jamais un projet réel.
 import { seedDataSource } from './data-source';
 import { Project } from '../projects/project.entity';
 import { DEMO_SOURCE } from './seed-data';
 
+/** Supprime tous les projets de démonstration trouvés en base, avec leurs lignes enfants en cascade. */
 async function main() {
   await seedDataSource.initialize();
   const projectRepo = seedDataSource.getRepository(Project);

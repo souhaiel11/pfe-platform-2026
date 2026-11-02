@@ -1,0 +1,70 @@
+# Cible d'analyse dynamique pour OWASP ZAP — déploiement minikube.
+# APPLICATION INTENTIONNELLEMENT VULNÉRABLE — BANC D'ESSAI UNIQUEMENT.
+#
+# Service de type ClusterIP : joignable à l'intérieur du cluster seulement.
+# Aucun NodePort, aucun Ingress : la cible ne doit pas sortir du cluster.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: pfe-devsecops
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: projet-validation-vermeg
+  namespace: pfe-devsecops
+  labels:
+    app: projet-validation-vermeg
+    avertissement: application-intentionnellement-vulnerable
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: projet-validation-vermeg
+  template:
+    metadata:
+      labels:
+        app: projet-validation-vermeg
+    spec:
+      containers:
+        - name: application
+          # Remplacer par la référence produite par le pipeline, idéalement par
+          # digest plutôt que par tag.
+          image: projet-validation-vermeg:local
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+              name: http
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 30
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "192Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: projet-validation-vermeg
+  namespace: pfe-devsecops
+spec:
+  type: ClusterIP
+  selector:
+    app: projet-validation-vermeg
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http

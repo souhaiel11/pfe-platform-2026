@@ -1,15 +1,14 @@
+// Gère l’affichage et les actions de developer guide onglet.
 import { Component, Input, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { DeveloperGuide, DevGuideIssue, DevGuideFallbackFixOrderItem } from './developer-guide.model';
 import { PresentationLabelPipe } from '../../../shared/presentation-label.pipe';
 
-// ─────────────────────────────────────────────────────────────────────
-// Onglet "Guide de correction" — page détail incident
-// Usage : <app-developer-guide-tab [guide]="developerGuide" />
-// où developerGuide = report.rawData?.developerGuide
-// Composant autonome : aucune dépendance Material/PrimeNG requise.
-// ─────────────────────────────────────────────────────────────────────
-
+/**
+ * Onglet "Guide de correction" de la page détail incident : affiche le
+ * guide développeur généré par WF1 (fiches détaillées par problème, ou
+ * plan de secours déterministe si l'agent IA n'a pas pu en produire).
+ */
 @Component({
   selector: 'app-developer-guide-tab',
   standalone: true,
@@ -231,32 +230,37 @@ export class DeveloperGuideTabComponent {
 
   private openIds = signal<Set<string>>(new Set());
 
+  /** Fiches par problème, triées par priorité croissante (la plus urgente en premier). */
   sortedIssues = computed<DevGuideIssue[]>(() =>
     [...(this.guide?.issues ?? [])].sort((a, b) => (a.priority ?? 99) - (b.priority ?? 99))
   );
 
-  // TEST-FE-02/03 (voir docs/frontend-qa/regression): fiche détaillée par
-  // issue prioritaire quand disponible ; guide de secours déterministe sinon.
+  /** Vrai si le guide porte au moins une fiche détaillée par problème (chemin LLM). */
   hasDetailedIssues(): boolean {
     return !!(this.guide && this.guide.issues && this.guide.issues.length);
   }
 
+  /** Distingue un item de plan de secours (objet) d'un simple id d'issue (string) dans fixOrder. */
   private isFallbackItem(x: string | DevGuideFallbackFixOrderItem): x is DevGuideFallbackFixOrderItem {
     return !!x && typeof x === 'object';
   }
 
+  /** Items du plan de secours déterministe (quand fixOrder contient des objets, pas des ids). */
   fallbackFixOrder = computed<DevGuideFallbackFixOrderItem[]>(() =>
     (this.guide?.fixOrder ?? []).filter((x): x is DevGuideFallbackFixOrderItem => this.isFallbackItem(x))
   );
 
+  /** Ids d'issues détaillées, quand fixOrder contient des chaînes (chemin LLM). */
   stringFixOrder = computed<string[]>(() =>
     (this.guide?.fixOrder ?? []).filter((x): x is string => typeof x === 'string')
   );
 
+  /** Ids des issues "action rapide" (< 15 min), uniquement sous forme de chaînes. */
   stringQuickWins = computed<string[]>(() =>
     (this.guide?.quickWins ?? []).filter((x): x is string => typeof x === 'string')
   );
 
+  /** Vrai si un plan de secours déterministe existe (ordre de correction, actions rapides ou résumé) même sans fiches détaillées. */
   hasFallbackPlan(): boolean {
     return !!(this.guide && (
       this.fallbackFixOrder().length > 0 ||
@@ -265,6 +269,7 @@ export class DeveloperGuideTabComponent {
     ));
   }
 
+  /** Reformule le résumé technique interne en phrase lisible pour un développeur ; laisse passer tel quel tout autre résumé. */
   summaryLabel(raw: string | null | undefined): string {
     const value = String(raw || '').trim();
     if (/^Guide développeur généré automatiquement \(agent IA indisponible/i.test(value)) {
@@ -273,20 +278,24 @@ export class DeveloperGuideTabComponent {
     return value;
   }
 
+  /** Traduit le vocabulaire technique anglais ("finding(s)") du plan de secours en français courant. */
   fallbackText(raw: string | null | undefined): string {
     return String(raw || '')
       .replace(/(\d+) finding\(s\)/gi, (_m, count) => `${count} ${count === '1' ? 'problème' : 'problèmes'}`)
       .replace(/liste des findings/gi, 'liste des problèmes');
   }
 
+  /** Vrai si la fiche détaillée de cette issue est actuellement dépliée. */
   isOpen(id: string): boolean { return this.openIds().has(id); }
 
+  /** Ouvre ou referme la fiche détaillée d'une issue. */
   toggle(id: string): void {
     const next = new Set(this.openIds());
     next.has(id) ? next.delete(id) : next.add(id);
     this.openIds.set(next);
   }
 
+  /** Ouvre la fiche de l'issue visée et fait défiler la page jusqu'à elle (utilisé par les liens "actions rapides"/ordre de correction). */
   scrollTo(id: string): void {
     const next = new Set(this.openIds());
     next.add(id);
@@ -295,21 +304,25 @@ export class DeveloperGuideTabComponent {
       document.getElementById('dg-' + id)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
   }
 
+  /** Retrouve le titre d'une issue à partir de son id, pour l'afficher à côté du lien dans la liste d'ordre de correction. */
   titleOf(id: string): string {
     return this.guide?.issues?.find(i => i.id === id)?.title ?? '';
   }
 
+  /** Vrai si l'issue porte un exemple de code (avant/après) non vide. */
   hasCode(issue: DevGuideIssue): boolean {
     const c = this.codeOf(issue);
     return !!(c && (c.before || c.after));
   }
 
+  /** Renvoie l'exemple de code structuré de l'issue, ou null si absent/sous forme de simple chaîne. */
   codeOf(issue: DevGuideIssue): { before: string; after: string } | null {
     const c = issue.codeExample;
     if (!c || typeof c === 'string') return null;
     return c;
   }
 
+  /** Copie la commande de vérification dans le presse-papiers. */
   copy(text: string): void {
     navigator.clipboard?.writeText(text);
   }

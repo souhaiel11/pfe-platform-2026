@@ -1,18 +1,5 @@
-// Execution-2060 follow-up — the ONLY fields a WF6 result-recording caller
-// may supply. Same narrow-whitelist discipline as
-// security-remediation-evaluate.dto.ts (never a partial superset of an
-// internal type): every field is declared explicitly, `status`/`reason`
-// stay plain strings (never @IsIn against
-// SecurityRemediationCandidateStatus's own union) so this DTO does not need
-// editing every time that internal enum gains a value -- the GOAL here is
-// "never silently drop a field the caller sent", not "validate WF6's own
-// business logic a second time".
-//
-// Verified against the REAL, complete payload of execution 2060 (the first
-// successful end-to-end WF6 run, PR #37, TARGET_CVE_CLOSED) -- every field
-// below has a real, observed non-null example in that execution except
-// where noted.
-import { IsBoolean, IsInt, IsNumber, IsOptional, IsString, IsUUID, ValidateNested } from 'class-validator';
+// Valide le résultat WF6 unitaire, dont preuves de patch et de sécurité, avant sa prise en compte par le backend.
+import { IsBoolean, IsInt, IsNumber, IsOptional, IsString, IsUUID, ValidateIf, ValidateNested, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 
 // Mirrors SecurityValidationEvidence exactly (security-remediation-orchestration.types.ts),
@@ -52,6 +39,10 @@ export class Wf6RemediationResultDto {
   @IsUUID() projectId: string;
   @IsUUID() findingTaskId: string;
 
+  @ValidateIf((_object, value) => value !== undefined) @IsUUID() attemptId?: string;
+  @ValidateIf((_object, value) => value !== undefined) @IsInt() @Min(1) attemptNumber?: number;
+  @IsString() batchId?: string;
+
   // "CANDIDATE_READY" / "NOT_ELIGIBLE" / "GROUNDING_FAILED" / "TECHNICAL_FAILURE"
   // / ...(SecurityRemediationCandidateStatus's own values, plus "REJECTED"/
   // "WRITE_AUTHORIZED"/"CANDIDATE_DRIFTED" the controller layer adds, plus
@@ -59,6 +50,8 @@ export class Wf6RemediationResultDto {
   // returns) -- deliberately NOT constrained to a fixed list, see file header.
   @IsString() status: string;
   @IsOptional() @IsString() reason?: string;
+  @IsOptional() @IsString() reasonCode?: string;
+  @IsOptional() @IsString() reasonMessage?: string;
 
   @IsOptional() @IsString() candidateIdentity?: string;
   @IsOptional() @IsString() evaluatedSha?: string;

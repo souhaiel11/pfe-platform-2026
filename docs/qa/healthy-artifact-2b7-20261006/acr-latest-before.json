@@ -1,0 +1,7 @@
+{
+  "found": false,
+  "registry": "acrpfedevsecops",
+  "repository": "pfe-app-test",
+  "tag": "latest",
+  "detail": "ERROR: 2026-10-06 15:57:42.351592 Error: the specified tag does not exist. Correlation ID: ead20b40-d0de-4fed-ba65-4200cebd887a."
+}

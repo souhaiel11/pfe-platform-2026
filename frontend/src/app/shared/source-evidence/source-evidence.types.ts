@@ -1,16 +1,4 @@
-// Miroir frontend du contrat de preuve servi par
-// backend/src/common/source-evidence.ts.
-//
-// Le frontend ne CONSTRUIT jamais d'URL de source : il affiche ce que le
-// backend a dérivé. Cette règle existe parce que la logique d'URL éparpillée
-// dans les composants est exactement ce qui avait produit des liens morts
-// (`http://sonarqube:9000`, un alias Docker que le navigateur ne résout pas)
-// et des liens vers l'accueil d'un outil présentés comme preuve exacte.
-//
-// Le SEUL traitement d'URL ici est un portillon de sortie (`safeEvidenceUrl`)
-// qui rejette tout ce qui n'est pas un http(s) sans identifiants. Il ne
-// fabrique rien : il refuse. Un contrat backend déjà assaini le traverse sans
-// changement ; une valeur douteuse n'atteint jamais un attribut [href].
+// Définit et contrôle les données des liens vers les preuves.
 
 export type EvidenceProvider =
   | 'SONARQUBE' | 'JENKINS' | 'TRIVY' | 'OWASP' | 'ZAP'
@@ -20,16 +8,6 @@ export type EvidenceAvailability = 'LINK' | 'PATH_ONLY' | 'UNAVAILABLE';
 
 export const EVIDENCE_UNAVAILABLE_LABEL = 'Source non disponible';
 
-/**
- * État de CHARGEMENT de la table de preuve, strictement distinct de la
- * disponibilité d'un emplacement.
- *
- * « la requête a échoué » et « aucune preuve n'a été enregistrée » sont deux
- * faits différents, et les confondre est un mensonge dans les deux sens : on
- * affirme une absence qu'on n'a pas constatée, et on masque une panne que
- * l'utilisateur pourrait corriger en réessayant. C'est le même principe que
- * l'invariant LINK/PATH_ONLY/UNAVAILABLE, appliqué un niveau plus haut.
- */
 export type EvidenceLoadState = 'loading' | 'ready' | 'error';
 
 export interface SourceEvidence {
@@ -38,6 +16,7 @@ export interface SourceEvidence {
   label: string;
   availability: EvidenceAvailability;
   url: string | null;
+  applicationPath?: string | null;
   sourcePath: string | null;
   reason: string | null;
   buildNumber: number | null;
@@ -60,11 +39,6 @@ export interface SonarIssueEvidence {
   slots: Record<string, SourceEvidence>;
 }
 
-/**
- * Preuve par CONSTAT de scanner (une CVE Trivy/OWASP, une alerte ZAP).
- * Deux faits distincts : l'AVIS public qui décrit la vulnérabilité, et le
- * RAPPORT de scan qui l'a observée sur ce build.
- */
 export interface FindingEvidence {
   findingId: string;
   scanner: 'TRIVY' | 'OWASP' | 'ZAP';
@@ -83,11 +57,19 @@ export interface ProjectSourceEvidence {
   projectId: string;
   projectName: string;
   generatedAt: string;
+  jenkinsBaseUrl?: string | null;
   slots: Record<string, SourceEvidence>;
   sections: EvidenceSection[];
 }
 
+export interface LocalScannerReportInfo {
+  scanner: string; available: boolean; sourcePath: string | null;
+  relativePath?: string | null;
+  filename: string; bytes: number | null; reason: string | null;
+}
+
 export interface IncidentSourceEvidence {
+  localReports?: LocalScannerReportInfo[];
   incidentId: string;
   projectId: string;
   projectName: string;
@@ -101,11 +83,7 @@ export interface IncidentSourceEvidence {
   remediations: RemediationChainEvidence[];
 }
 
-/**
- * Portillon de sortie — jamais un constructeur d'URL. Rejette tout ce qui
- * n'est pas http(s) sans identifiants embarqués, donc en particulier
- * `javascript:`, `data:` et `user:password@`.
- */
+// Portillon de sortie des URLs externes : rejette tout ce qui n'est pas http(s) sans identifiants embarqués (donc en particulier javascript:, data:, user:password@).
 export function safeEvidenceUrl(value: unknown): string | null {
   const raw = String(value ?? '').trim();
   if (!raw) return null;
@@ -113,17 +91,25 @@ export function safeEvidenceUrl(value: unknown): string | null {
   try { parsed = new URL(raw); } catch { return null; }
   if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return null;
   if (parsed.username || parsed.password) return null;
+  const host = parsed.hostname.toLowerCase();
+  if (host !== 'localhost' && !host.endsWith('.localhost') && !host.includes('.') && !host.startsWith('[')) return null;
   return parsed.toString();
 }
 
-/**
- * Normalise une preuve reçue du backend, puis ré-applique l'invariant
- * « LINK ⟺ url assainie ». Une absence de preuve n'est jamais inventée ici :
- * `null` reste `null`.
- */
+// Valide qu'un chemin interne correspond exactement au format attendu d'un rapport scanner local, puis le résout en URL absolue sur l'origine courante.
+export function localScannerReportUrl(path: unknown, origin?: string | null): string | null {
+  const value = String(path ?? '');
+  if (!/^\/scanner-reports\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/(trivy|owasp|zap)$/i.test(value)) return null;
+  const base = origin ?? (typeof location !== 'undefined' ? location.origin : null);
+  const safeBase = safeEvidenceUrl(base);
+  return safeBase ? new URL(value, safeBase).toString() : null;
+}
+
+// Normalise une preuve reçue du backend (URL assainie, disponibilité LINK/PATH_ONLY/UNAVAILABLE) ; une absence de preuve reste null.
 export function normalizeEvidence(raw: any): SourceEvidence | null {
   if (!raw || typeof raw !== 'object') return null;
-  const url = safeEvidenceUrl(raw.url);
+  const applicationPath = /^\/(scanner-reports)\//.test(String(raw.applicationPath || '')) ? raw.applicationPath : null;
+  const url = localScannerReportUrl(applicationPath) || safeEvidenceUrl(raw.url);
   const sourcePath = String(raw.sourcePath ?? '').trim() || null;
   const availability: EvidenceAvailability = url ? 'LINK' : sourcePath ? 'PATH_ONLY' : 'UNAVAILABLE';
   return {
@@ -132,6 +118,7 @@ export function normalizeEvidence(raw: any): SourceEvidence | null {
     label: String(raw.label ?? '').trim() || 'Source',
     availability,
     url,
+    applicationPath: localScannerReportUrl(applicationPath) ? applicationPath : null,
     sourcePath,
     reason: url ? null : (String(raw.reason ?? '').trim() || EVIDENCE_UNAVAILABLE_LABEL),
     buildNumber: typeof raw.buildNumber === 'number' ? raw.buildNumber : null,
@@ -141,6 +128,7 @@ export function normalizeEvidence(raw: any): SourceEvidence | null {
   };
 }
 
+// Normalise chaque emplacement de preuve d'une table de slots, en écartant silencieusement ceux qui ne se normalisent pas.
 export function normalizeEvidenceSlots(raw: any): Record<string, SourceEvidence> {
   const slots: Record<string, SourceEvidence> = {};
   for (const [key, value] of Object.entries(raw || {})) {
@@ -150,21 +138,14 @@ export function normalizeEvidenceSlots(raw: any): Record<string, SourceEvidence>
   return slots;
 }
 
-/**
- * Normalise une vue COMPLÈTE : les emplacements de premier niveau ET ceux
- * imbriqués (constats de scanner, issues Sonar, chaînes de remédiation).
- *
- * Sans cela, une preuve imbriquée traverserait le portillon sans être
- * assainie : c'est précisément le chemin par lequel une URL non navigable
- * redeviendrait un [href]. L'assainissement n'est utile que s'il est
- * appliqué partout, pas seulement à la racine.
- */
+// Normalise une vue complète : les emplacements de premier niveau et ceux imbriqués (constats de scanner, issues Sonar, chaînes de remédiation).
 export function normalizeEvidenceView<T extends {
   slots?: any;
   sonarIssues?: { slots?: any }[];
   findings?: { slots?: any }[];
   remediations?: { slots?: any }[];
 }>(view: T): T {
+  /** Ajoute les emplacements de preuve au résultat. */
   const withSlots = <U extends { slots?: any }>(items: U[] | undefined): U[] | undefined =>
     items ? items.map(item => ({ ...item, slots: normalizeEvidenceSlots(item.slots) })) : items;
   return {
@@ -176,16 +157,7 @@ export function normalizeEvidenceView<T extends {
   };
 }
 
-/**
- * Forme VISUELLE abrégée d'un identifiant technique (§20).
- *
- * N'abrège QUE des empreintes opaques, dont le préfixe suffit à les
- * reconnaître : un digest `sha256:` et un SHA de commit. Un chemin de
- * fichier, une référence d'image ou un nom de ressource ne sont JAMAIS
- * tronqués — leur milieu porte l'information (quel fichier, quel dépôt), et
- * la couper rendrait la valeur fausse plutôt que compacte. La valeur
- * complète reste toujours disponible (attribut title + bouton copier).
- */
+// Forme visuelle abrégée d'un identifiant technique : n'abrège que les empreintes opaques (digest sha256, SHA de commit) dont le préfixe suffit à les reconnaître.
 export function shortIdentifier(value: string | null | undefined): string | null {
   const raw = String(value ?? '').trim();
   if (!raw) return null;
@@ -195,13 +167,12 @@ export function shortIdentifier(value: string | null | undefined): string | null
   return raw;
 }
 
-/** Vrai quand l'abréviation masque réellement une partie de la valeur. */
+// Vrai quand l'abréviation masque réellement une partie de la valeur.
 export function isAbbreviated(value: string | null | undefined): boolean {
   const raw = String(value ?? '').trim();
   return !!raw && shortIdentifier(raw) !== raw;
 }
 
-/** Pastille courte par fournisseur — identité visuelle, jamais une URL. */
 export const EVIDENCE_PROVIDER_LABEL: Record<EvidenceProvider, string> = {
   SONARQUBE: 'SonarQube',
   JENKINS: 'Jenkins',
@@ -215,11 +186,12 @@ export const EVIDENCE_PROVIDER_LABEL: Record<EvidenceProvider, string> = {
   DOCKER: 'Image',
 };
 
+// Traduit un fournisseur de preuve en libellé affichable, ou « Source » pour une valeur inconnue.
 export function providerLabel(provider: unknown): string {
   return EVIDENCE_PROVIDER_LABEL[provider as EvidenceProvider] || 'Source';
 }
 
-/** Sélection d'un emplacement, tolérante à une table de preuve absente. */
+// Sélectionne un emplacement de preuve par clé, tolérant à une table de preuve absente.
 export function evidenceSlot(
   view: { slots?: Record<string, SourceEvidence> } | null | undefined,
   slot: string,

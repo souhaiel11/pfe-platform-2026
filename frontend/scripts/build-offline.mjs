@@ -1,3 +1,4 @@
+// Compile le frontend dans un dossier temporaire sans toucher au site servi.
 import {mkdtempSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';

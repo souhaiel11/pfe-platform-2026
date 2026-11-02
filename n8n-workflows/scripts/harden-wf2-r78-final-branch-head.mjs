@@ -1,34 +1,18 @@
+// Vérifie le HEAD final de la branche avant de conclure.
 import fs from 'node:fs';
 
 const sourcePath = new URL('../pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.R77-CORRECTIVE-PLAN-CANONICALIZATION.json', import.meta.url);
 const outputPath = new URL('../pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.R78-FINAL-BRANCH-HEAD.json', import.meta.url);
 
+/** Vérifie le HEAD final de la branche avant de conclure. */
 export function hardenFinalBranchHead(workflow) {
+  /** Retrouve ou construit le nœud du workflow demandé. */
   const node = name => {
     const found = workflow.nodes.find(candidate => candidate.name === name);
     if (!found) throw new Error('R78_NODE_NOT_FOUND:' + name);
     return found;
   };
 
-  // Execution 2038 (attempt 13, the first real R77 success) proved a second,
-  // independent defect: `Save Execution Result to Backend` sourced
-  // fixRequest.prHeadSha from the PR object returned by the post-write
-  // `Lookup Existing Batch PR` GitHub search/list call ($json.head.sha).
-  // That endpoint is a secondary index that can lag a live `git push` by a
-  // few seconds -- in 2038 it returned the FIRST of two sequential commits
-  // (53cbd28d...) even though the branch/PR's true head was already the
-  // SECOND (5ef66be3...), because the search index hadn't caught up yet.
-  // `Validate Batch Completeness` already collects every write's commitSha,
-  // but only into `commitShas[]`, which is lexicographically SORTED
-  // (`norm()` = dedupe + `.sort()`) -- not write-order -- so array position
-  // cannot be trusted as "final" either. `Loop Over Manifest Files` is an
-  // n8n splitInBatches(batchSize:1) loop, which n8n guarantees runs fully
-  // sequentially (iteration i completes before i+1 starts), so the node's
-  // own `$runIndex` at each pass is a genuine, deterministic write-order
-  // sequence number, independent of any later sort or of any external
-  // GitHub read. R78 stamps that sequence at write time and derives the
-  // batch's true final branch head from it directly -- never from a
-  // separately-fetched PR/ref object.
   const buildResult = node('Build File Result (Pass 2)');
   {
     const before = buildResult.parameters.jsCode;

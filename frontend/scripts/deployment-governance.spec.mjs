@@ -1,18 +1,11 @@
-// Phase 2B.3 — governance frontend tests (F1-F12, API trust §20-21).
-// Same convention as the rest of this directory: loads the REAL
-// deployment-governance.component.ts through the TypeScript compiler API
-// inside a VM sandbox (no Angular TestBed), exercises its real methods,
-// and checks the real .html template text for the required bindings.
+// Teste le composant « deployment-governance » et ses cas d’erreur.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { loadFrontend } from './security-lifecycle-test-loader.mjs';
 
-// VM sandbox objects live in a different realm — their prototype differs
-// from this script's own Object.prototype, so assert.deepEqual (strict)
-// would fail on structurally-identical objects. Round-tripping through
-// JSON normalizes both sides to this realm's plain objects (same fix
-// already used elsewhere in this directory, see stuck-remediation-ux.spec.mjs).
+/** Prépare les données nécessaires à ce scénario. */
 const plain = v => JSON.parse(JSON.stringify(v));
+/** Lit les données depuis leur source. */
 const read = p => readFileSync(new URL(p, import.meta.url), 'utf8');
 const componentSource = read('../src/app/features/projects/deployment-governance.component.ts');
 const template = read('../src/app/features/projects/deployment-governance.component.html');
@@ -21,15 +14,21 @@ const projectDetailSource = read('../src/app/features/projects/project-detail.co
 const projectDetailTemplate = read('../src/app/features/projects/project-detail.component.html');
 
 const mod = loadFrontend('../src/app/features/projects/deployment-governance.component.ts', {
-  '../../core/http-error-message': { userHttpError: (err, fallback) => err?.error?.message || fallback },
+  '../../core/http-error-message': {
+  /** Prépare les données nécessaires à ce scénario. */
+  userHttpError: (err, fallback) => err?.error?.message || fallback },
 });
 const { DeploymentGovernanceComponent, CRITICAL_OVERRIDE_PHRASE } = mod;
 assert.equal(CRITICAL_OVERRIDE_PHRASE, 'DEPLOYER MALGRÉ LES RISQUES');
 
+/** Prépare les données nécessaires à ce scénario. */
 function observableFactory(calls, kind) {
-  return (...args) => ({ subscribe: observer => { calls.push({ kind, args, observer }); return observer; } });
+  return (...args) => ({
+  /** Prépare les données nécessaires à ce scénario. */
+  subscribe: observer => { calls.push({ kind, args, observer }); return observer; } });
 }
 
+/** Prépare les données nécessaires à ce scénario. */
 function freshComponent(role = 'admin') {
   const c = Object.create(DeploymentGovernanceComponent.prototype);
   c.projectId = 'proj-1';
@@ -49,7 +48,11 @@ function freshComponent(role = 'admin') {
   c.showConditionalForm = false; c.conditionalReason = ''; c.conditionalAck = false;
   c.showCriticalForm = false; c.criticalReason = ''; c.criticalPhrase = '';
   c.criticalAcks = { criticalRiskAccepted: false, securityControlsMayHaveFailed: false, deploymentMayExposeKnownRisk: false };
-  c.toast = { success() {}, error() {} };
+  c.toast = {
+  /** Prépare les données nécessaires à ce scénario. */
+  success() {},
+  /** Traite l’erreur reçue et termine le suivi de la demande. */
+  error() {} };
   c.auth = { currentUser: { role } };
   c.calls = [];
   c.api = {
@@ -354,8 +357,7 @@ const PREVIEW_IMPOSSIBLE = {
 }
 
 
-// Reaches a held authorization + dispatch in flight, so the deploy response
-// handling can be exercised directly. Returns the deploy call.
+/** Prépare les données nécessaires à ce scénario. */
 function dispatched(role = 'developer', preview = PREVIEW_READY) {
   const c = freshComponent(role);
   c.ngOnInit();
@@ -487,6 +489,7 @@ function dispatched(role = 'developer', preview = PREVIEW_READY) {
     { stage: 'ZAP', status: 'mystery-state', source: 'ZAP' },
   ];
   const rows = c.controlRows;
+  /** Retrouve l’élément par son nom. */
   const byName = n => rows.find(r => r.name === n);
   assert.equal(byName('Trivy').status, 'NOT_RUN');
   assert.equal(byName('Trivy').blocking, true);
@@ -620,6 +623,7 @@ function dispatched(role = 'developer', preview = PREVIEW_READY) {
   c.calls[0].observer.next(PREVIEW_CRITICAL_150);
   c.requiredStages = REAL_READY_STAGES;
   const rows = c.controlRows;
+  /** Récupère les données demandées. */
   const get = n => rows.find(r => r.name === n);
   assert.equal(get('zap').status, 'WARNING');
   assert.equal(get('zap').blocking, false);
@@ -653,6 +657,7 @@ const PROJECT_A = 'a1111111-2222-4333-8444-555555555555';
 const PROJECT_B = 'b9999999-8888-4777-8666-555555555555';
 const PROJECT_NEVER_SEEN = 'f0e1d2c3-b4a5-4968-8877-66554433221100'.slice(0, 36);
 
+/** Prépare les données nécessaires à ce scénario. */
 const previewFor = (projectId, overrides = {}) => ({
   ...PREVIEW_READY, projectId, ...overrides,
   environment: { ...PREVIEW_READY.environment, ...(overrides.environment || {}) },

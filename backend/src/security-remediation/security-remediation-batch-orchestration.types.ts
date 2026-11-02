@@ -1,22 +1,11 @@
-// Increment 1 — multi-CVE remediation, ONE candidate/build/scan/PR for N
-// findings. Deliberately a SEPARATE type family from
-// security-remediation-orchestration.types.ts (SecurityRemediationOrchestrationInput
-// stays untouched, singular, byte-for-byte -- see this increment's own
-// non-regression requirement: a 1-element batch must be a NEW code path,
-// never a modification of the proven single-CVE one). Pure types only; no I/O.
+/** Types de l'orchestration multi-CVE : un seul candidat/build/scan/PR couvrant N findings, famille de types séparée de l'orchestration singulière pour garantir la non-régression du cas N=1. */
 import { CandidateManifest } from '../candidate-verification/candidate-verification.types';
 import { SecurityFindingDecision, SecurityFindingDecisionInput } from './security-finding-decision.types';
 import { SecurityPatchGuardResult } from './security-patch-guard';
 import { DependencyProvenanceKind } from './dependency-provenance.types';
 import { ApplicationTestEvidence } from './security-remediation-orchestration.types';
 
-/**
- * Every finding in a batch MUST carry its own cveId (unlike the singular
- * flow, where cveId is optional/cosmetic-only): the whole point of a batch
- * is to name each CVE individually in conflicts, per-CVE closure evidence,
- * and the final PR body -- an unnamed finding could never be reported on
- * individually, defeating the increment's own honesty requirement (§4/§6).
- */
+/** Un finding de lot doit obligatoirement porter son propre cveId (contrairement au flux singulier), pour pouvoir être nommé individuellement dans les conflits et le corps de la PR. */
 export interface SecurityRemediationBatchFindingInput extends SecurityFindingDecisionInput {
   cveId: string;
 }
@@ -31,18 +20,13 @@ export interface SecurityRemediationBatchOrchestrationInput {
   overallDeadlineMs?: number;
 }
 
-/** Per-CVE closure verdict — §4's "intersection baseline/candidat". */
+/** Verdict de fermeture par CVE. */
 export type CveClosureStatus = 'CLOSED' | 'STILL_OPEN' | 'NOT_OBSERVED';
 
 export interface SecurityRemediationBatchFindingEvidence {
   findingIdentity: string;
   cveId: string;
-  /**
-   * 'PENDING' only ever appears transiently inside error paths that abort
-   * before reaching the closure scan (e.g. a conflict or a non-eligible
-   * finding) -- a terminal SecurityRemediationBatchCandidateResult never
-   * leaves a finding at 'PENDING'.
-   */
+  /** 'PENDING' apparaît seulement de façon transitoire dans un chemin d'erreur abandonné avant le scan de clôture. */
   status: CveClosureStatus | 'NOT_ELIGIBLE' | 'GROUNDING_FAILED' | 'PATCH_CONFLICT' | 'PENDING';
   reason: string;
   patchEvidence: {
@@ -63,11 +47,6 @@ export type SecurityRemediationBatchCandidateStatus =
   | 'MAVEN_RESOLUTION_FAILED'
   | 'MAVEN_RESOLUTION_MISMATCH'
   | 'CANDIDATE_BUILD_FAILED'
-  // V1.8 — same distinction as the singular flow's own status of the same
-  // name (security-remediation-orchestration.types.ts): the combined build
-  // failed because the application test suite failed / never ran, not
-  // because compilation/packaging itself failed. Not attributable to any
-  // single CVE (same discipline as buildOutput's own header comment above).
   | 'APPLICATION_TESTS_FAILED'
   | 'APPLICATION_TESTS_NOT_EXECUTED'
   | 'CANDIDATE_SECURITY_VALIDATION_FAILED'
@@ -78,41 +57,33 @@ export interface SecurityRemediationBatchCandidateResult {
   failureClass?: 'VERIFIER_TIMEOUT' | 'VERIFIER_UNAVAILABLE' | 'VERIFIER_PROTOCOL_ERROR';
   status: SecurityRemediationBatchCandidateStatus;
   reason: string;
-  /**
-   * Always present, always exactly one entry per input finding, in input
-   * order -- §4/§6's per-CVE requirement. Global tout-ou-rien (§3): `status`
-   * is only 'CANDIDATE_READY' when EVERY entry here is 'CLOSED'; any other
-   * global status still carries the full per-CVE detail so the caller can
-   * report WHICH CVE(s) blocked the batch, never just an opaque failure.
-   */
+  /** Toujours présent, exactement une entrée par finding d'entrée, dans l'ordre d'entrée. */
   findings: SecurityRemediationBatchFindingEvidence[];
   decisions: SecurityFindingDecision[];
   candidateIdentity: string | null;
   candidateManifest: CandidateManifest | null;
   guardResult: SecurityPatchGuardResult | null;
-  /**
-   * §5 — captured verbatim on CANDIDATE_BUILD_FAILED, deliberately WITHOUT
-   * attributing the failure to any one CVE (a combined multi-dependency
-   * Maven failure is not reliably attributable -- see this increment's own
-   * design cadrage). Absent for every other status.
-   */
+  /** Capturé uniquement sur CANDIDATE_BUILD_FAILED, sans attribuer l'échec à une CVE précise. */
   buildOutput?: string;
-  /** V1.8 — see ApplicationTestEvidence's own header comment (singular flow's types file). */
   applicationTests?: ApplicationTestEvidence;
 }
 
 export class SecurityRemediationBatchRequestValidationError extends Error {
+  /** Initialise l’erreur avec son contexte. */
   constructor(message: string) {
     super(message);
     this.name = 'SecurityRemediationBatchRequestValidationError';
   }
 }
 
+/** Vérifie qu'une valeur est une chaîne non vide. */
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === 'string' && value.trim().length > 0;
 }
 
+/** Valide la forme complète d'une requête d'orchestration de lot (jusqu'à 8 findings, chacun avec cveId/identité unique), en levant une erreur nommée au premier champ invalide. */
 export function assertSecurityRemediationBatchOrchestrationInput(body: any): asserts body is SecurityRemediationBatchOrchestrationInput {
+  /** Signale une erreur pour fail. */
   const fail = (msg: string): never => { throw new SecurityRemediationBatchRequestValidationError(msg); };
   if (!body || typeof body !== 'object') fail('Request body must be an object.');
   if (!Array.isArray(body.findings) || body.findings.length < 1) fail('findings must be a non-empty array.');

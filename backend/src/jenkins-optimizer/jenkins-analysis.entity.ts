@@ -1,3 +1,4 @@
+// Persiste une analyse de Jenkinsfile : état, résultat et historique, pour retrouver l'opération après redémarrage du backend.
 import {
   Entity, PrimaryGeneratedColumn, Column,
   CreateDateColumn, ManyToOne,

@@ -1,8 +1,10 @@
+// Prépare harden WF2 r14 pour les workflows n8n.
 import { readFileSync, writeFileSync } from 'node:fs';
 
 const path = new URL('../active/wf2-git-patch-pr-v4-1-9adcV31eaIgJyMR0.json', import.meta.url);
 const raw = JSON.parse(readFileSync(path, 'utf8'));
 const workflow = Array.isArray(raw) ? raw[0] : raw;
+/** Retrouve ou construit le nœud du workflow demandé. */
 const node = name => {
   const found = workflow.nodes.find(candidate => candidate.name === name);
   if (!found) throw new Error(`Missing WF2 node: ${name}`);

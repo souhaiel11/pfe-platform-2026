@@ -1,0 +1,136 @@
+{
+  "SchemaVersion": 2,
+  "Trivy": {
+    "Version": "0.72.0"
+  },
+  "ReportID": "01a110e4-78dc-7a8e-91b2-29feceb0b0e6",
+  "CreatedAt": "2026-10-06T13:06:11.03669278+02:00",
+  "ArtifactID": "sha256:3e94343a0cdc17836f5da14cbd2324298199bda7b6e6e2d0b7014d9e65dc9379",
+  "ArtifactName": "/tmp/phase4g2-lab/reproduction-1/image.tar",
+  "ArtifactType": "container_image",
+  "Metadata": {
+    "Size": 2549760,
+    "ImageID": "sha256:0d992e0b7a1dc2efde35e179e5165dcb87f899a66e641a3667d0cdd633ab8f33",
+    "DiffIDs": [
+      "sha256:4d282aa55d9471dcad2d69dde9caf22c4ef90075092ecae69fc8b33722b530df"
+    ],
+    "RepoTags": [
+      "offline-h2:fixture"
+    ],
+    "Reference": "offline-h2:fixture",
+    "ImageConfig": {
+      "architecture": "amd64",
+      "created": "0001-01-01T00:00:00Z",
+      "os": "linux",
+      "rootfs": {
+        "type": "layers",
+        "diff_ids": [
+          "sha256:4d282aa55d9471dcad2d69dde9caf22c4ef90075092ecae69fc8b33722b530df"
+        ]
+      },
+      "config": {}
+    },
+    "Layers": [
+      {
+        "Size": 2549760,
+        "DiffID": "sha256:4d282aa55d9471dcad2d69dde9caf22c4ef90075092ecae69fc8b33722b530df"
+      }
+    ]
+  },
+  "Results": [
+    {
+      "Target": "Java",
+      "Class": "lang-pkgs",
+      "Type": "jar",
+      "Packages": [
+        {
+          "Name": "com.h2database:h2",
+          "Identifier": {
+            "PURL": "pkg:maven/com.h2database/h2@2.1.212",
+            "UID": "de1ce7c42e604223"
+          },
+          "Version": "2.1.212",
+          "Layer": {
+            "DiffID": "sha256:4d282aa55d9471dcad2d69dde9caf22c4ef90075092ecae69fc8b33722b530df"
+          },
+          "FilePath": "app/dependencies/h2-2.1.212.jar",
+          "AnalyzedBy": "jar"
+        },
+        {
+          "Name": "operator.fixture:retry-e2e-h2",
+          "Identifier": {
+            "PURL": "pkg:maven/operator.fixture/retry-e2e-h2@1.0.0",
+            "UID": "31d6fcf3b323bf8"
+          },
+          "Version": "1.0.0",
+          "Layer": {
+            "DiffID": "sha256:4d282aa55d9471dcad2d69dde9caf22c4ef90075092ecae69fc8b33722b530df"
+          },
+          "FilePath": "app/retry-e2e-h2-1.0.0.jar",
+          "AnalyzedBy": "jar"
+        }
+      ],
+      "Vulnerabilities": [
+        {
+          "VulnerabilityID": "CVE-2022-45868",
+          "VendorIDs": [
+            "GHSA-22wj-vf5f-wrvj"
+          ],
+          "PkgName": "com.h2database:h2",
+          "PkgPath": "app/dependencies/h2-2.1.212.jar",
+          "PkgIdentifier": {
+            "PURL": "pkg:maven/com.h2database/h2@2.1.212",
+            "UID": "de1ce7c42e604223"
+          },
+          "InstalledVersion": "2.1.212",
+          "FixedVersion": "2.2.220",
+          "Status": "fixed",
+          "Layer": {
+            "DiffID": "sha256:4d282aa55d9471dcad2d69dde9caf22c4ef90075092ecae69fc8b33722b530df"
+          },
+          "SeveritySource": "ghsa",
+          "PrimaryURL": "https://avd.aquasec.com/nvd/cve-2022-45868",
+          "DataSource": {
+            "ID": "ghsa",
+            "Name": "GitHub Security Advisory Maven",
+            "URL": "https://github.com/advisories?query=type%3Areviewed+ecosystem%3Amaven"
+          },
+          "Fingerprint": "sha256:8d47b191d3023404a85b488511f378578d3b3614be8c66e9bbe0e2fde9900fc3",
+          "Title": "The web-based admin console in H2 Database Engine before 2.2.220 can b ...",
+          "Description": "The web-based admin console in H2 Database Engine before 2.2.220 can be started via the CLI with the argument -webAdminPassword, which allows the user to specify the password in cleartext for the web admin console. Consequently, a local user (or an attacker that has obtained local access through some means) would be able to discover the password by listing processes and their arguments. NOTE: the vendor states \"This is not a vulnerability of H2 Console ... Passwords should never be passed on the command line and every qualified DBA or system administrator is expected to know that.\" Nonetheless, the issue was fixed in 2.2.220.",
+          "Severity": "HIGH",
+          "CweIDs": [
+            "CWE-312"
+          ],
+          "VendorSeverity": {
+            "ghsa": 3,
+            "nvd": 3
+          },
+          "CVSS": {
+            "ghsa": {
+              "V3Vector": "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+              "V3Score": 7.8
+            },
+            "nvd": {
+              "V3Vector": "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+              "V3Score": 7.8
+            }
+          },
+          "References": [
+            "https://github.com/advisories/GHSA-22wj-vf5f-wrvj",
+            "https://github.com/h2database/h2database",
+            "https://github.com/h2database/h2database/blob/96832bf5a97cdc0adc1f2066ed61c54990d66ab5/h2/src/main/org/h2/server/web/WebServer.java#L346-L347",
+            "https://github.com/h2database/h2database/commit/581ed18ff9d6b3761d851620ed88a3994a351a0d",
+            "https://github.com/h2database/h2database/issues/3686",
+            "https://github.com/h2database/h2database/pull/3833",
+            "https://github.com/h2database/h2database/releases/tag/version-2.2.220",
+            "https://nvd.nist.gov/vuln/detail/CVE-2022-45868",
+            "https://sites.google.com/sonatype.com/vulnerabilities/sonatype-2022-6243"
+          ],
+          "PublishedDate": "2022-11-23T21:15:11.36Z",
+          "LastModifiedDate": "2026-06-17T05:10:53.73Z"
+        }
+      ]
+    }
+  ]
+}

@@ -1,24 +1,10 @@
+// Gère l’affichage et les actions de statut pastille.
 import { Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { StatusTone, statusGlyph, statusTone } from './status-tone';
 import { stageStatusLabel } from '../status-labels';
 
-// ─────────────────────────────────────────────────────────────────────
-//  <app-status-chip> — pastille de statut unique et cohérente.
-//
-//  Trois canaux d'information, jamais la couleur seule (§6) :
-//    glyphe  — repère non chromatique (✓ ✕ ! … – ○)
-//    libellé — français humain, via la table partagée status-labels.ts
-//    couleur — tonalité dérivée en UN endroit (status-tone.ts)
-//
-//  La valeur TECHNIQUE reste accessible sans être primaire : `showRaw`
-//  l'affiche en police mono sous le libellé, et elle est toujours dans
-//  l'attribut title. Le libellé humain reste l'information principale (§5).
-//
-//  Usage :
-//    <app-status-chip [status]="build.status"></app-status-chip>
-//    <app-status-chip [status]="'PROVENANCE_VERIFIED'" [showRaw]="true">
-// ─────────────────────────────────────────────────────────────────────
+// ───────────────────────────────────────────────────────────────────── <app-status-chip> — pastille de statut unique et cohérente.
 
 @Component({
   selector: 'app-status-chip',
@@ -59,14 +45,18 @@ export class StatusChipComponent {
   /** Affiche la valeur canonique à côté du libellé humain (§5). */
   @Input() showRaw = false;
 
+  /** Choisit la tonalité visuelle correspondant au statut. */
   tone(): StatusTone { return statusTone(this.status); }
+  /** Choisit le symbole associé au statut. */
   glyph(): string { return statusGlyph(this.tone()); }
 
+  /** Renvoie le libellé imposé par l'appelant, sinon le libellé français dérivé de la valeur technique. */
   label(): string {
     if (this.labelOverride) return this.labelOverride;
     return stageStatusLabel(this.rawValue());
   }
 
+  /** Normalise la valeur de statut brute, en renvoyant null plutôt qu'une chaîne vide. */
   rawValue(): string | null {
     const raw = String(this.status ?? '').trim();
     return raw ? raw : null;

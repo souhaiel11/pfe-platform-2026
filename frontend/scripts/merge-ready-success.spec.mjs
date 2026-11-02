@@ -1,3 +1,4 @@
+// Teste le composant « merge-ready-success » et ses cas d’erreur.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -5,14 +6,23 @@ import vm from 'node:vm';
 
 const require = createRequire(import.meta.url);
 const ts = require('typescript');
+/** Lit les données depuis leur source. */
 const read = path => readFileSync(new URL(path, import.meta.url), 'utf8');
-const angularStub = () => new Proxy({}, { get: () => (..._args) => target => target });
+/** Simule les dépendances nécessaires au scénario. */
+const angularStub = () => new Proxy({}, {
+/** Récupère les données demandées. */
+get: () => (..._args) => target => target });
+/** Simule la lecture des données demandées par le composant. */
 const loadComponent = (source, exportName) => {
   const exports = {};
   const code = ts.transpileModule(source, {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, experimentalDecorators: true },
   }).outputText;
-  vm.runInNewContext(code, { exports, require: angularStub, setTimeout: () => 0, clearInterval() {}, console });
+  vm.runInNewContext(code, { exports, require: angularStub,
+  /** Simule la modification demandée par le composant. */
+  setTimeout: () => 0,
+  /** Prépare les données nécessaires à ce scénario. */
+  clearInterval() {}, console });
   return Object.create(exports[exportName].prototype);
 };
 

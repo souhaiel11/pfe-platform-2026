@@ -1,6 +1,4 @@
-/** V1.7 runtime stabilization phase, Phase A/D — pure unit tests for
- * parseBaseImages(), which decides which FROM images get their own
- * explicit, separately-timed PODMAN_BASE_IMAGE_PULL stage. */
+// Teste le composant « parse-base-images » et ses cas d’erreur.
 import * as assert from 'assert';
 import { parseBaseImages } from './security-artifact-validator';
 

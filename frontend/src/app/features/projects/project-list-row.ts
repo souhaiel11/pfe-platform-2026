@@ -1,25 +1,7 @@
+// Regroupe les traitements de projet liste ligne.
 import { frenchDate, frenchRelative } from '../../shared/french-format';
 
-// ─────────────────────────────────────────────────────────────────────
-//  Ligne de la liste des projets (§29).
-//
-//  La liste doit rendre les projets COMPARABLES : nom, dépôt, dernier build,
-//  état de sécurité, état de déploiement, dernière activité. Chacun de ces
-//  cinq faits vient d'une source différente, et chacune peut manquer
-//  indépendamment des autres.
-//
-//  D'où le choix de modéliser un ÉTAT par colonne plutôt qu'une simple
-//  valeur nullable. « Jenkins n'a pas répondu » et « ce projet n'a aucun
-//  build » produisent tous deux `status = null` ; les afficher pareil est
-//  faux dans les deux sens — l'un se réessaie, l'autre non (§17). Le même
-//  raisonnement sépare « déploiement non configuré » de « déploiement
-//  bloqué » : la première n'est pas un problème, la seconde en est un.
-//
-//  Aucune valeur n'est fabriquée ici. Pas de 0 pour un inconnu, pas de
-//  repli sur un autre projet, pas de score hérité de Project.securityScore
-//  (désynchronisable sans alerte) : le score vient de security-global, qui
-//  est la lecture live.
-// ─────────────────────────────────────────────────────────────────────
+// ───────────────────────────────────────────────────────────────────── Ligne de la liste des projets (§29).
 
 export type BuildState = 'KNOWN' | 'NO_BUILD' | 'NOT_CONFIGURED' | 'UNAVAILABLE';
 export type SecurityState = 'KNOWN' | 'INCOMPLETE' | 'UNAVAILABLE';
@@ -63,40 +45,14 @@ export interface ProjectListRow {
   lastActivityExact: string | null;
 }
 
-/**
- * Entier, ou null.
- *
- * Le rejet explicite de null / undefined / '' / booléen n'est pas de la
- * défense gratuite : `Number(null)` et `Number('')` valent 0. Un helper
- * naïf transforme donc « score non enregistré » en « score de 0 » — soit
- * exactement le mensonge que §31 interdit, et dans le pire sens possible
- * (un projet non mesuré s'afficherait en rouge critique).
- */
+/** Entier, ou null. Le rejet explicite de null / undefined / '' / booléen n'est pas de la défense gratuite : Number(null) et Number('') valent 0. */
 function integerOrNull(value: unknown): number | null {
   if (value === null || value === undefined || value === '' || typeof value === 'boolean') return null;
   const n = Number(value);
   return Number.isFinite(n) && Number.isInteger(n) ? n : null;
 }
 
-/**
- * État du dernier build.
- *
- * `jenkins` est l'entrée de GET /dashboard/jenkins-global pour CE projet, ou
- * null quand l'appel global a échoué / n'a pas encore abouti. `readiness`
- * sert uniquement de source du NUMÉRO de build corrélé — jamais de son
- * résultat : la plateforme sait quel build elle a gouverné, elle ne sait pas
- * à sa place si Jenkins l'a réussi.
- *
- * `project` sert à une seule chose, et elle est essentielle : savoir si ce
- * projet a un job Jenkins DU TOUT. Sans cette information, un projet sans
- * job est absent de jenkins-global exactement comme un projet dont la
- * lecture a échoué — et les deux s'affichaient « Indisponible — les données
- * Jenkins n'ont pas été chargées ». C'est faux : rien n'a échoué, il n'y a
- * simplement rien à lire. Affirmer une panne non constatée est précisément
- * ce que la discipline de données interdit, et dans le pire sens : cela
- * envoie le développeur chercher une infrastructure en défaut alors qu'il
- * lui manque une ligne de configuration.
- */
+/** État du dernier build. */
 export function buildCell(jenkins: any, readiness: any, project?: any): ProjectListBuild {
   const correlated = integerOrNull(readiness?.currentBuild);
   // Un job non configuré est un fait de CONFIGURATION, jamais une panne.
@@ -150,15 +106,7 @@ export function buildCell(jenkins: any, readiness: any, project?: any): ProjectL
   };
 }
 
-/**
- * État de sécurité.
- *
- * `entry` est l'entrée byProject de security-global. Absente, le score reste
- * null — jamais un repli sur Project.securityScore, ni sur la moyenne
- * plateforme, ni sur le score d'un autre projet. `incomplete` est conservé
- * tel quel : un score calculé sans tous les scanners est affiché comme
- * partiel, pas comme un verdict.
- */
+/** État de sécurité. entry est l'entrée byProject de security-global. */
 export function securityCell(entry: any): ProjectListSecurity {
   if (!entry) return { state: 'UNAVAILABLE', score: null, criticalCves: null, missingScanners: [] };
   const missing = Array.isArray(entry.missingScanners) ? entry.missingScanners.filter((s: unknown) => typeof s === 'string') : [];
@@ -172,14 +120,7 @@ export function securityCell(entry: any): ProjectListSecurity {
   return { state: 'KNOWN', score, criticalCves: integerOrNull(entry.criticalCves), missingScanners: missing };
 }
 
-/**
- * État de déploiement.
- *
- * `deploymentConfigured === false` est un fait renvoyé par le backend : le
- * projet n'a pas de cible, donc ni « prêt » ni « bloqué » ne s'appliquent.
- * Un refus de gouvernance expose son NOMBRE de motifs et le premier d'entre
- * eux, parce que « bloqué » sans pourquoi n'est pas actionnable (§14).
- */
+/** État de déploiement. */
 export function deploymentCell(readiness: any): ProjectListDeployment {
   if (!readiness) return { state: 'UNAVAILABLE', blockingCount: null, firstReason: null };
   if (readiness.deploymentConfigured === false) return { state: 'NOT_CONFIGURED', blockingCount: null, firstReason: null };
@@ -193,6 +134,7 @@ export function deploymentCell(readiness: any): ProjectListDeployment {
   return { state: 'UNAVAILABLE', blockingCount: null, firstReason: null };
 }
 
+/** Construit projet liste ligne. */
 export function buildProjectListRow(
   project: any,
   security: any,
@@ -217,13 +159,7 @@ export function buildProjectListRow(
   };
 }
 
-/**
- * Un projet « demande une attention » quand un fait CONSTATÉ le dit : un
- * build en échec, un incident ouvert, un déploiement refusé, ou un score
- * de sécurité bas. Jamais une absence d'information : ne pas savoir n'est
- * pas un problème de sécurité, et le présenter comme tel noierait les vrais
- * problèmes (§28).
- */
+/** Un projet « demande une attention » quand un fait CONSTATÉ le dit : un build en échec, un incident ouvert, un déploiement refusé, ou un score de sécurité bas. */
 export function needsAttention(row: ProjectListRow): boolean {
   if (row.build.state === 'KNOWN' && ['FAILURE', 'FAILED', 'ERROR', 'UNSTABLE', 'ABORTED'].includes(String(row.build.status).toUpperCase())) return true;
   if ((row.openIncidents ?? 0) > 0) return true;
@@ -232,14 +168,7 @@ export function needsAttention(row: ProjectListRow): boolean {
   return false;
 }
 
-/**
- * Les raisons EXACTES pour lesquelles un projet demande une attention.
- *
- * « À traiter » sans pourquoi fait exactement ce que §14 reproche à un
- * « CRITICAL_RISK » nu : annoncer un problème sans donner la prise. Chaque
- * entrée correspond donc à un fait constaté et nommé, et la liste est vide
- * — pas « aucun problème détecté » — quand rien n'a été constaté.
- */
+/** Les raisons EXACTES pour lesquelles un projet demande une attention. */
 export function attentionReasons(row: ProjectListRow): string[] {
   const reasons: string[] = [];
   if (row.build.state === 'KNOWN' && ['FAILURE', 'FAILED', 'ERROR'].includes(String(row.build.status).toUpperCase())) {
@@ -262,11 +191,7 @@ export function attentionReasons(row: ProjectListRow): string[] {
   return reasons;
 }
 
-/**
- * Projets triés « ce qui va mal d'abord » (§28) : attention en tête, puis
- * par score croissant, les scores inconnus en dernier. Ne JAMAIS remonter
- * un projet parce qu'on ignore son état : l'inconnu n'est pas une alerte.
- */
+/** Projets triés « ce qui va mal d'abord » (§28) : attention en tête, puis par score croissant, les scores inconnus en dernier. */
 export function sortByAttention(rows: ProjectListRow[]): ProjectListRow[] {
   return [...rows].sort((a, b) => {
     const attention = Number(needsAttention(b)) - Number(needsAttention(a));

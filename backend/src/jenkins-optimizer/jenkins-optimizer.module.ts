@@ -1,8 +1,5 @@
-// ─────────────────────────────────────────────────────────────
-//  Jenkins Optimizer — proxy vers le workflow n8n WF4
-//  Fichier : src/jenkins-optimizer/jenkins-optimizer.module.ts
-//  Enregistrement : ajouter JenkinsOptimizerModule aux imports de AppModule
-// ─────────────────────────────────────────────────────────────
+import { currentOptimizerVerdict, optimizerVerdict } from '../common/optimizer-verdict';
+// Contient le contrôleur et le module de l'optimiseur Jenkinsfile.
 import { Module, Controller, Post, Get, Param, Body, Query, Headers, UseGuards, HttpException, HttpStatus, Req } from '@nestjs/common';
 import { TypeOrmModule, InjectRepository } from '@nestjs/typeorm';
 import { Repository, LessThan } from 'typeorm';
@@ -12,6 +9,8 @@ import { JenkinsApply, JenkinsApplyStatus } from './jenkins-apply.entity';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { JwtOrInternalSecretGuard } from '../auth/jwt-or-internal-secret.guard';
 import { Project } from '../projects/project.entity';
+import { fetchJenkinsfile } from './fetch-jenkinsfile';
+import { assertOptimizerInput, readOptimizerRejection } from './optimizer-contract';
 
 const N8N_URL = process.env.N8N_URL || 'http://172.31.172.61:5678';
 // Secret partagé pour /optimize/:id/callback ET /apply/:applyId/callback —
@@ -24,16 +23,7 @@ const WEBHOOK = `${N8N_URL}/webhook/jenkinsfile-optimize`;
 const APPLY_WEBHOOK = `${N8N_URL}/webhook/jenkinsfile-apply`;
 const FETCH_WEBHOOK = `${N8N_URL}/webhook/jenkinsfile-fetch`;
 
-// Régénération sélective (option B) : le développeur a coché un sous-
-// ensemble des issues d'une analyse précédente. On ne demande PAS à l'agent
-// de "retirer" les issues décochées d'un fichier déjà fusionné (impossible
-// proprement, voir diagnostic — les issues se chevauchent structurellement),
-// on repart du Jenkinsfile ORIGINAL avec une sélection structurée.
-//
-// Le texte d'instruction en langage naturel (auparavant construit ici et
-// collé dans context.notes) est maintenant la responsabilité du node
-// "Prepare - Optimizer Body" côté n8n — on ne lui envoie plus qu'une donnée
-// structurée {kept, excluded}, ref = l'id d'issue (JF-x), pas de prose.
+/** Régénération sélective (option B) : le développeur a coché un sous- ensemble des issues d'une analyse précédente. */
 function buildSelection(
   retained: { id: string; title: string }[],
   discarded: { id: string; title: string }[],
@@ -44,18 +34,7 @@ function buildSelection(
   };
 }
 
-// ─────────────────────────────────────────────────────────────
-//  État des analyses en cours — Map en mémoire = cache rapide pour
-//  le polling actif, PAS la source de vérité. La source de vérité
-//  est JenkinsAnalysis en base (voir jenkins-analysis.entity.ts) :
-//  une ligne 'pending' y est écrite dès la création du job, avant
-//  même d'appeler n8n, pour que le callback et le polling puissent
-//  toujours retrouver le job même si ce Map a été vidé par un
-//  redémarrage backend. "pending" n'est JAMAIS purgé du Map, quel
-//  que soit son âge (une analyse peut légitimement durer 10+ min —
-//  donnée mesurée : voir diagnostic WF4). Seuls done/error anciens
-//  sont purgés du Map (la ligne DB, elle, reste pour l'historique).
-// ─────────────────────────────────────────────────────────────
+// ───────────────────────────────────────────────────────────── État des analyses en cours — Map en mémoire = cache rapide pour le polling actif, PAS la source de vérité.
 type JobStatus = 'pending' | 'done' | 'error';
 interface JobEntry {
   status: JobStatus;
@@ -85,6 +64,7 @@ setInterval(() => {
 @Controller('jenkins')
 export class JenkinsOptimizerController {
 
+  /** Initialise les dépendances et l’état de ce composant. */
   constructor(
     @InjectRepository(JenkinsAnalysis)
     private readonly analyses: Repository<JenkinsAnalysis>,
@@ -93,18 +73,10 @@ export class JenkinsOptimizerController {
     @InjectRepository(Project)
     private readonly projects: Repository<Project>,
   ) {
-    // Balayage en arrière-plan — le filet de péremption (APPLY_STALE_MS) ne
-    // doit PAS dépendre qu'un client rappelle GET .../status après le délai :
-    // sans ça, une ligne 'pending' orpheline (frontend qui a arrêté de
-    // poller, onglet fermé) reste bloquée indéfiniment même si n8n ne
-    // répondra plus jamais. Ce balayage marche même si n8n est totalement
-    // mort et qu'aucun client n'interroge plus jamais l'API. Le check
-    // paresseux dans getApplyStatus() reste en place à côté : il donne une
-    // réponse immédiate à un poller actif sans attendre le prochain passage
-    // du balayage (jusqu'à 2 min).
     setInterval(() => this.sweepStaleApplies(), 2 * 60_000);
   }
 
+  /** Filet de sécurité périodique (toutes les 2 min) : marque FAILED tout apply resté PENDING plus de APPLY_STALE_MS sans callback n8n, même si aucun client ne poll plus le statut. */
   private async sweepStaleApplies() {
     const staleBefore = new Date(Date.now() - APPLY_STALE_MS);
     const stale = await this.applies.find({
@@ -119,12 +91,7 @@ export class JenkinsOptimizerController {
     }
   }
 
-  // Résout la branche par défaut du repo GitHub — Project ne stocke aucune
-  // colonne "branche" (voir diagnostic), donc GitHub lui-même fait foi.
-  // Fail-safe, jamais fail-loud : un échec (réseau, 404, repo privé sans
-  // token, rate limit, timeout) ne doit JAMAIS bloquer l'analyse — seule
-  // conséquence d'un échec ici, retomber sur 'main'. Même mécanisme d'auth
-  // que ProjectsService.getGithubStats() (token par-projet, optionnel).
+  /** Résout la branche par défaut du repo GitHub — Project ne stocke aucune colonne "branche" (voir diagnostic), donc GitHub lui-même fait foi. */
   private async resolveDefaultBranch(owner: string, repo: string, token?: string): Promise<string> {
     try {
       const headers: Record<string, string> = { 'User-Agent': 'DevSecOps-Platform' };
@@ -143,14 +110,14 @@ export class JenkinsOptimizerController {
     }
   }
 
-  // Lance l'analyse en tâche de fond et renvoie un id immédiatement —
-  // aucune requête HTTP ne reste jamais ouverte plus de quelques ms,
-  // donc aucun timeout de proxy (nginx, tunnel de soutenance, etc.)
-  // ne peut plus jamais couper cet appel.
-  // Appelé par le front (JWT utilisateur) ET par le routage auto WF4 dans
-  // webhooks.service.ts (token de service signé en interne, voir routeToOptimizer)
-  // — d'où le guard hybride plutôt qu'un JwtAuthGuard nu.
+  /** Lance l'analyse en tâche de fond et renvoie un id immédiatement. */
   @UseGuards(JwtOrInternalSecretGuard)
+  /**
+   * Endpoint HTTP : lance l'analyse Jenkinsfile en tâche de fond (fire-and-forget) et renvoie un
+   * id immédiatement — gère aussi la régénération sélective (repart du Jenkinsfile ORIGINAL avec
+   * les issues retenues/écartées, jamais du fichier déjà fusionné). Le résultat réel n'arrive
+   * jamais par cette réponse HTTP, seulement via /optimize/:id/callback.
+   */
   @Post('optimize')
   async optimize(@Body() body: {
     jenkinsfile?: string;
@@ -198,6 +165,8 @@ export class JenkinsOptimizerController {
       throw new HttpException('Jenkinsfile vide ou trop court', HttpStatus.BAD_REQUEST);
     }
 
+    assertOptimizerInput(jenkinsfile);
+
     const id = randomUUID();
     jobs.set(id, { status: 'pending', createdAt: Date.now() });
 
@@ -231,22 +200,7 @@ export class JenkinsOptimizerController {
       }
     }
 
-    // Fire-and-forget : on n'attend jamais cette promesse pour répondre
-    // au frontend. Le résultat final arrive via /optimize/:id/callback,
-    // appelé par n8n lui-même à la fin du workflow (succès ou erreur).
-    //
-    // Ce fetch ne sert QU'À déclencher le workflow n8n — sa réponse HTTP
-    // (ou son échec) n'est JAMAIS la donnée réelle, seul le callback fait
-    // foi. Sans `signal`, undici applique un timeout implicite de ~300s
-    // (mesuré empiriquement : HeadersTimeoutError à 301s) sur cette
-    // connexion tenue ouverte par le webhook n8n en responseMode
-    // "responseNode" — ce qui faisait passer le job en 'error' à tort
-    // après 5 min alors que l'analyse continuait légitimement. Un signal
-    // explicite de 30s borne la socket sans en faire une preuve d'échec :
-    // seul un refus réseau IMMÉDIAT et vérifié (ECONNREFUSED/ENOTFOUND/...)
-    // constitue un vrai signal d'erreur ; un abandon par timeout ne dit
-    // rien sur l'analyse et est ignoré (le job reste 'pending', le
-    // callback n8n tranchera plus tard).
+    // Fire-and-forget : on n'attend jamais cette promesse pour répondre au frontend.
     const n8nPayload = {
       jobId: id,
       jenkinsfile,
@@ -266,13 +220,17 @@ export class JenkinsOptimizerController {
     };
     // Visibilité directe sur ce qui part réellement à l'agent — utile pour
     // diagnostiquer un prompt de régénération qui ne serait pas respecté.
-    console.log(`[jenkins-optimizer] payload envoyé à n8n pour ${id} :`, JSON.stringify(n8nPayload));
+    console.log(`[jenkins-optimizer] analyse envoyée à n8n : jobId=${id}, caractères=${jenkinsfile.length}`);
 
     fetch(WEBHOOK, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(n8nPayload),
       signal: AbortSignal.timeout(30000),
+    }).then(async (response) => {
+      const reason = await readOptimizerRejection(response);
+      if (!reason || jobs.get(id)?.status !== 'pending') return;
+      await this.receiveOptimizeCallback(id, { status: 'error', reason }, N8N_CALLBACK_SECRET);
     }).catch((e: any) => {
       const job = jobs.get(id);
       if (!job || job.status !== 'pending') return;
@@ -305,26 +263,18 @@ export class JenkinsOptimizerController {
   // Même raison que optimize() ci-dessus : le front poll ce endpoint avec
   // son JWT, mais rien n'empêche un futur appel serveur->serveur.
   @UseGuards(JwtOrInternalSecretGuard)
+  /** Endpoint HTTP (polling) : lit le statut du job depuis le cache mémoire, ou retombe sur la ligne DB si le backend a redémarré depuis la création du job. */
   @Get('optimize/:id/status')
   async getOptimizeStatus(@Param('id') id: string) {
-    const job = jobs.get(id);
-    if (job) {
-      return { status: job.status, result: job.result, reason: job.reason, detail: job.detail };
-    }
-    // Absent du Map (typiquement : backend redémarré depuis la création du
-    // job) — fallback sur la ligne DB, source de vérité durable.
     const row = await this.analyses.findOneBy({ jobId: id });
     if (!row) {
       throw new HttpException('Analyse introuvable ou expirée', HttpStatus.NOT_FOUND);
     }
-    return { status: row.status, result: row.result, reason: row.reason, detail: row.detail };
+    const view = await currentOptimizerVerdict(row, await this.projects.findOneBy({ id: row.projectId }), 'Jenkinsfile');
+    return { status: view.status, result: view.result, reason: view.reason, detail: view.detail };
   }
 
-  // Appelé PAR n8n (WF4) à la fin du workflow — succès ou échec explicite.
-  // Pas de JwtAuthGuard (appelé depuis n8n, pas depuis le navigateur), mais
-  // protégé par le même secret partagé que /apply/:applyId/callback : sans
-  // ça, n'importe qui pouvait injecter un faux résultat d'optimisation
-  // affiché ensuite tel quel au développeur.
+  /** Appelé PAR n8n (WF4) à la fin du workflow — succès ou échec explicite. */
   @Post('optimize/:id/callback')
   async receiveOptimizeCallback(
     @Param('id') id: string,
@@ -372,61 +322,38 @@ export class JenkinsOptimizerController {
 
   // Historique complet des analyses d'un projet, plus récent d'abord —
   // le front prend [0] pour "la dernière analyse".
+  /** Endpoint HTTP : historique des analyses d'un projet, plus récent d'abord. */
   @Get('analyses')
   @UseGuards(JwtAuthGuard)
   async listAnalyses(@Query('projectId') projectId?: string) {
     if (!projectId) {
       throw new HttpException('projectId requis', HttpStatus.BAD_REQUEST);
     }
-    return this.analyses.find({ where: { projectId }, order: { createdAt: 'DESC' } });
+    const rows = await this.analyses.find({ where: { projectId }, order: { createdAt: 'DESC' } });
+    const project = await this.projects.findOneBy({ id: projectId.trim() });
+    return Promise.all(rows.map((row, index) => index === 0 ? currentOptimizerVerdict(row, project, 'Jenkinsfile') : { ...row, result: optimizerVerdict(row.result) }));
   }
 
   // Appelé par le front (bouton manuel) ET par le routage auto WF4 (token
   // de service) juste avant optimize() — même guard hybride que optimize().
   @UseGuards(JwtOrInternalSecretGuard)
+  /** Endpoint HTTP : demande à n8n (webhook fetch) de récupérer le Jenkinsfile d'un dépôt GitHub avant analyse. */
   @Post('fetch')
   async fetch(@Body() body: { owner: string; repo: string; filePath?: string; ref?: string }) {
     if (!body?.owner || !body?.repo) {
       throw new HttpException('owner et repo sont requis', HttpStatus.BAD_REQUEST);
     }
-    try {
-      const res = await fetch(FETCH_WEBHOOK, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          owner: body.owner,
-          repo: body.repo,
-          filePath: body.filePath || 'Jenkinsfile',
-          ref: body.ref || 'main',
-        }),
-        signal: AbortSignal.timeout(30000),
-      });
-      if (!res.ok) {
-        throw new HttpException(`Workflow n8n indisponible (${res.status})`, HttpStatus.BAD_GATEWAY);
-      }
-      const data = await res.json();
-      const result = Array.isArray(data) ? data[0] : data;
-      if (!result?.success) {
-        throw new HttpException(result?.message || 'Jenkinsfile introuvable', HttpStatus.NOT_FOUND);
-      }
-      return result;
-    } catch (e: any) {
-      if (e instanceof HttpException) throw e;
-      throw new HttpException(`Erreur d'appel au workflow : ${e.message}`, HttpStatus.BAD_GATEWAY);
-    }
+    return fetchJenkinsfile(FETCH_WEBHOOK, body);
   }
 
-  // WF4 v4 : la branche APPLY régénère elle-même le fichier via un 2e agent
-  // (Apply Agent) à partir du Jenkinsfile ORIGINAL + la sélection retenue/
-  // écartée — on ne POSTe plus jamais un optimizedJenkinsfile pré-calculé.
-  // On ne fait plus confiance au title/recommendation que le front pourrait
-  // renvoyer : on recharge l'analyse par jobId et on reconstruit retained/
-  // excluded depuis les issues RÉELLEMENT stockées (result.issues[]), le
-  // front ne fournit que les refs (id) pour dire ce qui est coché.
-  // Asynchrone, symétrique à optimize() — WF4 v4 a ajouté un vrai appel LLM
-  // (Apply Agent) dans la branche APPLY, un aller-retour HTTP synchrone
-  // n'est plus tenable (60s, puis 200s côté Nginx, tous les deux trop courts).
+  /** Applique la mise à jour prévue aux données. */
   @UseGuards(JwtAuthGuard)
+  /**
+   * Endpoint HTTP : déclenche l'Apply Agent n8n (régénération réelle du Jenkinsfile + PR) à
+   * partir du Jenkinsfile ORIGINAL stocké et des références d'issues retenues/écartées — jamais
+   * du title/recommendation fourni par le front, toujours re-résolu depuis les issues stockées.
+   * Asynchrone comme optimize() : le résultat arrive via /apply/:applyId/callback.
+   */
   @Post('apply')
   async apply(@Body() body: {
     jobId: string;
@@ -453,6 +380,7 @@ export class JenkinsOptimizerController {
     }
 
     const storedIssues: any[] = analysis.result?.issues || [];
+    /** Convertit vers complet Issue. */
     const toFullIssue = (ref: string) => {
       const issue = storedIssues.find((i) => i.id === ref);
       // Repli défensif si une ref envoyée par le front ne correspond à
@@ -532,6 +460,7 @@ export class JenkinsOptimizerController {
     return { applyId };
   }
 
+  /** Renvoie Apply statut. */
   @Get('apply/:applyId/status')
   async getApplyStatus(@Param('applyId') applyId: string) {
     const row = await this.applies.findOneBy({ applyId });
@@ -551,13 +480,7 @@ export class JenkinsOptimizerController {
     return { status: row.status, result: row.result };
   }
 
-  // Appelé PAR n8n (WF4 v4, branche APPLY) sur l'un des 3 nœuds terminaux :
-  // succès (après Create Pull Request), gate bloqué (Format Apply Error),
-  // ou échec technique de l'Apply Agent. Pas de JwtAuthGuard (même logique
-  // que /optimize/:id/callback, appelé depuis n8n, pas depuis le navigateur)
-  // — MAIS ce callback-ci écrit un prUrl affiché tel quel à l'utilisateur,
-  // donc protégé en plus par un secret partagé (voir N8N_CALLBACK_SECRET),
-  // contrairement aux autres callbacks de ce fichier.
+  /** Appelé PAR n8n (WF4 v4, branche APPLY) sur l'un des 3 nœuds terminaux : succès (après Create Pull Request), gate bloqué (Format Apply Error), ou échec technique de l'Apply Agent. */
   @Post('apply/:applyId/callback')
   async receiveApplyCallback(
     @Param('applyId') applyId: string,

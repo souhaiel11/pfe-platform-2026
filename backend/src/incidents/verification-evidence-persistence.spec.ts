@@ -1,12 +1,8 @@
-// R76 -- proves saveWorkflowBatchStatus persists a bounded, sanitized
-// candidate-verification evidence summary on a FAILED callback, without
-// touching any other existing field or behavior, and that it degrades
-// safely (never throws) when the summary is absent/malformed/oversized.
-//
-// No live n8n execution, network or business action.
+// Teste le composant « verification-evidence-persistence » et ses cas d’erreur.
 import * as assert from 'node:assert/strict';
 import { IncidentsService, sanitizeVerificationEvidence } from './incidents.service';
 
+/** Prépare les données nécessaires à ce scénario. */
 function makeCallbackHarness() {
   const incident: any = {
     id: 'incident-verif-callback', projectId: 'project-1', status: 'blocked', prUrl: null, metadata: { fixRequest: {
@@ -14,9 +10,23 @@ function makeCallbackHarness() {
       findingIds: ['a', 'b'], attemptCount: 1, attempts: [{ attempt: 1, expectedWorkflowId: '9adcV31eaIgJyMR0', status: 'DISPATCHED' }],
     } },
   };
-  const repo: any = { findOne: async () => incident, update: async (_id: string, patch: any) => Object.assign(incident, patch) };
-  const repository: any = { manager: { transaction: async (fn: any) => fn({ getRepository: () => repo }) }, findOne: async () => incident, update: repo.update };
-  const service = new IncidentsService(repository, {} as any, { emit: () => undefined } as any, { syncIncident: async () => undefined } as any, {} as any);
+  const repo: any = {
+  /** Recherche l’élément correspondant à l’identifiant. */
+  findOne: async () => incident,
+  /** Applique les modifications autorisées à l’élément. */
+  update: async (_id: string, patch: any) => Object.assign(incident, patch) };
+  const repository: any = { manager: {
+  /** Exécute les opérations dans le cadre transactionnel prévu. */
+  transaction: async (fn: any) => fn({
+  /** Simule la lecture des données demandées par le composant. */
+  getRepository: () => repo }) },
+  /** Recherche l’élément correspondant à l’identifiant. */
+  findOne: async () => incident, update: repo.update };
+  const service = new IncidentsService(repository, {} as any, {
+  /** Diffuse ou construit le résultat prévu. */
+  emit: () => undefined } as any, {
+  /** Prépare les données nécessaires à ce scénario. */
+  syncIncident: async () => undefined } as any, {} as any);
   const base = {
     status: 'FAILED' as const, workflowId: '9adcV31eaIgJyMR0', executionId: '1992',
     incidentId: incident.id, requestId: 'request-verif', batchId: 'batch-verif', batchKey: 'batch-verif',
@@ -26,6 +36,7 @@ function makeCallbackHarness() {
   return { incident, service, base };
 }
 
+/** Exécute les étapes principales de ce programme. */
 async function main() {
   // --- D. FAIL returns bounded verificationEvidence, persisted on the attempt AND top-level ---
   {

@@ -1,13 +1,8 @@
+// Teste le composant « default-value-semantics » et ses cas d’erreur.
 import * as assert from 'node:assert/strict';
 import { analyzeDefaultValueSemantics, DefaultValueSemanticsInput } from './default-value-semantics';
 
-// Pure unit tests — no DB, no IO, no LLM. Exercises the generic invariant in
-// isolation from any specific rule/entity/field: every fixture below uses
-// synthetic type/field names, EXCEPT the PR #34 offline-revalidation fixture
-// (case marked below), which intentionally uses the real, exact source text
-// recovered from the PR so the module is proven against the real defect it
-// was built for — never hardcoded into the module itself (see
-// default-value-semantics.ts: no rule/entity/field name appears there).
+/** Exécute le traitement et collecte son résultat. */
 
 function run(overrides: Partial<DefaultValueSemanticsInput>): ReturnType<typeof analyzeDefaultValueSemantics> {
   const base: DefaultValueSemanticsInput = {
@@ -70,14 +65,6 @@ function run(overrides: Partial<DefaultValueSemanticsInput>): ReturnType<typeof 
   assert.match(result.reason, /no explicit initializer/);
 }
 
-// ── CASE 6 — insufficient deserialization evidence => VERIFICATION_REQUIRED
-// Reserved for the two structural preconditions this invariant cannot do
-// without: proof the candidate type is itself externally deserialized, and
-// a well-formed request to check a candidate field that isn't even declared
-// (a config/input error, not "this field is new"). A source field that
-// simply isn't declared (CASE 5's sibling — no default to preserve) and a
-// mapping method proven to never read the field at all (definitively
-// non-observable, not merely unknown) are both NO_DEFECT, tested below.
 {
   const result = run({ externalBindingEvidence: undefined });
   assert.equal(result.verdict, 'VERIFICATION_REQUIRED');

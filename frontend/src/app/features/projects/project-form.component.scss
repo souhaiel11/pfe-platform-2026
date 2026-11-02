@@ -1,20 +1,4 @@
-/* ─────────────────────────────────────────────────────────────────────
-   Formulaire de projet.
-
-   Ces règles vivaient dans une balise <style> à l'intérieur du gabarit, ce
-   qui produisait deux défauts réels :
-
-    — la balise n'est pas encapsulée par Angular : des sélecteurs aussi
-      génériques que `.alert`, `.field`, `.section`, `.hint` ou `.divider`
-      fuyaient dans le document et continuaient de s'appliquer aux autres
-      écrans après un passage sur ce formulaire ;
-    — la palette était une palette GitHub-sombre codée en dur (#0d1117,
-      #e6edf3, #58a6ff…), donc cet écran restait sombre en thème clair —
-      le seul de la plateforme à ne pas suivre le thème (§2).
-
-   Les couleurs passent par les variables de thème existantes, et la page
-   hérite de la typographie et du défilement de la coquille applicative.
-   ───────────────────────────────────────────────────────────────────── */
+/* Définit les styles de la configuration d’un projet. */
 * { box-sizing: border-box; }
 .pf-container { max-width: 800px; margin: 0 auto; padding: 24px; background: var(--bg-primary); color: var(--text-primary); }
 .pf-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
@@ -94,3 +78,129 @@
 .vbox-item .valid-glyph { font-weight: 700; }
 .snav-btn { display: inline-flex; align-items: center; gap: 6px; }
 .divider { display: flex; align-items: center; gap: 6px; }
+
+/* Liste des champs qui empêchent l'enregistrement — affichée dans l'alerte
+   d'erreur. Chaque ligne est cliquable : elle ouvre l'onglet concerné et
+   place le curseur dans le champ.
+   L'alerte de base est en `display:flex` centré ; on repasse en colonne pour
+   que le résumé soit au-dessus de la liste et non à côté d'elle. */
+.alert.error {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+
+  .alert-line { font-weight: 600; }
+
+  .missing-list {
+    margin: .5rem 0 0;
+    padding: 0 0 0 .2rem;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: .3rem;
+
+    li { display: flex; flex-wrap: wrap; align-items: baseline; gap: .4rem; font-weight: 400; }
+  }
+
+  .missing-jump {
+    display: inline-flex; align-items: baseline; gap: .45rem;
+    background: none; border: 0; padding: 0; cursor: pointer;
+    font: inherit; color: inherit; text-align: left;
+
+    &:hover .missing-field, &:focus-visible .missing-field { text-decoration: underline; }
+    &:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; border-radius: 3px; }
+  }
+
+  .missing-tab {
+    font-size: .72rem; letter-spacing: .04em; text-transform: uppercase;
+    opacity: .75; border: 1px solid currentColor; border-radius: 3px;
+    padding: .05rem .35rem; white-space: nowrap;
+  }
+
+  .missing-field { font-weight: 600; }
+  .missing-why   { opacity: .85; }
+}
+
+/* Test des connexions — un état par outil.
+   Quatre catégories, pas deux : réussi, échoué, non vérifié, sans objet.
+   « Non vérifié » et « sans objet » ne doivent jamais se lire comme une panne. */
+.conn-box {
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  padding: 14px;
+  margin-bottom: 16px;
+}
+.conn-title { font-weight: 600; margin-bottom: 10px; font-size: .9rem; }
+.conn-title.ok { color: var(--accent-green); }
+
+.conn-rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.conn-row {
+  display: grid;
+  grid-template-columns: 1.2rem 11rem minmax(0, 1fr);
+  gap: 10px;
+  align-items: baseline;
+  font-size: .82rem;
+}
+.conn-name { font-weight: 600; }
+.conn-msg  { color: var(--text-muted); overflow-wrap: anywhere; }
+
+.conn-row[data-statut="ok"]      .conn-glyph { color: var(--accent-green); }
+.conn-row[data-statut="warn"]    .conn-glyph { color: var(--accent-orange); }
+.conn-row[data-statut="unknown"] .conn-glyph,
+.conn-row[data-statut="na"]      .conn-glyph { color: var(--text-muted); }
+.conn-row[data-statut="na"] .conn-name { font-weight: 500; color: var(--text-muted); }
+
+.conn-foot { margin: 10px 0 0; font-size: .75rem; color: var(--text-muted); }
+.conn-hint { margin: 0 0 14px; font-size: .78rem; color: var(--text-muted); }
+
+@media (max-width: 760px) {
+  .conn-row { grid-template-columns: 1.2rem minmax(0, 1fr); }
+  .conn-row .conn-msg { grid-column: 2; }
+}
+
+/* Verdict du test : c'est lui qui conditionne l'enregistrement. */
+.conn-box.conn-ok  { border-color: var(--accent-green); }
+.conn-box.conn-ko  { border-color: var(--accent-red); }
+.conn-box.conn-ok .conn-title { color: var(--accent-green); }
+.conn-box.conn-ko .conn-title { color: var(--accent-red); }
+
+.conn-row[data-statut="ko"] .conn-glyph { color: var(--accent-red); }
+.conn-row[data-statut="ko"] .conn-name  { color: var(--accent-red); }
+.conn-row[data-statut="ko"] .conn-msg   { color: var(--text-primary); }
+
+/* Le nom du champ renvoie à l'onglet où le corriger. */
+.conn-jump {
+  background: none; border: 0; padding: 0; font: inherit; color: inherit;
+  text-align: left; cursor: pointer;
+  &:hover, &:focus-visible { text-decoration: underline; }
+  &:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; border-radius: 3px; }
+}
+
+/* Bouton Sauvegarder grisé tant que le test n'a pas conclu. */
+.btn-save:disabled { opacity: .45; cursor: not-allowed; }
+
+/* Suggestion de remplissage : la valeur proposée apparaît en filigrane dans
+   le champ, et cette ligne rappelle qu'Entrée la reprend. Laisser le champ
+   vide revient à l'accepter — elle est alors écrite visiblement, jamais
+   appliquée en douce. */
+.suggestion {
+  display: block;
+  margin-top: 4px;
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  font-size: .72rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  text-align: left;
+
+  code {
+    font-family: var(--font-mono, monospace);
+    color: var(--text-primary);
+    overflow-wrap: anywhere;
+  }
+  &:hover code, &:focus-visible code { text-decoration: underline; }
+  &:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; border-radius: 3px; }
+}

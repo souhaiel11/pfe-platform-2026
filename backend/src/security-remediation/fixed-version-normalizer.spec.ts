@@ -1,3 +1,4 @@
+// Teste le composant « fixed-version-normalizer » et ses cas d’erreur.
 import * as assert from 'node:assert/strict';
 import { parseFixedVersions } from './fixed-version-normalizer';
 

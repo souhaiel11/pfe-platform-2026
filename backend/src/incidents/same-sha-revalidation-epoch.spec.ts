@@ -1,26 +1,13 @@
+// Teste le composant « same-sha-revalidation-epoch » et ses cas d’erreur.
 import * as assert from 'node:assert/strict';
 import { IncidentsService, prValidationIdentity, prValidationRevalidationIdentity } from './incidents.service';
 
-// R80.2 — proves the generic, human-gated SAME-SHA revalidation mechanism
-// (reRunPrValidation): validationEpoch is additive (epoch 0 == every
-// existing normal validation, unchanged, zero migration), the new endpoint
-// only ever advances epoch past a TERMINAL predecessor for the exact same
-// governed SHA, concurrent calls under the real pessimistic-write-lock
-// pattern serialize to exactly one Jenkins trigger, and every other
-// existing path (requestPrValidation itself, attemptCount, application/WF2)
-// is provably untouched.
-//
-// Uses the SAME fixture/mocking pattern as pr-validation-head-verification
-// .spec.ts: a fake TypeORM repository whose manager.transaction() serializes
-// concurrent callers via a promise tail (simulating a real pessimistic_write
-// row lock without a live DB), and globalThis.fetch stubbed for GitHub/
-// Jenkins. Nothing here calls a real database, GitHub, Jenkins, n8n, or the
-// candidate-verifier worker.
 
 const SHA = '11ee62d1cdcdb9de20f2d1b0be453b9994ce9f9e';
 const OTHER_SHA = 'a'.repeat(40);
 const REPO = 'souhaiel11/pfe-app-test';
 
+/** Prépare les données nécessaires à ce scénario. */
 function passingHeadVerification(request: any) {
   return {
     mode: 'HEAD_ONLY',
@@ -36,6 +23,7 @@ function passingHeadVerification(request: any) {
   };
 }
 
+/** Prépare les données nécessaires à ce scénario. */
 function makeFixture(candidateVerification: any, overrides: { fix?: any; prValidationRequest?: any } = {}) {
   const incidentId = '73733ec0-4077-4c81-aed3-df3a3bca5245';
   const requestId = 'dfcd0966-c81a-4726-b47c-2ee5a81b1029';
@@ -69,29 +57,47 @@ function makeFixture(candidateVerification: any, overrides: { fix?: any; prValid
     sonarqubeKey: 'pfe-app-test',
   };
   incident.project = project;
-  const incidentRepo: any = { findOne: async () => incident, update: async (_id: string, patch: any) => Object.assign(incident, patch) };
-  const projectRepo: any = { findOne: async () => project };
+  const incidentRepo: any = {
+  /** Recherche l’élément correspondant à l’identifiant. */
+  findOne: async () => incident,
+  /** Applique les modifications autorisées à l’élément. */
+  update: async (_id: string, patch: any) => Object.assign(incident, patch) };
+  const projectRepo: any = {
+  /** Recherche l’élément correspondant à l’identifiant. */
+  findOne: async () => project };
   let tail = Promise.resolve();
   const repository: any = {
-    manager: { transaction: async (fn: any) => {
+    manager: {
+    /** Exécute les opérations dans le cadre transactionnel prévu. */
+    transaction: async (fn: any) => {
       const previous = tail; let release!: () => void;
       tail = new Promise<void>(resolve => { release = resolve; });
       await previous;
-      try { return await fn({ getRepository: (entity: any) => entity?.name === 'Project' ? projectRepo : incidentRepo }); }
+      try { return await fn({
+      /** Simule la lecture des données demandées par le composant. */
+      getRepository: (entity: any) => entity?.name === 'Project' ? projectRepo : incidentRepo }); }
       finally { release(); }
     } },
     findOne: incidentRepo.findOne, update: incidentRepo.update,
   };
-  const service = new IncidentsService(repository, projectRepo, { emit: () => undefined } as any, { syncIncident: async () => undefined } as any, candidateVerification);
+  const service = new IncidentsService(repository, projectRepo, {
+  /** Diffuse ou construit le résultat prévu. */
+  emit: () => undefined } as any, {
+  /** Prépare les données nécessaires à ce scénario. */
+  syncIncident: async () => undefined } as any, candidateVerification);
   return { incident, project, service, repository, incidentId, requestId, batchId, baseValidationRequestId };
 }
 
+/** Construit la réponse HTTP prévue par le scénario. */
 function githubPr(sha: string, branch: string, state = 'open') {
   return new Response(JSON.stringify({ state, head: { sha, ref: branch } }), { status: 200 });
 }
+/** Construit la réponse HTTP prévue par le scénario. */
 const validMetadata = () => new Response(JSON.stringify({ buildable: true, _class: 'org.jenkinsci.plugins.workflow.job.WorkflowJob', property: [{ _class: 'hudson.model.ParametersDefinitionProperty', parameterDefinitions: [{ name: 'PFE_VALIDATION_CONTEXT', type: 'StringParameterDefinition', defaultParameterValue: { value: '' } }] }] }), { status: 200 });
+/** Construit la réponse HTTP prévue par le scénario. */
 const validCrumb = () => new Response(JSON.stringify({ crumbRequestField: 'Jenkins-Crumb', crumb: 'opaque' }), { status: 200 });
 
+/** Simule les dépendances nécessaires au scénario. */
 function jenkinsFetchStub(incident: any, sha: string, onTrigger: () => void) {
   const branch = `fix/pfe-${incident.id}-${incident.metadata.fixRequest.requestId}`;
   return (async (url: any) => {
@@ -104,6 +110,7 @@ function jenkinsFetchStub(incident: any, sha: string, onTrigger: () => void) {
   }) as any;
 }
 
+/** Exécute les étapes principales de ce programme. */
 async function main() {
   const originalFetch = globalThis.fetch;
   const user = { id: 'admin-1', role: 'admin' };
@@ -114,7 +121,9 @@ async function main() {
   // Jenkins exactly once, preserves history, does not touch attemptCount.
   // ------------------------------------------------------------------
   {
-    const candidateVerification = { verifyHead: async (req: any) => passingHeadVerification(req) };
+    const candidateVerification = {
+    /** Vérifie le code exact du HEAD de la PR. */
+    verifyHead: async (req: any) => passingHeadVerification(req) };
     const { incident, service, baseValidationRequestId, batchId } = makeFixture(candidateVerification);
     let triggers = 0;
     globalThis.fetch = jenkinsFetchStub(incident, SHA, () => { triggers++; });
@@ -159,7 +168,9 @@ async function main() {
   // B — PR closed -> rejected
   // ------------------------------------------------------------------
   {
-    const candidateVerification = { verifyHead: async (req: any) => passingHeadVerification(req) };
+    const candidateVerification = {
+    /** Vérifie le code exact du HEAD de la PR. */
+    verifyHead: async (req: any) => passingHeadVerification(req) };
     const { incident, service } = makeFixture(candidateVerification);
     globalThis.fetch = (async (url: any) => {
       const value = String(url);
@@ -175,7 +186,9 @@ async function main() {
   // C — remote head moved -> rejected
   // ------------------------------------------------------------------
   {
-    const candidateVerification = { verifyHead: async (req: any) => passingHeadVerification(req) };
+    const candidateVerification = {
+    /** Vérifie le code exact du HEAD de la PR. */
+    verifyHead: async (req: any) => passingHeadVerification(req) };
     const { incident, service } = makeFixture(candidateVerification);
     globalThis.fetch = (async (url: any) => {
       const value = String(url);
@@ -190,7 +203,9 @@ async function main() {
   // D — branch changed -> rejected
   // ------------------------------------------------------------------
   {
-    const candidateVerification = { verifyHead: async (req: any) => passingHeadVerification(req) };
+    const candidateVerification = {
+    /** Vérifie le code exact du HEAD de la PR. */
+    verifyHead: async (req: any) => passingHeadVerification(req) };
     const { incident, service } = makeFixture(candidateVerification);
     globalThis.fetch = (async (url: any) => {
       const value = String(url);
@@ -208,7 +223,9 @@ async function main() {
   // -> rejected, never silently revalidates the wrong SHA.
   // ------------------------------------------------------------------
   {
-    const candidateVerification = { verifyHead: async (req: any) => passingHeadVerification(req) };
+    const candidateVerification = {
+    /** Vérifie le code exact du HEAD de la PR. */
+    verifyHead: async (req: any) => passingHeadVerification(req) };
     const { incident, service } = makeFixture(candidateVerification, { fix: { validationTargetSha: OTHER_SHA } });
     globalThis.fetch = (async () => { throw new Error('GitHub/Jenkins must never be reached when the target sha is stale'); }) as any;
     await assert.rejects(() => service.reRunPrValidation(incident.id, user), /Aucune validation terminée n.existe pour le SHA cible actuel/);
@@ -219,7 +236,9 @@ async function main() {
   // F — fix not VALIDATED -> rejected
   // ------------------------------------------------------------------
   {
-    const candidateVerification = { verifyHead: async (req: any) => passingHeadVerification(req) };
+    const candidateVerification = {
+    /** Vérifie le code exact du HEAD de la PR. */
+    verifyHead: async (req: any) => passingHeadVerification(req) };
     const { incident, service } = makeFixture(candidateVerification, { fix: { status: 'PR_CREATED' } });
     globalThis.fetch = (async () => { throw new Error('GitHub/Jenkins must never be reached when fix is not VALIDATED'); }) as any;
     await assert.rejects(() => service.reRunPrValidation(incident.id, user), /correction déjà validée/);
@@ -231,7 +250,9 @@ async function main() {
   // never a rerun) -> rejected, never treated as a duplicate of anything.
   // ------------------------------------------------------------------
   {
-    const candidateVerification = { verifyHead: async (req: any) => passingHeadVerification(req) };
+    const candidateVerification = {
+    /** Vérifie le code exact du HEAD de la PR. */
+    verifyHead: async (req: any) => passingHeadVerification(req) };
     const { incident, service } = makeFixture(candidateVerification, { prValidationRequest: { status: 'QUEUED' } });
     globalThis.fetch = (async (url: any) => {
       const value = String(url);
@@ -246,7 +267,9 @@ async function main() {
   // H — current request RUNNING (epoch 0) -> rejected
   // ------------------------------------------------------------------
   {
-    const candidateVerification = { verifyHead: async (req: any) => passingHeadVerification(req) };
+    const candidateVerification = {
+    /** Vérifie le code exact du HEAD de la PR. */
+    verifyHead: async (req: any) => passingHeadVerification(req) };
     const { incident, service } = makeFixture(candidateVerification, { prValidationRequest: { status: 'RUNNING' } });
     globalThis.fetch = (async (url: any) => {
       const value = String(url);
@@ -261,7 +284,9 @@ async function main() {
   // I — unauthorized role -> rejected before any GitHub/Jenkins call
   // ------------------------------------------------------------------
   {
-    const candidateVerification = { verifyHead: async (req: any) => passingHeadVerification(req) };
+    const candidateVerification = {
+    /** Vérifie le code exact du HEAD de la PR. */
+    verifyHead: async (req: any) => passingHeadVerification(req) };
     const { incident, service } = makeFixture(candidateVerification);
     globalThis.fetch = (async () => { throw new Error('GitHub/Jenkins must never be reached for an unauthorized role'); }) as any;
     await assert.rejects(() => service.reRunPrValidation(incident.id, viewer), /autorisation/);
@@ -275,7 +300,9 @@ async function main() {
   // real pessimistic_write row lock would.
   // ------------------------------------------------------------------
   {
-    const candidateVerification = { verifyHead: async (req: any) => passingHeadVerification(req) };
+    const candidateVerification = {
+    /** Vérifie le code exact du HEAD de la PR. */
+    verifyHead: async (req: any) => passingHeadVerification(req) };
     const { incident, service } = makeFixture(candidateVerification);
     let triggers = 0;
     globalThis.fetch = jenkinsFetchStub(incident, SHA, () => { triggers++; });
@@ -300,7 +327,9 @@ async function main() {
   // epoch 2 is ever allocated.
   // ------------------------------------------------------------------
   {
-    const candidateVerification = { verifyHead: async (req: any) => passingHeadVerification(req) };
+    const candidateVerification = {
+    /** Vérifie le code exact du HEAD de la PR. */
+    verifyHead: async (req: any) => passingHeadVerification(req) };
     const { incident, service } = makeFixture(candidateVerification);
     let triggers = 0;
     globalThis.fetch = jenkinsFetchStub(incident, SHA, () => { triggers++; });
@@ -319,7 +348,9 @@ async function main() {
   // R80.2: epoch 0, existing 4-field identity formula, existing dedupe.
   // ------------------------------------------------------------------
   {
-    const candidateVerification: any = { verifyHead: async (req: any) => passingHeadVerification(req) };
+    const candidateVerification: any = {
+    /** Vérifie le code exact du HEAD de la PR. */
+    verifyHead: async (req: any) => passingHeadVerification(req) };
     const incidentId = '65e35d1b-212f-4153-bd63-fba6e8eebc2c';
     const requestId = 'f1af3192-40f0-4400-869a-3854246d7a11';
     const batchId = '9c190dbec8d6f3d17b2b7e961e329bdc122e00ed18f88586b85bdca7a8d1c49d';
@@ -330,20 +361,34 @@ async function main() {
     };
     const project: any = { id: 'project-2', githubRepo: REPO, jenkinsUrl: 'http://jenkins', jenkinsToken: 'user:not-printed', jenkinsJobName: 'pfe-app-test', sonarqubeKey: 'pfe-app-test' };
     incident.project = project;
-    const incidentRepo: any = { findOne: async () => incident, update: async (_id: string, patch: any) => Object.assign(incident, patch) };
-    const projectRepo: any = { findOne: async () => project };
+    const incidentRepo: any = {
+    /** Recherche l’élément correspondant à l’identifiant. */
+    findOne: async () => incident,
+    /** Applique les modifications autorisées à l’élément. */
+    update: async (_id: string, patch: any) => Object.assign(incident, patch) };
+    const projectRepo: any = {
+    /** Recherche l’élément correspondant à l’identifiant. */
+    findOne: async () => project };
     let tail = Promise.resolve();
     const repository: any = {
-      manager: { transaction: async (fn: any) => {
+      manager: {
+      /** Exécute les opérations dans le cadre transactionnel prévu. */
+      transaction: async (fn: any) => {
         const previous = tail; let release!: () => void;
         tail = new Promise<void>(resolve => { release = resolve; });
         await previous;
-        try { return await fn({ getRepository: (entity: any) => entity?.name === 'Project' ? projectRepo : incidentRepo }); }
+        try { return await fn({
+        /** Simule la lecture des données demandées par le composant. */
+        getRepository: (entity: any) => entity?.name === 'Project' ? projectRepo : incidentRepo }); }
         finally { release(); }
       } },
       findOne: incidentRepo.findOne, update: incidentRepo.update,
     };
-    const service = new IncidentsService(repository, projectRepo, { emit: () => undefined } as any, { syncIncident: async () => undefined } as any, candidateVerification);
+    const service = new IncidentsService(repository, projectRepo, {
+    /** Diffuse ou construit le résultat prévu. */
+    emit: () => undefined } as any, {
+    /** Prépare les données nécessaires à ce scénario. */
+    syncIncident: async () => undefined } as any, candidateVerification);
     let triggers = 0;
     globalThis.fetch = jenkinsFetchStub(incident, SHA, () => { triggers++; });
     const result: any = await service.requestPrValidation(incident.id, user);

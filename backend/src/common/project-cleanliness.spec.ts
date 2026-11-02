@@ -1,14 +1,9 @@
-// Tests pour project-cleanliness.ts — même style assert/ts-node que
-// report-normalizer.spec.ts (pas de framework de test installé).
-//   npx ts-node src/common/project-cleanliness.spec.ts
-//
-// Couvre spécifiquement le fix QA-WF1-SCANNER-DIAGNOSTIC-HARDENING §8 :
-// suppression de l'exception ZAP (auparavant non-bloquant tant que non
-// complété) — ZAP doit maintenant bloquer comme Trivy/OWASP.
+// Tests pour project-cleanliness.ts — même style assert/ts-node que report-normalizer.spec.ts (pas de framework de test installé).
 import * as assert from 'assert';
 import { evaluateProjectCleanliness } from './project-cleanliness';
 
 let passed = 0;
+/** Vérifie les données dans ce scénario de test. */
 function check(label: string, condition: boolean) {
   assert.ok(condition, `ÉCHEC: ${label}`);
   passed++;

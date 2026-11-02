@@ -1,21 +1,4 @@
-/**
- * PFE R19.1 — WF2 branch-creation context-loss — offline isolated validation.
- *
- * Loads wf2_fixed.json (the patched ACTIVE WF2 v4.1) and drives the
- *   Prepare Batch Context -> Lookup Remediation Branch -> Branch Exists?
- *   -> {Use Existing Branch | Prepare Branch Creation -> Create Missing Branch}
- * sub-graph with the REAL jsCode of every Code node and the REAL URL/body
- * expressions of the two httpRequest nodes. No network: the GitHub ref lookup
- * is mocked per case.
- *
- * Canonical R19 batch (must be preserved end to end):
- *   incidentId 65e35d1b-212f-4153-bd63-fba6e8eebc2c
- *   requestId  f1af3192-40f0-4400-869a-3854246d7a11
- *   batchId    9c190dbec8d6f3d17b2b7e961e329bdc122e00ed18f88586b85bdca7a8d1c49d
- *   baseSha    1aded596713cbe8477a4bf652cd081b9aec00aa7
- *   findings   b8db9c11… java:S4684 TaskController.java:36
- *              f11d4686… java:S4684 TaskController.java:41
- */
+// Vérifie WF2 branche contexte sim dans les workflows n8n.
 import { readFileSync } from 'node:fs';
 import { strict as assert } from 'node:assert';
 
@@ -23,7 +6,9 @@ const exported = JSON.parse(readFileSync(new URL('../backups/r19-3c-prebuild/wf2
 const wf = Array.isArray(exported) ? exported[0] : exported;
 assert.equal(wf.name.startsWith('WF2'), true);
 const nodeMap = new Map(wf.nodes.map(n => [n.name, n]));
+/** Retrouve ou construit le nœud du workflow demandé. */
 const node = n => { assert.ok(nodeMap.has(n), `missing node ${n}`); return nodeMap.get(n); };
+/** Prépare le résultat produit par le scénario. */
 const out = (n, i = 0) => (wf.connections[n]?.main?.[i] || []).map(e => e.node);
 
 // ─── canonical batch ────────────────────────────────────────────────────────
@@ -51,21 +36,26 @@ const policyGate = {
 // Get Main Branch SHA1 output as consumed by Prepare Batch Context ($input.first())
 const mainRef = { ref: 'refs/heads/main', object: { sha: BASE_SHA, type: 'commit' } };
 
-// ─── minimal n8n runtime shim ───────────────────────────────────────────────
+/** Exécute code. */
 function runCode(name, { input, ctxByNode }) {
   const src = node(name).parameters.jsCode;
+  /** Simule l’accès à un nœud n8n pour le scénario. */
   const $ = ref => ({
+    /** Renvoie le premier élément disponible. */
     first: () => ({ json: ctxByNode[ref] ?? (() => { throw new Error(`no run data for $('${ref}')`); })() }),
   });
+  /** Simule la lecture des éléments d’un nœud n8n. */
   const $items = (ref) => [{ json: ctxByNode[ref] }];
-  const $input = { first: () => ({ json: input }) };
+  const $input = {
+  /** Renvoie le premier élément disponible. */
+  first: () => ({ json: input }) };
   const $json = input;
   const $execution = { id: '9999' };
   const fn = new Function('$', '$items', '$input', '$json', '$execution',
     `"use strict";${src}`);
   return fn($, $items, $input, $json, $execution);
 }
-// n8n "{{ expr }}" evaluation for httpRequest string params, $json in scope
+/** Prépare le résultat lié à tmpl. */
 function tmpl(str, $json) {
   return str.replace(/^=/, '').replace(/\{\{([\s\S]*?)\}\}/g, (_, e) =>
     String(new Function('$json', `"use strict";return (${e});`)($json)));
@@ -96,7 +86,7 @@ assert.deepEqual(pbc.findingIds, findingIds);
 const ctxByNode = { 'Policy Gate - Validate Constraints': policyGate, 'Prepare Batch Context': pbc };
 console.log('✓ Prepare Batch Context: context intact (owner/repo/branch/baseSha/batchId/findingIds)');
 
-// Branch Exists? predicate (real IF condition: $json.statusCode === 200)
+/** Prépare le résultat lié à branche Exists True. */
 const branchExistsTrue = lookupItem => Number(lookupItem.statusCode) === 200;
 
 // ══ CASE A — remediation branch missing (lookup 404) ════════════════════════

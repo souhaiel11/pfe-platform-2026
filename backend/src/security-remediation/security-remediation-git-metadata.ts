@@ -1,31 +1,20 @@
-// R-SEC-V1.5 §9/§10 — deterministic, bounded commit message + PR title/body
-// text. Pure, no I/O. Computed HERE, server-side, and returned directly on
-// the /evaluate and /revalidate responses (alongside branchName -- see
-// security-branch-name.ts) so WF6 needs ZERO text-authoring logic of its
-// own: no LLM node, no n8n Code node interpolating scanner-controlled
-// strings into a commit subject line unsanitized.
-//
-// `cveId` is SCANNER-CONTROLLED text (ultimately sourced from Trivy's own
-// output, threaded through ManualRemediationTask.ruleOrCve) -- never
-// interpolated into git metadata unless it matches a strict CVE/GHSA
-// allowlist shape. An unrecognized shape falls back to a safe generic
-// label rather than rejecting the whole candidate over cosmetic text.
+// Construit de manière déterministe le message de commit, le titre et le corps de PR d’une correction de sécurité à partir des preuves de la CVE et du composant.
 const CVE_PATTERN = /^CVE-\d{4}-\d{4,}$/i;
 const GHSA_PATTERN = /^GHSA-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}$/i;
 
+/** Retire les informations sensibles de Advisory identifiant. */
 function sanitizeAdvisoryId(cveId: string | null): string {
   if (typeof cveId === 'string' && display(cveId, '', 64) === cveId && (CVE_PATTERN.test(cveId) || GHSA_PATTERN.test(cveId))) return cveId;
   return 'security-advisory';
 }
 
-// Presentation only: reject malformed strings as a whole rather than joining
-// injected lines. ASCII coordinate/version characters cannot introduce Markdown.
-// Authoritative coordinates, versions and candidate bytes are never mutated.
+/** Renvoie display pour le traitement ou l’affichage. */
 function display(value: unknown, fallback = 'unknown', limit = 100): string {
   return typeof value === 'string' && value.length > 0 && value.length <= limit
     && /^[A-Za-z0-9]/.test(value) && !/[^A-Za-z0-9._:+/@-]/.test(value) ? value : fallback;
 }
 
+/** Extrait le nom d’artefact des coordonnées Maven. */
 function artifactIdOf(packageCoordinate: string): string {
   const safe = display(packageCoordinate, 'dependency');
   return display(safe.split(':').pop(), 'dependency', 72);
@@ -42,22 +31,19 @@ export interface SecurityRemediationGitMetadataInput {
   candidateIdentity: string;
 }
 
-/** e.g. "fix(security): remediate CVE-2023-6378 in logback-classic (1.2.11 -> 1.2.13)" */
+/** Calcule le message de commit de sécurité. */
 export function computeSecurityCommitMessage(input: SecurityRemediationGitMetadataInput): string {
   const advisory = sanitizeAdvisoryId(input.cveId);
   const artifactId = artifactIdOf(input.package);
   return `fix(security): remediate ${advisory} in ${artifactId} (${display(input.installedVersion, 'unknown', 32)} -> ${display(input.targetVersion, 'unknown', 32)})`;
 }
 
+/** Calcule le titre de PR de sécurité. */
 export function computeSecurityPrTitle(input: SecurityRemediationGitMetadataInput): string {
   return computeSecurityCommitMessage(input);
 }
 
-/**
- * Deliberately says "Security remediation candidate", never "Vulnerability
- * fixed" (§10) -- final validation belongs to the post-PR scanner re-scan,
- * never claimed here.
- */
+/** Calcule le texte de PR de sécurité. */
 export function computeSecurityPrBody(input: SecurityRemediationGitMetadataInput): string {
   const advisory = sanitizeAdvisoryId(input.cveId);
   return [

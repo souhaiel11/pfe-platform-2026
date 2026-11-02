@@ -1,5 +1,4 @@
-// V1.8 Phase 4 ticket — Phase 5 (future eligibility rule) + Phase 11
-// (known real cases) verification.
+// Teste le composant « v1_8-compatibility-decision » et ses cas d’erreur.
 import { strict as assert } from 'assert';
 import { V1_8CompatibilityDecisionService } from './v1_8-compatibility-decision.service';
 import { isAutoFixAvailableV1_8, V1_8CompatibilityDecision } from './v1_8-compatibility-decision.types';
@@ -59,7 +58,7 @@ console.log('E. Unknown finding -> honest NOT_YET_SANDBOXED, never fabricated: P
 console.log('entryCount:', service.entryCount, 'generatedAt:', service.generatedAt);
 assert.equal(service.entryCount, 251);
 
-// ── Phase 5: future eligibility rule (defined, not activated) ───────────
+/** Prépare les informations de base du résultat. */
 
 function base(overrides: Partial<V1_8CompatibilityDecision> = {}): V1_8CompatibilityDecision {
   return {

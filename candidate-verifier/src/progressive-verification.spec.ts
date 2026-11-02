@@ -1,3 +1,4 @@
+// Teste le composant « progressive-verification » et ses cas d’erreur.
 import * as assert from 'node:assert/strict';
 import { compilerDiagnostics } from './candidate-verification-executor';
 import { WorkspaceManager } from './workspace-manager.service';

@@ -1,3 +1,4 @@
+// Teste le composant « python-build-adapter » et ses cas d’erreur.
 import * as assert from 'node:assert/strict';
 import * as fs from 'fs';
 import * as os from 'os';
@@ -6,6 +7,7 @@ import childProcess = require('node:child_process');
 import { PythonBuildAdapter } from './python-build-adapter';
 
 const empty = { status: 'UNKNOWN', total: null, failures: null, errors: null, skipped: null };
+/** Prépare les données nécessaires à ce scénario. */
 const suite = (tests: number, failures = 0, errors = 0, skipped = 0) =>
   `<testsuites><testsuite tests="${tests}" failures="${failures}" errors="${errors}" skipped="${skipped}"/></testsuites>`;
 const cases = [

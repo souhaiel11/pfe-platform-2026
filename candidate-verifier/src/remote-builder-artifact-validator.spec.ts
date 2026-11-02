@@ -1,11 +1,4 @@
-// V1.7 predeploy phase — real HTTP proof for RemoteBuilderArtifactValidator
-// against the REAL builder-scanner server.ts (spawned, same technique
-// candidate-verifier's own security-remediation-http.spec.ts already uses
-// for its own server). Podman is not installed on this host (a separate,
-// already-documented environmental fact), so this proves the CLIENT<->
-// SERVER wiring itself -- request shape, timeout/budget forwarding,
-// deterministic ArtifactRuntimeError mapping on failure -- not a real
-// Podman build.
+// Teste le composant « remote-builder-artifact-validator » et ses cas d’erreur.
 import * as assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import * as net from 'node:net';
@@ -15,6 +8,7 @@ import * as path from 'node:path';
 import { ArtifactRuntimeError } from './security-artifact-validator';
 import { RemoteBuilderArtifactValidator } from './remote-builder-artifact-validator';
 
+/** Prépare les données nécessaires à ce scénario. */
 async function reservePort(): Promise<number> {
   const reservation = net.createServer();
   await new Promise<void>(resolve => reservation.listen(0, '127.0.0.1', resolve));
@@ -25,6 +19,7 @@ async function reservePort(): Promise<number> {
 
 const TEST_SECRET = 'v17-final-predeploy-client-test-secret-do-not-reuse';
 
+/** Exécute les étapes principales de ce programme. */
 async function main() {
   const port = await reservePort();
   const serverPath = path.join(__dirname, '../../builder-scanner/src/server.ts');
@@ -70,13 +65,6 @@ async function main() {
         assert.equal(threwBadAuth!.code, 'AUTH_REJECTED');
       }
 
-      // 1. A real end-to-end call with VALID_AUTH: client -> real HTTP
-      // (with the correct X-Internal-Secret header) -> real server, past
-      // the auth gate -> real TrivyImageArtifactValidator.inspect() (no
-      // Podman on this host, so this fails deterministically -- but every
-      // hop, including authentication, is real). The code must NOT be
-      // AUTH_REJECTED -- proving the auth gate was reached and passed, not
-      // merely that some code came back.
       let threw: ArtifactRuntimeError | undefined;
       try { client.inspect(workspace, 30_000); }
       catch (err) { threw = err as ArtifactRuntimeError; }
@@ -84,15 +72,7 @@ async function main() {
       assert.ok(typeof threw!.code === 'string' && threw!.code.length > 0);
       assert.notEqual(threw!.code, 'AUTH_REJECTED', 'VALID_AUTH must reach past the auth gate, not be rejected by it');
 
-      // 1b. Regression: a REAL, monotonic-clock-derived budgetMs (e.g.
-      // WorkerDeadline.remainingMs(), always a sub-millisecond float by
-      // construction) must not be misclassified as RUNTIME_EXECUTABLE_
-      // UNAVAILABLE -- Node's execFileSync `timeout` option throws
-      // synchronously on a non-integer, which this codebase's own real
-      // orchestrator run against this exact separated architecture caught
-      // for real. A float budget must still reach the real server exactly
-      // like an integer one does (same ArtifactRuntimeError, same code as
-      // the integer-budget call above, never a spurious "unavailable").
+      // Un délai nul supprimerait la limite : conserver au moins 1 ms et vérifier le budget avant l’appel.
       let threwFloat: ArtifactRuntimeError | undefined;
       try { client.inspect(workspace, 30_000.789); }
       catch (err) { threwFloat = err as ArtifactRuntimeError; }

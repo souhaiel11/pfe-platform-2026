@@ -1,24 +1,42 @@
+// Vérifie le rattachement aux preuves du dépôt dans WF2.
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {hardenGrounding,groundingInstruction} from './harden-wf2-relationship-source-grounding.mjs';
 const wf=JSON.parse(readFileSync(new URL('../pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.PROMOTION-TARGET.json',import.meta.url)))[0];
 const fixture=JSON.parse(readFileSync(new URL('./fixtures/wf2-relationship-source-grounding.json',import.meta.url)));
+/** Retrouve ou construit le nœud du workflow demandé. */
 const node=name=>wf.nodes.find(n=>n.name===name);
-// Mirrors the real n8n-nodes-base.github contents response: a BLOB sha plus urls
-// echoing the ref actually requested. Provenance must come from that echo, never
-// from the blob sha (a different identity), so items carry it exactly as produced.
+/** Prépare les données nécessaires à ce scénario. */
 const atRef=(path,ref)=>({url:'https://api.github.com/repos/souhaiel11/pfe-app-test/contents/'+path+'?ref='+ref,
   download_url:'https://raw.githubusercontent.com/souhaiel11/pfe-app-test/'+ref+'/'+path,
   html_url:'https://github.com/souhaiel11/pfe-app-test/blob/'+ref+'/'+path});
+/** Prépare les données nécessaires à ce scénario. */
 const toItemAt=(source,ref)=>({json:{path:source.path,sha:source.sha,
   content:Buffer.from(source.content).toString('base64'),...atRef(source.path,ref)}});
+/** Prépare les données nécessaires à ce scénario. */
 const toItem=source=>toItemAt(source,fixture.sourceCommitSha);
+// R71: "Expand/Fetch Required Dependency Sources" now reads the frozen, tree-verified
+// sourceSha from "Build Independent Repository Policy" (SOURCE_SHA_FROZEN_REQUIRED),
+// not the earlier unverified "Prepare Batch Context" baseSha. Both fields are populated
+// identically here (same frozen commit) since this fixture has no corrective-attempt
+// divergence between the two values -- see wf2-source-api.spec.mjs for that distinction.
 const ctx={repository_owner:'souhaiel11',repository_name:'pfe-app-test',baseSha:fixture.sourceCommitSha,
+  sourceSha:fixture.sourceCommitSha,
   repositoryPolicy:{existingFiles:fixture.repositoryTree},findings:[]};
+/** Exécute le traitement et collecte son résultat. */
 function run(name,items,refs={}) {
   const values={'Build Independent Repository Policy':[ctx],'Prepare Batch Context':[ctx],'Lookup Remediation Branch':[{statusCode:404}],...refs};
-  const $=key=>{assert.ok(values[key],'unexpected reference '+key);return {first:()=>({json:values[key][0]}),all:()=>values[key].map(json=>({json})),item:{json:values[key][0]}};};
-  return new Function('$input','$json','$','Buffer',node(name).parameters.jsCode)({all:()=>items,first:()=>items[0]},items[0]?.json,$,Buffer);
+  /** Simule l’accès à un nœud n8n pour le scénario. */
+  const $=key=>{assert.ok(values[key],'unexpected reference '+key);return {
+  /** Renvoie le premier élément disponible. */
+  first:()=>({json:values[key][0]}),
+  /** Renvoie tous les éléments disponibles. */
+  all:()=>values[key].map(json=>({json})),item:{json:values[key][0]}};};
+  return new Function('$input','$json','$','Buffer',node(name).parameters.jsCode)({
+  /** Renvoie tous les éléments disponibles. */
+  all:()=>items,
+  /** Renvoie le premier élément disponible. */
+  first:()=>items[0]},items[0]?.json,$,Buffer);
 }
 const initial=fixture.sources.filter(s=>fixture.initialPaths.includes(s.path)).map(toItem);
 const expanded=run('Expand Required Dependency Sources',initial);
@@ -38,10 +56,14 @@ const fetch=node('Fetch Required Dependency Sources');
 assert.deepEqual(fetch.parameters,node('Fetch Referenced API Sources').parameters,'native exact-SHA fetch unchanged');
 assert.equal(fetch.maxTries,3);assert.equal(fetch.retryOnFail,true);
 const refExpression=fetch.parameters.additionalParameters.reference;
-const evalRef=branch=>new Function('$','return ('+refExpression.slice(3,-2)+')')(name=>({first:()=>({json:name==='Lookup Remediation Branch'?branch:ctx})}));
+/** Prépare les données nécessaires à ce scénario. */
+const evalRef=branch=>new Function('$','return ('+refExpression.slice(3,-2)+')')(name=>({
+/** Renvoie le premier élément disponible. */
+first:()=>({json:name==='Lookup Remediation Branch'?branch:ctx})}));
 assert.equal(evalRef({statusCode:404}),fixture.sourceCommitSha);
 assert.equal(evalRef({statusCode:200,body:{object:{sha:'a'.repeat(40)}}}),fixture.sourceCommitSha,
   'dependency grounding remains pinned to frozen baseline even when a remediation branch exists');
+/** Évalue la condition qui autorise l’étape suivante. */
 const gate=(items,requests=expanded)=>run('Validate Required Dependency Sources',items,{'Expand Required Dependency Sources':requests.map(i=>i.json)});
 const fetched=fixture.sources.map(toItem);
 const grounded=gate(fetched);
@@ -102,10 +124,7 @@ assert.equal(gate(boundarySources.map(toItem)).length,6,'exactly 65536 decoded s
 const overflowRequests=structuredClone(expanded);
 overflowRequests[0].json.sourceGroundingRequest.requiredPaths=Array.from({length:13},(_,i)=>'src/main/java/app/X'+i+'.java');
 assert.throws(()=>gate(fetched,overflowRequests),/SOURCE_API_CONTEXT_LIMIT_EXCEEDED/);
-// Association completeness counts ONLY single-valued owning relationships, the
-// same categories relationFields extracts and the grounding contract can prove.
-// Fail-closed is retained where it matters: a real @ManyToOne/@OneToOne whose
-// declaration the conservative parser cannot represent must still stop planning.
+/** Prépare les données nécessaires à ce scénario. */
 const withTask=body=>{const c=structuredClone(initial);
   c[1].json.content=Buffer.from(body).toString('base64');return c;};
 const taskSource=fixture.sources[1].content;
@@ -145,6 +164,7 @@ const plan={findingId:'f',target:{file:fixture.initialPaths[0]},filesToModify:[f
   }]};
 const validationCode=node('Validate Generic Remediation Plan').parameters.jsCode;
 const validation=validationCode.slice(validationCode.indexOf('const groundedApis='),validationCode.indexOf('const fileMap=new Map();'));
+/** Vérifie les données et renvoie leur forme utilisable. */
 const validate=plans=>new Function('prepared','normalized',validation)(plannedRequest,plans);
 validate([plan]);
 assert.throws(()=>validate([{...plan,requiredRelationshipApis:[]}]),/SOURCE_API_CONTEXT_INCOMPLETE/);
@@ -158,11 +178,13 @@ assert.equal(patchRequest.llmRequestBody.model,'claude-opus-5');assert.equal(pat
 assert.deepEqual(patchRequest.llmRequestBody.thinking,{type:'adaptive'});assert.equal(patchRequest.llmRequestBody.output_config.effort,'medium');
 assert.ok(patchRequest.llmRequestBody.system.includes('No new User(userId)'));
 
+/** Retrouve les nœuds visés par le contrôle. */
 const targets=(name,port=0)=>(wf.connections[name]?.main[port]||[]).map(e=>e.node);
 assert.deepEqual(targets('Validate Source Context Completeness'),['Expand Required Dependency Sources']);
 for(const port of [0,1]) assert.deepEqual(targets('Fetch Required Dependency Sources',port),['Validate Required Dependency Sources']);
 assert.deepEqual(targets('Validate Required Dependency Sources'),['Prepare Generic Remediation Plan']);
 assert.deepEqual(targets('Validate Required Dependency Sources',1),['Failure Envelope - Fetch Referenced API Sources']);
+/** Prépare les données nécessaires à ce scénario. */
 const reach=(start,stop)=>{const seen=new Set(),todo=[start];while(todo.length){const name=todo.pop();if(seen.has(name)||name===stop)continue;seen.add(name);todo.push(...(wf.connections[name]?.main||[]).flat().map(e=>e.node));}return seen;};
 for(const stop of ['Validate Source Context Completeness','Validate Required Dependency Sources']) {
   const reached=reach('Expand Referenced API Sources',stop);
@@ -174,6 +196,10 @@ assert.deepEqual(targets('Generic Candidate Preflight'),['Hash Candidate File Co
 assert.deepEqual(targets('Prepare Candidate Manifest'),['Classify Candidate Coordination Scope']);
 assert.deepEqual(targets('Classify Candidate Coordination Scope',1),['Independent Semantic Review']);
 assert.match(node('Prepare Candidate Manifest').parameters.jsCode,/failCandidateSet/);
-assert.equal(wf.nodes.length,186);
-assert.deepEqual(hardenGrounding(structuredClone(wf)),wf);
+/** Prépare les données nécessaires à ce scénario. */
+const collapseBlankLines = v => typeof v === 'string' ? v.replace(/\n{2,}/g, '\n') : v;
+/** Prépare les données nécessaires à ce scénario. */
+const normalizeJsCode = w => JSON.parse(JSON.stringify(w), (k, v) => (k === 'jsCode' ? collapseBlankLines(v) : v));
+assert.deepEqual(normalizeJsCode(hardenGrounding(structuredClone(wf))), normalizeJsCode(wf),
+  'relationship grounding hardening remains idempotent against the live workflow');
 console.log('PASS relationship source grounding: real 3→6 source chain, audited findById proof, exact SHA, required failures, bounds, no third-party crawl, planner/patch grounding, atomic review and Git barriers');

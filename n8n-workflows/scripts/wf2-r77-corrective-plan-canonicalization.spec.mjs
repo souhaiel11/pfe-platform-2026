@@ -1,3 +1,4 @@
+// Vérifie la normalisation des plans correctifs dans WF2.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
@@ -7,35 +8,59 @@ const fixture2035 = JSON.parse(readFileSync(new URL('./fixtures/wf2-r75-executio
 const fixture2036 = JSON.parse(readFileSync(new URL('./fixtures/wf2-r77-execution-2036-canonicalization.json', import.meta.url))).attempt11;
 const wf = JSON.parse(readFileSync(artifact))[0];
 const prior = JSON.parse(readFileSync(priorArtifact))[0];
+/** Retrouve ou construit le nœud du workflow demandé. */
 const node = name => wf.nodes.find(candidate => candidate.name === name);
+/** Prépare les données nécessaires à ce scénario. */
 const priorNode = name => prior.nodes.find(candidate => candidate.name === name);
 
+/** Exécute le traitement et collecte son résultat. */
 function run(name, jsonInput, refs = {}) {
+  /** Simule l’accès à un nœud n8n pour le scénario. */
   const $ = key => {
     assert.ok(refs[key], `unexpected reference ${key}`);
-    return { first: () => ({ json: refs[key][0] }), all: () => refs[key].map(json => ({ json })) };
+    return {
+    /** Renvoie le premier élément disponible. */
+    first: () => ({ json: refs[key][0] }),
+    /** Renvoie tous les éléments disponibles. */
+    all: () => refs[key].map(json => ({ json })) };
   };
   return new Function('$input', '$json', '$', 'Buffer', node(name).parameters.jsCode)(
-    { first: () => ({ json: jsonInput }), all: () => [{ json: jsonInput }] }, jsonInput, $, Buffer,
+    {
+    /** Renvoie le premier élément disponible. */
+    first: () => ({ json: jsonInput }),
+    /** Renvoie tous les éléments disponibles. */
+    all: () => [{ json: jsonInput }] }, jsonInput, $, Buffer,
   );
 }
+/** Prépare les données nécessaires à ce scénario. */
 const runBuildPolicy = (batch, tree, lookup) =>
   run('Build Independent Repository Policy', tree, { 'Prepare Batch Context': [batch], 'Lookup Remediation Branch': [lookup] })[0].json;
 
+/** Vérifie les résultats attendus dans ce scénario. */
 function runPreparePlan(fixture) {
   const policyOut = runBuildPolicy(fixture.batch, fixture.tree_resp, fixture.lookup);
   const items = fixture.rawFetchItems.map((raw, i) => ({ json: i === 0 ? { ...raw, sourceGrounding: fixture.sourceGrounding } : raw }));
-  const $ = key => { assert.equal(key, 'Build Independent Repository Policy'); return { first: () => ({ json: policyOut }) }; };
+  /** Simule l’accès à un nœud n8n pour le scénario. */
+  const $ = key => { assert.equal(key, 'Build Independent Repository Policy'); return {
+  /** Renvoie le premier élément disponible. */
+  first: () => ({ json: policyOut }) }; };
   return new Function('$input', '$json', '$', 'Buffer', node('Prepare Generic Remediation Plan').parameters.jsCode)(
-    { all: () => items, first: () => items[0] }, items[0].json, $, Buffer,
+    {
+    /** Renvoie tous les éléments disponibles. */
+    all: () => items,
+    /** Renvoie le premier élément disponible. */
+    first: () => items[0] }, items[0].json, $, Buffer,
   )[0].json;
 }
+/** Prépare les données nécessaires à ce scénario. */
 const runValidatePlan = (preparedJson, claudeResponse) =>
   run('Validate Generic Remediation Plan', claudeResponse, { 'Prepare Generic Remediation Plan': [preparedJson] });
 
+/** Prépare les données nécessaires à ce scénario. */
 function claudeTextResponse(plans) {
   return { stop_reason: 'end_turn', content: [{ type: 'text', text: JSON.stringify({ plans }) }] };
 }
+/** Prépare les données nécessaires à ce scénario. */
 function makePlan(overrides = {}) {
   return {
     findingId: 'x', source: 'SONARQUBE', rule: 'java:S4684', target: { file: 'src/main/java/com/pfe/devsecops/dto/TaskDTO.java', line: null },
@@ -117,9 +142,7 @@ console.log('R77_C_CONFLICTING_DUPLICATES_FAIL: PASS');
   const planB = makePlan({ findingId: idB, target: { file: 'src/main/java/com/pfe/devsecops/service/TaskService.java', line: null }, filesToModify: ['src/main/java/com/pfe/devsecops/service/TaskService.java'], proposedPaths: ['src/main/java/com/pfe/devsecops/service/TaskService.java'] });
   const outputs = runValidatePlan(prepared, claudeTextResponse([planA, planB]));
   assert.equal(outputs.length, 2);
-  // remediationPlans is the full, shared plan list on every output item
-  // (one output item per unique file); find the plan matching THIS output's
-  // own target_file_path rather than assuming index [0].
+  /** Simule la lecture des données demandées par le composant. */
   const findingIdForOutput = o => o.json.remediationPlans.find(p => p.target.file === o.json.target_file_path).findingId;
   assert.deepEqual(outputs.map(findingIdForOutput).sort(), [idA, idB].sort());
   assert.deepEqual(outputs.map(o => o.json.target_file_path).sort(), [
@@ -187,14 +210,25 @@ console.log('R77_C_CONFLICTING_DUPLICATES_FAIL: PASS');
     genericPreflightPassed: true, applicablePlans: [validatedPlanItem.remediationPlans[0].findingId],
     llmRequestBody: { model: 'claude-sonnet-5', system: 'reviewer', messages: [{ role: 'user', content: 'placeholder' }] },
   };
+  /** Simule l’échec attendu par ce scénario. */
   const $manifest = key => {
-    if (key === 'Prepare Batch Context') return { first: () => ({ json: prepared2036 }) };
-    if (key === 'Validate Generic Remediation Plan') return { all: () => [{ json: validatedPlanItem }] };
-    if (key === 'Prepare Generic Remediation Plan') return { first: () => ({ json: prepared2036 }) };
+    if (key === 'Prepare Batch Context') return {
+    /** Renvoie le premier élément disponible. */
+    first: () => ({ json: prepared2036 }) };
+    if (key === 'Validate Generic Remediation Plan') return {
+    /** Renvoie tous les éléments disponibles. */
+    all: () => [{ json: validatedPlanItem }] };
+    if (key === 'Prepare Generic Remediation Plan') return {
+    /** Renvoie le premier élément disponible. */
+    first: () => ({ json: prepared2036 }) };
     throw new Error('unexpected ref ' + key);
   };
   const manifestOut = new Function('$input', '$json', '$', 'Buffer', node('Prepare Candidate Manifest').parameters.jsCode)(
-    { all: () => [{ json: candidateItem }], first: () => ({ json: candidateItem }) }, candidateItem, $manifest, Buffer,
+    {
+    /** Renvoie tous les éléments disponibles. */
+    all: () => [{ json: candidateItem }],
+    /** Renvoie le premier élément disponible. */
+    first: () => ({ json: candidateItem }) }, candidateItem, $manifest, Buffer,
   );
   assert.equal(manifestOut[0].json.candidateManifest?.candidateId ?? manifestOut[0].json.files?.length, manifestOut[0].json.files?.length ?? undefined, 'manifest built without throwing');
   console.log('DOWNSTREAM_MANIFEST_IDENTITY_ALIGNED = YES');
@@ -208,9 +242,16 @@ console.log('R77_C_CONFLICTING_DUPLICATES_FAIL: PASS');
     candidateStateVerified: true, updateApplied: true, fileOperation: 'MODIFY', newSha: 'ee'.repeat(20), commitSha: 'ff'.repeat(20),
     contentSha256: 'bb'.repeat(32), oldSha: manifest.files[0].originalBlobSha,
   };
-  const $batch = key => key === 'Prepare Batch Context' ? { first: () => ({ json: bctx }) } : { first: () => ({ json: manifest }) };
+  /** Prépare les données nécessaires à ce scénario. */
+  const $batch = key => key === 'Prepare Batch Context' ? {
+  /** Renvoie le premier élément disponible. */
+  first: () => ({ json: bctx }) } : {
+  /** Renvoie le premier élément disponible. */
+  first: () => ({ json: manifest }) };
   const [batchResult] = new Function('$input', '$json', '$', 'Buffer', node('Validate Batch Completeness').parameters.jsCode)(
-    { all: () => [{ json: receipt }] }, null, $batch, Buffer);
+    {
+    /** Renvoie tous les éléments disponibles. */
+    all: () => [{ json: receipt }] }, null, $batch, Buffer);
   assert.equal(batchResult.json.completenessPassed, true);
   assert.deepEqual(batchResult.json.expectedFindingIds, [canonicalId2036]);
   console.log('DOWNSTREAM_BATCH_COMPLETENESS_IDENTITY_ALIGNED = YES');

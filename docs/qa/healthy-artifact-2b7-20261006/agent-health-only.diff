@@ -1,0 +1,55 @@
+--- agent-before-health-patch.py
++++ agent.py
+@@ -53,6 +53,28 @@
+ # input (same algorithm the backend's own DIGEST_RE enforces).
+ DIGEST_RE = re.compile(r"^sha256:[a-f0-9]{64}$")
+ 
++
++def health_contract(target, ports):
++    """Only a local HTTP path and an approved client; never arbitrary exec."""
++    health = target.get("healthCheck")
++    if health is None:
++        return "curl -s http://localhost:8080/api/health", '"UP"'
++    if not isinstance(health, dict) or set(health) - {"path", "port", "client", "expectedBody"}:
++        raise ValueError("INVALID_HEALTH_CHECK")
++    path = health.get("path")
++    port = str(health.get("port", "8080"))
++    client = health.get("client", "curl")
++    expected = health.get("expectedBody")
++    if (not isinstance(path, str) or not re.fullmatch(r"/[A-Za-z0-9/_-]{0,255}", path)
++            or port not in ports or client not in {"curl", "wget"}
++            or not isinstance(expected, str) or not re.fullmatch(r"[A-Za-z0-9 _.-]{1,128}", expected)):
++        raise ValueError("INVALID_HEALTH_CHECK")
++    prefix = "curl -fsS" if client == "curl" else "wget -q -O -"
++    return f"{prefix} http://localhost:{port}{path}", expected
++
++
++def health_response_matches(target, expected, output):
++    return output.strip() == expected if target.get("healthCheck") is not None else expected in output
+ 
+ AGENT_SECRET = os.environ.get("AZURE_DEPLOY_AGENT_SECRET")
+ if not AGENT_SECRET:
+@@ -354,6 +376,10 @@
+             return self._send(400, {"error": "INVALID_COMPUTE_LIMIT"})
+         if not ports or any(not p.isdigit() or not 1 <= int(p) <= 65535 for p in ports):
+             return self._send(400, {"error": "INVALID_PORTS"})
++        try:
++            health_command, health_expected = health_contract(target, ports)
++        except ValueError:
++            return self._send(400, {"error": "INVALID_HEALTH_CHECK"})
+ 
+         # Même validation que /deploy, avec arrêt garanti avant toute
+         # commande Azure : utilisé par le préflight et les tests UI/backend.
+@@ -458,10 +484,10 @@
+             for attempt in range(6):  # jusqu'à 30s (6 x 5s)
+                 ok, out, err = run_argv([
+                     "az", "container", "exec", "-g", resource_group, "-n", container_name,
+-                    "--exec-command", "curl -s http://localhost:8080/api/health",
++                    "--exec-command", health_command,
+                 ], timeout=15)
+                 health = (out or err)[:300]
+-                if ok and '"UP"' in (out or ''):
++                if ok and health_response_matches(target, health_expected, out or ''):
+                     health_ok = True
+                     break
+                 time.sleep(5)

@@ -1,3 +1,4 @@
+# Démarre et relance l’agent Azure comme service utilisateur.
 [Unit]
 Description=Azure Deploy Agent — seul processus autorisé à lire ~/.azure pour le déploiement de la plateforme DevSecOps
 After=network.target

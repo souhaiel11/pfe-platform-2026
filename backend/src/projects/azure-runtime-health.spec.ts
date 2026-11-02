@@ -1,7 +1,9 @@
+// Teste le composant « azure-runtime-health » et ses cas d’erreur.
 import 'reflect-metadata';
 import * as assert from 'node:assert/strict';
 import { ProjectsService } from './projects.service';
 
+/** Met les valeurs au même format avant comparaison. */
 const normalize = (input: any) => (ProjectsService.prototype as any).normalizeAzureConfig(input);
 const base = { provider: 'azure-container-instances', resourceGroup: 'rg-pfe-devsecops',
   targetName: 'aci-canary', registry: 'acrpfedevsecops', imageRepository: 'pfe-app-test' };

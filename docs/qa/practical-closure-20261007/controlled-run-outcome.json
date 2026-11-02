@@ -1,0 +1,8 @@
+{
+  "pass": true,
+  "samePlanContinued": true,
+  "initialCallbackProbeCorrected": true,
+  "thirdAttemptCreated": false,
+  "normalDispatchAfter": false,
+  "harnessAfter": false
+}

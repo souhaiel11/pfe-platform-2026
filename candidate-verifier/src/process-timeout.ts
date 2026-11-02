@@ -1,12 +1,6 @@
-/**
- * Child-process timeout signatures used by all build adapters.
- *
- * Node normally exposes a timeout as SIGTERM/killed, but wrappers such as
- * Maven can propagate the conventional 128 + SIGTERM exit code (143) while
- * omitting both fields. A null exit code at the timeout boundary is the final
- * conservative signature; an ordinary non-zero exit code remains a real
- * build/test failure.
- */
+// Arrête les processus externes lorsqu’ils dépassent leur délai.
+/** Vérifie l’état suivant : processus délai dépassé. */
+/** Vérifie l’état suivant : processus délai dépassé. */
 export function isProcessTimeout(
   error: any,
   status: number | null,

@@ -1,28 +1,4 @@
-// V1.7 predeploy phase — minimal HTTP entry point for the dedicated
-// builder/scanner worker. Plain Node `http`, no framework: exactly one
-// business route (`POST /internal/build-scan`) for exactly one caller
-// (candidate-verifier, over an isolated internal network). Network
-// isolation was this route's ONLY trust boundary through the prior V1.7
-// phase; the final predeploy phase adds application-level authentication
-// on top of it (see internal-auth.ts) -- reusing the codebase's EXISTING
-// shared-secret-header mechanism (backend/src/auth/internal-secret.guard.ts)
-// rather than inventing a second kind of credential system, with its own
-// dedicated secret so this trust boundary stays independent from the
-// n8n->backend one.
-//
-// V1.7 final predeploy phase — this process now reads exactly ONE secret
-// env var, BUILDER_INTERNAL_SECRET, used ONLY to authenticate the caller
-// on /internal/build-scan (see internal-auth.ts). It still reads no
-// DB_PASS, no JWT_SECRET, no N8N_INTERNAL_SECRET, no GitHub/Jenkins/Sonar
-// credential of any kind. Its other env inputs are PORT, WORKSPACE_ROOT (a
-// filesystem path it must share with candidate-verifier, read-only from
-// its perspective -- it never creates or deletes workspaces, only builds/
-// scans one it is pointed at) and SECURITY_TRIVY_CACHE_DIR. It makes NO
-// remediation decision: it receives a workspace path and a time budget,
-// and returns a structured build/scan result -- nothing else. This secret
-// is NEVER forwarded into the podman/trivy subprocess environment (see
-// security-artifact-validator.ts's own explicit env allowlist) and is
-// never logged.
+// Reçoit les demandes internes de construction et de scan d’image.
 import * as http from 'http';
 import { TrivyImageArtifactValidator } from './security-artifact-validator';
 import { ArtifactRuntimeError } from '../../backend/src/security-remediation/security-artifact-scan';
@@ -33,6 +9,7 @@ const PORT = Number(process.env.PORT) || 4200;
 const BUILDER_INTERNAL_SECRET = process.env.BUILDER_INTERNAL_SECRET;
 const validator = new TrivyImageArtifactValidator();
 
+/** Lit et décode le corps de la requête HTTP. */
 function readBody(req: http.IncomingMessage): Promise<string> {
   return new Promise((resolve, reject) => {
     let data = '';
@@ -42,12 +19,14 @@ function readBody(req: http.IncomingMessage): Promise<string> {
   });
 }
 
+/** Envoie une réponse HTTP au format JSON. */
 function sendJson(res: http.ServerResponse, status: number, body: unknown): void {
   const payload = JSON.stringify(body);
   res.writeHead(status, { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) });
   res.end(payload);
 }
 
+/** Vérifie l’état suivant : Non vide chaîne. */
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === 'string' && value.trim().length > 0;
 }

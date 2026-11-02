@@ -1,3 +1,4 @@
+// Déclaration NestJS du module reports : branche le service sur Report/Project, AzureDeploy et Incidents.
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { HttpModule } from '@nestjs/axios';

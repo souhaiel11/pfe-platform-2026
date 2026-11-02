@@ -1,0 +1,29 @@
+{
+  "queue": {
+    "_class": "hudson.model.Queue",
+    "discoverableItems": [],
+    "items": []
+  },
+  "computers": {
+    "_class": "hudson.model.ComputerSet",
+    "computer": [
+      {
+        "_class": "hudson.model.Hudson$MasterComputer",
+        "displayName": "Built-In Node",
+        "executors": [
+          {
+            "currentExecutable": null
+          },
+          {
+            "currentExecutable": null
+          }
+        ],
+        "oneOffExecutors": [
+          {
+            "currentExecutable": null
+          }
+        ]
+      }
+    ]
+  }
+}

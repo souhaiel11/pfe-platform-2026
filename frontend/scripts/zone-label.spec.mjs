@@ -1,27 +1,17 @@
-// ═══════════════════════════════════════════════════════════════════════
-//  Déclaration de nature de zone — Information / Action.
-//
-//  Demande de l'opérateur : « la partie qui contient juste des informations,
-//  on écrit par exemple Information, et la partie qui contient des actions
-//  ou une intervention humaine, on la déclare aussi, pour faciliter la
-//  complexité d'affichage. »
-//
-//  Le risque d'une telle étiquette est qu'elle MENTE. Une zone marquée
-//  « Action » sans aucun contrôle actionnable envoie chercher un bouton
-//  inexistant ; une zone marquée « Information » qui contient un bouton
-//  engageant la plateforme fait l'inverse, et c'est plus grave. Ces tests
-//  verrouillent la cohérence entre l'étiquette et le contenu réel.
-// ═══════════════════════════════════════════════════════════════════════
+// Teste le composant « zone-label » et ses cas d’erreur.
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import { loadFrontend } from './security-lifecycle-test-loader.mjs';
 
+/** Lit les données depuis leur source. */
 const read = p => readFileSync(new URL(p, import.meta.url), 'utf8');
 const zone = loadFrontend('../src/app/shared/zone-label/zone-label.component.ts');
 
+/** Prépare les données nécessaires à ce scénario. */
 const walk = dir => readdirSync(new URL(dir, import.meta.url), { withFileTypes: true })
   .flatMap(e => e.isDirectory() ? walk(`${dir}${e.name}/`) : [`${dir}${e.name}`]);
 const sources = walk('../src/app/').filter(f => /\.(ts|html)$/.test(f) && !/\/fixtures\//.test(f));
+/** Retire les commentaires du code utilisé par le test. */
 const stripComments = src => src.replace(/<!--[\s\S]*?-->/g, '').replace(/^[ \t]*\/\/.*$/gm, '');
 
 // ── 1. Deux natures, et seulement deux ────────────────────────────────

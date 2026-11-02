@@ -1,15 +1,30 @@
+// Teste le composant « effective-config » et ses cas d’erreur.
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createRequire} from 'node:module';
 import vm from 'node:vm';
 const ts=createRequire(import.meta.url)('typescript');
+/** Lit les données depuis leur source. */
 const read=p=>readFileSync(new URL(p,import.meta.url),'utf8');
-function moduleOf(path,dependencies={}) { const exports={}; vm.runInNewContext(ts.transpileModule(read(path),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,experimentalDecorators:true}}).outputText,{exports,Intl,Number,console,URL,Set,require:n=>dependencies[n] || (n==='@angular/core'?{Component:()=>v=>v}:{})});return exports; }
+/** Prépare les données nécessaires à ce scénario. */
+function moduleOf(path,dependencies={}) { const exports={}; vm.runInNewContext(ts.transpileModule(read(path),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,experimentalDecorators:true}}).outputText,{exports,Intl,Number,console,URL,Set,
+/** Charge la dépendance prévue pour le scénario. */
+require:n=>dependencies[n] || (n==='@angular/core'?{
+/** Simule le décorateur de composant Angular. */
+Component:()=>v=>v}:{})});return exports; }
 const presentation=moduleOf('../src/app/features/settings/general-settings-presentation.ts');
 const labels=moduleOf('../src/app/shared/platform-capability-presentation.ts');
 const {SettingsComponent}=moduleOf('../src/app/features/settings/settings.component.ts',{'./general-settings-presentation':presentation,'../../shared/platform-capability-presentation':labels});
 let co,io;const calls=[];
-const component=new SettingsComponent({},{getPlatformCapabilities:()=>{calls.push('capabilities');return {subscribe:o=>co=o};},getIntegrations:()=>{calls.push('integrations');return {subscribe:o=>io=o};}},{});
+const component=new SettingsComponent({},{
+/** Simule la lecture des données demandées par le composant. */
+getPlatformCapabilities:()=>{calls.push('capabilities');return {
+/** Prépare les données nécessaires à ce scénario. */
+subscribe:o=>co=o};},
+/** Simule la lecture des données demandées par le composant. */
+getIntegrations:()=>{calls.push('integrations');return {
+/** Prépare les données nécessaires à ce scénario. */
+subscribe:o=>io=o};}},{});
 component.loadCapabilities();component.loadIntegrations();assert.equal(component.capabilitiesState,'LOADING');assert.equal(component.integrationsState,'LOADING');
 co.next({security:[{id:'sonar'},{id:'trivy'}],remediation:{enforcementMode:'ENFORCED',supportedEditTypes:['PARENT_VERSION']}});
 io.next([{toolType:'prometheus',url:'https://diagnostic.example',status:'connected',lastChecked:'2026-10-01T11:00:00Z'}]);

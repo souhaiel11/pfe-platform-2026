@@ -1,18 +1,8 @@
+// Bouton d'aide contextuelle court (une phrase dans une infobulle accessible) pour les termes
+// techniques du glossaire de la plateforme (provenance, digest, quality-gate, SAST/SCA/DAST...).
+
 import { Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
-
-// ─────────────────────────────────────────────────────────────────────
-//  <app-info-hint term="provenance"> — aide contextuelle COURTE (§22).
-//
-//  Une phrase, dans l'infobulle native, sur les concepts qu'un développeur
-//  qui arrive sur la plateforme n'a pas de raison de connaître. Pas de
-//  paragraphe pédagogique dans une interface d'exploitation : si l'explication
-//  ne tient pas en une phrase, elle appartient à la documentation.
-//
-//  Accessible : c'est un <button> atteignable au clavier, avec un
-//  aria-label qui porte le texte complet (une infobulle `title` seule n'est
-//  pas annoncée de façon fiable).
-// ─────────────────────────────────────────────────────────────────────
 
 export const GLOSSARY: Record<string, string> = {
   'quality-gate': 'Contrôle qualité SonarQube : un ensemble de conditions évaluées sur le code nouveau. « Réussi » ne signifie pas « aucun problème ».',
@@ -50,10 +40,10 @@ export const GLOSSARY: Record<string, string> = {
 })
 export class InfoHintComponent {
   @Input() term = '';
-  /** Texte imposé, pour un concept hors glossaire partagé. */
+  // Texte imposé, pour un concept hors glossaire partagé.
   @Input() hint: string | null = null;
 
-  /** Un terme inconnu n'affiche RIEN plutôt qu'un point d'interrogation vide. */
+  // Renvoie le texte à afficher (hint explicite, sinon entrée du glossaire), ou null si le terme est inconnu (n'affiche alors aucun bouton).
   text(): string | null {
     return this.hint || GLOSSARY[this.term] || null;
   }

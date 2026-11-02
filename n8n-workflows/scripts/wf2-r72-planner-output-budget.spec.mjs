@@ -1,3 +1,4 @@
+// Vérifie la taille de sortie du planificateur dans WF2.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
@@ -5,16 +6,28 @@ const artifact = new URL('../pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetf
 const priorArtifact = new URL('../pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.R71-CORRECTIVE-SOURCE-AUTHORITY.json', import.meta.url);
 const wf = JSON.parse(readFileSync(artifact))[0];
 const prior = JSON.parse(readFileSync(priorArtifact))[0];
+/** Retrouve ou construit le nœud du workflow demandé. */
 const node = name => wf.nodes.find(candidate => candidate.name === name);
+/** Prépare les données nécessaires à ce scénario. */
 const priorNode = name => prior.nodes.find(candidate => candidate.name === name);
 
+/** Exécute le traitement et collecte son résultat. */
 function run(name, jsonInput, refs = {}) {
+  /** Simule l’accès à un nœud n8n pour le scénario. */
   const $ = key => {
     assert.ok(refs[key], `unexpected reference ${key}`);
-    return { first: () => ({ json: refs[key][0] }), all: () => refs[key].map(json => ({ json })) };
+    return {
+    /** Renvoie le premier élément disponible. */
+    first: () => ({ json: refs[key][0] }),
+    /** Renvoie tous les éléments disponibles. */
+    all: () => refs[key].map(json => ({ json })) };
   };
   return new Function('$input', '$json', '$', 'Buffer', node(name).parameters.jsCode)(
-    { first: () => ({ json: jsonInput }), all: () => [{ json: jsonInput }] }, jsonInput, $, Buffer,
+    {
+    /** Renvoie le premier élément disponible. */
+    first: () => ({ json: jsonInput }),
+    /** Renvoie tous les éléments disponibles. */
+    all: () => [{ json: jsonInput }] }, jsonInput, $, Buffer,
   );
 }
 

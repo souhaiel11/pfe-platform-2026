@@ -1,3 +1,4 @@
+// Pilote l’analyse et l’application des optimisations Jenkinsfile.
 import { userHttpError } from '../../core/http-error-message';
 import { Component, Input, OnInit, OnDestroy, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -5,24 +6,6 @@ import { HttpClient } from '@angular/common/http';
 import { Subscription, interval, switchMap } from 'rxjs';
 import { PresentationLabelPipe } from '../../shared/presentation-label.pipe';
 
-// ─────────────────────────────────────────────────────────────────────
-//  Optimiseur de Jenkinsfile — agent IA
-//  Usage : <app-jenkinsfile-optimizer [projectId]="project?.id" [projectName]="project?.name">
-//  Backend requis : POST /api/jenkins/optimize (module JenkinsOptimizerModule)
-//
-//  Asynchrone par construction : POST /optimize renvoie un id immédiatement,
-//  le résultat arrive via polling de GET /optimize/:id/status. Aucun timeout
-//  fixe côté frontend — "en cours" reste affiché tant que status=pending,
-//  même après plusieurs minutes (données réelles : une analyse a mis 11min
-//  et a quand même abouti). Seul un vrai signal d'erreur explicite du
-//  workflow (status=error, avec une raison lisible) fait passer à "bloqué".
-//
-//  Persistance : la dernière analyse est rechargée depuis
-//  GET /api/jenkins/analyses?projectId= au ngOnInit (voir loadLatestAnalysis)
-//  — état conservé en base côté backend (JenkinsAnalysis), pas seulement en
-//  mémoire ici. Une analyse encore 'pending' au moment du chargement reprend
-//  automatiquement son polling sur le même jobId.
-// ─────────────────────────────────────────────────────────────────────
 
 @Component({
   selector: 'app-jenkinsfile-optimizer',
@@ -100,7 +83,7 @@ import { PresentationLabelPipe } from '../../shared/presentation-label.pipe';
     <ng-container *ngIf="result() as r">
 
       <section class="jo-verdict">
-        <div class="jo-score" [attr.data-tone]="scoreTone(r.score)">
+        <div class="jo-score" *ngIf="!r.validation && r.issues.length" [attr.data-tone]="scoreTone(r.score)">
           <span class="jo-score-num mono">{{ r.score }}</span>
           <span class="jo-score-lab">score du fichier<br>original / 100</span>
         </div>
@@ -112,7 +95,7 @@ import { PresentationLabelPipe } from '../../shared/presentation-label.pipe';
               ≈ <strong class="mono">−{{ r.estimatedTimeSavingPercent }}%</strong> de durée de pipeline estimée
             </span>
             <span class="jo-gain">
-              <strong class="mono">{{ r.issues.length }}</strong> {{ r.issues.length === 1 ? 'point d’amélioration' : 'points d’amélioration' }}
+              <strong class="mono">{{ r.issues.length }}</strong> {{ r.issues.length === 1 ? 'problème prioritaire' : 'problèmes prioritaires' }}
             </span>
           </div>
         </div>
@@ -445,13 +428,20 @@ export class JenkinsfileOptimizerComponent implements OnInit, OnDestroy {
   // d'une erreur réseau/infra (voir apply()).
   selectionViolation = signal<string | null>(null);
 
+  /** Initialise les dépendances et l’état de ce composant. */
+  private validationTimer?: ReturnType<typeof setInterval>;
+  private validationRefresh?: Subscription;
   constructor(private http: HttpClient) {}
 
+  /** Arrête les abonnements et les suivis du composant. */
   ngOnDestroy(): void {
+    clearInterval(this.validationTimer);
+    this.validationRefresh?.unsubscribe();
     this.pollSub?.unsubscribe();
     this.applyPollSub?.unsubscribe();
   }
 
+  /** Charge les données nécessaires à l’ouverture du composant. */
   ngOnInit(): void {
     let o = (this.owner || '').trim();
     let r = (this.repo || '').trim();
@@ -470,17 +460,28 @@ export class JenkinsfileOptimizerComponent implements OnInit, OnDestroy {
     this.pathInput.set('Jenkinsfile');
 
     this.loadLatestAnalysis();
+    this.validationTimer = setInterval(() => {
+      if (!this.result() || this.loading() || this.applying()) return;
+      this.validationRefresh?.unsubscribe();
+      this.validationRefresh = this.http.get<any[]>(`/api/jenkins/analyses?projectId=${encodeURIComponent(this.projectId || '')}`).subscribe({
+        next: rows => {
+          const result = rows?.[0]?.result;
+          if (result && JSON.stringify(result.validation) !== JSON.stringify(this.result()?.validation)) {
+            this.result.set(result);
+          }
+        },
+        error: () => { /* Keep the last confirmed verdict while offline. */ },
+      });
+    }, 30000);
   }
 
-  // Recharge la dernière analyse connue en base pour ce projet — appelé une
-  // fois au démarrage. Si elle est encore 'pending', reprend le polling sur
-  // le même jobId plutôt que de laisser l'onglet paraître vide alors qu'un
-  // callback n8n peut encore arriver.
+  /** Recharge la dernière analyse connue en base pour ce projet — appelé une fois au démarrage. */
   private loadLatestAnalysis(): void {
     const pid = (this.projectId || '').trim();
     if (!pid) return;
     this.checkingHistory.set(true);
     this.http.get<any[]>(`/api/jenkins/analyses?projectId=${encodeURIComponent(pid)}`).subscribe({
+      /** Traite le résultat reçu et actualise les données locales. */
       next: (rows) => {
         this.checkingHistory.set(false);
         const latest = rows?.[0];
@@ -499,6 +500,7 @@ export class JenkinsfileOptimizerComponent implements OnInit, OnDestroy {
           this.error.set(`Bloqué : ${latest.reason || 'raison inconnue'}${latest.detail ? ' — ' + latest.detail : ''}`);
         }
       },
+      /** Traite l’erreur reçue et termine le suivi de la demande. */
       error: () => {
         this.checkingHistory.set(false);
         this.error.set("Impossible de charger l'historique des analyses Jenkinsfile.");
@@ -506,10 +508,7 @@ export class JenkinsfileOptimizerComponent implements OnInit, OnDestroy {
     });
   }
 
-  // Point d'entrée UNIQUE pour afficher un résultat (fraîchement analysé,
-  // rechargé depuis l'historique, ou régénéré) — garantit que la sélection
-  // de cases à cocher et l'état "PR créée" repartent toujours cohérents
-  // avec le fichier réellement affiché.
+  /** Point d'entrée UNIQUE pour afficher un résultat (fraîchement analysé, rechargé depuis l'historique, ou régénéré). */
   private applyResult(jobId: string, r: any, sourceAvailable: boolean): void {
     this.result.set(r);
     this.currentJobId.set(jobId);
@@ -526,18 +525,22 @@ export class JenkinsfileOptimizerComponent implements OnInit, OnDestroy {
     this.selectionViolation.set(null);
   }
 
+  /** Indique si l’élément est sélectionné. */
   isSelected(id: string): boolean {
     return this.selectedIssueIds().has(id);
   }
 
+  /** Ajoute ou retire l’élément de la sélection. */
   toggleSelection(id: string): void {
     const next = new Set(this.selectedIssueIds());
     if (next.has(id)) next.delete(id); else next.add(id);
     this.selectedIssueIds.set(next);
   }
 
+  /** Indique si le fichier peut être récupéré. */
   canFetch(): boolean { return !!this.ownerInput().trim() && !!this.repoInput().trim() && !!this.refInput().trim(); }
 
+  /** Récupère le fichier depuis le dépôt Git. */
   fetchFromGit(): void {
     if (!this.canFetch()) return;
     this.fetching.set(true);
@@ -549,11 +552,13 @@ export class JenkinsfileOptimizerComponent implements OnInit, OnDestroy {
       ref: this.refInput().trim(),
       filePath: this.pathInput().trim() || 'Jenkinsfile',
     }).subscribe({
+      /** Traite le résultat reçu et actualise les données locales. */
       next: (r) => {
         this.source.set(r.jenkinsfile || '');
         this.fetched.set(true);
         this.fetching.set(false);
       },
+      /** Traite l’erreur reçue et termine le suivi de la demande. */
       error: (e) => {
         this.fetchError.set(userHttpError(e, 'Jenkinsfile introuvable. Vérifiez le dépôt et la branche.'));
         this.fetching.set(false);
@@ -561,20 +566,14 @@ export class JenkinsfileOptimizerComponent implements OnInit, OnDestroy {
     });
   }
 
-  // ngOnInit() sépare déjà tout "owner/repo" combiné (ex: project.githubRepo)
-  // dans ownerInput()/repoInput() — on doit lire CES signaux en priorité, pas
-  // this.owner/this.repo bruts, sinon un repo combiné jamais séparé repart
-  // tel quel vers le backend (violation du contrat "repo en nom seul").
+  /** ngOnInit() sépare déjà tout "owner/repo" combiné (ex: project.githubRepo) dans ownerInput()/repoInput(). */
   private effOwner(): string { return (this.ownerInput() || this.owner || '').trim(); }
+  /** Retrouve le dépôt effectif utilisé pour l’opération. */
   private effRepo(): string { return (this.repoInput() || this.repo || '').trim(); }
+  /** Indique si l’optimisation peut être appliquée. */
   canApply(): boolean { return !!this.effOwner() && !!this.effRepo() && !!this.baseBranch.trim(); }
 
-  // WF4 v4 : asynchrone comme optimize() — POST /apply ne déclenche que le
-  // workflow n8n (Apply Agent, vrai appel LLM) et renvoie un applyId
-  // immédiatement. Le résultat réel (succès/bloqué/échec) arrive plus tard
-  // via le callback n8n -> GET /apply/:applyId/status (voir startApplyPolling).
-  // Un aller-retour synchrone n'est plus tenable : l'Apply Agent peut
-  // prendre plusieurs minutes, largement au-delà des timeouts de proxy.
+  /** WF4 v4 : asynchrone comme optimize() — POST /apply ne déclenche que le workflow n8n (Apply Agent, vrai appel LLM) et renvoie un applyId immédiatement. */
   apply(r: any): void {
     if (!this.baseBranch.trim()) { this.applyError.set('Renseignez la branche cible de la PR avant de continuer.'); return; }
     this.applying.set(true);
@@ -597,6 +596,7 @@ export class JenkinsfileOptimizerComponent implements OnInit, OnDestroy {
       retainedIssues: retained,
       discardedIssues: discarded,
     }).subscribe({
+      /** Traite le résultat reçu et actualise les données locales. */
       next: (res) => {
         if (!res?.applyId) {
           this.applying.set(false);
@@ -605,6 +605,7 @@ export class JenkinsfileOptimizerComponent implements OnInit, OnDestroy {
         }
         this.startApplyPolling(res.applyId);
       },
+      /** Traite l’erreur reçue et termine le suivi de la demande. */
       error: (e) => {
         this.applying.set(false);
         this.applyError.set(userHttpError(e, 'Impossible de créer la Pull Request. Vérifiez le dépôt puis réessayez.'));
@@ -612,16 +613,14 @@ export class JenkinsfileOptimizerComponent implements OnInit, OnDestroy {
     });
   }
 
-  // Poll GET /apply/:applyId/status. Le backend a son propre garde-fou
-  // APPLY_STALE_MS (balayage en arrière-plan, indépendant du polling) — mais
-  // on n'y fait plus une confiance aveugle côté front : un poll qui tourne
-  // depuis trop longtemps sans jamais voir status changer sort quand même de
-  // "en cours" plutôt que de tourner éternellement (défense en profondeur,
-  // au cas où le backend serait lui-même injoignable). Et si prUrl apparaît
-  // dans le résultat à N'IMPORTE quel moment, on l'affiche immédiatement —
-  // ne pas attendre status==='success' au cas où le champ arriverait avant
-  // que le statut ne soit finalisé.
-  private static readonly APPLY_POLL_MAX_ATTEMPTS = 20; // 20 x 3s = 60s
+  // Aligné sur APPLY_STALE_MS du backend (12 min) + une marge d'un cycle :
+  // c'est TOUJOURS le backend qui prononce le verdict (succès, blocked,
+  // failed ou péremption), jamais une horloge côté navigateur. Un plafond
+  // plus court faisait abandonner l'UI avant l'Apply Agent — un apply réel
+  // sur un gros Jenkinsfile dépasse couramment la minute (84 s mesurées),
+  // et la PR était alors créée sans que le dashboard l'affiche jamais.
+  private static readonly APPLY_POLL_MAX_ATTEMPTS = 260; // 260 x 3s = 13 min
+  /** Suit périodiquement l’application de l’optimisation. */
   private startApplyPolling(applyId: string): void {
     let unstableStreak = 0;
     let attempts = 0;
@@ -629,6 +628,7 @@ export class JenkinsfileOptimizerComponent implements OnInit, OnDestroy {
     this.applyPollSub = interval(3000).pipe(
       switchMap(() => this.http.get<any>(`/api/jenkins/apply/${applyId}/status`)),
     ).subscribe({
+      /** Traite le résultat reçu et actualise les données locales. */
       next: (s) => {
         unstableStreak = 0;
         this.applyPollUnstable.set(false);
@@ -643,7 +643,7 @@ export class JenkinsfileOptimizerComponent implements OnInit, OnDestroy {
           if (attempts >= JenkinsfileOptimizerComponent.APPLY_POLL_MAX_ATTEMPTS) {
             this.applyPollSub?.unsubscribe();
             this.applying.set(false);
-            this.applyError.set('Création non confirmée après 60s — vérifiez sur GitHub si la PR a bien été créée.');
+            this.applyError.set('Création non confirmée par la plateforme — vérifiez sur GitHub si la PR a bien été créée.');
           }
           return; // on continue de poller
         }
@@ -663,6 +663,7 @@ export class JenkinsfileOptimizerComponent implements OnInit, OnDestroy {
           this.applyError.set('La Pull Request n’a pas pu être créée. Vérifiez le rapport de validation avant de réessayer.');
         }
       },
+      /** Traite l’erreur reçue et termine le suivi de la demande. */
       error: (e) => {
         if (e.status === 404) {
           this.applyPollSub?.unsubscribe();
@@ -679,8 +680,10 @@ export class JenkinsfileOptimizerComponent implements OnInit, OnDestroy {
     });
   }
 
+  /** Refuse la demande et en précise la raison. */
   reject(): void { this.reset(); }
 
+  /** Normalise la sévérité pour le filtrage ou le tri. */
   sevKey(s: string): string {
     const u = String(s || '').toUpperCase();
     if (u === 'CRITIQUE') return 'critical';
@@ -689,12 +692,14 @@ export class JenkinsfileOptimizerComponent implements OnInit, OnDestroy {
     return 'low';
   }
 
+  /** Choisit la couleur correspondant au score. */
   scoreTone(score: number): string {
     if (score < 40) return 'fail';
     if (score < 70) return 'warn';
     return 'pass';
   }
 
+  /** Demande l’analyse du fichier sélectionné. */
   analyze(): void {
     if (!this.projectId) {
       this.error.set('Projet inconnu — impossible de lancer une analyse hors contexte projet.');
@@ -709,6 +714,7 @@ export class JenkinsfileOptimizerComponent implements OnInit, OnDestroy {
       projectId: this.projectId,
       projectName: this.projectName || 'projet',
     }).subscribe({
+      /** Traite le résultat reçu et actualise les données locales. */
       next: (r) => {
         if (!r?.id) {
           // Ne devrait jamais arriver si le backend répond 200, mais on ne
@@ -719,6 +725,7 @@ export class JenkinsfileOptimizerComponent implements OnInit, OnDestroy {
         }
         this.startPolling(r.id, true);
       },
+      /** Traite l’erreur reçue et termine le suivi de la demande. */
       error: (e) => {
         this.error.set(userHttpError(e, 'Impossible de démarrer l’analyse. Vérifiez la connexion à la plateforme.'));
         this.loading.set(false);
@@ -726,16 +733,13 @@ export class JenkinsfileOptimizerComponent implements OnInit, OnDestroy {
     });
   }
 
-  // Poll GET /optimize/:id/status. "en cours" reste affiché indéfiniment
-  // tant que status=pending — pas de timeout ni de seuil de temps. Seul un
-  // vrai status=error (raison explicite fournie par le workflow) ou un 404
-  // (job perdu/expiré) arrêtent le polling.
-  //
+  /** Démarre la consultation périodique du statut. */
   private startPolling(id: string, sourceAvailable: boolean): void {
     let unstableStreak = 0;
     this.pollSub = interval(3000).pipe(
       switchMap(() => this.http.get<any>(`/api/jenkins/optimize/${id}/status`)),
     ).subscribe({
+      /** Traite le résultat reçu et actualise les données locales. */
       next: (s) => {
         unstableStreak = 0;
         this.pollUnstable.set(false);
@@ -748,6 +752,7 @@ export class JenkinsfileOptimizerComponent implements OnInit, OnDestroy {
           this.error.set(`Bloqué : ${s.reason || 'raison inconnue'}${s.detail ? ' — ' + s.detail : ''}`);
         }
       },
+      /** Traite l’erreur reçue et termine le suivi de la demande. */
       error: (e) => {
         if (e.status === 404) {
           this.pollSub?.unsubscribe();
@@ -763,6 +768,7 @@ export class JenkinsfileOptimizerComponent implements OnInit, OnDestroy {
     });
   }
 
+  /** Réinitialise l’état du scénario. */
   reset(): void {
     this.pollSub?.unsubscribe();
     this.applyPollSub?.unsubscribe();

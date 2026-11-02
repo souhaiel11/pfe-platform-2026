@@ -1,0 +1,8 @@
+{
+  "genericManifestOneGroup": true,
+  "alternateProjectRepositoryFileAndPR": true,
+  "wrongPRRejected": true,
+  "wrongBranchRejected": true,
+  "wrongRepositoryRejected": true,
+  "dbChanges": 0
+}

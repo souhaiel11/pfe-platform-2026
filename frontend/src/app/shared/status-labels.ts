@@ -1,11 +1,4 @@
-// ─────────────────────────────────────────────────────────────────────
-// Présentation uniquement : traduit les valeurs canoniques du backend
-// (statuts de stage, types de remédiation) en libellés humains FR pour
-// l'affichage. Ne modifie jamais la valeur canonique elle-même — les
-// composants continuent de lier/comparer sur la valeur brute (ex.
-// [class]="status.toLowerCase()"), seul le TEXTE visible passe par ces
-// fonctions.
-// ─────────────────────────────────────────────────────────────────────
+// Traduit les statuts techniques en libellés français.
 
 const STAGE_STATUS_LABELS: Record<string, string> = {
   VALIDATED_RECOMMENDED: 'Correction validée',
@@ -85,6 +78,8 @@ const STAGE_STATUS_LABELS: Record<string, string> = {
   REQUESTED: 'Demandé',
   IN_PROGRESS: 'En cours',
   ABORTED: 'Interrompu',
+  NOT_EXECUTED: 'Non exécutée',
+  PAUSED_PENDING_INPUT: 'En attente d’une validation',
   UNSTABLE: 'Instable',
   SCANNER_UNAVAILABLE: 'Analyse indisponible',
   CRITICAL: 'Critique',
@@ -131,6 +126,7 @@ const STAGE_STATUS_LABELS: Record<string, string> = {
   MAINTAINABILITY: 'Maintenabilité',
 };
 
+/** Traduit un statut technique canonique en libellé français ; une valeur non répertoriée (identifiant technique) est renvoyée telle quelle, jamais déformée. */
 export function stageStatusLabel(raw: string | null | undefined): string {
   if (!raw) return 'Non disponible';
   const key = String(raw).toUpperCase();
@@ -140,6 +136,7 @@ export function stageStatusLabel(raw: string | null | undefined): string {
   return STAGE_STATUS_LABELS[key] ?? String(raw);
 }
 
+/** Traduit un type de remédiation en libellé français, en réutilisant la même table que les statuts de stage. */
 export function remediationTypeLabel(raw: string | null | undefined): string {
   return stageStatusLabel(raw);
 }
@@ -149,6 +146,7 @@ const RISK_LEVEL_LABELS: Record<string, string> = {
   INDETERMINATE: 'Indéterminé', INDETERMINE: 'Indéterminé',
 };
 
+/** Traduit un niveau de risque technique en libellé français. */
 export function riskLevelLabel(raw: string | null | undefined): string {
   if (!raw) return 'Non disponible';
   return RISK_LEVEL_LABELS[String(raw).toUpperCase()] ?? String(raw);
@@ -156,15 +154,8 @@ export function riskLevelLabel(raw: string | null | undefined): string {
 
 export const presentationLabel = stageStatusLabel;
 
-// ─────────────────────────────────────────────────────────────────────
-// metadata.fixRequest.status (WF2 remediation lifecycle) — distinct map
-// from STAGE_STATUS_LABELS above: the same technical tokens can carry a
-// different, more specific French label in this context (e.g. DISPATCHED
-// is "en cours" generically, but here it means "the WF2 fix itself is
-// running", not a scan stage). Never expose the raw backend value; an
-// unmapped token falls back to stageStatusLabel's own fallback (the raw
-// token as last resort), same convention as the rest of this file.
-// ─────────────────────────────────────────────────────────────────────
+// Table dédiée au cycle de vie WF2 (metadata.fixRequest.status) : les mêmes jetons techniques
+// peuvent porter un libellé différent et plus spécifique dans ce contexte que dans STAGE_STATUS_LABELS.
 const FIX_REQUEST_STATUS_LABELS: Record<string, string> = {
   FIX_STARTING: 'Préparation de la correction',
   DISPATCHED: 'Correction en cours',
@@ -178,13 +169,14 @@ const FIX_REQUEST_STATUS_LABELS: Record<string, string> = {
   REJECTED: 'Correction rejetée',
 };
 
+/** Traduit un statut du cycle de vie WF2 (fixRequest) en libellé français spécifique à ce contexte, avec repli sur la table générique des statuts de stage. */
 export function fixRequestStatusLabel(raw: string | null | undefined): string {
   if (!raw) return 'Non disponible';
   const key = String(raw).toUpperCase();
   return FIX_REQUEST_STATUS_LABELS[key] ?? stageStatusLabel(raw);
 }
 
-/** Translate known status tokens embedded in server recommendations. */
+/** Renvoie presentation texte pour le traitement ou l’affichage. */
 export function presentationText(value: unknown): string {
   return String(value || '').replace(/\bQuality Gate\b/gi, 'contrôle qualité').replace(/\bstatus:/gi, 'état :').replace(/\bstage(?=\s)/gi, 'étape').replace(/\b[A-Z][A-Z0-9_]+\b/g, token => token === 'OWASP' ? token : (STAGE_STATUS_LABELS[token] || token));
 }
@@ -199,6 +191,7 @@ const ZAP_ALERT_LABELS: Record<string, string> = {
   'cross site scripting (reflected)': 'Injection de script réfléchie',
   'cross site scripting (persistent)': 'Injection de script persistante',
 };
+/** Traduit le titre technique anglais d'une alerte ZAP connue en libellé français ; une alerte non répertoriée reçoit un libellé générique. */
 export function zapAlertLabel(title: unknown): string {
   return ZAP_ALERT_LABELS[String(title || '').trim().toLowerCase()] || 'Alerte de sécurité ZAP';
 }

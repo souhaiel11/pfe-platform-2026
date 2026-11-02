@@ -1,3 +1,4 @@
+// Teste le composant « owasp-remediation-presentation » et ses cas d’erreur.
 import { sharedDependency } from './security-lifecycle-test-loader.mjs';
 // getSecurityRemediationPresentation()/summarizeSecurityRemediation() — loads the
 // REAL shared modules (never a re-implementation), same discipline as
@@ -10,19 +11,39 @@ import vm from 'node:vm';
 
 const require = createRequire(import.meta.url);
 const ts = require('typescript');
+/** Lit les données depuis leur source. */
 const read = path => readFileSync(new URL(path, import.meta.url), 'utf8');
 const angular = {
-  Component: () => value => value, Injectable: () => value => value,
-  Input: () => () => {}, Output: () => () => {}, ViewChild: () => () => {},
-  EventEmitter: class { emit(value) { this.value = value; } },
-  signal: value => { const f = () => value; f.set = v => value = v; return f; },
+  /** Simule le décorateur de composant Angular. */
+  Component: () => value => value,
+  /** Simule le décorateur de service Angular. */
+  Injectable: () => value => value,
+  /** Simule une entrée de composant Angular. */
+  Input: () => () => {},
+  /** Simule une sortie de composant Angular. */
+  Output: () => () => {},
+  /** Simule une référence à un élément de vue Angular. */
+  ViewChild: () => () => {},
+  EventEmitter: class {
+  /** Diffuse ou construit le résultat prévu. */
+  emit(value) { this.value = value; } },
+  /** Prépare une valeur réactive pour le scénario. */
+  signal: value => {
+  /** Renvoie les contrôles du formulaire. */
+  const f = () => value;
+  /** Affecte la valeur prévue au champ. */
+  f.set = v => value = v; return f; },
+  /** Prépare le calcul réactif du scénario. */
   computed: f => f,
 };
+/** Charge les données nécessaires au composant. */
 function load(path, dependencies = {}) {
   const exports = {};
   vm.runInNewContext(ts.transpileModule(read(path), { compilerOptions: {
     module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, experimentalDecorators: true,
-  } }).outputText, { exports, require: name => dependencies[name] || sharedDependency(name) || (name === '@angular/core' ? angular : {}), console });
+  } }).outputText, { exports,
+  /** Charge la dépendance prévue pour le scénario. */
+  require: name => dependencies[name] || sharedDependency(name) || (name === '@angular/core' ? angular : {}), console });
   return exports;
 }
 
@@ -34,12 +55,11 @@ const { getSecurityRemediationPresentation, summarizeSecurityRemediation } = loa
 
 const CVE = { id: 'CVE-2022-25857', pkg: 'org.yaml:snakeyaml', fixedVersion: undefined };
 const baseSnapshot = { component: 'org.yaml:snakeyaml', legacyPackage: CVE.pkg, purl: 'pkg:maven/org.yaml/snakeyaml@1.29', installedVersion: '1.29', currentVersion: '1.29', ruleOrCve: CVE.id };
+/** Prépare les données nécessaires à ce scénario. */
 function task(overrides = {}, snapshotOverrides = {}) {
   return { id: 'task-1', source: 'OWASP', ruleOrCve: CVE.id, findingSnapshot: { ...baseSnapshot, ...snapshotOverrides }, ...overrides };
 }
-// Real canSelectCveTask() call, matching exactly what the component itself
-// would compute -- never a hand-rolled {selectable:true} stand-in, so these
-// tests exercise the REAL gate, not an assumption about it.
+/** Prépare les données nécessaires à ce scénario. */
 function elig(t, cve = CVE) { return eligibility.canSelectCveTask(t, true, cve); }
 
 // 1. OWASP + unique fixedVersion -> AUTO_FIX_AVAILABLE
@@ -179,7 +199,9 @@ console.log('11. identical CVE id on independent OWASP/Trivy tasks -> no visual/
     B: task({ id: 'b' }, { fixedVersion: null, fixedVersionUnavailableReason: 'MULTIPLE_CANDIDATES' }),
     C: task({ id: 'c' }, { fixedVersion: null, fixedVersionUnavailableReason: 'NO_TRIVY_MATCH' }),
   };
+  /** Prépare les données nécessaires à ce scénario. */
   const taskFor = cve => tasks[cve.id];
+  /** Prépare les données nécessaires à ce scénario. */
   const eligFor = (t, cve) => eligibility.canSelectCveTask(t, true, cve);
   const summary = summarizeSecurityRemediation(cves, taskFor, eligFor);
   assert.equal(summary.total, 3);
@@ -187,10 +209,20 @@ console.log('11. identical CVE id on independent OWASP/Trivy tasks -> no visual/
   assert.equal(summary.manualRequired, 2);
   assert.equal(summary.candidateReady, 0);
   // Change the underlying data -> the summary must change with it, never a frozen/hardcoded number.
-  tasks.B = task({ id: 'b2' }, { fixedVersion: '2.0', fixedVersionSource: 'TRIVY_CORRELATED' });
+  // La cible reste dans la majeure installee (1.29 -> 1.33) : c'est la seule
+  // forme qui peut devenir auto-corrigeable.
+  tasks.B = task({ id: 'b2' }, { fixedVersion: '1.33', fixedVersionSource: 'TRIVY_CORRELATED' });
   const summary2 = summarizeSecurityRemediation(cves, taskFor, eligFor);
   assert.equal(summary2.autoFixAvailable, 2);
   assert.equal(summary2.manualRequired, 1);
+  // Controle negatif : la meme ligne avec un franchissement de majeure
+  // (1.29 -> 2.0) doit repartir dans l'intervention manuelle, et le resume
+  // doit suivre ce reclassement -- ce qui prouve la reactivite dans les DEUX sens.
+  tasks.B = task({ id: 'b3' }, { fixedVersion: '2.0', fixedVersionSource: 'TRIVY_CORRELATED' });
+  const summary3 = summarizeSecurityRemediation(cves, taskFor, eligFor);
+  assert.equal(summary3.autoFixAvailable, 1, 'un franchissement de majeure ne compte pas comme correction automatique');
+  assert.equal(summary3.manualRequired, 2, 'un franchissement de majeure compte comme intervention manuelle');
+  assert.equal(summary3.total, 3);
 }
 console.log('12. summary computed dynamically from real per-row classification, reacts to data changes: PASS');
 
@@ -210,6 +242,7 @@ const { CveTableComponent } = load('../src/app/features/projects/cve-table.compo
   const t = task({}, { fixedVersion: '1.31', fixedVersionSource: 'TRIVY_CORRELATED' });
   table.tasks = [t];
   table.cves = [CVE];
+  /** Décrit la règle de sélection appliquée à la tâche. */
   table.selectionRule = (task_, c) => eligibility.canSelectCveTask(task_, true, c);
   const row = table.normalized()[0];
   const p = table.owaspPresentation(row);
@@ -227,6 +260,7 @@ const { CveTableComponent } = load('../src/app/features/projects/cve-table.compo
   trivyTable.source = 'TRIVY';
   trivyTable.tasks = [{ id: 'trivy-1', source: 'TRIVY', findingSnapshot: { component: 'ch.qos.logback:logback-classic', ruleOrCve: 'CVE-2023-6378' } }];
   trivyTable.cves = [{ id: 'CVE-2023-6378', pkg: 'ch.qos.logback:logback-classic', fixedVersion: '1.2.13' }];
+  /** Décrit la règle de sélection appliquée à la tâche. */
   trivyTable.selectionRule = (task_, c) => eligibility.canSelectCveTask(task_, true, c);
   const trivyRow = trivyTable.normalized()[0];
   assert.equal(trivyTable.owaspPresentation(trivyRow).state, 'AUTO_FIX_AVAILABLE');

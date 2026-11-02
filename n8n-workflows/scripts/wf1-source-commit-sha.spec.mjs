@@ -1,13 +1,4 @@
-// BRIQUE 3 CLOSEOUT — proves the "Prepare Final Report" node in the
-// repo-tracked WF1 export (n8n-workflows/active/wf1-incident-intake-
-// analysis-v5-1-vNOQiEgnXg9Zqn2q.json) threads the source commit SHA
-// already computed by "Normalize Incident Payload" (commitSha: body.after
-// || head_commit.id || body.commit || body.revision.sha) into
-// rawData.sourceCommitSha -- which becomes incident.metadata.sourceCommitSha
-// once "Save Final Decision to Backend" PUTs { metadata: rawData }. Before
-// this change the field was computed and then silently discarded: never
-// forwarded past "Extract Project Config". This is a REPO-ONLY change:
-// nothing here imports/publishes to the live n8n instance.
+// Teste le composant « wf1-source-commit-sha » et ses cas d’erreur.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -20,8 +11,12 @@ const node = workflow.nodes.find(n => n.name === 'Prepare Final Report');
 assert.ok(node, 'Prepare Final Report node must exist in the repo-tracked WF1 export');
 const code = node.parameters.jsCode;
 
+/** Exécute le traitement et collecte son résultat. */
 function run(mockData) {
-  const mock = name => ({ first: () => ({ json: mockData[name] }) });
+  /** Simule les dépendances nécessaires au scénario. */
+  const mock = name => ({
+  /** Renvoie le premier élément disponible. */
+  first: () => ({ json: mockData[name] }) });
   const fn = new Function('$', code);
   return fn(mock)[0].json;
 }
@@ -56,11 +51,11 @@ const baseMocks = {
   assert.equal(out.rawData.sourceCommitSha, null, 'absent commitSha is never fabricated -- stays null');
 }
 
-// Execute the actual input boundary, config propagation, report and backend
-// body expression. No workflow engine, network or backend call is involved.
+/** Retrouve l’élément par son nom. */
 const byName = name => workflow.nodes.find(n => n.name === name);
 const normalize = new Function('$input', byName('Normalize Incident Payload').parameters.jsCode);
 const extract = new Function('$', '$input', byName('Extract Project Config').parameters.jsCode);
+/** Prépare les données nécessaires à ce scénario. */
 const expression = value => new Function('$json', '$', `return (${value.slice(3, -2)});`);
 const route = expression(byName('Is PR Validation').parameters.conditions.conditions[0].leftValue);
 const persist = expression(byName('Save Final Decision to Backend').parameters.jsonBody);
@@ -81,15 +76,23 @@ for (const [label, input, expected] of [
   ['all empty', { commitSha: '', body: { commitSha: null, after: '' } }, null],
   ['preserve non-empty malformed value for backend rejection', { commitSha: 'not-a-sha', commit: shaB }, 'not-a-sha'],
 ]) {
-  const normalized = normalize({ all: () => [{ json: input }] })[0].json;
+  const normalized = normalize({
+  /** Renvoie tous les éléments disponibles. */
+  all: () => [{ json: input }] })[0].json;
   assert.equal(normalized.commitSha, expected, label);
   const config = extract(name => ({
+    /** Renvoie le premier élément disponible. */
     first: () => ({ json: normalized }),
+    /** Renvoie tous les éléments disponibles. */
     all: () => [{ json: { id: 'proj-1' } }],
-  }), { first: () => ({ json: normalized }) })[0].json;
+  }), {
+  /** Renvoie le premier élément disponible. */
+  first: () => ({ json: normalized }) })[0].json;
   const report = run({ ...baseMocks, 'Extract Project Config': config });
   assert.equal(report.rawData.sourceCommitSha, expected, label);
-  const body = JSON.parse(persist({}, () => ({ first: () => ({ json: report }) })));
+  const body = JSON.parse(persist({}, () => ({
+  /** Renvoie le premier élément disponible. */
+  first: () => ({ json: report }) })));
   assert.equal(body.metadata.sourceCommitSha, expected, `${label}: backend metadata`);
 }
 assert.equal(route({ body: { event: 'pr_validation' }, event: 'pipeline_failed' }), 'pr_validation');
@@ -101,6 +104,7 @@ const switch3 = byName('Switch3');
 const switch3Events = switch3.parameters.rules.values.map(rule => rule.conditions.conditions[0].leftValue);
 assert.equal(switch3Events.length, 4, 'all Switch3 event routes remain present');
 assert.ok(switch3Events.every(value => value === '={{ $json.body?.event ?? $json.event }}'), 'Switch3 routes prefer body.event then root event');
+/** Prépare les données nécessaires à ce scénario. */
 const resolveEvent = payload => payload?.body?.event ?? payload?.event;
 assert.equal(resolveEvent({ body: { event: 'VALUE_BODY' } }), 'VALUE_BODY');
 assert.equal(resolveEvent({ event: 'VALUE_ROOT' }), 'VALUE_ROOT');

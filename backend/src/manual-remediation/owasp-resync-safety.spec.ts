@@ -1,12 +1,4 @@
-// OWASP backend resync safety — makes a normal syncIncident()/reconcileSource()
-// /snapshot() cycle preserve/build the correct normalized Maven identity
-// (component/legacyPackage/purl/installedVersion/groupId/artifactId) instead
-// of regressing it to the raw jar-filename shape on every sync, while never
-// erasing WF6/human remediation state. See manual-remediation.service.ts's
-// own resolveOwaspIdentity() header for why a resync can never independently
-// RE-DERIVE a Maven identity (the raw finding reaching this method has
-// already lost dependency.packages[] upstream) and must instead preserve an
-// already-validated one.
+// Teste le composant « owasp-resync-safety » et ses cas d’erreur.
 import { strict as assert } from 'assert';
 import { readFileSync } from 'fs';
 import { join } from 'path';
@@ -14,15 +6,23 @@ import { normalizeOwaspFinding } from '../common/owasp-finding-normalizer';
 import { ManualRemediationService } from './manual-remediation.service';
 import { findingFingerprint } from './finding-fingerprint';
 
+/** Simule l’échec attendu par ce scénario. */
 function makeService(rows: any[]) {
   const repo: any = {
+    /** Recherche les éléments correspondants. */
     find: async ({ where }: any) => rows.filter(r => !where.source || r.source === where.source),
+    /** Crée et enregistre un nouvel élément. */
     create: (v: any) => { const t = { id: `new-${rows.length}-${Math.random().toString(36).slice(2, 8)}`, ...v }; return t; },
+    /** Enregistre les données fournies. */
     save: async (v: any) => { if (!rows.includes(v)) rows.push(v); return v; },
+    /** Applique les modifications autorisées à l’élément. */
     update: async () => {},
   };
-  return new ManualRemediationService(repo, {} as any, { dispatch: async () => { throw new Error('WF6 must never run in this offline simulation'); } });
+  return new ManualRemediationService(repo, {} as any, {
+  /** Transmet la demande au service chargé de l’exécuter. */
+  dispatch: async () => { throw new Error('WF6 must never run in this offline simulation'); } });
 }
+/** Prépare les données nécessaires à ce scénario. */
 function incidentFor(owaspCves: any[], trivyCves: any[] = []) {
   return {
     id: 'incident-149', projectId: 'project-149', buildNumber: 149,
@@ -34,6 +34,7 @@ function incidentFor(owaspCves: any[], trivyCves: any[] = []) {
   } as any;
 }
 
+/** Exécute le traitement et collecte son résultat. */
 async function run() {
   const depFixture = JSON.parse(readFileSync(join(__dirname, '../common/fixtures/owasp-149-dependencies.json'), 'utf8'));
   const snakeDep = depFixture.dependencies.find((d: any) => d.fileName === 'snakeyaml-1.29.jar');

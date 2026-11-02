@@ -1,3 +1,8 @@
+/** Déclare le module NestJS de remédiation manuelle : entités, contrôleurs et services, y compris la réconciliation legacy. */
+import { LegacyReconciliationController } from './legacy-reconciliation.controller';
+import { LegacyReconciliationService } from './legacy-reconciliation.service';
+import { LegacyRemoteSettlement } from './legacy-remote-settlement';
+import { RetryE2EHarnessService } from '../security-remediation/retry-e2e-harness.service';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Incident } from '../incidents/incident.entity';
@@ -7,15 +12,9 @@ import { ManualRemediationTask } from './manual-remediation.entity';
 import { ManualRemediationService } from './manual-remediation.service';
 
 @Module({
-  // V1.8 Phase 5 ticket — Project added so launchBatchRemediation() can
-  // resolve the SAME repository/trusted-commit context
-  // SecurityFindingResolverService already resolves, WITHOUT importing
-  // SecurityRemediationModule here (that module already imports THIS one
-  // -- a circular module import this codebase has never used anywhere
-  // else). A plain TypeORM entity injection has no such risk.
   imports: [TypeOrmModule.forFeature([ManualRemediationTask, Incident, Project])],
-  controllers: [ManualRemediationController],
-  providers: [ManualRemediationService],
-  exports: [ManualRemediationService],
+  controllers: [ManualRemediationController, LegacyReconciliationController],
+  providers: [ManualRemediationService, RetryE2EHarnessService, LegacyReconciliationService, LegacyRemoteSettlement],
+  exports: [ManualRemediationService, RetryE2EHarnessService],
 })
 export class ManualRemediationModule {}

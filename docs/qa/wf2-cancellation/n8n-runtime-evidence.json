@@ -1,0 +1,14 @@
+[
+  {
+    "installedVersion": "2.14.2",
+    "sourceFile": "wf2-n8n-execution-service.js",
+    "sha256": "053f5cf94655ef512da6c24ea5d33669852614784a59dd6dd83cf9520fde7465",
+    "excerpt": "assertStoppable(execution) {\n        const STOPPABLE_STATUSES = ['new', 'unknown', 'waiting', 'running'];\n        if (!STOPPABLE_STATUSES.includes(execution.status)) {\n            throw new n8n_workflow_1.WorkflowOperationError(`Only running or waiting executions can be stopped and ${execution.id} is currently ${execution.status}`);\n        }\n    }\n    async stopInRegularMode(execution) {\n        if (this.concurrencyControl.has(execution.id)) {\n            this.concurrencyControl.remove({ mode: execution.mode, executionId: execution.id });\n            return await this.executionRepository.stopBeforeRun(execution);\n        }\n        if (this.activeExecutions.has(execution.id)) {"
+  },
+  {
+    "installedVersion": "2.14.2",
+    "sourceFile": "wf2-n8n-executions-handler.js",
+    "sha256": "c836d100dc0126c0ec6cd6f540dc8fc74420f8d0cb81586f755666f6b7bc8b6c",
+    "excerpt": "stopExecution: [\n        (0, global_middleware_1.apiKeyHasScope)('execution:stop'),\n        async (req, res) => {\n            const sharedWorkflowsIds = await (0, workflows_service_1.getSharedWorkflowIds)(req.user, ['workflow:execute']);\n            if (!sharedWorkflowsIds.length) {\n                return res.status(404).json({ message: 'Not Found' });\n            }\n            const { id } = req.params;\n            try {\n                const stopResult = await di_1.Container.get(execution_service_1.ExecutionService).stop(id, sharedWorkflowsIds);\n                return res.json((0, n8n_workflow_1.replaceCircularReferences)(stopResult));\n            }\n            catch (error) {\n                if (error instanceof missing_execution_stop_error_1.MissingExecutionStopError) {\n                    return res.status(404).json({ message: 'Not Found' });\n                }\n                else if (error instanceof not_found_error_1.NotFoundError) {\n                    return res.status(404).json({ message: error.message });\n                }\n                else {\n                    throw error;\n                }\n            }\n        },\n    ],\n    stopManyExecutions: [\n        (0, global_middleware_1.apiKeyHasScope)('execution:stop'),\n        async (req, res) => {\n            const { status: rawStatus, workflowId, startedAfter, startedBefore } = req.body;\n            const status = rawStatus.map((x) => (x === 'queued' ? 'new' : x));\n            if (!status || status.length === 0) {"
+  }
+]

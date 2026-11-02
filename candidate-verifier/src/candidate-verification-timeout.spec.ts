@@ -1,3 +1,4 @@
+// Teste le composant « candidate-verification-timeout » et ses cas d’erreur.
 import * as assert from 'node:assert/strict';
 import { CandidateVerificationExecutor } from './candidate-verification-executor';
 import { isProcessTimeout } from './process-timeout';
@@ -9,14 +10,26 @@ const request: any = {
 };
 
 const manager: any = {
+  /** Construit l’identifiant de l’espace de travail. */
   workspaceId: () => 'request/batch/attempt-1',
+  /** Crée un espace isolé pour la vérification. */
   createWorkspace: () => ({ path: '/tmp', exactShaVerified: true, checkoutSha: sha }),
+  /** Nettoie l’espace de travail après l’opération. */
   cleanupWorkspace: () => undefined,
 };
-const repoCache: any = { ensureRepo: () => '/tmp/repo' };
+const repoCache: any = {
+/** Prépare le dépôt et la révision nécessaires. */
+ensureRepo: () => '/tmp/repo' };
 
+/** Exécute le traitement et collecte son résultat. */
 function run(compile: any, tests: any = { status: 'SUCCESS', total: 1, failures: 0, errors: 0, skipped: 0, durationMs: 1, evidenceRef: null }) {
-  const adapter: any = { supports: () => true, compile: () => compile, runRegressionTests: () => tests };
+  const adapter: any = {
+  /** Indique si cet adaptateur prend en charge les données. */
+  supports: () => true,
+  /** Compile le projet dans le délai disponible. */
+  compile: () => compile,
+  /** Exécute les tests pour détecter les régressions. */
+  runRegressionTests: () => tests };
   return new CandidateVerificationExecutor(manager, {} as any, repoCache, [adapter]).executeHead(request);
 }
 

@@ -1,0 +1,4 @@
+{
+  "decision": "BLOCK",
+  "reason": "V1_8_EVIDENCE_STALE: repository mismatch (evidence validated against \"LOCAL_DISPOSABLE_H2_FIXTURE\", task currently reports \"souhaiel11/remediation-retry-e2e-fixture\") -- refusing to reuse stale evidence, never silently."
+}

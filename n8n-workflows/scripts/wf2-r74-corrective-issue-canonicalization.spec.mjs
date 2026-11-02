@@ -1,3 +1,4 @@
+// Vérifie la normalisation des issues correctives dans WF2.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
@@ -7,42 +8,62 @@ const priorArtifact = new URL('../pending-live-update/wf2-git-patch-pr-u3eeMwTuh
 const fixturesPath = new URL('./fixtures/wf2-r74-corrective-issue-fixtures.json', import.meta.url);
 const wf = JSON.parse(readFileSync(artifact))[0];
 const prior = JSON.parse(readFileSync(priorArtifact))[0];
+/** Retrouve ou construit le nœud du workflow demandé. */
 const node = name => wf.nodes.find(candidate => candidate.name === name);
+/** Prépare les données nécessaires à ce scénario. */
 const priorNode = name => prior.nodes.find(candidate => candidate.name === name);
 const fixtures = JSON.parse(readFileSync(fixturesPath));
 const fixture8 = fixtures.attempt8;
 const fixture9 = fixtures.attempt9;
 
+/** Exécute le traitement et collecte son résultat. */
 function run(name, jsonInput, refs = {}) {
+  /** Simule l’accès à un nœud n8n pour le scénario. */
   const $ = key => {
     assert.ok(refs[key], `unexpected reference ${key}`);
-    return { first: () => ({ json: refs[key][0] }), all: () => refs[key].map(json => ({ json })) };
+    return {
+    /** Renvoie le premier élément disponible. */
+    first: () => ({ json: refs[key][0] }),
+    /** Renvoie tous les éléments disponibles. */
+    all: () => refs[key].map(json => ({ json })) };
   };
   return new Function('$input', '$json', '$', 'Buffer', node(name).parameters.jsCode)(
-    { first: () => ({ json: jsonInput }), all: () => [{ json: jsonInput }] }, jsonInput, $, Buffer,
+    {
+    /** Renvoie le premier élément disponible. */
+    first: () => ({ json: jsonInput }),
+    /** Renvoie tous les éléments disponibles. */
+    all: () => [{ json: jsonInput }] }, jsonInput, $, Buffer,
   );
 }
 
+/** Prépare les données nécessaires à ce scénario. */
 const runBuildPolicy = (batch, tree, lookup) =>
   run('Build Independent Repository Policy', tree, { 'Prepare Batch Context': [batch], 'Lookup Remediation Branch': [lookup] })[0].json;
 
-// Prepare Generic Remediation Plan is fed by $input.all() (the raw fetch
-// items) and reads $('Build Independent Repository Policy').first().json.
+/** Vérifie les résultats attendus dans ce scénario. */
 function runPreparePlan(fixture) {
   const policyOut = runBuildPolicy(fixture.batch, fixture.tree_resp, fixture.lookup);
   const items = fixture.rawFetchItems.map((raw, i) => ({
     json: i === 0 ? { ...raw, sourceGrounding: fixture.sourceGrounding } : raw,
   }));
+  /** Simule l’accès à un nœud n8n pour le scénario. */
   const $ = key => {
     assert.equal(key, 'Build Independent Repository Policy');
-    return { first: () => ({ json: policyOut }) };
+    return {
+    /** Renvoie le premier élément disponible. */
+    first: () => ({ json: policyOut }) };
   };
   const out = new Function('$input', '$json', '$', 'Buffer', node('Prepare Generic Remediation Plan').parameters.jsCode)(
-    { all: () => items, first: () => items[0] }, items[0].json, $, Buffer,
+    {
+    /** Renvoie tous les éléments disponibles. */
+    all: () => items,
+    /** Renvoie le premier élément disponible. */
+    first: () => items[0] }, items[0].json, $, Buffer,
   );
   return { policyOut, prepared: out[0].json };
 }
 
+/** Prépare les données nécessaires à ce scénario. */
 function canonicalDigest(prepared) {
   const issues = prepared.remediationContract.correctiveIssues;
   const stable = JSON.stringify(issues.map(issue => {

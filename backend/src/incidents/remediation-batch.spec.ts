@@ -1,6 +1,9 @@
+// Teste le composant « remediation-batch » et ses cas d’erreur.
+import { emptyReservationQuery } from './sonar-file-reservation.test-double';
 import * as assert from 'node:assert/strict';
 import { buildPrValidationJobName, canRetryFixRequest, encodePrValidationContext, IncidentsService, isFullGitSha, prValidationIdentity, remediationBatchIdentity, resolveRemediationBatch } from './incidents.service';
 
+/** Prépare les données nécessaires à ce scénario. */
 const sonar = (id: string, extra: any = {}) => ({
   id, source: 'SONARQUBE', stage: 'sonar', remediationType: 'AUTO_FIX_ELIGIBLE',
   rule: 'java:S1068', file: `src/${id}.java`, line: 10, message: `Finding ${id}`, ...extra,
@@ -34,25 +37,40 @@ const incident: any = {
 };
 let lockedFindOptions: any;
 const transactionalRepo = {
+  /** Recherche l’élément correspondant à l’identifiant. */
   findOne: async (options: any) => { lockedFindOptions = options; return incident; },
+  /** Applique les modifications autorisées à l’élément. */
   update: async (_id: string, patch: any) => Object.assign(incident, patch),
 };
 const project = { id: 'project-1', githubRepo: 'owner/repo' };
-const transactionalProjectRepo = { findOne: async () => project };
+const transactionalProjectRepo = {
+/** Recherche l’élément correspondant à l’identifiant. */
+findOne: async () => project };
 const repository: any = {
-  manager: { transaction: async (fn: any) => fn({ getRepository: (entity: any) => entity?.name === 'Project' ? transactionalProjectRepo : transactionalRepo }) },
+  manager: {
+  /** Exécute les opérations dans le cadre transactionnel prévu. */
+  transaction: async (fn: any) => fn({
+  /** Simule la lecture des données demandées par le composant. */
+  query: emptyReservationQuery, getRepository: (entity: any) => entity?.name === 'Project' ? transactionalProjectRepo : transactionalRepo }) },
+  /** Recherche l’élément correspondant à l’identifiant. */
   findOne: async () => incident,
   update: transactionalRepo.update,
 };
+/** Exécute les étapes principales de ce programme. */
 async function main() {
   let dispatches = 0;
   const payloads: any[] = [];
   const originalFetch = globalThis.fetch;
   const originalWorkflowId = process.env.N8N_WF2_ID;
   process.env.N8N_WF2_ID = '9adcV31eaIgJyMR0';
+  /** Envoie la requête et lit la réponse distante. */
   globalThis.fetch = async (_url: any, options: any) => { dispatches++; payloads.push(JSON.parse(options.body)); return new Response('{}', { status: 200 }); };
   try {
-  const service = new IncidentsService(repository, transactionalProjectRepo as any, { emit: () => undefined } as any, { syncIncident: async () => undefined } as any, {} as any);
+  const service = new IncidentsService(repository, transactionalProjectRepo as any, {
+  /** Diffuse ou construit le résultat prévu. */
+  emit: () => undefined } as any, {
+  /** Prépare les données nécessaires à ce scénario. */
+  syncIncident: async () => undefined } as any, {} as any);
   const user = { id: 'developer-1', role: 'developer' };
   const first: any = await service.approveFix(incident.id, user, { findingIds: ['b', 'a', 'a'] });
   assert.equal(first.duplicate, false);
@@ -103,15 +121,27 @@ async function main() {
     metadata: { enrichedData: { sonar: { issues: [sonar('a'), sonar('b')] } } },
   };
   const retryIncidentRepo: any = {
+    /** Recherche l’élément correspondant à l’identifiant. */
     findOne: async () => retryIncident,
+    /** Applique les modifications autorisées à l’élément. */
     update: async (_id: string, patch: any) => Object.assign(retryIncident, patch),
   };
   const retryRepository: any = {
-    manager: { transaction: async (fn: any) => fn({ getRepository: (entity: any) => entity?.name === 'Project' ? transactionalProjectRepo : retryIncidentRepo }) },
+    manager: {
+    /** Exécute les opérations dans le cadre transactionnel prévu. */
+    transaction: async (fn: any) => fn({
+    /** Simule la lecture des données demandées par le composant. */
+    query: emptyReservationQuery, getRepository: (entity: any) => entity?.name === 'Project' ? transactionalProjectRepo : retryIncidentRepo }) },
+    /** Recherche l’élément correspondant à l’identifiant. */
     findOne: async () => retryIncident,
     update: retryIncidentRepo.update,
   };
-  const retryService = new IncidentsService(retryRepository, transactionalProjectRepo as any, { emit: () => undefined } as any, { syncIncident: async () => undefined } as any, {} as any);
+  const retryService = new IncidentsService(retryRepository, transactionalProjectRepo as any, {
+  /** Diffuse ou construit le résultat prévu. */
+  emit: () => undefined } as any, {
+  /** Prépare les données nécessaires à ce scénario. */
+  syncIncident: async () => undefined } as any, {} as any);
+  /** Envoie la requête et lit la réponse distante. */
   globalThis.fetch = async () => { throw new Error('simulated dispatch failure'); };
   await assert.rejects(() => retryService.approveFix(retryIncident.id, user, { findingIds: ['a', 'b'] }), /correction n’a pas pu démarrer/);
   const failedRequestId = retryIncident.metadata.fixRequest.requestId;
@@ -119,6 +149,7 @@ async function main() {
   assert.equal(retryIncident.metadata.fixRequest.status, 'FIX_FAILED');
   assert.equal(retryIncident.metadata.fixRequest.attemptCount, 1);
   let retryDispatches = 0;
+  /** Envoie la requête et lit la réponse distante. */
   globalThis.fetch = async () => { retryDispatches++; return new Response('{}', { status: 200 }); };
   // Resoumission du batch IDENTIQUE (même ensemble de findings) via approveFix
   // (pas retryFix) après échec : toujours refusée, l'utilisateur doit passer
@@ -141,7 +172,7 @@ async function main() {
   assert.equal(retryDispatches, 1);
   await assert.rejects(
     () => retryService.approveFix(retryIncident.id, user, { findingIds: ['a', 'b'] }),
-    /Pull Request existe déjà/,
+    (e: any) => /Pull Request existe déjà|n’est pas encore fusionnée|déjà modifiés? par la Pull Request/.test(String(e?.response?.message || e?.message)),
   );
   assert.equal(retryDispatches, 1);
 
@@ -156,24 +187,36 @@ async function main() {
     } },
   };
   const concurrentIncidentRepo: any = {
+    /** Recherche l’élément correspondant à l’identifiant. */
     findOne: async () => concurrentIncident,
+    /** Applique les modifications autorisées à l’élément. */
     update: async (_id: string, patch: any) => Object.assign(concurrentIncident, patch),
   };
   let transactionTail = Promise.resolve();
   const concurrentRepository: any = {
-    manager: { transaction: async (fn: any) => {
+    manager: {
+    /** Exécute les opérations dans le cadre transactionnel prévu. */
+    transaction: async (fn: any) => {
       const previous = transactionTail;
       let release!: () => void;
       transactionTail = new Promise<void>(resolve => { release = resolve; });
       await previous;
-      try { return await fn({ getRepository: (entity: any) => entity?.name === 'Project' ? transactionalProjectRepo : concurrentIncidentRepo }); }
+      try { return await fn({
+      /** Simule la lecture des données demandées par le composant. */
+      query: emptyReservationQuery, getRepository: (entity: any) => entity?.name === 'Project' ? transactionalProjectRepo : concurrentIncidentRepo }); }
       finally { release(); }
     } },
+    /** Recherche l’élément correspondant à l’identifiant. */
     findOne: async () => concurrentIncident,
     update: concurrentIncidentRepo.update,
   };
-  const concurrentService = new IncidentsService(concurrentRepository, transactionalProjectRepo as any, { emit: () => undefined } as any, { syncIncident: async () => undefined } as any, {} as any);
+  const concurrentService = new IncidentsService(concurrentRepository, transactionalProjectRepo as any, {
+  /** Diffuse ou construit le résultat prévu. */
+  emit: () => undefined } as any, {
+  /** Prépare les données nécessaires à ce scénario. */
+  syncIncident: async () => undefined } as any, {} as any);
   let concurrentDispatches = 0;
+  /** Envoie la requête et lit la réponse distante. */
   globalThis.fetch = async () => { concurrentDispatches++; return new Response('{}', { status: 200 }); };
   const concurrentResults = await Promise.allSettled([
     concurrentService.retryFix(concurrentIncident.id, user),
@@ -191,15 +234,26 @@ async function main() {
     } },
   };
   const callbackRepo: any = {
+    /** Recherche l’élément correspondant à l’identifiant. */
     findOne: async () => callbackIncident,
+    /** Applique les modifications autorisées à l’élément. */
     update: async (_id: string, patch: any) => Object.assign(callbackIncident, patch),
   };
   const callbackRepository: any = {
-    manager: { transaction: async (fn: any) => fn({ getRepository: () => callbackRepo }) },
+    manager: {
+    /** Exécute les opérations dans le cadre transactionnel prévu. */
+    transaction: async (fn: any) => fn({
+    /** Simule la lecture des données demandées par le composant. */
+    query: emptyReservationQuery, getRepository: () => callbackRepo }) },
+    /** Recherche l’élément correspondant à l’identifiant. */
     findOne: async () => callbackIncident,
     update: callbackRepo.update,
   };
-  const callbackService = new IncidentsService(callbackRepository, transactionalProjectRepo as any, { emit: () => undefined } as any, { syncIncident: async () => undefined } as any, {} as any);
+  const callbackService = new IncidentsService(callbackRepository, transactionalProjectRepo as any, {
+  /** Diffuse ou construit le résultat prévu. */
+  emit: () => undefined } as any, {
+  /** Prépare les données nécessaires à ce scénario. */
+  syncIncident: async () => undefined } as any, {} as any);
   const failure = {
     status: 'FAILED' as const, workflowId: '9adcV31eaIgJyMR0', executionId: '1887',
     incidentId: callbackIncident.id, requestId: 'request-callback', batchId: 'batch-callback', batchKey: 'batch-callback',

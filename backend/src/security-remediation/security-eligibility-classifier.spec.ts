@@ -1,3 +1,4 @@
+// Teste le composant « security-eligibility-classifier » et ses cas d’erreur.
 import * as assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -271,15 +272,6 @@ console.log('security-eligibility-classifier M) source/ecosystem casing normaliz
 }
 console.log('security-eligibility-classifier §9) REAL fixture proof (tomcat-embed-core, read-only, not patched): PASS');
 
-// ============================================================================
-// N. V1.8 — a pinned target version wins over selectEligibleTargetVersion()'s
-// own "lowest same-major" pick, using the REAL CVE-2024-22257 scanner data
-// (installed 5.6.4, fixedVersions "5.7.12, 5.8.11, 6.1.8, 6.2.3" — the pure
-// policy would ALSO pick 5.7.12 here since it happens to be the lowest
-// same-major candidate; the pin must still be what actually drove the
-// decision, proven by picking a version the pure policy would NEVER choose
-// on its own).
-// ============================================================================
 {
   const provenance = resolveMavenProvenance({ ...base, package: 'org.springframework.security:spring-security-core', installedVersion: '5.6.4' });
   assert.equal(provenance.kind, 'DIRECT_EXPLICIT');

@@ -1,15 +1,17 @@
-// Conservative Java signature coherence checks for complete multi-file candidates.
-// This is intentionally not a Java parser: it reports only mismatches whose two
-// endpoint types can be resolved from candidate or supplied source snapshots.
+// Vérifie la cohérence des types Java utilisés par le correctif.
 
+/** Nettoie les données avant leur utilisation. */
 const clean = source => String(source || '')
   .replace(/\/\*[\s\S]*?\*\//g, ' ')
   .replace(/(^|[^:])\/\/.*$/gm, '$1 ');
+/** Prépare un exemple minimal pour le contrôle. */
 const simple = type => String(type || '').replace(/<[^<>]*>/g, '').replace(/\[\]$/g, '').trim().split('.').at(-1);
+/** Vérifie la condition liée à compatible. */
 const compatible = (actual, required) => {
   if (!actual || !required || actual === 'null') return true;
   return actual === required || simple(actual) === simple(required);
 };
+/** Sépare arguments. */
 const splitArgs = text => {
   const out=[]; let depth=0,start=0;
   for(let i=0;i<text.length;i++){
@@ -20,6 +22,7 @@ const splitArgs = text => {
   const tail=text.slice(start).trim(); if(tail)out.push(tail); return out;
 };
 
+/** Vérifie la cohérence des types Java utilisés par le correctif. */
 export function analyzeJavaTypeCoherence(files, typeResolutionSources=[]) {
   const candidates=(files||[]).filter(file=>String(file.path||'').endsWith('.java'));
   if(candidates.length<2) return [];
@@ -46,17 +49,20 @@ export function analyzeJavaTypeCoherence(files, typeResolutionSources=[]) {
       methods.push({owner,name:hit[2],returnType,params,file:file.path});
     }
   }
+  /** Recherche méthode. */
   const findMethod=(receiverType,name,argCount)=>{
     const receiver=simple(receiverType);
     const matches=methods.filter(method=>method.name===name&&method.params.length===argCount&&(!receiver||simple(method.owner)===receiver));
     return matches.length===1?matches[0]:null;
   };
+  /** Vérifie l’état suivant : Enum. */
   const isEnum=type=>enums.has(type)||enums.has(simple(type))||[...enums].some(value=>value.endsWith('.'+type));
   const mismatches=[];
   for(const file of candidates){
     const source=clean(file.content); const vars=new Map();
     for(const method of methods.filter(item=>item.file===file.path))for(const param of method.params)vars.set(param.name,param.type);
     for(const hit of source.matchAll(/\b([A-Z][\w.$]*(?:<[^;=()]+>)?(?:\[\])?)\s+(\w+)\s*(?=[=;,):])/g))vars.set(hit[2],hit[1]);
+    /** Déduit la valeur à partir des données observées. */
     const infer=expression=>{
       const value=String(expression||'').trim();
       if(!value)return null; if(value==='null')return 'null';

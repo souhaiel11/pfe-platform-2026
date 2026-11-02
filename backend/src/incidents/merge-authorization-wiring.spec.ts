@@ -1,26 +1,15 @@
+// Teste le composant « merge-authorization-wiring » et ses cas d’erreur.
 import * as assert from 'node:assert/strict';
 import { IncidentsService, buildPrValidationJobName, remediationBatchIdentity } from './incidents.service';
 
 // ÉTAPE 2 — câblage ADDITIF de computeMergeAuthorization dans saveValidation.
-//
-// Prouve deux choses :
-//  1. saveValidation persiste désormais validation.mergeAuthorization (bloc
-//     dérivé, lié au SHA exact), sur la forme réelle de la PR #25 :
-//     2 findings VALID, corrélation OK, SHA match, stages complets, QG Sonar
-//     ERROR, regression INCONCLUSIVE  ->  authorization === 'INCONCLUSIVE'
-//     avec REGRESSION_UNVERIFIED, JAMAIS bloqué par le QG (advisory seul).
-//  2. AUCUN comportement existant n'a bougé : validation.passed,
-//     validation.validationStatus, validation.failureReasons et la
-//     transition incident.status restent identiques à avant le câblage.
-//
-// Aucune vraie DB, aucun fetch. Repo en mémoire minimal (saveValidation
-// n'utilise que repo.findOne / repo.update / gateway.emit).
 
 const SHA = '8a315b0dd508eb9843bb3037fe2827f02f6faa78';
 const REPO = 'souhaiel11/pfe-app-test';
 const JOB = 'pfe-app-test';
 const PR = 25;
 
+/** Vérifie les résultats attendus dans ce scénario. */
 function makeHarness() {
   const requestId = 'fixreq-1';
   const batchId = remediationBatchIdentity('incident-pr25', ['a', 'b']);
@@ -45,17 +34,35 @@ function makeHarness() {
     },
   };
   const repo: any = {
+    /** Recherche l’élément correspondant à l’identifiant. */
     findOne: async () => incident,
+    /** Applique les modifications autorisées à l’élément. */
     update: async (_id: string, patch: any) => Object.assign(incident, patch),
   };
+  repo.manager = {
+  /** Exécute les opérations dans le cadre transactionnel prévu. */
+  transaction: async (fn: any) => fn({
+  /** Vérifie les résultats attendus dans ce scénario. */
+  getRepository: () => ({
+    ...repo,
+    /** Recherche l’élément correspondant à l’identifiant. */
+    findOne: async (options: any) => { assert.equal(options.lock?.mode, 'pessimistic_write'); return incident; },
+  }) }) };
   const service = new IncidentsService(
-    repo, { findOne: async () => incident.project } as any,
-    { emit: () => undefined } as any, { syncIncident: async () => undefined } as any,
+    repo, {
+    /** Recherche l’élément correspondant à l’identifiant. */
+    findOne: async () => incident.project } as any,
+    {
+    /** Diffuse ou construit le résultat prévu. */
+    emit: () => undefined } as any, {
+    /** Prépare les données nécessaires à ce scénario. */
+    syncIncident: async () => undefined } as any,
     {} as any,
   );
   return { service, incident, requestId, batchId };
 }
 
+/** Prépare les données nécessaires à ce scénario. */
 function validationPayload(over: any, findingResults: any[]) {
   const { batchId } = over;
   return {
@@ -72,6 +79,7 @@ function validationPayload(over: any, findingResults: any[]) {
   };
 }
 
+/** Exécute les étapes principales de ce programme. */
 async function main() {
   // ── CASE 1 — forme PR #25 : 2 VALID, QG ERROR, regression INCONCLUSIVE ──
   {

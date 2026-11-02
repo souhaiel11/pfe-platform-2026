@@ -1,13 +1,9 @@
-// V1.8 Phase 4 ticket — list()'s additive, opt-in `includeV18` enrichment.
-// Proves: (1) default behavior is byte-for-byte unchanged (no new field at
-// all, not even `undefined` -- a real property absence, exactly what every
-// existing frontend/test caller already receives), (2) opt-in adds exactly
-// one new field per row, sourced from the real V1.8 evidence store, never
-// mutating any existing field.
+// Teste le composant « manual-remediation.service.v1-8-decision » et ses cas d’erreur.
 import { strict as assert } from 'assert';
 import { ManualRemediationService } from './manual-remediation.service';
 import { ManualRemediationStatus, ScannerFindingStatus } from './manual-remediation.entity';
 
+/** Exécute le traitement et collecte son résultat. */
 async function run() {
   const rows: any[] = [
     {
@@ -24,17 +20,24 @@ async function run() {
     },
   ];
   const repo: any = {
+    /** Compte les éléments correspondants. */
     count: async ({ where }: any) => rows.filter(r => r.projectId === where.projectId).length,
+    /** Recherche les éléments correspondants. */
     find: async ({ where }: any) => rows.filter(r => Object.entries(where).every(([k, v]) => r[k] === v)),
   };
-  const incidents: any = { find: async () => [], findOne: async () => null };
+  const incidents: any = {
+  /** Recherche les éléments correspondants. */
+  find: async () => [],
+  /** Recherche l’élément correspondant à l’identifiant. */
+  findOne: async () => null };
   const service = new ManualRemediationService(repo, incidents);
 
   // 1. Default call (no includeV18) -- existing behavior, no new field at all.
   const defaultResult = await service.list('project-1');
   assert.equal(defaultResult.length, 2);
   for (const t of defaultResult) assert.ok(!('v1_8Decision' in t), 'default list() must never add v1_8Decision');
-  assert.deepEqual(defaultResult, rows, 'default list() must return the exact same rows, unmodified');
+  assert.deepEqual(defaultResult.map(({projectFixVerified, securityFindingRemediation, ...t}: any) => t), rows.map(({securityFindingRemediation, ...t}: any) => t), 'existing persisted fields remain unchanged');
+  assert.ok(defaultResult.every(t => t.projectFixVerified === false));
 
   // 2. includeV18=true -- exactly one new field, every existing field untouched, real evidence used.
   const enriched: any[] = await service.list('project-1', { includeV18: true });

@@ -1,7 +1,7 @@
-/** Browser-synchronous SHA-256 for non-secret finding identity, not authentication.
- * Canonical input is byte-identical to backend findingFingerprint for Trivy/OWASP.
- * Tested against Node crypto and persisted backend fixture fingerprints.
- */
+// Calcule une identité stable pour un finding de sécurité (SHA-256 synchrone côté navigateur,
+// algorithme identique au fingerprint backend) afin de corréler un même finding entre deux scans.
+
+// Implémentation SHA-256 synchrone et sans dépendance, pour une identité de finding non secrète (pas une authentification).
 export function sha256Identity(text: string): string {
   const bytes = new TextEncoder().encode(text);
   const length = Math.ceil((bytes.length + 9) / 64) * 64;
@@ -18,6 +18,7 @@ export function sha256Identity(text: string): string {
     0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,
     0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
   const h = [0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
+  /** Effectue la rotation binaire utilisée par l’empreinte. */
   const rotate = (x: number, n: number) => (x >>> n) | (x << (32 - n));
   const w = new Uint32Array(64);
   for (let block = 0; block < length; block += 64) {
@@ -36,7 +37,10 @@ export function sha256Identity(text: string): string {
   }
   return h.map(x => (x>>>0).toString(16).padStart(8,'0')).join('');
 }
+
+// Calcule l'identité stable d'un finding de sécurité (source + id + package normalisés) ; échoue si id ou package est absent plutôt que de produire une empreinte fausse.
 export function securityFindingFingerprint(source: string, id: string, pkg: string): string {
+  /** Normalise la valeur avant comparaison. */
   const norm = (value: string) => String(value ?? '').trim().toLowerCase().replace(/\s+/g,' ');
   if (!norm(id) || !norm(pkg)) throw new Error('Identité exacte du finding indisponible');
   return sha256Identity([norm(source).toUpperCase(),norm(id),norm(pkg)].join('\n'));

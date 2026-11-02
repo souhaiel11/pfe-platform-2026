@@ -1,23 +1,4 @@
-// R-SEC-V1.2 §3/§6 — DETERMINISTIC XML/property patch writer. No LLM
-// involved anywhere in this file (see §6 audit in the spec: neither
-// DIRECT_EXPLICIT nor PROPERTY_MANAGED needs one — the controlling
-// declaration is already grounded deterministically by
-// maven-provenance-resolver.ts, so there is nothing left for an LLM to
-// decide). A single targeted string splice, computed from EXACT character
-// offsets located via regex `d` (indices) matching, never a blind
-// find-and-replace-first-occurrence.
-//
-// Fails closed (never guesses, never edits "close enough"):
-//   - more than one candidate <dependency> block for the same
-//     groupId:artifactId, or more than one <properties> declaration for the
-//     same property name -> reject (an ambiguous pom is not something this
-//     writer will pick an occurrence from).
-//   - the located old value does not exactly equal request.installedVersion
-//     -> reject (mirrors resolveMavenProvenance's own installed-version
-//     grounding check -- defense in depth, this writer trusts nothing blindly
-//     either).
-//   - old/target version not same-major -> reject (independent re-check of
-//     the same-major policy, never assumes the caller already enforced it).
+/** Écrit de façon déterministe (sans aucune IA) un patch de version XML/propriété sur un pom.xml, par une seule substitution ciblée à un offset exact, en refusant toute ambiguïté. */
 import { deriveMavenRemediationScope, applyMavenControls } from './maven-remediation-scope';
 import { CandidateFile } from '../candidate-verification/candidate-verification.types';
 import { computeContentSha256, computeGitBlobSha1 } from '../candidate-verification/candidate-digest';
@@ -39,25 +20,19 @@ export type SecurityPatchWriteResult =
   | { ok: true; candidate: SecurityPatchCandidate }
   | { ok: false; reason: SecurityPatchWriteFailureReason; detail: string };
 
+/** Construit un résultat d'échec typé avec son détail explicatif. */
 function fail(reason: SecurityPatchWriteFailureReason, detail: string): SecurityPatchWriteResult {
   return { ok: false, reason, detail };
 }
 
+/** Découpe une coordonnée Maven "groupId:artifactId" en ses deux parties, ou null si le format est invalide. */
 function splitCoordinate(pkg: string): { groupId: string; artifactId: string } | null {
   const parts = String(pkg || '').trim().split(':');
   if (parts.length !== 2 || !parts[0] || !parts[1]) return null;
   return { groupId: parts[0], artifactId: parts[1] };
 }
 
-/** Every <dependency>...</dependency> block within <dependencies> (not <dependencyManagement>), with absolute offsets in the FULL pomXmlText. */
-// Locates the absolute offset of `groupMatch` (a regex capture group's own
-// matched text) within the full match, WITHOUT relying on the regex `d`
-// (indices) flag -- this project's tsconfig target (ES2021) predates `d`
-// flag support in TypeScript's type-checker (a compile-time-only
-// restriction; not a runtime one), and changing that global, shared target
-// is out of scope for this one file. `searchFrom` skips past the opening
-// tag so a value that could coincidentally recur earlier in the match is
-// never found first.
+/** Localise la position exacte d'un texte capturé à l'intérieur de son match complet, pour spliccer sans décalage. */
 function groupOffsetWithin(fullMatchText: string, groupText: string, searchFrom: number): number {
   const idx = fullMatchText.indexOf(groupText, searchFrom);
   if (idx === -1) throw new Error('Internal error: capture group text not found within its own match.');
@@ -67,11 +42,12 @@ function groupOffsetWithin(fullMatchText: string, groupText: string, searchFrom:
 interface DependencyBlockLocation {
   groupId: string | null;
   artifactId: string | null;
-  /** Absolute [start,end) of the <version>VALUE</version> text's VALUE only, or null if this block has no literal <version>. */
+  /** Bornes absolues [début,fin) de la seule VALEUR du <version>, ou null si ce bloc n'a pas de <version> littérale. */
   versionValueRange: [number, number] | null;
   versionValue: string | null;
 }
 
+/** Localise chaque bloc <dependency> de <dependencies> (jamais <dependencyManagement>), avec ses offsets absolus dans le texte complet. */
 function locateDependencyBlocks(pomXmlText: string): DependencyBlockLocation[] {
   const openTag = '<dependencies>';
   const closeTag = '</dependencies>';
@@ -106,11 +82,12 @@ function locateDependencyBlocks(pomXmlText: string): DependencyBlockLocation[] {
 }
 
 interface PropertyDeclarationLocation {
-  /** Absolute [start,end) of the property VALUE text only. */
+  /** Bornes absolues [début,fin) de la seule valeur de la propriété. */
   valueRange: [number, number];
   value: string;
 }
 
+/** Localise chaque déclaration d'une propriété Maven donnée dans <properties>, avec ses offsets absolus. */
 function locatePropertyDeclarations(pomXmlText: string, propertyName: string): PropertyDeclarationLocation[] {
   const openTag = '<properties>';
   const closeTag = '</properties>';
@@ -121,9 +98,6 @@ function locatePropertyDeclarations(pomXmlText: string, propertyName: string): P
   const regionStart = openIdx + openTag.length;
   const region = pomXmlText.slice(regionStart, closeIdx);
 
-  // propertyName is always the identifier already extracted deterministically
-  // by resolveMavenProvenance() (a `${...}` placeholder body) -- escape only
-  // as defense in depth, never a source of arbitrary regex injection.
   const escaped = propertyName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const propRe = new RegExp(`<${escaped}>\\s*([^<]*?)\\s*<\\/${escaped}>`, 'g');
   const results: PropertyDeclarationLocation[] = [];
@@ -137,6 +111,7 @@ function locatePropertyDeclarations(pomXmlText: string, propertyName: string): P
   return results;
 }
 
+/** Vérifie que l'ancienne et la nouvelle version appartiennent à la même version majeure, refuse sinon. */
 function checkSameMajor(oldVersion: string, targetVersion: string): SecurityPatchWriteFailureReason | null {
   const oldParsed = parseVersion(oldVersion);
   const targetParsed = parseVersion(targetVersion);
@@ -145,10 +120,12 @@ function checkSameMajor(oldVersion: string, targetVersion: string): SecurityPatc
   return null;
 }
 
+/** Remplace le contenu d'une plage de texte par une valeur de remplacement. */
 function spliceValue(text: string, range: [number, number], replacement: string): string {
   return text.slice(0, range[0]) + replacement + text.slice(range[1]);
 }
 
+/** Construit l'objet CandidateFile final (chemin, contenu, empreintes) à partir du patch produit. */
 function buildCandidateFile(request: SecurityPatchRequest, content: string): CandidateFile {
   const sourceContent = request.sourceContent;
   return {
@@ -157,19 +134,11 @@ function buildCandidateFile(request: SecurityPatchRequest, content: string): Can
     content,
     contentSha256: computeContentSha256(content),
     sourceContent,
-    // Never accepted as an input claim -- always derived, here, from the
-    // exact sourceContent this writer just edited (same algorithm the
-    // R81.3 write-guard itself uses to verify it), so file.originalBlobSha
-    // is internally consistent with file.sourceContent by construction.
     originalBlobSha: computeGitBlobSha1(sourceContent),
   };
 }
 
-/**
- * Pure. Supports ONLY provenanceKind 'DIRECT_EXPLICIT' and
- * 'PROPERTY_MANAGED' (§3) -- anything else is rejected outright, never
- * attempted. No LLM call anywhere in this function (§6).
- */
+/** Écrit le patch de sécurité pour une provenance DIRECT_EXPLICIT ou PROPERTY_MANAGED uniquement — toute autre provenance est refusée sans tentative. */
 export function writeSecurityPatch(request: SecurityPatchRequest): SecurityPatchWriteResult {
   if (request.ecosystem !== 'MAVEN') {
     return fail('UNSUPPORTED_PROVENANCE_KIND', `Ecosystem "${request.ecosystem}" is not supported by this writer (Maven only).`);

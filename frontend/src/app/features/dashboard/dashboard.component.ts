@@ -1,3 +1,4 @@
+// Gère l’affichage et les actions de tableau de bord.
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
@@ -13,30 +14,10 @@ import {
   ProjectListRow, attentionReasons, buildProjectListRow, needsAttention, sortByAttention,
 } from '../projects/project-list-row';
 
-// ─────────────────────────────────────────────────────────────────────
-//  Tableau de bord (§28).
-//
-//  Quatre questions, dans cet ordre : combien de projets, lesquels demandent
-//  une attention, qu'est-ce qui a échoué récemment, quels problèmes de
-//  sécurité ou de déploiement existent. Rien d'autre.
-//
-//  Ce qui a été retiré ici l'a été parce qu'il répétait (§27) :
-//   — un bandeau latéral et une barre supérieure propres au tableau de bord,
-//     masqués en CSS mais toujours dans le DOM, qui dupliquaient la
-//     navigation, le bouton de thème et la fiche utilisateur de la coquille
-//     applicative ;
-//   — un panneau d'anneaux de risque qui affichait, en graphique, le MÊME
-//     score déjà écrit deux fois sur la carte du projet juste en dessous ;
-//   — une colonne « Risque » dérivée de ce même score, soit une quatrième
-//     représentation du même nombre.
-//
-//  Le modèle de ligne est celui de la liste des projets
-//  (features/projects/project-list-row.ts) : une seule définition de ce
-//  qu'est un build connu, un score partiel ou un déploiement bloqué, donc
-//  aucun risque que les deux écrans affirment deux choses différentes du
-//  même projet.
-// ─────────────────────────────────────────────────────────────────────
-
+/**
+ * Tableau de bord principal : nombre de projets, projets à traiter en
+ * priorité, activité récente et vue d'ensemble sécurité/build/déploiement.
+ */
 interface AttentionItem {
   row: ProjectListRow;
   reasons: string[];
@@ -55,23 +36,20 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   rows: ProjectListRow[] = [];
   projectsLoading = true;
-  /** §18 — tant que la gouvernance n'a pas répondu, la colonne le dit. */
   deploymentLoading = false;
-  /** §18 — idem pour Jenkins, la lecture la plus lente du tableau de bord. */
   buildLoading = false;
 
   securitySummary: any = null;
   securitySummaryLoading = true;
 
+  incidentSummary: { total: number; pending: number; completed: number; limited: boolean } | null = null;
+  riskSummary: { total: number; elevated: number; average: number | null; highest: number | null } | null = null;
+  riskSummaryLoading = true;
+
   activities: Array<{ tone: string; title: string; meta: string; incidentId: string }> = [];
   activitiesLoading = true;
 
-  // §18 — le taux de réussite affichait « Non disponible » pendant sa propre
-  // lecture : une absence affirmée avant même d'avoir interrogé Jenkins.
   buildReliabilityLoading = true;
-  // Taux de réussite des builds — même source que l'onglet Jenkins
-  // (GET /dashboard/jenkins-global::summary). rate=null => "Non disponible",
-  // jamais un chiffre dérivé de builds fabriqués.
   buildReliability: { rate: number | null; sampleSize: number } | null = null;
 
   private projectEventsSub?: Subscription;
@@ -82,22 +60,27 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   needsAttention = needsAttention;
 
+  /** Initialise les dépendances et l’état de ce composant. */
   constructor(
     private api: ApiService,
     private projectEvents: ProjectEventsService,
   ) {}
 
+  /** Lance les chargements initiaux du tableau de bord et les relance à chaque changement de projet. */
   ngOnInit() {
     this.loadProjects();
     this.loadSecuritySummary();
     this.loadIncidentFeeds();
+    this.loadRiskSummary();
     this.projectEventsSub = this.projectEvents.projectsChanged$.subscribe(() => {
       this.loadProjects();
       this.loadSecuritySummary();
       this.loadIncidentFeeds();
+      this.loadRiskSummary();
     });
   }
 
+  /** Se désabonne du flux de changements de projets à la destruction du composant. */
   ngOnDestroy() { this.projectEventsSub?.unsubscribe(); }
 
   /** Projets à traiter, les plus dégradés d'abord, avec le motif exact. */
@@ -107,13 +90,17 @@ export class DashboardComponent implements OnInit, OnDestroy {
       .map(row => ({ row, reasons: attentionReasons(row) }));
   }
 
+  /** Lignes de projets triées par ordre d'attention décroissant. */
   get orderedRows(): ProjectListRow[] { return sortByAttention(this.rows); }
 
+  /** Récupère le résumé sécurité agrégé plateforme pour le panneau correspondant. */
   loadSecuritySummary() {
     delete this.dataErrors['security'];
     this.securitySummaryLoading = true;
     this.api.getSecurityGlobal().subscribe({
+      /** Traite le résultat reçu et actualise les données locales. */
       next: (data: any) => { this.securitySummary = data?.summary || null; this.securitySummaryLoading = false; },
+      /** Traite l’erreur reçue et termine le suivi de la demande. */
       error: () => {
         this.dataErrors['security'] = 'Impossible de charger les résultats de sécurité.';
         this.securitySummary = null;
@@ -122,18 +109,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     });
   }
 
-  /**
-   * Lectures étagées — même correctif que la liste des projets, même cause.
-   *
-   * /dashboard/jenkins-global met 5 008 ms sur ce backend (son plafond de
-   * 5 000 ms, atteint dès qu'un projet pointe vers une adresse Jenkins
-   * injoignable), contre 7 ms pour /projects et 20 ms pour security-global.
-   * Dans un `forkJoin` bloquant, le tableau de bord entier attendait donc la
-   * plus lente des trois. Jenkins part désormais en parallèle : ni le
-   * panneau « À traiter en priorité » ni le tableau des projets ne
-   * l'attendent, et le panneau « Taux de réussite des builds » garde son
-   * propre indicateur de chargement, qui est exactement ce qu'il attend.
-   */
+  /** Charge la liste des projets et le résumé sécurité par projet, puis déclenche les lectures Jenkins et de disponibilité au déploiement. */
   loadProjects() {
     delete this.dataErrors['projects'];
     this.projectsLoading = true;
@@ -141,6 +117,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       projects: this.api.getProjects(),
       security: this.api.getSecurityGlobal().pipe(catchError(() => of(null))),
     }).subscribe({
+      /** Traite le résultat reçu et actualise les données locales. */
       next: ({ projects, security }) => {
         this.rawProjects = projects || [];
         this.securityByProject = new Map((security?.byProject || []).map((p: any) => [p.projectId, p]));
@@ -150,6 +127,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         this.loadReadiness();
         this.loadJenkins();
       },
+      /** Traite l’erreur reçue et termine le suivi de la demande. */
       error: () => {
         this.dataErrors['projects'] = 'Impossible de charger les projets.';
         this.rows = [];
@@ -160,7 +138,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     });
   }
 
-  /** Recompose les lignes depuis les lectures déjà arrivées, et elles seules. */
+  /** Recompose les lignes du tableau depuis les lectures déjà arrivées (projets, sécurité, Jenkins, disponibilité). */
   private rebuildRows() {
     this.rows = this.rawProjects.map(p => buildProjectListRow(
       p,
@@ -170,7 +148,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     ));
   }
 
-  /** Jenkins, hors du chemin critique : colonne de build ET taux de réussite. */
+  /** Charge les données Jenkins (colonne de build et taux de réussite global), indépendamment des autres lectures. */
   private loadJenkins() {
     delete this.dataErrors['jenkins'];
     this.buildReliabilityLoading = true;
@@ -193,6 +171,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     });
   }
 
+  /** Charge la disponibilité au déploiement de chaque projet. */
   private loadReadiness() {
     if (!this.rawProjects.length) { this.deploymentLoading = false; return; }
     const projects = this.rawProjects;
@@ -204,16 +183,21 @@ export class DashboardComponent implements OnInit, OnDestroy {
       });
   }
 
-  /**
-   * Activité récente — incidents, les plus récents d'abord. La tonalité vient
-   * de la table de statuts partagée, pas d'un second barème local.
-   */
+  /** Récupère les incidents les plus récents pour le panneau d'activité. */
   loadIncidentFeeds() {
     delete this.dataErrors['incidents'];
     this.activitiesLoading = true;
-    this.api.getIncidents({ size: 20 }).subscribe({
+    this.incidentSummary = null;
+    this.api.getIncidents({ size: 50 }).subscribe({
+      /** Traite le résultat reçu et actualise les données locales. */
       next: (data: any) => {
         const incidents: any[] = (Array.isArray(data) ? data : data?.content) || [];
+        this.incidentSummary = {
+          total: incidents.length,
+          pending: incidents.filter(i => i.status === 'pending').length,
+          completed: incidents.filter(i => i.status === 'completed').length,
+          limited: incidents.length >= 50,
+        };
         this.activities = incidents.slice(0, 6).map(i => ({
           tone: i.status || '',
           title: i.title || 'Incident sans titre',
@@ -226,6 +210,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         }));
         this.activitiesLoading = false;
       },
+      /** Traite l’erreur reçue et termine le suivi de la demande. */
       error: () => {
         this.dataErrors['incidents'] = 'Impossible de charger les incidents récents.';
         this.activities = [];
@@ -234,7 +219,30 @@ export class DashboardComponent implements OnInit, OnDestroy {
     });
   }
 
-  /** Couleur d'un score sur 100 — gris neutre quand il n'est pas connu. */
+  loadRiskSummary() {
+    delete this.dataErrors['risk'];
+    this.riskSummaryLoading = true;
+    this.riskSummary = null;
+    this.api.getRiskIndicators().subscribe({
+      next: (data: any) => {
+        const projects: any[] = data?.projects || [];
+        const scores: number[] = projects.map(p => p.risk).filter((score: unknown): score is number => typeof score === 'number' && Number.isFinite(score));
+        this.riskSummary = {
+          total: projects.length,
+          elevated: projects.filter(p => ['eleve', 'critique'].includes(p.levelClass)).length,
+          average: scores.length ? Math.round(scores.reduce((sum, score) => sum + score, 0) / scores.length) : null,
+          highest: scores.length ? Math.max(...scores) : null,
+        };
+        this.riskSummaryLoading = false;
+      },
+      error: () => {
+        this.dataErrors['risk'] = 'Impossible de charger les indicateurs de risque.';
+        this.riskSummaryLoading = false;
+      },
+    });
+  }
+
+  /** Renvoie la couleur associée à un score sur 100 (gris si inconnu). */
   scoreColor(score: number | null): string {
     if (score === null) return 'var(--text-muted)';
     if (score >= 80) return 'var(--accent-green)';

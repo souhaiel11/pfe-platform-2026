@@ -1,0 +1,18 @@
+{
+  "case": {
+    "name": "tomcat90119",
+    "tomcat": "9.0.119"
+  },
+  "exitCode": 0,
+  "buildPass": true,
+  "testPass": true,
+  "descriptor": "/tmp/sec2-qualification/tomcat90119/qualification.xml",
+  "originalPomUnchanged": true,
+  "tests": 18,
+  "yamlCompatibilityPass": true,
+  "startupPass": true,
+  "healthPass": true,
+  "running": true,
+  "runtimeJava": "11 (exact151 base runtime)",
+  "jarSha256": "22607087d33d9903a307fe21370845c8aac3a042c76653fc2d78fc2de5ad14fa"
+}

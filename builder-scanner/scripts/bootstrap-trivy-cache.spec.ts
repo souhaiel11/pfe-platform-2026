@@ -1,20 +1,4 @@
-/** V1.7 bootstrap-timeout-split phase — deterministic proof that the vuln
- * DB and Java DB bootstrap steps use their own separate, correctly-ordered
- * timeouts (10m / 30m — see the script's own header comment for the
- * throughput math behind those numbers), and that a failure of either step
- * still fails the whole bootstrap closed: no partial "good enough"
- * readiness, no retry.
- *
- * Source-text checks pin each timeout value to the RIGHT invocation (vuln-
- * db-only gets the 10m variable, java-db-only gets the 30m variable — never
- * swapped, never collapsed back to one shared literal). The behavioral
- * checks run the REAL script under `sh` against a fake `trivy` shim on
- * PATH, so they exercise real `set -eu` propagation without paying for a
- * real network download — the same fast/offline/deterministic split this
- * codebase already uses (trivy-readiness.spec.ts's synthetic `trivy
- * --version` text; containers-conf.spec.ts's source-text Dockerfile
- * checks).
- */
+// Teste le composant « bootstrap-trivy-cache » et ses cas d’erreur.
 import * as assert from 'assert';
 import * as fs from 'fs';
 import * as os from 'os';
@@ -56,7 +40,7 @@ const codeOnly = script.split('\n').filter((line) => !line.trim().startsWith('#'
 assert.doesNotMatch(codeOnly, /\bwhile\b|\buntil\b|\bfor\s+\w+\s+in\b/,
   'must not introduce any retry loop around the trivy invocations');
 
-// --- Behavioral: real `sh` execution against a fake `trivy` on PATH ---
+/** Simule les dépendances nécessaires au scénario. */
 
 function runWithFakeTrivy(fakeTrivyBody: string): { status: number; stdout: string } {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'bootstrap-spec-'));

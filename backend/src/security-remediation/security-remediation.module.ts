@@ -1,3 +1,5 @@
+// Assemble les contrôleurs et services de sécurité correction.
+import { RetryE2EHarnessController, RetryE2EOperatorGuard } from './retry-e2e-harness.controller';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ManualRemediationTask } from '../manual-remediation/manual-remediation.entity';
@@ -10,8 +12,8 @@ import { SecurityRemediationController } from './security-remediation.controller
 
 @Module({
   imports: [TypeOrmModule.forFeature([ManualRemediationTask, Incident, Project]), CandidateVerificationModule, ManualRemediationModule],
-  controllers: [SecurityRemediationController],
-  providers: [SecurityFindingResolverService],
+  controllers: [SecurityRemediationController, RetryE2EHarnessController],
+  providers: [SecurityFindingResolverService, RetryE2EOperatorGuard],
   exports: [SecurityFindingResolverService],
 })
 export class SecurityRemediationModule {}

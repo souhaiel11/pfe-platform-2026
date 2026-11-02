@@ -1,0 +1,205 @@
+{
+  "decision": {
+    "state": "VALIDATED_RECOMMENDED",
+    "vulnerableDependency": "com.h2database:h2",
+    "testedCandidates": [
+      {
+        "candidateVersion": "2.2.220",
+        "actualEditTarget": "com.h2database:h2",
+        "existence": "AVAILABLE",
+        "resolvedVersion": "2.2.220",
+        "dependencyResolution": "PASS",
+        "build": "PASS",
+        "tests": "PASS",
+        "securityRescan": "PASS",
+        "targetCveClosed": true,
+        "newHighCriticalCount": 0,
+        "dependencyGraphDelta": [
+          "com.h2database:h2: 2.1.212 -> 2.2.220"
+        ],
+        "versionPolicy": {
+          "state": "SAFE_SAME_MAJOR",
+          "currentVersion": "2.1.212",
+          "candidateVersion": "2.2.220",
+          "reason": "Same major (2) -- eligible per production's existing same-major policy."
+        },
+        "automationEligible": true,
+        "status": "VALIDATED",
+        "reason": "ALL_GATES_PASSED"
+      }
+    ],
+    "recommendedCandidate": {
+      "candidateVersion": "2.2.220",
+      "actualEditTarget": "com.h2database:h2",
+      "existence": "AVAILABLE",
+      "resolvedVersion": "2.2.220",
+      "dependencyResolution": "PASS",
+      "build": "PASS",
+      "tests": "PASS",
+      "securityRescan": "PASS",
+      "targetCveClosed": true,
+      "newHighCriticalCount": 0,
+      "dependencyGraphDelta": [
+        "com.h2database:h2: 2.1.212 -> 2.2.220"
+      ],
+      "versionPolicy": {
+        "state": "SAFE_SAME_MAJOR",
+        "currentVersion": "2.1.212",
+        "candidateVersion": "2.2.220",
+        "reason": "Same major (2) -- eligible per production's existing same-major policy."
+      },
+      "automationEligible": true,
+      "status": "VALIDATED",
+      "reason": "ALL_GATES_PASSED"
+    },
+    "recommendationReason": "2.2.220 passed every required gate (dependency resolution, build, tests, target CVE closure, no new HIGH/CRITICAL) and is the smallest safe (same-major) change from 2.1.212.",
+    "validationEvidence": []
+  },
+  "profile": {
+    "groupId": "com.h2database",
+    "artifactId": "h2",
+    "installedVersion": "2.1.212",
+    "javaVersion": null,
+    "springBootVersion": null,
+    "evidence": [
+      "<dependency><groupId>com.h2database</groupId><artifactId>h2</artifactId><version>2.1.212</version></dependency> found directly in <dependencies> of pom.xml."
+    ],
+    "dependencyKind": "DIRECT",
+    "versionControl": "DIRECT_EXPLICIT",
+    "declarationPom": "pom.xml",
+    "propertyName": null,
+    "managementOwner": null,
+    "managementOwnerVersion": null,
+    "bomGroupId": null,
+    "bomArtifactId": null,
+    "bomVersion": null,
+    "parentGroupId": null,
+    "parentArtifactId": null,
+    "parentVersion": null
+  },
+  "plans": {
+    "manualReviewReason": null,
+    "plans": [
+      {
+        "vulnerableDependency": "com.h2database:h2",
+        "securityCandidate": {
+          "version": "2.2.220",
+          "source": "TRIVY",
+          "cve": "CVE-2022-45868",
+          "evidenceType": "STRUCTURED_FIXED_VERSION",
+          "rawEvidence": "2.2.220"
+        },
+        "editType": "DEPENDENCY_VERSION",
+        "editCoordinate": "com.h2database:h2",
+        "editProperty": null,
+        "fromVersion": "2.1.212",
+        "toVersion": "2.2.220",
+        "expectedResolvedDependencyVersion": "2.2.220",
+        "requiresSandboxDiscovery": false,
+        "versionPolicy": {
+          "state": "SAFE_SAME_MAJOR",
+          "currentVersion": "2.1.212",
+          "candidateVersion": "2.2.220",
+          "reason": "Same major (2) -- eligible per production's existing same-major policy."
+        },
+        "requiresMajorUpgrade": false,
+        "requiresDeveloperReview": false,
+        "automationEligible": true,
+        "evidence": [
+          "<dependency><groupId>com.h2database</groupId><artifactId>h2</artifactId><version>2.1.212</version></dependency> found directly in <dependencies> of pom.xml.",
+          "Direct <version> edit on com.h2database:h2: 2.1.212 -> 2.2.220 (source: TRIVY CVE-2022-45868).",
+          "Version policy: SAFE_SAME_MAJOR (Same major (2) -- eligible per production's existing same-major policy.)"
+        ]
+      }
+    ]
+  },
+  "candidates": [
+    {
+      "version": "2.2.220",
+      "source": "TRIVY",
+      "cve": "CVE-2022-45868",
+      "evidenceType": "STRUCTURED_FIXED_VERSION",
+      "rawEvidence": "2.2.220"
+    }
+  ],
+  "package": "com.h2database:h2",
+  "currentVersion": "2.1.212",
+  "cve": "CVE-2022-45868",
+  "candidateVersion": "2.2.220",
+  "targetFile": "pom.xml",
+  "targetCoordinate": "com.h2database:h2",
+  "scannerVersion": "0.72.0",
+  "baselineFindingCount": 1,
+  "candidateFindingCount": 0,
+  "targetCollisionCount": 0,
+  "scope": {
+    "kind": "SINGLE_CONTROL",
+    "targetCve": "CVE-2022-45868",
+    "evaluatedSha": "7234ec4995996ce130ba4848c472c93310d9f4de",
+    "controllingFile": "pom.xml",
+    "originalBlobSha": "cd764d7fe0876bbee987061e4f2ef5a944340665",
+    "affectedPackages": [
+      {
+        "package": "com.h2database:h2",
+        "installedVersion": "2.1.212",
+        "targetVersion": "2.2.220"
+      }
+    ],
+    "controls": [
+      {
+        "kind": "DEPENDENCY_VERSION",
+        "key": "com.h2database:h2",
+        "start": 463,
+        "end": 470,
+        "oldVersion": "2.1.212",
+        "targetVersion": "2.2.220"
+      }
+    ]
+  },
+  "baselineTests": {
+    "total": 1,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "matchCount": 1
+  },
+  "candidateTests": {
+    "total": 1,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "matchCount": 1
+  },
+  "v18Gate": {
+    "status": "VALIDATED",
+    "reason": "ALL_GATES_PASSED"
+  },
+  "v18Decision": "ACCEPT",
+  "facts": {
+    "candidateVersion": "2.2.220",
+    "actualEditTarget": "com.h2database:h2",
+    "existence": "AVAILABLE",
+    "resolvedVersion": "2.2.220",
+    "dependencyResolution": "PASS",
+    "build": "PASS",
+    "tests": "PASS",
+    "securityRescan": "PASS",
+    "targetCveClosed": true,
+    "newHighCriticalCount": 0,
+    "dependencyGraphDelta": [
+      "com.h2database:h2: 2.1.212 -> 2.2.220"
+    ],
+    "versionPolicy": {
+      "state": "SAFE_SAME_MAJOR",
+      "currentVersion": "2.1.212",
+      "candidateVersion": "2.2.220",
+      "reason": "Same major (2) -- eligible per production's existing same-major policy."
+    },
+    "automationEligible": true
+  },
+  "baselineReportDigest": "99e7d48a0658a75393dd734d0ecd745ee3d946865d1e2fae13cc139002ac1606",
+  "candidateReportDigest": "a671e8a77ee874f0d71ec5ef0cbc1ac8699d825a68cbd4771eb2ca0dc92b2857",
+  "baselineManifestSha256": "522a82df990724c8c868a1b46d887063a9976a637ef67e62202b60b2bea5b18b",
+  "candidateManifestSha256": "dbd7d806f7c8b546f972275e3708eebe259e9ab99132a889cb31ee57cf07da60",
+  "localCommit": "7234ec4995996ce130ba4848c472c93310d9f4de"
+}

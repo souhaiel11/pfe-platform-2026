@@ -1,3 +1,4 @@
+// Teste le composant « merge-authorization-acceptance » et ses cas d’erreur.
 import * as assert from 'node:assert/strict';
 import { IncidentsService, buildPrValidationJobName, remediationBatchIdentity } from './incidents.service';
 import { evaluateReadiness } from '../common/governance';
@@ -14,6 +15,7 @@ const REPO = 'souhaiel11/pfe-app-test';
 const JOB = 'pfe-app-test';
 const PR = 25;
 
+/** Vérifie les résultats attendus dans ce scénario. */
 function makeHarness(overrides: { baselineIssues?: any[] } = {}) {
   const requestId = 'fixreq-1';
   const batchId = remediationBatchIdentity('incident-pr25', ['a', 'b']);
@@ -51,17 +53,35 @@ function makeHarness(overrides: { baselineIssues?: any[] } = {}) {
     },
   };
   const repo: any = {
+    /** Recherche l’élément correspondant à l’identifiant. */
     findOne: async () => incident,
+    /** Applique les modifications autorisées à l’élément. */
     update: async (_id: string, patch: any) => Object.assign(incident, patch),
   };
+  repo.manager = {
+  /** Exécute les opérations dans le cadre transactionnel prévu. */
+  transaction: async (fn: any) => fn({
+  /** Vérifie les résultats attendus dans ce scénario. */
+  getRepository: () => ({
+    ...repo,
+    /** Recherche l’élément correspondant à l’identifiant. */
+    findOne: async (options: any) => { assert.equal(options.lock?.mode, 'pessimistic_write'); return incident; },
+  }) }) };
   const service = new IncidentsService(
-    repo, { findOne: async () => incident.project } as any,
-    { emit: () => undefined } as any, { syncIncident: async () => undefined } as any,
+    repo, {
+    /** Recherche l’élément correspondant à l’identifiant. */
+    findOne: async () => incident.project } as any,
+    {
+    /** Diffuse ou construit le résultat prévu. */
+    emit: () => undefined } as any, {
+    /** Prépare les données nécessaires à ce scénario. */
+    syncIncident: async () => undefined } as any,
     {} as any,
   );
   return { service, incident, requestId, batchId };
 }
 
+/** Prépare les données nécessaires à ce scénario. */
 function baseValidationPayload(over: any, findingResults: any[], candidateFindingsSnapshot: any[]) {
   const { batchId } = over;
   return {
@@ -77,6 +97,7 @@ function baseValidationPayload(over: any, findingResults: any[], candidateFindin
   };
 }
 
+/** Exécute les étapes principales de ce programme. */
 async function main() {
   // ══════════════════════════════════════════════════════════════════
   // PR #25 SEMANTIC ACCEPTANCE — the critical regression test.

@@ -1,3 +1,4 @@
+// Vérifie les instructions de génération du correctif dans WF2.
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
 
@@ -8,6 +9,7 @@ const fixturePath = new URL('./fixtures/wf2-r81-2-execution-2038-source-content.
 const workflow = JSON.parse(fs.readFileSync(workflowPath, 'utf8'));
 const fixture = JSON.parse(fs.readFileSync(fixturePath, 'utf8'));
 
+/** Retrouve ou construit le nœud du workflow demandé. */
 const node = (name) => {
   const found = workflow.nodes.find(n => n.name === name);
   if (!found) throw new Error('NODE_NOT_FOUND:' + name);

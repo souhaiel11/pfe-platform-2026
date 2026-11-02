@@ -1,0 +1,7 @@
+{
+  "liveTaskRowsUnchanged": true,
+  "wf6GraphAndVersionUnchanged": true,
+  "auditedSourceAndMigrationsUnchanged": true,
+  "preexistingWorkspacePreserved": true,
+  "databaseWritesOnlyInDisposableSimulation": true
+}

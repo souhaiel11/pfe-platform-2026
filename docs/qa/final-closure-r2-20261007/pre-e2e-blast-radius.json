@@ -1,0 +1,13 @@
+{
+  "unrelatedChanges": {
+    "projects": [],
+    "manual_remediation_tasks": [],
+    "incidents": [],
+    "reports": [],
+    "remediation_target_reservations": [],
+    "security_remediation_retry_e2e_plans": []
+  },
+  "newDedicatedProject": "ebe3bd94-8240-4c30-a2d9-6de2106a28bc",
+  "newDedicatedTask": "a390e383-42b7-4348-894c-5e02a7e5f98d",
+  "newScannerIncident": "f84e7464-eac7-4bb3-a050-369797ed632f"
+}

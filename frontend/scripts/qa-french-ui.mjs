@@ -1,8 +1,10 @@
+// Prépare qa french ui pour le frontend.
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
 const root = new URL('../src/app/', import.meta.url).pathname;
 const files = [];
+/** Parcourt les données pour en extraire les éléments utiles. */
 const walk = dir => readdirSync(dir).forEach(name => { const path = join(dir, name); statSync(path).isDirectory() ? walk(path) : /\.(html|ts)$/.test(name) && files.push(path); });
 walk(root);
 
@@ -13,6 +15,7 @@ const englishButton = /<button[^>]*>[^<]*(?:\bCancel\b|\bSave\b|\bDelete\b|\bRet
 const forbiddenVisible = /\b(?:Finding|Findings|finding\(s\)|Owner|Remediation|Evidence|Root Cause|Developer Guidance|Judge Agent|Raw Data|PR Validation|Loading|No data|No results|Not Ready|Build unavailable)\b|\bN\/A\b/g;
 const rawVisibleEnum = /\b(?:PASSED|FAILED|FAILURE|WARNING|NOT_RUN|NOT_REACHED|RUNNING|BLOCK|READY|NOT_READY|AUTO_FIX_ELIGIBLE|DEVELOPER_ACTION_REQUIRED|ADMIN_ACTION_REQUIRED|DONE_BY_USER|REOPENED|VALIDATED_RECOMMENDED|VALIDATED_ALTERNATIVES|NO_COMPATIBLE_CANDIDATE|SECURITY_TARGET_UNKNOWN|MAJOR_UPGRADE_REQUIRES_REVIEW|VALIDATION_FAILED)\b/g;
 
+/** Extrait les portions du frontend nécessaires au contrôle. */
 function presentationFragments(source, file) {
   const templates = file.endsWith('.html')
     ? [source]

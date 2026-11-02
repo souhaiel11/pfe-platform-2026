@@ -1,12 +1,4 @@
-// OWASP Increment 3 — integration test against REAL report #149 data (both
-// scanner blocks: backend/src/common/fixtures/owasp-149-dependencies.json,
-// 146 real findings, and fixtures/trivy-149-cves.json, 105 real findings,
-// both pulled from this platform's own persisted incident
-// a1cee307-dcca-49b4-a490-5d1fdfe55fb8, build 149, project
-// 3aa1c9b9-e114-40e4-884b-ebc7aa32e002). Exercises ManualRemediationService.
-// syncIncident() end-to-end (the actual write path WF6 will read from), not
-// just the pure correlator. Covers §8 items 8/9/11/12 plus the real-data
-// rerun requested by §9/§10 of the increment instructions.
+// Teste le composant « owasp-trivy-fixed-version-correlation.integration » et ses cas d’erreur.
 import { strict as assert } from 'assert';
 import { readFileSync } from 'fs';
 import { join } from 'path';
@@ -14,6 +6,7 @@ import { normalizeOwaspFinding } from '../common/owasp-finding-normalizer';
 import { ManualRemediationService } from './manual-remediation.service';
 import { findingFingerprint } from './finding-fingerprint';
 
+/** Exécute le traitement et collecte son résultat. */
 async function run() {
   const owaspFixture = JSON.parse(readFileSync(join(__dirname, '../common/fixtures/owasp-149-dependencies.json'), 'utf8'));
   const trivyFixture = JSON.parse(readFileSync(join(__dirname, '../common/fixtures/trivy-149-cves.json'), 'utf8'));
@@ -24,12 +17,18 @@ async function run() {
 
   const rows: any[] = [];
   const repo: any = {
+    /** Recherche les éléments correspondants. */
     find: async ({ where }: any) => rows.filter(r => !where.source || r.source === where.source),
+    /** Crée et enregistre un nouvel élément. */
     create: (v: any) => ({ id: `task-${rows.length}`, ...v }),
+    /** Enregistre les données fournies. */
     save: async (v: any) => { if (!rows.includes(v)) rows.push(v); return v; },
+    /** Applique les modifications autorisées à l’élément. */
     update: async () => {},
   };
-  const service = new ManualRemediationService(repo, {} as any, { dispatch: async () => { throw new Error('WF6 must never run in this offline replay'); } });
+  const service = new ManualRemediationService(repo, {} as any, {
+  /** Transmet la demande au service chargé de l’exécuter. */
+  dispatch: async () => { throw new Error('WF6 must never run in this offline replay'); } });
   const incident = {
     id: 'incident-149', projectId: 'project-149', buildNumber: 149,
     metadata: { enrichedData: {
@@ -73,9 +72,7 @@ async function run() {
   assert.ok(enrichedTask.ruleOrCve, 'CVE present');
   assert.equal(s.fixedVersionEvidence.source, 'TRIVY');
   assert.equal(s.fixedVersionEvidence.match, 'CVE_MAVEN_INSTALLED_VERSION');
-  // Exactly the same predicate launchBatchRemediation() itself uses to reject
-  // an incomplete finding before ever dispatching WF6 (manual-remediation.
-  // service.ts's own `incomplete` filter) -- replayed here, never dispatched.
+  /** Prépare les données nécessaires à ce scénario. */
   const incompleteForWf6 = (t: any) => !t.source || !t.ruleOrCve || !t.findingSnapshot?.component || !t.findingSnapshot?.currentVersion || !t.findingSnapshot?.fixedVersion;
   assert.equal(incompleteForWf6(enrichedTask), false, '12. an enriched OWASP finding now clears launchBatchRemediation\'s own completeness gate');
   const unenrichedOwasp = owaspTasks.find((t: any) => t.findingSnapshot.fixedVersionSource !== 'TRIVY_CORRELATED' && !t.findingSnapshot.fixedVersion);

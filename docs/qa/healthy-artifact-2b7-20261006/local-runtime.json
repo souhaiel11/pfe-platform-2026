@@ -1,0 +1,44 @@
+{
+  "running": true,
+  "healthPass": true,
+  "healthBody": "OK",
+  "state": {
+    "Status": "running",
+    "Running": true,
+    "Paused": false,
+    "Restarting": false,
+    "OOMKilled": false,
+    "Dead": false,
+    "Pid": 34847,
+    "ExitCode": 0,
+    "Error": "",
+    "StartedAt": "2026-10-06T16:05:13.820827633Z",
+    "FinishedAt": "0001-01-01T00:00:00Z",
+    "Health": {
+      "Status": "healthy",
+      "FailingStreak": 0,
+      "Log": [
+        {
+          "Start": "2026-10-06T18:05:18.99007573+02:00",
+          "End": "2026-10-06T18:05:19.046062359+02:00",
+          "ExitCode": 1,
+          "Output": "wget: can't connect to remote host: Connection refused\n"
+        },
+        {
+          "Start": "2026-10-06T18:05:24.047289055+02:00",
+          "End": "2026-10-06T18:05:24.264456423+02:00",
+          "ExitCode": 0,
+          "Output": ""
+        },
+        {
+          "Start": "2026-10-06T18:05:56.425554592+02:00",
+          "End": "2026-10-06T18:05:56.460123579+02:00",
+          "ExitCode": 0,
+          "Output": ""
+        }
+      ]
+    }
+  },
+  "contextStarted": true,
+  "h2Initialized": true
+}

@@ -1,4 +1,4 @@
-// V1.8 Phase 5 ticket — Phase 6/7 payload contract tests.
+// Teste le composant « v1_8-remediation-plan-payload » et ses cas d’erreur.
 import { strict as assert } from 'assert';
 import { buildWf6ValidatedFindingPayload } from './v1_8-remediation-plan-payload.types';
 import { V1_8CompatibilityDecisionService } from './v1_8-compatibility-decision.service';

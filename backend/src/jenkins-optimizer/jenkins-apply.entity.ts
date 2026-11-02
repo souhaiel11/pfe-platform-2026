@@ -1,3 +1,4 @@
+// Persiste une demande d'application d'une optimisation Jenkinsfile et son résultat, séparément de la simple analyse.
 import {
   Entity, PrimaryGeneratedColumn, Column, CreateDateColumn,
 } from 'typeorm';

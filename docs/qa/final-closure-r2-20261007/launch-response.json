@@ -1,0 +1,18 @@
+{
+  "status": 201,
+  "body": {
+    "projectId": "ebe3bd94-8240-4c30-a2d9-6de2106a28bc",
+    "batchId": "sec-batch-61727477-9c75-4445-857d-69da14e4636f",
+    "findingTaskIds": [
+      "a390e383-42b7-4348-894c-5e02a7e5f98d"
+    ],
+    "attempts": [
+      {
+        "findingTaskId": "a390e383-42b7-4348-894c-5e02a7e5f98d",
+        "attemptId": "93c68aed-1fcb-4917-8493-1dfe89b30f0d",
+        "attemptNumber": 1
+      }
+    ],
+    "status": "DISPATCHING"
+  }
+}

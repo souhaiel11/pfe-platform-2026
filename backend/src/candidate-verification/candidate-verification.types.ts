@@ -1,36 +1,13 @@
-// R22-C — P3 Candidate Verification contracts.
-//
-// CandidateVerification NEVER resolves a scanner finding (no VALID/INVALID
-// field anywhere here) — WF3 remains the sole authority for that, per
-// R22-A's FindingValidation/PipelineHealth separation. This contract only
-// answers "does the exact candidate bytes compile and pass regression
-// tests", nothing more, and says so explicitly via `verificationLevel`.
+// Contrats de données de la vérification de candidat (P3).
 
 export type CandidateFileOperation = 'MODIFY' | 'CREATE';
 
 export interface CandidateFile {
   path: string;
   operation: CandidateFileOperation;
-  /** Required for MODIFY (the blob this content replaces); absent for CREATE. */
   originalBlobSha?: string;
   content: string;
-  /** sha256 hex of `content`, declared by the caller — re-verified, never trusted blindly. */
   contentSha256: string;
-  /**
-   * R81/R81.2 — the exact pre-edit file text the writer used as its editing
-   * context. Named `sourceContent`, not a new field, because that is what
-   * the real WF2 manifest ALREADY carries here today (verified directly
-   * against a real historical execution, id 2038: `Prepare Candidate
-   * Manifest` already includes `sourceContent:it.sourceContent` — sourced
-   * from the writer's own decoded pre-edit fetch, before the LLM ever runs
-   * — for every file, unconditionally). No n8n change was needed to make
-   * this field exist; R81.2's fail-closed gate (generated-comment-guard.ts)
-   * is what makes ITS ABSENCE on a MODIFY of a supported extension an
-   * outright rejection instead of a silent skip. Absent/null only for a
-   * caller that predates this field (never a false rejection — see
-   * generated-comment-guard.ts's own doc for exactly how absence is
-   * handled); CREATE's own seeded value is the empty string, not null.
-   */
   sourceContent?: string | null;
 }
 
@@ -40,14 +17,8 @@ export interface CandidateManifest {
   batchId: string;
   candidateAttempt: number;
   repository: string;
-  /**
-   * CRITICAL INVARIANT 1: never auto-equated to main/baseline SHA. Must be
-   * resolved explicitly via resolveCandidateBaseSha() before this manifest
-   * is constructed — see candidate-base-sha.ts.
-   */
   candidateBaseSha: string;
   files: CandidateFile[];
-  /** Set by computeCandidateDigest() — present once the manifest is finalized. */
   candidateDigest?: string;
 }
 
@@ -63,12 +34,6 @@ export interface VerificationStep {
   stateDigest: string;
 }
 
-/**
- * Deliberately limited to what R22-C can actually prove. FULL_PREFLIGHT_VERIFIED
- * does not exist as a reachable value in this phase's code — see
- * CandidateVerificationService, which hardcodes COMPILE_TEST_VERIFIED and is
- * covered by a test asserting FULL_PREFLIGHT_VERIFIED is never emitted.
- */
 export type VerificationLevel = 'COMPILE_TEST_VERIFIED' | 'FULL_PREFLIGHT_VERIFIED';
 
 export type FailureClass =
@@ -84,11 +49,6 @@ export type FailureClass =
   | 'VERIFICATION_MODE_UNSUPPORTED'
   | 'WORKSPACE_TIMEOUT'
   | 'WORKSPACE_INFRA_FAILURE'
-  // R22-E2C2 — transport-layer failures talking to the candidate-verifier
-  // worker (connection refused, timeout, malformed response). These are
-  // INFRA/INCONCLUSIVE facts about reachability, never evidence about the
-  // candidate itself -- a caller must map all three to overall:'INCONCLUSIVE',
-  // never 'FAIL', and never anywhere near a scanner finding verdict.
   | 'VERIFIER_UNAVAILABLE'
   | 'VERIFIER_TIMEOUT'
   | 'VERIFIER_PROTOCOL_ERROR'
@@ -155,7 +115,6 @@ export interface CandidateVerification {
   };
 }
 
-/** Read-only verification of an existing commit, without candidate overlays. */
 export interface HeadVerificationRequest {
   verifyHeadOnly: true;
   repository: string;
@@ -182,13 +141,6 @@ export interface HeadVerification extends Omit<CandidateVerification, 'identity'
   failureClass: FailureClass | 'SHA_UNAVAILABLE';
 }
 
-/**
- * R76 -- bounded, redaction-safe diagnostic summary of a non-PASS
- * CandidateVerification, small enough to persist on a fixRequest attempt.
- * Deliberately excludes: full compiler/test logs, environment variables,
- * credentials, request headers, workspace content. See
- * verification-evidence.ts for the only place this is constructed.
- */
 export interface VerificationEvidence {
   overall: OverallVerdict | null;
   failureClass: FailureClass | null;
@@ -206,7 +158,8 @@ export type VerificationRequest = HeadVerificationRequest | {
   verificationStep?: VerificationStep;
 };
 
-/** Shared by both HTTP boundaries; no Git or build side effects. */
+// Valide la forme d'une requête de vérification « HEAD seulement » (SHA cible complet,
+// nom de dépôt bien formé, identifiants présents) ; lève une erreur si quelque chose cloche.
 export function assertHeadVerificationRequest(value: HeadVerificationRequest): void {
   const id = /^[A-Za-z0-9_-]{1,128}$/;
   if (!value || value.verifyHeadOnly !== true || 'manifest' in value
@@ -222,7 +175,8 @@ export function assertHeadVerificationRequest(value: HeadVerificationRequest): v
   }
 }
 
-/** Runtime boundary for progressive verification metadata. */
+// Vérifie que le mode de vérification est connu et que l'étape progressive fournie
+// (séquence, phase, empreinte d'état) est cohérente avec ce mode ; lève une erreur sinon.
 export function assertVerificationStep(value: VerificationStep | undefined, mode: VerificationMode | undefined): void {
   const modes: VerificationMode[] = ['COMPILE_MAIN', 'COMPILE_TESTS', 'FULL_TEST'];
   if (mode !== undefined && !modes.includes(mode)) throw new Error('INVALID_VERIFICATION_MODE');

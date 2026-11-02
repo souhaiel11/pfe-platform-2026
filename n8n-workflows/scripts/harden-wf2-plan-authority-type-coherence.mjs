@@ -1,10 +1,13 @@
+// Vérifie l’origine du plan et la cohérence des types.
 import assert from 'node:assert/strict';
 import {readFileSync,writeFileSync} from 'node:fs';
 import {crossFileTypeCoherenceNodeCode} from './wf2-cross-file-type-coherence.mjs';
 
 export const planAuthorityContract = ` PLAN CONTRACT IS AUTHORITATIVE. When the validated remediation plan explicitly specifies a field type, API type, or boundary representation, that explicit contract overrides generic generation preferences. A generic preference for a DTO-owned closed-domain type MUST NOT replace an explicit String contract. When the plan requires String with explicit validation or conversion semantics, generate String and preserve those semantics. When the plan explicitly requires an independent DTO enum, generate that enum and every corresponding type-safe mapping. Never mix representations across sibling candidate files.`;
 
+/** Vérifie l’origine du plan et la cohérence des types. */
 export function hardenPlanAuthorityAndTypeCoherence(workflow){
+  /** Retrouve ou construit le nœud du workflow demandé. */
   const node=name=>{const found=workflow.nodes.find(item=>item.name===name);assert.ok(found,`missing node ${name}`);return found};
   const prepare=node('Prepare - Code Patch Body');
   if(!prepare.parameters.jsCode.includes(planAuthorityContract)){

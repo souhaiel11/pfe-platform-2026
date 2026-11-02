@@ -1,27 +1,9 @@
-// R-SEC-V1.3 §4 — connects the already-implemented, already-committed
-// deterministic pieces into one orchestration contract:
-//
-//   finding -> grounded decision (V1.1, SecurityFindingDecisionService)
-//           -> eligibility (V1, classifySecurityAutoFixEligibility, called
-//              internally by the decision service)
-//           -> deterministic patch generation (V1.2, writeSecurityPatch)
-//           -> security patch guard (V1.2, assertSecurityPatchSafeToWrite)
-//           -> Maven resolution validation (new: a SECOND, independent
-//              isolated worktree at the same exact SHA)
-//           -> candidate result (new: SecurityRemediationCandidateResult)
-//
-// V1.7 adds backend-owned scope derivation from scanner findings and Maven
-// control experiments, followed by package/build and candidate-wide CVE
-// closure. WF6 receives only the resulting verified candidate; it has no
-// authority to select versions or broaden the remediation scope.
-//
-// NEVER writes to GitHub, never creates a PR, never touches
-// remediationWorkflowFor()/n8n -- this produces a candidate record only.
+// Enchaîne les contrôles d’une correction de sécurité unitaire.
 import { createHash } from 'crypto';
 import { performance } from 'perf_hooks';
 import { computeGitBlobSha1 } from '../../backend/src/candidate-verification/candidate-digest';
 import { localMavenControls, applyMavenControls, deriveMavenRemediationScope, graphClosesScope, MavenScopeEvidence } from '../../backend/src/security-remediation/maven-remediation-scope';
-import { ArtifactRuntimeError, SecurityArtifactValidator, cveTargets, provesSecurityClosure, trackedSourceDigest } from './security-artifact-validator';
+import { ArtifactRuntimeError, SecurityArtifactValidator, cveTargets, provesSecurityClosure, trackedSourceDigest, countHighCriticalVulnerabilities } from './security-artifact-validator';
 import { RemoteBuilderArtifactValidator } from './remote-builder-artifact-validator';
 import { Injectable, Optional } from '@nestjs/common';
 import * as fs from 'fs';
@@ -51,6 +33,7 @@ type WriteSuccess = { ok: true; candidate: SecurityPatchCandidate };
 
 @Injectable()
 export class SecurityRemediationOrchestratorService {
+  /** Initialise les dépendances et l’état de ce composant. */
   constructor(
     @Optional() private readonly decisionService: SecurityFindingDecisionService = new SecurityFindingDecisionService(),
     @Optional() private readonly workspaceManager: WorkspaceManager = new WorkspaceManager(),
@@ -59,6 +42,7 @@ export class SecurityRemediationOrchestratorService {
     @Optional() private readonly securityValidator: SecurityArtifactValidator = new RemoteBuilderArtifactValidator(),
   ) {}
 
+  /** Enchaîne les contrôles de correction et rassemble les preuves. */
   orchestrate(input: SecurityRemediationOrchestrationInput): SecurityRemediationCandidateResult {
     const started = performance.now(), timings: Record<string, number> = {};
     // V1.7 Blocker B: one monotonic deadline for the whole synchronous
@@ -77,17 +61,21 @@ export class SecurityRemediationOrchestratorService {
     return { ...result, executionTimings: timings };
   }
 
+  /** Évalue les données et retourne la décision correspondante. */
   private evaluate(input: SecurityRemediationOrchestrationInput, timings: Record<string, number>, deadline: WorkerDeadline): SecurityRemediationCandidateResult {
+    /** Mesure la durée de l’étape exécutée. */
     const measure = <T>(key: string, operation: () => T): T => {
       const started = performance.now();
       try { return operation(); }
       finally { timings[key] = (timings[key] ?? 0) + Math.round(performance.now() - started); }
     };
+    /** Classe le résultat dans la catégorie correspondante. */
     const bucket = (scanTimings: Record<string, number> | undefined, keys: string[], target: string) => {
       for (const k of keys) if (scanTimings?.[k] !== undefined) timings[target] = (timings[target] ?? 0) + scanTimings[k];
     };
-    const inspect = (workspace: string) => {
-      const scan = measure('ARTIFACT_VALIDATION_DURATION_MS', () => this.securityValidator.inspect(workspace, deadline.remainingMs()));
+    /** Inspecte les données ou l’artefact pour en tirer des preuves. */
+    const inspect = (workspace: string, targetCves?: string[]) => {
+      const scan = measure('ARTIFACT_VALIDATION_DURATION_MS', () => this.securityValidator.inspect(workspace, deadline.remainingMs(), targetCves));
       // V1.7 runtime stabilization phase, Phase A — PODMAN_BASE_IMAGE_PULL
       // is now its own distinct bucket (registry-contact time), separated
       // from IMAGE_BUILD_DURATION_MS (pure build-execution time, now that
@@ -101,14 +89,7 @@ export class SecurityRemediationOrchestratorService {
       bucket(scan.timings, ['IMAGE_EXISTS', 'IMAGE_CLEANUP'], 'CLEANUP_DURATION_MS');
       return scan;
     };
-    // A dedicated, distinguishable ArtifactRuntimeError code (see
-    // security-artifact-validator.ts's own `run()`) already maps to
-    // failureClass VERIFIER_TIMEOUT below via `runtimeFailure` -- this
-    // helper is for phases that are refused BEFORE ever calling
-    // execFileSync at all (grounding's own mvn calls, the scope-evidence
-    // control-experiment loop, the post-patch dependency:tree, and the
-    // candidate package build), where no ArtifactRuntimeError was thrown
-    // because nothing was attempted.
+    /** Construit un résultat indiquant que le délai est dépassé. */
     const deadlineExceeded = (stage: string) => new ArtifactRuntimeError('WORKER_DEADLINE_EXCEEDED', stage);
     // §4 steps 2-6: grounded provenance + fixedVersions normalization +
     // eligibility classification + target selection, all already
@@ -119,9 +100,11 @@ export class SecurityRemediationOrchestratorService {
       timeoutMs: deadline.budgetFor(GROUNDING_STAGE_CAP_MS),
     }));
 
+    /** Construit le résultat d’inéligibilité à la correction automatique. */
     const notEligible = (status: SecurityRemediationCandidateResult['status'], reason: string): SecurityRemediationCandidateResult => ({
       status, reason, decision, candidateIdentity: null, candidateManifest: null, patchEvidence: null, guardResult: null, dependencyResolutionEvidence: null,
     });
+    /** Construit le résultat exécution échec. */
     const runtimeFailure = (error: ArtifactRuntimeError): SecurityRemediationCandidateResult => ({
       ...notEligible('TECHNICAL_FAILURE', error.message),
       failureClass: (error.code === 'RUNTIME_OPERATION_TIMEOUT' || error.code === 'WORKER_DEADLINE_EXCEEDED') ? 'VERIFIER_TIMEOUT' : 'VERIFIER_UNAVAILABLE',
@@ -133,17 +116,6 @@ export class SecurityRemediationOrchestratorService {
     // ZAP-unsupported all STOPPING here, cleanly, with the real reason the
     // decision service already computed (never re-derived, never guessed).
     if (decision.remediationType !== 'AUTO_FIX_ELIGIBLE' || !decision.selectedTargetVersion || !decision.provenance || !decision.evaluatedSha) {
-      // decision.reason is 'GROUNDING_FAILED:<failureClass>' ONLY when a
-      // real checkout/dependency-tree run was actually attempted and
-      // failed (see SecurityFindingDecisionService.decide()) -- every other
-      // non-eligible reason (SOURCE_NOT_SUPPORTED_V1, FIXED_VERSION_MISSING,
-      // TRANSITIVE_NOT_AUTOFIXABLE_V1, BOM_MANAGED_NOT_AUTOFIXABLE_V1,
-      // PROVENANCE_UNRESOLVED, CROSS_MAJOR_ONLY, ...) is a clean,
-      // deterministic classification that never even needed (or
-      // deliberately skipped) a real checkout. Distinguishing on the
-      // reason string, not on evaluatedSha nullness, keeps "grounding was
-      // never attempted because it wasn't needed" from being mislabeled as
-      // a failure.
       const groundingFailed = decision.reason.startsWith('GROUNDING_FAILED:');
       return notEligible(groundingFailed ? 'GROUNDING_FAILED' : 'NOT_ELIGIBLE', decision.reason);
     }
@@ -164,15 +136,6 @@ export class SecurityRemediationOrchestratorService {
     // workspace's own (undefined-verificationStep) identity, so the two
     // never collide even though they share requestId/batchId/candidateAttempt.
     const workspaceId = this.workspaceManager.workspaceId(input.requestId, input.batchId, input.candidateAttempt, 1);
-    // Bounded-git-operations fix: this second materialization previously
-    // called ensureRepo() with no timeoutMs at all, so it always fell back
-    // to RepoCacheService's own flat GIT_OPERATION_CAP_MS default regardless
-    // of how much of `deadline`'s overall budget the grounding stage above
-    // had already spent -- the one call in this function that didn't follow
-    // the deadline.expired()-guard + deadline.budgetFor(...) pattern every
-    // other stage here already uses. GROUNDING_STAGE_CAP_MS is reused (not a
-    // new cap) since this is the same class of operation (repo
-    // materialization) as the grounding stage's own ensureRepo() call.
     if (deadline.expired()) return runtimeFailure(deadlineExceeded('PATCH_VALIDATION_WORKSPACE'));
     let repoPath: string;
     try {
@@ -218,12 +181,17 @@ export class SecurityRemediationOrchestratorService {
       // V1.7: independently observed scanner targets and controlled Maven
       // experiments determine scope. Nothing here is accepted from WF6.
       let scopeEvidence: MavenScopeEvidence;
+      // V1.8 Phase 2 ticket — captured purely for the additive
+      // newHighCriticalCount evidence field below; never read by any
+      // existing control-flow decision in this function.
+      let baselineScanReport: any = null;
       try {
         const cve = input.finding.cveId;
         if (!cve || !/^CVE-\d{4}-\d{4,}$/.test(cve)) throw new Error('TRUSTED_TARGET_CVE_REQUIRED');
         if (deadline.expired()) throw deadlineExceeded('BASE_SCAN');
         const originalDigest = trackedSourceDigest(workspacePath);
         const scan = inspect(workspacePath);
+        baselineScanReport = scan.report;
         if (scan.sourceDigest !== originalDigest || trackedSourceDigest(workspacePath) !== originalDigest)
           throw new Error('BASE_SCAN_SOURCE_BINDING_FAILED');
         if (deadline.expired()) throw deadlineExceeded('BASE_MAVEN_MODEL');
@@ -235,14 +203,6 @@ export class SecurityRemediationOrchestratorService {
           originalBlobSha: computeGitBlobSha1(sourceContent), baselineTree: baseTree.text,
           baselineEffectivePom: effective.text, cveTargets: cveTargets(scan, cve), experiments: [] };
         for (const control of localMavenControls(sourceContent, provenance.package, decision.selectedTargetVersion)) {
-          // V1.7 Blocker B requirement #5: remaining-budget exhaustion must
-          // prevent starting ANOTHER expensive phase -- checked before every
-          // single control experiment, not just once before the loop, since
-          // each iteration runs two real `mvn` invocations. Breaking out
-          // silently here would leave `scopeEvidence.experiments` partial,
-          // which deriveMavenRemediationScope()/graphClosesScope() would
-          // then treat as complete -- so this fails the WHOLE evaluation
-          // closed instead, exactly like any other mid-flight timeout.
           if (deadline.expired()) throw deadlineExceeded('CONTROL_EXPERIMENT');
           const content = applyMavenControls(sourceContent, [control]);
           try {
@@ -322,14 +282,6 @@ export class SecurityRemediationOrchestratorService {
         };
       }
 
-      // V1.8 — a version replacement is not security closure, and a
-      // packaged candidate is not proven safe to ship just because it
-      // compiles. ONE combined `mvn clean package` (no -DskipTests) proves
-      // compile + application tests + packaging together (see
-      // MavenBuildAdapter.packageCandidateWithTests's own header comment for
-      // why this is one invocation, not two). Only once that has genuinely
-      // executed AND passed does this proceed to build/scan the image and
-      // reject any remaining target-CVE match.
       const expectedDigest = candidateSourceDigest;
       let packageResult: ReturnType<MavenBuildAdapter['packageCandidateWithTests']>;
       try {
@@ -370,7 +322,7 @@ export class SecurityRemediationOrchestratorService {
       try {
         if (trackedSourceDigest(workspacePath) !== expectedDigest) throw new Error('BUILD_MUTATED_SOURCE');
         if (deadline.expired()) throw deadlineExceeded('CANDIDATE_SECURITY_VALIDATION');
-        closureScan = inspect(workspacePath);
+        closureScan = inspect(workspacePath, [decision.remediationScope.targetCve]);
         if (closureScan.sourceDigest !== expectedDigest || trackedSourceDigest(workspacePath) !== expectedDigest)
           throw new Error('CANDIDATE_SCAN_SOURCE_BINDING_FAILED');
         if (!provesSecurityClosure(closureScan, decision.remediationScope)) throw new Error('TARGET_CVE_NOT_CLOSED_OR_SCAN_INCOMPLETE');
@@ -397,12 +349,25 @@ export class SecurityRemediationOrchestratorService {
         remediationScope: decision.remediationScope,
       });
 
+      // V1.8 Phase 3 ticket — each additional CVE ID is checked against this
+      // SAME real closureScan via the existing cveTargets(), never assumed
+      // closed just because the primary target closed. Malformed IDs are
+      // silently skipped here (same format guard the primary target above
+      // already enforces) rather than failing the whole otherwise-successful
+      // candidate over an ancillary, caller-supplied extra check.
+      const additionalCveClosure = (input.additionalCveIds ?? [])
+        .filter(id => /^CVE-\d{4}-\d{4,}$/.test(id) || /^GHSA-/.test(id))
+        .map(id => ({ cve: id, closed: cveTargets(closureScan, id).length === 0 }));
+
       return {
+        ...{ scannerEvidence: { TRIVY: closureScan, OWASP: (closureScan as any).owasp } },
         status: 'CANDIDATE_READY', reason: 'DETERMINISTIC_CANDIDATE_READY', decision, candidateIdentity, candidateManifest,
         securityValidationEvidence: { status: 'TARGET_CVE_CLOSED', targetCve: scopeEvidence.targetCve, mode: 'TRIVY_IMAGE_ARCHIVE',
           evaluatedSha: decision.evaluatedSha, candidateContentSha256: computeContentSha256(candidate.file.content),
           artifactDigest: closureScan.artifactDigest, reportDigest: closureScan.reportDigest, scannerVersion: closureScan.scannerVersion,
-          targetCveMatchCount: 0, buildPassed: true, tests: 'PASSED' },
+          targetCveMatchCount: 0, buildPassed: true, tests: 'PASSED',
+          newHighCriticalCount: baselineScanReport ? Math.max(0, countHighCriticalVulnerabilities(closureScan.report) - countHighCriticalVulnerabilities(baselineScanReport)) : null,
+          additionalCveClosure: additionalCveClosure.length ? additionalCveClosure : undefined },
         applicationTests,
         patchEvidence: {
           provenanceKind: provenance.kind, oldVersion: candidate.oldVersion, targetVersion: candidate.targetVersion,
@@ -412,13 +377,6 @@ export class SecurityRemediationOrchestratorService {
         dependencyResolutionEvidence: { checked: true, resolvedMatch: true, evaluatedAtSha: decision.evaluatedSha! },
       };
     } finally {
-      // V1.7 Blocker B requirement #4: cleanup is attempted regardless of
-      // WHY this `try` block is exiting -- including a deadline-exceeded
-      // result returned above -- and a `finally` throw here supersedes any
-      // pending return value (existing JS semantics, already exercised by
-      // this file's own leakingManager test): cleanup failure stays
-      // fail-closed even for a TIMEOUT outcome, never silently swallowed
-      // into a result that looks like a clean stop.
       measure('CLEANUP_DURATION_MS', () => this.workspaceManager.cleanupWorkspace(workspaceId, repoPath));
       if (fs.existsSync(workspacePath)) throw new ArtifactRuntimeError('RUNTIME_CLEANUP_FAILED', 'WORKSPACE_CLEANUP');
     }

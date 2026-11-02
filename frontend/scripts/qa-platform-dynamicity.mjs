@@ -1,3 +1,4 @@
+// Prépare qa plateforme dynamicity pour le frontend.
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import {createRequire} from 'node:module';
@@ -11,6 +12,7 @@ const context=await browser.newContext();const results={pages:[],errors:[],block
 await context.addInitScript(a=>{localStorage.setItem('token',a.token);localStorage.setItem('user',JSON.stringify(a.user));},auth);
 await context.route('**/*',route=>['GET','HEAD','OPTIONS'].includes(route.request().method())?route.continue():(results.blockedWrites.push({method:route.request().method(),path:new URL(route.request().url()).pathname}),route.abort()));
 const page=await context.newPage();page.on('pageerror',e=>results.errors.push(e.message));
+/** Capture le résultat utile au contrôle. */
 async function capture(name,url,width){await page.setViewportSize({width,height:1000});if(url)await page.goto(base+url);await page.waitForTimeout(1100);const size=await page.evaluate(()=>({width:innerWidth,scroll:document.documentElement.scrollWidth}));assert.ok(size.scroll<=width+1,name+' overflow');await page.screenshot({path:out+'/'+name+'.png',fullPage:true});results.pages.push({name,...size});}
 try {
  const response=await context.request.get(base+'/api/dashboard/capabilities',{headers:{Authorization:'Bearer '+auth.token}});assert.equal(response.status(),200);const capabilities=await response.json();results.capabilities=capabilities;

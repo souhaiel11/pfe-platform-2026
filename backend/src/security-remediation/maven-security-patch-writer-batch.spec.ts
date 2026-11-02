@@ -1,3 +1,4 @@
+// Teste le composant « maven-security-patch-writer-batch » et ses cas d’erreur.
 import * as assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -10,6 +11,7 @@ const FIXTURES_DIR = join(__dirname, 'fixtures');
 const realPomXmlText = readFileSync(join(FIXTURES_DIR, 'pfe-app-test.pom.xml'), 'utf8');
 const EVALUATED_SHA = 'a'.repeat(40);
 
+/** Prépare les données nécessaires à ce scénario. */
 function baseRequest(overrides: Partial<SecurityPatchRequest>): SecurityPatchRequest {
   return {
     findingIdentity: 'fp-1', evaluatedSha: EVALUATED_SHA, ecosystem: 'MAVEN',
@@ -77,6 +79,7 @@ console.log('maven-security-patch-writer-batch B) two distinct non-conflicting C
 // ============================================================================
 {
   const syntheticPom = `<project>\n  <dependencies>\n    <dependency><groupId>ch.qos.logback</groupId><artifactId>logback-classic</artifactId><version>1.2.11</version></dependency>\n    <dependency><groupId>com.fasterxml.jackson.core</groupId><artifactId>jackson-databind</artifactId><version>2.13.3</version></dependency>\n    <dependency><groupId>org.yaml</groupId><artifactId>snakeyaml</artifactId><version>1.30</version></dependency>\n  </dependencies>\n</project>`;
+  /** Prépare les données nécessaires à ce scénario. */
   const make = (): SecurityPatchBatchItem[] => [
     { cveId: 'CVE-2023-6378', request: baseRequest({ findingIdentity: 'fp-logback', sourceContent: syntheticPom }) },
     { cveId: 'CVE-2020-36518', request: baseRequest({ findingIdentity: 'fp-jackson', package: 'com.fasterxml.jackson.core:jackson-databind', installedVersion: '2.13.3', targetVersion: '2.13.5', controllingElement: '<version>2.13.3</version>', sourceContent: syntheticPom }) },

@@ -1,3 +1,4 @@
+// Teste le composant « security-patch-guard » et ses cas d’erreur.
 import * as assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -18,6 +19,7 @@ const provenance: DependencyProvenance = {
   controllingProperty: null, groundedSha: EVALUATED_SHA, evidence: 'test fixture',
 };
 
+/** Prépare les données nécessaires à ce scénario. */
 function baseRequest(overrides: Partial<SecurityPatchRequest> = {}): SecurityPatchRequest {
   return {
     findingIdentity: 'fp-1', evaluatedSha: EVALUATED_SHA, ecosystem: 'MAVEN',
@@ -29,6 +31,7 @@ function baseRequest(overrides: Partial<SecurityPatchRequest> = {}): SecurityPat
   };
 }
 
+/** Prépare les données nécessaires à ce scénario. */
 function baseDecision(overrides: Partial<SecurityFindingDecision> = {}): SecurityFindingDecision {
   return {
     findingIdentity: 'fp-1', evaluatedSha: EVALUATED_SHA, provenance, fixedVersions: ['1.2.13'],
@@ -37,6 +40,7 @@ function baseDecision(overrides: Partial<SecurityFindingDecision> = {}): Securit
   };
 }
 
+/** Vérifie les résultats attendus dans ce scénario. */
 function authenticCandidate() {
   const result = writeSecurityPatch(baseRequest());
   assert.equal(result.ok, true);
@@ -164,10 +168,7 @@ console.log('security-patch-guard M) unrelated XML edit (java.version) -> guard 
 }
 console.log('security-patch-guard) additional invariants (identity, SHA, eligibility, path, integrity, swapped-source): PASS');
 
-// ============================================================================
-// V1.8 Phase 7B — assertParentVersionPatchSafeToWrite(): F (independently
-// reproduces the exact parent patch -> PASS) and G (tampered bytes -> BLOCK).
-// ============================================================================
+/** Prépare les données nécessaires à ce scénario. */
 function parentRequest(overrides: Partial<ParentVersionPatchRequest> = {}): ParentVersionPatchRequest {
   return {
     findingIdentity: 'fp-parent-1', evaluatedSha: EVALUATED_SHA, ecosystem: 'MAVEN', editType: 'PARENT_VERSION',
@@ -176,6 +177,7 @@ function parentRequest(overrides: Partial<ParentVersionPatchRequest> = {}): Pare
     ...overrides,
   };
 }
+/** Prépare les données nécessaires à ce scénario. */
 function parentDecision(overrides: Partial<SecurityFindingDecision> = {}): SecurityFindingDecision {
   return {
     findingIdentity: 'fp-parent-1', evaluatedSha: EVALUATED_SHA, provenance: null, fixedVersions: [],
@@ -185,6 +187,7 @@ function parentDecision(overrides: Partial<SecurityFindingDecision> = {}): Secur
     ...overrides,
   };
 }
+/** Vérifie les résultats attendus dans ce scénario. */
 function authenticParentCandidate() {
   const result: any = writeParentVersionPatch(parentRequest());
   assert.equal(result.ok, true);

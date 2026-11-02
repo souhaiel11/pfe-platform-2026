@@ -1,0 +1,4 @@
+POST /api/incidents/<uuid>/remediation/<uuid>/pre-write-gate -> HTTP 404
+POST /api/incidents/<uuid>/remediation/<uuid>/execution-started -> HTTP 404
+POST /api/incidents/<uuid>/remediation/<uuid>/cancel -> HTTP 404
+POST /api/incidents/<uuid>/remediation/<uuid>/reconcile-stale-dispatch -> HTTP 401

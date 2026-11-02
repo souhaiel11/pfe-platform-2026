@@ -1,27 +1,4 @@
-// BRIQUE 5 — PHASE 12 READ-ONLY AUDIT of the WF2 failure-envelope contract
-// ("Prepare WF2 Failure Status" -> "Persist WF2 Failure Status" in the
-// repo-tracked, active WF2 export). The described defect pattern
-// (Persist node referencing `$json.incidentId` where the field actually
-// lived at `correlationEnvelope.incidentId`, producing
-// POST /api/incidents//workflow-status) is AUDITED HERE and found NOT
-// PRESENT in this artifact:
-//
-//   1. "Prepare WF2 Failure Status" is the ONLY node feeding "Persist WF2
-//      Failure Status" (single direct edge — verified below from the
-//      workflow's own connections graph).
-//   2. It resolves the correlation envelope via an EXPLICIT named lookup
-//      ($items('Capture Correlation Envelope', 0, 0)) regardless of which
-//      of the ~30 error-output edges triggered it, and copies
-//      `ctx.incidentId` into its OWN output as `incidentId`.
-//   3. "Persist WF2 Failure Status" then reads `$json.incidentId` off of
-//      its direct (and only) predecessor's output -- i.e. exactly
-//      correlationEnvelope.incidentId, correctly threaded.
-//   4. If the correlation envelope never captured (or is missing required
-//      fields), step 2 THROWS ('FAILURE_CORRELATION_MISSING:...') before
-//      "Persist" ever runs -- an empty-incidentId URL can never be built.
-//
-// No fix applied (none required, per Phase 12: "fix it ONLY if the defect
-// is still present"). This is a proof, not a patch. REPO-ONLY / no live n8n.
+// Vérifie la classification et le retour des échecs dans WF2.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -54,8 +31,12 @@ assert.equal(persistNode.parameters.url, '=http://backend:3001/api/incidents/{{ 
 const prepareNode = workflow.nodes.find(n => n.name === 'Prepare WF2 Failure Status');
 const code = prepareNode.parameters.jsCode;
 
+/** Exécute le traitement et collecte son résultat. */
 function run(inputJson, captured) {
-  const mockInput = { first: () => ({ json: inputJson }) };
+  const mockInput = {
+  /** Renvoie le premier élément disponible. */
+  first: () => ({ json: inputJson }) };
+  /** Simule les dépendances nécessaires au scénario. */
   const mockItems = (name, a, b) => name === 'Capture Correlation Envelope' ? captured : undefined;
   const mockExecution = { id: 'exec-1' };
   const fn = new Function('$input', '$items', '$execution', code);

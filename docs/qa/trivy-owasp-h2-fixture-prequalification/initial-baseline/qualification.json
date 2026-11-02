@@ -1,0 +1,458 @@
+{
+  "workspace": "/tmp/phase4g2-lab/seed",
+  "localCommit": "7f419db57f50c572cfc9c81f792795ec2dd2ece6",
+  "repository": "LOCAL_DISPOSABLE_H2_FIXTURE",
+  "currentVersion": "2.1.212",
+  "scannerFixedVersion": "2.2.220",
+  "selectedCandidate": "2.2.220",
+  "targetFile": "pom.xml",
+  "targetKey": {
+    "projectId": "11111111-1111-4111-8111-111111111111",
+    "targetFile": "pom.xml",
+    "dependencyCoordinate": "com.h2database:h2",
+    "lockGranularity": "FILE",
+    "targetKey": "[\"v1\",\"FILE\",\"pom.xml\"]"
+  },
+  "targets": [
+    {
+      "finding": {
+        "id": "CVE-2022-45868",
+        "pkg": "com.h2database:h2",
+        "installedVersion": "2.1.212",
+        "fixedVersion": "2.2.220",
+        "source": "TRIVY"
+      },
+      "candidates": [
+        {
+          "version": "2.2.220",
+          "source": "TRIVY",
+          "cve": "CVE-2022-45868",
+          "evidenceType": "STRUCTURED_FIXED_VERSION",
+          "rawEvidence": "2.2.220"
+        }
+      ],
+      "plans": {
+        "manualReviewReason": null,
+        "plans": [
+          {
+            "vulnerableDependency": "com.h2database:h2",
+            "securityCandidate": {
+              "version": "2.2.220",
+              "source": "TRIVY",
+              "cve": "CVE-2022-45868",
+              "evidenceType": "STRUCTURED_FIXED_VERSION",
+              "rawEvidence": "2.2.220"
+            },
+            "editType": "DEPENDENCY_VERSION",
+            "editCoordinate": "com.h2database:h2",
+            "editProperty": null,
+            "fromVersion": "2.1.212",
+            "toVersion": "2.2.220",
+            "expectedResolvedDependencyVersion": "2.2.220",
+            "requiresSandboxDiscovery": false,
+            "versionPolicy": {
+              "state": "SAFE_SAME_MAJOR",
+              "currentVersion": "2.1.212",
+              "candidateVersion": "2.2.220",
+              "reason": "Same major (2) -- eligible per production's existing same-major policy."
+            },
+            "requiresMajorUpgrade": false,
+            "requiresDeveloperReview": false,
+            "automationEligible": true,
+            "evidence": [
+              "<dependency><groupId>com.h2database</groupId><artifactId>h2</artifactId><version>2.1.212</version></dependency> found directly in <dependencies> of pom.xml.",
+              "Direct <version> edit on com.h2database:h2: 2.1.212 -> 2.2.220 (source: TRIVY CVE-2022-45868).",
+              "Version policy: SAFE_SAME_MAJOR (Same major (2) -- eligible per production's existing same-major policy.)"
+            ]
+          }
+        ]
+      },
+      "key": {
+        "projectId": "11111111-1111-4111-8111-111111111111",
+        "targetFile": "pom.xml",
+        "dependencyCoordinate": "com.h2database:h2",
+        "lockGranularity": "FILE",
+        "targetKey": "[\"v1\",\"FILE\",\"pom.xml\"]"
+      },
+      "fingerprint": "513d498a97206dd164a58140053ddd2350ec44e11136fd8b155d1c7c3d5ba3f9"
+    },
+    {
+      "finding": {
+        "id": "CVE-2022-45868",
+        "ruleOrCve": "CVE-2022-45868",
+        "cve": "CVE-2022-45868",
+        "stage": "owasp",
+        "source": "OWASP",
+        "severity": "HIGH",
+        "category": "DEPENDENCY",
+        "title": "CVE-2022-45868",
+        "description": "The web-based admin console in H2 Database Engine before 2.2.220 can be started via the CLI with the argument -webAdminPassword, which allows the user to specify the password in cleartext for the web admin console. Consequently, a local user (or an attacker that has obtained local access through some means) would be able to discover the password by listing processes and their arguments. NOTE: the ",
+        "file": "h2-2.1.212.jar",
+        "fileName": "h2-2.1.212.jar",
+        "line": null,
+        "legacyPackage": "h2-2.1.212.jar",
+        "dependency": "h2-2.1.212.jar",
+        "packageType": "maven",
+        "pkg": "com.h2database:h2",
+        "package": "com.h2database:h2",
+        "purl": "pkg:maven/com.h2database/h2@2.1.212",
+        "groupId": "com.h2database",
+        "artifactId": "h2",
+        "installedVersion": "2.1.212",
+        "fixedVersion": null,
+        "recommendation": null,
+        "evidence": "https://sites.google.com/sonatype.com/vulnerabilities/sonatype-2022-6243",
+        "primaryUrl": "https://sites.google.com/sonatype.com/vulnerabilities/sonatype-2022-6243",
+        "cvss": 7.8,
+        "blocking": false,
+        "remediationType": "DEVELOPER_ACTION_REQUIRED"
+      },
+      "candidates": [
+        {
+          "version": "2.2.220",
+          "source": "TRIVY",
+          "cve": "CVE-2022-45868",
+          "evidenceType": "TRIVY_CORRELATED_EXACT",
+          "rawEvidence": "2.2.220"
+        }
+      ],
+      "plans": {
+        "manualReviewReason": null,
+        "plans": [
+          {
+            "vulnerableDependency": "com.h2database:h2",
+            "securityCandidate": {
+              "version": "2.2.220",
+              "source": "TRIVY",
+              "cve": "CVE-2022-45868",
+              "evidenceType": "TRIVY_CORRELATED_EXACT",
+              "rawEvidence": "2.2.220"
+            },
+            "editType": "DEPENDENCY_VERSION",
+            "editCoordinate": "com.h2database:h2",
+            "editProperty": null,
+            "fromVersion": "2.1.212",
+            "toVersion": "2.2.220",
+            "expectedResolvedDependencyVersion": "2.2.220",
+            "requiresSandboxDiscovery": false,
+            "versionPolicy": {
+              "state": "SAFE_SAME_MAJOR",
+              "currentVersion": "2.1.212",
+              "candidateVersion": "2.2.220",
+              "reason": "Same major (2) -- eligible per production's existing same-major policy."
+            },
+            "requiresMajorUpgrade": false,
+            "requiresDeveloperReview": false,
+            "automationEligible": true,
+            "evidence": [
+              "<dependency><groupId>com.h2database</groupId><artifactId>h2</artifactId><version>2.1.212</version></dependency> found directly in <dependencies> of pom.xml.",
+              "Direct <version> edit on com.h2database:h2: 2.1.212 -> 2.2.220 (source: TRIVY CVE-2022-45868).",
+              "Version policy: SAFE_SAME_MAJOR (Same major (2) -- eligible per production's existing same-major policy.)"
+            ]
+          }
+        ]
+      },
+      "key": {
+        "projectId": "11111111-1111-4111-8111-111111111111",
+        "targetFile": "pom.xml",
+        "dependencyCoordinate": "com.h2database:h2",
+        "lockGranularity": "FILE",
+        "targetKey": "[\"v1\",\"FILE\",\"pom.xml\"]"
+      },
+      "fingerprint": "b544b5130483492b860463543ccd506bafd0543189c34d749f87019ac7952738"
+    }
+  ],
+  "provenance": {
+    "ecosystem": "MAVEN",
+    "kind": "DIRECT_EXPLICIT",
+    "package": "com.h2database:h2",
+    "installedVersion": "2.1.212",
+    "controllingFile": "pom.xml",
+    "controllingElement": "<version>2.1.212</version>",
+    "controllingProperty": null,
+    "groundedSha": "7f419db57f50c572cfc9c81f792795ec2dd2ece6",
+    "evidence": "<dependency><groupId>com.h2database</groupId><artifactId>h2</artifactId><version>2.1.212</version></dependency> found directly in <dependencies> of pom.xml."
+  },
+  "profile": {
+    "groupId": "com.h2database",
+    "artifactId": "h2",
+    "installedVersion": "2.1.212",
+    "javaVersion": null,
+    "springBootVersion": null,
+    "evidence": [
+      "<dependency><groupId>com.h2database</groupId><artifactId>h2</artifactId><version>2.1.212</version></dependency> found directly in <dependencies> of pom.xml."
+    ],
+    "dependencyKind": "DIRECT",
+    "versionControl": "DIRECT_EXPLICIT",
+    "declarationPom": "pom.xml",
+    "propertyName": null,
+    "managementOwner": null,
+    "managementOwnerVersion": null,
+    "bomGroupId": null,
+    "bomArtifactId": null,
+    "bomVersion": null,
+    "parentGroupId": null,
+    "parentArtifactId": null,
+    "parentVersion": null
+  },
+  "existence": {
+    "coordinate": "com.h2database:h2:2.2.220",
+    "status": "AVAILABLE",
+    "detail": "mvn dependency:get succeeded for com.h2database:h2:2.2.220."
+  },
+  "scope": {
+    "kind": "SINGLE_CONTROL",
+    "targetCve": "CVE-2022-45868",
+    "evaluatedSha": "7f419db57f50c572cfc9c81f792795ec2dd2ece6",
+    "controllingFile": "pom.xml",
+    "originalBlobSha": "cd764d7fe0876bbee987061e4f2ef5a944340665",
+    "affectedPackages": [
+      {
+        "package": "com.h2database:h2",
+        "installedVersion": "2.1.212",
+        "targetVersion": "2.2.220"
+      }
+    ],
+    "controls": [
+      {
+        "kind": "DEPENDENCY_VERSION",
+        "key": "com.h2database:h2",
+        "start": 463,
+        "end": 470,
+        "oldVersion": "2.1.212",
+        "targetVersion": "2.2.220"
+      }
+    ]
+  },
+  "facts": {
+    "candidateVersion": "2.2.220",
+    "actualEditTarget": "com.h2database:h2",
+    "existence": "AVAILABLE",
+    "resolvedVersion": "2.2.220",
+    "dependencyResolution": "PASS",
+    "build": "PASS",
+    "tests": "PASS",
+    "securityRescan": "PASS",
+    "targetCveClosed": true,
+    "newHighCriticalCount": 0,
+    "dependencyGraphDelta": [
+      "com.h2database:h2: 2.1.212 -> 2.2.220"
+    ],
+    "versionPolicy": {
+      "state": "SAFE_SAME_MAJOR",
+      "currentVersion": "2.1.212",
+      "candidateVersion": "2.2.220",
+      "reason": "Same major (2) -- eligible per production's existing same-major policy."
+    },
+    "automationEligible": true
+  },
+  "gate": {
+    "status": "VALIDATED",
+    "reason": "ALL_GATES_PASSED"
+  },
+  "decision": {
+    "state": "VALIDATED_RECOMMENDED",
+    "vulnerableDependency": "com.h2database:h2",
+    "testedCandidates": [
+      {
+        "candidateVersion": "2.2.220",
+        "actualEditTarget": "com.h2database:h2",
+        "existence": "AVAILABLE",
+        "resolvedVersion": "2.2.220",
+        "dependencyResolution": "PASS",
+        "build": "PASS",
+        "tests": "PASS",
+        "securityRescan": "PASS",
+        "targetCveClosed": true,
+        "newHighCriticalCount": 0,
+        "dependencyGraphDelta": [
+          "com.h2database:h2: 2.1.212 -> 2.2.220"
+        ],
+        "versionPolicy": {
+          "state": "SAFE_SAME_MAJOR",
+          "currentVersion": "2.1.212",
+          "candidateVersion": "2.2.220",
+          "reason": "Same major (2) -- eligible per production's existing same-major policy."
+        },
+        "automationEligible": true,
+        "status": "VALIDATED",
+        "reason": "ALL_GATES_PASSED"
+      }
+    ],
+    "recommendedCandidate": {
+      "candidateVersion": "2.2.220",
+      "actualEditTarget": "com.h2database:h2",
+      "existence": "AVAILABLE",
+      "resolvedVersion": "2.2.220",
+      "dependencyResolution": "PASS",
+      "build": "PASS",
+      "tests": "PASS",
+      "securityRescan": "PASS",
+      "targetCveClosed": true,
+      "newHighCriticalCount": 0,
+      "dependencyGraphDelta": [
+        "com.h2database:h2: 2.1.212 -> 2.2.220"
+      ],
+      "versionPolicy": {
+        "state": "SAFE_SAME_MAJOR",
+        "currentVersion": "2.1.212",
+        "candidateVersion": "2.2.220",
+        "reason": "Same major (2) -- eligible per production's existing same-major policy."
+      },
+      "automationEligible": true,
+      "status": "VALIDATED",
+      "reason": "ALL_GATES_PASSED"
+    },
+    "recommendationReason": "2.2.220 passed every required gate (dependency resolution, build, tests, target CVE closure, no new HIGH/CRITICAL) and is the smallest safe (same-major) change from 2.1.212.",
+    "validationEvidence": []
+  },
+  "dispatch": [
+    {
+      "decision": "ALLOW",
+      "reason": "ALL_GATES_PASSED",
+      "evidence": {
+        "schemaVersion": 2,
+        "evidenceId": "9bb8d0189bd3e323d891488d651477a2398fc3ce011fa16cdf1df7c492490cc1",
+        "repository": "LOCAL_DISPOSABLE_H2_FIXTURE",
+        "validatedCommitSha": "7f419db57f50c572cfc9c81f792795ec2dd2ece6",
+        "findingSource": "TRIVY",
+        "cve": "CVE-2022-45868",
+        "component": "com.h2database:h2",
+        "installedVersion": "2.1.212",
+        "validationRunId": "seed",
+        "validatedAt": "2026-10-06T11:05:39.184Z",
+        "state": "VALIDATED_RECOMMENDED",
+        "recommendedVersion": "2.2.220",
+        "actualEditTarget": "com.h2database:h2",
+        "editType": "DEPENDENCY_VERSION",
+        "fromVersion": "2.1.212",
+        "toVersion": "2.2.220",
+        "expectedResolvedDependency": "2.2.220",
+        "ownerType": null,
+        "ownerCoordinate": null,
+        "evidenceSummary": "Real Maven resolution/build/tests and unfiltered dual scanner baseline/candidate reports",
+        "recommendationReason": "ALL_GATES_PASSED",
+        "sandboxValidated": true,
+        "targetCveClosed": true,
+        "newHighCriticalCount": 0,
+        "requiresDeveloperReview": false
+      }
+    },
+    {
+      "decision": "ALLOW",
+      "reason": "ALL_GATES_PASSED",
+      "evidence": {
+        "schemaVersion": 2,
+        "evidenceId": "6659cee12d7317273fed814fcec4d367ad5357f14339877e133c3e7b8db0d630",
+        "repository": "LOCAL_DISPOSABLE_H2_FIXTURE",
+        "validatedCommitSha": "7f419db57f50c572cfc9c81f792795ec2dd2ece6",
+        "findingSource": "OWASP",
+        "cve": "CVE-2022-45868",
+        "component": "com.h2database:h2",
+        "installedVersion": "2.1.212",
+        "validationRunId": "seed",
+        "validatedAt": "2026-10-06T11:05:39.211Z",
+        "state": "VALIDATED_RECOMMENDED",
+        "recommendedVersion": "2.2.220",
+        "actualEditTarget": "com.h2database:h2",
+        "editType": "DEPENDENCY_VERSION",
+        "fromVersion": "2.1.212",
+        "toVersion": "2.2.220",
+        "expectedResolvedDependency": "2.2.220",
+        "ownerType": null,
+        "ownerCoordinate": null,
+        "evidenceSummary": "Real Maven resolution/build/tests and unfiltered dual scanner baseline/candidate reports",
+        "recommendationReason": "ALL_GATES_PASSED",
+        "sandboxValidated": true,
+        "targetCveClosed": true,
+        "newHighCriticalCount": 0,
+        "requiresDeveloperReview": false
+      }
+    }
+  ],
+  "baselineTests": {
+    "total": 1,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "matchCount": 1
+  },
+  "candidateTests": {
+    "total": 1,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "matchCount": 1
+  },
+  "baselineTrivyFindings": [
+    {
+      "id": "CVE-2022-45868",
+      "pkg": "com.h2database:h2",
+      "installedVersion": "2.1.212",
+      "fixedVersion": "2.2.220",
+      "source": "TRIVY"
+    }
+  ],
+  "baselineOwaspFindings": [
+    {
+      "id": "CVE-2022-45868",
+      "ruleOrCve": "CVE-2022-45868",
+      "cve": "CVE-2022-45868",
+      "stage": "owasp",
+      "source": "OWASP",
+      "severity": "HIGH",
+      "category": "DEPENDENCY",
+      "title": "CVE-2022-45868",
+      "description": "The web-based admin console in H2 Database Engine before 2.2.220 can be started via the CLI with the argument -webAdminPassword, which allows the user to specify the password in cleartext for the web admin console. Consequently, a local user (or an attacker that has obtained local access through some means) would be able to discover the password by listing processes and their arguments. NOTE: the ",
+      "file": "h2-2.1.212.jar",
+      "fileName": "h2-2.1.212.jar",
+      "line": null,
+      "legacyPackage": "h2-2.1.212.jar",
+      "dependency": "h2-2.1.212.jar",
+      "packageType": "maven",
+      "pkg": "com.h2database:h2",
+      "package": "com.h2database:h2",
+      "purl": "pkg:maven/com.h2database/h2@2.1.212",
+      "groupId": "com.h2database",
+      "artifactId": "h2",
+      "installedVersion": "2.1.212",
+      "fixedVersion": null,
+      "recommendation": null,
+      "evidence": "https://sites.google.com/sonatype.com/vulnerabilities/sonatype-2022-6243",
+      "primaryUrl": "https://sites.google.com/sonatype.com/vulnerabilities/sonatype-2022-6243",
+      "cvss": 7.8,
+      "blocking": false,
+      "remediationType": "DEVELOPER_ACTION_REQUIRED"
+    }
+  ],
+  "patchedTrivyFindings": [],
+  "patchedOwaspFindings": [],
+  "sourceManifestSha256": "522a82df990724c8c868a1b46d887063a9976a637ef67e62202b60b2bea5b18b",
+  "patchedManifestSha256": "dbd7d806f7c8b546f972275e3708eebe259e9ab99132a889cb31ee57cf07da60",
+  "candidateManifest": {
+    "candidateBaseSha": "7f419db57f50c572cfc9c81f792795ec2dd2ece6",
+    "files": [
+      {
+        "path": "pom.xml",
+        "operation": "MODIFY",
+        "content": "<project xmlns=\"http://maven.apache.org/POM/4.0.0\"><modelVersion>4.0.0</modelVersion><groupId>operator.fixture</groupId><artifactId>retry-e2e-h2</artifactId><version>1.0.0</version><properties><maven.compiler.source>8</maven.compiler.source><maven.compiler.target>8</maven.compiler.target><project.build.sourceEncoding>UTF-8</project.build.sourceEncoding></properties><dependencies><dependency><groupId>com.h2database</groupId><artifactId>h2</artifactId><version>2.2.220</version></dependency></dependencies><build><plugins><plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-clean-plugin</artifactId><version>3.2.0</version></plugin><plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-resources-plugin</artifactId><version>3.2.0</version></plugin><plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-compiler-plugin</artifactId><version>3.10.1</version><dependencies><dependency><groupId>junit</groupId><artifactId>junit</artifactId><version>3.8.2</version></dependency></dependencies><executions><execution><id>default-testCompile</id><configuration><compilerArgs><arg>-classpath</arg><arg>${project.build.outputDirectory}:${settings.localRepository}/junit/junit/3.8.2/junit-3.8.2.jar</arg></compilerArgs></configuration></execution></executions></plugin><plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-surefire-plugin</artifactId><version>2.22.2</version><dependencies><dependency><groupId>org.apache.maven.surefire</groupId><artifactId>surefire-junit3</artifactId><version>2.22.2</version></dependency></dependencies><configuration><additionalClasspathElements><additionalClasspathElement>${settings.localRepository}/junit/junit/3.8.2/junit-3.8.2.jar</additionalClasspathElement></additionalClasspathElements></configuration></plugin><plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-jar-plugin</artifactId><version>3.2.2</version></plugin></plugins></build></project>",
+        "contentSha256": "dbd7d806f7c8b546f972275e3708eebe259e9ab99132a889cb31ee57cf07da60",
+        "sourceContent": "<project xmlns=\"http://maven.apache.org/POM/4.0.0\"><modelVersion>4.0.0</modelVersion><groupId>operator.fixture</groupId><artifactId>retry-e2e-h2</artifactId><version>1.0.0</version><properties><maven.compiler.source>8</maven.compiler.source><maven.compiler.target>8</maven.compiler.target><project.build.sourceEncoding>UTF-8</project.build.sourceEncoding></properties><dependencies><dependency><groupId>com.h2database</groupId><artifactId>h2</artifactId><version>2.1.212</version></dependency></dependencies><build><plugins><plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-clean-plugin</artifactId><version>3.2.0</version></plugin><plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-resources-plugin</artifactId><version>3.2.0</version></plugin><plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-compiler-plugin</artifactId><version>3.10.1</version><dependencies><dependency><groupId>junit</groupId><artifactId>junit</artifactId><version>3.8.2</version></dependency></dependencies><executions><execution><id>default-testCompile</id><configuration><compilerArgs><arg>-classpath</arg><arg>${project.build.outputDirectory}:${settings.localRepository}/junit/junit/3.8.2/junit-3.8.2.jar</arg></compilerArgs></configuration></execution></executions></plugin><plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-surefire-plugin</artifactId><version>2.22.2</version><dependencies><dependency><groupId>org.apache.maven.surefire</groupId><artifactId>surefire-junit3</artifactId><version>2.22.2</version></dependency></dependencies><configuration><additionalClasspathElements><additionalClasspathElement>${settings.localRepository}/junit/junit/3.8.2/junit-3.8.2.jar</additionalClasspathElement></additionalClasspathElements></configuration></plugin><plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-jar-plugin</artifactId><version>3.2.2</version></plugin></plugins></build></project>",
+        "originalBlobSha": "cd764d7fe0876bbee987061e4f2ef5a944340665"
+      }
+    ],
+    "candidateDigest": "96175de1acc324e6c8f3044e56e80ef6016a40cad2d5c7de7dd0c9e8e2bc6e87"
+  },
+  "manifestMaterializedByProductionService": true,
+  "scannerVersions": {
+    "trivy": "0.72.0",
+    "owasp": "12.2.2"
+  },
+  "sourceHashes": {
+    "dependency-compatibility/dependency-compatibility-decision.ts": "d9b28227f1043d7cbfc81908edb227b757b7705a5faf0e7deb095011348829c8",
+    "dependency-compatibility/remediation-plan.ts": "dbf5b5d436f8b534f4c9bf8ccde1ec24ee08c886b1d8b782542cfb8504c8335d",
+    "dependency-compatibility/v1_8-security-remediation-gate.ts": "b4d1269aea628f17d15aed7d61641116fc00682a0f0cf98c92461eb5c59a383c",
+    "dependency-compatibility/v1_8-compatibility-decision.service.ts": "1120d03d5eff0512ffbe100432404a270a73d56625a775ab8f8b963b92eb217c",
+    "manual-remediation/remediation-target-reservation.ts": "8c536ecd482e76199f14a04398abcf9241c6ec17fa9686eb56ae966343247157"
+  }
+}

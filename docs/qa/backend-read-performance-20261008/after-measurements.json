@@ -1,0 +1,3652 @@
+{
+  "phase": "after",
+  "projects": [
+    {
+      "id": "7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+      "name": "devsecops-platform-testbed"
+    },
+    {
+      "id": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+      "name": "pfe-app-test"
+    }
+  ],
+  "origin": "http://127.0.0.1:4200",
+  "rows": [
+    {
+      "project": "devsecops-platform-testbed",
+      "projectId": "7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+      "flow": "overview",
+      "tab": "rapport",
+      "mode": "cold",
+      "trial": 1,
+      "navigationStart": 1791419965776,
+      "requests": [
+        {
+          "endpoint": "/api/projects/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791419966028,
+          "durationMs": 23,
+          "bytes": 961,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&page=1&pageSize=20",
+          "start": 1791419966049,
+          "durationMs": 27,
+          "bytes": 3274,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&page=1&pageSize=20&analysisOnly=true",
+          "start": 1791419966049,
+          "durationMs": 33,
+          "bytes": 3274,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/reports?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&page=1&pageSize=100",
+          "start": 1791419966049,
+          "durationMs": 44,
+          "bytes": 2393,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/azure-deploy/ready/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791419966050,
+          "durationMs": 45,
+          "bytes": 3080,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents/dcbf9722-2099-4121-bbe9-b7bbdb19ba67",
+          "start": 1791419966081,
+          "durationMs": 36,
+          "bytes": 64739,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 275.79999999701977,
+      "settled": true,
+      "dataCompleteMs": 341,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 0,
+      "totalApiRequests": 6,
+      "slowest": {
+        "endpoint": "/api/azure-deploy/ready/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+        "start": 1791419966050,
+        "durationMs": 45,
+        "bytes": 3080,
+        "status": 200
+      },
+      "largest": {
+        "endpoint": "/api/incidents/dcbf9722-2099-4121-bbe9-b7bbdb19ba67",
+        "start": 1791419966081,
+        "durationMs": 36,
+        "bytes": 64739,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "devsecops-platform-testbed",
+      "projectId": "7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+      "flow": "Rapport",
+      "tab": "rapport",
+      "mode": "cold",
+      "trial": 1,
+      "navigationStart": 1791419966359,
+      "requests": [
+        {
+          "endpoint": "/api/projects/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791419966622,
+          "durationMs": 26,
+          "bytes": 961,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&page=1&pageSize=20",
+          "start": 1791419966645,
+          "durationMs": 16,
+          "bytes": 3274,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&page=1&pageSize=20&analysisOnly=true",
+          "start": 1791419966646,
+          "durationMs": 31,
+          "bytes": 3274,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/reports?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&page=1&pageSize=100",
+          "start": 1791419966647,
+          "durationMs": 40,
+          "bytes": 2393,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/azure-deploy/ready/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791419966647,
+          "durationMs": 51,
+          "bytes": 3080,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents/dcbf9722-2099-4121-bbe9-b7bbdb19ba67",
+          "start": 1791419966679,
+          "durationMs": 37,
+          "bytes": 64739,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 283.80000000074506,
+      "settled": true,
+      "dataCompleteMs": 357,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 0,
+      "totalApiRequests": 6,
+      "slowest": {
+        "endpoint": "/api/azure-deploy/ready/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+        "start": 1791419966647,
+        "durationMs": 51,
+        "bytes": 3080,
+        "status": 200
+      },
+      "largest": {
+        "endpoint": "/api/incidents/dcbf9722-2099-4121-bbe9-b7bbdb19ba67",
+        "start": 1791419966679,
+        "durationMs": 37,
+        "bytes": 64739,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "devsecops-platform-testbed",
+      "projectId": "7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+      "flow": "Jenkins",
+      "tab": "jenkins",
+      "mode": "cold",
+      "trial": 1,
+      "navigationStart": 1791419966958,
+      "requests": [
+        {
+          "endpoint": "/api/projects/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791419967157,
+          "durationMs": 22,
+          "bytes": 961,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&page=1&pageSize=20",
+          "start": 1791419967176,
+          "durationMs": 22,
+          "bytes": 3274,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&page=1&pageSize=20&analysisOnly=true",
+          "start": 1791419967177,
+          "durationMs": 35,
+          "bytes": 3274,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/reports?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&page=1&pageSize=100",
+          "start": 1791419967177,
+          "durationMs": 36,
+          "bytes": 2393,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/projects/7b8a91e6-d07c-4367-aaa7-dd300a424fe2/jenkins-status",
+          "start": 1791419967177,
+          "durationMs": 32,
+          "bytes": 261,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/jenkins/analyses?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791419967178,
+          "durationMs": 48,
+          "bytes": 2,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents/dcbf9722-2099-4121-bbe9-b7bbdb19ba67",
+          "start": 1791419967212,
+          "durationMs": 20,
+          "bytes": 64739,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 215.10000000149012,
+      "settled": true,
+      "dataCompleteMs": 274,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 0,
+      "totalApiRequests": 7,
+      "slowest": {
+        "endpoint": "/api/jenkins/analyses?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+        "start": 1791419967178,
+        "durationMs": 48,
+        "bytes": 2,
+        "status": 200
+      },
+      "largest": {
+        "endpoint": "/api/incidents/dcbf9722-2099-4121-bbe9-b7bbdb19ba67",
+        "start": 1791419967212,
+        "durationMs": 20,
+        "bytes": 64739,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "devsecops-platform-testbed",
+      "projectId": "7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+      "flow": "SonarQube",
+      "tab": "sonarqube",
+      "mode": "cold",
+      "trial": 1,
+      "navigationStart": 1791419967457,
+      "requests": [
+        {
+          "endpoint": "/api/projects/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791419967832,
+          "durationMs": 20,
+          "bytes": 961,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&page=1&pageSize=20",
+          "start": 1791419967850,
+          "durationMs": 17,
+          "bytes": 3274,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&page=1&pageSize=20&analysisOnly=true",
+          "start": 1791419967851,
+          "durationMs": 21,
+          "bytes": 3274,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/reports?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&page=1&pageSize=100",
+          "start": 1791419967852,
+          "durationMs": 17,
+          "bytes": 2393,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents/dcbf9722-2099-4121-bbe9-b7bbdb19ba67",
+          "start": 1791419967871,
+          "durationMs": 19,
+          "bytes": 64739,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 395.80000000074506,
+      "settled": true,
+      "dataCompleteMs": 433,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 0,
+      "totalApiRequests": 5,
+      "slowest": {
+        "endpoint": "/api/project-reads/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&page=1&pageSize=20&analysisOnly=true",
+        "start": 1791419967851,
+        "durationMs": 21,
+        "bytes": 3274,
+        "status": 200
+      },
+      "largest": {
+        "endpoint": "/api/incidents/dcbf9722-2099-4121-bbe9-b7bbdb19ba67",
+        "start": 1791419967871,
+        "durationMs": 19,
+        "bytes": 64739,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "devsecops-platform-testbed",
+      "projectId": "7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+      "flow": "Docker",
+      "tab": "docker",
+      "mode": "cold",
+      "trial": 1,
+      "navigationStart": 1791419968141,
+      "requests": [
+        {
+          "endpoint": "/api/projects/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791419968879,
+          "durationMs": 21,
+          "bytes": 961,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&page=1&pageSize=20",
+          "start": 1791419968898,
+          "durationMs": 16,
+          "bytes": 3274,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&page=1&pageSize=20&analysisOnly=true",
+          "start": 1791419968898,
+          "durationMs": 18,
+          "bytes": 3274,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/reports?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&page=1&pageSize=100",
+          "start": 1791419968899,
+          "durationMs": 18,
+          "bytes": 2393,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents/dcbf9722-2099-4121-bbe9-b7bbdb19ba67",
+          "start": 1791419968916,
+          "durationMs": 16,
+          "bytes": 64739,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 760.8000000007451,
+      "settled": true,
+      "dataCompleteMs": 791,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 0,
+      "totalApiRequests": 5,
+      "slowest": {
+        "endpoint": "/api/projects/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+        "start": 1791419968879,
+        "durationMs": 21,
+        "bytes": 961,
+        "status": 200
+      },
+      "largest": {
+        "endpoint": "/api/incidents/dcbf9722-2099-4121-bbe9-b7bbdb19ba67",
+        "start": 1791419968916,
+        "durationMs": 16,
+        "bytes": 64739,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "devsecops-platform-testbed",
+      "projectId": "7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+      "flow": "Security",
+      "tab": "securite",
+      "mode": "cold",
+      "trial": 1,
+      "navigationStart": 1791419969174,
+      "requests": [
+        {
+          "endpoint": "/api/projects/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791419969661,
+          "durationMs": 22,
+          "bytes": 961,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&page=1&pageSize=20",
+          "start": 1791419969679,
+          "durationMs": 33,
+          "bytes": 3274,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&page=1&pageSize=20&analysisOnly=true",
+          "start": 1791419969681,
+          "durationMs": 40,
+          "bytes": 3274,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/reports?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&page=1&pageSize=100",
+          "start": 1791419969681,
+          "durationMs": 62,
+          "bytes": 2393,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/azure-deploy/ready/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791419969681,
+          "durationMs": 49,
+          "bytes": 3080,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents/project/7b8a91e6-d07c-4367-aaa7-dd300a424fe2/cycles",
+          "start": 1791419969682,
+          "durationMs": 26,
+          "bytes": 3166,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/manual-remediation?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&includeV18=true",
+          "start": 1791419969683,
+          "durationMs": 109,
+          "bytes": 24629,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/manual-remediation/summary?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791419969683,
+          "durationMs": 53,
+          "bytes": 68,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents/dcbf9722-2099-4121-bbe9-b7bbdb19ba67",
+          "start": 1791419969721,
+          "durationMs": 50,
+          "bytes": 64739,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 502.29999999701977,
+      "settled": true,
+      "dataCompleteMs": 618,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 0,
+      "totalApiRequests": 9,
+      "slowest": {
+        "endpoint": "/api/manual-remediation?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&includeV18=true",
+        "start": 1791419969683,
+        "durationMs": 109,
+        "bytes": 24629,
+        "status": 200
+      },
+      "largest": {
+        "endpoint": "/api/incidents/dcbf9722-2099-4121-bbe9-b7bbdb19ba67",
+        "start": 1791419969721,
+        "durationMs": 50,
+        "bytes": 64739,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "devsecops-platform-testbed",
+      "projectId": "7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+      "flow": "Remediation",
+      "tab": "securite",
+      "mode": "cold",
+      "trial": 1,
+      "navigationStart": 1791419970040,
+      "requests": [
+        {
+          "endpoint": "/api/projects/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791419970246,
+          "durationMs": 22,
+          "bytes": 961,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&page=1&pageSize=20",
+          "start": 1791419970264,
+          "durationMs": 28,
+          "bytes": 3274,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&page=1&pageSize=20&analysisOnly=true",
+          "start": 1791419970264,
+          "durationMs": 52,
+          "bytes": 3274,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/reports?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&page=1&pageSize=100",
+          "start": 1791419970266,
+          "durationMs": 29,
+          "bytes": 2393,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/azure-deploy/ready/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791419970266,
+          "durationMs": 46,
+          "bytes": 3080,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents/project/7b8a91e6-d07c-4367-aaa7-dd300a424fe2/cycles",
+          "start": 1791419970266,
+          "durationMs": 24,
+          "bytes": 3166,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/manual-remediation?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&includeV18=true",
+          "start": 1791419970266,
+          "durationMs": 40,
+          "bytes": 24629,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/manual-remediation/summary?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791419970267,
+          "durationMs": 52,
+          "bytes": 68,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents/dcbf9722-2099-4121-bbe9-b7bbdb19ba67",
+          "start": 1791419970316,
+          "durationMs": 39,
+          "bytes": 64739,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 220,
+      "settled": true,
+      "dataCompleteMs": 315,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 0,
+      "totalApiRequests": 9,
+      "slowest": {
+        "endpoint": "/api/project-reads/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&page=1&pageSize=20&analysisOnly=true",
+        "start": 1791419970264,
+        "durationMs": 52,
+        "bytes": 3274,
+        "status": 200
+      },
+      "largest": {
+        "endpoint": "/api/incidents/dcbf9722-2099-4121-bbe9-b7bbdb19ba67",
+        "start": 1791419970316,
+        "durationMs": 39,
+        "bytes": 64739,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "devsecops-platform-testbed",
+      "projectId": "7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+      "flow": "Incidents",
+      "tab": "incidents",
+      "mode": "cold",
+      "trial": 1,
+      "navigationStart": 1791419970607,
+      "requests": [
+        {
+          "endpoint": "/api/projects/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791419970844,
+          "durationMs": 15,
+          "bytes": 961,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&page=1&pageSize=20",
+          "start": 1791419970857,
+          "durationMs": 19,
+          "bytes": 3274,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&page=1&pageSize=20&analysisOnly=true",
+          "start": 1791419970858,
+          "durationMs": 16,
+          "bytes": 3274,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/reports?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&page=1&pageSize=100",
+          "start": 1791419970858,
+          "durationMs": 23,
+          "bytes": 2393,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents/dcbf9722-2099-4121-bbe9-b7bbdb19ba67",
+          "start": 1791419970873,
+          "durationMs": 14,
+          "bytes": 64739,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 245.89999999850988,
+      "settled": true,
+      "dataCompleteMs": 280,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 0,
+      "totalApiRequests": 5,
+      "slowest": {
+        "endpoint": "/api/project-reads/reports?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&page=1&pageSize=100",
+        "start": 1791419970858,
+        "durationMs": 23,
+        "bytes": 2393,
+        "status": 200
+      },
+      "largest": {
+        "endpoint": "/api/incidents/dcbf9722-2099-4121-bbe9-b7bbdb19ba67",
+        "start": 1791419970873,
+        "durationMs": 14,
+        "bytes": 64739,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "devsecops-platform-testbed",
+      "projectId": "7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+      "flow": "Configuration",
+      "tab": "config",
+      "mode": "cold",
+      "trial": 1,
+      "navigationStart": 1791419971141,
+      "requests": [
+        {
+          "endpoint": "/api/projects/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791419971343,
+          "durationMs": 17,
+          "bytes": 961,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&page=1&pageSize=20",
+          "start": 1791419971358,
+          "durationMs": 21,
+          "bytes": 3274,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&page=1&pageSize=20&analysisOnly=true",
+          "start": 1791419971359,
+          "durationMs": 23,
+          "bytes": 3274,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/reports?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&page=1&pageSize=100",
+          "start": 1791419971360,
+          "durationMs": 38,
+          "bytes": 2393,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/azure-deploy/ready/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791419971360,
+          "durationMs": 36,
+          "bytes": 3080,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents/dcbf9722-2099-4121-bbe9-b7bbdb19ba67",
+          "start": 1791419971382,
+          "durationMs": 21,
+          "bytes": 64739,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 213.80000000074506,
+      "settled": true,
+      "dataCompleteMs": 262,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 0,
+      "totalApiRequests": 6,
+      "slowest": {
+        "endpoint": "/api/project-reads/reports?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&page=1&pageSize=100",
+        "start": 1791419971360,
+        "durationMs": 38,
+        "bytes": 2393,
+        "status": 200
+      },
+      "largest": {
+        "endpoint": "/api/incidents/dcbf9722-2099-4121-bbe9-b7bbdb19ba67",
+        "start": 1791419971382,
+        "durationMs": 21,
+        "bytes": 64739,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "devsecops-platform-testbed",
+      "projectId": "7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+      "flow": "Deployment",
+      "tab": "deploiement",
+      "mode": "cold",
+      "trial": 1,
+      "navigationStart": 1791419971641,
+      "requests": [
+        {
+          "endpoint": "/api/projects/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791419971929,
+          "durationMs": 23,
+          "bytes": 961,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&page=1&pageSize=20",
+          "start": 1791419971949,
+          "durationMs": 22,
+          "bytes": 3274,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&page=1&pageSize=20&analysisOnly=true",
+          "start": 1791419971950,
+          "durationMs": 28,
+          "bytes": 3274,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/reports?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&page=1&pageSize=100",
+          "start": 1791419971951,
+          "durationMs": 29,
+          "bytes": 2393,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/azure-deploy/ready/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791419971952,
+          "durationMs": 24,
+          "bytes": 3080,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/azure-deploy/governance/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791419971952,
+          "durationMs": 38,
+          "bytes": 836,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents/dcbf9722-2099-4121-bbe9-b7bbdb19ba67",
+          "start": 1791419971979,
+          "durationMs": 37,
+          "bytes": 64739,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 304.9000000022352,
+      "settled": true,
+      "dataCompleteMs": 375,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 0,
+      "totalApiRequests": 7,
+      "slowest": {
+        "endpoint": "/api/azure-deploy/governance/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+        "start": 1791419971952,
+        "durationMs": 38,
+        "bytes": 836,
+        "status": 200
+      },
+      "largest": {
+        "endpoint": "/api/incidents/dcbf9722-2099-4121-bbe9-b7bbdb19ba67",
+        "start": 1791419971979,
+        "durationMs": 37,
+        "bytes": 64739,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "pfe-app-test",
+      "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+      "flow": "overview",
+      "tab": "rapport",
+      "mode": "cold",
+      "trial": 1,
+      "navigationStart": 1791419972260,
+      "requests": [
+        {
+          "endpoint": "/api/projects/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791419972481,
+          "durationMs": 18,
+          "bytes": 1264,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&page=1&pageSize=20",
+          "start": 1791419972497,
+          "durationMs": 25,
+          "bytes": 6854,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&page=1&pageSize=20&analysisOnly=true",
+          "start": 1791419972498,
+          "durationMs": 33,
+          "bytes": 6891,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/reports?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&page=1&pageSize=100",
+          "start": 1791419972499,
+          "durationMs": 46,
+          "bytes": 7832,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/azure-deploy/ready/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791419972499,
+          "durationMs": 46,
+          "bytes": 3109,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents/70bc8f46-5cd2-48a3-9f8b-169cf2ba250b",
+          "start": 1791419972533,
+          "durationMs": 60,
+          "bytes": 620529,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 243.19999999925494,
+      "settled": true,
+      "dataCompleteMs": 333,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 0,
+      "totalApiRequests": 6,
+      "slowest": {
+        "endpoint": "/api/incidents/70bc8f46-5cd2-48a3-9f8b-169cf2ba250b",
+        "start": 1791419972533,
+        "durationMs": 60,
+        "bytes": 620529,
+        "status": 200
+      },
+      "largest": {
+        "endpoint": "/api/incidents/70bc8f46-5cd2-48a3-9f8b-169cf2ba250b",
+        "start": 1791419972533,
+        "durationMs": 60,
+        "bytes": 620529,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "pfe-app-test",
+      "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+      "flow": "Rapport",
+      "tab": "rapport",
+      "mode": "cold",
+      "trial": 1,
+      "navigationStart": 1791419972840,
+      "requests": [
+        {
+          "endpoint": "/api/projects/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791419973064,
+          "durationMs": 24,
+          "bytes": 1264,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&page=1&pageSize=20",
+          "start": 1791419973085,
+          "durationMs": 31,
+          "bytes": 6854,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&page=1&pageSize=20&analysisOnly=true",
+          "start": 1791419973086,
+          "durationMs": 30,
+          "bytes": 6891,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/reports?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&page=1&pageSize=100",
+          "start": 1791419973087,
+          "durationMs": 90,
+          "bytes": 7832,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/azure-deploy/ready/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791419973088,
+          "durationMs": 55,
+          "bytes": 3109,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents/70bc8f46-5cd2-48a3-9f8b-169cf2ba250b",
+          "start": 1791419973115,
+          "durationMs": 81,
+          "bytes": 620529,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 243.29999999701977,
+      "settled": true,
+      "dataCompleteMs": 356,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 0,
+      "totalApiRequests": 6,
+      "slowest": {
+        "endpoint": "/api/project-reads/reports?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&page=1&pageSize=100",
+        "start": 1791419973087,
+        "durationMs": 90,
+        "bytes": 7832,
+        "status": 200
+      },
+      "largest": {
+        "endpoint": "/api/incidents/70bc8f46-5cd2-48a3-9f8b-169cf2ba250b",
+        "start": 1791419973115,
+        "durationMs": 81,
+        "bytes": 620529,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "pfe-app-test",
+      "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+      "flow": "Jenkins",
+      "tab": "jenkins",
+      "mode": "cold",
+      "trial": 1,
+      "navigationStart": 1791419973458,
+      "requests": [
+        {
+          "endpoint": "/api/projects/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791419973689,
+          "durationMs": 21,
+          "bytes": 1264,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&page=1&pageSize=20",
+          "start": 1791419973706,
+          "durationMs": 29,
+          "bytes": 6854,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&page=1&pageSize=20&analysisOnly=true",
+          "start": 1791419973708,
+          "durationMs": 36,
+          "bytes": 6891,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/reports?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&page=1&pageSize=100",
+          "start": 1791419973708,
+          "durationMs": 80,
+          "bytes": 7832,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/projects/3aa1c9b9-e114-40e4-884b-ebc7aa32e002/jenkins-status",
+          "start": 1791419973708,
+          "durationMs": 195,
+          "bytes": 2211,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/jenkins/analyses?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791419973709,
+          "durationMs": 78,
+          "bytes": 864407,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents/70bc8f46-5cd2-48a3-9f8b-169cf2ba250b",
+          "start": 1791419973745,
+          "durationMs": 157,
+          "bytes": 620529,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 245.10000000149012,
+      "settled": true,
+      "dataCompleteMs": 445,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 0,
+      "totalApiRequests": 7,
+      "slowest": {
+        "endpoint": "/api/projects/3aa1c9b9-e114-40e4-884b-ebc7aa32e002/jenkins-status",
+        "start": 1791419973708,
+        "durationMs": 195,
+        "bytes": 2211,
+        "status": 200
+      },
+      "largest": {
+        "endpoint": "/api/jenkins/analyses?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+        "start": 1791419973709,
+        "durationMs": 78,
+        "bytes": 864407,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "pfe-app-test",
+      "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+      "flow": "SonarQube",
+      "tab": "sonarqube",
+      "mode": "cold",
+      "trial": 1,
+      "navigationStart": 1791419974140,
+      "requests": [
+        {
+          "endpoint": "/api/projects/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791419974334,
+          "durationMs": 28,
+          "bytes": 1264,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&page=1&pageSize=20",
+          "start": 1791419974358,
+          "durationMs": 23,
+          "bytes": 6854,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&page=1&pageSize=20&analysisOnly=true",
+          "start": 1791419974362,
+          "durationMs": 21,
+          "bytes": 6891,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/reports?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&page=1&pageSize=100",
+          "start": 1791419974362,
+          "durationMs": 44,
+          "bytes": 7832,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents/70bc8f46-5cd2-48a3-9f8b-169cf2ba250b",
+          "start": 1791419974383,
+          "durationMs": 74,
+          "bytes": 620529,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 217.70000000298023,
+      "settled": true,
+      "dataCompleteMs": 317,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 0,
+      "totalApiRequests": 5,
+      "slowest": {
+        "endpoint": "/api/incidents/70bc8f46-5cd2-48a3-9f8b-169cf2ba250b",
+        "start": 1791419974383,
+        "durationMs": 74,
+        "bytes": 620529,
+        "status": 200
+      },
+      "largest": {
+        "endpoint": "/api/incidents/70bc8f46-5cd2-48a3-9f8b-169cf2ba250b",
+        "start": 1791419974383,
+        "durationMs": 74,
+        "bytes": 620529,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "pfe-app-test",
+      "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+      "flow": "Docker",
+      "tab": "docker",
+      "mode": "cold",
+      "trial": 1,
+      "navigationStart": 1791419974725,
+      "requests": [
+        {
+          "endpoint": "/api/projects/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791419974965,
+          "durationMs": 20,
+          "bytes": 1264,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&page=1&pageSize=20",
+          "start": 1791419974983,
+          "durationMs": 21,
+          "bytes": 6854,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&page=1&pageSize=20&analysisOnly=true",
+          "start": 1791419974984,
+          "durationMs": 22,
+          "bytes": 6891,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/reports?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&page=1&pageSize=100",
+          "start": 1791419974985,
+          "durationMs": 51,
+          "bytes": 7832,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents/70bc8f46-5cd2-48a3-9f8b-169cf2ba250b",
+          "start": 1791419975005,
+          "durationMs": 43,
+          "bytes": 620529,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 257.6000000014901,
+      "settled": true,
+      "dataCompleteMs": 323,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 0,
+      "totalApiRequests": 5,
+      "slowest": {
+        "endpoint": "/api/project-reads/reports?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&page=1&pageSize=100",
+        "start": 1791419974985,
+        "durationMs": 51,
+        "bytes": 7832,
+        "status": 200
+      },
+      "largest": {
+        "endpoint": "/api/incidents/70bc8f46-5cd2-48a3-9f8b-169cf2ba250b",
+        "start": 1791419975005,
+        "durationMs": 43,
+        "bytes": 620529,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "pfe-app-test",
+      "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+      "flow": "Security",
+      "tab": "securite",
+      "mode": "cold",
+      "trial": 1,
+      "navigationStart": 1791419975290,
+      "requests": [
+        {
+          "endpoint": "/api/projects/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791419975485,
+          "durationMs": 26,
+          "bytes": 1264,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&page=1&pageSize=20",
+          "start": 1791419975506,
+          "durationMs": 26,
+          "bytes": 6854,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&page=1&pageSize=20&analysisOnly=true",
+          "start": 1791419975507,
+          "durationMs": 52,
+          "bytes": 6891,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/reports?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&page=1&pageSize=100",
+          "start": 1791419975508,
+          "durationMs": 613,
+          "bytes": 7832,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/azure-deploy/ready/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791419975508,
+          "durationMs": 119,
+          "bytes": 3109,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents/project/3aa1c9b9-e114-40e4-884b-ebc7aa32e002/cycles",
+          "start": 1791419975510,
+          "durationMs": 727,
+          "bytes": 176463,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/manual-remediation?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&includeV18=true",
+          "start": 1791419975510,
+          "durationMs": 376,
+          "bytes": 852634,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/manual-remediation/summary?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791419975510,
+          "durationMs": 44,
+          "bytes": 71,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents/70bc8f46-5cd2-48a3-9f8b-169cf2ba250b",
+          "start": 1791419975558,
+          "durationMs": 927,
+          "bytes": 620529,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 214.19999999925494,
+      "settled": true,
+      "dataCompleteMs": 1195,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 645,
+      "totalApiRequests": 9,
+      "slowest": {
+        "endpoint": "/api/incidents/70bc8f46-5cd2-48a3-9f8b-169cf2ba250b",
+        "start": 1791419975558,
+        "durationMs": 927,
+        "bytes": 620529,
+        "status": 200
+      },
+      "largest": {
+        "endpoint": "/api/manual-remediation?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&includeV18=true",
+        "start": 1791419975510,
+        "durationMs": 376,
+        "bytes": 852634,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "pfe-app-test",
+      "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+      "flow": "Remediation",
+      "tab": "securite",
+      "mode": "cold",
+      "trial": 1,
+      "navigationStart": 1791419976741,
+      "requests": [
+        {
+          "endpoint": "/api/projects/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791419976943,
+          "durationMs": 28,
+          "bytes": 1264,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&page=1&pageSize=20",
+          "start": 1791419976967,
+          "durationMs": 63,
+          "bytes": 6854,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&page=1&pageSize=20&analysisOnly=true",
+          "start": 1791419976968,
+          "durationMs": 48,
+          "bytes": 6891,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/reports?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&page=1&pageSize=100",
+          "start": 1791419976969,
+          "durationMs": 530,
+          "bytes": 7832,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/azure-deploy/ready/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791419976970,
+          "durationMs": 65,
+          "bytes": 3109,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents/project/3aa1c9b9-e114-40e4-884b-ebc7aa32e002/cycles",
+          "start": 1791419976970,
+          "durationMs": 765,
+          "bytes": 176463,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/manual-remediation?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&includeV18=true",
+          "start": 1791419976971,
+          "durationMs": 282,
+          "bytes": 852634,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/manual-remediation/summary?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791419976971,
+          "durationMs": 645,
+          "bytes": 71,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents/70bc8f46-5cd2-48a3-9f8b-169cf2ba250b",
+          "start": 1791419977015,
+          "durationMs": 907,
+          "bytes": 620529,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 224.30000000074506,
+      "settled": true,
+      "dataCompleteMs": 1181,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 792,
+      "totalApiRequests": 9,
+      "slowest": {
+        "endpoint": "/api/incidents/70bc8f46-5cd2-48a3-9f8b-169cf2ba250b",
+        "start": 1791419977015,
+        "durationMs": 907,
+        "bytes": 620529,
+        "status": 200
+      },
+      "largest": {
+        "endpoint": "/api/manual-remediation?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&includeV18=true",
+        "start": 1791419976971,
+        "durationMs": 282,
+        "bytes": 852634,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "pfe-app-test",
+      "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+      "flow": "Incidents",
+      "tab": "incidents",
+      "mode": "cold",
+      "trial": 1,
+      "navigationStart": 1791419978214,
+      "requests": [
+        {
+          "endpoint": "/api/projects/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791419978597,
+          "durationMs": 15,
+          "bytes": 1264,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&page=1&pageSize=20",
+          "start": 1791419978613,
+          "durationMs": 23,
+          "bytes": 6854,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&page=1&pageSize=20&analysisOnly=true",
+          "start": 1791419978614,
+          "durationMs": 24,
+          "bytes": 6891,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/reports?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&page=1&pageSize=100",
+          "start": 1791419978614,
+          "durationMs": 38,
+          "bytes": 7832,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents/70bc8f46-5cd2-48a3-9f8b-169cf2ba250b",
+          "start": 1791419978638,
+          "durationMs": 38,
+          "bytes": 620529,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 405,
+      "settled": true,
+      "dataCompleteMs": 462,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 0,
+      "totalApiRequests": 5,
+      "slowest": {
+        "endpoint": "/api/project-reads/reports?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&page=1&pageSize=100",
+        "start": 1791419978614,
+        "durationMs": 38,
+        "bytes": 7832,
+        "status": 200
+      },
+      "largest": {
+        "endpoint": "/api/incidents/70bc8f46-5cd2-48a3-9f8b-169cf2ba250b",
+        "start": 1791419978638,
+        "durationMs": 38,
+        "bytes": 620529,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "pfe-app-test",
+      "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+      "flow": "Configuration",
+      "tab": "config",
+      "mode": "cold",
+      "trial": 1,
+      "navigationStart": 1791419978923,
+      "requests": [
+        {
+          "endpoint": "/api/projects/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791419979238,
+          "durationMs": 20,
+          "bytes": 1264,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&page=1&pageSize=20",
+          "start": 1791419979256,
+          "durationMs": 32,
+          "bytes": 6854,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&page=1&pageSize=20&analysisOnly=true",
+          "start": 1791419979257,
+          "durationMs": 36,
+          "bytes": 6891,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/reports?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&page=1&pageSize=100",
+          "start": 1791419979257,
+          "durationMs": 53,
+          "bytes": 7832,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/azure-deploy/ready/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791419979258,
+          "durationMs": 42,
+          "bytes": 3109,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents/70bc8f46-5cd2-48a3-9f8b-169cf2ba250b",
+          "start": 1791419979293,
+          "durationMs": 49,
+          "bytes": 620529,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 329.69999999925494,
+      "settled": true,
+      "dataCompleteMs": 419,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 0,
+      "totalApiRequests": 6,
+      "slowest": {
+        "endpoint": "/api/project-reads/reports?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&page=1&pageSize=100",
+        "start": 1791419979257,
+        "durationMs": 53,
+        "bytes": 7832,
+        "status": 200
+      },
+      "largest": {
+        "endpoint": "/api/incidents/70bc8f46-5cd2-48a3-9f8b-169cf2ba250b",
+        "start": 1791419979293,
+        "durationMs": 49,
+        "bytes": 620529,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "pfe-app-test",
+      "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+      "flow": "Deployment",
+      "tab": "deploiement",
+      "mode": "cold",
+      "trial": 1,
+      "navigationStart": 1791419979590,
+      "requests": [
+        {
+          "endpoint": "/api/projects/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791419979786,
+          "durationMs": 18,
+          "bytes": 1264,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&page=1&pageSize=20",
+          "start": 1791419979801,
+          "durationMs": 23,
+          "bytes": 6854,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&page=1&pageSize=20&analysisOnly=true",
+          "start": 1791419979802,
+          "durationMs": 39,
+          "bytes": 6891,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/reports?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&page=1&pageSize=100",
+          "start": 1791419979802,
+          "durationMs": 56,
+          "bytes": 7832,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/azure-deploy/ready/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791419979803,
+          "durationMs": 46,
+          "bytes": 3109,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/azure-deploy/governance/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791419979804,
+          "durationMs": 12074,
+          "bytes": 1445,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents/70bc8f46-5cd2-48a3-9f8b-169cf2ba250b",
+          "start": 1791419979840,
+          "durationMs": 60,
+          "bytes": 620529,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 212.80000000074506,
+      "settled": true,
+      "dataCompleteMs": 12288,
+      "renderAfterLastResponseMs": 1103.400146484375,
+      "longTaskMs": 0,
+      "totalApiRequests": 7,
+      "slowest": {
+        "endpoint": "/api/azure-deploy/governance/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+        "start": 1791419979804,
+        "durationMs": 12074,
+        "bytes": 1445,
+        "status": 200
+      },
+      "largest": {
+        "endpoint": "/api/incidents/70bc8f46-5cd2-48a3-9f8b-169cf2ba250b",
+        "start": 1791419979840,
+        "durationMs": 60,
+        "bytes": 620529,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "devsecops-platform-testbed",
+      "projectId": "7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+      "flow": "overview",
+      "tab": "rapport",
+      "mode": "cold",
+      "trial": 2,
+      "navigationStart": 1791419992136,
+      "requests": [
+        {
+          "endpoint": "/api/projects/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791419992328,
+          "durationMs": 20,
+          "bytes": 961,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&page=1&pageSize=20",
+          "start": 1791419992345,
+          "durationMs": 20,
+          "bytes": 3274,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&page=1&pageSize=20&analysisOnly=true",
+          "start": 1791419992345,
+          "durationMs": 34,
+          "bytes": 3274,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/reports?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&page=1&pageSize=100",
+          "start": 1791419992347,
+          "durationMs": 35,
+          "bytes": 2393,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/azure-deploy/ready/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791419992348,
+          "durationMs": 35,
+          "bytes": 3080,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents/dcbf9722-2099-4121-bbe9-b7bbdb19ba67",
+          "start": 1791419992379,
+          "durationMs": 24,
+          "bytes": 64739,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 212.10000000149012,
+      "settled": true,
+      "dataCompleteMs": 267,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 0,
+      "totalApiRequests": 6,
+      "slowest": {
+        "endpoint": "/api/project-reads/reports?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&page=1&pageSize=100",
+        "start": 1791419992347,
+        "durationMs": 35,
+        "bytes": 2393,
+        "status": 200
+      },
+      "largest": {
+        "endpoint": "/api/incidents/dcbf9722-2099-4121-bbe9-b7bbdb19ba67",
+        "start": 1791419992379,
+        "durationMs": 24,
+        "bytes": 64739,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "devsecops-platform-testbed",
+      "projectId": "7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+      "flow": "Rapport",
+      "tab": "rapport",
+      "mode": "cold",
+      "trial": 2,
+      "navigationStart": 1791419992653,
+      "requests": [
+        {
+          "endpoint": "/api/projects/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791419992952,
+          "durationMs": 19,
+          "bytes": 961,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&page=1&pageSize=20",
+          "start": 1791419992968,
+          "durationMs": 20,
+          "bytes": 3274,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&page=1&pageSize=20&analysisOnly=true",
+          "start": 1791419992970,
+          "durationMs": 25,
+          "bytes": 3274,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/reports?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&page=1&pageSize=100",
+          "start": 1791419992970,
+          "durationMs": 21,
+          "bytes": 2393,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/azure-deploy/ready/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791419992971,
+          "durationMs": 19,
+          "bytes": 3080,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents/dcbf9722-2099-4121-bbe9-b7bbdb19ba67",
+          "start": 1791419992995,
+          "durationMs": 24,
+          "bytes": 64739,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 312.8999999985099,
+      "settled": true,
+      "dataCompleteMs": 366,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 0,
+      "totalApiRequests": 6,
+      "slowest": {
+        "endpoint": "/api/project-reads/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&page=1&pageSize=20&analysisOnly=true",
+        "start": 1791419992970,
+        "durationMs": 25,
+        "bytes": 3274,
+        "status": 200
+      },
+      "largest": {
+        "endpoint": "/api/incidents/dcbf9722-2099-4121-bbe9-b7bbdb19ba67",
+        "start": 1791419992995,
+        "durationMs": 24,
+        "bytes": 64739,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "devsecops-platform-testbed",
+      "projectId": "7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+      "flow": "Jenkins",
+      "tab": "jenkins",
+      "mode": "cold",
+      "trial": 2,
+      "navigationStart": 1791419993253,
+      "requests": [
+        {
+          "endpoint": "/api/projects/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791419993453,
+          "durationMs": 22,
+          "bytes": 961,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&page=1&pageSize=20",
+          "start": 1791419993472,
+          "durationMs": 35,
+          "bytes": 3274,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&page=1&pageSize=20&analysisOnly=true",
+          "start": 1791419993472,
+          "durationMs": 39,
+          "bytes": 3274,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/reports?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&page=1&pageSize=100",
+          "start": 1791419993473,
+          "durationMs": 39,
+          "bytes": 2393,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/projects/7b8a91e6-d07c-4367-aaa7-dd300a424fe2/jenkins-status",
+          "start": 1791419993474,
+          "durationMs": 37,
+          "bytes": 261,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/jenkins/analyses?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791419993474,
+          "durationMs": 43,
+          "bytes": 2,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents/dcbf9722-2099-4121-bbe9-b7bbdb19ba67",
+          "start": 1791419993512,
+          "durationMs": 22,
+          "bytes": 64739,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 216.59999999776483,
+      "settled": true,
+      "dataCompleteMs": 281,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 0,
+      "totalApiRequests": 7,
+      "slowest": {
+        "endpoint": "/api/jenkins/analyses?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+        "start": 1791419993474,
+        "durationMs": 43,
+        "bytes": 2,
+        "status": 200
+      },
+      "largest": {
+        "endpoint": "/api/incidents/dcbf9722-2099-4121-bbe9-b7bbdb19ba67",
+        "start": 1791419993512,
+        "durationMs": 22,
+        "bytes": 64739,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "devsecops-platform-testbed",
+      "projectId": "7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+      "flow": "SonarQube",
+      "tab": "sonarqube",
+      "mode": "cold",
+      "trial": 2,
+      "navigationStart": 1791419993786,
+      "requests": [
+        {
+          "endpoint": "/api/projects/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791419994089,
+          "durationMs": 21,
+          "bytes": 961,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&page=1&pageSize=20",
+          "start": 1791419994108,
+          "durationMs": 14,
+          "bytes": 3274,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&page=1&pageSize=20&analysisOnly=true",
+          "start": 1791419994110,
+          "durationMs": 18,
+          "bytes": 3274,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/reports?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&page=1&pageSize=100",
+          "start": 1791419994110,
+          "durationMs": 16,
+          "bytes": 2393,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents/dcbf9722-2099-4121-bbe9-b7bbdb19ba67",
+          "start": 1791419994128,
+          "durationMs": 15,
+          "bytes": 64739,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 319.29999999701977,
+      "settled": true,
+      "dataCompleteMs": 357,
+      "renderAfterLastResponseMs": 0.099853515625,
+      "longTaskMs": 0,
+      "totalApiRequests": 5,
+      "slowest": {
+        "endpoint": "/api/projects/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+        "start": 1791419994089,
+        "durationMs": 21,
+        "bytes": 961,
+        "status": 200
+      },
+      "largest": {
+        "endpoint": "/api/incidents/dcbf9722-2099-4121-bbe9-b7bbdb19ba67",
+        "start": 1791419994128,
+        "durationMs": 15,
+        "bytes": 64739,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "devsecops-platform-testbed",
+      "projectId": "7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+      "flow": "Docker",
+      "tab": "docker",
+      "mode": "cold",
+      "trial": 2,
+      "navigationStart": 1791419994386,
+      "requests": [
+        {
+          "endpoint": "/api/projects/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791419994601,
+          "durationMs": 16,
+          "bytes": 961,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&page=1&pageSize=20",
+          "start": 1791419994615,
+          "durationMs": 19,
+          "bytes": 3274,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&page=1&pageSize=20&analysisOnly=true",
+          "start": 1791419994616,
+          "durationMs": 19,
+          "bytes": 3274,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/reports?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&page=1&pageSize=100",
+          "start": 1791419994616,
+          "durationMs": 20,
+          "bytes": 2393,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents/dcbf9722-2099-4121-bbe9-b7bbdb19ba67",
+          "start": 1791419994637,
+          "durationMs": 16,
+          "bytes": 64739,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 228.80000000074506,
+      "settled": true,
+      "dataCompleteMs": 267,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 0,
+      "totalApiRequests": 5,
+      "slowest": {
+        "endpoint": "/api/project-reads/reports?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&page=1&pageSize=100",
+        "start": 1791419994616,
+        "durationMs": 20,
+        "bytes": 2393,
+        "status": 200
+      },
+      "largest": {
+        "endpoint": "/api/incidents/dcbf9722-2099-4121-bbe9-b7bbdb19ba67",
+        "start": 1791419994637,
+        "durationMs": 16,
+        "bytes": 64739,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "devsecops-platform-testbed",
+      "projectId": "7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+      "flow": "Security",
+      "tab": "securite",
+      "mode": "cold",
+      "trial": 2,
+      "navigationStart": 1791419994903,
+      "requests": [
+        {
+          "endpoint": "/api/projects/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791419995106,
+          "durationMs": 29,
+          "bytes": 961,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&page=1&pageSize=20",
+          "start": 1791419995131,
+          "durationMs": 40,
+          "bytes": 3274,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&page=1&pageSize=20&analysisOnly=true",
+          "start": 1791419995132,
+          "durationMs": 42,
+          "bytes": 3274,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/reports?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&page=1&pageSize=100",
+          "start": 1791419995133,
+          "durationMs": 52,
+          "bytes": 2393,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/azure-deploy/ready/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791419995133,
+          "durationMs": 39,
+          "bytes": 3080,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents/project/7b8a91e6-d07c-4367-aaa7-dd300a424fe2/cycles",
+          "start": 1791419995133,
+          "durationMs": 30,
+          "bytes": 3166,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/manual-remediation?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&includeV18=true",
+          "start": 1791419995135,
+          "durationMs": 97,
+          "bytes": 24629,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/manual-remediation/summary?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791419995135,
+          "durationMs": 50,
+          "bytes": 68,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents/dcbf9722-2099-4121-bbe9-b7bbdb19ba67",
+          "start": 1791419995174,
+          "durationMs": 40,
+          "bytes": 64739,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 228.10000000149012,
+      "settled": true,
+      "dataCompleteMs": 329,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 0,
+      "totalApiRequests": 9,
+      "slowest": {
+        "endpoint": "/api/manual-remediation?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&includeV18=true",
+        "start": 1791419995135,
+        "durationMs": 97,
+        "bytes": 24629,
+        "status": 200
+      },
+      "largest": {
+        "endpoint": "/api/incidents/dcbf9722-2099-4121-bbe9-b7bbdb19ba67",
+        "start": 1791419995174,
+        "durationMs": 40,
+        "bytes": 64739,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "devsecops-platform-testbed",
+      "projectId": "7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+      "flow": "Remediation",
+      "tab": "securite",
+      "mode": "cold",
+      "trial": 2,
+      "navigationStart": 1791419995469,
+      "requests": [
+        {
+          "endpoint": "/api/projects/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791419995692,
+          "durationMs": 26,
+          "bytes": 961,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&page=1&pageSize=20",
+          "start": 1791419995714,
+          "durationMs": 52,
+          "bytes": 3274,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&page=1&pageSize=20&analysisOnly=true",
+          "start": 1791419995715,
+          "durationMs": 70,
+          "bytes": 3274,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/reports?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&page=1&pageSize=100",
+          "start": 1791419995715,
+          "durationMs": 65,
+          "bytes": 2393,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/azure-deploy/ready/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791419995716,
+          "durationMs": 45,
+          "bytes": 3080,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents/project/7b8a91e6-d07c-4367-aaa7-dd300a424fe2/cycles",
+          "start": 1791419995716,
+          "durationMs": 49,
+          "bytes": 3166,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/manual-remediation?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&includeV18=true",
+          "start": 1791419995717,
+          "durationMs": 62,
+          "bytes": 24629,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/manual-remediation/summary?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791419995718,
+          "durationMs": 74,
+          "bytes": 68,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents/dcbf9722-2099-4121-bbe9-b7bbdb19ba67",
+          "start": 1791419995784,
+          "durationMs": 47,
+          "bytes": 64739,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 241.90000000223517,
+      "settled": true,
+      "dataCompleteMs": 362,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 0,
+      "totalApiRequests": 9,
+      "slowest": {
+        "endpoint": "/api/manual-remediation/summary?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+        "start": 1791419995718,
+        "durationMs": 74,
+        "bytes": 68,
+        "status": 200
+      },
+      "largest": {
+        "endpoint": "/api/incidents/dcbf9722-2099-4121-bbe9-b7bbdb19ba67",
+        "start": 1791419995784,
+        "durationMs": 47,
+        "bytes": 64739,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "devsecops-platform-testbed",
+      "projectId": "7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+      "flow": "Incidents",
+      "tab": "incidents",
+      "mode": "cold",
+      "trial": 2,
+      "navigationStart": 1791419996071,
+      "requests": [
+        {
+          "endpoint": "/api/projects/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791419996266,
+          "durationMs": 23,
+          "bytes": 961,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&page=1&pageSize=20",
+          "start": 1791419996286,
+          "durationMs": 32,
+          "bytes": 3274,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&page=1&pageSize=20&analysisOnly=true",
+          "start": 1791419996288,
+          "durationMs": 35,
+          "bytes": 3274,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/reports?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&page=1&pageSize=100",
+          "start": 1791419996288,
+          "durationMs": 35,
+          "bytes": 2393,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents/dcbf9722-2099-4121-bbe9-b7bbdb19ba67",
+          "start": 1791419996332,
+          "durationMs": 27,
+          "bytes": 64739,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 211.70000000298023,
+      "settled": true,
+      "dataCompleteMs": 288,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 0,
+      "totalApiRequests": 5,
+      "slowest": {
+        "endpoint": "/api/project-reads/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&page=1&pageSize=20&analysisOnly=true",
+        "start": 1791419996288,
+        "durationMs": 35,
+        "bytes": 3274,
+        "status": 200
+      },
+      "largest": {
+        "endpoint": "/api/incidents/dcbf9722-2099-4121-bbe9-b7bbdb19ba67",
+        "start": 1791419996332,
+        "durationMs": 27,
+        "bytes": 64739,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "devsecops-platform-testbed",
+      "projectId": "7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+      "flow": "Configuration",
+      "tab": "config",
+      "mode": "cold",
+      "trial": 2,
+      "navigationStart": 1791419996602,
+      "requests": [
+        {
+          "endpoint": "/api/projects/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791419996823,
+          "durationMs": 26,
+          "bytes": 961,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&page=1&pageSize=20",
+          "start": 1791419996845,
+          "durationMs": 19,
+          "bytes": 3274,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&page=1&pageSize=20&analysisOnly=true",
+          "start": 1791419996847,
+          "durationMs": 32,
+          "bytes": 3274,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/reports?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&page=1&pageSize=100",
+          "start": 1791419996848,
+          "durationMs": 36,
+          "bytes": 2393,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/azure-deploy/ready/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791419996848,
+          "durationMs": 33,
+          "bytes": 3080,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents/dcbf9722-2099-4121-bbe9-b7bbdb19ba67",
+          "start": 1791419996879,
+          "durationMs": 26,
+          "bytes": 64739,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 246.29999999701977,
+      "settled": true,
+      "dataCompleteMs": 303,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 0,
+      "totalApiRequests": 6,
+      "slowest": {
+        "endpoint": "/api/project-reads/reports?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&page=1&pageSize=100",
+        "start": 1791419996848,
+        "durationMs": 36,
+        "bytes": 2393,
+        "status": 200
+      },
+      "largest": {
+        "endpoint": "/api/incidents/dcbf9722-2099-4121-bbe9-b7bbdb19ba67",
+        "start": 1791419996879,
+        "durationMs": 26,
+        "bytes": 64739,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "devsecops-platform-testbed",
+      "projectId": "7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+      "flow": "Deployment",
+      "tab": "deploiement",
+      "mode": "cold",
+      "trial": 2,
+      "navigationStart": 1791419997152,
+      "requests": [
+        {
+          "endpoint": "/api/projects/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791419997740,
+          "durationMs": 18,
+          "bytes": 961,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&page=1&pageSize=20",
+          "start": 1791419997755,
+          "durationMs": 17,
+          "bytes": 3274,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&page=1&pageSize=20&analysisOnly=true",
+          "start": 1791419997756,
+          "durationMs": 41,
+          "bytes": 3274,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/reports?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&page=1&pageSize=100",
+          "start": 1791419997757,
+          "durationMs": 25,
+          "bytes": 2393,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/azure-deploy/ready/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791419997758,
+          "durationMs": 30,
+          "bytes": 3080,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/azure-deploy/governance/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791419997758,
+          "durationMs": 36,
+          "bytes": 836,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents/dcbf9722-2099-4121-bbe9-b7bbdb19ba67",
+          "start": 1791419997796,
+          "durationMs": 20,
+          "bytes": 64739,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 600.5,
+      "settled": true,
+      "dataCompleteMs": 664,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 0,
+      "totalApiRequests": 7,
+      "slowest": {
+        "endpoint": "/api/project-reads/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&page=1&pageSize=20&analysisOnly=true",
+        "start": 1791419997756,
+        "durationMs": 41,
+        "bytes": 3274,
+        "status": 200
+      },
+      "largest": {
+        "endpoint": "/api/incidents/dcbf9722-2099-4121-bbe9-b7bbdb19ba67",
+        "start": 1791419997796,
+        "durationMs": 20,
+        "bytes": 64739,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "pfe-app-test",
+      "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+      "flow": "overview",
+      "tab": "rapport",
+      "mode": "cold",
+      "trial": 2,
+      "navigationStart": 1791419998071,
+      "requests": [
+        {
+          "endpoint": "/api/projects/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791419998474,
+          "durationMs": 19,
+          "bytes": 1264,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&page=1&pageSize=20",
+          "start": 1791419998491,
+          "durationMs": 19,
+          "bytes": 6854,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&page=1&pageSize=20&analysisOnly=true",
+          "start": 1791419998491,
+          "durationMs": 22,
+          "bytes": 6891,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/reports?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&page=1&pageSize=100",
+          "start": 1791419998491,
+          "durationMs": 40,
+          "bytes": 7832,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/azure-deploy/ready/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791419998492,
+          "durationMs": 38,
+          "bytes": 3109,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents/70bc8f46-5cd2-48a3-9f8b-169cf2ba250b",
+          "start": 1791419998513,
+          "durationMs": 66,
+          "bytes": 620529,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 415.30000000074506,
+      "settled": true,
+      "dataCompleteMs": 508,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 0,
+      "totalApiRequests": 6,
+      "slowest": {
+        "endpoint": "/api/incidents/70bc8f46-5cd2-48a3-9f8b-169cf2ba250b",
+        "start": 1791419998513,
+        "durationMs": 66,
+        "bytes": 620529,
+        "status": 200
+      },
+      "largest": {
+        "endpoint": "/api/incidents/70bc8f46-5cd2-48a3-9f8b-169cf2ba250b",
+        "start": 1791419998513,
+        "durationMs": 66,
+        "bytes": 620529,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "pfe-app-test",
+      "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+      "flow": "Rapport",
+      "tab": "rapport",
+      "mode": "cold",
+      "trial": 2,
+      "navigationStart": 1791419998819,
+      "requests": [
+        {
+          "endpoint": "/api/projects/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791419999178,
+          "durationMs": 23,
+          "bytes": 1264,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&page=1&pageSize=20",
+          "start": 1791419999198,
+          "durationMs": 21,
+          "bytes": 6854,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&page=1&pageSize=20&analysisOnly=true",
+          "start": 1791419999199,
+          "durationMs": 22,
+          "bytes": 6891,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/reports?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&page=1&pageSize=100",
+          "start": 1791419999200,
+          "durationMs": 39,
+          "bytes": 7832,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/azure-deploy/ready/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791419999201,
+          "durationMs": 32,
+          "bytes": 3109,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents/70bc8f46-5cd2-48a3-9f8b-169cf2ba250b",
+          "start": 1791419999221,
+          "durationMs": 56,
+          "bytes": 620529,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 378.4000000022352,
+      "settled": true,
+      "dataCompleteMs": 458,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 0,
+      "totalApiRequests": 6,
+      "slowest": {
+        "endpoint": "/api/incidents/70bc8f46-5cd2-48a3-9f8b-169cf2ba250b",
+        "start": 1791419999221,
+        "durationMs": 56,
+        "bytes": 620529,
+        "status": 200
+      },
+      "largest": {
+        "endpoint": "/api/incidents/70bc8f46-5cd2-48a3-9f8b-169cf2ba250b",
+        "start": 1791419999221,
+        "durationMs": 56,
+        "bytes": 620529,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "pfe-app-test",
+      "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+      "flow": "Jenkins",
+      "tab": "jenkins",
+      "mode": "cold",
+      "trial": 2,
+      "navigationStart": 1791419999502,
+      "requests": [
+        {
+          "endpoint": "/api/projects/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791419999752,
+          "durationMs": 23,
+          "bytes": 1264,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&page=1&pageSize=20",
+          "start": 1791419999772,
+          "durationMs": 57,
+          "bytes": 6854,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&page=1&pageSize=20&analysisOnly=true",
+          "start": 1791419999773,
+          "durationMs": 81,
+          "bytes": 6891,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/reports?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&page=1&pageSize=100",
+          "start": 1791419999773,
+          "durationMs": 194,
+          "bytes": 7832,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/projects/3aa1c9b9-e114-40e4-884b-ebc7aa32e002/jenkins-status",
+          "start": 1791419999773,
+          "durationMs": 194,
+          "bytes": 2211,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/jenkins/analyses?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791419999775,
+          "durationMs": 65,
+          "bytes": 864407,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents/70bc8f46-5cd2-48a3-9f8b-169cf2ba250b",
+          "start": 1791419999854,
+          "durationMs": 113,
+          "bytes": 620529,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 267.29999999701977,
+      "settled": true,
+      "dataCompleteMs": 465,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 0,
+      "totalApiRequests": 7,
+      "slowest": {
+        "endpoint": "/api/project-reads/reports?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&page=1&pageSize=100",
+        "start": 1791419999773,
+        "durationMs": 194,
+        "bytes": 7832,
+        "status": 200
+      },
+      "largest": {
+        "endpoint": "/api/jenkins/analyses?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+        "start": 1791419999775,
+        "durationMs": 65,
+        "bytes": 864407,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "pfe-app-test",
+      "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+      "flow": "SonarQube",
+      "tab": "sonarqube",
+      "mode": "cold",
+      "trial": 2,
+      "navigationStart": 1791420000203,
+      "requests": [
+        {
+          "endpoint": "/api/projects/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791420000446,
+          "durationMs": 16,
+          "bytes": 1264,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&page=1&pageSize=20",
+          "start": 1791420000461,
+          "durationMs": 21,
+          "bytes": 6854,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&page=1&pageSize=20&analysisOnly=true",
+          "start": 1791420000462,
+          "durationMs": 26,
+          "bytes": 6891,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/reports?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&page=1&pageSize=100",
+          "start": 1791420000462,
+          "durationMs": 35,
+          "bytes": 7832,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents/70bc8f46-5cd2-48a3-9f8b-169cf2ba250b",
+          "start": 1791420000487,
+          "durationMs": 61,
+          "bytes": 620529,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 261.5,
+      "settled": true,
+      "dataCompleteMs": 345,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 0,
+      "totalApiRequests": 5,
+      "slowest": {
+        "endpoint": "/api/incidents/70bc8f46-5cd2-48a3-9f8b-169cf2ba250b",
+        "start": 1791420000487,
+        "durationMs": 61,
+        "bytes": 620529,
+        "status": 200
+      },
+      "largest": {
+        "endpoint": "/api/incidents/70bc8f46-5cd2-48a3-9f8b-169cf2ba250b",
+        "start": 1791420000487,
+        "durationMs": 61,
+        "bytes": 620529,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "pfe-app-test",
+      "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+      "flow": "Docker",
+      "tab": "docker",
+      "mode": "cold",
+      "trial": 2,
+      "navigationStart": 1791420000803,
+      "requests": [
+        {
+          "endpoint": "/api/projects/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791420000996,
+          "durationMs": 24,
+          "bytes": 1264,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&page=1&pageSize=20",
+          "start": 1791420001018,
+          "durationMs": 23,
+          "bytes": 6854,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&page=1&pageSize=20&analysisOnly=true",
+          "start": 1791420001019,
+          "durationMs": 24,
+          "bytes": 6891,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/reports?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&page=1&pageSize=100",
+          "start": 1791420001019,
+          "durationMs": 57,
+          "bytes": 7832,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents/70bc8f46-5cd2-48a3-9f8b-169cf2ba250b",
+          "start": 1791420001043,
+          "durationMs": 40,
+          "bytes": 620529,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 212.69999999925494,
+      "settled": true,
+      "dataCompleteMs": 280,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 0,
+      "totalApiRequests": 5,
+      "slowest": {
+        "endpoint": "/api/project-reads/reports?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&page=1&pageSize=100",
+        "start": 1791420001019,
+        "durationMs": 57,
+        "bytes": 7832,
+        "status": 200
+      },
+      "largest": {
+        "endpoint": "/api/incidents/70bc8f46-5cd2-48a3-9f8b-169cf2ba250b",
+        "start": 1791420001043,
+        "durationMs": 40,
+        "bytes": 620529,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "pfe-app-test",
+      "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+      "flow": "Security",
+      "tab": "securite",
+      "mode": "cold",
+      "trial": 2,
+      "navigationStart": 1791420001319,
+      "requests": [
+        {
+          "endpoint": "/api/projects/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791420001546,
+          "durationMs": 28,
+          "bytes": 1264,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&page=1&pageSize=20",
+          "start": 1791420001571,
+          "durationMs": 120,
+          "bytes": 6854,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&page=1&pageSize=20&analysisOnly=true",
+          "start": 1791420001572,
+          "durationMs": 57,
+          "bytes": 6891,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/reports?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&page=1&pageSize=100",
+          "start": 1791420001572,
+          "durationMs": 615,
+          "bytes": 7832,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/azure-deploy/ready/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791420001573,
+          "durationMs": 142,
+          "bytes": 3109,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents/project/3aa1c9b9-e114-40e4-884b-ebc7aa32e002/cycles",
+          "start": 1791420001573,
+          "durationMs": 917,
+          "bytes": 176463,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/manual-remediation?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&includeV18=true",
+          "start": 1791420001574,
+          "durationMs": 358,
+          "bytes": 852634,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/manual-remediation/summary?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791420001574,
+          "durationMs": 801,
+          "bytes": 71,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents/70bc8f46-5cd2-48a3-9f8b-169cf2ba250b",
+          "start": 1791420001628,
+          "durationMs": 1043,
+          "bytes": 620529,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 246.89999999850988,
+      "settled": true,
+      "dataCompleteMs": 1352,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 714,
+      "totalApiRequests": 9,
+      "slowest": {
+        "endpoint": "/api/incidents/70bc8f46-5cd2-48a3-9f8b-169cf2ba250b",
+        "start": 1791420001628,
+        "durationMs": 1043,
+        "bytes": 620529,
+        "status": 200
+      },
+      "largest": {
+        "endpoint": "/api/manual-remediation?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&includeV18=true",
+        "start": 1791420001574,
+        "durationMs": 358,
+        "bytes": 852634,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "pfe-app-test",
+      "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+      "flow": "Remediation",
+      "tab": "securite",
+      "mode": "cold",
+      "trial": 2,
+      "navigationStart": 1791420002912,
+      "requests": [
+        {
+          "endpoint": "/api/projects/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791420003204,
+          "durationMs": 34,
+          "bytes": 1264,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&page=1&pageSize=20",
+          "start": 1791420003234,
+          "durationMs": 38,
+          "bytes": 6854,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&page=1&pageSize=20&analysisOnly=true",
+          "start": 1791420003235,
+          "durationMs": 74,
+          "bytes": 6891,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/reports?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&page=1&pageSize=100",
+          "start": 1791420003236,
+          "durationMs": 103,
+          "bytes": 7832,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/azure-deploy/ready/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791420003237,
+          "durationMs": 659,
+          "bytes": 3109,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents/project/3aa1c9b9-e114-40e4-884b-ebc7aa32e002/cycles",
+          "start": 1791420003237,
+          "durationMs": 781,
+          "bytes": 176463,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/manual-remediation?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&includeV18=true",
+          "start": 1791420003237,
+          "durationMs": 346,
+          "bytes": 852634,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/manual-remediation/summary?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791420003238,
+          "durationMs": 540,
+          "bytes": 71,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents/70bc8f46-5cd2-48a3-9f8b-169cf2ba250b",
+          "start": 1791420003308,
+          "durationMs": 898,
+          "bytes": 620529,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 315.20000000298023,
+      "settled": true,
+      "dataCompleteMs": 1294,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 740,
+      "totalApiRequests": 9,
+      "slowest": {
+        "endpoint": "/api/incidents/70bc8f46-5cd2-48a3-9f8b-169cf2ba250b",
+        "start": 1791420003308,
+        "durationMs": 898,
+        "bytes": 620529,
+        "status": 200
+      },
+      "largest": {
+        "endpoint": "/api/manual-remediation?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&includeV18=true",
+        "start": 1791420003237,
+        "durationMs": 346,
+        "bytes": 852634,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "pfe-app-test",
+      "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+      "flow": "Incidents",
+      "tab": "incidents",
+      "mode": "cold",
+      "trial": 2,
+      "navigationStart": 1791420004452,
+      "requests": [
+        {
+          "endpoint": "/api/projects/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791420004799,
+          "durationMs": 19,
+          "bytes": 1264,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&page=1&pageSize=20",
+          "start": 1791420004820,
+          "durationMs": 29,
+          "bytes": 6854,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&page=1&pageSize=20&analysisOnly=true",
+          "start": 1791420004821,
+          "durationMs": 31,
+          "bytes": 6891,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/reports?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&page=1&pageSize=100",
+          "start": 1791420004822,
+          "durationMs": 45,
+          "bytes": 7832,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents/70bc8f46-5cd2-48a3-9f8b-169cf2ba250b",
+          "start": 1791420004851,
+          "durationMs": 47,
+          "bytes": 620529,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 368.80000000074506,
+      "settled": true,
+      "dataCompleteMs": 446,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 0,
+      "totalApiRequests": 5,
+      "slowest": {
+        "endpoint": "/api/incidents/70bc8f46-5cd2-48a3-9f8b-169cf2ba250b",
+        "start": 1791420004851,
+        "durationMs": 47,
+        "bytes": 620529,
+        "status": 200
+      },
+      "largest": {
+        "endpoint": "/api/incidents/70bc8f46-5cd2-48a3-9f8b-169cf2ba250b",
+        "start": 1791420004851,
+        "durationMs": 47,
+        "bytes": 620529,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "pfe-app-test",
+      "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+      "flow": "Configuration",
+      "tab": "config",
+      "mode": "cold",
+      "trial": 2,
+      "navigationStart": 1791420005135,
+      "requests": [
+        {
+          "endpoint": "/api/projects/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791420005497,
+          "durationMs": 19,
+          "bytes": 1264,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&page=1&pageSize=20",
+          "start": 1791420005513,
+          "durationMs": 36,
+          "bytes": 6854,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&page=1&pageSize=20&analysisOnly=true",
+          "start": 1791420005514,
+          "durationMs": 34,
+          "bytes": 6891,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/reports?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&page=1&pageSize=100",
+          "start": 1791420005515,
+          "durationMs": 72,
+          "bytes": 7832,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/azure-deploy/ready/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791420005515,
+          "durationMs": 63,
+          "bytes": 3109,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents/70bc8f46-5cd2-48a3-9f8b-169cf2ba250b",
+          "start": 1791420005549,
+          "durationMs": 65,
+          "bytes": 620529,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 378.9000000022352,
+      "settled": true,
+      "dataCompleteMs": 479,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 0,
+      "totalApiRequests": 6,
+      "slowest": {
+        "endpoint": "/api/project-reads/reports?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&page=1&pageSize=100",
+        "start": 1791420005515,
+        "durationMs": 72,
+        "bytes": 7832,
+        "status": 200
+      },
+      "largest": {
+        "endpoint": "/api/incidents/70bc8f46-5cd2-48a3-9f8b-169cf2ba250b",
+        "start": 1791420005549,
+        "durationMs": 65,
+        "bytes": 620529,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "pfe-app-test",
+      "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+      "flow": "Deployment",
+      "tab": "deploiement",
+      "mode": "cold",
+      "trial": 2,
+      "navigationStart": 1791420005852,
+      "requests": [
+        {
+          "endpoint": "/api/projects/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791420006275,
+          "durationMs": 30,
+          "bytes": 1264,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&page=1&pageSize=20",
+          "start": 1791420006301,
+          "durationMs": 32,
+          "bytes": 6854,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&page=1&pageSize=20&analysisOnly=true",
+          "start": 1791420006302,
+          "durationMs": 43,
+          "bytes": 6891,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/project-reads/reports?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&page=1&pageSize=100",
+          "start": 1791420006304,
+          "durationMs": 63,
+          "bytes": 7832,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/azure-deploy/ready/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791420006304,
+          "durationMs": 53,
+          "bytes": 3109,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/azure-deploy/governance/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791420006304,
+          "durationMs": 11783,
+          "bytes": 1445,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents/70bc8f46-5cd2-48a3-9f8b-169cf2ba250b",
+          "start": 1791420006346,
+          "durationMs": 86,
+          "bytes": 620529,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 445.80000000074506,
+      "settled": true,
+      "dataCompleteMs": 12235,
+      "renderAfterLastResponseMs": 1155.400146484375,
+      "longTaskMs": 0,
+      "totalApiRequests": 7,
+      "slowest": {
+        "endpoint": "/api/azure-deploy/governance/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+        "start": 1791420006304,
+        "durationMs": 11783,
+        "bytes": 1445,
+        "status": 200
+      },
+      "largest": {
+        "endpoint": "/api/incidents/70bc8f46-5cd2-48a3-9f8b-169cf2ba250b",
+        "start": 1791420006346,
+        "durationMs": 86,
+        "bytes": 620529,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "devsecops-platform-testbed",
+      "projectId": "7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+      "flow": "Rapport",
+      "tab": "rapport",
+      "mode": "warm",
+      "trial": 1,
+      "navigationStart": 1791420020258,
+      "requests": [],
+      "feedbackMs": 65,
+      "settled": true,
+      "dataCompleteMs": 65,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 0,
+      "totalApiRequests": 0,
+      "slowest": null,
+      "largest": null,
+      "duplicates": []
+    },
+    {
+      "project": "devsecops-platform-testbed",
+      "projectId": "7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+      "flow": "Jenkins",
+      "tab": "jenkins",
+      "mode": "warm",
+      "trial": 1,
+      "navigationStart": 1791420020545,
+      "requests": [
+        {
+          "endpoint": "/api/projects/7b8a91e6-d07c-4367-aaa7-dd300a424fe2/jenkins-status",
+          "start": 1791420020585,
+          "durationMs": 22,
+          "bytes": 261,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/jenkins/analyses?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791420020597,
+          "durationMs": 14,
+          "bytes": 2,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 60,
+      "settled": true,
+      "dataCompleteMs": 66,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 0,
+      "totalApiRequests": 2,
+      "slowest": {
+        "endpoint": "/api/projects/7b8a91e6-d07c-4367-aaa7-dd300a424fe2/jenkins-status",
+        "start": 1791420020585,
+        "durationMs": 22,
+        "bytes": 261,
+        "status": 200
+      },
+      "largest": {
+        "endpoint": "/api/projects/7b8a91e6-d07c-4367-aaa7-dd300a424fe2/jenkins-status",
+        "start": 1791420020585,
+        "durationMs": 22,
+        "bytes": 261,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "devsecops-platform-testbed",
+      "projectId": "7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+      "flow": "SonarQube",
+      "tab": "sonarqube",
+      "mode": "warm",
+      "trial": 1,
+      "navigationStart": 1791420020862,
+      "requests": [],
+      "feedbackMs": 46,
+      "settled": true,
+      "dataCompleteMs": 46,
+      "renderAfterLastResponseMs": 39.89990234375,
+      "longTaskMs": 0,
+      "totalApiRequests": 0,
+      "slowest": null,
+      "largest": null,
+      "duplicates": []
+    },
+    {
+      "project": "devsecops-platform-testbed",
+      "projectId": "7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+      "flow": "Docker",
+      "tab": "docker",
+      "mode": "warm",
+      "trial": 1,
+      "navigationStart": 1791420021145,
+      "requests": [],
+      "feedbackMs": 45,
+      "settled": true,
+      "dataCompleteMs": 45,
+      "renderAfterLastResponseMs": 39.89990234375,
+      "longTaskMs": 0,
+      "totalApiRequests": 0,
+      "slowest": null,
+      "largest": null,
+      "duplicates": []
+    },
+    {
+      "project": "devsecops-platform-testbed",
+      "projectId": "7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+      "flow": "Security",
+      "tab": "securite",
+      "mode": "warm",
+      "trial": 1,
+      "navigationStart": 1791420021428,
+      "requests": [
+        {
+          "endpoint": "/api/azure-deploy/ready/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791420021471,
+          "durationMs": 59,
+          "bytes": 3080,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents/project/7b8a91e6-d07c-4367-aaa7-dd300a424fe2/cycles",
+          "start": 1791420021472,
+          "durationMs": 26,
+          "bytes": 3166,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/manual-remediation?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&includeV18=true",
+          "start": 1791420021472,
+          "durationMs": 41,
+          "bytes": 24629,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/manual-remediation/summary?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791420021473,
+          "durationMs": 19,
+          "bytes": 68,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 107,
+      "settled": true,
+      "dataCompleteMs": 107,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 0,
+      "totalApiRequests": 4,
+      "slowest": {
+        "endpoint": "/api/azure-deploy/ready/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+        "start": 1791420021471,
+        "durationMs": 59,
+        "bytes": 3080,
+        "status": 200
+      },
+      "largest": {
+        "endpoint": "/api/manual-remediation?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&includeV18=true",
+        "start": 1791420021472,
+        "durationMs": 41,
+        "bytes": 24629,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "devsecops-platform-testbed",
+      "projectId": "7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+      "flow": "Incidents",
+      "tab": "incidents",
+      "mode": "warm",
+      "trial": 1,
+      "navigationStart": 1791420021762,
+      "requests": [],
+      "feedbackMs": 50,
+      "settled": true,
+      "dataCompleteMs": 50,
+      "renderAfterLastResponseMs": 42.099853515625,
+      "longTaskMs": 0,
+      "totalApiRequests": 0,
+      "slowest": null,
+      "largest": null,
+      "duplicates": []
+    },
+    {
+      "project": "devsecops-platform-testbed",
+      "projectId": "7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+      "flow": "Configuration",
+      "tab": "config",
+      "mode": "warm",
+      "trial": 1,
+      "navigationStart": 1791420022045,
+      "requests": [
+        {
+          "endpoint": "/api/azure-deploy/ready/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791420022084,
+          "durationMs": 13,
+          "bytes": 3080,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 47,
+      "settled": true,
+      "dataCompleteMs": 52,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 0,
+      "totalApiRequests": 1,
+      "slowest": {
+        "endpoint": "/api/azure-deploy/ready/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+        "start": 1791420022084,
+        "durationMs": 13,
+        "bytes": 3080,
+        "status": 200
+      },
+      "largest": {
+        "endpoint": "/api/azure-deploy/ready/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+        "start": 1791420022084,
+        "durationMs": 13,
+        "bytes": 3080,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "devsecops-platform-testbed",
+      "projectId": "7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+      "flow": "Deployment",
+      "tab": "deploiement",
+      "mode": "warm",
+      "trial": 1,
+      "navigationStart": 1791420022344,
+      "requests": [
+        {
+          "endpoint": "/api/azure-deploy/ready/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791420022384,
+          "durationMs": 13,
+          "bytes": 3080,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/azure-deploy/governance/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+          "start": 1791420022388,
+          "durationMs": 22,
+          "bytes": 836,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 47,
+      "settled": true,
+      "dataCompleteMs": 66,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 0,
+      "totalApiRequests": 2,
+      "slowest": {
+        "endpoint": "/api/azure-deploy/governance/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+        "start": 1791420022388,
+        "durationMs": 22,
+        "bytes": 836,
+        "status": 200
+      },
+      "largest": {
+        "endpoint": "/api/azure-deploy/ready/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+        "start": 1791420022384,
+        "durationMs": 13,
+        "bytes": 3080,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "pfe-app-test",
+      "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+      "flow": "Rapport",
+      "tab": "rapport",
+      "mode": "warm",
+      "trial": 1,
+      "navigationStart": 1791420023929,
+      "requests": [],
+      "feedbackMs": 57,
+      "settled": true,
+      "dataCompleteMs": 57,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 0,
+      "totalApiRequests": 0,
+      "slowest": null,
+      "largest": null,
+      "duplicates": []
+    },
+    {
+      "project": "pfe-app-test",
+      "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+      "flow": "Jenkins",
+      "tab": "jenkins",
+      "mode": "warm",
+      "trial": 1,
+      "navigationStart": 1791420024212,
+      "requests": [
+        {
+          "endpoint": "/api/projects/3aa1c9b9-e114-40e4-884b-ebc7aa32e002/jenkins-status",
+          "start": 1791420024250,
+          "durationMs": 62,
+          "bytes": 2211,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/jenkins/analyses?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791420024262,
+          "durationMs": 38,
+          "bytes": 864407,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 54,
+      "settled": true,
+      "dataCompleteMs": 100,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 0,
+      "totalApiRequests": 2,
+      "slowest": {
+        "endpoint": "/api/projects/3aa1c9b9-e114-40e4-884b-ebc7aa32e002/jenkins-status",
+        "start": 1791420024250,
+        "durationMs": 62,
+        "bytes": 2211,
+        "status": 200
+      },
+      "largest": {
+        "endpoint": "/api/jenkins/analyses?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+        "start": 1791420024262,
+        "durationMs": 38,
+        "bytes": 864407,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "pfe-app-test",
+      "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+      "flow": "SonarQube",
+      "tab": "sonarqube",
+      "mode": "warm",
+      "trial": 1,
+      "navigationStart": 1791420024562,
+      "requests": [],
+      "feedbackMs": 56,
+      "settled": true,
+      "dataCompleteMs": 56,
+      "renderAfterLastResponseMs": 43.099853515625,
+      "longTaskMs": 0,
+      "totalApiRequests": 0,
+      "slowest": null,
+      "largest": null,
+      "duplicates": []
+    },
+    {
+      "project": "pfe-app-test",
+      "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+      "flow": "Docker",
+      "tab": "docker",
+      "mode": "warm",
+      "trial": 1,
+      "navigationStart": 1791420024845,
+      "requests": [],
+      "feedbackMs": 44,
+      "settled": true,
+      "dataCompleteMs": 44,
+      "renderAfterLastResponseMs": 39.39990234375,
+      "longTaskMs": 0,
+      "totalApiRequests": 0,
+      "slowest": null,
+      "largest": null,
+      "duplicates": []
+    },
+    {
+      "project": "pfe-app-test",
+      "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+      "flow": "Security",
+      "tab": "securite",
+      "mode": "warm",
+      "trial": 1,
+      "navigationStart": 1791420025128,
+      "requests": [
+        {
+          "endpoint": "/api/azure-deploy/ready/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791420025168,
+          "durationMs": 147,
+          "bytes": 3109,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/incidents/project/3aa1c9b9-e114-40e4-884b-ebc7aa32e002/cycles",
+          "start": 1791420025170,
+          "durationMs": 591,
+          "bytes": 176463,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/manual-remediation?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&includeV18=true",
+          "start": 1791420025170,
+          "durationMs": 376,
+          "bytes": 852634,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/manual-remediation/summary?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791420025170,
+          "durationMs": 105,
+          "bytes": 71,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 754,
+      "settled": true,
+      "dataCompleteMs": 754,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 426,
+      "totalApiRequests": 4,
+      "slowest": {
+        "endpoint": "/api/incidents/project/3aa1c9b9-e114-40e4-884b-ebc7aa32e002/cycles",
+        "start": 1791420025170,
+        "durationMs": 591,
+        "bytes": 176463,
+        "status": 200
+      },
+      "largest": {
+        "endpoint": "/api/manual-remediation?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&includeV18=true",
+        "start": 1791420025170,
+        "durationMs": 376,
+        "bytes": 852634,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "pfe-app-test",
+      "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+      "flow": "Incidents",
+      "tab": "incidents",
+      "mode": "warm",
+      "trial": 1,
+      "navigationStart": 1791420026112,
+      "requests": [],
+      "feedbackMs": 65,
+      "settled": true,
+      "dataCompleteMs": 65,
+      "renderAfterLastResponseMs": 56.199951171875,
+      "longTaskMs": 0,
+      "totalApiRequests": 0,
+      "slowest": null,
+      "largest": null,
+      "duplicates": []
+    },
+    {
+      "project": "pfe-app-test",
+      "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+      "flow": "Configuration",
+      "tab": "config",
+      "mode": "warm",
+      "trial": 1,
+      "navigationStart": 1791420026412,
+      "requests": [
+        {
+          "endpoint": "/api/azure-deploy/ready/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791420026450,
+          "durationMs": 29,
+          "bytes": 3109,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 47,
+      "settled": true,
+      "dataCompleteMs": 67,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 0,
+      "totalApiRequests": 1,
+      "slowest": {
+        "endpoint": "/api/azure-deploy/ready/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+        "start": 1791420026450,
+        "durationMs": 29,
+        "bytes": 3109,
+        "status": 200
+      },
+      "largest": {
+        "endpoint": "/api/azure-deploy/ready/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+        "start": 1791420026450,
+        "durationMs": 29,
+        "bytes": 3109,
+        "status": 200
+      },
+      "duplicates": []
+    },
+    {
+      "project": "pfe-app-test",
+      "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+      "flow": "Deployment",
+      "tab": "deploiement",
+      "mode": "warm",
+      "trial": 1,
+      "navigationStart": 1791420026711,
+      "requests": [
+        {
+          "endpoint": "/api/azure-deploy/ready/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791420026750,
+          "durationMs": 31,
+          "bytes": 3109,
+          "status": 200
+        },
+        {
+          "endpoint": "/api/azure-deploy/governance/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+          "start": 1791420026754,
+          "durationMs": 12376,
+          "bytes": 1445,
+          "status": 200
+        }
+      ],
+      "feedbackMs": 45,
+      "settled": true,
+      "dataCompleteMs": 12419,
+      "renderAfterLastResponseMs": 0,
+      "longTaskMs": 0,
+      "totalApiRequests": 2,
+      "slowest": {
+        "endpoint": "/api/azure-deploy/governance/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+        "start": 1791420026754,
+        "durationMs": 12376,
+        "bytes": 1445,
+        "status": 200
+      },
+      "largest": {
+        "endpoint": "/api/azure-deploy/ready/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+        "start": 1791420026750,
+        "durationMs": 31,
+        "bytes": 3109,
+        "status": 200
+      },
+      "duplicates": []
+    }
+  ],
+  "exceptions": [],
+  "method": "Two cold navigations per flow/project; one warm tab sequence; bytes decoded API bodies; header visibility at requestAnimationFrame; data completion last API response; render after response mutation proxy, not Angular profiler duration"
+}

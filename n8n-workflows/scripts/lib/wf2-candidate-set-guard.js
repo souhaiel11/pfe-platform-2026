@@ -1,6 +1,7 @@
-// Embedded verbatim in Prepare Candidate Manifest; execution-local inputs only.
+// Prépare WF2 candidat mise à jour garde pour les workflows n8n.
 const validatedPlan = $('Validate Generic Remediation Plan').all().map(item => item.json);
 const expected = validatedPlan[0]?.plannedFiles || [];
+/** Normalise le chemin pour les comparaisons. */
 const canonicalPath = value => {
   const raw = String(value || '').replace(/\\/g, '/');
   const parts = raw.split('/');
@@ -13,8 +14,9 @@ const expectedSet = new Set(expectedPaths);
 const actualSet = new Set(actualPaths);
 const missingPaths = expectedPaths.filter(path => !actualSet.has(path));
 const unexpectedPaths = actualPaths.filter(path => !expectedSet.has(path));
+/** Signale une erreur pour fail candidat mise à jour. */
 const failCandidateSet = code => {
-  // Only counts and bounded path lists; never include candidate/source/error objects.
+  /** Prépare le résultat lié à bounded. */
   const bounded = paths => [...new Set(paths)].slice(0, 12).map(path => String(path || '<invalid-path>').slice(0, 240));
   throw new Error(code + ':' + JSON.stringify({plannedCount: expected.length, generatedCount: items.length,
     missingPaths: bounded(missingPaths), unexpectedPaths: bounded(unexpectedPaths)}));

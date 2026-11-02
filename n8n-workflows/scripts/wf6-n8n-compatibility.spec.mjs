@@ -1,13 +1,13 @@
 #!/usr/bin/env node
-// Read-only static audit of source copied from the installed 2.14.2 package.
-// Usage: node wf6-n8n-compatibility.spec.mjs [/tmp/wf6-]
-// No container commands, n8n execution, network, import or activation here.
+// Vérifie WF6 n8n compatibilité et ses cas d’erreur.
 import {readFileSync} from 'node:fs';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {test} from 'node:test';
 import vm from 'node:vm';
-const prefix=process.argv[2] || '/tmp/wf6-';
+// Préfixe des sources n8n extraites du conteneur : argument, puis variable
+// d'environnement, puis la valeur historique.
+const prefix=process.argv[2] || process.env.WF6_N8N_SOURCE_PREFIX || '/tmp/wf6-';
 const sources = Object.fromEntries(['n8n-package.json','HttpRequest.js','HttpRequestV3.js','HttpDescription.js','IfV2.js','Code.js','js-task-runner.js','RespondToWebhook.js','Webhook.js','WebhookUtils.js'].map(name=>[name,readFileSync(prefix+name,'utf8')]));
 const [w]=JSON.parse(readFileSync(new URL('../pending-live-update/wf6-security-remediation-maven.OFFLINE-DRAFT.json',import.meta.url)));
 test('audit uses n8n 2.14.2 source',()=>assert.equal(JSON.parse(sources['n8n-package.json']).version,'2.14.2'));
@@ -30,14 +30,6 @@ test('full response preserves empty/nonempty PR arrays in one item',()=>{
 test('neverError, continueOnFail and timeout allow explicit failure routing',()=>{
  assert.match(sources['HttpRequestV3.js'],/requestOptions.simple = false/);
  assert.match(sources['HttpRequestV3.js'],/this.continueOnFail\(\)/);
- // V1.7 predeploy phase — the four real security-evaluation/revalidation
- // nodes deliberately carry the reconciled 920000ms timeout (re-evaluated
- // in the FINAL predeploy phase from the earlier 620000ms) instead of the
- // baseline 30000ms every other HTTP node keeps (see
- // wf6-security-remediation.spec.mjs's own dedicated test for the exact
- // per-node assertion; n8n-workflows/WF6-V1_7-RUNTIME-INTEGRATION-
- // AUDIT.md for the real evidence this number is derived from) — excluded
- // here, not silently ignored.
  const V17_RECONCILED_TIMEOUT_NODES=['Evaluate Security Remediation','Revalidate Before Write (New Branch)','Revalidate Before Write (Reuse)','Revalidate Before Write (PR)'];
  for(const n of w.nodes.filter(n=>n.type.endsWith('.httpRequest'))){assert.equal(n.continueOnFail,true);assert.equal(n.parameters.options.timeout,V17_RECONCILED_TIMEOUT_NODES.includes(n.name)?920000:30000);assert.equal(n.parameters.options.response.response.neverError,true);}
 });
@@ -66,11 +58,20 @@ console.log('N8N_STATIC_SOURCE_SHA256 = '+JSON.stringify(Object.fromEntries(Obje
 const authSource=sources['WebhookUtils.js'];
 const authFunction=authSource.slice(authSource.indexOf('async function validateWebhookAuthentication('),authSource.indexOf('async function handleFormData('));
 assert.ok(authFunction.startsWith('async function validateWebhookAuthentication('));
-class AuthError extends Error {constructor(code,message){super(message);this.responseCode=code;}}
+class AuthError extends Error {
+/** Initialise l’erreur avec son contexte. */
+constructor(code,message){super(message);this.responseCode=code;}}
 const validateInbound=vm.runInNewContext('('+authFunction+')',{error_1:{WebhookAuthorizationError:AuthError}});
 const hook=w.nodes.find(n=>n.type.endsWith('.webhook'));
+/** Vérifie les résultats attendus dans ce scénario. */
 function authContext(headers,missing=false){return {
- getNodeParameter:()=>hook.parameters.authentication,getRequestObject:()=>({headers}),getHeaderData:()=>headers,
+ /** Simule la lecture des données demandées par le composant. */
+ getNodeParameter:()=>hook.parameters.authentication,
+ /** Simule la lecture des données demandées par le composant. */
+ getRequestObject:()=>({headers}),
+ /** Simule la lecture des données demandées par le composant. */
+ getHeaderData:()=>headers,
+ /** Vérifie les résultats attendus dans ce scénario. */
  getCredentials:async type=>{assert.equal(type,'httpHeaderAuth');if(missing)throw new Error('missing offline credential');return {name:'X-WF6-Offline-Test',value:'offline-only-fixture'};},
 };}
 for(const [label,headers] of [['anonymous',{}],['invalid',{'x-wf6-offline-test':'wrong'}]])test(`${label} header auth rejected before business flow`,async()=>{

@@ -1,0 +1,12 @@
+{
+  "buildNumber": 151,
+  "imageId": "sha256:12aba29ceacaf1411a272df99c5376cdc0dfd9baa98de2bcd2f2c1a0c9256777",
+  "labels": {
+    "maintainer": "Amri Souhaiel <amri.souhaiel@esprit.tn>",
+    "org.opencontainers.image.created": "2026-10-06T16:08:04Z",
+    "org.opencontainers.image.revision": "393816c250f73d907eb5a2dd43b2ec2288c7abcb",
+    "org.opencontainers.image.source": "https://github.com/souhaiel11/pfe-app-test.git",
+    "project": "pfe-app-test",
+    "version": "1.0.0"
+  }
+}

@@ -1,10 +1,4 @@
-/** Execution-2057 observability fix — describeGitCommandFailure() is pure
- * and secret-safe: no subprocess, no network, no console. Mirrors
- * builder-scanner's own artifact-failure-logging.spec.ts discipline
- * (wrapper-vs-exit distinction, bounded/redacted stderr, never throws on
- * an unusual error value). Proves the diagnostic side channel only —
- * external contract (RepoCacheService still throwing the SAME raw error)
- * is covered separately below. */
+// Teste le composant « repo-cache-command-failure » et ses cas d’erreur.
 import * as assert from 'node:assert/strict';
 import { describeGitCommandFailure } from './repo-cache.service';
 

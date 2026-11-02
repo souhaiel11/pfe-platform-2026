@@ -1,3 +1,4 @@
+// Vérifie les relations entre fichiers du correctif dans WF2.
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
@@ -7,6 +8,7 @@ import {hardenPlanAuthorityAndTypeCoherence,planAuthorityContract} from './harde
 const artifact=new URL('../pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.PROMOTION-TARGET.json',import.meta.url);
 const root=JSON.parse(readFileSync(artifact,'utf8')),before=structuredClone(root[0]),workflow=structuredClone(root[0]);
 hardenPlanAuthorityAndTypeCoherence(workflow);
+/** Retrouve ou construit le nœud du workflow demandé. */
 const node=name=>workflow.nodes.find(item=>item.name===name);
 const alreadyHardened=before.nodes.some(item=>item.name==='Validate Cross-File Type Coherence');
 assert.equal(workflow.nodes.length,before.nodes.length+(alreadyHardened?0:2));
@@ -60,10 +62,14 @@ assert.ok(e2023.filter(item=>item.requiredType==='String'&&item.declaredType==='
 assert.ok(e2023.some(item=>item.requiredType==='TaskStatusDTO'&&item.declaredType==='String'));
 
 const manifest={files:[{path:'src/TaskDTO.java',content:execution2023Dto},{path:'src/TaskController.java',content:execution2023Controller}],typeResolutionSources:[{path:'src/Task.java',content:execution2023Entity}]};
-const $input={first:()=>({json:manifest})};
+const $input={
+/** Renvoie le premier élément disponible. */
+first:()=>({json:manifest})};
 assert.throws(()=>new vm.Script(`(()=>{${crossFileTypeCoherenceNodeCode}})()`).runInNewContext({$input}),/CROSS_FILE_TYPE_CONTRACT_MISMATCH/,'production node blocks execution-2023 before compilation');
 
 const mono={files:[{path:'src/Legacy.java',content:'class Legacy {}'}]};
-const monoResult=new vm.Script(`(()=>{${crossFileTypeCoherenceNodeCode}})()`).runInNewContext({$input:{first:()=>({json:mono})}});
+const monoResult=new vm.Script(`(()=>{${crossFileTypeCoherenceNodeCode}})()`).runInNewContext({$input:{
+/** Renvoie le premier élément disponible. */
+first:()=>({json:mono})}});
 assert.equal(monoResult[0].json.crossFileTypeCoherencePassed,true,'mono-file input is a no-op safeguard');
 console.log('WF2 plan authority, generic cross-file Java type coherence, execution-2023 regression: PASS');

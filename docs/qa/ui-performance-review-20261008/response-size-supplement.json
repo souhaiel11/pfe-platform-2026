@@ -1,0 +1,1122 @@
+[
+  {
+    "phase": "before",
+    "project": "devsecops-platform-testbed",
+    "flow": "overview",
+    "mode": "cold",
+    "trial": 1,
+    "largestEndpoint": "/api/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&size=20",
+    "largestDecodedBytes": 479869,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "before",
+    "project": "devsecops-platform-testbed",
+    "flow": "Rapport",
+    "mode": "cold",
+    "trial": 1,
+    "largestEndpoint": "/api/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&size=20",
+    "largestDecodedBytes": 479869,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "before",
+    "project": "devsecops-platform-testbed",
+    "flow": "Jenkins",
+    "mode": "cold",
+    "trial": 1,
+    "largestEndpoint": "/api/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&size=20",
+    "largestDecodedBytes": 479869,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "before",
+    "project": "devsecops-platform-testbed",
+    "flow": "SonarQube",
+    "mode": "cold",
+    "trial": 1,
+    "largestEndpoint": "/api/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&size=20",
+    "largestDecodedBytes": 479869,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "before",
+    "project": "devsecops-platform-testbed",
+    "flow": "Docker",
+    "mode": "cold",
+    "trial": 1,
+    "largestEndpoint": "/api/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&size=20",
+    "largestDecodedBytes": 479869,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "before",
+    "project": "devsecops-platform-testbed",
+    "flow": "Security",
+    "mode": "cold",
+    "trial": 1,
+    "largestEndpoint": "/api/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&size=20",
+    "largestDecodedBytes": 479869,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "before",
+    "project": "devsecops-platform-testbed",
+    "flow": "Remediation",
+    "mode": "cold",
+    "trial": 1,
+    "largestEndpoint": "/api/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&size=20",
+    "largestDecodedBytes": 479869,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "before",
+    "project": "devsecops-platform-testbed",
+    "flow": "Incidents",
+    "mode": "cold",
+    "trial": 1,
+    "largestEndpoint": "/api/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&size=20",
+    "largestDecodedBytes": 479869,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "before",
+    "project": "devsecops-platform-testbed",
+    "flow": "Configuration",
+    "mode": "cold",
+    "trial": 1,
+    "largestEndpoint": "/api/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&size=20",
+    "largestDecodedBytes": 479869,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "before",
+    "project": "devsecops-platform-testbed",
+    "flow": "Deployment",
+    "mode": "cold",
+    "trial": 1,
+    "largestEndpoint": "/api/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&size=20",
+    "largestDecodedBytes": 479869,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "before",
+    "project": "pfe-app-test",
+    "flow": "overview",
+    "mode": "cold",
+    "trial": 1,
+    "largestEndpoint": "/api/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+    "largestDecodedBytes": 15516430,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "before",
+    "project": "pfe-app-test",
+    "flow": "Rapport",
+    "mode": "cold",
+    "trial": 1,
+    "largestEndpoint": "/api/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+    "largestDecodedBytes": 15516430,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "before",
+    "project": "pfe-app-test",
+    "flow": "Jenkins",
+    "mode": "cold",
+    "trial": 1,
+    "largestEndpoint": "/api/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+    "largestDecodedBytes": 15516430,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "before",
+    "project": "pfe-app-test",
+    "flow": "SonarQube",
+    "mode": "cold",
+    "trial": 1,
+    "largestEndpoint": "/api/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+    "largestDecodedBytes": 15516430,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "before",
+    "project": "pfe-app-test",
+    "flow": "Docker",
+    "mode": "cold",
+    "trial": 1,
+    "largestEndpoint": "/api/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+    "largestDecodedBytes": 15516430,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "before",
+    "project": "pfe-app-test",
+    "flow": "Security",
+    "mode": "cold",
+    "trial": 1,
+    "largestEndpoint": "/api/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+    "largestDecodedBytes": 15516430,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "before",
+    "project": "pfe-app-test",
+    "flow": "Remediation",
+    "mode": "cold",
+    "trial": 1,
+    "largestEndpoint": "/api/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+    "largestDecodedBytes": 15516430,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "before",
+    "project": "pfe-app-test",
+    "flow": "Incidents",
+    "mode": "cold",
+    "trial": 1,
+    "largestEndpoint": "/api/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+    "largestDecodedBytes": 15516430,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "before",
+    "project": "pfe-app-test",
+    "flow": "Configuration",
+    "mode": "cold",
+    "trial": 1,
+    "largestEndpoint": "/api/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+    "largestDecodedBytes": 15516430,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "before",
+    "project": "pfe-app-test",
+    "flow": "Deployment",
+    "mode": "cold",
+    "trial": 1,
+    "largestEndpoint": "/api/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+    "largestDecodedBytes": 15516430,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "before",
+    "project": "devsecops-platform-testbed",
+    "flow": "overview",
+    "mode": "cold",
+    "trial": 2,
+    "largestEndpoint": "/api/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&size=20",
+    "largestDecodedBytes": 479869,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "before",
+    "project": "devsecops-platform-testbed",
+    "flow": "Rapport",
+    "mode": "cold",
+    "trial": 2,
+    "largestEndpoint": "/api/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&size=20",
+    "largestDecodedBytes": 479869,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "before",
+    "project": "devsecops-platform-testbed",
+    "flow": "Jenkins",
+    "mode": "cold",
+    "trial": 2,
+    "largestEndpoint": "/api/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&size=20",
+    "largestDecodedBytes": 479869,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "before",
+    "project": "devsecops-platform-testbed",
+    "flow": "SonarQube",
+    "mode": "cold",
+    "trial": 2,
+    "largestEndpoint": "/api/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&size=20",
+    "largestDecodedBytes": 479869,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "before",
+    "project": "devsecops-platform-testbed",
+    "flow": "Docker",
+    "mode": "cold",
+    "trial": 2,
+    "largestEndpoint": "/api/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&size=20",
+    "largestDecodedBytes": 479869,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "before",
+    "project": "devsecops-platform-testbed",
+    "flow": "Security",
+    "mode": "cold",
+    "trial": 2,
+    "largestEndpoint": "/api/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&size=20",
+    "largestDecodedBytes": 479869,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "before",
+    "project": "devsecops-platform-testbed",
+    "flow": "Remediation",
+    "mode": "cold",
+    "trial": 2,
+    "largestEndpoint": "/api/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&size=20",
+    "largestDecodedBytes": 479869,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "before",
+    "project": "devsecops-platform-testbed",
+    "flow": "Incidents",
+    "mode": "cold",
+    "trial": 2,
+    "largestEndpoint": "/api/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&size=20",
+    "largestDecodedBytes": 479869,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "before",
+    "project": "devsecops-platform-testbed",
+    "flow": "Configuration",
+    "mode": "cold",
+    "trial": 2,
+    "largestEndpoint": "/api/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&size=20",
+    "largestDecodedBytes": 479869,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "before",
+    "project": "devsecops-platform-testbed",
+    "flow": "Deployment",
+    "mode": "cold",
+    "trial": 2,
+    "largestEndpoint": "/api/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&size=20",
+    "largestDecodedBytes": 479869,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "before",
+    "project": "pfe-app-test",
+    "flow": "overview",
+    "mode": "cold",
+    "trial": 2,
+    "largestEndpoint": "/api/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+    "largestDecodedBytes": 15516430,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "before",
+    "project": "pfe-app-test",
+    "flow": "Rapport",
+    "mode": "cold",
+    "trial": 2,
+    "largestEndpoint": "/api/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+    "largestDecodedBytes": 15516430,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "before",
+    "project": "pfe-app-test",
+    "flow": "Jenkins",
+    "mode": "cold",
+    "trial": 2,
+    "largestEndpoint": "/api/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+    "largestDecodedBytes": 15516430,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "before",
+    "project": "pfe-app-test",
+    "flow": "SonarQube",
+    "mode": "cold",
+    "trial": 2,
+    "largestEndpoint": "/api/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+    "largestDecodedBytes": 15516430,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "before",
+    "project": "pfe-app-test",
+    "flow": "Docker",
+    "mode": "cold",
+    "trial": 2,
+    "largestEndpoint": "/api/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+    "largestDecodedBytes": 15516430,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "before",
+    "project": "pfe-app-test",
+    "flow": "Security",
+    "mode": "cold",
+    "trial": 2,
+    "largestEndpoint": "/api/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+    "largestDecodedBytes": 15516430,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "before",
+    "project": "pfe-app-test",
+    "flow": "Remediation",
+    "mode": "cold",
+    "trial": 2,
+    "largestEndpoint": "/api/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+    "largestDecodedBytes": 15516430,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "before",
+    "project": "pfe-app-test",
+    "flow": "Incidents",
+    "mode": "cold",
+    "trial": 2,
+    "largestEndpoint": "/api/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+    "largestDecodedBytes": 15516430,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "before",
+    "project": "pfe-app-test",
+    "flow": "Configuration",
+    "mode": "cold",
+    "trial": 2,
+    "largestEndpoint": "/api/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+    "largestDecodedBytes": 15516430,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "before",
+    "project": "pfe-app-test",
+    "flow": "Deployment",
+    "mode": "cold",
+    "trial": 2,
+    "largestEndpoint": "/api/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+    "largestDecodedBytes": 15516430,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "before",
+    "project": "devsecops-platform-testbed",
+    "flow": "Rapport",
+    "mode": "warm",
+    "trial": 1,
+    "largestEndpoint": null,
+    "largestDecodedBytes": null,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "before",
+    "project": "devsecops-platform-testbed",
+    "flow": "Jenkins",
+    "mode": "warm",
+    "trial": 1,
+    "largestEndpoint": "/api/jenkins/analyses?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+    "largestDecodedBytes": 2,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "before",
+    "project": "devsecops-platform-testbed",
+    "flow": "SonarQube",
+    "mode": "warm",
+    "trial": 1,
+    "largestEndpoint": null,
+    "largestDecodedBytes": null,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "before",
+    "project": "devsecops-platform-testbed",
+    "flow": "Docker",
+    "mode": "warm",
+    "trial": 1,
+    "largestEndpoint": null,
+    "largestDecodedBytes": null,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "before",
+    "project": "devsecops-platform-testbed",
+    "flow": "Security",
+    "mode": "warm",
+    "trial": 1,
+    "largestEndpoint": null,
+    "largestDecodedBytes": null,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "before",
+    "project": "devsecops-platform-testbed",
+    "flow": "Incidents",
+    "mode": "warm",
+    "trial": 1,
+    "largestEndpoint": null,
+    "largestDecodedBytes": null,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "before",
+    "project": "devsecops-platform-testbed",
+    "flow": "Configuration",
+    "mode": "warm",
+    "trial": 1,
+    "largestEndpoint": null,
+    "largestDecodedBytes": null,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "before",
+    "project": "devsecops-platform-testbed",
+    "flow": "Deployment",
+    "mode": "warm",
+    "trial": 1,
+    "largestEndpoint": "/api/azure-deploy/governance/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+    "largestDecodedBytes": 836,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "before",
+    "project": "pfe-app-test",
+    "flow": "Rapport",
+    "mode": "warm",
+    "trial": 1,
+    "largestEndpoint": null,
+    "largestDecodedBytes": null,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "before",
+    "project": "pfe-app-test",
+    "flow": "Jenkins",
+    "mode": "warm",
+    "trial": 1,
+    "largestEndpoint": "/api/jenkins/analyses?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+    "largestDecodedBytes": 864407,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "before",
+    "project": "pfe-app-test",
+    "flow": "SonarQube",
+    "mode": "warm",
+    "trial": 1,
+    "largestEndpoint": null,
+    "largestDecodedBytes": null,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "before",
+    "project": "pfe-app-test",
+    "flow": "Docker",
+    "mode": "warm",
+    "trial": 1,
+    "largestEndpoint": null,
+    "largestDecodedBytes": null,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "before",
+    "project": "pfe-app-test",
+    "flow": "Security",
+    "mode": "warm",
+    "trial": 1,
+    "largestEndpoint": null,
+    "largestDecodedBytes": null,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "before",
+    "project": "pfe-app-test",
+    "flow": "Incidents",
+    "mode": "warm",
+    "trial": 1,
+    "largestEndpoint": null,
+    "largestDecodedBytes": null,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "before",
+    "project": "pfe-app-test",
+    "flow": "Configuration",
+    "mode": "warm",
+    "trial": 1,
+    "largestEndpoint": null,
+    "largestDecodedBytes": null,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "before",
+    "project": "pfe-app-test",
+    "flow": "Deployment",
+    "mode": "warm",
+    "trial": 1,
+    "largestEndpoint": "/api/azure-deploy/governance/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+    "largestDecodedBytes": 1445,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "after",
+    "project": "devsecops-platform-testbed",
+    "flow": "overview",
+    "mode": "cold",
+    "trial": 1,
+    "largestEndpoint": "/api/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+    "largestDecodedBytes": 479869,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "after",
+    "project": "devsecops-platform-testbed",
+    "flow": "Rapport",
+    "mode": "cold",
+    "trial": 1,
+    "largestEndpoint": "/api/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+    "largestDecodedBytes": 479869,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "after",
+    "project": "devsecops-platform-testbed",
+    "flow": "Jenkins",
+    "mode": "cold",
+    "trial": 1,
+    "largestEndpoint": "/api/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+    "largestDecodedBytes": 479869,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "after",
+    "project": "devsecops-platform-testbed",
+    "flow": "SonarQube",
+    "mode": "cold",
+    "trial": 1,
+    "largestEndpoint": "/api/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+    "largestDecodedBytes": 479869,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "after",
+    "project": "devsecops-platform-testbed",
+    "flow": "Docker",
+    "mode": "cold",
+    "trial": 1,
+    "largestEndpoint": "/api/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+    "largestDecodedBytes": 479869,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "after",
+    "project": "devsecops-platform-testbed",
+    "flow": "Security",
+    "mode": "cold",
+    "trial": 1,
+    "largestEndpoint": "/api/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+    "largestDecodedBytes": 479869,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "after",
+    "project": "devsecops-platform-testbed",
+    "flow": "Remediation",
+    "mode": "cold",
+    "trial": 1,
+    "largestEndpoint": "/api/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+    "largestDecodedBytes": 479869,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "after",
+    "project": "devsecops-platform-testbed",
+    "flow": "Incidents",
+    "mode": "cold",
+    "trial": 1,
+    "largestEndpoint": "/api/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+    "largestDecodedBytes": 479869,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "after",
+    "project": "devsecops-platform-testbed",
+    "flow": "Configuration",
+    "mode": "cold",
+    "trial": 1,
+    "largestEndpoint": "/api/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+    "largestDecodedBytes": 479869,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "after",
+    "project": "devsecops-platform-testbed",
+    "flow": "Deployment",
+    "mode": "cold",
+    "trial": 1,
+    "largestEndpoint": "/api/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+    "largestDecodedBytes": 479869,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "after",
+    "project": "pfe-app-test",
+    "flow": "overview",
+    "mode": "cold",
+    "trial": 1,
+    "largestEndpoint": "/api/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+    "largestDecodedBytes": 15516430,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "after",
+    "project": "pfe-app-test",
+    "flow": "Rapport",
+    "mode": "cold",
+    "trial": 1,
+    "largestEndpoint": "/api/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+    "largestDecodedBytes": 15516430,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "after",
+    "project": "pfe-app-test",
+    "flow": "Jenkins",
+    "mode": "cold",
+    "trial": 1,
+    "largestEndpoint": "/api/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+    "largestDecodedBytes": 15516430,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "after",
+    "project": "pfe-app-test",
+    "flow": "SonarQube",
+    "mode": "cold",
+    "trial": 1,
+    "largestEndpoint": "/api/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+    "largestDecodedBytes": 15516430,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "after",
+    "project": "pfe-app-test",
+    "flow": "Docker",
+    "mode": "cold",
+    "trial": 1,
+    "largestEndpoint": "/api/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+    "largestDecodedBytes": 15516430,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "after",
+    "project": "pfe-app-test",
+    "flow": "Security",
+    "mode": "cold",
+    "trial": 1,
+    "largestEndpoint": "/api/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+    "largestDecodedBytes": 15516430,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "after",
+    "project": "pfe-app-test",
+    "flow": "Remediation",
+    "mode": "cold",
+    "trial": 1,
+    "largestEndpoint": "/api/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+    "largestDecodedBytes": 15516430,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "after",
+    "project": "pfe-app-test",
+    "flow": "Incidents",
+    "mode": "cold",
+    "trial": 1,
+    "largestEndpoint": "/api/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+    "largestDecodedBytes": 15516430,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "after",
+    "project": "pfe-app-test",
+    "flow": "Configuration",
+    "mode": "cold",
+    "trial": 1,
+    "largestEndpoint": "/api/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+    "largestDecodedBytes": 15516430,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "after",
+    "project": "pfe-app-test",
+    "flow": "Deployment",
+    "mode": "cold",
+    "trial": 1,
+    "largestEndpoint": "/api/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+    "largestDecodedBytes": 15516430,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "after",
+    "project": "devsecops-platform-testbed",
+    "flow": "overview",
+    "mode": "cold",
+    "trial": 2,
+    "largestEndpoint": "/api/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+    "largestDecodedBytes": 479869,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "after",
+    "project": "devsecops-platform-testbed",
+    "flow": "Rapport",
+    "mode": "cold",
+    "trial": 2,
+    "largestEndpoint": "/api/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+    "largestDecodedBytes": 479869,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "after",
+    "project": "devsecops-platform-testbed",
+    "flow": "Jenkins",
+    "mode": "cold",
+    "trial": 2,
+    "largestEndpoint": "/api/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+    "largestDecodedBytes": 479869,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "after",
+    "project": "devsecops-platform-testbed",
+    "flow": "SonarQube",
+    "mode": "cold",
+    "trial": 2,
+    "largestEndpoint": "/api/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+    "largestDecodedBytes": 479869,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "after",
+    "project": "devsecops-platform-testbed",
+    "flow": "Docker",
+    "mode": "cold",
+    "trial": 2,
+    "largestEndpoint": "/api/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+    "largestDecodedBytes": 479869,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "after",
+    "project": "devsecops-platform-testbed",
+    "flow": "Security",
+    "mode": "cold",
+    "trial": 2,
+    "largestEndpoint": "/api/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+    "largestDecodedBytes": 479869,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "after",
+    "project": "devsecops-platform-testbed",
+    "flow": "Remediation",
+    "mode": "cold",
+    "trial": 2,
+    "largestEndpoint": "/api/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+    "largestDecodedBytes": 479869,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "after",
+    "project": "devsecops-platform-testbed",
+    "flow": "Incidents",
+    "mode": "cold",
+    "trial": 2,
+    "largestEndpoint": "/api/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+    "largestDecodedBytes": 479869,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "after",
+    "project": "devsecops-platform-testbed",
+    "flow": "Configuration",
+    "mode": "cold",
+    "trial": 2,
+    "largestEndpoint": "/api/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+    "largestDecodedBytes": 479869,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "after",
+    "project": "devsecops-platform-testbed",
+    "flow": "Deployment",
+    "mode": "cold",
+    "trial": 2,
+    "largestEndpoint": "/api/incidents?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+    "largestDecodedBytes": 479869,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "after",
+    "project": "pfe-app-test",
+    "flow": "overview",
+    "mode": "cold",
+    "trial": 2,
+    "largestEndpoint": "/api/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+    "largestDecodedBytes": 15516430,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "after",
+    "project": "pfe-app-test",
+    "flow": "Rapport",
+    "mode": "cold",
+    "trial": 2,
+    "largestEndpoint": "/api/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+    "largestDecodedBytes": 15516430,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "after",
+    "project": "pfe-app-test",
+    "flow": "Jenkins",
+    "mode": "cold",
+    "trial": 2,
+    "largestEndpoint": "/api/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+    "largestDecodedBytes": 15516430,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "after",
+    "project": "pfe-app-test",
+    "flow": "SonarQube",
+    "mode": "cold",
+    "trial": 2,
+    "largestEndpoint": "/api/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+    "largestDecodedBytes": 15516430,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "after",
+    "project": "pfe-app-test",
+    "flow": "Docker",
+    "mode": "cold",
+    "trial": 2,
+    "largestEndpoint": "/api/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+    "largestDecodedBytes": 15516430,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "after",
+    "project": "pfe-app-test",
+    "flow": "Security",
+    "mode": "cold",
+    "trial": 2,
+    "largestEndpoint": "/api/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+    "largestDecodedBytes": 15516430,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "after",
+    "project": "pfe-app-test",
+    "flow": "Remediation",
+    "mode": "cold",
+    "trial": 2,
+    "largestEndpoint": "/api/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+    "largestDecodedBytes": 15516430,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "after",
+    "project": "pfe-app-test",
+    "flow": "Incidents",
+    "mode": "cold",
+    "trial": 2,
+    "largestEndpoint": "/api/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+    "largestDecodedBytes": 15516430,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "after",
+    "project": "pfe-app-test",
+    "flow": "Configuration",
+    "mode": "cold",
+    "trial": 2,
+    "largestEndpoint": "/api/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+    "largestDecodedBytes": 15516430,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "after",
+    "project": "pfe-app-test",
+    "flow": "Deployment",
+    "mode": "cold",
+    "trial": 2,
+    "largestEndpoint": "/api/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+    "largestDecodedBytes": 15516430,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "after",
+    "project": "devsecops-platform-testbed",
+    "flow": "Rapport",
+    "mode": "warm",
+    "trial": 1,
+    "largestEndpoint": null,
+    "largestDecodedBytes": null,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "after",
+    "project": "devsecops-platform-testbed",
+    "flow": "Jenkins",
+    "mode": "warm",
+    "trial": 1,
+    "largestEndpoint": "/api/projects/7b8a91e6-d07c-4367-aaa7-dd300a424fe2/jenkins-status",
+    "largestDecodedBytes": 261,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "after",
+    "project": "devsecops-platform-testbed",
+    "flow": "SonarQube",
+    "mode": "warm",
+    "trial": 1,
+    "largestEndpoint": null,
+    "largestDecodedBytes": null,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "after",
+    "project": "devsecops-platform-testbed",
+    "flow": "Docker",
+    "mode": "warm",
+    "trial": 1,
+    "largestEndpoint": null,
+    "largestDecodedBytes": null,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "after",
+    "project": "devsecops-platform-testbed",
+    "flow": "Security",
+    "mode": "warm",
+    "trial": 1,
+    "largestEndpoint": "/api/manual-remediation?projectId=7b8a91e6-d07c-4367-aaa7-dd300a424fe2&includeV18=true",
+    "largestDecodedBytes": 24629,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "after",
+    "project": "devsecops-platform-testbed",
+    "flow": "Incidents",
+    "mode": "warm",
+    "trial": 1,
+    "largestEndpoint": null,
+    "largestDecodedBytes": null,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "after",
+    "project": "devsecops-platform-testbed",
+    "flow": "Configuration",
+    "mode": "warm",
+    "trial": 1,
+    "largestEndpoint": "/api/azure-deploy/ready/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+    "largestDecodedBytes": 3080,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "after",
+    "project": "devsecops-platform-testbed",
+    "flow": "Deployment",
+    "mode": "warm",
+    "trial": 1,
+    "largestEndpoint": "/api/azure-deploy/ready/7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+    "largestDecodedBytes": 3080,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "after",
+    "project": "pfe-app-test",
+    "flow": "Rapport",
+    "mode": "warm",
+    "trial": 1,
+    "largestEndpoint": null,
+    "largestDecodedBytes": null,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "after",
+    "project": "pfe-app-test",
+    "flow": "Jenkins",
+    "mode": "warm",
+    "trial": 1,
+    "largestEndpoint": "/api/jenkins/analyses?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+    "largestDecodedBytes": 864407,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "after",
+    "project": "pfe-app-test",
+    "flow": "SonarQube",
+    "mode": "warm",
+    "trial": 1,
+    "largestEndpoint": null,
+    "largestDecodedBytes": null,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "after",
+    "project": "pfe-app-test",
+    "flow": "Docker",
+    "mode": "warm",
+    "trial": 1,
+    "largestEndpoint": null,
+    "largestDecodedBytes": null,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "after",
+    "project": "pfe-app-test",
+    "flow": "Security",
+    "mode": "warm",
+    "trial": 1,
+    "largestEndpoint": "/api/manual-remediation?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&includeV18=true",
+    "largestDecodedBytes": 852634,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "after",
+    "project": "pfe-app-test",
+    "flow": "Incidents",
+    "mode": "warm",
+    "trial": 1,
+    "largestEndpoint": null,
+    "largestDecodedBytes": null,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "after",
+    "project": "pfe-app-test",
+    "flow": "Configuration",
+    "mode": "warm",
+    "trial": 1,
+    "largestEndpoint": "/api/azure-deploy/ready/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+    "largestDecodedBytes": 3109,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  },
+  {
+    "phase": "after",
+    "project": "pfe-app-test",
+    "flow": "Deployment",
+    "mode": "warm",
+    "trial": 1,
+    "largestEndpoint": "/api/azure-deploy/ready/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+    "largestDecodedBytes": 3109,
+    "byteSource": "in-band or separate streaming characterization; raw inspector failures retained"
+  }
+]

@@ -1,3 +1,4 @@
+// Teste le composant « proposed-state-regression » et ses cas d’erreur.
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import {readFileSync} from 'node:fs';
@@ -7,13 +8,17 @@ const eligibility=loadFrontend('../src/app/shared/cve-selection-eligibility.ts')
 const {CveTableComponent}=loadFrontend('../src/app/features/projects/cve-table.component.ts');
 const {ProjectDetailComponent}=loadFrontend('../src/app/features/projects/project-detail.component.ts');
 const fixture=JSON.parse(readFileSync(new URL('../src/app/shared/fixtures/proposed-state-live-regression.json',import.meta.url)));
-function table(source,tasks=fixture.tasks,rows=[]){const t=new CveTableComponent();t.source=source;t.tasks=tasks;t.cves=rows;t.userRole='developer';t.selectionRule=(task,row)=>eligibility.canSelectCveTask(task,true,row);return t;}
+/** Prépare le tableau pour son affichage. */
+function table(source,tasks=fixture.tasks,rows=[]){const t=new CveTableComponent();t.source=source;t.tasks=tasks;t.cves=rows;t.userRole='developer';
+/** Décrit la règle de sélection appliquée à la tâche. */
+t.selectionRule=(task,row)=>eligibility.canSelectCveTask(task,true,row);return t;}
 test('live regression: 1 current candidate + 11 CLOSED with PR = exactly 1 proposed, 11 manual',()=>{
  let proposed=0,manual=0,total=0;
  for(const source of ['TRIVY','OWASP']){const t=table(source),s=t.owaspRemediationSummary();proposed+=s.candidateReady;manual+=s.manualRequired;total+=s.total;t.owaspRemediationFilter.set('PROPOSED');assert.equal(t.filtered().length,s.candidateReady);t.owaspRemediationFilter.set('MANUAL');assert.equal(t.filtered().length,s.manualRequired);for(const row of t.normalized())assert.equal(shared.remediationCategory(t.owaspPresentation(row).state),t.taskFor(row).securityFindingRemediation.status==='CANDIDATE_READY'?'PROPOSED':'MANUAL');assert.equal(s.autoFixAvailable+s.dispatching+s.candidateReady+s.failedRetryable+s.verifiedFixed+s.manualRequired,s.total);}
  assert.equal(proposed,1);assert.equal(manual,11);assert.equal(total,12);
 });
 const base=fixture.tasks[1];
+/** Prépare les données nécessaires à ce scénario. */
 function present(status='CLOSED',fields={},taskFields={}){const t={...base,...taskFields,securityFindingRemediation:{...base.securityFindingRemediation,status,...fields}};return shared.getSecurityRemediationPresentation(t,{selectable:true,reason:''});}
 for(const [name,taskFields,fields] of [
  ['C1 CLOSED + PR + DETECTED',{scannerStatus:'DETECTED'},{}],

@@ -1,23 +1,18 @@
+// Teste le composant « wf2-r81-3-trust-binding » et ses cas d’erreur.
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
 
-// R81.3 — OFFLINE ONLY. No network call, no n8n execution, no live promotion
-// anywhere in this file. Proves, against the ACTUAL text of the real
-// proposed WF2 artifact (the same R81_2-WRITER-PROMPT.json draft already
-// reviewed under R81.2 -- NO WF2 CHANGE was made for R81.3, since the trust
-// anchor it needs, `originalBlobSha`, was already threaded end-to-end by
-// this exact draft), that the writer LLM structurally cannot override
-// sourceContent, originalBlobSha (the trust anchor used for R81.3's
-// integrity check), or candidateBaseSha before Write Guard sees them.
 
 const workflowPath = new URL('../pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.R81_2-WRITER-PROMPT.json', import.meta.url);
 const workflow = JSON.parse(fs.readFileSync(workflowPath, 'utf8'));
 
+/** Retrouve ou construit le nœud du workflow demandé. */
 const node = (name) => {
   const found = workflow.nodes.find(n => n.name === name);
   if (!found) throw new Error('NODE_NOT_FOUND:' + name);
   return found;
 };
+/** Lit le code du nœud de workflow. */
 const code = (name) => node(name).parameters.jsCode;
 
 // ---- 0. Workflow safety invariants (R81.3 §11): NO WF2 change was made, so

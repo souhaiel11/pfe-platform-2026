@@ -1,18 +1,44 @@
+// Teste le composant « platform-dynamicity » et ses cas d’erreur.
 import assert from 'node:assert/strict';
 import {readFileSync,existsSync} from 'node:fs';
 import {createRequire} from 'node:module';
 import vm from 'node:vm';
 const ts=createRequire(import.meta.url)('typescript');
+/** Lit les données depuis leur source. */
 const read=p=>readFileSync(new URL(p,import.meta.url),'utf8');
-const angular={Component:()=>v=>v};
-function load(path,deps={}){const exports={};vm.runInNewContext(ts.transpileModule(read(path),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,experimentalDecorators:true}}).outputText,{exports,console,Intl,Date,URL,require:n=>deps[n] || (n==='@angular/core'?angular:{})});return exports;}
+const angular={
+/** Simule le décorateur de composant Angular. */
+Component:()=>v=>v};
+/** Charge les données nécessaires au composant. */
+function load(path,deps={}){const exports={};vm.runInNewContext(ts.transpileModule(read(path),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,experimentalDecorators:true}}).outputText,{exports,console,Intl,Date,URL,
+/** Charge la dépendance prévue pour le scénario. */
+require:n=>deps[n] || (n==='@angular/core'?angular:{})});return exports;}
 const presentation=load('../src/app/shared/platform-capability-presentation.ts');
 const stages=load('../src/app/shared/pipeline-stage-presentation.ts');
 const {SettingsComponent}=load('../src/app/features/settings/settings.component.ts',{'../../core/http-error-message':load('../src/app/core/http-error-message.ts',{'@angular/common/http':{HttpErrorResponse:class{}}}),'../../shared/platform-capability-presentation':presentation,'../../shared/pipeline-stage-presentation':stages});
 let integrations=[],capabilities={security:[],remediation:{enforcementMode:'SHADOW',supportedEditTypes:['DEPENDENCY_VERSION']},ci:{configuredProjects:0},deployment:{configuredProjects:0,agentConfigured:false}},failure=false,updates=0,tests=0;
-const response=value=>({subscribe:observer=>failure?observer.error(new Error('network')):observer.next(value)});
-const api={getProjects:()=>response([]),getEffectiveConfig:()=>response(null),getIntegrations:()=>response(integrations),getPlatformCapabilities:()=>response(capabilities),updateIntegration:()=>{updates++;return response({id:'i',status:'disconnected'});},testIntegration:()=>{tests++;return response({status:'connected',success:true});}};
-const toast={success(){},error(){}};
+/** Construit la réponse utilisée par le scénario. */
+const response=value=>({
+/** Prépare les données nécessaires à ce scénario. */
+subscribe:observer=>failure?observer.error(new Error('network')):observer.next(value)});
+const api={
+/** Simule la lecture des données demandées par le composant. */
+getProjects:()=>response([]),
+/** Simule la lecture des données demandées par le composant. */
+getEffectiveConfig:()=>response(null),
+/** Simule la lecture des données demandées par le composant. */
+getIntegrations:()=>response(integrations),
+/** Simule la lecture des données demandées par le composant. */
+getPlatformCapabilities:()=>response(capabilities),
+/** Simule la modification demandée par le composant. */
+updateIntegration:()=>{updates++;return response({id:'i',status:'disconnected'});},
+/** Vérifie l’intégration dans ce scénario de test. */
+testIntegration:()=>{tests++;return response({status:'connected',success:true});}};
+const toast={
+/** Prépare les données nécessaires à ce scénario. */
+success(){},
+/** Traite l’erreur reçue et termine le suivi de la demande. */
+error(){}};
 const auth={currentUser:{role:'viewer'}};
 const settings=new SettingsComponent(toast,api,auth);
 settings.ngOnInit();assert.equal(settings.integrationsState,'EMPTY');assert.equal(settings.tools.length,0);assert.equal(settings.capabilities.security.length,0);

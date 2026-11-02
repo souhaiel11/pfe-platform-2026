@@ -1,0 +1,16 @@
+{
+  "servedIndexSha256": "e1b6dcb70f861fbc8cea79f2f5f507d7edcab85d90252005ae184a77abd83edd",
+  "backendDbHealth": {
+    "status": "ok"
+  },
+  "flags": {
+    "dispatch": "false",
+    "harness": "false"
+  },
+  "activeCounts": {
+    "plans": 0,
+    "reservations": 0,
+    "writers": 0
+  },
+  "result": "PASS"
+}

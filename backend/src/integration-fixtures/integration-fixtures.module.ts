@@ -1,3 +1,6 @@
+/**
+ * Module NestJS des fixtures d'intégration WF2 jetables.
+ */
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Incident } from '../incidents/incident.entity';

@@ -1,3 +1,4 @@
+// Assemble les contrôleurs et services de authentification.
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { JwtModule } from '@nestjs/jwt';
@@ -14,6 +15,7 @@ import { JwtStrategy } from './jwt.strategy';
     PassportModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
+      /** Construit la configuration ou le service injecté par le module. */
       useFactory: (config: ConfigService) => ({
         secret: config.get('JWT_SECRET', 'devsecops-secret-2024'),
         signOptions: { expiresIn: '7d' },

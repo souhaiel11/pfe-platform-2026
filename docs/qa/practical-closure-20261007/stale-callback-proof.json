@@ -1,0 +1,23 @@
+{
+  "request": {
+    "projectId": "ebe3bd94-8240-4c30-a2d9-6de2106a28bc",
+    "findingTaskId": "9d2ff915-23e1-4f0b-8f4a-561b4d95845f",
+    "attemptId": "238c2d38-5f09-44d9-aaf3-54253a2fc453",
+    "attemptNumber": 1,
+    "batchId": "sec-batch-0637f733-42d1-4aa8-a58e-48c373a7c3d5",
+    "status": "TECHNICAL_FAILURE",
+    "reasonCode": "VERIFIER_TIMEOUT"
+  },
+  "response": {
+    "status": 409,
+    "body": {
+      "message": "R\u00e9sultat obsol\u00e8te ou identit\u00e9 de tentative WF6 incorrecte.",
+      "error": "Conflict",
+      "statusCode": 409
+    }
+  },
+  "taskUnchanged": true,
+  "currentAttemptId": "09d7b431-dca3-4fd3-a45d-bc93afa432f6",
+  "currentBatchId": "sec-batch-4285b874-1b51-4fe3-8983-09eab7777107",
+  "pass": true
+}

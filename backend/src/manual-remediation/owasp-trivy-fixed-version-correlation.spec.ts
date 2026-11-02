@@ -1,7 +1,4 @@
-// OWASP Increment 3 — pure correlation logic tests (§8 of the increment
-// instructions). Integration against real report #149 data (both scanner
-// blocks, task snapshots, WF6 input contract) lives in
-// owasp-trivy-fixed-version-correlation.integration.spec.ts.
+// Teste le composant « owasp-trivy-fixed-version-correlation » et ses cas d’erreur.
 import { strict as assert } from 'assert';
 import {
   buildTrivyFixedVersionIndex, qualifyOwaspFixedVersionCorrelation, resolveOwaspFixedVersion,

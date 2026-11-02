@@ -1,3 +1,5 @@
+// Teste le composant « integration-fixtures » et ses cas d’erreur.
+import { emptyReservationQuery } from '../incidents/sonar-file-reservation.test-double';
 import * as assert from 'node:assert/strict';
 import { GUARDS_METADATA } from '@nestjs/common/constants';
 import { ConfigService } from '@nestjs/config';
@@ -10,40 +12,61 @@ import { IntegrationFixturesService, Wf2FixtureInput } from './integration-fixtu
 
 const admin = { id: 'fixture-admin', role: 'admin' };
 
+/** Prépare les données nécessaires à ce scénario. */
 function harness(environment = 'test', enabled = 'true') {
   const incidents = new Map<string, any>();
   const projects = new Map<string, any>();
   let projectSequence = 0;
   const incidentRepo: any = {
+    /** Crée et enregistre un nouvel élément. */
     create: (value: any) => ({ ...value }),
+    /** Enregistre les données fournies. */
     save: async (value: any) => { incidents.set(value.id, value); return value; },
+    /** Recherche l’élément correspondant à l’identifiant. */
     findOne: async ({ where }: any) => incidents.get(where.id) || null,
+    /** Applique les modifications autorisées à l’élément. */
     update: async (id: string, patch: any) => Object.assign(incidents.get(id), patch),
+    /** Compte les éléments correspondants. */
     count: async ({ where }: any) => [...incidents.values()].filter(value => value.projectId === where.projectId).length,
+    /** Supprime l’élément ciblé et gère ses dépendances. */
     remove: async (value: any) => { incidents.delete(value.id); return value; },
   };
   const projectRepo: any = {
+    /** Crée et enregistre un nouvel élément. */
     create: (value: any) => ({ ...value }),
+    /** Enregistre les données fournies. */
     save: async (value: any) => { value.id ||= `fixture-project-${++projectSequence}`; projects.set(value.id, value); return value; },
+    /** Recherche l’élément correspondant à l’identifiant. */
     findOne: async ({ where }: any) => projects.get(where.id) || null,
+    /** Supprime l’élément ciblé et gère ses dépendances. */
     remove: async (value: any) => { projects.delete(value.id); return value; },
   };
-  const manager = { getRepository: (entity: any) => entity === Incident ? incidentRepo : projectRepo };
+  const manager = {
+  /** Simule la lecture des données demandées par le composant. */
+  query: emptyReservationQuery, getRepository: (entity: any) => entity === Incident ? incidentRepo : projectRepo };
+  /** Exécute les opérations dans le cadre transactionnel prévu. */
   const transaction = async (fn: any) => fn(manager);
   incidentRepo.manager = { transaction };
   const config = new ConfigService({ NODE_ENV: environment, INTEGRATION_FIXTURES_ENABLED: enabled });
   const fixtures = new IntegrationFixturesService(incidentRepo, projectRepo, config);
-  const lifecycle = new IncidentsService(incidentRepo, projectRepo, { emit: () => undefined } as any,
-    { syncIncident: async () => undefined } as any, {} as any);
+  const lifecycle = new IncidentsService(incidentRepo, projectRepo, {
+  /** Diffuse ou construit le résultat prévu. */
+  emit: () => undefined } as any,
+    {
+    /** Prépare les données nécessaires à ce scénario. */
+    syncIncident: async () => undefined } as any, {} as any);
   return { fixtures, lifecycle, incidents, projects };
 }
 
+/** Prépare les données nécessaires à ce scénario. */
 const fixture = (repository: string, buildType: string, finding: any): Wf2FixtureInput => ({
   repository: { fullName: repository, defaultBranch: 'main', buildType }, findings: [finding], buildNumber: 1,
 });
+/** Simule la lecture des données demandées par le composant. */
 const finding = (findingId: string, source: string, category: string, remediationDomain: string, file: string) =>
   ({ findingId, source, category, remediationDomain, file, line: 7, message: 'Synthetic integration finding' });
 
+/** Exécute les étapes principales de ce programme. */
 async function main() {
   const h = harness();
   const java = await h.fixtures.provisionWf2Context(fixture('fixture-owner/service-a', 'maven',

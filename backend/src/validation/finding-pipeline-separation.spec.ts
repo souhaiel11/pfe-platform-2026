@@ -1,13 +1,7 @@
+// Teste le composant « finding-pipeline-separation » et ses cas d’erreur.
 import * as assert from 'node:assert/strict';
 import { deriveFindingsAndHealth } from './finding-pipeline-separation';
 
-// Fixtures are the REAL persisted metadata.validation payloads observed this
-// session (R21-AY/R21-AZ), trimmed to the fields deriveFindingsAndHealth
-// reads. Build #2: docker/build FAILED, both S4684 findings still VALID.
-// Build #3: build/docker SUCCESS, but Sonar Quality Gate ERROR, findings
-// still VALID. These are the two real-world proofs that finding verdicts
-// and pipeline health are already independent in production data -- this
-// module just makes that independence an explicit, typed contract.
 const build2Payload = {
   analysisId: '23b330da-e3a9-4469-a8a3-cb4bdbe9873c',
   checkoutSha: 'ea6230b79b99f0c5fcb3c7da3f838bb3efbe81be',

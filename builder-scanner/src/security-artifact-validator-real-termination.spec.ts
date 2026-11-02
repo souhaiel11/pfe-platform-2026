@@ -1,20 +1,4 @@
-/** V1.7 Blocker B — REAL subprocess termination proof.
- *
- * Every other test in this phase injects a plain JS function in place of
- * the `podman`/`trivy` commands (the ArtifactCommand fault-test seam) --
- * necessary because Blocker A (see n8n-workflows/WF6-V1_7-RUNTIME-
- * INTEGRATION-AUDIT.md) means rootless Podman cannot initialize in this
- * environment, so the real command can never be exercised end-to-end here.
- *
- * That still leaves "subprocess timeout" / "process termination on
- * timeout" / "no orphan process" unproven against an actual OS process
- * UNLESS something real is used. `sleep` needs no Podman/Trivy/container
- * runtime and is available in any POSIX environment (including this one),
- * so this file substitutes a REAL, LONG-RUNNING `sleep` for one stage's
- * command via the SAME injection seam, with the SAME timeout/killSignal
- * options the adapter itself computed -- proving actual OS-level kill and
- * absence of a surviving process, not a simulated one.
- */
+// Teste le composant « security-artifact-validator-real-termination » et ses cas d’erreur.
 import * as assert from 'assert';
 import { execFileSync } from 'child_process';
 import * as fs from 'fs';
@@ -29,6 +13,7 @@ execFileSync('git', ['clone', '--no-hardlinks', process.env.SECURITY_TEST_REPO |
 // An unusual, unlikely-to-collide sleep duration used purely as a `pgrep -f`
 // marker to find/confirm-absent the real child process by its argv.
 const MARKER_SECONDS = '61.417';
+/** Simule la mise à jour de l’état du formulaire. */
 function markerStillRunning(): boolean {
   try { execFileSync('pgrep', ['-f', `sleep ${MARKER_SECONDS}`], { encoding: 'utf8' }); return true; }
   catch { return false; } // pgrep exits non-zero when nothing matches

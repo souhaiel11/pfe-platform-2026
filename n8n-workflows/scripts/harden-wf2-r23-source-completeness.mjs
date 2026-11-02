@@ -56,6 +56,7 @@ import crypto from 'node:crypto';
 
 const targetPath = new URL('../pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.PROMOTION-TARGET.json', import.meta.url);
 const workflow = JSON.parse(fs.readFileSync(targetPath))[0];
+/** Retrouve ou construit le nœud du workflow demandé. */
 const node = name => workflow.nodes.find(candidate => candidate.name === name);
 
 // This generator reads and writes the same canonical artifact (unlike the

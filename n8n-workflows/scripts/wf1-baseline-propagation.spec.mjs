@@ -1,16 +1,4 @@
-// Offline contract tests for WF1's "Merge All Fetched Data" node: proves it
-// consumes the CONSOLIDATED Sonar baseline snapshot (the sole authoritative
-// owner of fetch completeness), never the raw single-page HTTP fetch.
-//
-// Root cause (execution 1969, real Jenkins build #141, incident
-// c24ac224-cc55-4d74-9139-33d55ed71e55): sonarRaw was bound to
-// $('Fetch SonarQube Issues') -- a stale pre-refactor reference. That raw
-// shape has no complete/snapshotError/collectedCount fields at all, so
-// sonarRaw.complete === true was permanently false regardless of the real
-// (correct) consolidation result, producing a false snapshotError=INCOMPLETE
-// on a genuinely complete 16-issue baseline.
-//
-// No n8n execution, network or business action.
+// Vérifie le choix de la référence de comparaison dans WF1.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
@@ -38,26 +26,32 @@ assert.ok((conns['Parse OWASP JSON']?.main?.[0] || []).some(e => e.node === 'Mer
 
 // ── Harness: execute the real node code with a mocked $(nodeName) ──────────
 const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
+/** Simule l’échec attendu par ce scénario. */
 function dollar(overrides) {
   return (nodeName) => ({
+    /** Renvoie le premier élément disponible. */
     first: () => {
       if (!(nodeName in overrides)) throw new Error(`unmocked node reference: ${nodeName}`);
       return { json: overrides[nodeName] };
     },
   });
 }
+/** Prépare les données nécessaires à ce scénario. */
 const baseFixture = () => ({
   'Extract Project Config': { projectConfig: { sonarqubeKey: 'test-project' }, jenkins: {}, reports: {}, build_number: 141 },
   'Incident Webhook': { body: {} },
   'Prepare Fetch URLs': { incidentUUID: 'incident-test-uuid' },
   'Resolve Exact Sonar Correlation': { qualityGate: 'OK', ceTaskId: 'ce-task-test', analysisId: 'analysis-test', correlationVerified: true },
 });
+/** Prépare les données nécessaires à ce scénario. */
 async function runMerge(overrides) {
   const fn = new AsyncFunction('$', mergeNode.parameters.jsCode);
   return (await fn(dollar({ ...baseFixture(), ...overrides })))[0].json.enrichedData.sonar;
 }
 
+/** Prépare les données nécessaires à ce scénario. */
 const issue = i => ({ key: `k${i}`, rule: 'java:S125', severity: 'MAJOR', type: 'CODE_SMELL', component: `proj:F${i}.java`, message: 'm', line: 1 });
+/** Prépare les données nécessaires à ce scénario. */
 const consolidated = (n, extra = {}) => ({
   issues: Array.from({ length: n }, (_, i) => issue(i)),
   total: n, collectedCount: n, pageSize: 500, complete: true, snapshotError: null,

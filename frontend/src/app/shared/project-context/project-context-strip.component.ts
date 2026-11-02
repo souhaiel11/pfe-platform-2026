@@ -1,21 +1,10 @@
+// Bandeau compact de contexte projet (branche, build, commit, fraîcheur de la dernière analyse) affiché en en-tête d'écran.
+
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { StatusChipComponent } from '../status-chip/status-chip.component';
 import { SourceEvidenceLinkComponent } from '../source-evidence/source-evidence-link.component';
 import { EvidenceLoadState, SourceEvidence } from '../source-evidence/source-evidence.types';
-
-// ─────────────────────────────────────────────────────────────────────
-//  <app-project-context-strip> — contexte projet persistant et COMPACT (§3).
-//
-//  Répond en une ligne aux premières questions d'un développeur qui arrive
-//  sur l'écran : quelle branche, quel build, quel statut, quel commit, quand,
-//  et par où sortir vers la preuve.
-//
-//  Discipline de données : chaque champ est optionnel et DISPARAÎT quand il
-//  n'est pas enregistré. Aucun repli inventé, aucun « — » décoratif qui
-//  laisserait croire qu'une valeur a été constatée. Le bandeau ne se répète
-//  jamais dans les sous-sections : il appartient à l'en-tête de l'écran.
-// ─────────────────────────────────────────────────────────────────────
 
 @Component({
   selector: 'app-project-context-strip',
@@ -34,8 +23,6 @@ import { EvidenceLoadState, SourceEvidence } from '../source-evidence/source-evi
         <app-status-chip *ngIf="buildStatus" [status]="buildStatus"></app-status-chip>
       </span>
 
-      <!-- §20/§21 — forme courte lisible, valeur complète dans title et
-           derrière le bouton copier. -->
       <span class="ctx-item" *ngIf="commitFull">
         <span class="ctx-key">Commit</span>
         <code class="ctx-val" [attr.title]="commitFull">{{ commitShort() }}</code>
@@ -45,8 +32,6 @@ import { EvidenceLoadState, SourceEvidence } from '../source-evidence/source-evi
         </button>
       </span>
 
-      <!-- §19 — fraîcheur relative, horodatage exact en title. Jamais
-           fabriquée : absente, la mention disparaît. -->
       <span class="ctx-item" *ngIf="freshness">
         <span class="ctx-key">Dernière analyse</span>
         <span class="ctx-plain" [attr.title]="timestamp">{{ freshness }}</span>
@@ -104,12 +89,12 @@ export class ProjectContextStripComponent {
   @Input() copiedValue: string | null = null;
   @Output() copy = new EventEmitter<string>();
 
-  /** 12 caractères : assez pour identifier, assez court pour ne pas casser la ligne. */
+  // Tronque le commit complet à 12 caractères pour l'affichage court.
   commitShort(): string | null {
     return this.commitFull ? this.commitFull.slice(0, 12) : null;
   }
 
-  /** Un bandeau sans aucun fait constaté ne s'affiche pas du tout. */
+  // Indique si au moins un champ de contexte est renseigné (sinon le bandeau ne s'affiche pas).
   hasAnything(): boolean {
     return !!(this.branch || this.buildNumber !== null || this.commitFull || this.freshness
       || this.repositoryEvidence || this.buildEvidence);

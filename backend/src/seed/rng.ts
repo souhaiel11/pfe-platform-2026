@@ -1,7 +1,6 @@
-// PRNG déterministe seedé par chaîne (FNV-1a + mulberry32).
-// Même seed en entrée => toujours la même séquence en sortie : utilisé pour que
-// le seed de démo (et le mock Jenkins) reste stable entre deux exécutions.
+// Générateur de nombres pseudo-aléatoires déterministe, seedé par chaîne, utilisé pour que les données de démonstration restent stables entre deux exécutions du seed.
 
+/** Hache une chaîne en un entier 32 bits non signé (FNV-1a), utilisé comme graine du PRNG. */
 export function hashSeed(str: string): number {
   let h = 2166136261;
   for (let i = 0; i < str.length; i++) {
@@ -11,6 +10,7 @@ export function hashSeed(str: string): number {
   return h >>> 0;
 }
 
+/** Construit un générateur de nombres pseudo-aléatoires (mulberry32) à partir d'une graine entière. */
 export function mulberry32(seed: number): () => number {
   let a = seed;
   return () => {

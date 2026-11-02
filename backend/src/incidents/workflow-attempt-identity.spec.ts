@@ -1,3 +1,5 @@
+// Teste le composant « workflow-attempt-identity » et ses cas d’erreur.
+import { emptyReservationQuery } from './sonar-file-reservation.test-double';
 import * as assert from 'node:assert/strict';
 import { IncidentsService } from './incidents.service';
 import { resolveAttemptWorkflowIdentity } from './workflow-attempt-identity';
@@ -6,6 +8,7 @@ const CURRENT = 'u3eeMwTuhCsetfcS';
 const LEGACY = '9adcV31eaIgJyMR0';
 const SHA = 'a'.repeat(40);
 const admin = { id: 'admin', role: 'admin' };
+/** Prépare les données nécessaires à ce scénario. */
 function fixture() {
   const finding = { id: 'a', findingId: 'a', source: 'SONARQUBE', stage: 'sonar',
     remediationType: 'AUTO_FIX_ELIGIBLE', rule: 'java:S125', file: 'A.java', message: 'comment' };
@@ -13,21 +16,38 @@ function fixture() {
   const incident: any = { id: 'i', projectId: 'p', project, status: 'blocked', buildNumber: 1,
     metadata: { enrichedData: { sonar: { issues: [finding] } }, sourceCommitSha: SHA } };
   let writes = 0;
-  const repo: any = { findOne: async () => incident,
+  const repo: any = {
+  /** Recherche l’élément correspondant à l’identifiant. */
+  findOne: async () => incident,
+    /** Applique les modifications autorisées à l’élément. */
     update: async (_id: string, patch: any) => { writes++; Object.assign(incident, patch); } };
-  const projects: any = { findOne: async () => project };
-  repo.manager = { transaction: async (fn: any) => fn({ getRepository: (entity: any) => entity.name === 'Project' ? projects : repo }) };
-  const service = new IncidentsService(repo, projects, { emit: () => undefined } as any,
-    { syncIncident: async () => undefined } as any, {} as any);
-  // Never let the automatic PR-validation side effect leave this unit harness.
+  const projects: any = {
+  /** Recherche l’élément correspondant à l’identifiant. */
+  findOne: async () => project };
+  repo.manager = {
+  /** Exécute les opérations dans le cadre transactionnel prévu. */
+  transaction: async (fn: any) => fn({
+  /** Simule la lecture des données demandées par le composant. */
+  query: emptyReservationQuery, getRepository: (entity: any) => entity.name === 'Project' ? projects : repo }) };
+  const service = new IncidentsService(repo, projects, {
+  /** Diffuse ou construit le résultat prévu. */
+  emit: () => undefined } as any,
+    {
+    /** Prépare les données nécessaires à ce scénario. */
+    syncIncident: async () => undefined } as any, {} as any);
+  /** Prépare les données nécessaires à ce scénario. */
   (service as any).dispatchAutomaticInitialPrValidation = async () => undefined;
-  return { incident, service, writes: () => writes };
+  return { incident, service,
+  /** Prépare les données nécessaires à ce scénario. */
+  writes: () => writes };
 }
+/** Traite le retour de l’opération du scénario. */
 function callback(incident: any, workflowId = CURRENT, attemptCount = incident.metadata.fixRequest.attemptCount): any {
   const fix = incident.metadata.fixRequest;
   return { incidentId: incident.id, requestId: fix.requestId, batchId: fix.batchId, batchKey: fix.batchId,
     attemptCount, workflowId, executionId: `exec-${attemptCount}`, status: 'FAILED', failureCode: 'TEST_FAILURE' };
 }
+/** Exécute les étapes principales de ce programme. */
 async function main() {
   const savedEnv = process.env.N8N_WF2_ID;
   const savedFetch = globalThis.fetch;
@@ -82,6 +102,7 @@ async function main() {
     c.incident.metadata.validation = { checkoutSha: SHA,
       findingResults: [{ findingId: 'a', result: 'INVALID', evidence: 'still present' }],
       mergeAuthorization: { authorization: 'BLOCKED', correctiveActionAllowed: true } };
+    /** Prépare les données nécessaires à ce scénario. */
     (c.service as any).githubPullRequest = async () => ({ state: 'open', head: { sha: SHA, ref: 'fix/pfe-i-r' } });
     process.env.N8N_WF2_ID = CURRENT;
     await c.service.correctAndRevalidate('i', admin);

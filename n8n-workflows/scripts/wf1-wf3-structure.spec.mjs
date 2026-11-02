@@ -1,6 +1,7 @@
-// Offline JSON, expression and graph validation; never invokes n8n.
+// Teste le composant « wf1-wf3-structure » et ses cas d’erreur.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+/** Charge les données nécessaires au composant. */
 const load = file => JSON.parse(readFileSync(new URL('../active/' + file, import.meta.url)))[0];
 const wf1 = load('wf1-incident-intake-analysis-v5-1-vNOQiEgnXg9Zqn2q.json');
 const wf3 = load('wf3-post-pr-validation-v4-4JiOKpyHhx1znTYw.json');
@@ -23,6 +24,7 @@ for (const wf of [wf1, wf3]) {
     for (const [a, b] of edges) if (reachable.has(a)) reachable.add(b);
   }
   assert.equal(reachable.size, names.size, 'all functional nodes reachable');
+  /** Inspecte les données ou l’artefact pour en tirer des preuves. */
   function inspect(value, label) {
     if (typeof value === 'string') {
       for (const match of value.matchAll(/\{\{([\s\S]*?)\}\}/g)) {
@@ -44,7 +46,9 @@ for (const wf of [wf1, wf3]) {
 }
 assert.equal(wf1.nodes.length, 50);
 assert.deepEqual(wf1.nodes.filter(n => n.type === 'n8n-nodes-base.webhook').map(n => n.parameters.path), ['jenkins-event']);
+/** Prépare les données nécessaires à ce scénario. */
 const wf1n = name => wf1.nodes.find(n => n.name === name);
+/** Prépare les données nécessaires à ce scénario. */
 const wf1next = name => wf1.connections[name].main.flat().map(e => e.node);
 assert.equal(wf1n('Fetch SonarQube Issues').type, 'n8n-nodes-base.httpRequest');
 assert.equal(wf1n('Fetch SonarQube Issues').onError, 'continueErrorOutput');
@@ -54,7 +58,9 @@ assert.ok(!JSON.stringify(wf1n('Fetch SonarQube Issues')).includes('httpRequestW
 assert.ok(!wf1n('Consolidate Baseline Sonar Snapshot').parameters.jsCode.includes('httpRequestWithAuthentication'));
 assert.equal(wf3.nodes.length, 11);
 assert.equal(wf3.nodes.filter(n => n.type === 'n8n-nodes-base.webhook').length, 0);
+/** Prépare les données nécessaires à ce scénario. */
 const n = name => wf3.nodes.find(n => n.name === name);
+/** Traite le résultat reçu et actualise les données locales. */
 const next = name => wf3.connections[name].main.flat().map(e => e.node);
 assert.deepEqual(next('Get SonarQube Approved Findings'), ['Collect Target Finding Evidence', 'Collect Target Finding Evidence']);
 assert.deepEqual(next('Collect Target Finding Evidence'), ['Get Full Candidate Sonar Snapshot']);

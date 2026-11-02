@@ -1,13 +1,4 @@
-// BRIQUE 5 — PHASE 5 "SAME PR GUARANTEE": proves the "Select Existing PR"
-// node in the repo-tracked, active WF2 export
-// (n8n-workflows/active/wf2-git-patch-pr-v4-1-9adcV31eaIgJyMR0.json) never
-// creates a replacement PR for a causal corrective attempt. Normal
-// (non-corrective) behavior is unchanged: creating a PR for the very first
-// remediation attempt still proceeds exactly as before. REPO-ONLY: nothing
-// here imports/publishes to the live n8n instance, and this targets the
-// active artifact only -- NOT the unrelated pending WF2 R19/R22 hardening
-// candidate (n8n-workflows/pending-live-update/...), which has its own
-// separate test suite and is explicitly out of scope for Brique 5.
+// Vérifie la réutilisation de la même PR dans WF2.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -20,10 +11,16 @@ const node = workflow.nodes.find(n => n.name === 'Select Existing PR');
 assert.ok(node, 'Select Existing PR node must exist in the repo-tracked, active WF2 export');
 const code = node.parameters.jsCode;
 
+/** Exécute le traitement et collecte son résultat. */
 function run(ctx, prCandidates) {
-  const mock = name => name === 'Prepare Batch Context' ? { first: () => ({ json: ctx }) } : undefined;
+  /** Simule les dépendances nécessaires au scénario. */
+  const mock = name => name === 'Prepare Batch Context' ? {
+  /** Renvoie le premier élément disponible. */
+  first: () => ({ json: ctx }) } : undefined;
   const fn = new Function('$', '$input', code);
-  const mockInput = { all: () => prCandidates.map(pr => ({ json: pr })) };
+  const mockInput = {
+  /** Renvoie tous les éléments disponibles. */
+  all: () => prCandidates.map(pr => ({ json: pr })) };
   return fn(mock, mockInput)[0].json;
 }
 

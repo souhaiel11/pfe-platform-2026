@@ -1,0 +1,63 @@
+{
+  "identicalPatchGroups": [
+    [
+      38,
+      40
+    ]
+  ],
+  "conflictingPatchGroups": [
+    [
+      38,
+      39
+    ],
+    [
+      39,
+      40
+    ],
+    [
+      39,
+      41
+    ]
+  ],
+  "allShareFileReservation": [
+    37,
+    38,
+    39,
+    40,
+    41,
+    42
+  ],
+  "parentManagedInteractionRequiresSeparateValidation": [
+    42
+  ],
+  "alreadyOnMain": {
+    "37": false,
+    "38": false,
+    "39": false,
+    "40": false,
+    "41": false,
+    "42": false
+  },
+  "mutations": {
+    "37": {
+      "property:logback.version": "1.2.13",
+      "dependency:ch.qos.logback:logback-classic": "1.2.13"
+    },
+    "38": {
+      "dependency:org.yaml:snakeyaml": "1.31"
+    },
+    "39": {
+      "dependency:org.springframework.security:spring-security-core": "5.6.9",
+      "dependency:org.yaml:snakeyaml": "1.32"
+    },
+    "40": {
+      "dependency:org.yaml:snakeyaml": "1.31"
+    },
+    "41": {
+      "dependency:org.springframework.security:spring-security-core": "5.7.12"
+    },
+    "42": {
+      "parent": "2.7.18"
+    }
+  }
+}

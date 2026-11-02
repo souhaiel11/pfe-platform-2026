@@ -1,9 +1,4 @@
-// R-SEC-V1.1 — real, unmocked proof: real git worktree at an exact SHA,
-// real `mvn dependency:tree`, against the real souhaiel11/pfe-app-test
-// repository. Same pattern as candidate-verification-executor.spec.ts
-// (symlink the already-local dev clone into a scratch RepoCacheService
-// root, so no network clone is needed on every test run — RepoCacheService's
-// own network-clone behavior is proven separately in repo-cache.service.spec.ts).
+// Teste le composant « grounded-maven-provenance » et ses cas d’erreur.
 import * as assert from 'node:assert/strict';
 import * as fs from 'fs';
 import * as os from 'os';
@@ -24,6 +19,7 @@ const repoCache = new RepoCacheService(repoCacheRoot);
 const service = new GroundedMavenProvenanceService(workspaceManager, repoCache, new MavenBuildAdapter());
 
 let requestIdCounter = 0;
+/** Prépare les données nécessaires à ce scénario. */
 const nextRequestId = () => `reqSecV11-${++requestIdCounter}`;
 
 // ============================================================================
@@ -62,17 +58,6 @@ console.log('grounded-maven-provenance A/C) exact-SHA happy path, real DIRECT_EX
 }
 console.log('grounded-maven-provenance E) real TRANSITIVE grounding (tomcat-embed-core, task\'s own example) -> non-auto: PASS');
 
-// ============================================================================
-// B. requested SHA is syntactically valid but does not exist in the
-// repository -> fail closed. This is the REALISTIC fail-closed case for an
-// exact 40-hex SHA request: `git worktree add --detach <path> <sha>`
-// deterministically either checks out EXACTLY that commit or fails outright
-// (WorkspaceManager's own additional post-checkout SHA comparison is a
-// belt-and-suspenders check for this same invariant, not independently
-// triggerable via real git for a full-length SHA — see workspace-manager.
-// service.ts). Either way: no silent fallback to main/HEAD/latest-remote —
-// proven here by asserting checkoutSha/evaluatedSha both stay unset.
-// ============================================================================
 {
   const nonexistentSha = 'b'.repeat(40);
   const result = service.resolve({
@@ -124,17 +109,6 @@ console.log('grounded-maven-provenance G) real installed-version mismatch -> fai
 // alone can no longer imply failure: a successful offline probe takes priority.
 // That test enforces real subprocess timeouts without a variable network fetch.
 
-// ── D. property-managed grounded — HONEST NOTE ──────────────────────────
-// The real souhaiel11/pfe-app-test repository has no actual ${property}-
-// referenced dependency today (its <properties> are vestigial — see
-// maven-provenance-resolver.spec.ts's own §B note from V1). There is
-// therefore no REAL fixture to ground PROPERTY_MANAGED against in this
-// specific target repository. The grounded service reuses the EXACT SAME
-// resolveMavenProvenance() function already proven correct for
-// PROPERTY_MANAGED against a synthetic-but-standard pom (V1's
-// maven-provenance-resolver.spec.ts, tests B/F) — the grounded layer adds
-// only real I/O (checkout + dependency:tree text), it does not re-implement
-// property resolution, so that existing proof still covers this code path.
 console.log('grounded-maven-provenance D) PROPERTY_MANAGED: no real fixture exists in pfe-app-test (honest gap, same as V1) — logic proven at the pure-resolver level, reused unchanged here');
 
 fs.rmSync(scratchRoot, { recursive: true, force: true });

@@ -1,0 +1,75 @@
+{
+  "SchemaVersion": 2,
+  "Trivy": {
+    "Version": "0.72.0"
+  },
+  "ReportID": "01a110e3-e930-723f-8c5f-c54ed02c84f0",
+  "CreatedAt": "2026-10-06T13:05:34.256147921+02:00",
+  "ArtifactID": "sha256:282c825785d605302bec5086ba58a909132f1131c5706a185fac53b4ea61b4cf",
+  "ArtifactName": "/tmp/phase4g2-lab/seed-patch/image.tar",
+  "ArtifactType": "container_image",
+  "Metadata": {
+    "Size": 2621440,
+    "ImageID": "sha256:39841fc805fb3e86c9a2c037a0e8f366fff14b14742f3402d06659c70f9fd62b",
+    "DiffIDs": [
+      "sha256:eefde7fe2bf7be19b03b871da5c8789bf16c1743310c38e5c4c8e3ace9049a33"
+    ],
+    "RepoTags": [
+      "offline-h2:fixture"
+    ],
+    "Reference": "offline-h2:fixture",
+    "ImageConfig": {
+      "architecture": "amd64",
+      "created": "0001-01-01T00:00:00Z",
+      "os": "linux",
+      "rootfs": {
+        "type": "layers",
+        "diff_ids": [
+          "sha256:eefde7fe2bf7be19b03b871da5c8789bf16c1743310c38e5c4c8e3ace9049a33"
+        ]
+      },
+      "config": {}
+    },
+    "Layers": [
+      {
+        "Size": 2621440,
+        "DiffID": "sha256:eefde7fe2bf7be19b03b871da5c8789bf16c1743310c38e5c4c8e3ace9049a33"
+      }
+    ]
+  },
+  "Results": [
+    {
+      "Target": "Java",
+      "Class": "lang-pkgs",
+      "Type": "jar",
+      "Packages": [
+        {
+          "Name": "com.h2database:h2",
+          "Identifier": {
+            "PURL": "pkg:maven/com.h2database/h2@2.2.220",
+            "UID": "78b3150744760dd"
+          },
+          "Version": "2.2.220",
+          "Layer": {
+            "DiffID": "sha256:eefde7fe2bf7be19b03b871da5c8789bf16c1743310c38e5c4c8e3ace9049a33"
+          },
+          "FilePath": "app/dependencies/h2-2.2.220.jar",
+          "AnalyzedBy": "jar"
+        },
+        {
+          "Name": "operator.fixture:retry-e2e-h2",
+          "Identifier": {
+            "PURL": "pkg:maven/operator.fixture/retry-e2e-h2@1.0.0",
+            "UID": "31d6fcf3b323bf8"
+          },
+          "Version": "1.0.0",
+          "Layer": {
+            "DiffID": "sha256:eefde7fe2bf7be19b03b871da5c8789bf16c1743310c38e5c4c8e3ace9049a33"
+          },
+          "FilePath": "app/retry-e2e-h2-1.0.0.jar",
+          "AnalyzedBy": "jar"
+        }
+      ]
+    }
+  ]
+}

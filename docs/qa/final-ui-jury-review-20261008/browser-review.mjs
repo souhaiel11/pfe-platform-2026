@@ -1,0 +1,24 @@
+import fs from 'node:fs';
+import {createRequire} from 'node:module';
+const {chromium}=createRequire(import.meta.url)('/home/souhaiel/.npm/_npx/e41f203b7505f1fb/node_modules/playwright');
+const out=new URL('./',import.meta.url).pathname;const phase=process.env.QA_PHASE||'before';
+const auth=JSON.parse(fs.readFileSync('/tmp/jury-session.private.json'));const browser=await chromium.launch({headless:true});const ctx=await browser.newContext({viewport:{width:1440,height:900}});
+await ctx.addInitScript(a=>{localStorage.setItem('token',a.token);localStorage.setItem('user',JSON.stringify(a.user))},auth);
+const results={phase,pages:[],errors:[],requests:[],blockedWrites:[],spotChecks:[]};
+await ctx.route('**/*',async route=>{const r=route.request();if(!['GET','HEAD','OPTIONS'].includes(r.method())){results.blockedWrites.push({method:r.method(),url:r.url().split('?')[0]});return route.abort();}return route.continue()});
+const page=await ctx.newPage();page.on('pageerror',e=>results.errors.push(e.message));page.on('response',r=>{if(r.url().includes('/api/'))results.requests.push({url:r.url().replace(/token=[^&]+/g,'token=REDACTED'),status:r.status()})});
+const base='http://127.0.0.1:4200';
+await page.goto(base+'/projects');await page.waitForTimeout(1200);
+const projects=await page.evaluate(async()=>{const r=await fetch('/api/projects',{headers:{Authorization:'Bearer '+localStorage.getItem('token')}});if(!r.ok)throw Error('projects '+r.status);return (await r.json()).map(p=>({id:p.id,name:p.name,githubRepo:p.githubRepo}))});results.projects=projects;
+async function capture(path,name){await page.goto(base+path);await page.waitForTimeout(600);await page.waitForLoadState('networkidle',{timeout:12000}).catch(()=>{});if(name.endsWith('-deploiement') || name.startsWith('deployment-'))await page.locator('.dg-capability-card,.dg-error-panel').first().waitFor({timeout:65000}).catch(()=>{});let b=await page.locator('body').innerText();if(/Chargement/.test(b)){await page.waitForTimeout(1200);b=await page.locator('body').innerText()};const d=await page.evaluate(()=>({width:innerWidth,scroll:document.documentElement.scrollWidth,buttons:[...document.querySelectorAll('button')].filter(e=>e.getClientRects().length).map(e=>({text:e.innerText.trim(),label:e.getAttribute('aria-label'),title:e.title,disabled:e.disabled})),headings:[...document.querySelectorAll('h1,h2,h3')].map(e=>e.innerText)}));results.pages.push({name,path,...d,text:b});if(phase!=='before' || name==='dashboard')await page.screenshot({path:out+phase+'-'+name+'.png',fullPage:false});}
+try{
+for(const route of ['dashboard','projects','analysis','security','prediction','settings','admin','incidents','projects/new','not-found'])await capture('/'+route,route.replaceAll('/','-'));
+for(const p of projects){for(const tab of ['rapport','jenkins','sonarqube','docker','securite','deploiement','incidents','config'])await capture('/projects/'+p.id+'?tab='+tab,p.id.slice(0,8)+'-'+tab);}
+await page.goto(base+'/incidents');await page.waitForTimeout(1200);const links=await page.locator('a[href^="/incidents/"]').evaluateAll(es=>[...new Set(es.map(e=>e.getAttribute('href')))].slice(0,3));for(const [i,l]of links.entries())await capture(l,'incident-'+i);
+if(phase!=='before') {
+ await page.goto(base+'/settings');await page.waitForTimeout(800);
+ for(const p of projects){await page.locator('#settings-project').selectOption(p.id);await page.waitForTimeout(450);for(const section of ['general','integrations','security','delivery','diagnostics']){const btn=page.locator('#settings-tab-'+section);if(await btn.count()){await btn.click();await page.waitForTimeout(450);const text=await page.locator('body').innerText();results.pages.push({name:p.id.slice(0,8)+'-settings-'+section,path:page.url(),width:1440,scroll:await page.evaluate(()=>document.documentElement.scrollWidth),text});}}}
+ for(const p of projects){await capture('/projects/'+p.id+'/edit',p.id.slice(0,8)+'-edit');for(const section of ['CI/CD','SonarQube']){await page.locator('.snav-btn').filter({hasText:section}).click();await page.waitForTimeout(100);results.pages.push({name:p.id.slice(0,8)+'-edit-'+section,path:page.url(),width:1440,scroll:await page.evaluate(()=>document.documentElement.scrollWidth),text:await page.locator('body').innerText()});}}
+}
+for(const width of [1366,1920]){await page.setViewportSize({width,height:width===1366?768:1080});await capture('/projects/'+projects[0].id+'?tab=securite','security-'+width);await capture('/projects/'+projects[0].id+'?tab=deploiement','deployment-'+width);}
+}finally{fs.writeFileSync(out+phase+'-browser.json',JSON.stringify(results,null,2));await browser.close();console.log(JSON.stringify({phase,projects:projects.length,pages:results.pages.length,errors:results.errors,overflow:results.pages.filter(p=>p.scroll>p.width).map(p=>p.name),failed:results.requests.filter(r=>r.status>=400)}))}

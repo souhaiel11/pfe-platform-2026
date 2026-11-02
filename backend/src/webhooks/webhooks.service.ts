@@ -1,4 +1,5 @@
-// webhooks.service.ts
+// Traite les webhooks bruts SonarQube/Jenkins/Trivy : crée bugs/incidents, et route automatiquement
+// certains échecs Jenkins classifiés vers les optimiseurs Jenkinsfile (WF4) / Dockerfile (WF5).
 import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -12,20 +13,18 @@ import { IncidentStatus } from '../incidents/incident.entity';
 import { extractErrorFromConsoleLog } from './console-log-errors';
 import { classify } from './jenkins-known-fixes';
 import { RoutedBuild } from './routed-build.entity';
+import { trustedJenkinsConsoleUrl } from './trusted-jenkins-url';
 
-// Base même processus — appel interne backend->backend (jamais franchit le
-// réseau Docker), pas de dépendance à N8N_URL ni à un hostname de conteneur.
 const SELF_API_URL = process.env.SELF_API_URL || 'http://localhost:3001/api';
+// Appels internes du routeur (WF4/WF5) : secret interne n8n. Un JWT fabriqué pour un compte
+// inexistant est refusé depuis que la stratégie JWT exige un utilisateur réel en base.
+const INTERNAL_HEADERS = () => ({ 'Content-Type': 'application/json', 'X-Internal-Secret': process.env.N8N_INTERNAL_SECRET || '' });
 
-// TTL de la garde anti-boucle (routed_builds) : un même échec (même projet,
-// même type, même errorReason) ne re-déclenche pas WF4/WF5 pendant cette
-// fenêtre. 24h par défaut — assez long pour absorber une rafale de rebuilds
-// identiques (ex: les ~10 builds ZAP de ce soir), pas assez pour bloquer
-// indéfiniment un échec qui persiste sur plusieurs jours.
 const ROUTED_BUILD_TTL_MS = Number(process.env.ROUTED_BUILD_TTL_MS) || 24 * 60 * 60 * 1000;
 
 @Injectable()
 export class WebhooksService {
+  /** Initialise les dépendances et l’état de ce composant. */
   constructor(
     private readonly bugs: BugsService,
     private readonly incidents: IncidentsService,
@@ -34,6 +33,7 @@ export class WebhooksService {
     @InjectRepository(RoutedBuild) private readonly routedBuilds: Repository<RoutedBuild>,
   ) {}
 
+  // Convertit chaque issue SonarQube du payload (limité à 20) en bug.
   async handleSonarqube(projectId: string, payload: any) {
     const issues = payload?.issues || [];
     for (const issue of issues.slice(0, 20)) {
@@ -52,34 +52,35 @@ export class WebhooksService {
     return { processed: issues.length };
   }
 
+  // Crée un incident à partir d'un payload Jenkins, va chercher la vraie cause d'échec dans le log
+  // console si besoin, puis déclenche (en fire-and-forget) le routage automatique vers WF4/WF5.
   async handleJenkins(projectId: string, payload: any) {
-    // Créer un incident pour tout payload Jenkins valide
     const buildNumber = payload?.build_number || payload?.build?.number || payload?.buildNumber || null;
     const buildStatus = payload?.status || payload?.build?.status || 'UNKNOWN';
     const jobName     = payload?.job || payload?.jenkinsJobName || null;
     const title       = payload?.title
                       || (jobName ? `Jenkins Build #${buildNumber}: ${buildStatus}` : 'Jenkins Build');
 
-    // Pas de valeur SUCCESS/UNSTABLE dédiée dans IncidentStatus : un build vert
-    // -> COMPLETED (rien à traiter), tout le reste (FAILURE/UNSTABLE/ABORTED/
-    // inconnu) -> FAILED, ça mérite un regard même si "unstable" n'est pas un
-    // arrêt dur.
     const incidentStatus = String(buildStatus).toUpperCase() === 'SUCCESS'
       ? IncidentStatus.COMPLETED
       : IncidentStatus.FAILED;
 
     const buildUrl = payload?.build_url || payload?.build?.url || payload?.metadata?.buildUrl || '';
 
-    // Le message d'erreur venant du Jenkinsfile (payload.error_message) ne
-    // peut jamais contenir le vrai texte d'un échec de step sh (Jenkins ne
-    // capture que "script returned exit code N" à ce niveau — voir
-    // diagnostic). Sur un build FAILURE, on va chercher la vraie cause dans
-    // le log console lui-même. Fail-safe : un fetch raté ne bloque jamais la
-    // création de l'incident, juste un warning + repli sur error_message.
     let errorReason: string | null = payload?.error_message || null;
-    if (String(buildStatus).toUpperCase() === 'FAILURE' && buildUrl) {
+    // SSRF : build_url vient du payload ; on ne lit que le log d'un build du Jenkins configuré du projet.
+    // Lecture authentifiée (Jenkins refuse l'anonyme) : le token n'est envoyé qu'à l'URL interne validée ci-dessus.
+    const jenkinsProject = String(buildStatus).toUpperCase() === 'FAILURE' && buildUrl
+      ? await this.projects.findOneWithSecrets(projectId).catch(() => null) : null;
+    const consoleUrl = jenkinsProject ? trustedJenkinsConsoleUrl(buildUrl, jenkinsProject) : null;
+    const consoleHeaders: Record<string, string> = jenkinsProject?.jenkinsToken
+      ? { Authorization: 'Basic ' + Buffer.from(jenkinsProject.jenkinsToken).toString('base64') } : {};
+    if (buildUrl && String(buildStatus).toUpperCase() === 'FAILURE' && !consoleUrl) {
+      console.warn(`[webhooks] build_url refusé (hors du Jenkins configuré du projet) : ${buildUrl}`);
+    }
+    if (consoleUrl) {
       try {
-        const res = await fetch(`${buildUrl}consoleText`, { signal: AbortSignal.timeout(15000) });
+        const res = await fetch(consoleUrl, { headers: consoleHeaders, signal: AbortSignal.timeout(15000), redirect: 'error' });
         if (res.ok) {
           const log = await res.text();
           const extracted = extractErrorFromConsoleLog(log);
@@ -105,16 +106,7 @@ export class WebhooksService {
       errorReason,
     });
 
-    // Routage automatique WF4/WF5 — fire-and-forget : ne DOIT jamais retarder
-    // ni faire échouer la réponse au webhook Jenkins (voir catch ci-dessous).
-    // Le seul appel LLM impliqué est celui de WF4/WF5 eux-mêmes ; classify()
-    // et la garde anti-boucle (voir routeToOptimizer) sont 100% déterministes.
     if (incidentStatus === IncidentStatus.FAILED && errorReason) {
-      // jobName Jenkins multibranche = "<job>/<branche>" (ex:
-      // "vuln-testapp/ci/ma-branche") — tout ce qui suit le 1er segment est
-      // la branche réelle. Sans ça, fetch() retomberait toujours sur 'main'
-      // par défaut et ne reproduirait jamais un bug qui n'existe que sur la
-      // branche qui a réellement échoué.
       const branch = jobName && jobName.includes('/') ? jobName.split('/').slice(1).join('/') : undefined;
       this.routeToOptimizer(projectId, incident.id, errorReason, branch).catch((e: any) => {
         console.warn(`[webhooks] routage auto WF4/WF5 échoué pour incident ${incident.id} : ${e?.message || e}`);
@@ -124,23 +116,12 @@ export class WebhooksService {
     return { received: true, incidentId: incident.id, id: incident.id };
   }
 
-  // Routage automatique déterministe (classify(), zéro LLM pour DÉCIDER) vers
-  // WF4/WF5 — le seul "penseur" LLM reste WF4/WF5 eux-mêmes, jamais ce
-  // routeur. GARDE-FOU CRITIQUE : uniquement 'jenkinsfile'/'dockerfile'
-  // déclenchent quelque chose ; 'vulnerability'/'code'/'infra'/'unknown' ne
-  // déclenchent JAMAIS rien automatiquement — l'incident reste en attente
-  // d'une analyse WF1 à la demande (bloc suivant), jamais d'auto-fix sur une
-  // vraie vulnérabilité ou un problème hors du périmètre Jenkinsfile/Dockerfile.
+  // Classe l'erreur (déterministe, sans LLM) et déclenche WF4 (Jenkinsfile) ou WF5 (Dockerfile)
+  // uniquement pour ces deux types, en respectant la garde anti-boucle (table routed_builds).
   private async routeToOptimizer(projectId: string, incidentId: string, errorReason: string, branch?: string) {
     const classification = classify(errorReason);
     if (classification.type !== 'jenkinsfile' && classification.type !== 'dockerfile') return;
 
-    // Garde anti-boucle : hash(projectId + type + errorReason) + TTL, table
-    // routed_builds — se souvient de TOUT hash déjà routé (pas seulement le
-    // dernier incident), donc insensible à ce qui s'est passé entre deux
-    // occurrences du même échec (ex: les ~10 builds ZAP identiques de ce
-    // soir, entrecoupés d'autres tests). TTL = ROUTED_BUILD_TTL_MS, pour ne
-    // pas bloquer indéfiniment un échec qui persiste sur plusieurs jours.
     const hash = createHash('sha256')
       .update(`${projectId}:${classification.type}:${errorReason}`)
       .digest('hex');
@@ -165,19 +146,9 @@ export class WebhooksService {
     }
 
     if (classification.type === 'jenkinsfile') {
-      // WF4 : /jenkins/optimize a besoin du contenu, pas seulement du
-      // chemin — un fetch préalable est requis (WF4 ne le fait pas lui-même,
-      // contrairement à WF5). /jenkins/fetch et /jenkins/optimize sont
-      // protégés par JwtOrInternalSecretGuard (voir jenkins-optimizer.module.ts) :
-      // un appel serveur->serveur n'a pas de session à réutiliser, on signe un
-      // token de service à la volée (même secret que AuthModule, voir
-      // webhooks.module.ts) — même pattern que la branche WF5 ci-dessous.
-      const internalToken = this.jwt.sign({
-        sub: 'internal-webhook-router', email: 'internal-router@devsecops.local', role: 'admin',
-      });
       const fetchRes = await fetch(`${SELF_API_URL}/jenkins/fetch`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${internalToken}` },
+        headers: INTERNAL_HEADERS(),
         body: JSON.stringify({ owner, repo, filePath: 'Jenkinsfile', ref: branch || undefined }),
         signal: AbortSignal.timeout(30000),
       });
@@ -188,7 +159,7 @@ export class WebhooksService {
       }
       await fetch(`${SELF_API_URL}/jenkins/optimize`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${internalToken}` },
+        headers: INTERNAL_HEADERS(),
         body: JSON.stringify({
           projectId, projectName: project?.name, jenkinsfile: fetchData.jenkinsfile, buildError: errorReason,
         }),
@@ -198,19 +169,9 @@ export class WebhooksService {
       console.log(`[webhooks] routage auto WF4 déclenché pour incident ${incidentId}`);
       return;
     }
-
-    // classification.type === 'dockerfile' — WF5 fetch le Dockerfile
-    // lui-même côté backend, un seul appel suffit. /dockerfile/optimize est
-    // protégé par JwtAuthGuard (voir dockerfile-optimizer.module.ts, non
-    // modifié) : un appel serveur->serveur n'a pas de session à réutiliser,
-    // on signe un token de service à la volée (même secret que AuthModule,
-    // voir webhooks.module.ts) plutôt que de toucher WF5.
-    const internalToken = this.jwt.sign({
-      sub: 'internal-webhook-router', email: 'internal-router@devsecops.local', role: 'admin',
-    });
     await fetch(`${SELF_API_URL}/dockerfile/optimize`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${internalToken}` },
+      headers: INTERNAL_HEADERS(),
       body: JSON.stringify({ owner, repo, projectId, projectName: project?.name, buildError: errorReason, ref: branch || undefined }),
       signal: AbortSignal.timeout(30000),
     });
@@ -218,10 +179,8 @@ export class WebhooksService {
     console.log(`[webhooks] routage auto WF5 déclenché pour incident ${incidentId}`);
   }
 
-  // Écrit la ligne routed_builds APRÈS que l'appel optimize() ait réussi à
-  // partir (pas avant) : si le fetch/optimize échoue (repo introuvable,
-  // n8n injoignable), on ne marque rien comme "routé" — un vrai retry sur
-  // le prochain rebuild reste possible plutôt qu'un faux blocage silencieux.
+  // Enregistre un échec comme "routé" (avec expiration), seulement après que l'appel d'optimisation a
+  // réussi à partir — un appel qui échoue n'est jamais marqué, pour laisser un vrai retry possible.
   private async markRouted(hash: string, projectId: string, classificationType: string, errorReason: string) {
     const routedAt = new Date();
     const expiresAt = new Date(routedAt.getTime() + ROUTED_BUILD_TTL_MS);
@@ -230,6 +189,7 @@ export class WebhooksService {
     );
   }
 
+  // Convertit chaque vulnérabilité Trivy critique/haute du payload (limité à 10) en bug.
   async handleTrivy(projectId: string, payload: any) {
     const vulns = payload?.Results?.flatMap((r: any) => r.Vulnerabilities || []) || [];
     for (const v of vulns.filter((v: any) => ['CRITICAL', 'HIGH'].includes(v.Severity)).slice(0, 10)) {
@@ -246,6 +206,7 @@ export class WebhooksService {
     return { processed: vulns.length };
   }
 
+  // Convertit une sévérité SonarQube (BLOCKER/CRITICAL/MAJOR/MINOR) en sévérité interne BugSeverity.
   private mapSonarSeverity(s: string): BugSeverity {
     const map: any = { BLOCKER: BugSeverity.CRITICAL, CRITICAL: BugSeverity.HIGH, MAJOR: BugSeverity.MEDIUM, MINOR: BugSeverity.LOW };
     return map[s] || BugSeverity.LOW;

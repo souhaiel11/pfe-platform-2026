@@ -1,6 +1,8 @@
 [
   {
+    "id": "x4oTJ4HbkC1R526b",
     "name": "WF4 - Jenkinsfile Optimizer v5",
+    "activeVersionId": "ff78c308-a9d1-4193-8778-fe98ce7c7456",
     "nodes": [
       {
         "parameters": {
@@ -14,22 +16,22 @@
         "type": "n8n-nodes-base.webhook",
         "typeVersion": 2,
         "position": [
-          10624,
-          7616
+          8688,
+          7584
         ],
         "webhookId": "a3946415-46d6-43d3-92ea-660449318930"
       },
       {
         "parameters": {
-          "jsCode": "const body = $input.first().json.body || $input.first().json;\nconst jenkinsfile = String(body.jenkinsfile || '').trim();\nconst projectName = body.projectName || 'projet';\nconst context     = body.context || {};\nconst owner  = String(body.owner  || '').trim();\nconst repo   = String(body.repo   || '').trim();\nconst branch = String(body.branch || 'main').trim();\nconst buildError = String(body.buildError || '').trim();\nif (!jenkinsfile || jenkinsfile.length < 30) return [{ json: { error: 'INVALID_INPUT', message: 'Jenkinsfile vide ou trop court (min 30 caractères)' } }];\nif (jenkinsfile.length > 60000) return [{ json: { error: 'TOO_LARGE', message: 'Jenkinsfile trop volumineux (max 60 Ko)' } }];\n\n// ── SÉLECTION (régénération) ────────────────────────────────────────────────\n// Source PRÉFÉRÉE (structurée) attendue du backend :\n//   body.selection = { kept: [{ref,title}], excluded: [{ref,title}] }\n// Fallback rétro-compatible : ancien texte prose context.notes (analyse initiale).\nconst selection = body.selection || context.selection || null;\nconst kept     = selection && Array.isArray(selection.kept)     ? selection.kept     : [];\nconst excluded = selection && Array.isArray(selection.excluded) ? selection.excluded : [];\nconst isRegen  = kept.length > 0 || excluded.length > 0;\n\nconst fmtList = (arr) => arr.length\n  ? arr.map(i => `- [${i.ref || i.id || '?'}] ${(i.title || i.recommendation || '').toString().trim()}`).join('\\n')\n  : '- (aucune)';\n\nconst keptTxt  = fmtList(kept);\nconst exclTxt  = fmtList(excluded);\nconst exclRefs = excluded.map(i => i.ref || i.id || '?').join(', ') || '(aucune)';\n\n// Bloc de contrainte injecté EN TÊTE du message (uniquement en régénération).\nconst selectionBlock = isRegen ? `\n════════════════════════════════════════════════\nCONTRAINTE DE SÉLECTION — PRIORITÉ ABSOLUE\n════════════════════════════════════════════════\nCeci est une RÉGÉNÉRATION. Le développeur a examiné une analyse précédente et fait des\nchoix DÉLIBÉRÉS. Ce ne sont pas des oublis : ce sont des décisions à respecter à la lettre.\n\nCORRECTIONS RETENUES (à appliquer dans le Jenkinsfile régénéré) :\n${keptTxt}\n\nCORRECTIONS ÉCARTÉES (STRICTEMENT INTERDITES — à ne jamais réintroduire) :\n${exclTxt}\n\nRÈGLES IMPÉRATIVES :\n1. Le Jenkinsfile régénéré ne doit contenir AUCUNE des corrections écartées ci-dessus —\n   ni sous une autre forme, ni sous un autre nom, ni dans un commentaire.\n2. Même si une correction écartée est une bonne pratique DevSecOps standard (timeout,\n   cleanWs, retry, quality gate, etc.), tu NE DOIS PAS l'ajouter. Ce n'est PAS une omission\n   à corriger : le développeur l'a retirée CONSCIEMMENT. La réintroduire est une ERREUR,\n   pas une amélioration.\n3. Ne renumérote jamais une correction écartée comme si elle était retenue, et n'ajoute\n   aucun commentaire qui la justifie ou l'annonce.\n4. Ton objectif n'est PAS de produire le \"meilleur Jenkinsfile absolu\", mais le meilleur\n   Jenkinsfile qui RESPECTE les choix du développeur.\n` : (context.notes ? `Notes : ${context.notes}` : '');\n\n// Bloc injecte SEULEMENT si un contexte d'erreur de build reel est fourni\n// (voir webhooks.service.ts -> optimize()). Absent = comportement identique\n// a avant (analyse statique normale, aucun changement).\nconst buildErrorBlock = buildError ? `\n════════════════════════════════════════════════\nERREUR DE BUILD REELLE — PRIORITE ABSOLUE\n════════════════════════════════════════════════\nLe dernier build Jenkins a echoue avec cette erreur reelle, extraite du log console :\n\"${buildError}\"\n\nPriorise la correction de CETTE erreur precise. Les fichiers du projet (pom.xml, Dockerfile\n— fournis plus loin dans ce message, section CONTEXTE PROJET) restent la SOURCE DE VERITE\npour determiner COMMENT corriger. Exemple : cette erreur mentionne 'cannot access mvnw' et\nle contexte projet indique hasMvnw=false -> remplace ./mvnw par mvn. Ne corrige que ce qui\nest coherent avec le contexte projet ET avec cette erreur reelle — n'invente rien de plus.\n` : '';\n\n// Rappel condensé réinjecté EN TOUTE FIN du message (contre le biais de récence).\nconst finalReminder = isRegen ? `\n\n════════════════════════════════════════════════\nRAPPEL FINAL — À VÉRIFIER AVANT DE RÉPONDRE\n════════════════════════════════════════════════\nCorrections ÉCARTÉES, INTERDITES dans ta réponse même si ce sont de bonnes pratiques : ${exclRefs}.\nAvant de produire ton JSON, relis le Jenkinsfile que tu t'apprêtes à générer et confirme\nqu'aucune de ces corrections écartées n'y figure — ni dans le code, ni dans un commentaire.` : '';\n\nconst systemPrompt = `Tu es un architecte CI/CD senior, expert Jenkins et DevSecOps (15 ans d'expérience).\nTa mission : analyser un Jenkinsfile et produire une version améliorée, plus propre, plus sûre et plus rapide.\nRéponds UNIQUEMENT en JSON valide — pas de markdown, pas de backticks. Commence par { et termine par }.\nN'écris JAMAIS de raisonnement, de liste de vérification ou de texte avant le JSON — même pour vérifier les règles ci-dessous : cette vérification est SILENCIEUSE, son résultat va directement dans le champ \"summary\" du JSON, jamais en texte libre.\nLANGUE : tous les textes (summary, title, problem, recommendation, description) en FRANÇAIS professionnel. Le code reste tel quel.\nRÈGLE D'ARRÊT — ERREURS REELLES SEULEMENT :\nTu ne signales et ne corriges QUE des erreurs RÉELLES et vérifiables : syntaxe Groovy\ninvalide, incohérence avec pom.xml/Dockerfile (version Java, nom du JAR, stage docker\nsans Dockerfile), interpolation Groovy non échappée d'une variable credentials dans un\nbloc sh (GString \"...$VAR...\" au lieu d'un shell single-quote '...$VAR...' — fuite\npotentielle du secret dans les logs malgré withCredentials). Vérifie ces 4 catégories de façon exhaustive à chaque analyse, sans exception — mais\nSILENCIEUSEMENT : ne décris jamais cette vérification, va directement à la sortie JSON. Tu n'inventes JAMAIS d'amélioration subjective ('tu pourrais ajouter\nun timeout', 'tu pourrais paralléliser', 'ce serait mieux si...') sur un Jenkinsfile\nqui est déjà valide et cohérent. Si le Jenkinsfile ne contient AUCUNE erreur réelle,\ntu réponds exactement : 'Jenkinsfile conforme, aucune correction nécessaire' et tu\nrenvoies le fichier INCHANGÉ (identique caractère pour caractère). Ne modifie pas une\nseule ligne dans ce cas. (Cette réponse reste un JSON valide au FORMAT EXACT plus bas :\nsummary=\"Jenkinsfile conforme, aucune correction nécessaire\", issues=[], changes=[],\noptimizedJenkinsfile=le fichier original strictement inchangé.)\nRÈGLES D'ANALYSE — examine dans cet ordre :\n1. SECURITE : credentials/tokens/mots de passe en clair (CRITIQUE), absence de withCredentials, images Docker en :latest ou sans tag, sh avec interpolation non échappée de variables Groovy (injection), permissions trop larges.\n2. FIABILITE : absence de timeout global et par stage, pas de retry sur les étapes réseau, pas de post { always { cleanWs() } }, pas de post { failure }, stages sans when pertinent.\n3. PERFORMANCE : scans sécurité séquentiels qui pourraient être parallèles (parallel {}), absence de cache Maven/npm, ordre non fail-fast (vérifications rapides d'abord), checkout redondants.\n4. LISIBILITE : variables d'environnement dupliquées, blocs sh géants, absence de options { timestamps() }, stages mal nommés.\n5. DEVSECOPS : ordre recommandé build → tests → SAST (Sonar) → dependency check → image build → scan image (Trivy) → deploy éphémère → DAST (ZAP) ; archivage des rapports. Ne suggère JAMAIS d'ajouter waitForQualityGate() ou un quality gate bloquant : cela nécessite un webhook SonarQube→Jenkins configuré côté infrastructure, invérifiable depuis le Jenkinsfile seul, et un pipeline peut rester bloqué indéfiniment si ce webhook n'est pas en place.\nCONTRAINTE DE SÉLECTION — PRIORITÉ ABSOLUE sur toute bonne pratique :\n- Si une liste de corrections ÉCARTÉES t'est fournie dans le message, tu ne dois JAMAIS réintroduire ces corrections, même si ce sont des bonnes pratiques DevSecOps standard. Une exclusion est un choix délibéré du développeur, pas un oubli à corriger. Cette contrainte l'emporte sur toutes les règles d'analyse ci-dessus.\nRÈGLE SYNTAXE GROOVY (priorité absolue, prime sur la préservation du code existant) :\ntimestamps() n'est PAS une option valide. S'il apparaît dans options{}, tu DOIS le\nretirer de options{} et envelopper les steps avec :\n  INCORRECT :  options { timestamps() }\n  CORRECT   :  stage('X') { steps { timestamps { sh '...' } } }\nUn Jenkinsfile qui ne compile pas n'est PAS 'du code fonctionnel à préserver' — la\nrègle CONSERVE ne s'applique JAMAIS à une syntaxe invalide. Corrige-la toujours.\nRÈGLES DE RÉÉCRITURE — impératives :\n- CONSERVE tous les outils, stages, credentials IDs, URLs et webhooks existants. N'invente JAMAIS un credential ID, une URL ou un outil absent de l'original.\n- Le fichier optimisé doit être COMPLET et directement utilisable (pas de \"...\" ni de sections omises).\n- Chaque changement doit correspondre à une issue listée (traçabilité via ref).\n- Commentaires français courts uniquement là où un choix mérite explication.\n- Ne change rien sur les points déjà corrects.\nRÈGLE DE CONFIANCE — n'affirme jamais comme un fait ce que tu ne peux pas vérifier depuis le Jenkinsfile fourni :\n- Certaines recommandations dépendent d'informations EXTERNES que tu n'as pas : existence d'un tag précis d'image sur un registre (ex: aquasec/trivy:0.51.1 existe-t-il ?), plugin Jenkins réellement installé (ex: waitForQualityGate nécessite le plugin SonarQube + un webhook configuré), version d'un outil externe, config runtime de l'agent, secrets/credentials présents dans Jenkins.\n- Pour CHAQUE issue de ce type, ajoute \"needsConfirmation\": true et \"confirmationNote\": \"<quoi vérifier précisément et où>\" (ex: \"vérifier que le tag aquasec/trivy:0.51.1 existe sur Docker Hub avant merge\").\n- IMPORTANT — ne mets ce flag QUE si l'exactitude dépend vraiment d'une info externe non vérifiable. Une recommandation entièrement vérifiable depuis le Jenkinsfile (ajouter un timeout(), paralléliser des stages, ajouter timestamps(), passer un token via withCredentials, cleanWs()) ne porte PAS ce flag : mets alors \"needsConfirmation\": false et \"confirmationNote\": \"\". Ne marque pas tout par excès — un flag partout noierait le signal et le rendrait inutile.\nFORMAT EXACT :\n{\"score\":<0-100 du fichier ORIGINAL>,\"summary\":\"<3-4 phrases ; mentionne s'il existe des points à confirmer par le développeur>\",\"issues\":[{\"id\":\"JF-1\",\"category\":\"SECURITE|FIABILITE|PERFORMANCE|LISIBILITE|DEVSECOPS\",\"severity\":\"CRITIQUE|ELEVE|MOYEN|FAIBLE\",\"title\":\"<une ligne>\",\"problem\":\"<1-2 phrases>\",\"recommendation\":\"<quoi faire>\",\"lineHint\":\"<extrait ou numéro>\",\"needsConfirmation\":<true|false>,\"confirmationNote\":\"<si true: quoi vérifier et où ; sinon chaîne vide>\"}],\"optimizedJenkinsfile\":\"<FICHIER COMPLET>\",\"changes\":[{\"ref\":\"JF-1\",\"description\":\"<modif appliquée>\"}],\"estimatedTimeSavingPercent\":<0-60>,\"confidence\":<0.0-1.0>}`;\n\nconst userContent = `Analyse et optimise ce Jenkinsfile du projet \"${projectName}\".\nContexte : SonarQube, Trivy, OWASP Dependency-Check et ZAP disponibles ; backend de reporting sur le réseau Docker.\n${buildErrorBlock}\n${selectionBlock}\nJENKINSFILE ORIGINAL :\n\\n\\`\\`\\`groovy\n${jenkinsfile}\n\\`\\`\\`${finalReminder}`;\n\nreturn [{ json: { apiBody: { model:'claude-sonnet-4-6', max_tokens:16000, temperature:0, system:systemPrompt, messages:[{role:'user',content:userContent}] }, projectName, owner, repo, branch } }];"
+          "jsCode": "const body = $input.first().json.body || $input.first().json;\nconst jenkinsfile = String(body.jenkinsfile || '').trim();\nconst projectName = body.projectName || 'projet';\nconst context     = body.context || {};\nconst owner  = String(body.owner  || '').trim();\nconst repo   = String(body.repo   || '').trim();\nconst branch = String(body.branch || 'main').trim();\nconst buildError = String(body.buildError || '').trim();\nif (!jenkinsfile || jenkinsfile.length < 30) return [{ json: { error: 'INVALID_INPUT', message: 'Jenkinsfile vide ou trop court (min 30 caractères)' } }];\nif (jenkinsfile.length > 60000) return [{ json: { error: 'TOO_LARGE', message: 'Jenkinsfile trop volumineux (max 60 Ko)' } }];\n\n// ── SÉLECTION (régénération) ────────────────────────────────────────────────\n// Source PRÉFÉRÉE (structurée) attendue du backend :\n//   body.selection = { kept: [{ref,title}], excluded: [{ref,title}] }\n// Fallback rétro-compatible : ancien texte prose context.notes (analyse initiale).\nconst selection = body.selection || context.selection || null;\nconst kept     = selection && Array.isArray(selection.kept)     ? selection.kept     : [];\nconst excluded = selection && Array.isArray(selection.excluded) ? selection.excluded : [];\nconst isRegen  = kept.length > 0 || excluded.length > 0;\n\nconst fmtList = (arr) => arr.length\n  ? arr.map(i => `- [${i.ref || i.id || '?'}] ${(i.title || i.recommendation || '').toString().trim()}`).join('\\n')\n  : '- (aucune)';\n\nconst keptTxt  = fmtList(kept);\nconst exclTxt  = fmtList(excluded);\nconst exclRefs = excluded.map(i => i.ref || i.id || '?').join(', ') || '(aucune)';\n\n// Bloc de contrainte injecté EN TÊTE du message (uniquement en régénération).\nconst selectionBlock = isRegen ? `\n════════════════════════════════════════════════\nCONTRAINTE DE SÉLECTION — PRIORITÉ ABSOLUE\n════════════════════════════════════════════════\nCeci est une RÉGÉNÉRATION. Le développeur a examiné une analyse précédente et fait des\nchoix DÉLIBÉRÉS. Ce ne sont pas des oublis : ce sont des décisions à respecter à la lettre.\n\nCORRECTIONS RETENUES (à appliquer dans le Jenkinsfile régénéré) :\n${keptTxt}\n\nCORRECTIONS ÉCARTÉES (STRICTEMENT INTERDITES — à ne jamais réintroduire) :\n${exclTxt}\n\nRÈGLES IMPÉRATIVES :\n1. Le Jenkinsfile régénéré ne doit contenir AUCUNE des corrections écartées ci-dessus —\n   ni sous une autre forme, ni sous un autre nom, ni dans un commentaire.\n2. Même si une correction écartée est une bonne pratique DevSecOps standard (timeout,\n   cleanWs, retry, quality gate, etc.), tu NE DOIS PAS l'ajouter. Ce n'est PAS une omission\n   à corriger : le développeur l'a retirée CONSCIEMMENT. La réintroduire est une ERREUR,\n   pas une amélioration.\n3. Ne renumérote jamais une correction écartée comme si elle était retenue, et n'ajoute\n   aucun commentaire qui la justifie ou l'annonce.\n4. Ton objectif n'est PAS de produire le \"meilleur Jenkinsfile absolu\", mais le meilleur\n   Jenkinsfile qui RESPECTE les choix du développeur.\n` : (context.notes ? `Notes : ${context.notes}` : '');\n\n// Bloc injecte SEULEMENT si un contexte d'erreur de build reel est fourni\n// (voir webhooks.service.ts -> optimize()). Absent = comportement identique\n// a avant (analyse statique normale, aucun changement).\nconst buildErrorBlock = buildError ? `\n════════════════════════════════════════════════\nERREUR DE BUILD REELLE — PRIORITE ABSOLUE\n════════════════════════════════════════════════\nLe dernier build Jenkins a echoue avec cette erreur reelle, extraite du log console :\n\"${buildError}\"\n\nPriorise la correction de CETTE erreur precise. Les fichiers du projet (pom.xml, Dockerfile\n— fournis plus loin dans ce message, section CONTEXTE PROJET) restent la SOURCE DE VERITE\npour determiner COMMENT corriger. Exemple : cette erreur mentionne 'cannot access mvnw' et\nle contexte projet indique hasMvnw=false -> remplace ./mvnw par mvn. Ne corrige que ce qui\nest coherent avec le contexte projet ET avec cette erreur reelle — n'invente rien de plus.\n` : '';\n\n// Rappel condensé réinjecté EN TOUTE FIN du message (contre le biais de récence).\nconst finalReminder = isRegen ? `\n\n════════════════════════════════════════════════\nRAPPEL FINAL — À VÉRIFIER AVANT DE RÉPONDRE\n════════════════════════════════════════════════\nCorrections ÉCARTÉES, INTERDITES dans ta réponse même si ce sont de bonnes pratiques : ${exclRefs}.\nAvant de produire ton JSON, relis le Jenkinsfile que tu t'apprêtes à générer et confirme\nqu'aucune de ces corrections écartées n'y figure — ni dans le code, ni dans un commentaire.` : '';\n\nlet systemPrompt = `Tu es un architecte CI/CD senior, expert Jenkins et DevSecOps (15 ans d'expérience).\nTa mission : analyser un Jenkinsfile et produire une version améliorée, plus propre, plus sûre et plus rapide.\nRéponds UNIQUEMENT en JSON valide — pas de markdown, pas de backticks. Commence par { et termine par }.\nN'écris JAMAIS de raisonnement, de liste de vérification ou de texte avant le JSON — même pour vérifier les règles ci-dessous : cette vérification est SILENCIEUSE, son résultat va directement dans le champ \"summary\" du JSON, jamais en texte libre.\nLANGUE : tous les textes (summary, title, problem, recommendation, description) en FRANÇAIS professionnel. Le code reste tel quel.\nRÈGLE D'ARRÊT — ERREURS REELLES SEULEMENT :\nTu ne signales et ne corriges QUE des erreurs RÉELLES et vérifiables : syntaxe Groovy\ninvalide, incohérence avec pom.xml/Dockerfile (version Java, nom du JAR, stage docker\nsans Dockerfile), interpolation Groovy non échappée d'une variable credentials dans un\nbloc sh (GString \"...$VAR...\" au lieu d'un shell single-quote '...$VAR...' — fuite\npotentielle du secret dans les logs malgré withCredentials). Vérifie ces 4 catégories de façon exhaustive à chaque analyse, sans exception — mais\nSILENCIEUSEMENT : ne décris jamais cette vérification, va directement à la sortie JSON. Tu n'inventes JAMAIS d'amélioration subjective ('tu pourrais ajouter\nun timeout', 'tu pourrais paralléliser', 'ce serait mieux si...') sur un Jenkinsfile\nqui est déjà valide et cohérent. Si le Jenkinsfile ne contient AUCUNE erreur réelle,\ntu réponds exactement : 'Jenkinsfile conforme, aucune correction nécessaire' et tu\nrenvoies le fichier INCHANGÉ (identique caractère pour caractère). Ne modifie pas une\nseule ligne dans ce cas. (Cette réponse reste un JSON valide au FORMAT EXACT plus bas :\nsummary=\"Jenkinsfile conforme, aucune correction nécessaire\", issues=[], changes=[],\noptimizedJenkinsfile=le fichier original strictement inchangé.)\nRÈGLES D'ANALYSE — examine dans cet ordre :\n1. SECURITE : credentials/tokens/mots de passe en clair (CRITIQUE), absence de withCredentials, images Docker en :latest ou sans tag, sh avec interpolation non échappée de variables Groovy (injection), permissions trop larges.\n2. FIABILITE : absence de timeout global et par stage, pas de retry sur les étapes réseau, pas de post { always { cleanWs() } }, pas de post { failure }, stages sans when pertinent.\n3. PERFORMANCE : scans sécurité séquentiels qui pourraient être parallèles (parallel {}), absence de cache Maven/npm, ordre non fail-fast (vérifications rapides d'abord), checkout redondants.\n4. LISIBILITE : variables d'environnement dupliquées, blocs sh géants, absence de options { timestamps() }, stages mal nommés.\n5. DEVSECOPS : ordre recommandé build → tests → SAST (Sonar) → dependency check → image build → scan image (Trivy) → deploy éphémère → DAST (ZAP) ; archivage des rapports. Ne suggère JAMAIS d'ajouter waitForQualityGate() ou un quality gate bloquant : cela nécessite un webhook SonarQube→Jenkins configuré côté infrastructure, invérifiable depuis le Jenkinsfile seul, et un pipeline peut rester bloqué indéfiniment si ce webhook n'est pas en place.\nCONTRAINTE DE SÉLECTION — PRIORITÉ ABSOLUE sur toute bonne pratique :\n- Si une liste de corrections ÉCARTÉES t'est fournie dans le message, tu ne dois JAMAIS réintroduire ces corrections, même si ce sont des bonnes pratiques DevSecOps standard. Une exclusion est un choix délibéré du développeur, pas un oubli à corriger. Cette contrainte l'emporte sur toutes les règles d'analyse ci-dessus.\nRÈGLE SYNTAXE GROOVY (priorité absolue, prime sur la préservation du code existant) :\ntimestamps() n'est PAS une option valide. S'il apparaît dans options{}, tu DOIS le\nretirer de options{} et envelopper les steps avec :\n  INCORRECT :  options { timestamps() }\n  CORRECT   :  stage('X') { steps { timestamps { sh '...' } } }\nUn Jenkinsfile qui ne compile pas n'est PAS 'du code fonctionnel à préserver' — la\nrègle CONSERVE ne s'applique JAMAIS à une syntaxe invalide. Corrige-la toujours.\nRÈGLES DE RÉÉCRITURE — impératives :\n- CONSERVE tous les outils, stages, credentials IDs, URLs et webhooks existants. N'invente JAMAIS un credential ID, une URL ou un outil absent de l'original.\n- Les remplacements doivent être complets, sans sections omises. Le programme conserve le reste du fichier.\n- Chaque changement doit correspondre à une issue listée (traçabilité via ref).\n- Commentaires français courts uniquement là où un choix mérite explication.\n- Ne change rien sur les points déjà corrects.\nRÈGLE DE CONFIANCE — n'affirme jamais comme un fait ce que tu ne peux pas vérifier depuis le Jenkinsfile fourni :\n- Certaines recommandations dépendent d'informations EXTERNES que tu n'as pas : existence d'un tag précis d'image sur un registre (ex: aquasec/trivy:0.51.1 existe-t-il ?), plugin Jenkins réellement installé (ex: waitForQualityGate nécessite le plugin SonarQube + un webhook configuré), version d'un outil externe, config runtime de l'agent, secrets/credentials présents dans Jenkins.\n- Pour CHAQUE issue de ce type, ajoute \"needsConfirmation\": true et \"confirmationNote\": \"<quoi vérifier précisément et où>\" (ex: \"vérifier que le tag aquasec/trivy:0.51.1 existe sur Docker Hub avant merge\").\n- IMPORTANT — ne mets ce flag QUE si l'exactitude dépend vraiment d'une info externe non vérifiable. Une recommandation entièrement vérifiable depuis le Jenkinsfile (ajouter un timeout(), paralléliser des stages, ajouter timestamps(), passer un token via withCredentials, cleanWs()) ne porte PAS ce flag : mets alors \"needsConfirmation\": false et \"confirmationNote\": \"\". Ne marque pas tout par excès — un flag partout noierait le signal et le rendrait inutile.\nFORMAT EXACT :\n{\"score\":<0-100 du fichier ORIGINAL>,\"summary\":\"<3-4 phrases ; mentionne s'il existe des points à confirmer par le développeur>\",\"issues\":[{\"id\":\"JF-1\",\"category\":\"SECURITE|FIABILITE|PERFORMANCE|LISIBILITE|DEVSECOPS\",\"severity\":\"CRITIQUE|ELEVE|MOYEN|FAIBLE\",\"title\":\"<une ligne>\",\"problem\":\"<1-2 phrases>\",\"recommendation\":\"<quoi faire>\",\"lineHint\":\"<extrait ou numéro>\",\"needsConfirmation\":<true|false>,\"confirmationNote\":\"<si true: quoi vérifier et où ; sinon chaîne vide>\"}],\"optimizedJenkinsfile\":\"<FICHIER COMPLET>\",\"changes\":[{\"ref\":\"JF-1\",\"description\":\"<modif appliquée>\"}],\"estimatedTimeSavingPercent\":<0-60>,\"confidence\":<0.0-1.0>}`;\n\nconst userContent = `Analyse et optimise ce Jenkinsfile du projet \"${projectName}\".\nContexte : SonarQube, Trivy, OWASP Dependency-Check et ZAP disponibles ; backend de reporting sur le réseau Docker.\n${buildErrorBlock}\n${selectionBlock}\nJENKINSFILE ORIGINAL :\n\\n\\`\\`\\`groovy\n${jenkinsfile}\n\\`\\`\\`${finalReminder}`;\n\nsystemPrompt = systemPrompt.split(\"FORMAT EXACT :\")[0] + \"\\\\nCONTRAT DE SORTIE PRIORITAIRE : retourne uniquement un objet JSON avec score (0 à 100), summary (français), issues et edits. Maximum 8 issues vérifiables. Chaque issue contient id, category, severity, title, problem, recommendation, lineHint, needsConfirmation, confirmationNote. Chaque correction automatique contient {ref,before,after}, ref étant un id de issue. before doit être un extrait EXACT, non vide et UNIQUE du Jenkinsfile ORIGINAL ; after son remplacement complet. Petits changements uniquement : au maximum 10 corrections, before de 2000 caractères maximum et after de 4000 maximum. Les remplacements ne doivent pas se chevaucher. Si une correction ne peut pas être formulée ainsi, décris-la uniquement dans issues et ne fournis aucun edit pour elle. Ne fournis PAS optimizedJenkinsfile : il sera reconstruit et vérifié par le programme. Ne recopie pas le fichier complet. edits=[] si aucun changement automatique sûr. Conserve les stages, commandes, credentials et URLs ; respecte toutes les exclusions. Ne présente jamais une supposition externe comme un fait. N’invente pas de problème pour remplir la liste. Les règles du contexte projet restent obligatoires. Aucun Markdown.\\nVÉRIFICATIONS ANTI-FAUX-POSITIFS : dans un GString Groovy, \\\\$VARIABLE ou \\\\${VARIABLE} empêche l’interpolation Groovy et laisse la variable au shell : ce n’est PAS une fuite. Un bloc sh triple-single-quotes ne fait pas d’interpolation Groovy. Ne signale pas comme vulnérabilité un secret déjà transmis ainsi sous withCredentials. Un set +e suivi de la capture du code de retour puis d’un test de ce code est un traitement explicite des erreurs, pas une absence de contrôle. Ne signale jamais un problème que ton explication reconnaît déjà conforme. summary doit refléter exactement issues, sans contradiction, et rester sous 700 caractères. Pour épingler une image externe, ne propose pas de numéro de version inventé ou non vérifié ; demande une version validée ou un digest, avec needsConfirmation=true.\";\nreturn [{ json: { apiBody: { output_config:{\"format\":{\"type\":\"json_schema\",\"schema\":{\"type\":\"object\",\"properties\":{\"score\":{\"type\":\"number\"},\"summary\":{\"type\":\"string\"},\"issues\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},\"category\":{\"type\":\"string\",\"enum\":[\"SECURITE\",\"FIABILITE\",\"PERFORMANCE\",\"LISIBILITE\",\"DEVSECOPS\"]},\"severity\":{\"type\":\"string\",\"enum\":[\"CRITIQUE\",\"ELEVE\",\"MOYEN\",\"FAIBLE\"]},\"title\":{\"type\":\"string\"},\"problem\":{\"type\":\"string\"},\"recommendation\":{\"type\":\"string\"},\"lineHint\":{\"type\":\"string\"},\"needsConfirmation\":{\"type\":\"boolean\"},\"confirmationNote\":{\"type\":\"string\"}},\"required\":[\"id\",\"category\",\"severity\",\"title\",\"problem\",\"recommendation\",\"lineHint\",\"needsConfirmation\",\"confirmationNote\"],\"additionalProperties\":false}},\"edits\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"ref\":{\"type\":\"string\"},\"before\":{\"type\":\"string\"},\"after\":{\"type\":\"string\"}},\"required\":[\"ref\",\"before\",\"after\"],\"additionalProperties\":false}}},\"required\":[\"score\",\"summary\",\"issues\",\"edits\"],\"additionalProperties\":false}}}, model:'claude-sonnet-4-6', max_tokens:6500, temperature:0, system:systemPrompt, messages:[{role:'user',content:userContent}] }, projectName, owner, repo, branch } }];"
         },
         "id": "e821a0d8-62ba-4750-b0ad-00d2fea891f1",
         "name": "Prepare - Optimizer Body",
         "type": "n8n-nodes-base.code",
         "typeVersion": 2,
         "position": [
-          10848,
-          7616
+          8880,
+          7584
         ]
       },
       {
@@ -62,8 +64,8 @@
         "type": "n8n-nodes-base.if",
         "typeVersion": 2.2,
         "position": [
-          11072,
-          7616
+          9056,
+          7584
         ]
       },
       {
@@ -89,7 +91,7 @@
           "specifyBody": "json",
           "jsonBody": "={{ JSON.stringify($json.apiBody) }}",
           "options": {
-            "timeout": 180000
+            "timeout": 240000
           }
         },
         "id": "297152c5-054a-424a-924c-e7be2e20dab5",
@@ -97,10 +99,10 @@
         "type": "n8n-nodes-base.httpRequest",
         "typeVersion": 4.2,
         "position": [
-          11280,
-          7536
+          12272,
+          7504
         ],
-        "retryOnFail": true,
+        "retryOnFail": false,
         "maxTries": 3,
         "waitBetweenTries": 3000,
         "credentials": {
@@ -113,15 +115,15 @@
       },
       {
         "parameters": {
-          "jsCode": "const response = $input.first().json;\nconst fail = (msg, raw) => [{ json: { success:false, error:'PARSE_ERROR', message:msg, raw:String(raw||'').substring(0,800) } }];\nif (response.error) return [{ json: { success:false, error:response.error, message:response.message } }];\nconst content = response.content?.[0]?.text || '';\nif (!content) return fail(\"Réponse vide de l'agent\", JSON.stringify(response).substring(0,300));\nlet clean = content.replace(/```json\\s*/gi,'').replace(/```\\s*/gi,'').trim();\nconst s = clean.indexOf('{'), e = clean.lastIndexOf('}');\nif (s === -1 || e === -1) return fail('Aucun JSON trouvé', clean);\ntry {\n  const p = JSON.parse(clean.substring(s, e+1));\n  if (!p.optimizedJenkinsfile || String(p.optimizedJenkinsfile).length < 30) return fail('Fichier optimisé absent', clean);\n  p.issues = Array.isArray(p.issues) ? p.issues : [];\n  p.changes = Array.isArray(p.changes) ? p.changes : [];\n  const o = { CRITIQUE:0, ELEVE:1, MOYEN:2, FAIBLE:3 };\n  p.issues.sort((a,b)=>(o[a.severity]??9)-(o[b.severity]??9));\n\n  // ── POST-CHECK DÉTERMINISTE (régénération) ────────────────────────────────\n  // Objectif : garantir l'invariant \"aucune correction écartée ne réapparaît\",\n  // indépendamment de l'obéissance du LLM. Best-effort : couvre les corrections\n  // \"réflexe\" les plus courantes via une carte concept→pattern. Une exclusion non\n  // reconnue n'est pas auto-vérifiée (pas de faux positif), juste non couverte.\n  let excluded = [];\n  try { excluded = $('Webhook - Optimize').first().json.body?.selection?.excluded || []; } catch (_) { excluded = []; }\n\n  const PATTERNS = [\n    { keys:['timeout'],                                    re:/\\btimeout\\s*\\(/,            label:'timeout()' },\n    { keys:['cleanws','nettoyage du workspace','workspace'], re:/\\bcleanWs\\s*\\(/,          label:'cleanWs()' },\n    { keys:['retry','nouvelle tentative'],                 re:/\\bretry\\s*\\(/,              label:'retry()' },\n    { keys:['timestamps','horodatage'],                    re:/\\btimestamps\\s*\\(/,         label:'timestamps()' },\n    { keys:['parallel','parallél','parallelis','parallèl'], re:/\\bparallel\\s*\\{/,          label:'parallel {}' },\n    { keys:['withcredentials','credential','token en clair','secret en clair'], re:/\\bwithCredentials\\s*\\(/, label:'withCredentials()' },\n    { keys:['quality gate','qualitygate','waitforqualitygate'], re:/\\bwaitForQualityGate\\s*\\(/, label:'waitForQualityGate()' },\n    { keys:['archiv'],                                     re:/\\barchiveArtifacts\\s*\\(/,   label:'archiveArtifacts()' },\n  ];\n\n  const jf = String(p.optimizedJenkinsfile);\n  const violations = [];\n  for (const iss of excluded) {\n    const hay = `${iss.title||''} ${iss.recommendation||''}`.toLowerCase();\n    for (const pat of PATTERNS) {\n      if (pat.keys.some(k => hay.includes(k)) && pat.re.test(jf)) {\n        violations.push({ ref: iss.ref || iss.id || '?', title: iss.title || '', pattern: pat.label });\n        break; // une violation par issue écartée suffit\n      }\n    }\n  }\n\n  const selectionRespected = violations.length === 0;\n  let projectContext = null;\n  try { projectContext = $('Build Project Context').first().json.projectContext; } catch (_) {}\n  return [{ json: {\n    success:true,\n    analyzedAt:new Date().toISOString(),\n    selectionRespected,                                   // false → l'agent a désobéi\n    selectionViolations: violations,                      // détail des exclusions réintroduites\n    projectContext,                                        // contexte projet réellement utilisé pour enrichir le prompt (traçabilité)\n    ...p\n  } }];\n} catch (err) { return fail('JSON invalide : '+err.message, clean); }"
+          "jsCode": "const response = $input.first().json;\nconst fail = (msg, raw) => [{ json: { success:false, error:'PARSE_ERROR', message:msg, raw:String(raw||'').substring(0,800) } }];\nif (response.error) return [{ json: { success:false, error:response.error, message:response.message } }];\nif (response.stop_reason === 'max_tokens') return fail('Réponse IA tronquée : aucune correction appliquée.', 'max_tokens');\nconst content = (response.content || []).filter(b => b.type === 'text').map(b => b.text).join('\\n');\nif (!content) return fail(\"Réponse vide de l'agent\", JSON.stringify(response).substring(0,300));\nlet clean = content.replace(/```json\\s*/gi,'').replace(/```\\s*/gi,'').trim();\nconst s = clean.indexOf('{'), e = clean.lastIndexOf('}');\nif (s === -1 || e === -1) return fail('Aucun JSON trouvé', clean);\ntry {\n  const p = JSON.parse(clean.substring(s, e+1));\n  // Reconstruit uniquement les remplacements exacts, uniques et disjoints.\n  const original = String($('Webhook - Optimize').first().json.body.jenkinsfile || '').trim();\n  if (!Number.isFinite(p.score) || p.score < 0 || p.score > 100 || typeof p.summary !== 'string' || !p.summary.trim() || !Array.isArray(p.issues) || !Array.isArray(p.edits) || p.issues.length > 8 || p.edits.length > 10) return fail('Contrat d’analyse IA invalide', '');\n  const refs = new Set();\n  for (const issue of p.issues) {\n    if (!issue || typeof issue.id !== 'string' || refs.has(issue.id) || !['CRITIQUE','ELEVE','MOYEN','FAIBLE'].includes(issue.severity) || !['SECURITE','FIABILITE','PERFORMANCE','LISIBILITE','DEVSECOPS'].includes(issue.category) || !['title','problem','recommendation','lineHint'].every(k => typeof issue[k] === 'string') || !issue.title.trim() || typeof issue.needsConfirmation !== 'boolean' || typeof issue.confirmationNote !== 'string') return fail('Constat IA invalide', '');\n    refs.add(issue.id);\n  }\n  const ranges = [];\n  for (const edit of p.edits) {\n    if (!edit || !refs.has(edit.ref) || typeof edit.before !== 'string' || !edit.before.length || edit.before.length > 2000 || typeof edit.after !== 'string' || edit.after.length > 4000) return fail('Correction ciblée invalide', '');\n    const issue = p.issues.find(i => i.id === edit.ref);\n    if (issue.needsConfirmation) return fail('Une correction non confirmée ne peut pas être appliquée automatiquement', '');\n    const start = original.indexOf(edit.before);\n    if (start < 0 || original.indexOf(edit.before, start + 1) !== -1) return fail('Extrait de correction absent ou ambigu : ' + edit.ref, '');\n    ranges.push({start, end:start + edit.before.length, after:edit.after, ref:edit.ref});\n  }\n  ranges.sort((a,b) => a.start-b.start);\n  for (let i=1;i<ranges.length;i++) if (ranges[i].start < ranges[i-1].end) return fail('Corrections qui se chevauchent', '');\n  let rebuilt = original;\n  for (const edit of [...ranges].reverse()) rebuilt = rebuilt.slice(0,edit.start) + edit.after + rebuilt.slice(edit.end);\n  p.optimizedJenkinsfile = rebuilt;\n  p.changes = ranges.map(e => ({ref:e.ref, description:p.issues.find(i => i.id === e.ref).recommendation}));\n  delete p.edits;\n  if (!p.optimizedJenkinsfile || String(p.optimizedJenkinsfile).length < 30) return fail('Fichier optimisé absent', clean);\n  p.issues = Array.isArray(p.issues) ? p.issues : [];\n  p.changes = Array.isArray(p.changes) ? p.changes : [];\n  const o = { CRITIQUE:0, ELEVE:1, MOYEN:2, FAIBLE:3 };\n  p.issues.sort((a,b)=>(o[a.severity]??9)-(o[b.severity]??9));\n\n  // ── POST-CHECK DÉTERMINISTE (régénération) ────────────────────────────────\n  // Objectif : garantir l'invariant \"aucune correction écartée ne réapparaît\",\n  // indépendamment de l'obéissance du LLM. Best-effort : couvre les corrections\n  // \"réflexe\" les plus courantes via une carte concept→pattern. Une exclusion non\n  // reconnue n'est pas auto-vérifiée (pas de faux positif), juste non couverte.\n  let excluded = [];\n  try { excluded = $('Webhook - Optimize').first().json.body?.selection?.excluded || []; } catch (_) { excluded = []; }\n\n  const PATTERNS = [\n    { keys:['timeout'],                                    re:/\\btimeout\\s*\\(/,            label:'timeout()' },\n    { keys:['cleanws','nettoyage du workspace','workspace'], re:/\\bcleanWs\\s*\\(/,          label:'cleanWs()' },\n    { keys:['retry','nouvelle tentative'],                 re:/\\bretry\\s*\\(/,              label:'retry()' },\n    { keys:['timestamps','horodatage'],                    re:/\\btimestamps\\s*\\(/,         label:'timestamps()' },\n    { keys:['parallel','parallél','parallelis','parallèl'], re:/\\bparallel\\s*\\{/,          label:'parallel {}' },\n    { keys:['withcredentials','credential','token en clair','secret en clair'], re:/\\bwithCredentials\\s*\\(/, label:'withCredentials()' },\n    { keys:['quality gate','qualitygate','waitforqualitygate'], re:/\\bwaitForQualityGate\\s*\\(/, label:'waitForQualityGate()' },\n    { keys:['archiv'],                                     re:/\\barchiveArtifacts\\s*\\(/,   label:'archiveArtifacts()' },\n  ];\n\n  const jf = String(p.optimizedJenkinsfile);\n  const violations = [];\n  for (const iss of excluded) {\n    const hay = `${iss.title||''} ${iss.recommendation||''}`.toLowerCase();\n    for (const pat of PATTERNS) {\n      if (pat.keys.some(k => hay.includes(k)) && pat.re.test(jf)) {\n        violations.push({ ref: iss.ref || iss.id || '?', title: iss.title || '', pattern: pat.label });\n        break; // une violation par issue écartée suffit\n      }\n    }\n  }\n\n  const selectionRespected = violations.length === 0;\n  let projectContext = null;\n  try { projectContext = $('Build Project Context').first().json.projectContext; } catch (_) {}\n  return [{ json: {\n    success:true,\n    analyzedAt:new Date().toISOString(),\n    selectionRespected,                                   // false → l'agent a désobéi\n    selectionViolations: violations,                      // détail des exclusions réintroduites\n    projectContext,                                        // contexte projet réellement utilisé pour enrichir le prompt (traçabilité)\n    ...p\n  } }];\n} catch (err) { return fail('JSON invalide : '+err.message, clean); }"
         },
         "id": "7d7bdd26-3f41-4aee-83e0-59857d9288d2",
         "name": "Parse - Optimizer Output",
         "type": "n8n-nodes-base.code",
         "typeVersion": 2,
         "position": [
-          11536,
-          7440
+          12592,
+          7328
         ],
         "onError": "continueErrorOutput"
       },
@@ -134,8 +136,8 @@
         "type": "n8n-nodes-base.code",
         "typeVersion": 2,
         "position": [
-          11536,
-          7936
+          9760,
+          8032
         ]
       },
       {
@@ -148,7 +150,7 @@
         "type": "n8n-nodes-base.respondToWebhook",
         "typeVersion": 1.1,
         "position": [
-          12384,
+          14128,
           7664
         ]
       },
@@ -164,8 +166,8 @@
         "type": "n8n-nodes-base.webhook",
         "typeVersion": 2,
         "position": [
-          10576,
-          8208
+          10400,
+          9456
         ],
         "webhookId": "17a5e6b3-837a-4b33-acdc-8e7de62c71f2"
       },
@@ -178,8 +180,8 @@
         "type": "n8n-nodes-base.code",
         "typeVersion": 2,
         "position": [
-          10832,
-          8208
+          10800,
+          9456
         ]
       },
       {
@@ -211,8 +213,8 @@
         "type": "n8n-nodes-base.if",
         "typeVersion": 2.2,
         "position": [
-          11056,
-          8208
+          11024,
+          9456
         ]
       },
       {
@@ -236,8 +238,8 @@
         "type": "n8n-nodes-base.httpRequest",
         "typeVersion": 4.2,
         "position": [
-          12160,
-          8128
+          12128,
+          9376
         ],
         "credentials": {
           "githubApi": {
@@ -272,8 +274,8 @@
         "type": "n8n-nodes-base.httpRequest",
         "typeVersion": 4.2,
         "position": [
-          12480,
-          8128
+          12448,
+          9376
         ],
         "credentials": {
           "githubApi": {
@@ -312,8 +314,8 @@
         "type": "n8n-nodes-base.github",
         "typeVersion": 1,
         "position": [
-          12736,
-          8128
+          12704,
+          9376
         ],
         "webhookId": "2e4b5cf5-8a16-4bf4-a24b-cea7ee0ec1d6",
         "credentials": {
@@ -349,8 +351,8 @@
         "type": "n8n-nodes-base.httpRequest",
         "typeVersion": 4.2,
         "position": [
-          12960,
-          8128
+          12928,
+          9376
         ],
         "credentials": {
           "githubApi": {
@@ -369,8 +371,8 @@
         "type": "n8n-nodes-base.code",
         "typeVersion": 2,
         "position": [
-          13104,
-          8128
+          13072,
+          9376
         ]
       },
       {
@@ -382,8 +384,8 @@
         "type": "n8n-nodes-base.code",
         "typeVersion": 2,
         "position": [
-          12368,
-          8416
+          12672,
+          10240
         ]
       },
       {
@@ -396,8 +398,8 @@
         "type": "n8n-nodes-base.respondToWebhook",
         "typeVersion": 1.1,
         "position": [
-          13552,
-          8384
+          13520,
+          9632
         ]
       },
       {
@@ -547,8 +549,8 @@
         "type": "n8n-nodes-base.code",
         "typeVersion": 2,
         "position": [
-          11488,
-          7696
+          12528,
+          7536
         ],
         "id": "44e995b2-07fb-4ab5-b894-d815fde0afa3",
         "name": "Format Agent Error"
@@ -560,8 +562,8 @@
         "type": "n8n-nodes-base.code",
         "typeVersion": 2,
         "position": [
-          11728,
-          7552
+          12816,
+          7424
         ],
         "id": "261d3d38-4dd7-4924-86c1-e1b5125f2f8c",
         "name": "Format Parse Error"
@@ -591,8 +593,8 @@
         "type": "n8n-nodes-base.httpRequest",
         "typeVersion": 4.2,
         "position": [
-          11840,
-          7696
+          13184,
+          7520
         ],
         "id": "ff971278-95a6-49e0-8d45-8532079f93bc",
         "name": "Send Error to Backend",
@@ -623,8 +625,8 @@
         "type": "n8n-nodes-base.httpRequest",
         "typeVersion": 4.2,
         "position": [
-          11760,
-          7312
+          12752,
+          7184
         ],
         "id": "0ca09959-40ba-496e-9361-8e7b41a9a095",
         "name": "Send Result to Backend",
@@ -639,8 +641,8 @@
         "type": "n8n-nodes-base.code",
         "typeVersion": 2,
         "position": [
-          11280,
-          8208
+          11248,
+          9456
         ]
       },
       {
@@ -674,8 +676,8 @@
         "type": "n8n-nodes-base.httpRequest",
         "typeVersion": 4.2,
         "position": [
-          11504,
-          8208
+          11472,
+          9456
         ],
         "retryOnFail": true,
         "maxTries": 3,
@@ -697,8 +699,8 @@
         "type": "n8n-nodes-base.code",
         "typeVersion": 2,
         "position": [
-          11728,
-          8208
+          11696,
+          9456
         ]
       },
       {
@@ -730,8 +732,8 @@
         "type": "n8n-nodes-base.if",
         "typeVersion": 2.2,
         "position": [
-          11936,
-          8208
+          11904,
+          9456
         ]
       },
       {
@@ -763,8 +765,8 @@
         "type": "n8n-nodes-base.httpRequest",
         "typeVersion": 4.2,
         "position": [
-          13248,
-          8384
+          13216,
+          9632
         ],
         "onError": "continueRegularOutput"
       },
@@ -793,9 +795,10 @@
         "type": "n8n-nodes-base.github",
         "typeVersion": 1,
         "position": [
-          11072,
-          7760
+          9312,
+          7488
         ],
+        "webhookId": "71ebe2b1-12d7-431c-b397-2fe5304c44a0",
         "credentials": {
           "githubApi": {
             "id": "fBueZWwflXWM3RoX",
@@ -829,9 +832,10 @@
         "type": "n8n-nodes-base.github",
         "typeVersion": 1,
         "position": [
-          11072,
-          7900
+          9904,
+          7488
         ],
+        "webhookId": "b1e01a26-d68a-4137-9099-279812cf1a08",
         "credentials": {
           "githubApi": {
             "id": "fBueZWwflXWM3RoX",
@@ -865,9 +869,10 @@
         "type": "n8n-nodes-base.github",
         "typeVersion": 1,
         "position": [
-          11072,
-          8040
+          10464,
+          7456
         ],
+        "webhookId": "27dcc608-5a1e-476c-be95-fc03a2afe175",
         "credentials": {
           "githubApi": {
             "id": "fBueZWwflXWM3RoX",
@@ -901,9 +906,10 @@
         "type": "n8n-nodes-base.github",
         "typeVersion": 1,
         "position": [
-          11072,
-          8180
+          11056,
+          7440
         ],
+        "webhookId": "a425fb93-0726-4a7f-a313-d421e6361fd7",
         "credentials": {
           "githubApi": {
             "id": "fBueZWwflXWM3RoX",
@@ -937,9 +943,10 @@
         "type": "n8n-nodes-base.github",
         "typeVersion": 1,
         "position": [
-          11072,
-          8320
+          11504,
+          7424
         ],
+        "webhookId": "19ecad8f-548d-4a34-aaa7-b7d99874bd29",
         "credentials": {
           "githubApi": {
             "id": "fBueZWwflXWM3RoX",
@@ -950,15 +957,15 @@
       },
       {
         "parameters": {
-          "jsCode": "const prepared = $('Prepare - Optimizer Body').first().json;\n\n// Selectionne le node qui a REELLEMENT tourne (OK ou Err) entre une paire.\n// continueErrorOutput garantit qu'exactement un des deux tourne par execution\n// -> exactement un des deux try reussit. Si les DEUX echouent, ce n'est PAS\n// \"fichier absent\" (ca, c'est le role du node Err lui-meme de le dire) - c'est\n// soit une erreur de cablage (nom de node incorrect apres un refactor), soit\n// une anomalie continueErrorOutput qui ne devrait structurellement pas arriver.\n// Dans les deux cas on le signale bruyamment plutot que de le confondre\n// silencieusement avec \"found:false\" legitime.\nfunction pick(okName, errName) {\n  try { return $(okName).first().json; } catch (e1) {\n    try { return $(errName).first().json; } catch (e2) {\n      console.warn(`[Build Project Context] pick(): ni '${okName}' ni '${errName}' n'ont produit de donnee - erreur de cablage probable (nom de node incorrect) ou anomalie continueErrorOutput inattendue. Verifier le graphe WF4.`);\n      return { found: false, content: '', _pickWiringError: true };\n    }\n  }\n}\nconst pom     = pick('Format pom.xml OK', 'Format pom.xml Err');\nconst gradle  = pick('Format build.gradle OK', 'Format build.gradle Err');\nconst docker  = pick('Format Dockerfile OK', 'Format Dockerfile Err');\nconst mvnw    = pick('Format mvnw OK', 'Format mvnw Err');\nconst gradlew = pick('Format gradlew OK', 'Format gradlew Err');\n\nlet buildTool = 'unknown', javaVersion = null, packaging = 'jar';\nlet artifactId = null, version = null, finalName = null;\nlet isSpringBoot = false, hasTests = false;\n\nif (pom.found) {\n  buildTool = 'maven';\n  const xml = pom.content;\n  const xmlNoParent = xml.replace(/<parent>[\\s\\S]*?<\\/parent>/, '');\n  const grab = (tag) => {\n    const m = xmlNoParent.match(new RegExp(`<${tag}>\\\\s*([^<]+?)\\\\s*</${tag}>`));\n    return m ? m[1].trim() : null;\n  };\n  javaVersion = grab('java.version') || grab('maven.compiler.release')\n             || grab('maven.compiler.target') || grab('maven.compiler.source');\n  packaging = grab('packaging') || 'jar';\n  artifactId = grab('artifactId');\n  version = grab('version');\n  finalName = grab('finalName');\n  isSpringBoot = /spring-boot-maven-plugin/.test(xml);\n  hasTests = /<scope>\\s*test\\s*<\\/scope>/.test(xml) || /spring-boot-starter-test|junit|testng/i.test(xml);\n} else if (gradle.found) {\n  buildTool = 'gradle';\n  const g = gradle.content;\n  const srcCompat = g.match(/sourceCompatibility\\s*=?\\s*['\"]?(?:JavaVersion\\.VERSION_)?(\\d+)/);\n  javaVersion = srcCompat ? srcCompat[1] : null;\n  isSpringBoot = /org\\.springframework\\.boot/.test(g);\n  hasTests = /useJUnitPlatform|testImplementation/.test(g);\n}\n\nconst artifactName = buildTool === 'maven'\n  ? (finalName ? `${finalName}.${packaging}` : (artifactId && version ? `${artifactId}-${version}.${packaging}` : null))\n  : null;\n\nlet hasDockerfile = false, dockerBaseJavaVersion = null, dockerCopySource = null;\nif (docker.found) {\n  hasDockerfile = true;\n  const fromLines = [...docker.content.matchAll(/^FROM\\s+(\\S+)/gim)].map(m => m[1]);\n  const lastFrom = fromLines[fromLines.length - 1] || '';\n  const verMatch = lastFrom.match(/:[^\\d]*?(\\d{1,2})(?:[-.]|$)/) || lastFrom.match(/(\\d{1,2})/);\n  dockerBaseJavaVersion = verMatch ? verMatch[1] : null;\n  const copyMatch = docker.content.match(/^COPY\\s+(?:--from=\\S+\\s+)?(\\S*\\.(?:jar|war))\\s+\\S+/im);\n  dockerCopySource = copyMatch ? copyMatch[1] : null;\n}\n\nconst coherenceWarnings = [];\nif (hasDockerfile && dockerBaseJavaVersion && javaVersion && Number(dockerBaseJavaVersion) < Number(javaVersion)) {\n  coherenceWarnings.push(`Dockerfile FROM Java ${dockerBaseJavaVersion} but ${buildTool} compiles Java ${javaVersion} → UnsupportedClassVersionError`);\n}\nif (hasDockerfile && dockerCopySource && artifactName && !dockerCopySource.includes('*') && !dockerCopySource.includes(artifactName)) {\n  coherenceWarnings.push(`Dockerfile COPY path (${dockerCopySource}) does not match real artifactName (${artifactName})`);\n}\nif (buildTool === 'maven' && !isSpringBoot && /spring-boot-starter/.test(pom.content || '')) {\n  coherenceWarnings.push('spring-boot-maven-plugin missing but Spring Boot expected → non-executable jar');\n}\n\nconst projectContext = {\n  buildTool, javaVersion, packaging, artifactName, isSpringBoot,\n  hasDockerfile, dockerBaseJavaVersion, dockerCopySource,\n  dockerReadConfirmed: docker.readConfirmed !== false,\n  hasMvnw: buildTool === 'maven' ? !!mvnw.found : false,\n  hasGradlew: buildTool === 'gradle' ? !!gradlew.found : false,\n  hasTests, coherenceWarnings,\n};\n\nconst apiBody = JSON.parse(JSON.stringify(prepared.apiBody));\n\nconst rulesBlock = `\n\nCONTEXTE PROJET (extrait de pom.xml/build.gradle/Dockerfile — SOURCE DE VERITE,\nne JAMAIS l'inverser : aligne le Jenkinsfile sur ces fichiers, jamais l'inverse) :\n${JSON.stringify(projectContext, null, 2)}\n\nREGLES D'UTILISATION DE CE CONTEXTE — STRICTES, prioritaires sur les regles generales :\nREGLE DE PRIORITE ABSOLUE (prime sur TOUTE autre regle, y compris JF-7 PERFORMANCE) :\nLe nombre de stages et leurs noms en SORTIE doivent etre IDENTIQUES a l'ENTREE, a la\nseule exception de la regle 3 ci-dessous (retrait d'un stage docker si hasDockerfile=false).\nToute regle de performance (dont JF-7 parallel{}) ne peut REORGANISER ou fusionner que des\nstages DEJA EXISTANTS - jamais en creer un nouveau, jamais en introduire un wrapper qui\napparait comme un stage supplementaire (ex: un stage \"Security Scans\" qui n'existait pas et\nqui englobe Trivy Scan + OWASP Dependency Check est INTERDIT, meme si JF-7 le suggere).\nSi une optimisation JF-7 exigerait d'ajouter un stage, NE PAS l'appliquer : laisse les\nstages concernes tels quels, sequentiels, sans les regrouper dans un nouveau stage.\nAucune suppression de stage pour motif de \"redondance\" (seule exception : regle 3).\nTu ne fais que MODIFIER le contenu de stages existants.\n\nAUTO-FIX autorise (seulement si le champ correspondant n'est pas null) :\n  1. version du tool JDK -> doit correspondre a projectContext.javaVersion\n  2. chemin archiveArtifacts -> doit correspondre a projectContext.artifactName\n  3. si hasDockerfile === false ET dockerReadConfirmed === true -> retirer les\n     stages docker build/push (absence REELLEMENT confirmee par GitHub, pas une\n     lecture ratee). Si dockerReadConfirmed === false, NE RETIRE AUCUN stage\n     docker/trivy/scan, meme si hasDockerfile apparait false -> traite l'info\n     comme INCONNUE. Un stage de securite ne se supprime jamais sur une panne.\n  4. si hasMvnw === true -> utiliser './mvnw' (+ 'sh \"chmod +x mvnw\"' avant) ;\n     si buildTool === 'gradle' et hasGradlew === true -> utiliser './gradlew'\n     Si hasMvnw === false ET le Jenkinsfile utilise deja './mvnw' ou\n     'chmod +x mvnw' -> remplace-les par 'mvn' (un tool Maven est configure\n     dans Jenkins). Un wrapper appele mais absent du depot fait echouer le\n     build (chmod: cannot access 'mvnw': No such file or directory).\n  5. corriger toute erreur de syntaxe Groovy visible dans le Jenkinsfile fourni —\n     en particulier timestamps() : verifie la syntaxe Declarative Pipeline reelle\n     avant de le deplacer, ne le laisse jamais dans un bloc qui ne compile pas\nREPORT-ONLY — ne JAMAIS editer le Jenkinsfile pour ces cas, seulement les lister :\n  - Dockerfile base Java < projectContext.javaVersion\n  - Dockerfile COPY ne correspond pas a artifactName\n  - spring-boot-maven-plugin manquant alors que Spring Boot est utilise\nSECURITE :\n  - champ null/unknown -> ne touche PAS la ligne Jenkinsfile concernee\n  - n'invente JAMAIS une valeur absente de projectContext ou du Jenkinsfile original\n  - ne modifie et ne renvoie QUE le Jenkinsfile\n  - preserve tous les stages qui fonctionnent deja\nSORTIE — ajoute ces 2 lignes en commentaire, en TETE du Jenkinsfile optimise :\n  // [AUTO-FIXED]: <changements appliques via les regles 1-5, ou \"aucun\">\n  // [WARNING]: <incoherences detectees mais non corrigees (REPORT-ONLY), ou \"aucune\">`;\n\napiBody.messages[0].content += rulesBlock;\n\nreturn [{ json: { ...prepared, apiBody, projectContext } }];\n"
+          "jsCode": "const prepared = $('Prepare - Optimizer Body').first().json;\n\n// Selectionne le node qui a REELLEMENT tourne (OK ou Err) entre une paire.\n// continueErrorOutput garantit qu'exactement un des deux tourne par execution\n// -> exactement un des deux try reussit. Si les DEUX echouent, ce n'est PAS\n// \"fichier absent\" (ca, c'est le role du node Err lui-meme de le dire) - c'est\n// soit une erreur de cablage (nom de node incorrect apres un refactor), soit\n// une anomalie continueErrorOutput qui ne devrait structurellement pas arriver.\n// Dans les deux cas on le signale bruyamment plutot que de le confondre\n// silencieusement avec \"found:false\" legitime.\nfunction pick(okName, errName) {\n  try { return $(okName).first().json; } catch (e1) {\n    try { return $(errName).first().json; } catch (e2) {\n      console.warn(`[Build Project Context] pick(): ni '${okName}' ni '${errName}' n'ont produit de donnee - erreur de cablage probable (nom de node incorrect) ou anomalie continueErrorOutput inattendue. Verifier le graphe WF4.`);\n      return { found: false, content: '', _pickWiringError: true };\n    }\n  }\n}\nconst pom     = pick('Format pom.xml OK', 'Format pom.xml Err');\nconst gradle  = pick('Format build.gradle OK', 'Format build.gradle Err');\nconst docker  = pick('Format Dockerfile OK', 'Format Dockerfile Err');\nconst mvnw    = pick('Format mvnw OK', 'Format mvnw Err');\nconst gradlew = pick('Format gradlew OK', 'Format gradlew Err');\n\nlet buildTool = 'unknown', javaVersion = null, packaging = 'jar';\nlet artifactId = null, version = null, finalName = null;\nlet isSpringBoot = false, hasTests = false;\n\nif (pom.found) {\n  buildTool = 'maven';\n  const xml = pom.content;\n  const xmlNoParent = xml.replace(/<parent>[\\s\\S]*?<\\/parent>/, '');\n  const grab = (tag) => {\n    const m = xmlNoParent.match(new RegExp(`<${tag}>\\\\s*([^<]+?)\\\\s*</${tag}>`));\n    return m ? m[1].trim() : null;\n  };\n  javaVersion = grab('java.version') || grab('maven.compiler.release')\n             || grab('maven.compiler.target') || grab('maven.compiler.source');\n  packaging = grab('packaging') || 'jar';\n  artifactId = grab('artifactId');\n  version = grab('version');\n  finalName = grab('finalName');\n  isSpringBoot = /spring-boot-maven-plugin/.test(xml);\n  hasTests = /<scope>\\s*test\\s*<\\/scope>/.test(xml) || /spring-boot-starter-test|junit|testng/i.test(xml);\n} else if (gradle.found) {\n  buildTool = 'gradle';\n  const g = gradle.content;\n  const srcCompat = g.match(/sourceCompatibility\\s*=?\\s*['\"]?(?:JavaVersion\\.VERSION_)?(\\d+)/);\n  javaVersion = srcCompat ? srcCompat[1] : null;\n  isSpringBoot = /org\\.springframework\\.boot/.test(g);\n  hasTests = /useJUnitPlatform|testImplementation/.test(g);\n}\n\nconst artifactName = buildTool === 'maven'\n  ? (finalName ? `${finalName}.${packaging}` : (artifactId && version ? `${artifactId}-${version}.${packaging}` : null))\n  : null;\n\nlet hasDockerfile = false, dockerBaseJavaVersion = null, dockerCopySource = null;\nif (docker.found) {\n  hasDockerfile = true;\n  const fromLines = [...docker.content.matchAll(/^FROM\\s+(\\S+)/gim)].map(m => m[1]);\n  const lastFrom = fromLines[fromLines.length - 1] || '';\n  const verMatch = lastFrom.match(/:[^\\d]*?(\\d{1,2})(?:[-.]|$)/) || lastFrom.match(/(\\d{1,2})/);\n  dockerBaseJavaVersion = verMatch ? verMatch[1] : null;\n  const copyMatch = docker.content.match(/^COPY\\s+(?:--from=\\S+\\s+)?(\\S*\\.(?:jar|war))\\s+\\S+/im);\n  dockerCopySource = copyMatch ? copyMatch[1] : null;\n}\n\nconst coherenceWarnings = [];\nif (hasDockerfile && dockerBaseJavaVersion && javaVersion && Number(dockerBaseJavaVersion) < Number(javaVersion)) {\n  coherenceWarnings.push(`Dockerfile FROM Java ${dockerBaseJavaVersion} but ${buildTool} compiles Java ${javaVersion} → UnsupportedClassVersionError`);\n}\nif (hasDockerfile && dockerCopySource && artifactName && !dockerCopySource.includes('*') && !dockerCopySource.includes(artifactName)) {\n  coherenceWarnings.push(`Dockerfile COPY path (${dockerCopySource}) does not match real artifactName (${artifactName})`);\n}\nif (buildTool === 'maven' && !isSpringBoot && /spring-boot-starter/.test(pom.content || '')) {\n  coherenceWarnings.push('spring-boot-maven-plugin missing but Spring Boot expected → non-executable jar');\n}\n\nconst projectContext = {\n  buildTool, javaVersion, packaging, artifactName, isSpringBoot,\n  hasDockerfile, dockerBaseJavaVersion, dockerCopySource,\n  dockerReadConfirmed: docker.readConfirmed !== false,\n  hasMvnw: buildTool === 'maven' ? !!mvnw.found : false,\n  hasGradlew: buildTool === 'gradle' ? !!gradlew.found : false,\n  hasTests, coherenceWarnings,\n};\n\nconst apiBody = JSON.parse(JSON.stringify(prepared.apiBody));\n\nconst rulesBlock = `\n\nCONTEXTE PROJET (extrait de pom.xml/build.gradle/Dockerfile — SOURCE DE VERITE,\nne JAMAIS l'inverser : aligne le Jenkinsfile sur ces fichiers, jamais l'inverse) :\n${JSON.stringify(projectContext, null, 2)}\n\nREGLES D'UTILISATION DE CE CONTEXTE — STRICTES, prioritaires sur les regles generales :\nREGLE DE PRIORITE ABSOLUE (prime sur TOUTE autre regle, y compris JF-7 PERFORMANCE) :\nLe nombre de stages et leurs noms en SORTIE doivent etre IDENTIQUES a l'ENTREE, a la\nseule exception de la regle 3 ci-dessous (retrait d'un stage docker si hasDockerfile=false).\nToute regle de performance (dont JF-7 parallel{}) ne peut REORGANISER ou fusionner que des\nstages DEJA EXISTANTS - jamais en creer un nouveau, jamais en introduire un wrapper qui\napparait comme un stage supplementaire (ex: un stage \"Security Scans\" qui n'existait pas et\nqui englobe Trivy Scan + OWASP Dependency Check est INTERDIT, meme si JF-7 le suggere).\nSi une optimisation JF-7 exigerait d'ajouter un stage, NE PAS l'appliquer : laisse les\nstages concernes tels quels, sequentiels, sans les regrouper dans un nouveau stage.\nAucune suppression de stage pour motif de \"redondance\" (seule exception : regle 3).\nTu ne fais que MODIFIER le contenu de stages existants.\n\nAUTO-FIX autorise (seulement si le champ correspondant n'est pas null) :\n  1. version du tool JDK -> doit correspondre a projectContext.javaVersion\n  2. chemin archiveArtifacts -> doit correspondre a projectContext.artifactName\n  3. si hasDockerfile === false ET dockerReadConfirmed === true -> retirer les\n     stages docker build/push (absence REELLEMENT confirmee par GitHub, pas une\n     lecture ratee). Si dockerReadConfirmed === false, NE RETIRE AUCUN stage\n     docker/trivy/scan, meme si hasDockerfile apparait false -> traite l'info\n     comme INCONNUE. Un stage de securite ne se supprime jamais sur une panne.\n  4. si hasMvnw === true -> utiliser './mvnw' (+ 'sh \"chmod +x mvnw\"' avant) ;\n     si buildTool === 'gradle' et hasGradlew === true -> utiliser './gradlew'\n     Si hasMvnw === false ET le Jenkinsfile utilise deja './mvnw' ou\n     'chmod +x mvnw' -> remplace-les par 'mvn' (un tool Maven est configure\n     dans Jenkins). Un wrapper appele mais absent du depot fait echouer le\n     build (chmod: cannot access 'mvnw': No such file or directory).\n  5. corriger toute erreur de syntaxe Groovy visible dans le Jenkinsfile fourni —\n     en particulier timestamps() : verifie la syntaxe Declarative Pipeline reelle\n     avant de le deplacer, ne le laisse jamais dans un bloc qui ne compile pas\nREPORT-ONLY — ne JAMAIS editer le Jenkinsfile pour ces cas, seulement les lister :\n  - Dockerfile base Java < projectContext.javaVersion\n  - Dockerfile COPY ne correspond pas a artifactName\n  - spring-boot-maven-plugin manquant alors que Spring Boot est utilise\nSECURITE :\n  - champ null/unknown -> ne touche PAS la ligne Jenkinsfile concernee\n  - n'invente JAMAIS une valeur absente de projectContext ou du Jenkinsfile original\n  - ne modifie et ne renvoie QUE le Jenkinsfile\n  - preserve tous les stages qui fonctionnent deja\nSORTIE : indique les changements et avertissements dans summary et issues, sans ajouter de commentaires au fichier.`;\n\napiBody.messages[0].content += rulesBlock;\n\nreturn [{ json: { ...prepared, apiBody, projectContext } }];\n"
         },
         "id": "bc3182c9-66db-4f52-8739-1f5f3518bc62",
         "name": "Build Project Context",
         "type": "n8n-nodes-base.code",
         "typeVersion": 2,
         "position": [
-          11500,
-          7616
+          12080,
+          7504
         ]
       },
       {
@@ -970,8 +977,8 @@
         "type": "n8n-nodes-base.code",
         "typeVersion": 2,
         "position": [
-          11296,
-          7700
+          9664,
+          7472
         ]
       },
       {
@@ -983,8 +990,8 @@
         "type": "n8n-nodes-base.code",
         "typeVersion": 2,
         "position": [
-          11296,
-          7820
+          9584,
+          7712
         ]
       },
       {
@@ -996,8 +1003,8 @@
         "type": "n8n-nodes-base.code",
         "typeVersion": 2,
         "position": [
-          11296,
-          7840
+          10160,
+          7472
         ]
       },
       {
@@ -1009,8 +1016,8 @@
         "type": "n8n-nodes-base.code",
         "typeVersion": 2,
         "position": [
-          11296,
-          7960
+          10176,
+          7760
         ]
       },
       {
@@ -1022,8 +1029,8 @@
         "type": "n8n-nodes-base.code",
         "typeVersion": 2,
         "position": [
-          11296,
-          7980
+          10768,
+          7440
         ]
       },
       {
@@ -1035,8 +1042,8 @@
         "type": "n8n-nodes-base.code",
         "typeVersion": 2,
         "position": [
-          11296,
-          8100
+          10688,
+          7744
         ]
       },
       {
@@ -1048,8 +1055,8 @@
         "type": "n8n-nodes-base.code",
         "typeVersion": 2,
         "position": [
-          11296,
-          8120
+          11280,
+          7424
         ]
       },
       {
@@ -1061,8 +1068,8 @@
         "type": "n8n-nodes-base.code",
         "typeVersion": 2,
         "position": [
-          11296,
-          8240
+          11216,
+          7728
         ]
       },
       {
@@ -1074,8 +1081,8 @@
         "type": "n8n-nodes-base.code",
         "typeVersion": 2,
         "position": [
-          11296,
-          8260
+          11824,
+          7424
         ]
       },
       {
@@ -1087,22 +1094,22 @@
         "type": "n8n-nodes-base.code",
         "typeVersion": 2,
         "position": [
-          11296,
-          8380
+          11664,
+          7696
         ]
       },
       {
+        "parameters": {
+          "jsCode": "const input=$input.first().json; const headers=input.headers||{}; if(!headers['x-internal-secret']||headers['x-internal-secret']!==$env.N8N_INTERNAL_SECRET) throw new Error('UNAUTHORIZED_BACKEND_CALL'); const body=input.body||input; if(!body.requestId&&!body.applyId) throw new Error('MISSING_APPROVAL_CORRELATION'); if(!body.baseBranch) throw new Error('DEFAULT_BRANCH_REQUIRED'); return [{json:input}];"
+        },
         "id": "phase-b-authorize-backend-approval",
         "name": "Authorize Backend Approval",
         "type": "n8n-nodes-base.code",
         "typeVersion": 2,
         "position": [
-          10756,
-          8208
-        ],
-        "parameters": {
-          "jsCode": "const input=$input.first().json; const headers=input.headers||{}; if(!headers['x-internal-secret']||headers['x-internal-secret']!==$env.N8N_INTERNAL_SECRET) throw new Error('UNAUTHORIZED_BACKEND_CALL'); const body=input.body||input; if(!body.requestId&&!body.applyId) throw new Error('MISSING_APPROVAL_CORRELATION'); if(!body.baseBranch) throw new Error('DEFAULT_BRANCH_REQUIRED'); return [{json:input}];"
-        }
+          10608,
+          9472
+        ]
       }
     ],
     "connections": {
@@ -1719,15 +1726,11 @@
         ]
       }
     },
-    "active": true,
     "settings": {
       "executionOrder": "v1",
-      "binaryMode": "separate"
-    },
-    "id": "x4oTJ4HbkC1R526b",
-    "meta": {
-      "templateCredsSetupCompleted": true
-    },
-    "pinData": {}
+      "binaryMode": "separate",
+      "callerPolicy": "workflowsFromSameOwner",
+      "availableInMCP": false
+    }
   }
 ]

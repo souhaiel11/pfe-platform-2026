@@ -1,3 +1,4 @@
+# Déclare les paramètres de l’infrastructure Azure.
 variable "subscription_id" {
   description = "ID de la souscription Azure cible (Azure for Students)"
   type        = string

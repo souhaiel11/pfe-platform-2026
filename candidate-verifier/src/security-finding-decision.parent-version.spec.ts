@@ -1,9 +1,4 @@
-// V1.8 Phase 7B — contract tests for SecurityFindingDecisionService.decide()'s
-// PARENT_VERSION branch. Fast/pure section uses a FAKE GroundedMavenProvenanceService
-// (structural match, no real checkout) to isolate the decision-routing logic
-// itself; the REAL end-to-end proof (real checkout, real writer, real guard)
-// lives in this file's own final section, reusing the SAME real repository
-// this project's other specs already use (security-finding-decision.spec.ts).
+// Teste le composant « security-finding-decision.parent-version » et ses cas d’erreur.
 import * as assert from 'node:assert/strict';
 import * as fs from 'fs';
 import * as os from 'os';
@@ -22,14 +17,17 @@ import { SecurityFindingDecisionInput } from '../../backend/src/security-remedia
 const EVALUATED_SHA = 'a'.repeat(40);
 const REAL_PARENT_POM = `<project>\n  <parent>\n    <groupId>org.springframework.boot</groupId>\n    <artifactId>spring-boot-starter-parent</artifactId>\n    <version>2.7.0</version>\n  </parent>\n  <dependencies>\n    <dependency>\n      <groupId>com.fasterxml.jackson.core</groupId>\n      <artifactId>jackson-databind</artifactId>\n    </dependency>\n  </dependencies>\n</project>`;
 
+/** Simule les dépendances nécessaires au scénario. */
 function fakeProvenanceService(pomXmlText: string | null = REAL_PARENT_POM, ok = true): any {
   return {
+    /** Retrouve les données fiables correspondant à la demande. */
     resolve: (): GroundedMavenProvenanceResult => ok
       ? { ok: true, provenance: { ecosystem: 'MAVEN', kind: 'TRANSITIVE', package: 'com.fasterxml.jackson.core:jackson-databind', installedVersion: '2.13.3', controllingFile: null, controllingElement: null, controllingProperty: null, groundedSha: EVALUATED_SHA, evidence: 'fake' }, evidence: { requestedSha: EVALUATED_SHA, checkoutSha: EVALUATED_SHA, evaluatedSha: EVALUATED_SHA, pomXmlText } }
       : { ok: false, failureClass: 'WORKSPACE_INFRA_FAILURE', detail: 'fake failure', evidence: { requestedSha: EVALUATED_SHA, checkoutSha: null, evaluatedSha: null, pomXmlText: null } },
   };
 }
 
+/** Prépare les données nécessaires à ce scénario. */
 function baseFinding(overrides: Partial<SecurityFindingDecisionInput> = {}): SecurityFindingDecisionInput {
   return {
     findingIdentity: 'fp-parent-1', source: 'OWASP',
@@ -58,13 +56,6 @@ const workspace = { repository: 'souhaiel11/pfe-app-test', candidateBaseSha: EVA
 }
 console.log('security-finding-decision (parent) A) V1.8 PARENT_VERSION plan -> writeParentVersionPatch invoked: PASS');
 
-// ============================================================================
-// B. finding package != actualEditTarget -> supported correctly, never a
-// false mismatch (this IS the normal/expected shape for every real
-// PARENT_VERSION finding -- jackson-databind's own package never equals the
-// Spring Boot parent coordinate). Also proves fixedVersion (null here) is
-// never consulted on this path.
-// ============================================================================
 {
   const finding = baseFinding();
   assert.notEqual(finding.package, finding.parentRemediationPlan!.actualEditTarget, 'B: sanity -- package genuinely differs from actualEditTarget');
@@ -99,13 +90,6 @@ console.log('security-finding-decision (parent) C) parent target mismatch -> BLO
 }
 console.log('security-finding-decision (parent) D) fromVersion mismatch -> BLOCK: PASS');
 
-// ============================================================================
-// E. missing parent plan (task dispatched with no v1_8Plan at all, e.g. a
-// non-ENFORCED/legacy task) -> decide() takes the NORMAL path, never
-// synthesizes a parent edit out of nothing. Uses the REAL classifier path
-// (fixedVersion genuinely missing here) -> DEVELOPER_ACTION_REQUIRED,
-// exactly like any ordinary non-eligible finding -- never AUTO_FIX_ELIGIBLE.
-// ============================================================================
 {
   const service = new SecurityFindingDecisionService(fakeProvenanceService());
   const decision = service.decide(baseFinding({ parentRemediationPlan: undefined, fixedVersion: null }), workspace);
@@ -128,17 +112,6 @@ console.log('security-finding-decision (parent) E) missing parent plan -> normal
 }
 console.log('security-finding-decision (parent) grounding failure -> BLOCK, never fabricated: PASS');
 
-// ============================================================================
-// J / §12 causal-difference test — proves the writer's target came from the
-// V1.8 PLAN, not from any re-derivation/selection downstream. `fixedVersion`
-// is set here to a synthetic scanner string that, if a legacy
-// selectEligibleTargetVersion()-style policy were EVER consulted on this
-// path, would pick a DIFFERENT ("lowest same-major") version than the
-// plan's own toVersion -- proving decide() never reaches that policy at all
-// for a PARENT_VERSION finding (structurally impossible: this branch
-// returns before fixedVersions/classifySecurityAutoFixEligibility is ever
-// touched -- see decide()'s own early-return ordering).
-// ============================================================================
 {
   const service = new SecurityFindingDecisionService(fakeProvenanceService());
   const decision = service.decide(baseFinding({ fixedVersion: '2.7.1, 2.7.18, 2.7.99' }), workspace);
@@ -147,14 +120,6 @@ console.log('security-finding-decision (parent) grounding failure -> BLOCK, neve
 }
 console.log('security-finding-decision (parent) J/§12) causal-difference: writer target is the V1.8 plan, never a legacy re-selection: PASS');
 
-// ============================================================================
-// §13 — REAL, offline, end-to-end proof through the SAME live decision
-// pipeline code (resolver's own shape -> decide() -> guard -> writer ->
-// resulting pom), using the exact validated commit, real checkout, real
-// Maven -- NEVER by directly invoking writeParentVersionPatch() as a
-// shortcut. No GitHub mutation, no branch push (everything happens in a
-// throwaway local worktree this test creates and tears down itself).
-// ============================================================================
 {
   const REPO_PATH = '/home/souhaiel/pfe-2026/pfe-app-test';
   const VALIDATED_SHA = '7ae0f954f99628b69ce9b42f42c1e2acc8568d99';

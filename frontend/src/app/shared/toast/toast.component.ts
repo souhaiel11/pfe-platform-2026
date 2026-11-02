@@ -1,3 +1,4 @@
+// Gère l’affichage et les actions de notification.
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ToastService } from '../../core/services/toast.service';
@@ -28,5 +29,6 @@ import { ToastService } from '../../core/services/toast.service';
   `
 })
 export class ToastComponent {
+  /** Initialise les dépendances et l’état de ce composant. */
   constructor(public toastService: ToastService) {}
 }

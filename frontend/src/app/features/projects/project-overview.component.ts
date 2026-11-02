@@ -1,3 +1,4 @@
+// Présente la synthèse du projet et de ses derniers résultats.
 import { availableNumber, scannerHasResult, scannerMetric, scannerState, testStageCoverage, dockerImageState, sourceInteger } from '../../shared/data-truth';
 import { presentationText, presentationLabel } from '../../shared/status-labels';
 import { sortPipelineStages, pipelineStageLabel } from '../../shared/pipeline-stage-presentation';
@@ -203,7 +204,7 @@ interface Stage {
     /* ── Split ── */
     .split { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 24px; }
     @media (max-width: 760px) { .split { grid-template-columns: 1fr; } }
-    .panel { border: 1px solid var(--c-line); border-radius: 12px; padding: 16px 18px; }
+    .panel { min-width: 0; border: 1px solid var(--c-line); border-radius: 12px; padding: 16px 18px; }
 
     .bar { display: flex; height: 8px; border-radius: 4px; overflow: hidden; background: var(--c-soft2); gap: 1px; }
     .seg[data-sev='critical'] { background: var(--c-fail); }
@@ -221,8 +222,8 @@ interface Stage {
 
     .care { display: flex; align-items: center; gap: 20px; }
     .care-div { width: 1px; align-self: stretch; background: var(--c-line); }
-    .care-side { display: flex; flex-direction: column; }
-    .care-num { font-size: 28px; font-weight: 750; line-height: 1.05; font-family: var(--font-mono, monospace); }
+    .care-side { display: flex; flex-direction: column; flex: 1; min-width: 0; overflow-wrap: anywhere; }
+    .care-num { font-size: clamp(18px, 2.5vw, 28px); font-weight: 750; line-height: 1.05; font-family: var(--font-mono, monospace); }
     .care-num.auto   { color: var(--c-auto); }
     .care-num.manual { color: var(--c-warn); }
     .care-lab { font-size: 11.5px; opacity: .6; margin-top: 2px; }
@@ -271,9 +272,13 @@ interface Stage {
   `]
 })
 export class ProjectOverviewComponent {
+  /** Renvoie les données enrichies du rapport. */
   @Input() set ed(v: any) { this._ed.set(v || {}); }
+  /** Renvoie les données brutes du rapport. */
   @Input() set rp(v: any) { this._rp.set(v || {}); }
+  /** Renvoie les étapes communiquées par le backend. */
   @Input() set backendStages(v: any[]) { this._backendStages.set(Array.isArray(v) ? v : []); }
+  /** Renvoie le résultat de préparation au déploiement. */
   @Input() set deployReadiness(v: any) { this._readiness.set(v || null); }
   // Optionnel — colonnes Incident (errorReason/errorStep), pas dans ed/rp.
   // Absent quand ce composant est utilisé côté Report seul (project-detail) :
@@ -283,6 +288,7 @@ export class ProjectOverviewComponent {
   @Input() errorStep: string | null = null;
   @Output() goToTab = new EventEmitter<string>();
 
+  /** Vérifie si le scanner possède un résultat exploitable. */
   scannerAvailable = (tool: any) => tool.count !== null;
   private _ed = signal<any>({});
   private _rp = signal<any>({});
@@ -291,6 +297,7 @@ export class ProjectOverviewComponent {
   private _readiness = signal<any>(null);
   readiness = this._readiness.asReadonly();
 
+  /** Présente l’action proposée pour débloquer le déploiement. */
   readinessAction(): string {
     const raw = String(this.readiness()?.recommendedNextAction || '').trim();
     if (/^(resolve tests|Corriger l’étape Tests):\s*(skipped|not_run)$/i.test(raw)) return 'Configurer et exécuter les tests, actuellement non exécutés.';
@@ -298,6 +305,7 @@ export class ProjectOverviewComponent {
     return presentationText(raw) || this.verdictSub();
   }
 
+  /** Vérifie l’état suivant : Blocking. */
   isBlocking(key: string): boolean {
     return !!this.presentationStages().find((s: any) => s.stage === key && s.blocking === true);
   }
@@ -325,10 +333,7 @@ export class ProjectOverviewComponent {
     return Array.isArray(i) ? i : [];
   });
 
-  // Tooltip (survol/focus) des portes du rail — Phase 3 : plus jamais un
-  // état "skip"/UNKNOWN muet. 'build'/'deploy' non couverts ici (Build a
-  // déjà son propre mécanisme, plus riche, via classify()+log console —
-  // voir jenkinsIssues()/Bloc A ; Deploy hors périmètre de phase-diagnostics.ts).
+  /** Tooltip (survol/focus) des portes du rail — Phase 3 : plus jamais un état "skip"/UNKNOWN muet. */
   diagnosticFor(key: string): string {
     const d = this._ed();
     const ctx: IncidentContext = { errorReason: this.errorReason, errorStep: this.errorStep };
@@ -343,6 +348,7 @@ export class ProjectOverviewComponent {
     }
   }
 
+  /** Normalise la sévérité pour le filtrage ou le tri. */
   sevKey(s: string): string {
     const u = String(s || '').toUpperCase();
     if (u === 'BLOCKER' || u === 'CRITICAL') return 'critical';
@@ -360,17 +366,8 @@ export class ProjectOverviewComponent {
   stages = computed<Stage[]>(() => {
     const governed = this.presentationStages();
     if (governed.length) {
-      // 'deploy' opens the platform's OWN deployment-governance section
-      // ('deploiement'), never Jenkins: Jenkins is build evidence under the
-      // CI/CD tab, it is not the deployment UI.
-      // R49 — l'etape 'docker' ouvre la vue Docker du projet, pas Jenkins.
-      // Le pipeline reel expose les etapes zap/build/owasp/sonar/tests/trivy/
-      // deploy/docker : 'docker' est donc une destination vivante, et la router
-      // vers 'jenkins' envoyait l'utilisateur sur la preuve de build au lieu de
-      // l'image. Jenkins reste accessible depuis la vue Docker, en preuve
-      // secondaire. 'container' designe le meme travail d'image (aucune etape ne
-      // porte ce nom aujourd'hui) et suit la meme destination.
-      const tabs: Record<string, string> = { build: 'jenkins', tests: 'jenkins', sonar: 'sonar', trivy: 'security:trivy', owasp: 'security:owasp', zap: 'security:zap', container: 'docker', docker: 'docker', deploy: 'deploiement' };
+      const tabs: Record<string, string> = { build: 'build', tests: 'tests', sonar: 'sonar', trivy: 'security:trivy', owasp: 'security:owasp', zap: 'security:zap', container: 'docker', docker: 'docker', deploy: 'deploiement' };
+      /** Renvoie l’état courant de l’élément. */
       const state = (status: string): Stage['state'] => ({ PASSED: 'pass', FAILED: 'fail', WARNING: 'warn', RUNNING: 'warn', NOT_RUN: 'skip', NOT_REACHED: 'skip' } as any)[status] || 'skip';
       const humanStatus: Record<string,string> = { PASSED:'Réussi', FAILED:'Échec', WARNING:'Avertissement', RUNNING:'En cours', NOT_RUN:'Non exécuté', NOT_REACHED:'Non atteint' };
       return sortPipelineStages(governed).map(s => ({
@@ -390,13 +387,14 @@ export class ProjectOverviewComponent {
       s.BLOCKER > 0 ? 'fail' :
       (String(d?.sonar?.quality_gate || '').toUpperCase() === 'ERROR' ? 'fail' :
       (s.CRITICAL > 0 ? 'warn' : (d?.sonar?.status === 'COMPLETED' ? 'pass' : 'skip')));
+    /** Résume l’état des vulnérabilités affichées. */
     const cveState = (crit: number, high: number, status: string): Stage['state'] =>
       status !== 'COMPLETED' ? 'skip' : (crit > 0 ? 'fail' : (high > 0 ? 'warn' : 'pass'));
 
     // Historique sans stage model : tous les états restent neutres. Aucun
     // signal legacy absent ne peut devenir vert.
     return sortPipelineStages<Stage>([
-      { key: 'build', label: 'Build', tab: 'jenkins',
+      { key: 'build', label: 'Build', tab: 'build',
         // R49 — meme regle que l'etape Image : un tiret n'est pas un etat.
         detail: sourceInteger(d?.build?.number) === null ? 'Non disponible' : '#' + sourceInteger(d?.build?.number),
         state: 'skip' as const },
@@ -452,7 +450,9 @@ export class ProjectOverviewComponent {
   tools = computed(() => {
     const d = this._ed();
     const s = this.sonarBySeverity();
+    /** Choisit la tonalité visuelle correspondant au statut. */
     const tone = (fail: number, warn: number) => fail > 0 ? 'fail' : (warn > 0 ? 'warn' : 'pass');
+    /** Choisit la tonalité selon la décision de gouvernance. */
     const governedTone = (stage: string, fail: number, warn: number) => {
       const status = String(this.presentationStages().find(s => String(s.stage || '').toLowerCase() === stage)?.status || 'NOT_RUN').toUpperCase();
       if (status === 'FAILED') return 'fail';

@@ -1,3 +1,4 @@
+// Données et fonctions de construction des 4 projets de démonstration (palmyra-core-banking, megara-settlement, kyc-onboarding-svc, reporting-gateway) utilisées par seed.ts.
 import { ProjectEnvironment, ProjectStatus, CicdTool } from '../projects/project.entity';
 import { BugSeverity } from '../bugs/bug.entity';
 
@@ -51,10 +52,7 @@ export interface DemoProjectDef {
   bugTemplates: BugTemplate[];
 }
 
-// ─────────────────────────────────────────────────────────────────
-// Dérivation des compteurs CVE : TOUJOURS depuis le tableau réel
-// (filter().length), jamais écrits à la main. Utilisé par seed.ts.
-// ─────────────────────────────────────────────────────────────────
+/** Dérive les compteurs CVE (critical/high/cves_count) toujours à partir du tableau réel de CVE fourni. */
 export function deriveCveBlock(cves: CveEntry[]) {
   return {
     critical: cves.filter(c => c.severity === 'CRITICAL').length,
@@ -64,6 +62,7 @@ export function deriveCveBlock(cves: CveEntry[]) {
   };
 }
 
+/** Convertit un score de sécurité numérique en niveau de risque (LOW/MEDIUM/HIGH/CRITICAL). */
 export function riskLevelFor(score: number): string {
   if (score >= 80) return 'LOW';
   if (score >= 60) return 'MEDIUM';
@@ -71,10 +70,6 @@ export function riskLevelFor(score: number): string {
   return 'CRITICAL';
 }
 
-// ─────────────────────────────────────────────────────────────────
-// palmyra-core-banking — healthy / prod / score 92
-// CVE cible : 0 crit / 1 high / 4 med (trivy+owasp)
-// ─────────────────────────────────────────────────────────────────
 const palmyra: DemoProjectDef = {
   jenkinsJobName: 'palmyra-core-banking',
   name: 'palmyra-core-banking',
@@ -127,10 +122,6 @@ const palmyra: DemoProjectDef = {
   ],
 };
 
-// ─────────────────────────────────────────────────────────────────
-// megara-settlement — warning / prod / score 71
-// CVE cible : 1 crit / 5 high / 9 med
-// ─────────────────────────────────────────────────────────────────
 const megara: DemoProjectDef = {
   jenkinsJobName: 'megara-settlement',
   name: 'megara-settlement',
@@ -200,10 +191,6 @@ const megara: DemoProjectDef = {
   ],
 };
 
-// ─────────────────────────────────────────────────────────────────
-// kyc-onboarding-svc — critical / staging / score 46 (validé précédemment)
-// CVE cible : 4 crit / 11 high / 18 med
-// ─────────────────────────────────────────────────────────────────
 const kyc: DemoProjectDef = {
   jenkinsJobName: 'kyc-onboarding-svc',
   name: 'kyc-onboarding-svc',
@@ -295,10 +282,6 @@ const kyc: DemoProjectDef = {
   ],
 };
 
-// ─────────────────────────────────────────────────────────────────
-// reporting-gateway — healthy / staging / score 84
-// CVE cible : 0 crit / 2 high / 6 med
-// ─────────────────────────────────────────────────────────────────
 const reportingGateway: DemoProjectDef = {
   jenkinsJobName: 'reporting-gateway',
   name: 'reporting-gateway',
@@ -359,14 +342,9 @@ const reportingGateway: DemoProjectDef = {
 
 export const DEMO_PROJECTS: DemoProjectDef[] = [palmyra, megara, kyc, reportingGateway];
 
-// cicdTool est identique pour les 4 (imposé par la matrice) — pas la peine de le
-// répéter dans chaque objet.
 export const DEMO_CICD_TOOL = CicdTool.JENKINS;
 
-// ─────────────────────────────────────────────────────────────────
-// Assemble l'enrichedData v2.1 complet pour un projet démo, avec
-// critical/high/cves_count TOUJOURS dérivés des tableaux cves[].
-// ─────────────────────────────────────────────────────────────────
+/** Assemble l'objet enrichedData v2.1 complet d'un projet démo pour un build donné, avec les compteurs CVE toujours dérivés des tableaux cves[]. */
 export function buildEnrichedData(def: DemoProjectDef, buildNumber: number, buildTimestamp: number, buildUrl: string) {
   return {
     build: { status: def.build.status, number: buildNumber, url: buildUrl },

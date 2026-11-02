@@ -1,0 +1,213 @@
+--- before/frontend/src/app/core/services/api.service.ts
++++ after/frontend/src/app/core/services/api.service.ts
+@@ -57,6 +57,12 @@
+     let p = new HttpParams();
+     if (params) Object.keys(params).forEach(k => params[k] && (p = p.set(k, params[k])));
+     return this.http.get<any>(`${this.base}/incidents`, { params: p });
++  }
++  getIncidentSummaries(params: any) {
++    return this.http.get<any>(`${this.base}/project-reads/incidents`, { params });
++  }
++  getReportSummaries(params: any) {
++    return this.http.get<any>(`${this.base}/project-reads/reports`, { params });
+   }
+   getIncident(id: string) { return this.http.get<any>(`${this.base}/incidents/${id}`); }
+   updateIncidentStatus(id: string, status: string) {
+--- before/frontend/src/app/features/projects/project-detail.component.ts
++++ after/frontend/src/app/features/projects/project-detail.component.ts
+@@ -66,6 +66,13 @@
+   project: any = null;
+   incidents: any[] = [];
+   allReports: any[] = [];
++  allReportsTotal: number | null = null;
++  historyPage = 1;
++  historyHasNext = false;
++  historyLoading = false;
++  incidentsLoading = false;
++  private reportSelection = 0;
++  private reportDetails = new Map<string, any>();
+   latestReport: any = null;
+   loading = true;
+   loadError = false;
+@@ -910,6 +917,14 @@
+     this.project = null;
+     this.incidents = [];
+     this.allReports = [];
++    this.allReportsTotal = null;
++    this.historyPage = 1;
++    this.historyHasNext = false;
++    this.historyLoading = false;
++    this.incidentsLoading = false;
++    this.showAllHistory = false;
++    this.reportDetails.clear();
++    this.reportSelection++;
+     this.allReportsRaw = [];
+     this.jenkinsBuilds = [];
+     this.manualTasks = [];
+@@ -1006,22 +1021,43 @@
+ 
+   loadReports() {
+     this.reportsLoading = true;
++    this.incidentsLoading = true;
++    this.reportDetails.clear();
++    this.reportSelection++;
+     delete this.dataErrors['decisions'];
+     delete this.dataErrors['incidents'];
+-    this.api.getDecisions({ projectId: this.id }).pipe(takeUntil(this.projectScopeReset$)).subscribe({
+-      next: (r: any) => {
+-        const list: any[] = Array.isArray(r) ? r : [];
+-        // Same endpoint, project filter and descending date order as the old
+-        // separate size=20 read; retain the exact incident table/badge window.
+-        this.incidents = list.slice(0, 20);
+-        this.reportsLoading = false;
+-        this.allReports = list
+-          .filter(x => x.aiAnalysis)
+-          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+-        if (this.allReports.length > 0) this.selectReport(this.allReports[0]);
+-      },
+-      error: () => { this.reportsLoading = false; this.dataErrors['decisions'] = 'Impossible de charger les analyses du projet.'; this.dataErrors['incidents'] = 'Impossible de charger les incidents du projet.'; }
+-    });
++    this.api.getIncidentSummaries({ projectId: this.id, page: 1, pageSize: 20 })
++      .pipe(takeUntil(this.projectScopeReset$)).subscribe({
++        next: (r: any) => { this.incidentsLoading = false; this.incidents = r.items; },
++        error: () => { this.incidentsLoading = false; this.dataErrors['incidents'] = 'Impossible de charger les incidents du projet.'; }
++      });
++    this.loadHistory(true);
++  }
++
++  loadHistory(reset = false) {
++    if (this.historyLoading && !reset) return;
++    this.historyLoading = true;
++    delete this.dataErrors['decisions'];
++    const page = reset ? 1 : this.historyPage + 1;
++    this.api.getIncidentSummaries({ projectId: this.id, page, pageSize: 20, analysisOnly: true })
++      .pipe(takeUntil(this.projectScopeReset$)).subscribe({
++        next: (r: any) => {
++          this.historyLoading = false;
++          this.historyPage = r.page;
++          this.historyHasNext = r.hasNext;
++          this.allReportsTotal = r.total;
++          this.allReports = reset ? r.items : [...this.allReports, ...r.items];
++          if (reset) {
++            this.reportsLoading = false;
++            if (r.items.length) this.selectReport(r.items[0]);
++          }
++        },
++        error: () => {
++          this.historyLoading = false;
++          this.reportsLoading = false;
++          this.dataErrors['decisions'] = 'Impossible de charger les analyses du projet.';
++        }
++      });
+   }
+ 
+   // Dernier Report réel (colonnes judgeDecision/judgeConfidence) — sert le
+@@ -1030,9 +1066,9 @@
+   // lui-même (qui reste sur /incidents, allReports/rp inchangés).
+   loadJudgeStatus() {
+     delete this.dataErrors['reports'];
+-    this.api.getProjectReports({ projectId: this.id }).pipe(takeUntil(this.projectScopeReset$)).subscribe({
+-      next: (list: any[]) => {
+-        this.allReportsRaw = Array.isArray(list) ? list : [];
++    this.api.getReportSummaries({ projectId: this.id, page: 1, pageSize: 100 }).pipe(takeUntil(this.projectScopeReset$)).subscribe({
++      next: (result: any) => {
++        this.allReportsRaw = result.items;
+         const latest = this.allReportsRaw.length > 0 ? this.allReportsRaw[0] : null;
+         this.judge = {
+           decision: latest?.judgeDecision ?? null,
+@@ -1057,7 +1093,7 @@
+     const buildNum = incident?.buildNumber;
+     if (buildNum === null || buildNum === undefined || !this.allReportsRaw.length) return null;
+     return this.allReportsRaw.find(rep => {
+-      const repBuildNum = rep?.rawData?.enrichedData?.build?.number;
++      const repBuildNum = rep?.buildNumber ?? rep?.rawData?.enrichedData?.build?.number;
+       return repBuildNum !== null && repBuildNum !== undefined && Number(repBuildNum) === Number(buildNum);
+     }) ?? null;
+   }
+@@ -1120,6 +1156,37 @@
+   }
+ 
+   selectReport(r: any) {
++    if (!r.summaryOnly) { this.applyReport(r); return; }
++    const cached = this.reportDetails.get(r.id);
++    const selection = ++this.reportSelection;
++    if (cached) { this.reportsLoading = false; delete this.dataErrors['reportDetail']; this.applyReport(cached); return; }
++    this.reportsLoading = true;
++    this.latestReport = null;
++    this.ed = {};
++    this.rp = {};
++    this.lastScore = null;
++    this.scoreUnavailable = true;
++    delete this.dataErrors['reportDetail'];
++    this.api.getIncident(r.id).pipe(takeUntil(this.projectScopeReset$)).subscribe({
++      next: (detail: any) => {
++        if (selection !== this.reportSelection) return;
++        this.reportsLoading = false;
++        if (!detail || detail.projectId !== this.id || detail.id !== r.id) {
++          this.dataErrors['reportDetail'] = 'Impossible de charger le détail de cette analyse.';
++          return;
++        }
++        this.reportDetails.set(r.id, detail);
++        this.applyReport(detail);
++      },
++      error: () => {
++        if (selection !== this.reportSelection) return;
++        this.reportsLoading = false;
++        this.dataErrors['reportDetail'] = 'Impossible de charger le détail de cette analyse.';
++      }
++    });
++  }
++
++  private applyReport(r: any) {
+     this.latestReport = r;
+     this.rp = this.parseReport(r.aiAnalysis);
+     // Charger enrichedData
+--- before/frontend/src/app/features/projects/project-detail.component.html
++++ after/frontend/src/app/features/projects/project-detail.component.html
+@@ -39,7 +39,7 @@
+       <!-- ═══ TABS ═══ -->
+       <div class="tabs-row">
+         <button class="tab-btn" [class.active]="activeTab==='rapport'"   (click)="setActiveTab('rapport')">
+-          <i class="ti ti-report-analytics"></i> Rapport IA <span class="tab-badge" *ngIf="allReports.length">{{allReports.length}}</span>
++          <i class="ti ti-report-analytics"></i> Rapport IA <span class="tab-badge" *ngIf="allReportsTotal">{{allReportsTotal}}</span>
+         </button>
+         <button class="tab-btn" [class.active]="activeTab==='jenkins'"   (click)="setActiveTab('jenkins')">
+           <i class="ti ti-settings-automation"></i> Jenkins
+@@ -69,7 +69,7 @@
+       <!-- ═══════════════════════════════════════════ -->
+       <div *ngIf="activeTab === 'rapport'">
+         <p *ngIf="reportsLoading" role="status">Chargement des analyses…</p>
+-        <div *ngIf="!reportsLoading && !dataErrors['decisions'] && !latestReport" class="empty-state">
++        <div *ngIf="!reportsLoading && !dataErrors['decisions'] && !dataErrors['reportDetail'] && !latestReport" class="empty-state">
+           <div class="empty-icon">🤖</div>
+           <div class="empty-title">Aucun rapport IA disponible</div>
+           <div class="empty-sub">Lancez un build Jenkins pour générer une analyse</div>
+@@ -131,7 +131,7 @@
+           </div>
+ 
+           <!-- ── Historique des rapports ── -->
+-          <div class="history-box" *ngIf="allReports.length > 1">
++          <div class="history-box" *ngIf="allReportsTotal !== null && allReportsTotal > 1">
+             <div class="history-title">📋 Historique des rapports</div>
+             <div class="history-list">
+               <div *ngFor="let r of (showAllHistory ? allReports : allReports.slice(0, 5))" class="history-item"
+@@ -143,7 +143,8 @@
+                 <span class="h-score" [class.critical]="historyScoreCritical(r.securityScore)">{{historyScoreLabel(r.securityScore)}}</span>
+               </div>
+             </div>
+-            <button *ngIf="allReports.length > 5" type="button" class="btn btn-secondary btn-sm history-toggle" (click)="showAllHistory = !showAllHistory">{{showAllHistory ? 'Réduire l’historique' : 'Voir tout l’historique (' + allReports.length + ')'}}</button>
++            <button *ngIf="showAllHistory && historyHasNext" type="button" class="btn btn-secondary btn-sm" [disabled]="historyLoading" (click)="loadHistory()">{{historyLoading ? 'Chargement…' : 'Charger la suite de l’historique'}}</button>
++            <button *ngIf="allReports.length > 5" type="button" class="btn btn-secondary btn-sm history-toggle" (click)="showAllHistory = !showAllHistory">{{showAllHistory ? 'Réduire l’historique' : 'Voir l’historique (' + allReportsTotal + ')' }}</button>
+           </div>
+ 
+           <div style="text-align:right;margin-top:8px">
+@@ -847,7 +848,8 @@
+           <table class="data-table">
+             <thead><tr><th>Titre</th><th>Statut</th><th>Source</th><th>Date</th><th>Action</th></tr></thead>
+             <tbody>
+-              <tr *ngIf="incidents.length === 0">
++              <tr *ngIf="incidentsLoading"><td colspan="5" role="status">Chargement des incidents…</td></tr>
++              <tr *ngIf="!incidentsLoading && !dataErrors['incidents'] && incidents.length === 0">
+                 <td colspan="5" style="text-align:center;padding:30px;color:var(--text-faint)">Aucun incident</td>
+               </tr>
+               <tr *ngFor="let i of incidents">

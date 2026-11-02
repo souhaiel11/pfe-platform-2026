@@ -1,26 +1,4 @@
-// R22-E — WF2 two-pass restructuring: generate-all -> freeze -> verify -> write-all.
-//
-// Loads the LIVE canonical WF2 export (not a stale backup, per R22-B/R22-E
-// Phase 1) and produces a `pending-live-update` artifact. NOT imported or
-// published to the live n8n instance by this script -- deployment is a
-// separate, explicitly-authorized step this phase does not take.
-//
-// Preserves unchanged: planner, generic remediation generation, CREATE/
-// MODIFY routing, the Loop Over Items (SplitInBatches) mechanism itself,
-// semantic reviewer, error envelope conventions (onError:'continueErrorOutput'
-// + a paired Failure Envelope node, same as every existing node in this
-// workflow), GitHub write reconciliation logic, PR lookup/create, backend
-// persistence, retry/idempotency (none of Prepare Batch Context / Validate
-// Generic Remediation Plan / the LLM planner+generator+reviewer chain /
-// Lookup Existing Batch PR / Select Existing PR / Save Execution Result to
-// Backend are touched).
-//
-// Restructures only the candidate generation/write boundary:
-//   - Branch creation moves from "first thing that happens" to "only after
-//     CandidateVerification PASS" (R22-B's proven gap).
-//   - The per-file loop no longer writes to GitHub during generation --
-//     Create/Update File in Branch become PASS 2 only, fed by the frozen
-//     CandidateManifest instead of fresh per-item generation.
+// Prépare harden WF2 r22e two pass pour les workflows n8n.
 import fs from 'fs';
 import crypto from 'node:crypto';
 
@@ -33,31 +11,28 @@ const outputPath = new URL('../pending-live-update/wf2-git-patch-pr-v4-1-9adcV31
 
 const exported = JSON.parse(fs.readFileSync(liveExportPath));
 const workflow = Array.isArray(exported) ? exported[0] : exported;
+/** Retrouve ou construit le nœud du workflow demandé. */
 const node = name => workflow.nodes.find(candidate => candidate.name === name);
 const conns = workflow.connections;
 
+/** Vérifie nœud. */
 function assertNode(name) {
   if (!node(name)) throw new Error(`R22-E generator: expected node '${name}' to exist in the live export -- refusing to guess/skip.`);
   return node(name);
 }
 
-// ---------------------------------------------------------------------
-// Node factories. `withErrorOutput: true` (the default for code/http/github
-// factories below) mirrors the existing convention used throughout this
-// workflow: onError:'continueErrorOutput' gives the node a 2nd output, and
-// the caller MUST wire both outputs via setMainTwoOutputs -- a bare
-// setMain() on such a node would incorrectly merge success+error targets
-// into a single output array.
-// ---------------------------------------------------------------------
 let positionCounter = 0;
+/** Calcule la position du prochain nœud sur le canevas. */
 const nextPosition = () => { positionCounter += 1; return [900 + (positionCounter % 6) * 260, 4200 + Math.floor(positionCounter / 6) * 160]; };
 
+/** Construit un nœud de code n8n. */
 const codeNode = (name, jsCode, { withErrorOutput = true } = {}) => ({
   id: crypto.randomUUID(), name, type: 'n8n-nodes-base.code', typeVersion: 2,
   position: nextPosition(), parameters: { mode: 'runOnceForAllItems', jsCode },
   ...(withErrorOutput ? { onError: 'continueErrorOutput' } : {}),
 });
 
+/** Construit un nœud de branchement conditionnel n8n. */
 const ifNode = (name, leftValueExpr, rightValue, operationType = 'boolean', operation = 'true') => ({
   id: crypto.randomUUID(), name, type: 'n8n-nodes-base.if', typeVersion: 2.2,
   position: nextPosition(),
@@ -71,6 +46,7 @@ const ifNode = (name, leftValueExpr, rightValue, operationType = 'boolean', oper
   },
 });
 
+/** Construit le nœud de lecture de référence GitHub. */
 const githubReadRefNode = (name, ownerExpr, repoExpr, refExpr) => ({
   id: crypto.randomUUID(), name, type: 'n8n-nodes-base.httpRequest', typeVersion: 4.4,
   position: nextPosition(), onError: 'continueErrorOutput',
@@ -82,6 +58,7 @@ const githubReadRefNode = (name, ownerExpr, repoExpr, refExpr) => ({
   },
 });
 
+/** Construit un nœud HTTP qui envoie des données au backend. */
 const backendPostNode = (name, urlExpr, jsonBodyExpr, timeoutMs) => ({
   id: crypto.randomUUID(), name, type: 'n8n-nodes-base.httpRequest', typeVersion: 4.4,
   position: nextPosition(), onError: 'continueErrorOutput',
@@ -93,6 +70,7 @@ const backendPostNode = (name, urlExpr, jsonBodyExpr, timeoutMs) => ({
   },
 });
 
+/** Construit le nœud d’accès à un fichier GitHub. */
 const githubFileNode = (name, operation, ownerExpr, repoExpr, filePathExpr, referenceExpr) => ({
   id: crypto.randomUUID(), name, type: 'n8n-nodes-base.github', typeVersion: 1,
   position: nextPosition(), onError: 'continueErrorOutput',
@@ -106,34 +84,29 @@ const githubFileNode = (name, operation, ownerExpr, repoExpr, filePathExpr, refe
   },
 });
 
-// R22-E2Q — SHA-256 in the n8n Code-node sandbox: `require('crypto')` is
-// disallowed here (task-runner `allowedBuiltInModules` is empty; there is no
-// `crypto`/WebCrypto global; n8n expressions additionally block `Buffer`).
-// The installed native `n8n-nodes-base.crypto` v2 hash action runs in the
-// main process and is `createHash('SHA256').update(value).digest('hex')` —
-// byte-identical to the backend canonical `candidate-digest.ts`
-// (`computeContentSha256` / `computeCandidateDigest`). No sandbox policy is
-// widened. `value` is an n8n expression; `dataPropertyName` receives the hex
-// digest; all other item fields pass through.
+/** Prépare le résultat lié à crypto Hash nœud. */
 const cryptoHashNode = (name, valueExpr, dataPropertyName) => ({
   id: crypto.randomUUID(), name, type: 'n8n-nodes-base.crypto', typeVersion: 2,
   position: nextPosition(),
   parameters: { action: 'hash', type: 'SHA256', binaryData: false, value: valueExpr, dataPropertyName, encoding: 'hex' },
 });
 
+/** Construit le résultat d’échec transmis au workflow. */
 const failureEnvelope = (failedNodeName) => codeNode(
   `Failure Envelope - ${failedNodeName}`,
   String.raw`const input=$input.first().json||{};const raw=input.error??input;const err=typeof raw==='string'?{message:raw}:raw||{};const rawSummary=String(input.failureSummary||err.message||input.message||input.reason||raw||'workflow execution error');const failureSummary=rawSummary.replace(/[\r\n]+/g,' ').replace(/(?:token|password|secret|authorization)\s*[=:]\s*[^ ,;]+/ig,'$1=[REDACTED]').slice(0,500);const embedded=rawSummary.match(/^([A-Z][A-Z0-9_]+)(?::|$)/)?.[1];const failureCode=String(input.failureCode||embedded||'WF2_EXECUTION_ERROR').slice(0,120);const captured=$items('Capture Correlation Envelope',0,0);const correlationEnvelope=captured?.[0]?.json?.correlationEnvelope||{};return [{json:{correlationEnvelope,executionId:String($execution.id),failedNode:${JSON.stringify(failedNodeName)},failureCode,failureSummary}}];`,
   { withErrorOutput: false },
 );
 
+/** Définit Main. */
 function setMain(fromName, targets) {
   conns[fromName] = { main: [targets.map(t => ({ node: t, type: 'main', index: 0 }))] };
 }
+/** Définit Main Two Outputs. */
 function setMainTwoOutputs(fromName, outputsArr) {
   conns[fromName] = { main: outputsArr.map(targets => targets.map(t => ({ node: t, type: 'main', index: 0 }))) };
 }
-/** Wires a node that has onError:'continueErrorOutput' — success target(s) on output 0, its own Failure Envelope on output 1. */
+/** Prépare le résultat lié à wire avec erreur sortie. */
 function wireWithErrorOutput(fromName, successTargets) {
   setMainTwoOutputs(fromName, [successTargets, [`Failure Envelope - ${fromName}`]]);
 }
@@ -148,41 +121,9 @@ const recordNewBranchBaseline = codeNode('Record New Branch Baseline', String.ra
 // capture the branch's real HEAD as candidateBaseSha, distinct from
 // ctx.baseSha (main's SHA) -- Critical Invariant 1.
 
-// ---------------------------------------------------------------------
-// PHASE 3 — PASS 1: accumulate instead of write.
-// ---------------------------------------------------------------------
-// R22-E2Q FIX A.1 — the per-file contentSha256 is produced by the native
-// Crypto node just upstream (see 'Hash Candidate File Content'); this node
-// only asserts it arrived.
-// R22-E2Q FIX C — `candidateBaseSha` + `branchExists`, set by
-// 'Record New Branch Baseline' / 'Use Existing Branch', are dropped when
-// 'Fetch Repository Tree' (an httpRequest) replaces the item JSON, so they
-// never reach 'Assemble Candidate Manifest'. Re-derive them here from the
-// two nodes that always run and always carry the authoritative values —
-// exactly the same rule the two baseline nodes use (and the same rule as
-// the R22-E2P authoritative-ref fix): branch present (lookup 200) ⇒ its
-// HEAD sha; else ⇒ Prepare Batch Context.baseSha. Deterministic, generic,
-// no project/finding/rule/language branch.
 const accumulateCandidateFile = codeNode('Accumulate Candidate File', String.raw`const candidate=$('Enforce Independent Review').item.json;const contentSha256=String($json.contentSha256||'');if(!/^[a-f0-9]{64}$/.test(contentSha256))throw new Error('CANDIDATE_CONTENT_SHA256_UNAVAILABLE');const lookup=$('Lookup Remediation Branch').first().json;const branchExists=Number(lookup.statusCode)===200;const candidateBaseSha=String(branchExists?(lookup.body?.object?.sha||''):$('Prepare Batch Context').first().json.baseSha).toLowerCase();if(!/^[a-f0-9]{40}$/.test(candidateBaseSha))throw new Error('CANDIDATE_BASE_SHA_UNAVAILABLE');return {json:{...candidate,contentSha256,branchExists,candidateBaseSha}};`);
 const hashCandidateFileContent = cryptoHashNode('Hash Candidate File Content', "={{ String($json.patchedCode ?? '') }}", 'contentSha256');
 
-// ---------------------------------------------------------------------
-// PHASE 4 — assemble the immutable CandidateManifest once Pass 1 is done.
-// Mirrors backend/src/candidate-verification/candidate-digest.ts exactly
-// (same key order in JSON.stringify) -- cross-checked in
-// wf2-r22e-two-pass.spec.mjs against the real compiled backend module.
-// ---------------------------------------------------------------------
-// R22-E2Q FIX A.2 — the candidateDigest was computed here with
-// `require('crypto')` (sandbox-disallowed). Split into three:
-//   'Prepare Candidate Manifest' (this, renamed) builds the manifest and
-//       emits `_canonicalJson` — the EXACT string the old code hashed:
-//       JSON.stringify({candidateBaseSha, files:[{path,operation,contentSha256}] sorted}).
-//   'Hash Candidate Manifest' (native Crypto) hashes it → candidateDigest.
-//   'Assemble Candidate Manifest' (KEPT NAME so every downstream
-//       `$('Assemble Candidate Manifest')` reference is unchanged) strips
-//       the helper field and validates the frozen manifest.
-// The canonical serialization contract is preserved byte-for-byte and still
-// matches backend computeCandidateDigest.
 const prepareCandidateManifest = codeNode('Prepare Candidate Manifest', String.raw`const ctx=$('Prepare Batch Context').first().json;const items=$input.all().map(i=>i.json);const branchExists=Boolean(items[0]&&items[0].branchExists);const candidateBaseSha=String((items[0]&&items[0].candidateBaseSha)||'').toLowerCase();
 const files=items.map(it=>({path:String(it.target_file_path||it.file_path||''),operation:String(it.fileOperation||''),originalBlobSha:it.oldSha||null,content:String(it.patchedCode||''),contentSha256:String(it.contentSha256||''),file_path:it.file_path,repository_owner:it.repository_owner,repository_name:it.repository_name,branchName:it.branchName,commitMessage:it.commitMessage,sourceContent:it.sourceContent,approvedFindingIds:it.approvedFindingIds,processedFindingIds:it.processedFindingIds,candidateAcceptedFindingIds:it.candidateAcceptedFindingIds,validationEvidence:it.validationEvidence}));
 const canonicalFiles=files.map(f=>({path:f.path,operation:f.operation,contentSha256:f.contentSha256})).sort((a,b)=>a.path.localeCompare(b.path));const canonical={candidateBaseSha,files:canonicalFiles};
@@ -252,20 +193,6 @@ const relookupRemediationBranchBeforeCreate = githubReadRefNode(
   "{{ encodeURIComponent($('Assemble Candidate Manifest').first().json.targetBranchName) }}",
 );
 
-// R22-E2R — Pass 2 must expand the FROZEN CandidateManifest, never $json.
-// This node has two Pass-2 predecessors: 'Create Missing Branch' (emits a
-// GitHub ref-creation response `{ref, object:{sha}, ...}`) and 'Branch
-// Existed At Generation? (Pass 2 Entry)' (an IF node that passes through
-// the 'Call Remote Head Drift Guard' `{ok:true}` item). Neither carries
-// `.files`, so `const manifest=$json; manifest.files.map(...)` threw
-// `Cannot read properties of undefined (reading 'map')` and dead-ended
-// Pass 2 before any Git write (R22-E2O-R4 execution 1953). Read the exact
-// manifest that already passed CandidateVerification + Write Guard +
-// Remote Head Drift Guard — the same pinned reference every other Pass-2
-// node uses (`$('Assemble Candidate Manifest').first().json`) — and fail
-// closed if it is somehow unavailable. Generic: no project/finding/rule/
-// language/test-mode branch; the manifest is expanded identically however
-// Pass 2 was entered.
 const expandManifestFiles = codeNode('Expand Manifest Files', String.raw`const manifest=$('Assemble Candidate Manifest').first().json;if(!manifest||!Array.isArray(manifest.files)||!manifest.files.length)throw new Error('CANDIDATE_MANIFEST_UNAVAILABLE_FOR_PASS2');return manifest.files.map(f=>({json:{target_file_path:f.path,file_path:f.file_path||f.path,fileOperation:f.operation,patchedCode:f.content,contentSha256:f.contentSha256,oldSha:f.originalBlobSha,repository_owner:f.repository_owner,repository_name:f.repository_name,branchName:f.branchName,commitMessage:f.commitMessage,sourceContent:f.sourceContent,approvedFindingIds:f.approvedFindingIds,processedFindingIds:f.processedFindingIds,candidateAcceptedFindingIds:f.candidateAcceptedFindingIds,validationEvidence:f.validationEvidence}}));`);
 
 const loopOverManifestFiles = { id: crypto.randomUUID(), name: 'Loop Over Manifest Files', type: 'n8n-nodes-base.splitInBatches', typeVersion: 3, position: nextPosition(), parameters: { batchSize: 1, options: {} } };
@@ -293,16 +220,6 @@ const readBackFileAfterWriteErrorPass2 = githubFileNode(
   "={{ $('Expand Manifest Files').item.json.branchName }}",
 );
 
-// Phase 10: reconciliation now ALSO checks the readback content's hash
-// against the manifest's expected contentSha256, not merely "file exists"/
-// matches patchedCode by string-equality (kept) -- the hash check is the
-// same proof CandidateMaterializer already uses locally (R22-C), applied
-// here to the remote readback.
-// R22-E2Q FIX A.4 — the base64 decode stays in a Code node (`Buffer` is
-// allowed in Code nodes, blocked only in n8n expressions), and the SHA-256
-// of the decoded bytes is produced by the native Crypto node in between
-// ('Hash Reconciled Remote Content'). Reconciliation logic is otherwise
-// unchanged — same string-equality checks, same hash check, same outcomes.
 const decodeReconciledRemoteContent = codeNode('Decode Reconciled Remote Content', String.raw`const decoded=Buffer.from(String($json.content||'').replace(/\n/g,''),'base64').toString('utf8');return {json:{...$json,_reconciledRemoteContent:decoded}};`, { withErrorOutput: false });
 const hashReconciledRemoteContent = cryptoHashNode('Hash Reconciled Remote Content', "={{ String($json._reconciledRemoteContent ?? '') }}", '_reconciledRemoteSha256');
 const evaluateGitHubWriteReconciliationPass2 = codeNode('Evaluate GitHub Write Reconciliation (Pass 2)', String.raw`const patch=$('Expand Manifest Files').item.json;const decoded=String($json._reconciledRemoteContent||'');const normalize=value=>String(value).replace(/\r\n/g,'\n');const actualSha256=String($json._reconciledRemoteSha256||'');if(normalize(decoded)===normalize(patch.patchedCode)&&actualSha256===String(patch.contentSha256))return {json:{...patch,reconciledWrite:true,newSha:String($json.sha||''),remoteState:'EXPECTED_CANDIDATE'}};if(normalize(decoded)===normalize(patch.sourceContent))return {json:{...patch,reconciledWrite:false,failureCode:'GITHUB_WRITE_UNCONFIRMED',failureNode:'Update File in Branch',failureSummary:'GitHub write failed and remote content is unchanged',remoteState:'UNCHANGED'}};if(normalize(decoded)===normalize(patch.patchedCode)&&actualSha256!==String(patch.contentSha256))return {json:{...patch,reconciledWrite:false,failureCode:'CANDIDATE_CONTENT_MISMATCH',failureNode:'Update File in Branch',failureSummary:'Remote content matches patchedCode string but hash differs from the verified candidateDigest input -- refusing to trust it',remoteState:'HASH_MISMATCH'}};return {json:{...patch,reconciledWrite:false,failureCode:'GITHUB_REMOTE_STATE_UNEXPECTED',failureNode:'Update File in Branch',failureSummary:'GitHub write failed and remote content differs from source and candidate',remoteState:'UNEXPECTED'}};`, { withErrorOutput: false });
@@ -372,16 +289,7 @@ const newDigestNodes = [
 
 workflow.nodes.push(...codeAndHttpNodesNeedingEnvelopes, ...nodesWithoutEnvelopes, ...newFailureEnvelopes, ...ownFailureEnvelopeIf, ...newDigestNodes);
 
-// ---------------------------------------------------------------------
-// R22-E2B Phase 4 — credential references for the 5 new GitHub-calling
-// nodes, copied verbatim (reference only, never a secret value) from their
-// proven live siblings. httpRequest-type GitHub reads reuse the same
-// githubApi reference as the existing 'Lookup Remediation Branch'; the one
-// native n8n-nodes-base.github node reuses the same reference as the
-// existing 'Create File in Branch'. Fails loudly if either sibling's
-// credential is somehow absent, rather than silently shipping an unbound
-// node a second time.
-// ---------------------------------------------------------------------
+/** Exige Credential. */
 function requireCredential(siblingName, credentialType) {
   const cred = assertNode(siblingName).credentials?.[credentialType];
   if (!cred) throw new Error(`R22-E2B generator: sibling node '${siblingName}' has no '${credentialType}' credential reference to copy -- refusing to ship an unbound node.`);
@@ -394,41 +302,12 @@ for (const n of [recheckExistingBranchHead, relookupBaselineRefBeforeCreation, r
 }
 readBackFileAfterWriteErrorPass2.credentials = nativeGithubCredential;
 
-// ---------------------------------------------------------------------
-// R22-E2G — bounded LLM request latency. These three pre-existing
-// httpRequest nodes call api.anthropic.com directly with no explicit
-// `options.timeout`, which per the installed HttpRequestV3 node
-// (n8n-nodes-base, typeVersion 4.4) means each falls back to the node's
-// own code-level default of 300_000ms (5 minutes) -- not literally
-// unbounded, but long enough to leave a stalled/slow LLM call
-// indistinguishable from a hung workflow for a very long time, and it
-// is not an explicit, deliberate, reviewable policy. 180000ms (3
-// minutes) is deliberately below CandidateVerification's own 300000ms
-// timeout and gives a single LLM turn ample time while still failing
-// fast into the existing onError:'continueErrorOutput' -> Failure
-// Envelope path (proven: HttpRequestV3 catches request errors,
-// including a client-side timeout, in the same try/catch gated by
-// continueOnFail() that onError:'continueErrorOutput' controls -- a
-// timeout becomes an ordinary routed node error, not a hang, not a
-// retry, and not a fabricated success).
 const LLM_TIMEOUT_MS = 180000;
 const LLM_HTTP_REQUEST_NODES = ['Generate Remediation Plan', 'de Patch - HTTP Request', 'Independent Semantic Review'];
 
-// R22-E2P — the one authoritative reference every Pass-1 repository read must
-// use. Pass 1 defers creation of a missing remediation branch until after
-// CandidateVerification, so a Pass-1 read must resolve to an IMMUTABLE SHA:
-// the existing remediation branch HEAD when `Lookup Remediation Branch`
-// returned 200, otherwise the authoritative base SHA. A branch NAME is never
-// an acceptable Pass-1 file-read reference. This is repository-reference
-// lifecycle logic only -- no project/finding/rule/language/test-mode branch.
-// Shared verbatim by 'Fetch Finding Source Context' and 'Fetch Repository
-// Files' so the two Pass-1 github file:get reads can never diverge again.
 const PASS1_AUTHORITATIVE_REF = "={{ Number($('Lookup Remediation Branch').first().json.statusCode) === 200 ? $('Lookup Remediation Branch').first().json.body?.object?.sha : $('Prepare Batch Context').first().json.baseSha }}";
 
-// ---------------------------------------------------------------------
-// Mutate existing nodes in place (Phase 2/4/12). No other existing node's
-// jsCode/parameters are touched.
-// ---------------------------------------------------------------------
+/** Prépare le résultat lié à mutate Existing nœuds. */
 function mutateExistingNodes() {
   const useExistingBranch = assertNode('Use Existing Branch');
   useExistingBranch.parameters.jsCode = String.raw`const ctx=$('Prepare Batch Context').first().json;const response=$json;if(response.statusCode!==200||response.body?.ref!=='refs/heads/'+ctx.targetBranchName)throw new Error('EXISTING_BRANCH_IDENTITY_MISMATCH');const candidateBaseSha=String(response.body?.object?.sha||'').toLowerCase();if(!/^[a-f0-9]{40}$/.test(candidateBaseSha))throw new Error('EXISTING_BRANCH_HEAD_SHA_UNAVAILABLE');return [{json:{...ctx,branchExists:true,candidateBaseSha}}];`;
@@ -436,15 +315,6 @@ function mutateExistingNodes() {
   const fetchRepositoryTree = assertNode('Fetch Repository Tree');
   fetchRepositoryTree.parameters.url = "=https://api.github.com/repos/{{ $('Prepare Batch Context').first().json.repository_owner }}/{{ $('Prepare Batch Context').first().json.repository_name }}/git/trees/{{ encodeURIComponent($json.branchExists ? $json.targetBranchName : $json.baseBranch) }}";
 
-  // R22-E2J / R22-E2P — every Pass-1 github file:get read resolves to the
-  // immutable SHA that actually supplied the repository tree (existing
-  // remediation branch HEAD when lookup returned 200, otherwise the
-  // authoritative base SHA). Never dereference a not-yet-created branch.
-  //   - Fetch Finding Source Context: planner input read      (R22-E2J)
-  //   - Fetch Repository Files:        Pass-1 patch-target read (R22-E2P,
-  //     proven root cause of execution 1950's GitHub 404 -- it still
-  //     referenced $('Prepare Batch Context').targetBranchName, a branch
-  //     that does not exist on a first remediation attempt).
   for (const nodeName of ['Fetch Finding Source Context', 'Fetch Repository Files']) {
     assertNode(nodeName).parameters.additionalParameters.reference = PASS1_AUTHORITATIVE_REF;
   }
@@ -540,20 +410,6 @@ wireWithErrorOutput('Lookup Head After Reconciled Write (Pass 2)', ['Build Recon
 // untouched. Only its success target changes.
 setMainTwoOutputs('Build Reconciled File Result', [['Merge Effective File Results 2'], ['Failure Envelope - Build Reconciled File Result']]);
 
-// ---------------------------------------------------------------------
-// R22-E2Q FIX B — "every terminal state calls back". `wireWithErrorOutput`
-// (and the two `ownFailureEnvelopeIf` IF-nodes) route a failed node to its
-// paired `Failure Envelope - <node>`, but never wired those envelopes
-// onward, so all 16 R22-E two-pass failure envelopes dead-ended: a Pass-1/
-// Pass-2 failure never reached 'Prepare WF2 Failure Status' →
-// 'Persist WF2 Failure Status' and the incident never became FIX_FAILED
-// (proven by R22-E2O-R3 execution 1952). The 57 pre-existing envelopes are
-// already wired to persistence by the base workflow; here we complete the
-// same, single, generic edge for the R22-E ones. The envelope payload
-// ({correlationEnvelope, executionId, failedNode, failureCode,
-// failureSummary}) is exactly what 'Prepare WF2 Failure Status' consumes.
-// 'Prepare WF2 Failure Status' → 'Persist WF2 Failure Status' already
-// exists; neither has an error output, so no cycle and no double persist.
 const r22eFailureEnvelopeSources = [
   ...codeAndHttpNodesNeedingEnvelopes.map(n => n.name),
   'Transport Requires Read Back? (Pass 2)',
@@ -563,24 +419,8 @@ for (const failedNodeName of r22eFailureEnvelopeSources) {
   setMain(`Failure Envelope - ${failedNodeName}`, ['Prepare WF2 Failure Status']);
 }
 
-// ---------------------------------------------------------------------
-// R22-E2B Phases 1-3 — make this an independent, inactive, non-colliding
-// TEST workflow. This is the ONLY place the production identity
-// (id/name/active/webhook) is touched, and only in THIS generated
-// artifact's in-memory object -- the live export loaded above is never
-// written back anywhere.
-// ---------------------------------------------------------------------
 const PRODUCTION_WORKFLOW_ID = '9adcV31eaIgJyMR0';
 const PRODUCTION_WEBHOOK_PATH = 'wf2-approve';
-// R22-E2H — the Webhook node is copied verbatim from the live export
-// (only `parameters.path` was previously rewritten below), so its
-// `webhookId` GUID silently stayed identical to production's. That GUID
-// is inert for static-path routing today (n8n's webhookId-keyed lookup
-// only applies to parameterized `:id`-style paths, confirmed by reading
-// active-workflow-manager.js), but two workflows sharing one node-level
-// identity is still a latent hazard worth removing on principle -- not
-// claimed as the R22-E2F-RO stale-registration root cause (that was
-// proven separately: unpublish:workflow never calls clearWebhooks).
 const PRODUCTION_WEBHOOK_ID = '6155a0ff-9dea-4479-a1c8-96c827797354';
 const TEST_WORKFLOW_NAME = 'WF2 - Git Patch & PR R22E TEST';
 const TEST_WEBHOOK_PATH = 'wf2-r22e-test';
@@ -613,26 +453,6 @@ if (guardFailures.length) {
   throw new Error('R22-E2B safety guard refused to write an unsafe artifact:\n' + guardFailures.join('\n'));
 }
 
-// ---------------------------------------------------------------------
-// R22-E2Q-SCOPE-CLEANUP — diff hygiene against the accepted baseline.
-//
-// The canonical two-pass input (the R19.3E trusted-source artifact) has
-// since been re-opened/re-exported by the n8n editor, which materialises
-// n8n's own implicit parameter defaults (`mode:"runOnceForAllItems"`,
-// `method:"GET"`, `operation:"create"`) as explicit keys on many
-// pre-existing nodes. The previously reviewed & committed TEST artifact
-// predates that and carries those keys only inconsistently, so a fresh
-// regeneration otherwise shows ~47 "default became explicit" changes on
-// nodes that are NOT part of this change.
-//
-// To keep the reviewable diff to exactly the authorised R22-E2Q delta,
-// restore each unchanged node's `parameters` from the accepted baseline
-// artifact. This is representational only — n8n applies the identical
-// default whether the key is present or not, so runtime behaviour is
-// unaffected — and it is generator-driven and deterministic, not a hand
-// edit of the output. Only nodes OUTSIDE the authorised R22-E2Q set are
-// reconciled; the 4 changed nodes and 6 new nodes keep the generator's
-// definition. Connections, ids and positions are the generator's.
 const R22EQ_AUTHORISED_NODES = new Set([
   // 4 semantic parameter changes
   'Accumulate Candidate File', 'Assemble Candidate Manifest',

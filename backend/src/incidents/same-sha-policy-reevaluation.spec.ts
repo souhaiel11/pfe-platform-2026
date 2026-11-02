@@ -1,13 +1,7 @@
+// Teste le composant « same-sha-policy-reevaluation » et ses cas d’erreur.
 import * as assert from 'node:assert/strict';
 import { IncidentsService, buildPrValidationJobName } from './incidents.service';
 
-// R67 — same-SHA policy reevaluation. Offline (mocked fetch, mocked repo/
-// transaction — same harness pattern as corrective-convergence.spec.ts),
-// no real network, no real DB. The positive/PR34 fixtures use the exact
-// real PR #34 source text and blob SHAs (recovered earlier via GitHub and
-// the live incident record) so the recompute is proven against the real
-// defect, not a synthetic stand-in — nothing PR34-specific exists in
-// incidents.service.ts itself.
 
 const BASE_SHA = '6ed56ff791acbf3e111431285bef7b30c8076084';
 const HEAD_SHA = 'dc1aa978719ca40e6339e075cfe52a79875b2342';
@@ -55,6 +49,7 @@ const CONTENT_TABLE: Record<string, Record<string, { content: string; blobSha: s
 
 const admin = { id: 'admin-1', role: 'admin' };
 
+/** Prépare les données nécessaires à ce scénario. */
 function makeFixture(overrides: any = {}) {
   const incidentId = overrides.incidentId || 'incident-pr34';
   const requestId = 'req-r67';
@@ -92,23 +87,38 @@ function makeFixture(overrides: any = {}) {
   };
   const project: any = { id: 'project-1', githubRepo: REPO, githubToken: null, jenkinsUrl: 'http://jenkins', jenkinsToken: 'user:x', jenkinsJobName: JOB, sonarqubeKey: 'key' };
   incident.project = project;
-  const incidentRepo: any = { findOne: async () => incident, update: async (_id: string, patch: any) => Object.assign(incident, patch) };
-  const projectRepo: any = { findOne: async () => project };
+  const incidentRepo: any = {
+  /** Recherche l’élément correspondant à l’identifiant. */
+  findOne: async () => incident,
+  /** Applique les modifications autorisées à l’élément. */
+  update: async (_id: string, patch: any) => Object.assign(incident, patch) };
+  const projectRepo: any = {
+  /** Recherche l’élément correspondant à l’identifiant. */
+  findOne: async () => project };
   let tail = Promise.resolve();
   const repository: any = {
-    manager: { transaction: async (fn: any) => {
+    manager: {
+    /** Exécute les opérations dans le cadre transactionnel prévu. */
+    transaction: async (fn: any) => {
       const previous = tail; let release!: () => void;
       tail = new Promise<void>(resolve => { release = resolve; });
       await previous;
-      try { return await fn({ getRepository: (entity: any) => entity?.name === 'Project' ? projectRepo : incidentRepo }); }
+      try { return await fn({
+      /** Simule la lecture des données demandées par le composant. */
+      getRepository: (entity: any) => entity?.name === 'Project' ? projectRepo : incidentRepo }); }
       finally { release(); }
     } },
     findOne: incidentRepo.findOne, update: incidentRepo.update,
   };
-  const service = new IncidentsService(repository, projectRepo, { emit: () => undefined } as any, { syncIncident: async () => undefined } as any, {} as any);
+  const service = new IncidentsService(repository, projectRepo, {
+  /** Diffuse ou construit le résultat prévu. */
+  emit: () => undefined } as any, {
+  /** Prépare les données nécessaires à ce scénario. */
+  syncIncident: async () => undefined } as any, {} as any);
   return { incident, project, service, incidentId, requestId, batchId, expectedBranch };
 }
 
+/** Simule les dépendances nécessaires au scénario. */
 function mockGithub(remoteHeadSha: string, expectedBranch: string, fetchCallLog: string[]) {
   return (async (url: any) => {
     const value = String(url);
@@ -128,6 +138,7 @@ function mockGithub(remoteHeadSha: string, expectedBranch: string, fetchCallLog:
   }) as any;
 }
 
+/** Exécute les étapes principales de ce programme. */
 async function main() {
   const originalFetch = globalThis.fetch;
   try {
@@ -260,15 +271,6 @@ async function main() {
     assert.equal(correctAndRevalidatePreconditionPasses, true, 'CASE I: mergeAuthorization gate accepts this state');
     console.log('CASE I (correct-and-revalidate precondition gate accepts BLOCKED+correctiveActionAllowed): PASS');
 
-    // R68 CLOSED a gap this file originally documented as open: as of R68,
-    // corrective-context.ts also extracts a DEFAULT_VALUE_SEMANTICS_DEFECT
-    // cause from validation.defaultValueSemantics — so correctAndRevalidate's
-    // second gate (buildCorrectiveContext -> extractBlockingCauses must be
-    // non-empty) now ALSO passes for this candidate, even though
-    // findingResults are all VALID and regression is CLEAN (neither of the
-    // two older cause kinds would have fired). Proven here by calling the
-    // real function, not asserted — see corrective-context.spec.ts and
-    // default-value-corrective-loop.spec.ts for R68's own focused coverage.
     const { extractBlockingCauses } = await import('../validation/corrective-context');
     const blockingCauses = extractBlockingCauses(incident.metadata.validation);
     assert.equal(blockingCauses.length, 1, 'R68: a semantic cause is now extractable for this state');

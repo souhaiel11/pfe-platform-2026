@@ -1,3 +1,4 @@
+// Teste le composant « remote-head-drift » et ses cas d’erreur.
 import * as assert from 'node:assert/strict';
 import { assertRemoteHeadMatchesCandidateBase } from './remote-head-drift';
 

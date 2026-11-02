@@ -1,8 +1,4 @@
-// R22-C — generic build-adapter contract. Nothing pfe-app-test-specific
-// lives at this layer; MavenBuildAdapter is the only implementation this
-// phase, but the interface is shaped so Gradle/npm adapters (R22-B Phase 6:
-// NEEDS_ADAPTER) can be added later without touching
-// CandidateVerificationService.
+// Regroupe les traitements de construction adaptateur.
 import { RegressionTestResult, VerificationMode } from '../../backend/src/candidate-verification/candidate-verification.types';
 
 export interface CompileResult {
@@ -14,9 +10,14 @@ export interface CompileResult {
 
 export interface BuildAdapter {
   readonly buildType: string;
+  /** Indique si cet adaptateur prend en charge les données. */
   supports(workspacePath: string): boolean;
+  /** Indique si ce mode est pris en charge. */
   supportsMode?(mode: VerificationMode): boolean;
+  /** Compile le projet dans le délai disponible. */
   compile(workspacePath: string, timeoutMs: number): CompileResult;
+  /** Compile les tests du projet. */
   compileTests?(workspacePath: string, timeoutMs: number): CompileResult;
+  /** Exécute les tests pour détecter les régressions. */
   runRegressionTests(workspacePath: string, timeoutMs: number): RegressionTestResult;
 }

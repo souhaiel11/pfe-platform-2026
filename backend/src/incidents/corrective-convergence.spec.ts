@@ -1,3 +1,5 @@
+// Teste le composant « corrective-convergence » et ses cas d’erreur.
+import { emptyReservationQuery } from './sonar-file-reservation.test-double';
 import * as assert from 'node:assert/strict';
 import { IncidentsService, buildPrValidationJobName } from './incidents.service';
 
@@ -12,6 +14,7 @@ const REPO = 'owner/repo';
 const JOB = 'project-job';
 const PR = 25;
 
+/** Prépare les données nécessaires à ce scénario. */
 function makeFixture() {
   const incident: any = {
     id: 'incident-conv', projectId: 'project-1', status: 'validating',
@@ -37,23 +40,38 @@ function makeFixture() {
   };
   const project: any = { id: 'project-1', githubRepo: REPO, githubToken: null, jenkinsUrl: 'http://jenkins', jenkinsToken: 'user:x', jenkinsJobName: JOB, sonarqubeKey: 'key' };
   incident.project = project;
-  const incidentRepo: any = { findOne: async () => incident, update: async (_id: string, patch: any) => Object.assign(incident, patch) };
-  const projectRepo: any = { findOne: async () => project };
+  const incidentRepo: any = {
+  /** Recherche l’élément correspondant à l’identifiant. */
+  findOne: async () => incident,
+  /** Applique les modifications autorisées à l’élément. */
+  update: async (_id: string, patch: any) => Object.assign(incident, patch) };
+  const projectRepo: any = {
+  /** Recherche l’élément correspondant à l’identifiant. */
+  findOne: async () => project };
   let tail = Promise.resolve();
   const repository: any = {
-    manager: { transaction: async (fn: any) => {
+    manager: {
+    /** Exécute les opérations dans le cadre transactionnel prévu. */
+    transaction: async (fn: any) => {
       const previous = tail; let release!: () => void;
       tail = new Promise<void>(resolve => { release = resolve; });
       await previous;
-      try { return await fn({ getRepository: (entity: any) => entity?.name === 'Project' ? projectRepo : incidentRepo }); }
+      try { return await fn({
+      /** Simule la lecture des données demandées par le composant. */
+      query: emptyReservationQuery, getRepository: (entity: any) => entity?.name === 'Project' ? projectRepo : incidentRepo }); }
       finally { release(); }
     } },
     findOne: incidentRepo.findOne, update: incidentRepo.update,
   };
-  const service = new IncidentsService(repository, projectRepo, { emit: () => undefined } as any, { syncIncident: async () => undefined } as any, {} as any);
+  const service = new IncidentsService(repository, projectRepo, {
+  /** Diffuse ou construit le résultat prévu. */
+  emit: () => undefined } as any, {
+  /** Prépare les données nécessaires à ce scénario. */
+  syncIncident: async () => undefined } as any, {} as any);
   return { incident, project, service };
 }
 
+/** Prépare les données nécessaires à ce scénario. */
 function validationPayload(sha: string, findingResults: any[], candidateFindingsSnapshot: any[]) {
   return {
     validationRequestId: 'vr-1', projectId: 'project-1', fixRequestId: 'req-conv',
@@ -67,6 +85,7 @@ function validationPayload(sha: string, findingResults: any[], candidateFindings
   };
 }
 
+/** Simule les dépendances nécessaires au scénario. */
 function mockGithubAndWf2(incident: any, headSha: string, wf2Calls: { count: number }) {
   return (async (url: any) => {
     const value = String(url);
@@ -80,6 +99,7 @@ function mockGithubAndWf2(incident: any, headSha: string, wf2Calls: { count: num
 
 const admin = { id: 'admin-1', role: 'admin' };
 
+/** Exécute les étapes principales de ce programme. */
 async function main() {
   const originalFetch = globalThis.fetch;
   const originalWorkflowId = process.env.N8N_WF2_ID;

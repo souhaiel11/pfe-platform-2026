@@ -1,0 +1,61 @@
+   1 package com.pfe.devsecops.service;
+   2 
+   3 import com.pfe.devsecops.dto.LoginRequest;
+   4 import com.pfe.devsecops.dto.LoginResponse;
+   5 import com.pfe.devsecops.dto.RegisterRequest;
+   6 import com.pfe.devsecops.model.User;
+   7 import com.pfe.devsecops.repository.UserRepository;
+   8 import com.pfe.devsecops.security.JwtUtil;
+   9 import org.springframework.beans.factory.annotation.Autowired;
+  10 import org.springframework.security.authentication.AuthenticationManager;
+  11 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+  12 import org.springframework.security.core.AuthenticationException;
+  13 import org.springframework.security.crypto.password.PasswordEncoder;
+  14 import org.springframework.stereotype.Service;
+  15 
+  16 @Service
+  17 public class AuthService {
+  18 
+  19     @Autowired
+  20     private AuthenticationManager authenticationManager;
+  21 
+  22     @Autowired
+  23     private UserRepository userRepository;
+  24 
+  25     @Autowired
+  26     private PasswordEncoder passwordEncoder;
+  27 
+  28     @Autowired
+  29     private JwtUtil jwtUtil;
+  30 
+  31     public LoginResponse login(LoginRequest request) {
+  32         // VULNERABILITY : pas de rate limiting — brute force possible (ZAP)
+  33         try {
+  34             authenticationManager.authenticate(
+  35                     new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
+  36             );
+  37         } catch (AuthenticationException e) {
+  38             throw new RuntimeException("Invalid credentials");
+  39         }
+  40 
+  41         String token = jwtUtil.generateToken(request.getUsername());
+  42         User user = userRepository.findByUsername(request.getUsername())
+  43                 .orElseThrow(() -> new RuntimeException("User not found"));
+  44 
+  45         return new LoginResponse(token, user.getUsername(), user.getRole().name());
+  46     }
+  47 
+  48     public User register(RegisterRequest request) {
+  49         if (userRepository.existsByUsername(request.getUsername())) {
+  50             throw new RuntimeException("Username already exists");
+  51         }
+  52 
+  53         User user = new User();
+  54         user.setUsername(request.getUsername());
+  55         user.setEmail(request.getEmail());
+  56         user.setPassword(passwordEncoder.encode(request.getPassword()));
+  57         user.setRole(User.Role.USER);
+  58 
+  59         return userRepository.save(user);
+  60     }
+  61 }

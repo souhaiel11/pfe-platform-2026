@@ -1,0 +1,97 @@
+{
+  "PAGES_MEASURED": 20,
+  "SAMPLES_PER_RELEASE": 56,
+  "TOTAL_REQUESTS_BEFORE": 372,
+  "TOTAL_REQUESTS_AFTER": 198,
+  "DUPLICATE_REQUESTS_FOUND": 40,
+  "DUPLICATE_REQUESTS_REMOVED": 40,
+  "INACTIVE_TAB_REQUESTS_FOUND": 148,
+  "INACTIVE_TAB_REQUESTS_REMOVED": 148,
+  "MEDIAN_UI_IMPROVEMENT_PERCENT": 21.3,
+  "LARGEST_MEASURED_IMPROVEMENT": {
+    "PROJECT": "pfe-app-test",
+    "PAGE": "SonarQube",
+    "MODE": "cold",
+    "BEFORE_MS": 1849.0,
+    "AFTER_MS": 967.5,
+    "IMPROVEMENT_PERCENT": 47.7,
+    "REQUESTS_BEFORE": 9.0,
+    "REQUESTS_AFTER": 3.0,
+    "FEEDBACK_BEFORE_MS": 604.1,
+    "FEEDBACK_AFTER_MS": 272.7,
+    "RENDER_LONG_TASKS_BEFORE_MS": 249.5,
+    "RENDER_LONG_TASKS_AFTER_MS": 178.0
+  },
+  "DECODED_API_BYTES_BEFORE": 49263690,
+  "DECODED_API_BYTES_AFTER": 23737876,
+  "FIRST_MEANINGFUL_COLD_BEFORE_MS_MEDIAN": 236.0,
+  "FIRST_MEANINGFUL_COLD_AFTER_MS_MEDIAN": 306.0,
+  "FIRST_MEANINGFUL_COLD_AFTER_MS_MAX": 561.3999999985099,
+  "SLOW_BACKEND_ENDPOINTS": [
+    {
+      "PHASE": "after",
+      "ENDPOINT": "/api/incidents?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+      "COUNT": 20,
+      "DURATION_MS_MEDIAN": 722.5,
+      "DURATION_MS_MAX": 1538,
+      "PAYLOAD_SIZE_BYTES_MAX": 15516430,
+      "PAYLOAD_SOURCE": "in-band decoded body or separate streaming characterization for inspector-evicted bodies",
+      "CALLER_COMPONENT": "ProjectDetail",
+      "NECESSARY": "YES",
+      "REASON": "Shared report/header evidence or active-tab child"
+    },
+    {
+      "PHASE": "after",
+      "ENDPOINT": "/api/reports?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+      "COUNT": 20,
+      "DURATION_MS_MEDIAN": 589.0,
+      "DURATION_MS_MAX": 1159,
+      "PAYLOAD_SIZE_BYTES_MAX": 12102637,
+      "PAYLOAD_SOURCE": "in-band decoded body or separate streaming characterization for inspector-evicted bodies",
+      "CALLER_COMPONENT": "ProjectDetail",
+      "NECESSARY": "YES",
+      "REASON": "Shared report/header evidence or active-tab child"
+    },
+    {
+      "PHASE": "after",
+      "ENDPOINT": "/api/incidents/project/3aa1c9b9-e114-40e4-884b-ebc7aa32e002/cycles",
+      "COUNT": 5,
+      "DURATION_MS_MEDIAN": 651,
+      "DURATION_MS_MAX": 833,
+      "PAYLOAD_SIZE_BYTES_MAX": 176463,
+      "PAYLOAD_SOURCE": "in-band decoded body or separate streaming characterization for inspector-evicted bodies",
+      "CALLER_COMPONENT": "ProjectDetail",
+      "NECESSARY": "YES",
+      "REASON": "Security/remediation feature"
+    },
+    {
+      "PHASE": "after",
+      "ENDPOINT": "/api/manual-remediation?projectId=3aa1c9b9-e114-40e4-884b-ebc7aa32e002&includeV18=true",
+      "COUNT": 5,
+      "DURATION_MS_MEDIAN": 569,
+      "DURATION_MS_MAX": 816,
+      "PAYLOAD_SIZE_BYTES_MAX": 852634,
+      "PAYLOAD_SOURCE": "in-band decoded body or separate streaming characterization for inspector-evicted bodies",
+      "CALLER_COMPONENT": "ProjectDetail",
+      "NECESSARY": "YES",
+      "REASON": "Security/remediation feature"
+    }
+  ],
+  "SLOW_EXTERNAL_ENDPOINTS": [
+    {
+      "PHASE": "after",
+      "ENDPOINT": "/api/azure-deploy/governance/3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+      "COUNT": 3,
+      "DURATION_MS_MEDIAN": 11562,
+      "DURATION_MS_MAX": 12166,
+      "PAYLOAD_SIZE_BYTES_MAX": 1445,
+      "PAYLOAD_SOURCE": "in-band decoded body or separate streaming characterization for inspector-evicted bodies",
+      "CALLER_COMPONENT": "DeploymentGovernance",
+      "NECESSARY": "YES",
+      "REASON": "Shared report/header evidence or active-tab child"
+    }
+  ],
+  "CHARACTERIZED_LARGEST_RESPONSE_BYTES": 15516430,
+  "INBAND_BODY_CAPTURE_ERRORS_BEFORE": 60,
+  "INBAND_BODY_CAPTURE_ERRORS_AFTER": 40
+}

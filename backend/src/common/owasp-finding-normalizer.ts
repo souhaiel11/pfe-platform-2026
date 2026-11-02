@@ -1,4 +1,4 @@
-/** Dependency-Check identity only. No advisory range is a source of fixed versions. */
+// Résout l'identité Maven d'une dépendance OWASP Dependency-Check et normalise une paire (dépendance, vulnérabilité) au format finding de la plateforme.
 export interface OwaspMavenIdentity {
   groupId: string;
   artifactId: string;
@@ -7,6 +7,7 @@ export interface OwaspMavenIdentity {
   purl: string;
 }
 
+/** Extrait l'identité Maven (groupId/artifactId/version) d'une dépendance OWASP, uniquement si les PURL haute confiance convergent vers une seule identité sans ambiguïté. */
 export function resolveOwaspMavenIdentity(dependency: any): OwaspMavenIdentity | null {
   const identities = new Map<string, OwaspMavenIdentity>();
   for (const entry of Array.isArray(dependency?.packages) ? dependency.packages : []) {
@@ -20,13 +21,12 @@ export function resolveOwaspMavenIdentity(dependency: any): OwaspMavenIdentity |
       if (!/^[A-Za-z0-9_.+-]+$/.test(installedVersion)) continue;
       const pkg = `${groupId}:${artifactId}`;
       identities.set(`${pkg}@${installedVersion}`, { groupId, artifactId, installedVersion, pkg, purl });
-    } catch { /* Malformed percent encoding: unresolved, never infer from the JAR. */ }
+    } catch { /* encodage pourcentage malformé : identité non résolue */ }
   }
-  // Other ecosystems and low-confidence entries do not displace a unique Maven
-  // identity. Multiple distinct credible Maven identities remain ambiguous.
   return identities.size === 1 ? [...identities.values()][0] : null;
 }
 
+/** Transforme une paire (dépendance, vulnérabilité) du rapport OWASP Dependency-Check brut en finding normalisé de la plateforme. */
 export function normalizeOwaspFinding(dependency: any, vulnerability: any): any {
   const identity = resolveOwaspMavenIdentity(dependency);
   const severity = String(vulnerability?.severity || 'UNKNOWN').toUpperCase();
@@ -37,7 +37,6 @@ export function normalizeOwaspFinding(dependency: any, vulnerability: any): any 
     severity, category: 'DEPENDENCY', title: ruleOrCve || 'Dependency vulnerability',
     description: String(vulnerability?.description || '').substring(0, 400),
     file: fileName, fileName, line: null,
-    // Retained only to locate the pre-enrichment task; never used to parse GAV.
     legacyPackage: fileName, dependency: fileName,
     packageType: identity ? 'maven' : null,
     pkg: identity?.pkg || fileName, package: identity?.pkg || fileName,

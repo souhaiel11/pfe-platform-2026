@@ -1,3 +1,4 @@
+// Teste le composant « chat-service » et ses cas d’erreur.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -10,15 +11,21 @@ const source = readFileSync(new URL('../src/app/core/services/chat.service.ts', 
 const exports = {};
 vm.runInNewContext(ts.transpileModule(source, {
   compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, experimentalDecorators: true },
-}).outputText, { exports, require: name => {
+}).outputText, { exports,
+/** Charge la dépendance prévue pour le scénario. */
+require: name => {
   if (name === 'rxjs') return rxjs;
   if (name.includes('environment')) return { environment: { apiUrl: '/api' } };
-  return { Injectable: () => target => target };
+  return {
+  /** Simule le décorateur de service Angular. */
+  Injectable: () => target => target };
 }, console });
 
 let response;
 const calls = [];
-const http = { post: (url, body) => { calls.push({ url, body }); return response; } };
+const http = {
+/** Prépare les données nécessaires à ce scénario. */
+post: (url, body) => { calls.push({ url, body }); return response; } };
 const service = new exports.ChatService(http);
 let messages, loading;
 service.messages$.subscribe(value => messages = value);
@@ -59,7 +66,9 @@ service.sendMessage('Double clic');
 assert.equal(calls.length, pendingCalls);
 pending.error(new Error('failed'));
 assert.equal(loading, false);
-const throwing = new exports.ChatService({ post: () => { throw new Error('sync failure'); } });
+const throwing = new exports.ChatService({
+/** Simule l’échec attendu par ce scénario. */
+post: () => { throw new Error('sync failure'); } });
 let throwingLoading;
 throwing.loading$.subscribe(v => throwingLoading = v);
 throwing.sendMessage('Test');

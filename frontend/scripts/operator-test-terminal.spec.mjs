@@ -1,3 +1,4 @@
+// Teste le composant « operator-test-terminal » et ses cas d’erreur.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {loadFrontend} from './security-lifecycle-test-loader.mjs';

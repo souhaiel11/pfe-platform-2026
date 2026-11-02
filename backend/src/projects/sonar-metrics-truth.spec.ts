@@ -1,28 +1,25 @@
+// Teste le composant « sonar-metrics-truth » et ses cas d’erreur.
 import * as assert from 'node:assert/strict';
 import { of, throwError } from 'rxjs';
 import { ProjectsService } from './projects.service';
 
-/**
- * R46 — aucune valeur Sonar, Trivy ou GitHub ne doit jamais être fabriquée.
- *
- * Les trois replis précédents (getMockSonarMetrics, getMockTrivyReport,
- * getMockGithubStats) renvoyaient des valeurs plausibles — couverture 85 %,
- * 12 code smells, 1500 lignes, 3 CVE élevées, 18 PR fusionnées —
- * indistinguables de vraies données par n'importe quel consommateur.
- *
- * Vérifie aussi le repli sur un jeton Sonar de plateforme : un jeton
- * SonarQube est un jeton d'utilisateur, pas un secret propre à un projet.
- */
+// R46 — aucune valeur Sonar, Trivy ou GitHub ne doit jamais être fabriquée.
 const BASE = {
   id: 'p1', name: 'demo', sonarqubeUrl: 'http://sonarqube:9000',
   sonarqubeKey: 'demo', sonarqubeToken: null, githubRepo: null,
 };
 
+/** Prépare le service utilisé dans le scénario. */
 function service(project: any, http: any) {
-  const repo: any = { findOne: async () => project };
-  return new ProjectsService(repo, { find: async () => [] } as any, http as any);
+  const repo: any = {
+  /** Recherche l’élément correspondant à l’identifiant. */
+  findOne: async () => project };
+  return new ProjectsService(repo, {
+  /** Recherche les éléments correspondants. */
+  find: async () => [] } as any, http as any);
 }
 
+/** Prépare les données nécessaires à ce scénario. */
 function okMeasures(measures: Record<string, string>) {
   return {
     status: 200,
@@ -34,7 +31,9 @@ function okMeasures(measures: Record<string, string>) {
   // ── 1. Sans jeton ni variable de plateforme : indisponible, pas inventé ──
   {
     delete process.env.SONAR_TOKEN;
-    const svc = service({ ...BASE }, { get: () => { throw new Error('ne doit pas etre appele'); } });
+    const svc = service({ ...BASE }, {
+    /** Récupère les données demandées. */
+    get: () => { throw new Error('ne doit pas etre appele'); } });
     const out: any = await svc.getSonarMetrics('p1');
     assert.equal(out.available, false);
     assert.equal(out.reason, 'SONAR_TOKEN_UNAVAILABLE');
@@ -48,6 +47,7 @@ function okMeasures(measures: Record<string, string>) {
     process.env.SONAR_TOKEN = 'jeton-de-test';
     const calls: string[] = [];
     const svc = service({ ...BASE }, {
+      /** Récupère les données demandées. */
       get: (url: string) => {
         calls.push(url);
         if (url.includes('/api/measures/component')) {
@@ -76,6 +76,7 @@ function okMeasures(measures: Record<string, string>) {
     process.env.SONAR_TOKEN = 'jeton-de-plateforme';
     const seen: string[] = [];
     const svc = service({ ...BASE, sonarqubeToken: 'jeton-du-projet' }, {
+      /** Récupère les données demandées. */
       get: (_url: string, cfg: any) => {
         seen.push(Buffer.from(String(cfg.headers.Authorization).replace('Basic ', ''), 'base64').toString());
         return of(okMeasures({ bugs: '1' }));
@@ -89,7 +90,9 @@ function okMeasures(measures: Record<string, string>) {
   // ── 4. Une métrique absente reste absente ──────────────────────────────
   {
     process.env.SONAR_TOKEN = 'jeton-de-test';
-    const svc = service({ ...BASE }, { get: () => of(okMeasures({ bugs: '2' })) });
+    const svc = service({ ...BASE }, {
+    /** Récupère les données demandées. */
+    get: () => of(okMeasures({ bugs: '2' })) });
     const out: any = await svc.getSonarMetrics('p1');
     assert.equal(out.bugs, 2);
     for (const field of ['vulnerabilities', 'codeSmells', 'coverage', 'duplications', 'linesOfCode']) {
@@ -109,7 +112,9 @@ function okMeasures(measures: Record<string, string>) {
       [of({ status: 401, data: {} }), 'SONAR_API_STATUS_401'],
       [throwError(() => new Error('reseau')), 'SONAR_API_ERROR'],
     ] as any[]) {
-      const svc = service({ ...BASE }, { get: () => response });
+      const svc = service({ ...BASE }, {
+      /** Récupère les données demandées. */
+      get: () => response });
       const out: any = await svc.getSonarMetrics('p1');
       assert.equal(out.available, false);
       assert.equal(out.reason, expected);
@@ -120,7 +125,9 @@ function okMeasures(measures: Record<string, string>) {
 
   // ── 6. Trivy : plus aucun rapport inventé ──────────────────────────────
   {
-    const svc = service({ ...BASE }, { get: () => of({ status: 200, data: {} }) });
+    const svc = service({ ...BASE }, {
+    /** Récupère les données demandées. */
+    get: () => of({ status: 200, data: {} }) });
     const out: any = await svc.getTrivyReport('p1');
     assert.equal(out.available, false);
     assert.equal(out.reason, 'TRIVY_NOT_QUERYABLE_BY_API');
@@ -131,13 +138,17 @@ function okMeasures(measures: Record<string, string>) {
 
   // ── 7. GitHub : indisponibilité explicite ──────────────────────────────
   {
-    const svc = service({ ...BASE }, { get: () => throwError(() => new Error('api')) });
+    const svc = service({ ...BASE }, {
+    /** Récupère les données demandées. */
+    get: () => throwError(() => new Error('api')) });
     const sansDepot: any = await svc.getGithubStats('p1');
     assert.equal(sansDepot.available, false);
     assert.equal(sansDepot.reason, 'GITHUB_REPO_NOT_CONFIGURED');
     assert.equal(sansDepot.mergedPRs, null, 'jamais 18 PR fusionnees inventees');
 
-    const svc2 = service({ ...BASE, githubRepo: 'owner/repo' }, { get: () => throwError(() => new Error('api')) });
+    const svc2 = service({ ...BASE, githubRepo: 'owner/repo' }, {
+    /** Récupère les données demandées. */
+    get: () => throwError(() => new Error('api')) });
     const enErreur: any = await svc2.getGithubStats('p1');
     assert.equal(enErreur.available, false);
     assert.equal(enErreur.reason, 'GITHUB_API_ERROR');
@@ -147,13 +158,16 @@ function okMeasures(measures: Record<string, string>) {
   // ── 8. Corrélation Sonar : le repli de jeton vaut aussi ici ────────────
   {
     delete process.env.SONAR_TOKEN;
-    const svc = service({ ...BASE }, { get: () => { throw new Error('ne doit pas etre appele'); } });
+    const svc = service({ ...BASE }, {
+    /** Récupère les données demandées. */
+    get: () => { throw new Error('ne doit pas etre appele'); } });
     const sans: any = await svc.resolveSonarCorrelation('p1', 'ce-task-1234');
     assert.equal(sans.qualityGate, 'QUALITY_GATE_UNAVAILABLE');
     assert.equal(sans.state, 'SONAR_NOT_CONFIGURED');
 
     process.env.SONAR_TOKEN = 'jeton-de-test';
     const svc2 = service({ ...BASE }, {
+      /** Récupère les données demandées. */
       get: (url: string) => url.includes('/api/ce/task')
         ? of({ status: 200, data: { task: { status: 'SUCCESS', analysisId: 'a-1' } } })
         : of({ status: 200, data: { projectStatus: { status: 'OK' } } }),

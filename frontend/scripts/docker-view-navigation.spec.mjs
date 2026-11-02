@@ -1,12 +1,4 @@
-// R49 — Docker a sa propre destination, et ses valeurs viennent de sources reelles.
-//
-// Defaut constate : cliquer la carte/l'etape Docker ouvrait l'onglet JENKINS.
-// Le pipeline reel expose les etapes zap/build/owasp/sonar/tests/trivy/deploy/
-// docker (verifie sur app-test-pfe-vermeg et pfe-app-test), donc 'docker' etait
-// une destination vivante routee vers la mauvaise page. Jenkins reste une
-// preuve secondaire, accessible DEPUIS la vue Docker.
-//
-//   node frontend/scripts/docker-view-navigation.spec.mjs
+// Teste le composant « docker-view-navigation » et ses cas d’erreur.
 
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -14,12 +6,14 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 const here = dirname(fileURLToPath(import.meta.url));
+/** Lit les données depuis leur source. */
 const read = (rel) => readFileSync(join(here, rel), 'utf8');
 const truthSrc = read('../src/app/shared/data-truth.ts');
 const overview = read('../src/app/features/projects/project-overview.component.ts');
 const detailTs = read('../src/app/features/projects/project-detail.component.ts');
 const detailHtml = read('../src/app/features/projects/project-detail.component.html');
 
+/** Retire les commentaires du code utilisé par le test. */
 const strip = (s) => s
   .replace(/export function /g, 'function ')
   .replace(/: *number \| null/g, '').replace(/: *boolean(?: \| null)?/g, '')
@@ -30,6 +24,7 @@ const strip = (s) => s
 // Les annotations de type sont retirees AVANT l'extraction : un type de retour
 // comme `{ repository: ... }` porte des accolades qui fausseraient le comptage.
 const plainSrc = strip(truthSrc);
+/** Sélectionne les champs utiles de la donnée. */
 const pick = (name) => {
   const start = plainSrc.indexOf(`function ${name}`);
   assert.notEqual(start, -1, `${name} doit exister`);
@@ -61,9 +56,17 @@ assert.ok(/{ key: 'image', label: 'Image', tab: 'docker'/.test(overview),
   "l'etape heritee 'Image' doit ouvrir la vue Docker");
 assert.ok(!/label: 'Image', tab: 'jenkins'/.test(overview));
 
-// Les etapes legitimement Jenkins le restent : build et tests sont de la preuve CI.
-assert.ok(/build: 'jenkins'/.test(mapLine), "l'etape build reste sous Jenkins");
-assert.ok(/tests: 'jenkins'/.test(mapLine), "l'etape tests reste sous Jenkins");
+// Les etapes build et tests restent de la preuve CI -- elles ont depuis
+// gagne leurs ONGLETS DEDIES ('build' et 'tests', tous deux presents dans
+// VALID_TABS de project-detail.component.ts) au lieu d'etre renvoyees vers
+// l'onglet Jenkins generique. C'est une amelioration deliberee : l'intention
+// verifiee ici reste la meme -- ces etapes ne doivent jamais basculer vers la
+// vue Docker -- et c'est bien cela qu'on assert, plutot que la cible exacte
+// d'hier.
+assert.ok(/build: 'build'/.test(mapLine), "l'etape build ouvre sa vue de preuve CI dediee");
+assert.ok(/tests: 'tests'/.test(mapLine), "l'etape tests ouvre sa vue de preuve CI dediee");
+assert.ok(!/build: 'docker'/.test(mapLine) && !/tests: 'docker'/.test(mapLine),
+  'build et tests ne doivent jamais router vers la vue Docker');
 // Et 'deploy' garde la section de gouvernance de la plateforme.
 assert.ok(/deploy: 'deploiement'/.test(mapLine));
 
@@ -118,13 +121,6 @@ assert.equal(dockerPushState({}), 'Non disponible');
 assert.notEqual(dockerPushState({ push_status: 'NOT_ATTEMPTED' }), dockerPushState({ push_status: 'SKIPPED' }),
   'non tentee et non executee sont deux faits distincts');
 
-// ════════════════════════════════════════════════════════════════════════════
-// 4bis. NUMERO DE BUILD — Jenkins le livre parfois en chaine
-// Cas reel : vuln-testapp build "41" et devsecops-testbed "19" sont des chaines,
-// alors que app-test-pfe-vermeg 8 et pfe-app-test 151 sont des nombres. La garde
-// stricte availableNumber() rejetait les chaines : la vue affichait « Non
-// disponible » pour un numero que la source portait bel et bien.
-// ════════════════════════════════════════════════════════════════════════════
 assert.equal(sourceInteger(8), 8);
 assert.equal(sourceInteger('41'), 41, 'un numero livre en chaine doit etre lu');
 assert.equal(sourceInteger('  151  '), 151);
@@ -167,13 +163,6 @@ for (const f of ["'critical'", "'high'", "'cves_count'"]) {
 }
 assert.ok(detailHtml.includes("scannerState(ed?.trivy)"), "l'etat du scan doit etre explicite");
 
-// ════════════════════════════════════════════════════════════════════════════
-// 7. JENKINS EN PREUVE SECONDAIRE, pas en destination
-// ════════════════════════════════════════════════════════════════════════════
-// La preuve Jenkins vit maintenant dans le bloc « Sources & preuves » de la
-// vue Docker, alimente par le contrat backend (GET /api/source-evidence/*).
-// L'invariant teste reste le MEME : Jenkins est une preuve que l'on peut
-// suivre DEPUIS la vue Docker, jamais la destination du clic sur la carte.
 assert.ok(/dockerEvidenceSections\(\)/.test(detailHtml),
   'la vue Docker doit exposer son bloc de sources/preuves');
 const dockerSections = /dockerEvidenceSections\(\): EvidenceSection\[\] \{\s*return \[([\s\S]*?)\];/.exec(detailTs);
@@ -241,6 +230,7 @@ console.log('R49 docker view + navigation: PASS');
 // 11. R50 — publication, provenance et deploiement restent trois etats
 // ════════════════════════════════════════════════════════════════════════════
 const plain2 = strip(truthSrc);
+/** Vérifie les résultats attendus dans ce scénario. */
 const pickFrom = (name) => {
   const st = plain2.indexOf(`function ${name}`);
   assert.notEqual(st, -1, `${name} doit exister`);

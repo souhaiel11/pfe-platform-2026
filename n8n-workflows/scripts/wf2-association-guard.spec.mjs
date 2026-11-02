@@ -1,18 +1,10 @@
+// Teste le composant « wf2-association-guard » et ses cas d’erreur.
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 
-// Association completeness guard alignment.
-//
-// "Expand Required Dependency Sources" compares two counts to prove no JPA
-// association silently escaped relationship grounding. Both sides must span the
-// SAME relationship categories. Production previously counted four categories
-// for associationCount while relationFields only extracts the two single-valued
-// owning ones, so any @OneToMany/@ManyToMany in the INITIAL source set produced
-// a false SOURCE_API_CONTEXT_INCOMPLETE. This suite pins the aligned contract
-// and the fail-closed property that must survive it. Production node code is
-// executed as-is from the promotion target; nothing is re-implemented here.
 const wf=JSON.parse(readFileSync(new URL('../pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.PROMOTION-TARGET.json',import.meta.url)))[0];
 const fixture=JSON.parse(readFileSync(new URL('./fixtures/wf2-association-guard-incident-6edab0c8.json',import.meta.url)));
+/** Retrouve ou construit le nœud du workflow demandé. */
 const node=name=>{const n=wf.nodes.find(n=>n.name===name);assert.ok(n,name);return n;};
 const expandNode=node('Expand Required Dependency Sources');
 
@@ -25,19 +17,35 @@ const relationLine=expandNode.parameters.jsCode.split('\n').find(l=>l.includes('
 assert.match(relationLine,/\(\?:ManyToOne\|OneToOne\)/,'requiredRelationships parsing is unchanged');
 
 const byPath=new Map(fixture.sources.map(s=>[s.path,s]));
+/** Lit les données depuis leur source. */
 const read=p=>{const s=byPath.get(p);assert.ok(s,'fixture source '+p);return s.content;};
+/** Prépare les données nécessaires à ce scénario. */
 const toItem=path=>({json:{path,sha:'0'.repeat(40),content:Buffer.from(read(path)).toString('base64')}});
+// R71: "Expand Required Dependency Sources" now reads the frozen, tree-verified
+// sourceSha from "Build Independent Repository Policy" (SOURCE_SHA_FROZEN_REQUIRED),
+// not the earlier unverified "Prepare Batch Context" baseSha.
 const ctx={repository_owner:'souhaiel11',repository_name:'pfe-app-test',baseSha:fixture.sourceCommitSha,
+  sourceSha:fixture.sourceCommitSha,
   repositoryPolicy:{existingFiles:fixture.repositoryTree},findings:[]};
+/** Exécute le traitement et collecte son résultat. */
 function run(name,items,refs={}) {
   const values={'Build Independent Repository Policy':[ctx],'Prepare Batch Context':[ctx],'Lookup Remediation Branch':[{statusCode:404}],...refs};
-  const $=key=>{assert.ok(values[key],'unexpected reference '+key);return {first:()=>({json:values[key][0]}),all:()=>values[key].map(json=>({json})),item:{json:values[key][0]}};};
-  return new Function('$input','$json','$','Buffer',node(name).parameters.jsCode)({all:()=>items,first:()=>items[0]},items[0]?.json,$,Buffer);
+  /** Simule l’accès à un nœud n8n pour le scénario. */
+  const $=key=>{assert.ok(values[key],'unexpected reference '+key);return {
+  /** Renvoie le premier élément disponible. */
+  first:()=>({json:values[key][0]}),
+  /** Renvoie tous les éléments disponibles. */
+  all:()=>values[key].map(json=>({json})),item:{json:values[key][0]}};};
+  return new Function('$input','$json','$','Buffer',node(name).parameters.jsCode)({
+  /** Renvoie tous les éléments disponibles. */
+  all:()=>items,
+  /** Renvoie le premier élément disponible. */
+  first:()=>items[0]},items[0]?.json,$,Buffer);
 }
-// Mirrors the real DEPTH_0 -> DEPTH_1 step (Expand Referenced API Sources) so each
-// finding is replayed through the same initial set production would assemble.
+/** Prépare les données nécessaires à ce scénario. */
 const referenced=target=>run('Expand Referenced API Sources',[toItem(target)]).map(i=>i.json.target_file_path);
 
+/** Prépare les données nécessaires à ce scénario. */
 const guard=target=>{
   const initial=referenced(target).map(toItem);
   try { return {pass:true,items:run('Expand Required Dependency Sources',initial)}; }
@@ -64,7 +72,7 @@ assert.deepEqual([...s4684Request.requiredPaths].sort(),[
   'src/main/java/com/pfe/devsecops/service/TaskService.java',
 ].sort(),'S4684 still expands to the full grounded 6-file set');
 
-// Synthetic single-valued variants exercised through the real node.
+/** Prépare les données nécessaires à ce scénario. */
 const entityVariant=body=>[toItem(taskController),{json:{path:taskEntity,sha:'0'.repeat(40),content:Buffer.from(body).toString('base64')}},
   toItem('src/main/java/com/pfe/devsecops/service/TaskService.java')];
 const taskBody=read(taskEntity);

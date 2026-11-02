@@ -1,10 +1,12 @@
+// Point de départ du serveur.
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, RequestMethod } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { IoAdapter } from '@nestjs/platform-socket.io';
 import { json, urlencoded } from 'body-parser';
 
+/** Démarre le serveur et configure ses points d’entrée. */
 async function bootstrap() {
   // bodyParser: false désactive les parseurs par défaut de NestJS (limite 100kb)
   const app = await NestFactory.create(AppModule, { bodyParser: false });
@@ -16,7 +18,7 @@ async function bootstrap() {
   app.enableCors({ origin: '*', credentials: true });
   app.useWebSocketAdapter(new IoAdapter(app));
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
-  app.setGlobalPrefix('api');
+  app.setGlobalPrefix('api', { exclude: [{ path: 'healthz', method: RequestMethod.GET }] });
 
   const config = new DocumentBuilder()
     .setTitle('DevSecOps Platform API')

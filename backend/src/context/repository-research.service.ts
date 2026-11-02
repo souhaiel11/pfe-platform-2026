@@ -1,34 +1,11 @@
-// R22-A Phase 3 — Repository Research Agent.
-//
-// READ-ONLY. Never generates or modifies remediation code (no method here
-// returns anything resembling a patch/diff/source edit). Every answer is
-// grounded in `git show <sha>:<path>` against a real local checkout -- never
-// an LLM guess about what a class "probably" contains. This is the
-// deterministic-tool half of "AI proposes, deterministic tools prove."
-//
-// CRITICAL RULE this class exists to enforce mechanically: NOT_FOUND is a
-// fact, not an instruction. `Task.dueDate` returning NOT_FOUND must never be
-// interpreted upstream as "add dueDate to Task" -- this class has no
-// mechanism to create anything, and callers must route a NOT_FOUND result
-// for a field/method that a remediation seems to require into
-// HUMAN_DECISION_REQUIRED (see ContextSufficiencyService), never into silent
-// generation. Real-world worked example this was built from: PR-25's
-// TaskDTO.dueDate/getDueDate/setDueDate referenced a field that never
-// existed on Task at any commit -- R21-BA established this by hand via
-// `git show <sha>:Task.java`; this service makes that exact lookup a typed,
-// reusable, exact-SHA-gated operation.
+// Agent de recherche en lecture seule sur le dépôt.
 import { Injectable } from '@nestjs/common';
 import { execFileSync } from 'child_process';
 import { ContextRequest, EvidenceEntry, ResearchResponse } from './context.types';
 
 @Injectable()
 export class RepositoryResearchService {
-  /**
-   * @param repoPath local path to an already-cloned git repository (never
-   *   clones/fetches itself -- read-only against whatever is already there)
-   * @param remediationRevisionSha the SHA the remediation candidate targets;
-   *   every request must match it exactly or the answer fails closed
-   */
+  /** Répond à une question de recherche sur le dépôt (existence d'un champ, signature d'une méthode/constructeur, fichiers liés) en lisant le vrai contenu du dépôt à l'exact SHA demandé. */
   answer(request: ContextRequest, remediationRevisionSha: string, repoPath: string): ResearchResponse {
     if (request.revisionSha.toLowerCase() !== remediationRevisionSha.toLowerCase()) {
       return this.contradictory(request, 'RESEARCH_REVISION_MISMATCH: research request SHA does not match the remediation revision SHA');
@@ -44,21 +21,14 @@ export class RepositoryResearchService {
       case 'RELATED_FILES':
         return this.relatedFiles(request, repoPath);
       default:
-        // Not yet implemented in this phase (USAGES/CALLERS/CALLEES/
-        // API_CONTRACT/DTO_CONTRACT/ENTITY_CONTRACT/TEST_EXPECTATION/
-        // CONFIG_VALUE/SYMBOL_TYPE). Reporting NOT_FOUND with an honest
-        // reason, never a fabricated answer -- Phase 10 explicitly defers
-        // the remaining question classes to a later migration phase.
         return this.notFound(request, [], `Question class '${request.requestType}' is not yet implemented by RepositoryResearchService (R22-A Phase 1 foundation only)`);
     }
   }
 
+  // Lit le contenu d'un fichier à un SHA précis via `git show`, ou `null` si le
+  // fichier n'existe pas à ce SHA (cas attendu, pas une erreur).
   private readFileAtSha(repoPath: string, sha: string, filePath: string): string | null {
     try {
-      // stderr silenced: a missing path at this SHA is an expected,
-      // frequent outcome (that is the whole point of FIELD_EXISTS/
-      // METHOD_SIGNATURE returning NOT_FOUND), not a tool malfunction worth
-      // surfacing to the process's own stderr on every such lookup.
       return execFileSync('git', ['-C', repoPath, 'show', `${sha}:${filePath}`], {
         encoding: 'utf8', maxBuffer: 10 * 1024 * 1024, stdio: ['ignore', 'pipe', 'ignore'],
       });
@@ -67,7 +37,8 @@ export class RepositoryResearchService {
     }
   }
 
-  /** symbolOrFile format: "<repo-relative-file-path>#<fieldName>" */
+  // Cherche si un champ existe dans un fichier à un SHA donné, par une heuristique de
+  // déclaration (type + nom + `;`/`=`, jamais une méthode). symbolOrFile : "<fichier>#<nomChamp>".
   private fieldExists(request: ContextRequest, repoPath: string): ResearchResponse {
     const [filePath, fieldName] = request.symbolOrFile.split('#');
     if (!filePath || !fieldName) {
@@ -77,9 +48,6 @@ export class RepositoryResearchService {
     if (content == null) {
       return this.notFound(request, [], `File '${filePath}' does not exist at ${request.revisionSha}`);
     }
-    // Field declaration heuristic: a line with a type + the exact field name
-    // followed by ';' or '=' or annotation-decorated, but never a method
-    // (which always has '(' before the terminator).
     const fieldPattern = new RegExp(
       `^\\s*(?:@\\w+(?:\\([^)]*\\))?\\s*)*(?:private|public|protected|static|final|transient|volatile|\\s)*[\\w<>\\[\\],.]+\\s+${escapeRegExp(fieldName)}\\s*(=[^;]*)?;\\s*$`,
       'm',
@@ -101,7 +69,8 @@ export class RepositoryResearchService {
     };
   }
 
-  /** symbolOrFile format: "<repo-relative-file-path>#<methodName>" */
+  // Cherche la signature (type de retour + paramètres) d'une méthode dans un fichier à un
+  // SHA donné. symbolOrFile : "<fichier>#<nomMéthode>".
   private methodSignature(request: ContextRequest, repoPath: string): ResearchResponse {
     const [filePath, methodName] = request.symbolOrFile.split('#');
     if (!filePath || !methodName) {
@@ -128,7 +97,8 @@ export class RepositoryResearchService {
     };
   }
 
-  /** symbolOrFile format: "<repo-relative-file-path>#<ClassName>" */
+  // Cherche tous les constructeurs explicites d'une classe dans un fichier à un SHA
+  // donné (ne résout pas un constructeur implicite/Lombok). symbolOrFile : "<fichier>#<NomClasse>".
   private constructorSignature(request: ContextRequest, repoPath: string): ResearchResponse {
     const [filePath, className] = request.symbolOrFile.split('#');
     if (!filePath || !className) {
@@ -153,15 +123,14 @@ export class RepositoryResearchService {
     };
   }
 
-  /** symbolOrFile format: "<search term>" -- files under repoPath referencing it at the exact SHA. */
+  // Liste les fichiers du dépôt qui référencent un terme de recherche à l'exact SHA
+  // demandé, via `git grep`. symbolOrFile : le terme recherché.
   private relatedFiles(request: ContextRequest, repoPath: string): ResearchResponse {
     const term = request.symbolOrFile;
     let output: string;
     try {
       output = execFileSync('git', ['-C', repoPath, 'grep', '-l', '-I', term, request.revisionSha, '--'], { encoding: 'utf8' });
     } catch (err: any) {
-      // git grep exits 1 with empty stdout when nothing matches -- that is a
-      // real NOT_FOUND, not a tool error.
       if (err?.status === 1) {
         return this.notFound(request, [], `No files reference '${term}' at ${request.revisionSha}`);
       }
@@ -177,15 +146,20 @@ export class RepositoryResearchService {
     };
   }
 
+  // Construit une réponse « fait absent » : NOT_FOUND est un fait constaté, jamais
+  // une instruction de création implicite.
   private notFound(request: ContextRequest, evidence: EvidenceEntry[], reason: string): ResearchResponse {
     return { requestId: request.requestId, revisionSha: request.revisionSha, state: 'NOT_FOUND', facts: [{ reason }], evidence };
   }
 
+  // Construit une réponse « contradictoire » : la requête elle-même est invalide ou
+  // incohérente avec son propre contrat.
   private contradictory(request: ContextRequest, reason: string): ResearchResponse {
     return { requestId: request.requestId, revisionSha: request.revisionSha, state: 'CONTRADICTORY', facts: [{ reason }], evidence: [] };
   }
 }
 
+// Échappe les caractères spéciaux d'une chaîne pour l'utiliser littéralement dans une RegExp.
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }

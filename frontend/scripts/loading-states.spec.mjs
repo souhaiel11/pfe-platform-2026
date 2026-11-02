@@ -1,11 +1,4 @@
-// Priorité 2 (audit UX) : les zones vides pendant le chargement doivent
-// afficher le patron standard .loading-overlay/.spinner, jamais un écran
-// figé ou un message "vide" pendant qu'une requête est encore en vol.
-// Même technique que batch-polling.spec.mjs / chat-service.spec.mjs :
-// source réelle transpilée + exécutée dans un bac à sable, instanciation
-// via Object.create() (les initialiseurs de champs ne s'exécutent donc
-// pas -- tout ce qu'une méthode testée lit est fixé à la main avant
-// l'appel).
+// Teste le composant « loading-states » et ses cas d’erreur.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -14,9 +7,14 @@ import vm from 'node:vm';
 const require = createRequire(import.meta.url);
 const ts = require('typescript');
 const rxjs = require('rxjs');
+/** Lit les données depuis leur source. */
 const read = path => readFileSync(new URL(path, import.meta.url), 'utf8');
-const angularStub = () => new Proxy({}, { get: () => (..._args) => target => target });
+/** Simule les dépendances nécessaires au scénario. */
+const angularStub = () => new Proxy({}, {
+/** Récupère les données demandées. */
+get: () => (..._args) => target => target });
 
+/** Simule la lecture des données demandées par le composant. */
 function loadClass(relPath, exportName) {
   const source = read(relPath);
   const exports = {};
@@ -25,7 +23,12 @@ function loadClass(relPath, exportName) {
   }).outputText;
   vm.runInNewContext(code, {
     exports, require: angularStub,
-    setTimeout: () => 0, setInterval: () => 0, clearInterval() {},
+    /** Simule la modification demandée par le composant. */
+    setTimeout: () => 0,
+    /** Simule la modification demandée par le composant. */
+    setInterval: () => 0,
+    /** Prépare les données nécessaires à ce scénario. */
+    clearInterval() {},
     console,
   });
   return Object.create(exports[exportName].prototype);
@@ -77,7 +80,9 @@ const project = loadClass('../src/app/features/projects/project-detail.component
 project.dataErrors = {};
 project.convergenceCycles = [];
 let convergenceResponse;
-project.api = { getConvergence: () => convergenceResponse };
+project.api = {
+/** Simule la lecture des données demandées par le composant. */
+getConvergence: () => convergenceResponse };
 
 convergenceResponse = rxjs.of({ cycles: [{ buildNumber: 12 }] });
 project.loadConvergence();
@@ -107,8 +112,14 @@ const form = loadClass('../src/app/features/projects/project-form.component.ts',
 form.projectId = 'proj-1';
 form.loading = false; // valeur réelle du constructeur -- jamais exécuté via Object.create()
 let formResponse;
-form.api = { getProject: () => formResponse };
-form.form = { patchValue() {}, markAsPristine() {} };
+form.api = {
+/** Simule la lecture des données demandées par le composant. */
+getProject: () => formResponse };
+form.form = {
+/** Simule la mise à jour de l’état du formulaire. */
+patchValue() {},
+/** Simule la mise à jour de l’état du formulaire. */
+markAsPristine() {} };
 
 formResponse = rxjs.of({ jenkinsCredentialConfigured: true });
 form.loadProject();
@@ -125,10 +136,29 @@ assert.equal(form.projectLoading, false);
 assert.match(form.saveError, /Impossible de charger la configuration/);
 
 const projectFormTemplate = read('../src/app/features/projects/project-form.component.html');
+// Les deux boutons Sauvegarder sont desormais gouvernes par le getter
+// `enregistrementPossible`, qui porte l'invariant de chargement EN PLUS du
+// gate « test de connexion obligatoire ». On verifie donc les deux niveaux :
+// (1) le gabarit delegue bien au getter, (2) le getter refuse reellement
+// l'enregistrement pendant chacun des deux chargements -- ce qui est plus fort
+// qu'une expression figee dans le HTML.
 const saveButtonDisabled = [...projectFormTemplate.matchAll(/\[disabled\]="([^"]*)"[^>]*>\s*\{\{\s*loading/g)];
 assert.ok(saveButtonDisabled.length >= 2, 'les deux boutons Sauvegarder doivent exister');
 for (const m of saveButtonDisabled) {
-  assert.match(m[1], /loading \|\| projectLoading/, 'le bouton Sauvegarder doit rester désactivé pendant le chargement du projet, pas seulement pendant la sauvegarde');
+  assert.match(m[1], /^!enregistrementPossible$/, 'le bouton Sauvegarder doit deleguer son blocage au getter enregistrementPossible');
 }
+// Reference : test de connexion concluant, aucun chargement -> enregistrement permis.
+form.loading = false; form.projectLoading = false; form.testEnCours = false;
+form.test = { autoriseEnregistrement: true, bloquant: false };
+assert.equal(form.enregistrementPossible, true, 'sans chargement et avec un test concluant, l\'enregistrement doit etre permis');
+form.projectLoading = true;
+assert.equal(form.enregistrementPossible, false, 'le bouton Sauvegarder doit rester desactive pendant le chargement du projet, pas seulement pendant la sauvegarde');
+form.projectLoading = false; form.loading = true;
+assert.equal(form.enregistrementPossible, false, 'le bouton Sauvegarder doit rester desactive pendant la sauvegarde');
+form.loading = false; form.testEnCours = true;
+assert.equal(form.enregistrementPossible, false, 'le bouton Sauvegarder doit rester desactive pendant le test de connexion');
+form.testEnCours = false; form.test = null;
+assert.equal(form.enregistrementPossible, false, 'sans test de connexion concluant, l\'enregistrement reste refuse');
+form.test = { autoriseEnregistrement: true, bloquant: false };
 assert.match(projectFormTemplate, /<div class="loading-overlay" \*ngIf="projectLoading">/);
 console.log('loading-states project-form: PASS');

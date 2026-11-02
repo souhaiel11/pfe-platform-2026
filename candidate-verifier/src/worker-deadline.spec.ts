@@ -1,11 +1,8 @@
-/** V1.7 Blocker B — pure unit tests for the monotonic worker deadline
- * primitive itself (candidate-verifier/src/worker-deadline.ts). Integration
- * coverage proving the orchestrator actually enforces it lives in
- * security-remediation-orchestrator.deadline.spec.ts and
- * security-artifact-validator.spec.ts. */
+// Teste le composant « worker-deadline » et ses cas d’erreur.
 import * as assert from 'assert';
 import { createWorkerDeadline, DEFAULT_WORKER_BUDGET_MS, MAX_WORKER_BUDGET_MS, MIN_STAGE_BUDGET_MS, WORKER_DEADLINE_MS } from './worker-deadline';
 
+/** Prépare les données nécessaires à ce scénario. */
 function busyWaitMs(ms: number): void {
   const start = process.hrtime.bigint();
   while (Number(process.hrtime.bigint() - start) / 1_000_000 < ms) { /* burn monotonic time */ }

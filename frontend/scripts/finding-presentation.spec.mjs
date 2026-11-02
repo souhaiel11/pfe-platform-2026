@@ -1,3 +1,4 @@
+// Teste le composant « finding-presentation » et ses cas d’erreur.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -5,6 +6,7 @@ import vm from 'node:vm';
 
 const require = createRequire(import.meta.url);
 const ts = require('typescript');
+/** Lit les données depuis leur source. */
 const read = path => readFileSync(new URL(path, import.meta.url), 'utf8');
 
 // Charge le module PARTAGÉ réel (finding-presentation.ts) -- pas une
@@ -14,7 +16,9 @@ const moduleSource = read('../src/app/shared/finding-presentation.ts');
 const moduleExports = {};
 vm.runInNewContext(
   ts.transpileModule(moduleSource, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText,
-  { exports: moduleExports, require: () => ({}), console },
+  { exports: moduleExports,
+  /** Charge la dépendance prévue pour le scénario. */
+  require: () => ({}), console },
 );
 const {
   findingDescriptionText,
@@ -33,7 +37,9 @@ const statusLabelsSource = read('../src/app/shared/status-labels.ts');
 const statusLabelsExports = {};
 vm.runInNewContext(
   ts.transpileModule(statusLabelsSource, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText,
-  { exports: statusLabelsExports, require: () => ({}), console },
+  { exports: statusLabelsExports,
+  /** Charge la dépendance prévue pour le scénario. */
+  require: () => ({}), console },
 );
 const componentSource = read('../src/app/features/projects/project-detail.component.ts');
 const componentTemplate = read('../src/app/features/projects/project-detail.component.html');
@@ -43,11 +49,15 @@ const componentCode = ts.transpileModule(componentSource, {
 }).outputText;
 vm.runInNewContext(componentCode, {
   exports: componentExports,
+  /** Charge la dépendance prévue pour le scénario. */
   require: (spec) => {
     if (spec.endsWith('status-labels')) return statusLabelsExports;
     if (spec.endsWith('finding-presentation')) return moduleExports;
-    return new Proxy({}, { get: () => () => () => {} });
+    return new Proxy({}, {
+    /** Récupère les données demandées. */
+    get: () => () => () => {} });
   },
+  /** Simule la modification demandée par le composant. */
   setTimeout: () => 0, console,
 });
 const component = Object.create(componentExports.ProjectDetailComponent.prototype);
@@ -140,13 +150,7 @@ console.log('finding-presentation 4) responsable absent: PASS');
   const criticalFinding = { severity: 'CRITICAL', rule: 'java:S3305', source: 'SONARQUBE' };
   assert.match(findingWhyImportantText(infoFinding), /sévérité info/, '5: INFO severity correctly reflected');
   assert.match(findingWhyImportantText(criticalFinding), /sévérité critical/, '5: CRITICAL severity correctly reflected');
-  // Éligibilité indépendante de la sévérité -- dérivée de remediationType, plus
-  // la nature du constat. R46 : pour un défaut de CODE SOURCE, l'étiquette
-  // amont vient d'un classement par sévérité (WF1), pas d'une qualification ;
-  // le planificateur de WF2 statue ensuite et peut conclure
-  // MANUAL_OR_SPECIALIST. On annonce donc une CANDIDATURE. Pour une
-  // DÉPENDANCE, la qualification est déterministe et prouvée de bout en bout :
-  // « automatisable » y reste exact.
+  // Éligibilité indépendante de la sévérité -- dérivée de remediationType, plus la nature du constat.
   assert.equal(findingEligibilityText({ ...infoFinding, remediationType: 'AUTO_FIX_ELIGIBLE' }), 'Correction assistée candidate', '5: source Sonar + AUTO_FIX_ELIGIBLE -> candidature assistée, jamais une garantie');
   assert.equal(findingEligibilityText({ ...criticalFinding, remediationType: 'AUTO_FIX_ELIGIBLE' }), 'Correction assistée candidate', '5: la sévérité ne transforme pas une candidature en garantie');
   assert.equal(findingEligibilityText({ source: 'TRIVY', category: 'DEPENDENCY', remediationType: 'AUTO_FIX_ELIGIBLE' }), 'Correction automatisable', '5: dépendance + AUTO_FIX_ELIGIBLE -> automatisable (qualification déterministe)');

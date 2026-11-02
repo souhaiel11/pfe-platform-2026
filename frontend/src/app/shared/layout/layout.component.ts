@@ -1,3 +1,5 @@
+// Coquille de mise en page (barre latérale + barre de navigation + widget de chat) qui enveloppe toutes les pages authentifiées.
+
 import { PresentationLabelPipe } from '../presentation-label.pipe';
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -30,6 +32,7 @@ export class LayoutComponent implements OnInit {
     '/prediction':    'Indicateurs de risque',
   };
 
+  /** Initialise les dépendances et l’état de ce composant. */
   constructor(
     private auth: AuthService,
     private router: Router,
@@ -37,16 +40,15 @@ export class LayoutComponent implements OnInit {
     public riskState: RiskStateService,
   ) {}
 
+  // Traduit le niveau de risque global en couleur CSS appliquée au liseré de la barre latérale.
   get sidebarRiskStyle() {
-    const map = {
-      CRITICAL: { background: 'rgba(226,75,74,0.08)', 'border-right': '3px solid rgba(226,75,74,0.4)' },
-      HIGH:     { background: 'rgba(239,159,39,0.08)', 'border-right': '3px solid rgba(239,159,39,0.4)' },
-      MEDIUM:   { background: 'rgba(250,199,117,0.08)', 'border-right': '3px solid rgba(250,199,117,0.4)' },
-      LOW:      { background: '', 'border-right': '' },
+    const colours: Record<string, string> = {
+      CRITICAL: '#e58a80', HIGH: '#d4aa6b', MEDIUM: '#c7ba84', LOW: 'transparent',
     };
-    return map[this.riskState.level() as keyof typeof map] || map.LOW;
+    return { '--nav-risk-color': colours[this.riskState.level()] || 'transparent' };
   }
 
+  // Dérive le titre de page affiché depuis le premier segment de l'URL active, et le remet à jour à chaque navigation.
   ngOnInit() {
     this.router.events
       .pipe(filter(e => e instanceof NavigationEnd))
@@ -58,10 +60,15 @@ export class LayoutComponent implements OnInit {
     this.pageTitle = this.pageTitles[path] || 'DevSecOps IA';
   }
 
+  // Déconnecte l'utilisateur courant.
   logout() { this.auth.logout(); }
+  // Referme le menu de navigation mobile.
   closeMobileNav() { this.mobileNavOpen = false; }
+  // Expose l'utilisateur courant du service d'authentification.
   get currentUser() { return this.auth.currentUser; }
+  // Expose si l'utilisateur courant est administrateur.
   get isAdmin() { return this.auth.isAdmin; }
+  // Dérive les initiales affichées dans l'avatar depuis le nom d'utilisateur ou l'email.
   get userInitials() {
     const u = this.auth.currentUser;
     if (!u) return '—';

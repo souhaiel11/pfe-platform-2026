@@ -1,15 +1,6 @@
+// Renomme les zones visuelles du workflow.
 import { readFileSync, writeFileSync } from 'node:fs';
 
-// R85 — the 6 content-bearing sticky notes on the WF2 canvas (3 "Zones", 2
-// "Boucles", 1 "Chemins d'echec") were labelled with an old 8-phase numbering
-// that no longer matches this document's 8-block structure, and the canvas's
-// own geometric zones don't align 1:1 with the document's logical blocks
-// (confirmed: blocks 4, 5 and 8 are each split across 2-3 zone bounding
-// boxes). This script rewrites each sticky's displayed text (content only —
-// no functional node, no connection, no position) to name the exact block
-// numbers it covers, with verified node counts, and softens two claims about
-// node liveness that should state what the analysis observed rather than
-// assert a permanent verdict.
 
 const STICKIES = {
   'Sticky - Phase 1a - Reception & correlation': {
@@ -77,6 +68,7 @@ const STICKIES = {
   },
 };
 
+/** Renomme les zones visuelles du workflow. */
 export function relabelStickyZones(workflow) {
   for (const [name, patch] of Object.entries(STICKIES)) {
     const n = workflow.nodes.find(x => x.name === name);

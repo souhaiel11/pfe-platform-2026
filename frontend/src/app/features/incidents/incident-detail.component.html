@@ -1,3 +1,4 @@
+<!-- Présente le détail d’un incident. -->
 <div *ngIf="loadError" role="alert" class="card">{{loadError}} <button type="button" class="btn btn-secondary btn-sm" (click)="load()">Réessayer</button></div>
     <div class="page-container">
       <div class="page-header">
@@ -51,7 +52,15 @@
                    style="margin-top:10px;font-size:12px;color:var(--accent-blue);">
                 ⏳ {{fixRequestStatusLabel()}}
               </div>
-              <div *ngIf="isFixFailedStage()"
+              <div *ngIf="isFixFailedStage() && isManualReviewRequired()"
+                   style="margin-top:10px;padding:10px;border-radius:6px;background:rgba(245,158,11,0.10);color:#b45309;font-size:12px;">
+                🧑‍💻 Correction humaine requise
+                <div style="margin-top:4px;color:var(--text-muted);">
+                  {{fixFailureDetails()?.message}}
+                  Ce constat est désormais marqué « Nécessite une action humaine » : sélectionnez d’autres constats pour WF2.
+                </div>
+              </div>
+              <div *ngIf="isFixFailedStage() && !isManualReviewRequired()"
                    style="margin-top:10px;padding:10px;border-radius:6px;background:var(--accent-red-bg, rgba(220,53,69,0.08));color:var(--accent-red);font-size:12px;">
                 ❌ {{fixRequestStatusLabel()}}
                 <div *ngIf="fixFailureDetails()" style="margin-top:4px;color:var(--text-muted);">
@@ -172,13 +181,7 @@
                Les étapes restent SÉPARÉES (constat / correction / validation /
                image / déploiement) : ce ne sont pas les mêmes faits, et une
                « source » unique les mélangerait. -->
-          <app-source-evidence-list style="display:block;margin-bottom:16px;"
-            title="Provenance et preuves"
-            [note]="provenanceNote()"
-            [sections]="evidenceSections()"
-            [slots]="evidenceSlots()"
-            [state]="sourceEvidenceState" (retry)="loadSourceEvidence()">
-          </app-source-evidence-list>
+
 
           <!-- Rail de phases (Couche 1, Build→Tests→SAST→SCA→Conteneur→DAST→Déploiement) —
                réutilise tel quel app-project-overview (déjà écrit pour l'onglet "Rapport IA"
@@ -295,8 +298,8 @@
                 [issues]="sonarIssues()"
                 advice="Examinez la correction proposée. GitHub ne sera modifié qu'après votre clic explicite."
                 actionLabel="Proposer une correction"
-                [locked]="newCorrectionBlocked()"
-                [lockedNote]="hasRealPr() ? 'Une Pull Request de correction existe déjà pour cet incident. Les autres problèmes seront traités lors d’un nouveau cycle après le prochain scan.' : null"
+                [locked]="sonarSelectionLocked()"
+                [lockedNote]="sonarSelectionLocked() ? 'Une correction est en cours pour cet incident : attendez sa Pull Request avant d’en lancer une autre.' : null"
                 [validatedIds]="validatedSonarIds()"
                 [prUrl]="batchPrUrl()"
                 [prLabel]="batchPrLabel()"
@@ -486,7 +489,16 @@
               </div>
             </div>
           </div>
-        </div>
+
+        <!-- Resources follow results and corrective actions. -->
+          <app-source-evidence-list style="display:block;margin-top:24px;"
+            title="Provenance et preuves"
+            [note]="provenanceNote()"
+            [sections]="evidenceSections()"
+            [slots]="evidenceSlots()"
+            [state]="sourceEvidenceState" (retry)="loadSourceEvidence()">
+          </app-source-evidence-list>
+      </div>
 
         <!-- ══ ONGLET : VALIDATION WF3 ══ -->
         <div *ngIf="activeTab === 'validation'">
@@ -494,6 +506,37 @@
             [note]="canOperate
               ? 'Verdict de la validation post-Pull Request, et relance de cette validation quand elle est permise.'
               : 'Verdict de la validation post-Pull Request. Lecture seule.'"></app-zone-label>
+
+          <!-- Verrou de fichier Sonar : tant que la PR n'est pas fusionnée, ses fichiers sont refusés aux autres corrections. -->
+          <div *ngIf="sonarFileLock() as lock" class="card" style="margin-bottom:16px;"
+               [style.border-left]="'3px solid ' + (lock.releasedAt ? 'var(--accent-green)' : 'var(--accent-orange)')">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+              <div style="flex:1;min-width:240px;">
+                <div class="card-title" style="font-size:14px;">
+                  {{ lock.releasedAt ? 'Fichiers libérés' : 'Fichiers réservés par cette correction' }}
+                </div>
+                <div style="font-size:12px;color:var(--text-secondary);line-height:1.5;margin-top:4px;">
+                  <ng-container *ngIf="!lock.releasedAt">
+                    Aucune autre correction ne peut modifier ces fichiers tant que la Pull Request n’est pas fusionnée.
+                  </ng-container>
+                  <ng-container *ngIf="lock.releasedAt">
+                    {{ lock.releaseReason === 'PR_CLOSED_UNMERGED' ? 'Pull Request fermée sans merge' : 'Merge constaté sur GitHub' }}
+                    le {{ lock.releasedAt | frenchDate }} — ces fichiers peuvent recevoir une nouvelle correction.
+                  </ng-container>
+                </div>
+                <ul style="margin:8px 0 0;padding-left:18px;font-size:11px;font-family:var(--font-mono);color:var(--text-primary);line-height:1.6;">
+                  <li *ngFor="let file of lock.files">{{ file }}</li>
+                </ul>
+                <div *ngIf="lock.contestedFiles?.length" style="margin-top:6px;font-size:11px;color:var(--accent-orange);">
+                  Déjà réservé par une autre correction : {{ lock.contestedFiles?.join(', ') }}
+                </div>
+              </div>
+              <button *ngIf="canConfirmSonarMerge()" type="button" class="btn btn-primary btn-sm"
+                      [disabled]="confirmMergePending" (click)="confirmSonarMerge()">
+                {{ confirmMergePending ? 'Vérification du merge sur GitHub…' : 'Merge effectué — libérer les fichiers' }}
+              </button>
+            </div>
+          </div>
 
           <!-- Pas encore validé -->
           <div *ngIf="!validation" class="card" style="text-align:center;padding:40px;border:1px dashed var(--border);">

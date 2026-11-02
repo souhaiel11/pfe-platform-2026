@@ -1,3 +1,4 @@
+// Modèle de gouvernance des étapes du pipeline.
 export type StageStatus = 'PASSED' | 'FAILED' | 'WARNING' | 'RUNNING' | 'NOT_RUN' | 'NOT_REACHED';
 
 export interface GovernedStage {
@@ -15,6 +16,7 @@ const BAD_REQUIRED = new Set<StageStatus>(['FAILED', 'RUNNING', 'NOT_RUN', 'NOT_
 const STATUS_FR: Record<string, string> = { PASSED: 'réussi', FAILED: 'en échec', WARNING: 'en avertissement', RUNNING: 'en cours', NOT_RUN: 'non exécuté', NOT_REACHED: 'non atteint' };
 const STAGE_FR: Record<string, string> = { build: 'Build', tests: 'Tests', sonar: 'SonarQube', security: 'Sécurité', trivy: 'Trivy', owasp: 'OWASP Dependency-Check', zap: 'ZAP', container: 'Conteneur', docker: 'Docker', deploy: 'Déploiement' };
 
+/** Classe les étapes selon un ordre pipeline fixe, et sépare celles vraiment bloquantes de celles juste en avertissement ; renvoie la prochaine action recommandée. */
 export function prioritizeStages(stages: GovernedStage[]) {
   const ranked = stages.map((s, index) => ({ ...s, rank: ORDER.indexOf(s.stage.toLowerCase()) < 0 ? ORDER.length + index : ORDER.indexOf(s.stage.toLowerCase()) }));
   const blockers = ranked.filter(s => s.blocking || (s.required !== false && BAD_REQUIRED.has(s.status))).sort((a, b) => a.rank - b.rank);
@@ -41,6 +43,7 @@ export interface ReadinessInput {
   stages: GovernedStage[];
 }
 
+/** Calcule l'état READY/NOT_READY d'un projet en combinant validation, corrélation build/PR, Quality Gate et étapes bloquantes — toute raison de blocage détectée est listée explicitement. */
 export function evaluateReadiness(input: ReadinessInput) {
   const blockingReasons: string[] = [];
   const priority = prioritizeStages(input.stages);
@@ -66,6 +69,7 @@ export function evaluateReadiness(input: ReadinessInput) {
   };
 }
 
+/** Transforme la liste des incidents d'un projet en cycles de convergence ordonnés par build, avec le décompte de findings et l'état de validation de chacun. */
 export function buildConvergenceCycles(incidents: any[]) {
   return [...incidents].sort((a, b) => Number(a.buildNumber || 0) - Number(b.buildNumber || 0)).map((incident, index) => {
     const metadata = incident.metadata || {};

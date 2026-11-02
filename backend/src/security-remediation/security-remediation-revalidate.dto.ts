@@ -1,10 +1,4 @@
-// R-SEC-V1.5 §4 — same narrow-whitelist discipline as
-// SecurityRemediationEvaluateDto: `expectedCandidateIdentity` is accepted
-// ONLY as a comparison value (an opaque sha256 identity string), never as
-// authoritative candidate bytes. This DTO deliberately has NO field for
-// candidate content/path/targetVersion/etc -- a caller literally cannot
-// submit replacement candidate bytes for the backend to trust, because no
-// such field exists on the accepted request model (§8 of V1.4, reapplied).
+// Valide la demande de recontrôle unitaire avant écriture, dont l’identité du candidat attendue. Le backend la compare à une identité fraîchement recalculée.
 import { IsUUID, IsString, Matches } from 'class-validator';
 
 export class SecurityRemediationRevalidateDto {

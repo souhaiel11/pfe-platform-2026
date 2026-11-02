@@ -1,0 +1,13 @@
+diff --git a/pom.xml b/pom.xml
+index 9d657db..5eb97ce 100644
+--- a/pom.xml
++++ b/pom.xml
+@@ -61,7 +61,7 @@
+         <dependency>
+             <groupId>ch.qos.logback</groupId>
+             <artifactId>logback-classic</artifactId>
+-            <version>1.2.11</version>
++            <version>1.2.13</version>
+         </dependency>
+ 
+         <!-- SnakeYAML 1.29 — CVE-2022-25857 HIGH -->

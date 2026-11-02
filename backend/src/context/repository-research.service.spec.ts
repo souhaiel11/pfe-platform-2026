@@ -1,3 +1,4 @@
+// Teste le composant « repository-research.service » et ses cas d’erreur.
 import * as assert from 'node:assert/strict';
 import { RepositoryResearchService } from './repository-research.service';
 
@@ -10,6 +11,7 @@ const REPO_PATH = '/home/souhaiel/pfe-2026/pfe-app-test';
 const SHA = 'ea6230b79b99f0c5fcb3c7da3f838bb3efbe81be';
 const service = new RepositoryResearchService();
 
+/** Prépare les données nécessaires à ce scénario. */
 function req(overrides: Partial<Parameters<RepositoryResearchService['answer']>[0]>) {
   return { requestId: 'req-1', revisionSha: SHA, requestType: 'FIELD_EXISTS' as const, symbolOrFile: '', reason: 'test', ...overrides };
 }

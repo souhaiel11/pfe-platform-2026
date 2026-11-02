@@ -1,0 +1,18 @@
+{
+  "case": {
+    "name": "snake-only",
+    "snake": "2.4"
+  },
+  "exitCode": 0,
+  "buildPass": true,
+  "testPass": true,
+  "descriptor": "/tmp/sec2-qualification/snake-only/qualification.xml",
+  "originalPomUnchanged": true,
+  "tests": 18,
+  "yamlCompatibilityPass": false,
+  "startupPass": true,
+  "healthPass": true,
+  "running": true,
+  "runtimeJava": "11 (exact151 base runtime)",
+  "jarSha256": "15cdfbf4d4ff134491356122df291d0baa8912eeebd8968fe4f89c76d100ecb1"
+}

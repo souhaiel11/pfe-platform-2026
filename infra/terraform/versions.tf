@@ -1,3 +1,4 @@
+# Fixe les versions de Terraform et du fournisseur Azure.
 terraform {
   required_version = ">= 1.7.0"
 

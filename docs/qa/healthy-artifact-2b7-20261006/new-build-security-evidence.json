@@ -1,0 +1,69 @@
+{
+  "jenkinsResult": "SUCCESS",
+  "checkoutCommitSha": "393816c250f73d907eb5a2dd43b2ec2288c7abcb",
+  "tests": {
+    "status": "SKIPPED",
+    "total": 0,
+    "failures": 0,
+    "skipped": 0,
+    "coverage": null
+  },
+  "buildStageStatus": {
+    "build": "SUCCESS",
+    "sonar": "SUCCESS",
+    "docker": "SUCCESS",
+    "tests": "SKIPPED",
+    "trivy": "COMPLETED",
+    "owasp": "COMPLETED",
+    "zap": "COMPLETED"
+  },
+  "sonarQualityGate": {
+    "projectStatus": {
+      "status": "ERROR",
+      "conditions": [
+        {
+          "status": "ERROR",
+          "metricKey": "new_coverage",
+          "comparator": "LT",
+          "errorThreshold": "80",
+          "actualValue": "0.0"
+        },
+        {
+          "status": "OK",
+          "metricKey": "new_duplicated_lines_density",
+          "comparator": "GT",
+          "errorThreshold": "3",
+          "actualValue": "0.0"
+        },
+        {
+          "status": "ERROR",
+          "metricKey": "new_violations",
+          "comparator": "GT",
+          "errorThreshold": "0",
+          "actualValue": "1"
+        }
+      ],
+      "ignoredConditions": false,
+      "period": {
+        "mode": "PREVIOUS_VERSION",
+        "date": "2026-06-23T10:28:07+0000"
+      },
+      "caycStatus": "compliant"
+    }
+  },
+  "trivyRecordSeverityCounts": {
+    "HIGH": 50,
+    "MEDIUM": 47,
+    "CRITICAL": 14
+  },
+  "trivyDistinctCriticalCves": 14,
+  "owaspRecordSeverityCounts": {
+    "HIGH": 58,
+    "MEDIUM": 65,
+    "CRITICAL": 23,
+    "LOW": 8
+  },
+  "owaspDistinctCriticalCves": 19,
+  "zapAlertCount": 2,
+  "owaspScanExecutionMarkersPresent": false
+}

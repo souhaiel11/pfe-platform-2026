@@ -1,0 +1,158 @@
+{
+  "tables": [
+    "bugs",
+    "deployment_artifacts",
+    "deployment_attempts",
+    "deployment_authorizations",
+    "dockerfile_analyses",
+    "incidents",
+    "integrations",
+    "jenkins_analyses",
+    "jenkins_applies",
+    "manual_remediation_tasks",
+    "projects",
+    "reports",
+    "routed_builds",
+    "users"
+  ],
+  "references": {
+    "33": {
+      "identifiers": [
+        "9690613ecc5e87b33663ee8f82eea4f94d67bbfe",
+        "97c45acc0291fa92ca427fafd0b6475e7a22926d",
+        "c04ec8b69fd0fe97ce29eda9e97b7c61fb14d141",
+        "e5fa678182fcd8264dd95d81777ec02d69c5797b",
+        "fix/pfe-6edab0c8-64df-4bb7-ba9c-7dff9cbcd4f3-72ddba06-2f94-462c-a806-cb3053636d74",
+        "43d2e07dc3ff2f2f1e1975cdf5d666eb94f784b9",
+        "3cd7db1f818f2fc7b1a0d52960bb7fd66cd3e903",
+        "/pull/33"
+      ],
+      "tables": {}
+    },
+    "36": {
+      "identifiers": [
+        "security/fix/a37e178f7ce1-1ebe4cecc872",
+        "4402e8977e4984f5ab759e0af0010901abd10a45",
+        "/pull/36"
+      ],
+      "tables": {}
+    },
+    "37": {
+      "identifiers": [
+        "security/fix/a37e178f7ce1-71531d5009b1",
+        "/pull/37",
+        "a27fc820efdb96a53d92834b17546f128392a735"
+      ],
+      "tables": {
+        "manual_remediation_tasks": [
+          "c8fb2207-c8de-40af-acd4-1d2f96896715"
+        ]
+      }
+    },
+    "38": {
+      "identifiers": [
+        "1097ba035e6b2d88cd12f6af7cc1285e889f8aed",
+        "security/fix/3f712ca3bae0-55df917c8f87",
+        "/pull/38"
+      ],
+      "tables": {
+        "manual_remediation_tasks": [
+          "af1d6556-b782-4faf-b01b-4e87b119d033"
+        ]
+      }
+    },
+    "39": {
+      "identifiers": [
+        "security/fix/e9302805d352-0b27c921d9ca",
+        "/pull/39",
+        "cd3ab899af5ea1fca5cfa5b10f80348f8803430d"
+      ],
+      "tables": {
+        "manual_remediation_tasks": [
+          "bd9dc6f2-2202-4280-933e-4adb824dc695",
+          "9dc3706b-aabd-4b9a-a888-854641a2e64e"
+        ]
+      }
+    },
+    "40": {
+      "identifiers": [
+        "c5a3846d40f8358737d8d76085564fc5fb4edb4b",
+        "security/fix/41a0eac4ecb4-022ff90775f4",
+        "/pull/40"
+      ],
+      "tables": {
+        "incidents": [
+          "dd7cdcc1-4596-4001-941d-a87774e3ff4f"
+        ],
+        "manual_remediation_tasks": [
+          "c52a3134-c2f9-4698-b9e1-dc61a2d709de",
+          "306e8b84-90fe-4344-8fd6-5c38fcabcf40"
+        ],
+        "reports": [
+          "9853fdb9-df70-474b-afa2-da8b4f4ac7a2"
+        ]
+      }
+    },
+    "41": {
+      "identifiers": [
+        "cb1432c97f601ef1ffbf436a3f3f9215bdaa03f9",
+        "/pull/41",
+        "security/fix/5529fe26dcc4-a48178242bb4"
+      ],
+      "tables": {
+        "manual_remediation_tasks": [
+          "ca8f57e7-3839-4914-8805-d518aafe4c4a"
+        ]
+      }
+    },
+    "42": {
+      "identifiers": [
+        "7f57eec0f47b5b47c7320c65662348ec6b2404b4",
+        "/pull/42",
+        "security/fix/259beaee267e-3936026f7135"
+      ],
+      "tables": {
+        "manual_remediation_tasks": [
+          "64deba0e-f6ab-4da8-a3c9-da8e1b0eb30d",
+          "70fd88ac-2011-437d-a387-57d0fb3fa65d",
+          "6e6c3597-96bc-4f72-bcd8-eb0d4b8036db",
+          "a84a24c4-8673-4826-a4f2-4990ce7d118b",
+          "f21b69ba-922b-4ccb-8851-c2a43d9ce7ca",
+          "10fe9043-86f9-42eb-a0a2-ce5abaf26631"
+        ]
+      }
+    },
+    "43": {
+      "identifiers": [
+        "99987c1bdf0fad37f0e5e2a8d4af16efe693c208",
+        "fix/pfe-754328c4-4351-4f44-985b-34b9a031dfb2-4f3c88f0-fe71-464d-b2bf-62c850e0f8b3",
+        "/pull/43",
+        "075791d6d3d8d04881b2b5c55d691a0a9125ec61"
+      ],
+      "tables": {
+        "incidents": [
+          "754328c4-4351-4f44-985b-34b9a031dfb2"
+        ]
+      }
+    },
+    "44": {
+      "identifiers": [
+        "47a9f01701a6518c56a05dcb99ca4aa25ed08868",
+        "/pull/44",
+        "fix/pfe-a1cee307-dcca-49b4-a490-5d1fdfe55fb8-3fecb0d5-d88a-4548-815a-6d99e5f9e8a9"
+      ],
+      "tables": {
+        "incidents": [
+          "a1cee307-dcca-49b4-a490-5d1fdfe55fb8"
+        ]
+      }
+    },
+    "boot3": {
+      "identifiers": [
+        "security/boot3-remediation",
+        "b62c0d663268d87cc4c3c7b0abdd1c97c75f3f56"
+      ],
+      "tables": {}
+    }
+  }
+}

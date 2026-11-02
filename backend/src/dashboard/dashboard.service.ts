@@ -1,3 +1,5 @@
+// Agrège projets, bugs et reports pour alimenter le dashboard : stats globales, vues Jenkins/sécurité
+// agrégées, indicateurs de risque par projet, tableau de bord détaillé d'un projet.
 import { platformCapabilities } from './platform-capabilities';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -16,6 +18,7 @@ const JENKINS_GLOBAL_TIMEOUT_MS = 5000;
 
 @Injectable()
 export class DashboardService {
+  /** Initialise les dépendances et l’état de ce composant. */
   constructor(
     private readonly projectsService: ProjectsService,
     private readonly bugsService: BugsService,
@@ -23,7 +26,8 @@ export class DashboardService {
     private readonly reportRepo: Repository<Report>,
   ) {}
 
-  // Read-only projection of existing configuration, reports and V1.8 sources.
+  // Rapporte quelles fonctionnalités de la plateforme sont configurées, à partir des projets et du
+  // dernier report de chacun (projection en lecture seule, ne sonde rien en direct).
   async getCapabilities() {
     const projects = await this.projectsService.findAll();
     const reports = await this.reportRepo.query(
@@ -34,6 +38,8 @@ export class DashboardService {
     return platformCapabilities(projects, reports);
   }
 
+  // Calcule les statistiques globales (projets, bugs par sévérité/statut, score de sécurité moyen,
+  // historique des bugs sur 7 jours).
   async getGlobalStats() {
     const projects = await this.projectsService.findAll();
     const bugs = await this.bugsService.findAll();
@@ -42,10 +48,6 @@ export class DashboardService {
     const criticalBugs = bugs.filter(b => b.severity === BugSeverity.CRITICAL);
     const fixedBugs = bugs.filter(b => b.status === BugStatus.RESOLVED || b.status === BugStatus.PR_CREATED);
 
-    // QA-SCANNER-RUNTIME-TRUTH-CORRECTION-R1 §5 : un projet dont le dernier
-    // report combined est incomplete a securityScore=null (voir
-    // reports.service.ts) — exclu de la moyenne, jamais compté comme 100
-    // ("non vérifié" gonflerait faussement la moyenne globale vers le haut).
     const scoredProjects = projects.filter(p => p.securityScore != null);
     const avgSecurityScore = scoredProjects.length
       ? scoredProjects.reduce((sum, p) => sum + (p.securityScore as number), 0) / scoredProjects.length
@@ -73,7 +75,8 @@ export class DashboardService {
     };
   }
 
-  // ── Vue globale Jenkins (tous projets) ───────────────────────
+  // Vue Jenkins agrégée sur tous les projets configurés avec Jenkins : statut par projet (vert/rouge/
+  // inconnu), taux de réussite cumulé, builds en échec sur 24h, triés rouges d'abord.
   async getJenkinsGlobal() {
     const projects = await this.projectsService.findAll();
     const jenkinsProjects = projects.filter(
@@ -95,8 +98,6 @@ export class DashboardService {
     const items = jenkinsProjects.map((project, i) => {
       const result = settled[i];
 
-      // Timeout du Promise.race ou réponse vide : absence d'info, jamais un
-      // échec confirmé => 'unknown', pas 'red' (même principe que _liveData).
       if (result.status !== 'fulfilled' || !result.value) {
         const error = result.status === 'rejected'
           ? (result.reason?.message || 'Jenkins injoignable')
@@ -114,11 +115,6 @@ export class DashboardService {
       }
 
       const jenkins = result.value;
-      // Taux de réussite, status et lastBuild : source unique avec
-      // projects.service.ts::getJenkinsStatus (même helper, même _liveData).
-      // !isLive (non configuré, erreur, timeout — getMockJenkinsStatus
-      // supprimé) => rien de dérivé, jamais une valeur fictive ni comptée
-      // dans l'agrégat plateforme.
       const isLive = jenkins._liveData === true;
       const builds: any[] = isLive && Array.isArray(jenkins.builds) ? jenkins.builds : [];
       const recentSuccessRate = isLive ? computeBuildSuccessRate(builds) : null;
@@ -140,8 +136,6 @@ export class DashboardService {
         projectId: project.id,
         projectName: project.name,
         jenkinsJobName: project.jenkinsJobName,
-        // !isLive => 'unknown' : jamais 'red', qui affirmerait à tort un
-        // échec confirmé sur une simple absence de données.
         status: (!isLive ? 'unknown' : (jenkins.result === 'SUCCESS' ? 'green' : 'red')) as 'green' | 'red' | 'unknown',
         recentSuccessRate,
         lastBuild: isLive ? {
@@ -160,8 +154,6 @@ export class DashboardService {
     const projectsRed = items.filter(it => it.status === 'red').length;
     const projectsUnknown = items.filter(it => it.status === 'unknown').length;
 
-    // Tri : rouges confirmés d'abord, puis inconnus (à vérifier), puis verts ;
-    // à l'intérieur de chaque groupe, plus récents d'abord.
     const STATUS_PRIORITY: Record<string, number> = { red: 0, unknown: 1, green: 2 };
     items.sort((a, b) => {
       if (a.status !== b.status) return STATUS_PRIORITY[a.status] - STATUS_PRIORITY[b.status];
@@ -177,9 +169,6 @@ export class DashboardService {
         projectsGreen,
         projectsRed,
         projectsUnknown,
-        // % de builds réussis cumulés sur l'historique live de chaque projet
-        // (jusqu'à 20 builds/projet) — null si aucun projet n'a de données
-        // live (jamais un 0% fabriqué).
         aggregateSuccessRate: totalBuildsCount
           ? Math.round((totalSuccessCount / totalBuildsCount) * 100)
           : null,
@@ -192,6 +181,8 @@ export class DashboardService {
     };
   }
 
+  // Interroge le statut Jenkins d'un projet avec un délai maximal, pour qu'un Jenkins lent ou injoignable
+  // ne bloque jamais toute la vue globale.
   private getJenkinsStatusWithTimeout(projectId: string, timeoutMs = JENKINS_GLOBAL_TIMEOUT_MS): Promise<any> {
     let timer: ReturnType<typeof setTimeout>;
     return Promise.race([
@@ -202,6 +193,7 @@ export class DashboardService {
     ]).finally(() => clearTimeout(timer));
   }
 
+  // Assemble le tableau de bord détaillé d'un projet : Sonar, Jenkins, Trivy, GitHub et ses bugs.
   async getProjectDashboard(projectId: string) {
     const [sonar, jenkins, trivy, github] = await Promise.all([
       this.projectsService.getSonarMetrics(projectId),
@@ -213,12 +205,11 @@ export class DashboardService {
     return { sonar, jenkins, trivy, github, bugs };
   }
 
-  // ── Vue globale sécurité (tous projets, dernier report de chacun) ────
+  // Vue sécurité agrégée sur tous les projets, à partir du report le plus récent de chacun : CVE
+  // Trivy/OWASP, alertes ZAP, métriques Sonar, score moyen recalculé en direct.
   async getSecurityGlobal() {
     const projects = await this.projectsService.findAll();
 
-    // Un seul report par projet : le plus récent par createdAt (jamais la
-    // somme de tout l'historique).
     const latestReports: Array<{ projectId: string; rawData: any }> =
       await this.reportRepo.query(
         `SELECT DISTINCT ON ("projectId") "projectId", "rawData"
@@ -240,19 +231,11 @@ export class DashboardService {
 
     const byProject = projects.map(project => {
       const rawData = latestByProject.get(project.id);
-      // Normalise à la lecture — v2.1, legacy ou vide, un seul chemin pour tous.
       const normalized = normalizeReport(rawData);
 
       if (normalized._sourceFormat === 'empty') projectsWithoutData.push(project.name);
 
-      // Score LIVE, recalculé depuis CE report normalisé — jamais
-      // project.securityScore (copie figée qui peut se désynchroniser sans
-      // alerte). Cohérent par construction avec criticalCves ci-dessous,
-      // puisque calculés depuis le même `normalized`.
       const { score: liveScore, incomplete: scoreIncomplete, missingScanners } = calculateSecurityScore(normalized);
-      // Exclu de la moyenne globale si incomplete — même principe que
-      // getGlobalStats() : un score "non vérifié" ne doit jamais tirer la
-      // moyenne globale vers le haut comme s'il valait un vrai 100.
       if (!scoreIncomplete) { liveScoreSum += liveScore; liveScoredCount++; }
 
       const trivy = normalized.trivy;
@@ -267,8 +250,6 @@ export class DashboardService {
       const zHigh = zap.alerts_high || 0;
       const zMedium = zap.alerts_medium || 0;
 
-      // Medium = compteur cves_count (réel, pas jsonb_array_length) moins
-      // critical/high ; jamais négatif ; 0 si l'info n'est pas disponible.
       const tMedium = Math.max(0, (trivy.cves_count || 0) - tCrit - tHigh);
       const oMedium = Math.max(0, (owasp.cves_count || 0) - oCrit - oHigh);
 
@@ -286,9 +267,7 @@ export class DashboardService {
       return {
         projectId: project.id,
         projectName: project.name,
-        securityScore: liveScore,
-        // Consommé par la page /security et l'onglet Sécurité projet pour
-        // afficher un badge "scanner non exécuté" au lieu d'un faux "0 trouvé".
+        securityScore: normalized._sourceFormat === 'empty' ? null : liveScore,
         incomplete: scoreIncomplete,
         missingScanners,
         criticalCves: tCrit + oCrit,
@@ -296,8 +275,6 @@ export class DashboardService {
         trivy: { critical: tCrit, high: tHigh },
         owasp: { critical: oCrit, high: oHigh },
         zap: { high: zHigh, medium: zMedium },
-        // Champ additif — consommé par la page "Indicateurs de risque" (règle
-        // quality gate / coverage). Ne casse aucun consommateur existant.
         sonar: {
           qualityGate: sonar.quality_gate ?? null,
           coverage: typeof sonar.coverage === 'number' ? sonar.coverage : null,
@@ -307,9 +284,6 @@ export class DashboardService {
 
     byProject.sort((a, b) => b.criticalCves - a.criticalCves);
 
-    // Moyenne des scores LIVE recalculés ci-dessus — pas des Project.securityScore
-    // figés. null si aucun projet n'a de score exploitable (tous incomplete),
-    // jamais 100 par défaut (voir avgSecurityScore ci-dessous et getGlobalStats).
     const avgSecurityScore = liveScoredCount ? Math.round(liveScoreSum / liveScoredCount) : null;
 
     return {
@@ -335,7 +309,8 @@ export class DashboardService {
     };
   }
 
-  // ── Indicateur de risque par projet — LIVE, jamais stocké ────────────
+  // Calcule un indicateur de risque par projet (CVE critiques, build en échec, incidents ouverts,
+  // quality gate, couverture) — recalculé en direct à chaque appel, jamais stocké.
   async getRiskIndicators() {
     const [projects, security, jenkins] = await Promise.all([
       this.projectsService.findAll(),
@@ -373,6 +348,7 @@ export class DashboardService {
     return { projects: items, generatedAt: new Date().toISOString() };
   }
 
+  // Regroupe les bugs par jour sur les 7 derniers jours, pour le graphique d'activité du dashboard.
   private getBugsByDay(bugs: any[]) {
     const days: Record<string, number> = {};
     const now = new Date();

@@ -1,7 +1,4 @@
-// ─────────────────────────────────────────────────────────────
-// Modèle du guide développeur généré par WF1 v5
-// (rawData.developerGuide dans les analysis reports)
-// ─────────────────────────────────────────────────────────────
+// Modèle de données du guide développeur généré par WF1 (rawData.developerGuide dans les rapports d'analyse).
 
 export interface DevGuideCodeExample {
   before: string;
@@ -9,26 +6,22 @@ export interface DevGuideCodeExample {
 }
 
 export interface DevGuideIssue {
-  id: string;                       // "SONAR-1", "CVE-2024-1234", "ZAP-1"...
+  id: string;
   source: 'SONARQUBE' | 'TRIVY' | 'OWASP' | 'ZAP' | 'TESTS' | 'BUILD' | string;
   severity: 'BLOCKER' | 'CRITICAL' | 'HIGH' | 'MAJOR' | 'MEDIUM' | string;
   title: string;
   file: string;
   line: number;
   rule: string;
-  problem: string;                  // le vrai problème, en langage simple
-  whyItMatters: string;             // risque concret si non corrigé
-  howToFix: string[];               // étapes ordonnées
+  problem: string;
+  whyItMatters: string;
+  howToFix: string[];
   codeExample?: DevGuideCodeExample | string;
-  verification: string;             // commande pour prouver que le fix marche
+  verification: string;
   estimatedEffortMinutes: number;
-  priority: number;                 // 1 = à corriger en premier
+  priority: number;
 }
 
-// Forme produite par le fallback déterministe (WF1) quand l'agent LLM
-// Developer Guidance échoue à parser sa réponse : pas de fiche par issue,
-// seulement un plan d'action au niveau catégorie. Distincte de la forme
-// "string" (id d'issue) utilisée par fixOrder quand issues[] est peuplé.
 export interface DevGuideFallbackFixOrderItem {
   priority: number;
   category: string;
@@ -43,8 +36,8 @@ export interface DeveloperGuide {
   incidentId: string;
   summaryForDeveloper: string;
   issues: DevGuideIssue[];
-  quickWins: string[];              // ids des issues < 15 min
-  fixOrder: (string | DevGuideFallbackFixOrderItem)[]; // ids (guide détaillé) OU items de plan (fallback déterministe)
+  quickWins: string[];
+  fixOrder: (string | DevGuideFallbackFixOrderItem)[];
   totalEstimatedMinutes: number;
   confidence: number;
   parseError?: boolean;

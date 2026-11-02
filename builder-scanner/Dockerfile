@@ -1,16 +1,4 @@
-# V1.7 predeploy phase — dedicated builder/scanner worker image. The ONLY
-# component in this platform that execs podman/trivy, and the ONLY one that
-# needs CAP_SYS_ADMIN (validation-only per the V1.7 runtime audit; NOT
-# applied to production without separate authorization -- see
-# n8n-workflows/WF6-V1_7-RUNTIME-INTEGRATION-AUDIT.md). Deliberately does
-# NOT install Maven/OpenJDK/Gradle: this process never compiles anything
-# itself -- the target repository's OWN Dockerfile (built BY podman, inside
-# the container Podman creates) does that.
-#
-# Build context is the repository ROOT (see ../docker-compose.yml's
-# `build.context: .`), matching candidate-verifier/Dockerfile's own
-# convention -- needed to COPY the shared, pure security-artifact-scan.ts/
-# security-remediation-deadline-contract.ts contracts out of backend/src/.
+# Prépare les outils de construction et de scan des images.
 FROM node:20-bookworm-slim
 
 # git: `trackedSourceDigest()` (git ls-files) against the shared candidate
@@ -50,6 +38,22 @@ RUN apt-get update \
 # images changed. A dedicated volume, isolated to builder-scanner only
 # (never shared with the host Docker daemon's own storage, never
 # docker.sock) survives redeploys too.
+#
+# V1.7.1 builder reliability hardening — real finding from execution 2053's
+# root-cause audit: rootless Podman 4.3.1 does NOT read this system-level
+# /etc/containers/storage.conf for the `graphroot`/`runroot` keys when
+# running as a non-root user -- `podman info` on the live container kept
+# reporting the rootless DEFAULT ($HOME/.local/share/containers/storage,
+# this container's own ephemeral writable layer) regardless of this file,
+# silently defeating the whole point of the dedicated volume above (proven
+# live: zero images ever accumulated there, 68KB used). Left in place below
+# as documentation of intent / for any future rootful invocation, but it is
+# NOT what rootless `node` actually honors -- see the per-user override
+# immediately following USER node's own config directory setup, which uses
+# the SAME $HOME/.config/containers/ path Podman's rootless engine already
+# searches (proven by this image's own PRE-EXISTING containers.conf, whose
+# own comment already documents this exact search path for
+# image_parallel_copies).
 RUN mkdir -p /etc/containers && printf '%s\n' \
         '[storage]' \
         'driver = "vfs"' \
@@ -199,8 +203,19 @@ RUN mkdir -p "$XDG_RUNTIME_DIR" "$SECURITY_TRIVY_CACHE_DIR" "$WORKSPACE_ROOT" "$
 # system-wide change, and completely inert for any OTHER Podman
 # invocation on this host (candidate-verifier holds no Podman at all;
 # nothing else in this platform runs Podman).
+#
+# V1.7.1 builder reliability hardening — the SAME per-user override path,
+# now ALSO carrying the `[storage]` section: this is the actual fix for
+# execution 2053's root-cause finding (`podman info` reporting GraphRoot=
+# $HOME/.local/share/containers/storage instead of the intended, volume-
+# backed /var/pfe-podman-storage from /etc/containers/storage.conf above,
+# which rootless Podman 4.3.1 does not honor for a non-root user). Content
+# is byte-identical to /etc/containers/storage.conf's own `[storage]`
+# block -- same driver, same graphroot, no new decision -- placed only
+# where this specific Podman version/user combination actually reads it.
 RUN mkdir -p /home/node/.config/containers \
     && printf '%s\n' '[engine]' 'image_parallel_copies = 1' > /home/node/.config/containers/containers.conf \
+    && printf '%s\n' '[storage]' 'driver = "vfs"' 'graphroot = "/var/pfe-podman-storage"' > /home/node/.config/containers/storage.conf \
     && chown -R node:node /home/node/.config
 
 USER node

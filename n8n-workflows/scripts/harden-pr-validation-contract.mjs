@@ -1,22 +1,16 @@
+// Prépare la validation de la PR dans N8N.
 import fs from 'node:fs';
 
 const root = new URL('../active/', import.meta.url);
 const wf1Path = new URL('wf1-incident-intake-analysis-v5-1-vNOQiEgnXg9Zqn2q.json', root);
 const wf3Path = new URL('wf3-post-pr-validation-v4-4JiOKpyHhx1znTYw.json', root);
+/** Charge les données nécessaires au composant. */
 const load = path => { const raw = JSON.parse(fs.readFileSync(path)); return Array.isArray(raw) ? raw[0] : raw; };
+/** Enregistre les données fournies. */
 const save = (path, workflow) => fs.writeFileSync(path, JSON.stringify([workflow], null, 2) + '\n');
+/** Retrouve ou construit le nœud du workflow demandé. */
 const node = (workflow, name) => workflow.nodes.find(candidate => candidate.name === name);
 
-// R52/R57/R60 -- single source of truth for the Sonar credential reference,
-// used by every Sonar HTTP node across WF1 and WF3. 'SONARQUBE credential 2'
-// (httpBasicAuth) started failing Sonar auth with a real 401 (proven live on
-// PR-24 build #4). 'n8n-sonarqube-api' (R52) and 'sonar' (R57, id
-// bMpqrUPOkyVVn6G2) both subsequently failed auth (valid=false) despite the
-// underlying token itself being independently proven valid via direct curl --
-// the stored credential value was wrong, not the token or the wiring. R60 --
-// rewired to 'sonar-direct-token' (id r60SonarDirectCred1), created directly
-// from the user-provided token and proven live (valid=true, Quality Gate OK,
-// issue search real data). Never a raw token in source -- id/name reference only.
 const SONAR_CREDENTIAL_TYPE = 'httpHeaderAuth';
 const SONAR_CREDENTIAL = { id: 'r60SonarDirectCred1', name: 'sonar-direct-token' };
 
@@ -139,13 +133,6 @@ const findingResults=prepared.findings.map(f=>{if(!searchAvailable)return{findin
 const everyFindingValid=findingResults.length===prepared.findingIds.length&&findingResults.every(r=>r.result==='VALID');const shaVerified=ctx.expectedPrHeadSha===ctx.checkoutSha;const correlationVerified=!!incident?.id&&incident.id===ctx.incidentId&&sonarCorrelationVerified&&shaVerified;const passed=ctx.jenkinsStatus==='SUCCESS'&&sonarStatus==='OK'&&correlationVerified&&!missingStage.length&&!requiredFailures.length&&Number(ctx.unresolvedBlockingCount||0)===0&&everyFindingValid;const anyInvalid=findingResults.some(r=>r.result==='INVALID');
 return [{json:{...ctx,findingResults,validationStatus:passed?'VALIDATED':anyInvalid?'INVALID':'INCONCLUSIVE',passed,sonarStatus,sonarAnalysisMode:analysisMode,sonarCorrelationVerified,correlationVerified,finalStateVerified:shaVerified,requiredStagesStatus:(!missingStage.length&&!requiredFailures.length)?'PASSED':'FAILED',failureReasons:[ctx.jenkinsStatus!=='SUCCESS'?'Jenkins='+ctx.jenkinsStatus:null,sonarStatus!=='OK'?'Sonar='+sonarStatus:null,!shaVerified?'PR HEAD mismatch':null,!correlationVerified?'Correlation unverified':null,!everyFindingValid?'Approved finding validation incomplete':null,...missingStage.map(s=>'Required stage missing='+s),...requiredFailures.map(s=>s.stage+'='+s.status)].filter(Boolean),timestamp:new Date().toISOString()}}];`;
 
-// R49 -- both nodes were created with authentication:'predefinedCredentialType'
-// but no credentials block was ever attached (proven live: real PR-24 build
-// #3's WF3 execution 1896 -- both nodes errored "Credentials not found").
-// R52 -- the httpBasicAuth credential wired in R49 subsequently started
-// failing Sonar auth with a real 401 (proven live on build #4); rewired to
-// the httpHeaderAuth SONAR_CREDENTIAL defined at the top of this file. Never
-// a raw token -- reference by id only, exactly like n8n's own credential system.
 for (const nodeName of ['Get SonarQube PR Quality Gate', 'Get SonarQube Approved Findings']) {
   const sonarNode = node(wf3, nodeName);
   sonarNode.parameters.nodeCredentialType = SONAR_CREDENTIAL_TYPE;

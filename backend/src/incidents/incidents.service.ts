@@ -1,8 +1,11 @@
-// incidents.service.ts
-import { Injectable, NotFoundException, BadRequestException, ForbiddenException, ConflictException, ServiceUnavailableException, BadGatewayException, HttpException } from '@nestjs/common';
+// Service central des incidents : cycle de vie complet, routage vers WF2/WF4/WF5, validation de PR,
+// autorisation de fusion, annulation WF2, récupération post-écriture — le plus gros fichier du backend.
+import { redeliveryConfig, findPrValidationDeliveryInN8n, postPrValidationDelivery } from './pr-validation-redelivery';
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException, ConflictException, ServiceUnavailableException, BadGatewayException, HttpException, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { EntityManager, Repository } from 'typeorm';
 import { Incident, IncidentStatus } from './incident.entity';
+import { extendSonarFiles, fixRequestHoldsFiles, releaseSonarFiles, reserveSonarFiles, SonarFileHolder, sonarTargetFiles } from './sonar-file-reservation';
 import { IncidentsGateway } from './incidents.gateway';
 import { Project } from '../projects/project.entity';
 import { sanitizeEntityProject } from '../common/sanitize-project';
@@ -18,11 +21,6 @@ import { validateCanonicalEvidenceBinding, mergeCanonicalEvidenceWithStatic, ide
 import { resolveSemanticEvidenceAdapter } from '../validation/adapters/registry';
 import { CandidateVerificationService } from '../candidate-verification/candidate-verification.service';
 import { HeadVerificationRequest, HeadVerification, VerificationEvidence } from '../candidate-verification/candidate-verification.types';
-// V1.7 image-provisioning phase — isFullGitSha moved to candidate-digest.ts
-// (a pure, dependency-free module already shared with candidate-verifier);
-// re-exported here so every existing external import of it from this file
-// (e.g. remediation-batch.spec.ts) keeps working unchanged. Single
-// implementation, not two — see candidate-digest.ts's own comment.
 import { isFullGitSha } from '../candidate-verification/candidate-digest';
 export { isFullGitSha };
 import { redactAndCapEvidence } from '../candidate-verification/verification-evidence';
@@ -33,9 +31,20 @@ import { buildCorrectiveContext } from '../validation/corrective-context';
 import { isWorkflowIdentity, resolveAttemptWorkflowIdentity } from './workflow-attempt-identity';
 import { commonPrCreatedFields, isPostWriteFailureNode, PostWriteRecoveryInput,
   postWriteRecoveryIdentity, validatePostWriteRecoveryEvidence } from './post-write-recovery';
+import { ExecutionStartedInput, CancelFixRequestInput, PreWriteGateInput,
+  isPositiveN8nExecutionId, isTerminalFixRequestStatus, matchesActiveAttempt,
+  boundedCancelReason, cancelledFixRequest } from './wf2-cancellation.types';
+import { sanitizeIncidentPatch, userMetadata } from './incident-write.dto';
+import { validateExecutionBinding, validateRequestIdentifier } from './wf2-cancellation.types';
+import { stopN8nExecution, N8nStopOutcome, N8nStopResult } from './n8n-execution-client';
+import { isManualReviewFailure, reclassifyFindingsAsManual, MANUAL_REVIEW_SUMMARY, WF2_MANUAL_REVIEW_CODE } from './wf2-manual-review';
 
+/** Traduit le code HTTP brut renvoyé par Jenkins lors d'un déclenchement de build en un verdict métier (accepté ou refusé + code d'erreur). */
 export function classifyJenkinsTriggerStatus(status: number): { accepted: boolean; code?: string } {
   if (status === 201) return { accepted: true };
+  // QA-E2E-2026-10-11 (défaut D-9, reproduit en direct).
+  if (status === 303) return { accepted: false, code: 'JENKINS_TRIGGER_ALREADY_QUEUED' };
+  if (status >= 300 && status < 400) return { accepted: false, code: 'JENKINS_TRIGGER_NOT_ACCEPTED' };
   if (status >= 200 && status < 300) return { accepted: false, code: 'JENKINS_TRIGGER_NOT_ACCEPTED' };
   if (status === 401 || status === 403) return { accepted: false, code: 'JENKINS_AUTH_FAILED' };
   if (status === 404) return { accepted: false, code: 'JENKINS_JOB_NOT_FOUND' };
@@ -45,19 +54,37 @@ export function classifyJenkinsTriggerStatus(status: number): { accepted: boolea
   return { accepted: false, code: 'JENKINS_TRIGGER_FAILED' };
 }
 
-// R49 — single canonical builder for the PR validation job identity. This
-// value is issued to Jenkins once (requestPrValidation), threaded verbatim
-// through PFE_VALIDATION_CONTEXT -> Jenkins -> PlatformReporter -> WF1 -> WF3,
-// and must match byte-for-byte when saveValidation() re-derives its own
-// expectation at write-back time. Proven live on real PR-24 build #3: a
-// second, independently-written `/PR-${n}` (missing `/job/`) formula in
-// saveValidation() rejected the exact value this function issues, with a 409
-// -- Jenkins' own REST job path convention (`/job/<multibranch>/job/PR-<n>`)
-// is canonical, not a shortened display form.
+/** Délai maximal d'attente de la découverte d'un job PR par l'indexation multibranche Jenkins. */
+const PR_JOB_DISCOVERY_TIMEOUT_MS = Number(process.env.PR_JOB_DISCOVERY_TIMEOUT_MS || 90_000);
+
+/**
+ * GET des métadonnées d'un job PR Jenkins. Une PR tout juste créée n'existe dans Jenkins qu'après
+ * l'indexation du job multibranche parent (périodique) : sur un 404, on déclenche UNE indexation
+ * (aucun build n'est lancé, NoTriggerBranchProperty) puis on attend l'apparition du job.
+ */
+export async function fetchPrJobMetadataWithDiscovery(jenkinsInternalUrl: string, resolvedJobPath: string, authHeader: string, url: string): Promise<Response> {
+  const get = () => fetch(url, { headers: { Authorization: authHeader }, signal: AbortSignal.timeout(10_000) });
+  let response = await get();
+  const parentPath = resolvedJobPath.replace(/\/job\/[^/]+\/?$/, '');
+  if (response.status !== 404 || !parentPath || parentPath === resolvedJobPath) return response;
+  await fetch(`${jenkinsInternalUrl}${parentPath}/build?delay=0`, { method: 'POST', headers: { Authorization: authHeader }, signal: AbortSignal.timeout(10_000) }).catch(() => undefined);
+  const deadline = Date.now() + PR_JOB_DISCOVERY_TIMEOUT_MS;
+  while (response.status === 404 && Date.now() < deadline) {
+    await new Promise(resolve => setTimeout(resolve, 5_000));
+    response = await get();
+  }
+  return response;
+}
+
+/** Nombre maximal de réexpéditions automatiques d'un callback WF3 perdu, par demande de validation. */
+const MAX_PR_VALIDATION_REDELIVERIES = 3;
+
+/** Construit l'identifiant du job Jenkins d'une PR à partir du nom du job multibranche et du numéro de PR. */
 export function buildPrValidationJobName(baseJobName: string, prNumber: number): string {
   return `${baseJobName}-multibranch/job/PR-${prNumber}`;
 }
 
+/** Valide et encode un chemin de job Jenkins configuré en un chemin REST sûr (`/job/.../job/...`), en rejetant tout segment suspect. */
 export function resolveJenkinsJobPath(configuredPath: string): string {
   const value = String(configuredPath || '').trim();
   if (!value || value.includes('://') || /[?#\\\x00-\x1f]/.test(value)) {
@@ -70,14 +97,7 @@ export function resolveJenkinsJobPath(configuredPath: string): string {
   return '/job/' + names.map(name => encodeURIComponent(name)).join('/job/');
 }
 
-// R21-AS — the REST job path (`/job/<a>/job/<b>`) and Jenkins' internal item
-// "full name" (`<a>/<b>`, used by Jenkins.instance.getItemByFullName) are two
-// different encodings of the same item identity. Deriving the full name from
-// an already-`resolveJenkinsJobPath`-validated path (rather than accepting
-// one directly from a caller) means the strict segment characters that path
-// already enforced apply here too. A second, narrower allowlist is still
-// applied, since this value is embedded into a Groovy script string, not
-// just a URL.
+/** Dérive le "full name" interne Jenkins (`a/b`) à partir du chemin REST déjà validé (`/job/a/job/b`), pour cibler un WorkflowJob depuis un script Groovy. */
 export function jenkinsWorkflowFullName(resolvedJobPath: string): string {
   const segments = String(resolvedJobPath || '').split('/job/').map(decodeURIComponent).filter(Boolean);
   if (!segments.length || segments.some(segment => !/^[A-Za-z0-9._-]+$/.test(segment))) {
@@ -86,17 +106,12 @@ export function jenkinsWorkflowFullName(resolvedJobPath: string): string {
   return segments.join('/');
 }
 
+/** Échappe une chaîne pour une insertion sûre entre apostrophes dans un script Groovy. */
 function escapeGroovySingleQuoted(value: string): string {
   return value.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 }
 
-// R21-AS — reuses exactly the parameter-injection semantics already present
-// in jenkins-config/init.groovy.d/pfe-pr-head-discovery.groovy (add/replace
-// only the PFE_VALIDATION_CONTEXT definition, preserving every other existing
-// parameter), but scoped to one caller-identified WorkflowJob by exact full
-// name, invocable on demand instead of only at Jenkins startup. The script is
-// always built internally from a validated job identity -- no caller input
-// is ever concatenated into Groovy source beyond that one escaped identifier.
+/** Génère le script Groovy qui ajoute (ou remplace) le paramètre Jenkins `PFE_VALIDATION_CONTEXT` sur un job identifié par son nom complet. */
 export function buildParameterBootstrapScript(fullName: string): string {
   const safeName = escapeGroovySingleQuoted(fullName);
   return [
@@ -116,11 +131,13 @@ export function buildParameterBootstrapScript(fullName: string): string {
   ].join('\n');
 }
 
+/** Vérifie que les métadonnées Jenkins décrivent bien un job concret (buildable) de type WorkflowJob. */
 export function isConcreteJenkinsBuildJob(metadata: any): boolean {
   return metadata?.buildable === true
     && metadata?._class === 'org.jenkinsci.plugins.workflow.job.WorkflowJob';
 }
 
+/** Confirme qu'un déclenchement de build Jenkins a bien été accepté (201 + URL d'item de file d'attente valide). */
 export function isAcceptedJenkinsBuildResponse(status: number, queueUrl: string | null): boolean {
   return status === 201 && !!queueUrl && /\/queue\/item\/\d+\/?$/.test(queueUrl);
 }
@@ -132,6 +149,7 @@ type JenkinsParameterDefinition = {
   defaultParameterValue?: { value?: unknown } | null;
 };
 
+/** Extrait la liste des définitions de paramètres Jenkins depuis les métadonnées brutes d'un job. */
 export function getJenkinsParameterDefinitions(metadata: any): JenkinsParameterDefinition[] {
   const property = (metadata?.property || []).find((item: any) =>
     item?._class === 'hudson.model.ParametersDefinitionProperty'
@@ -139,6 +157,7 @@ export function getJenkinsParameterDefinitions(metadata: any): JenkinsParameterD
   return Array.isArray(property?.parameterDefinitions) ? property.parameterDefinitions : [];
 }
 
+/** Construit le corps de requête des paramètres Jenkins à partir des définitions du job, en validant chaque override contre la liste connue et en masquant les valeurs sensibles. */
 export function resolveJenkinsParameters(
   definitions: JenkinsParameterDefinition[],
   trustedOverrides: Record<string, unknown> = {},
@@ -162,82 +181,43 @@ export function resolveJenkinsParameters(
     if (!overridden && !hasDefault) throw new Error('Required Jenkins parameter has no trusted value');
     const value = overridden ? trustedOverrides[name] : definition.defaultParameterValue!.value;
     if (value === undefined || value === null) throw new Error('Required Jenkins parameter has no trusted value');
-    // A sensitive Jenkins default remains inside Jenkins. Omitting it from the
-    // request applies that default without copying it into backend logs/memory.
     if (!sensitive) body.append(name, typeof value === 'boolean' ? String(value) : String(value));
     audit.push({ name, source: overridden ? 'PROJECT_ALLOWED_OVERRIDE' : 'JENKINS_DEFAULT', sensitive });
   }
   return { body, audit };
 }
 
+/** Choisit l'endpoint Jenkins à appeler selon que le job attend des paramètres ou non. */
 export function selectJenkinsTriggerEndpoint(parameterized: boolean): 'build' | 'buildWithParameters' {
   return parameterized ? 'buildWithParameters' : 'build';
 }
 
 export type PrValidationStatus = 'REQUESTED' | 'QUEUED' | 'RUNNING' | 'COMPLETED' | 'FAILED';
 
+/** Calcule l'identité déterministe (hash SHA-256) d'une demande de validation de PR, à partir du projet, du numéro de PR, du SHA de tête et du lot. */
 export function prValidationIdentity(projectId: string, prNumber: number, prHeadSha: string, batchId: string): string {
   return createHash('sha256').update(`${projectId}\n${prNumber}\n${prHeadSha.toLowerCase()}\n${batchId}`).digest('hex');
 }
 
-// R80.2 — identity for an EXPLICIT, human-authorized same-SHA revalidation
-// (see reRunPrValidation). Deliberately a DIFFERENT hash function from
-// prValidationIdentity above, not that function extended with an extra
-// epoch parameter: every historical persisted prValidationRequest.
-// validationRequestId was computed by the 4-field formula above, and
-// sameIdentity comparisons throughout requestPrValidation/saveValidation
-// compare freshly-computed values against those persisted ones. Changing
-// the base formula's shape (even by adding an epoch param defaulting to 0)
-// would silently break every existing persisted identity across every
-// project/incident that predates this change — never worth the risk for a
-// feature only the NEW rerun path needs. `epoch` (>=1) is never derived
-// from this identity string alone; the caller (reRunPrValidation) always
-// carries and compares the numeric `epoch` field explicitly, this hash is
-// only the value threaded through Jenkins/WF3 the same way the base
-// identity already is.
+/** Identité dédiée à une revalidation explicite sur le même SHA (différente de prValidationIdentity pour ne jamais invalider les identités déjà persistées). */
 export function prValidationRevalidationIdentity(projectId: string, prNumber: number, prHeadSha: string, batchId: string, epoch: number): string {
   return createHash('sha256').update(`${projectId}\n${prNumber}\n${prHeadSha.toLowerCase()}\n${batchId}\nrevalidation\n${Number(epoch)}`).digest('hex');
 }
 
-// R79 — the sha a candidate's OWN writes are based on, for fetching its
-// pre-edit file content. `fixRequest.baselineSha` is the ORIGINAL
-// source-scan commit (used for the unrelated Sonar scanner-regression
-// diff) and only coincides with a candidate's real git parent on a batch's
-// very first attempt; a corrective (2nd+) attempt's real parent is whatever
-// PR head it was dispatched on top of, already recorded verbatim as
-// correctiveDispatch.blockedSha. Generic: reads only structural
-// dispatch/attempt bookkeeping, never a project-specific field/class name.
+/** Détermine le SHA de base réel d'une tentative de correction (celui de son parent git véritable, pas forcément le SHA source d'origine). */
 export function resolveDefaultValueSemanticsBaseSha(fixRequest: any): string {
   const correctiveBase = fixRequest?.correctiveDispatch?.blockedSha;
   if (isFullGitSha(correctiveBase)) return String(correctiveBase).toLowerCase();
   return String(fixRequest?.baselineSha || '').toLowerCase();
 }
 
-// R79 — true iff this batch's OWN corrective dispatch declares a
-// DEFAULT_VALUE_SEMANTICS_DEFECT blocking cause, i.e. the remediation's
-// stated purpose IS the invariant default-value-semantics.ts checks. Never
-// references a project-specific type/field/class name — only the
-// structural blockingCauses[].type tag WF2/backend already define.
+/** Indique si la tentative corrective en cours a été déclenchée spécifiquement pour corriger un défaut de sémantique de valeur par défaut. */
 export function correctiveBlockingCausesDeclareDefaultValueSemanticsDefect(fixRequest: any): boolean {
   const causes = fixRequest?.correctiveDispatch?.correctiveContext?.blockingCauses;
   return Array.isArray(causes) && causes.some((cause: any) => cause?.type === 'DEFAULT_VALUE_SEMANTICS_DEFECT');
 }
 
-// R79 — true iff at least one of `checkedFieldPairs` matches (exactly, on
-// all four identity fields) a DEFAULT_VALUE_SEMANTICS_DEFECT blocking
-// cause's own (sourceType, sourceField, candidateType, candidateField), AND
-// that specific pair's own verdict is NOT PROVEN_DEFECT (a proven defect on
-// the relevant pair already blocks via the top-level verdict check — this
-// flag only needs to distinguish "the required pair came back safe" from
-// "no relevant pair was ever checked"). Never references a project-specific
-// type/field name — only the generic identity fields blockingCauses and
-// checkedFieldPairs already both carry.
-// R80 — generic over ANY registered rule type (RULE_REGISTRY), never
-// assuming a fixed 4-field identity shape: identityMatches() compares
-// exactly the identity keys the matched rule itself declares. Still keyed
-// off `cause.type` because that is (and remains) the platform's own
-// corrective-dispatch contract field naming which rule a blocking cause
-// is — not a framework/project literal.
+/** Vérifie si au moins une paire de champs vérifiée correspond exactement à une cause bloquante enregistrée et que son verdict n'est pas un défaut prouvé. */
 export function defaultValueSemanticsRelevantPairWasChecked(
   fixRequest: any,
   checkedFieldPairs: ReadonlyArray<{ verdict: string; ruleType?: string; [key: string]: unknown }>,
@@ -249,15 +229,12 @@ export function defaultValueSemanticsRelevantPairWasChecked(
   return relevantCauses.some((cause: any) => {
     const rule = RULE_REGISTRY[cause.type];
     return checkedFieldPairs.some(pair => pair.verdict !== 'PROVEN_DEFECT'
-      && (pair.ruleType === undefined || pair.ruleType === cause.type) // legacy static pairs (pre-R80) carry no ruleType — still matched by identity alone
+      && (pair.ruleType === undefined || pair.ruleType === cause.type)
       && identityMatches(rule, pair as Record<string, string>, cause));
   });
 }
 
-// Canonical `owner/repo` form of any GitHub remote (URL or already-canonical
-// string). Single source of truth so the reconciler's SHA correlation compares
-// Jenkins' git remoteUrls against the project repo exactly as requestPrValidation
-// derived it.
+/** Normalise n'importe quelle forme d'URL distante GitHub (SSH, HTTPS, déjà canonique) en `owner/repo` minuscule. */
 export function canonicalGitRepo(value: unknown): string {
   return String(value || '')
     .replace(/^git@github\.com:/, '')
@@ -268,10 +245,7 @@ export function canonicalGitRepo(value: unknown): string {
     .toLowerCase();
 }
 
-// The exact PFE_VALIDATION_CONTEXT string the platform issued to Jenkins
-// (encodePrValidationContext -> base64url). Jenkins echoes it back verbatim as a
-// build parameter; decoding it is the strongest correlation the Jenkins-only
-// reconciler has — it carries the exact validationRequestId.
+/** Décode le paramètre `PFE_VALIDATION_CONTEXT` renvoyé par Jenkins (base64url/base64 + JSON) pour retrouver le contexte de validation d'origine. */
 export function decodeJenkinsValidationContext(rawValue: unknown): any | null {
   if (typeof rawValue !== 'string' || !rawValue) return null;
   for (const encoding of ['base64url', 'base64'] as const) {
@@ -283,15 +257,7 @@ export function decodeJenkinsValidationContext(rawValue: unknown): any | null {
   return null;
 }
 
-// R72B — deterministic fallback correlation for a stale QUEUED/RUNNING validation
-// whose persisted queueId matches no Jenkins build (proven live on PR-24: the
-// platform POSTed queue item 1496, but Jenkins' multibranch machinery superseded
-// it and the WorkflowRun that actually executed carries queueId 1505). Never
-// guesses by "latest build": a build only qualifies when EVERY independent fact
-// lines up — terminal, started after the request, exact PR-head SHA on the
-// project's own repo (never the shared library), and the exact validationRequestId
-// carried in PFE_VALIDATION_CONTEXT. The caller must still reject 0 matches
-// (STILL_QUEUED) and >1 matches (CORRELATION_AMBIGUOUS).
+/** Vérifie la condition liée à Jenkins construction Matches PR validation. */
 export function jenkinsBuildMatchesPrValidation(
   build: any,
   criteria: { expectedPrHeadSha: string; validationRequestId: string; repository: string; notBefore: number },
@@ -321,6 +287,7 @@ export function jenkinsBuildMatchesPrValidation(
     && String(context.expectedPrHeadSha || '').toLowerCase() === expectedSha);
 }
 
+/** Encode le contexte de validation de PR en base64url pour le transmettre à Jenkins comme paramètre de build. */
 export function encodePrValidationContext(context: Record<string, unknown>): string {
   return Buffer.from(JSON.stringify(context)).toString('base64url');
 }
@@ -341,6 +308,7 @@ export type WorkflowBatchStatusInput = {
   failureCode?: string;
   failureSummary?: string;
   failureNode?: string;
+  manualReviewRequired?: boolean;
   prUrl?: string;
   prNumber?: number;
   completenessPassed?: boolean;
@@ -364,11 +332,7 @@ export type WorkflowBatchStatusInput = {
   verificationEvidence?: unknown;
 };
 
-// R76 -- observability only. Whitelists exact fields, re-caps evidence tails,
-// re-applies redaction server-side (never trusts the WF2 payload blindly),
-// and degrades to null on anything malformed rather than throwing -- a
-// missing/invalid evidence summary must never block persisting the
-// failureCode/failureNode/failureSummary fields that already exist today.
+/** Retire les informations sensibles de les preuves de vérification. */
 export function sanitizeVerificationEvidence(input: unknown): VerificationEvidence | null {
   if (!input || typeof input !== 'object') return null;
   const raw: any = input;
@@ -391,17 +355,25 @@ export type StaleDispatchRecoveryInput = {
   attemptCount: number;
 };
 
+// WF2 cancellation (Phase 2, 2026-10-04) -- CANCELLED is treated exactly
+// like FIX_FAILED by the retry machinery: a cancelled remediation is just
+// as retryable as a failed one, never a dead end. Kept as a 2-element list
+// rather than hardcoding a second literal everywhere this function's shape
+// is mirrored.
+const RETRYABLE_FIX_REQUEST_STATUSES = ['FIX_FAILED', 'CANCELLED'];
+/** Détermine si une demande de correction échouée ou annulée peut être retentée (statut, éligibilité et absence de tentative plus récente déjà en cours). */
 export function canRetryFixRequest(fixRequest: any): boolean {
-  if (fixRequest?.status !== 'FIX_FAILED' || fixRequest?.retryEligible !== true) return false;
+  if (!RETRYABLE_FIX_REQUEST_STATUSES.includes(fixRequest?.status) || fixRequest?.retryEligible !== true) return false;
   const attemptCount = Number(fixRequest.attemptCount);
   if (!Number.isInteger(attemptCount) || attemptCount < 1) return false;
   const attempts = Array.isArray(fixRequest.attempts) ? fixRequest.attempts : [];
   const currentAttempt = attempts.find((attempt: any) => Number(attempt.attempt) === attemptCount);
-  if (!currentAttempt || currentAttempt.status !== 'FIX_FAILED') return false;
+  if (!currentAttempt || !RETRYABLE_FIX_REQUEST_STATUSES.includes(currentAttempt.status)) return false;
   return !attempts.some((attempt: any) => Number(attempt.attempt) > attemptCount
-    && ['FIX_STARTING', 'DISPATCHED', 'PR_CREATED', 'VALIDATING'].includes(String(attempt.status)));
+    && ['FIX_STARTING', 'DISPATCHED', 'PR_CREATED', 'VALIDATING', 'CANCEL_REQUESTED'].includes(String(attempt.status)));
 }
 
+/** Détermine quel workflow n8n (WF2/WF4/WF5) doit traiter un problème donné, selon sa source/scanner d'origine. */
 export function remediationWorkflowFor(finding: any): RemediationWorkflow | null {
   const source = String(finding?.source || '').toUpperCase();
   const stage = String(finding?.stage || '').toLowerCase();
@@ -410,10 +382,12 @@ export function remediationWorkflowFor(finding: any): RemediationWorkflow | null
     : source === 'DOCKER' || stage === 'docker' || stage === 'dockerfile' ? 'WF5' : null;
 }
 
+/** Calcule l'identité déterministe d'un lot de corrections (hash de l'incident + des identifiants de problèmes triés). */
 export function remediationBatchIdentity(incidentId: string, findingIds: string[]): string {
   return createHash('sha256').update(`${incidentId}\n${[...new Set(findingIds)].sort().join('\n')}`).digest('hex');
 }
 
+/** Valide et construit un lot de correction à partir des identifiants demandés : existence, éligibilité à l'auto-fix, et cohérence de la stratégie de correction. */
 export function resolveRemediationBatch(allFindings: any[], requestedIds: string[]) {
   const findingIds = [...new Set((requestedIds || []).map(String).map(v => v.trim()).filter(Boolean))].sort();
   if (!findingIds.length) throw new BadRequestException('Au moins un identifiant technique findingId exact est requis.');
@@ -435,20 +409,9 @@ export function resolveRemediationBatch(allFindings: any[], requestedIds: string
   return { findingIds, findings, workflow: routes[0] as RemediationWorkflow };
 }
 
-// R69 — workflowFinding() is called on TWO genuinely different shapes: raw
-// scanner/incident findings (Sonar/Trivy/OWASP/ZAP, always carrying `.id`
-// and/or `.key`, never `.findingId` — see collectFindings()/startFix()
-// above) when building a fresh batch, AND on the function's OWN already-
-// canonicalized persisted output (fixRequest.findings[], which only ever
-// carries `.findingId`) when a corrective attempt rebuilds a WF2 payload
-// from persisted state (correctAndRevalidate). The previous `finding?.id ||
-// finding?.key` resolution only understood the first shape; fed the second,
-// it silently produced the STRING "undefined" (proven: execution 2023027's
-// FINDING_CORRELATION_MISMATCH). resolveCanonicalFindingId() makes the
-// function idempotent — safe on either input shape — and never lets a
-// missing/sentinel value through.
 const MISSING_FINDING_ID_SENTINELS = new Set(['undefined', 'null', '']);
 
+/** Résout l'identifiant canonique d'un problème, qu'il provienne d'un finding brut (`.id`/`.key`) ou déjà canonicalisé (`.findingId`), en rejetant les valeurs sentinelles. */
 function resolveCanonicalFindingId(finding: any): string | null {
   for (const candidate of [finding?.findingId, finding?.id, finding?.key]) {
     if (candidate === undefined || candidate === null) continue;
@@ -459,6 +422,7 @@ function resolveCanonicalFindingId(finding: any): string | null {
   return null;
 }
 
+/** Transforme un problème brut en charge utile normalisée pour WF2/WF4/WF5, en échouant explicitement si aucun identifiant exploitable n'existe. */
 export function workflowFinding(finding: any) {
   const findingId = resolveCanonicalFindingId(finding);
   if (!findingId) {
@@ -484,8 +448,14 @@ export function workflowFinding(finding: any) {
   };
 }
 
+/** Identité technique du balayage automatique des validations PR (traçée dans reconciledBy / lastCallbackRedeliveryBy). */
+const PR_VALIDATION_RECONCILER = { id: 'system-pr-validation-reconciler', role: 'admin' };
+
 @Injectable()
-export class IncidentsService {
+export class IncidentsService implements OnModuleInit, OnModuleDestroy {
+  private prValidationSweep?: NodeJS.Timeout;
+
+  /** Initialise les dépendances et l’état de ce composant. */
   constructor(
     @InjectRepository(Incident) private readonly repo: Repository<Incident>,
     @InjectRepository(Project) private readonly projectRepo: Repository<Project>,
@@ -494,19 +464,49 @@ export class IncidentsService {
     private readonly candidateVerification: CandidateVerificationService,
   ) {}
 
-  /**
-   * Retire les secrets du projet lie avant de renvoyer un incident.
-   * Les incidents sont charges avec relations: ['project'], ce qui
-   * exposerait sinon les tokens Jenkins/Sonar/GitHub dans l'API.
-   */
+  /** Démarre le balayage périodique des validations PR restées actives (callback WF3 perdu), sauf désactivation explicite. */
+  onModuleInit() {
+    if (process.env.PR_VALIDATION_AUTO_RECONCILE === 'false' || !redeliveryConfig()) return;
+    const everyMs = Number(process.env.PR_VALIDATION_AUTO_RECONCILE_INTERVAL_MS || 5 * 60_000);
+    this.prValidationSweep = setInterval(() => {
+      this.sweepStalePrValidations().catch(e => console.warn(`[pr-validation] balayage automatique en échec : ${e?.message || e}`));
+    }, everyMs);
+    this.prValidationSweep.unref?.();
+  }
+
+  /** Arrête le balayage périodique. */
+  onModuleDestroy() {
+    if (this.prValidationSweep) clearInterval(this.prValidationSweep);
+  }
+
+  /** Réconcilie chaque validation PR encore QUEUED/RUNNING depuis plus de PR_VALIDATION_STALE_MS (10 min par défaut). */
+  async sweepStalePrValidations() {
+    const staleMs = Number(process.env.PR_VALIDATION_STALE_MS || 10 * 60_000);
+    const rows: { id: string }[] = await this.repo.query(
+      `SELECT id FROM incidents WHERE metadata->'prValidationRequest'->>'status' IN ('QUEUED', 'RUNNING')
+        AND COALESCE((metadata->'prValidationRequest'->>'updatedAt')::timestamptz, "updatedAt") < now() - ($1::double precision * interval '1 millisecond')`,
+      [staleMs]);
+    for (const { id } of rows) {
+      try {
+        const result: any = await this.reconcilePrValidation(id, PR_VALIDATION_RECONCILER);
+        if (result?.reconciled || result?.reason === 'CALLBACK_REDELIVERED') console.log(`[pr-validation] incident ${id} : ${result.reason || 'RECONCILED'}`);
+      } catch (e: any) {
+        console.warn(`[pr-validation] incident ${id} non réconcilié automatiquement : ${e?.message || e}`);
+      }
+    }
+  }
+
+  /** Retire les secrets du projet lie avant de renvoyer un incident. */
   private sanitizeIncident(incident: any) {
     return sanitizeEntityProject(incident);
   }
 
+  /** Version d'instance de canonicalGitRepo, pour normaliser une URL de dépôt au sein du service. */
   private canonicalRepository(value: string): string {
     return canonicalGitRepo(value);
   }
 
+  /** Récupère les détails d'une pull request GitHub (SHA de tête, état, etc.) pour le dépôt d'un projet. */
   private async githubPullRequest(project: Project, prNumber: number): Promise<any> {
     const repository = this.canonicalRepository(project.githubRepo);
     if (!repository || repository.split('/').length !== 2) {
@@ -531,6 +531,7 @@ export class IncidentsService {
     return response.json();
   }
 
+  /** Récupère le contenu et le SHA blob d'un fichier du dépôt GitHub à un commit donné. */
   private async githubFileAtSha(project: Project, path: string, sha: string): Promise<{ sha: string; content: string }> {
     const repository = this.canonicalRepository(project.githubRepo);
     const headers: Record<string, string> = { Accept: 'application/vnd.github+json', 'User-Agent': 'pfe-post-write-recovery' };
@@ -547,6 +548,7 @@ export class IncidentsService {
     return { sha: String(body.sha).toLowerCase(), content: Buffer.from(body.content.replace(/\n/g, ''), 'base64').toString('utf8') };
   }
 
+  /** Lit le SHA de tête actuel d'une branche GitHub du dépôt du projet. */
   private async githubBranchHead(project: Project, branch: string): Promise<string> {
     const repository = this.canonicalRepository(project.githubRepo);
     const headers: Record<string, string> = { Accept: 'application/vnd.github+json', 'User-Agent': 'pfe-post-write-recovery' };
@@ -561,6 +563,7 @@ export class IncidentsService {
     return head;
   }
 
+  /** Vérifie auprès de n8n s'il existe déjà une exécution WF2 active, pour éviter un double déclenchement. */
   private async hasActiveWf2Execution(): Promise<boolean> {
     const apiKey = String(process.env.N8N_API_KEY || '').trim();
     if (!apiKey) throw new ServiceUnavailableException({ code: 'POST_WRITE_RECOVERY_ACTIVE_EXECUTION_UNVERIFIED' });
@@ -580,6 +583,7 @@ export class IncidentsService {
     return executions.length > 0;
   }
 
+  /** Revérifie sur GitHub que les fichiers déclarés écrits par une récupération post-écriture existent réellement au SHA annoncé. */
   private async verifyRecoveryRemoteFiles(project: Project, input: PostWriteRecoveryInput): Promise<void> {
     for (const file of input.evidence.files) {
       const remote = await this.githubFileAtSha(project, file.path, input.expectedHeadSha);
@@ -594,6 +598,7 @@ export class IncidentsService {
     }
   }
 
+  /** Liste les incidents, filtrables par projet et statut, bornés à une taille maximale. */
   async findAll(projectId?: string, status?: string, size?: number) {
     const where: any = {};
     if (projectId) where.projectId = projectId;
@@ -614,33 +619,26 @@ export class IncidentsService {
     return this.manualRemediation.attachFindingTaskIds(incidents.map(i => this.sanitizeIncident(i)));
   }
 
+  /** Récupère un incident par son identifiant, ou lève une 404 s'il n'existe pas. */
   async findOne(id: string) {
     const i = await this.repo.findOne({ where: { id }, relations: ['project'] });
     if (!i) throw new NotFoundException('Incident introuvable.');
     return this.sanitizeIncident(i);
   }
 
-  // Increment 1 (sélection multiple CVE, cadrage OPTION A) — findOne() elle-
-  // même reste STRICTEMENT inchangée : c'est un helper interne réutilisé par
-  // ~12 méthodes (startFix, approve, retryFix, reject, pr-validation, …,
-  // grep "this.findOne(" dans ce fichier) qui n'ont besoin ni de la requête
-  // findingTaskId supplémentaire ni de dépendre du mock manualRemediation
-  // pour fonctionner — la preuve concrète : brancher l'enrichissement DANS
-  // findOne() cassait modify-failed-selection.spec.ts (son fake
-  // manualRemediation n'implémente que syncIncident()) en plus d'ajouter une
-  // requête inutile à chaque appel interne. Seul IncidentsController.findOne
-  // (GET /incidents/:id, la réponse qui atteint réellement le frontend) a
-  // besoin de l'enrichissement -- d'où ce point d'entrée séparé.
+  /** Increment 1 (sélection multiple CVE, cadrage OPTION A). */
   async findOneForClient(id: string) {
     const [enriched] = await this.manualRemediation.attachFindingTaskIds([await this.findOne(id)]);
     return enriched;
   }
 
+  /** Calcule les cycles de convergence (gouvernance des étapes) d'un projet à partir de ses incidents. */
   async convergence(projectId: string) {
     const incidents = await this.repo.find({ where: { projectId }, order: { createdAt: 'ASC' } });
     return { projectId, cycles: buildConvergenceCycles(incidents) };
   }
 
+  /** Crée un nouvel incident, typiquement à partir d'un événement Jenkins reçu via webhook. */
   async create(dto: Partial<Incident> & { jenkinsJobName?: string; buildNumber?: number }) {
     // ── Liaison forte : résoudre le projet via jenkinsJobName ──
     if (!dto.projectId && dto.jenkinsJobName) {
@@ -660,6 +658,7 @@ export class IncidentsService {
       throw new BadRequestException('projectId ou jenkinsJobName requis pour créer un incident.');
     }
 
+    dto = sanitizeIncidentPatch(dto) as typeof dto;
     const incident = this.repo.create(dto);
     const saved = await this.repo.save(incident);
     await this.manualRemediation.syncIncident(saved);
@@ -667,41 +666,37 @@ export class IncidentsService {
     return saved;
   }
 
+  /** Met à jour un incident existant avec les champs fournis, après assainissement du patch. */
   async update(id: string, dto: Partial<Incident>) {
-    // Seul le PUT qui reporte explicitement une errorReason passe par le
-    // helper (normalise errorDetail/errorStep à null si absents) — un
-    // update normal (statut, prUrl, metadata...) sans errorReason n'est pas
-    // touché, comportement identique à avant.
-    let payload: any = (dto as any).errorReason
-      ? {
-          ...dto,
-          ...writeErrorToEntity({
-            reason: (dto as any).errorReason,
-            detail: (dto as any).errorDetail,
-            step: (dto as any).errorStep,
-          }),
-        }
-      : dto;
-    if ((dto as any).prUrl && (dto as any).status === IncidentStatus.FIX_GENERATED) {
-      const current = await this.repo.findOne({ where: { id } });
+    const safe = sanitizeIncidentPatch(dto);
+    await this.repo.manager.transaction(async manager => {
+      const repo = manager.getRepository(Incident);
+      const current = await repo.findOne({ where: { id }, lock: { mode: 'pessimistic_write' } });
       if (!current) throw new NotFoundException('Incident introuvable.');
-      const metadata = current.metadata || {};
-      payload = { ...payload, metadata: { ...metadata, fixRequest: {
-        ...((metadata as any).fixRequest || {}), status: 'PR_CREATED', prUrl: (dto as any).prUrl, prCreatedAt: new Date().toISOString(),
-      } } };
-    }
-    await this.repo.update(id, payload);
+      const payload: any = { ...safe };
+      if (safe.metadata !== undefined) payload.metadata = { ...(current.metadata || {}), ...userMetadata(safe.metadata) };
+      if (safe.errorReason) Object.assign(payload, writeErrorToEntity({ reason: safe.errorReason, detail: safe.errorDetail, step: safe.errorStep }));
+      // Generic writes never transition the backend-owned remediation lifecycle.
+      await repo.update(id, payload);
+    });
     const updated = await this.findOne(id);
     await this.manualRemediation.syncIncident(updated as Incident);
     this.gateway.emit('incident:updated', updated);
     return updated;
   }
 
-  /**
-   * Transition canonique appelée par WF2, et par la procédure contrôlée de
-   * réconciliation. Toutes les données de corrélation sont validées sous le
-   * verrou de l'incident. Aucun callback ne peut créer un nouveau batch.
-   */
+  /** Fusionne un patch de métadonnées qui ne touche pas au cycle de vie de l'incident (évite d'écraser l'état de workflow en cours). */
+  private async mergeNonLifecycleMetadata(id: string, patch: Record<string, any>) {
+    await this.repo.manager.transaction(async manager => {
+      const repo = manager.getRepository(Incident);
+      const current = await repo.findOne({ where: { id }, lock: { mode: 'pessimistic_write' } });
+      if (!current) throw new NotFoundException('Incident introuvable.');
+      const { fixRequest: ignored, ...other } = patch;
+      await repo.update(id, { metadata: { ...(current.metadata || {}), ...other } } as any);
+    });
+  }
+
+  /** Transition canonique appelée par WF2, et par la procédure contrôlée de réconciliation. */
   async saveWorkflowBatchStatus(id: string, input: WorkflowBatchStatusInput) {
     const result = await this.repo.manager.transaction(async manager => {
       const repo = manager.getRepository(Incident);
@@ -734,6 +729,12 @@ export class IncidentsService {
         throw new ConflictException('Le statut WF2 ne correspond pas à l’identité de cette tentative.');
       }
 
+      if (attemptCount === Number(fix.attemptCount) && fix.n8nExecutionId && fix.n8nExecutionId !== executionId) {
+        throw new ConflictException('Le callback ne correspond pas à l’exécution enregistrée.');
+      }
+      if (fix.status === 'CANCELLED') return { applied: false, duplicate: false, stale: true, incident,
+        status: fix.status, code: 'STALE_OR_TERMINAL_ATTEMPT_CALLBACK' };
+
       const callbackStatus = String(input.status || '').toUpperCase() as WorkflowBatchStatus;
       if (!['FAILED', 'PR_CREATED'].includes(callbackStatus)) {
         throw new BadRequestException('Statut de workflow non pris en charge.');
@@ -748,13 +749,7 @@ export class IncidentsService {
       const incompleteReconciliation = input.reconciliation === true
         && String(input.failureCode || '') === 'WF2_BATCH_INCOMPLETE'
         && fix.status === 'PR_CREATED';
-      // R21-AE — a callback belongs to exactly one attempt. Once another
-      // human-authorized attempt exists, or once this attempt has reached a
-      // terminal state (including governed stale-dispatch recovery), it can
-      // never mutate the current request again. This check deliberately runs
-      // under the same pessimistic lock as recovery: first terminal writer
-      // wins and state can never be resurrected.
-      const terminalAttempt = ['FIX_FAILED', 'PR_CREATED', 'VALIDATING', 'VALIDATED', 'REJECTED']
+      const terminalAttempt = ['FIX_FAILED', 'PR_CREATED', 'VALIDATING', 'VALIDATED', 'REJECTED', 'CANCELLED']
         .includes(String(attempt.status));
       if (attemptCount !== Number(fix.attemptCount) || (terminalAttempt && !incompleteReconciliation)) {
         return {
@@ -780,23 +775,9 @@ export class IncidentsService {
         return { applied: false, duplicate: false, stale: true, incident, status: fix.status };
       }
 
+      /** Met les valeurs au même format avant comparaison. */
       const normalize = (values: unknown): string[] => [...new Set(Array.isArray(values)
         ? values.map(String).map(value => value.trim()).filter(Boolean) : [])].sort();
-      // R75 — corrective cardinality invariant. A corrective attempt's active
-      // defect identity is correctiveIssues[] (one per proven blocking cause),
-      // never the historical finding count/location — WF2 (R74/R75) already
-      // plans and writes against exactly that identity. Per cause, prefer its
-      // OWN `findingId` when present (e.g. the older TARGET_FINDING_INVALID
-      // shape, which already names a specific still-invalid historical
-      // finding 1:1 — synthesizing an id for that cause would be a
-      // regression, not a fix); only synthesize `batchId:issue-<index>` for a
-      // cause that carries no such field (e.g. DEFAULT_VALUE_SEMANTICS_DEFECT).
-      // This mirrors, field-for-field, the SAME rule WF2 itself applies when
-      // constructing correctiveIssues[].candidateId, from the SAME evidence
-      // (fix.correctiveDispatch.correctiveContext.blockingCauses). It also
-      // avoids requiring the corrective candidate's grounded target file to
-      // equal the historical finding's file — which R73 can deliberately
-      // make untrue.
       const isCorrectiveAttempt = attempt.corrective === true;
       const correctiveBlockingCauses = isCorrectiveAttempt && Array.isArray(fix.correctiveDispatch?.correctiveContext?.blockingCauses)
         ? fix.correctiveDispatch.correctiveContext.blockingCauses : [];
@@ -865,15 +846,18 @@ export class IncidentsService {
         status: callbackStatus, recordedAt: now,
         source: input.reconciliation ? 'RECONCILIATION' : 'WF2_CALLBACK',
       });
+      const manualReview = callbackStatus === 'FAILED' && isManualReviewFailure(input);
       const nextFix = callbackStatus === 'FAILED'
         ? { ...fix, status: 'FIX_FAILED', attempts, workflowEvents: events, failedAt: now,
-            lastErrorCode: String(input.failureCode || 'WF2_EXECUTION_ERROR').slice(0, 80),
-            lastError: String(input.failureSummary || 'Erreur d’exécution WF2').slice(0, 500),
+            lastErrorCode: manualReview ? WF2_MANUAL_REVIEW_CODE : String(input.failureCode || 'WF2_EXECUTION_ERROR').slice(0, 80),
+            lastError: manualReview ? MANUAL_REVIEW_SUMMARY : String(input.failureSummary || 'Erreur d’exécution WF2').slice(0, 500),
+            manualReviewRequired: manualReview,
             failedNode: String(input.failureNode || '').slice(0, 120) || null,
             verificationEvidence,
             workflowId, workflowExecutionId: executionId,
             completionEvidence: input.completionEvidence || fix.completionEvidence || null,
-            retryEligible: true }
+            // Relancer le même lot redonnerait le même refus : seule une autre sélection est proposée.
+            retryEligible: !manualReview }
         : { ...fix, ...commonPrCreatedFields({
               prUrl: String(input.prUrl), prNumber: Number(input.prNumber), prHeadSha: String(input.prHeadSha), now,
               evidence: { processedFindingIds, candidateAcceptedFindingIds: acceptedFindingIds,
@@ -884,9 +868,19 @@ export class IncidentsService {
             // supplied it, but never synthesize scanner-resolution semantics.
             effectiveRemediatedFindingIds: normalize(input.effectiveRemediatedFindingIds),
             verifiedFiles: normalize(input.verifiedFiles) };
+      if (callbackStatus === 'PR_CREATED') {
+        // La PR peut toucher plus de fichiers que ceux des constats sélectionnés : on les réserve aussi.
+        const extended = await extendSonarFiles(manager,
+          { projectId: incident.projectId, incidentId: id, batchId: fix.batchId, files: [...expectedFiles, ...verifiedFiles] });
+        nextFix.fileLock = { ...(fix.fileLock || {}), reservedAt: fix.fileLock?.reservedAt || now,
+          files: [...new Set([...(fix.fileLock?.files || []), ...extended.files])].sort(),
+          ...(extended.contested.length ? { contestedFiles: extended.contested } : {}) };
+      }
       const nextMetadata = callbackStatus === 'PR_CREATED'
         ? this.invalidateActiveValidationForNewSha({ ...metadata, fixRequest: nextFix }, String(input.prHeadSha || ''), 'CORRECTIVE_PR_CREATED')
-        : { ...metadata, fixRequest: nextFix };
+        : manualReview
+          ? reclassifyFindingsAsManual({ ...metadata, fixRequest: nextFix }, expectedFindingIds)
+          : { ...metadata, fixRequest: nextFix };
       const patch: any = { metadata: nextMetadata };
       if (callbackStatus === 'PR_CREATED') {
         if (!/^https:\/\/github\.com\/[^/]+\/[^/]+\/pull\/\d+$/i.test(String(input.prUrl || ''))
@@ -904,21 +898,6 @@ export class IncidentsService {
       const updated = await this.findOne(id);
       this.gateway.emit('incident:updated', updated);
     }
-    // BRIQUE 4 — AUTOMATIC INITIAL PR VALIDATION: fired exactly once per real
-    // WF2 PR_CREATED callback (never on a duplicate/stale/FAILED outcome —
-    // `result.applied` is only true for a genuinely NEW, freshly-persisted
-    // transition, thanks to the eventIdentity dedup and terminal-attempt
-    // guards already enforced inside the transaction above). PR number, URL,
-    // branch and head SHA are already durably persisted on `nextFix`/
-    // `incident.prUrl` at this point (patch applied above). Fire-and-forget,
-    // exactly like the existing WF4/WF5 auto-routing pattern in
-    // webhooks.service.ts#routeToOptimizer: must never delay or fail this
-    // callback's response to WF2. requestPrValidation() itself is the ONLY
-    // place that decides REQUESTED/QUEUED/FAILED and is already idempotent
-    // (prValidationRequest.validationRequestId keyed on
-    // projectId+prNumber+prHeadSha+batchId) — a human clicking "Valider la
-    // Pull Request" concurrently, or a second callback slipping past the
-    // outer dedup, can never cause a second business validation run.
     if (result.applied && result.status === 'PR_CREATED') {
       this.dispatchAutomaticInitialPrValidation(id).catch(error => {
         console.warn(`[incidents] automatic initial PR validation failed for incident ${id}: ${error?.message || error}`);
@@ -928,30 +907,13 @@ export class IncidentsService {
       incidentId: id, status: result.status, ...(result.code ? { code: result.code } : {}) };
   }
 
-  // BRIQUE 4 — system-triggered PR validation request, reusing
-  // requestPrValidation() unchanged (same governance, same Jenkins/HEAD_ONLY
-  // gate, same idempotent claim). A synthetic admin actor is used only for
-  // audit attribution (`prValidationRequest.createdBy`) — never bypasses
-  // assertCanApprove. Any failure here (Jenkins unreachable, HEAD_ONLY
-  // unavailable, a conflicting concurrent request, ...) is already durably
-  // recorded on prValidationRequest by requestPrValidation() itself (status
-  // FAILED + failureCode + result) before it throws; this method only
-  // exists so that thrown error can never surface as an unhandled rejection.
-  // Never retried automatically — a human retry (or a later governed
-  // refresh) remains required, exactly like any other FAILED validation.
+  /** Transmet automatique Initial PR validation. */
   private async dispatchAutomaticInitialPrValidation(id: string): Promise<void> {
     const systemActor = { id: 'system-auto-pr-validation', role: 'admin' };
     await this.requestPrValidation(id, systemActor);
   }
 
-  /**
-   * R21-AE — explicit human/admin lifecycle reconciliation for a WF2 dispatch
-   * that never produced a terminal callback. WF2 may already have performed
-   * external side effects, so elapsed time never starts a retry automatically:
-   * this action only moves DISPATCHED -> FIX_FAILED and records who authorized
-   * that lifecycle correction. It never reverses GitHub effects and never
-   * changes scanner/finding evidence.
-   */
+  /** Réconcilie périmé envoi. */
   async reconcileStaleDispatch(id: string, requestId: string, input: StaleDispatchRecoveryInput, user: any) {
     if (!user || String(user.role || '').toLowerCase() !== 'admin') {
       throw new ForbiddenException('Seul un administrateur peut réconcilier un dispatch WF2 obsolète.');
@@ -1036,17 +998,266 @@ export class IncidentsService {
     };
   }
 
+  /** Enregistre exécution Started. */
+
+  // PART 2 -- called by WF2 itself, immediately after intake, to register
+  // its own n8n execution id before anything else happens. Must tolerate
+  // arriving while startFix() is still between FIX_STARTING and DISPATCHED
+  // (see PART 3 below) -- hence accepting both statuses, never assuming one.
+  /** Enregistre qu'une exécution n8n a réellement démarré pour cette demande, afin de pouvoir plus tard l'annuler ou la surveiller. */
+  async recordExecutionStarted(id: string, requestId: string, input: ExecutionStartedInput) {
+    validateExecutionBinding(input);
+    validateRequestIdentifier(requestId);
+    if (!input || requestId !== input.requestId) {
+      throw new ConflictException('L’identifiant de la demande de correction ne correspond pas.');
+    }
+    if (!isPositiveN8nExecutionId(input.executionId)) {
+      throw new BadRequestException('L’identifiant d’exécution n8n est invalide.');
+    }
+    const result = await this.repo.manager.transaction(async manager => {
+      const repo = manager.getRepository(Incident);
+      const incident = await repo.findOne({ where: { id }, lock: { mode: 'pessimistic_write' } });
+      if (!incident) throw new NotFoundException('Incident introuvable.');
+      const metadata: any = incident.metadata || {};
+      const fix: any = metadata.fixRequest || {};
+      if (!matchesActiveAttempt(fix, requestId, input.batchId, input.attemptCount)) {
+        throw new ConflictException('L’exécution WF2 ne correspond pas à la demande de correction active.');
+      }
+      if (fix.workflow !== 'WF2' || (fix.n8nExecutionId && fix.n8nExecutionId !== input.executionId)) {
+        throw new ConflictException('WF2 execution ownership mismatch.');
+      }
+      if (fix.sideEffectsStarted === true) {
+        throw new ConflictException('Execution registration after Git barrier is forbidden.');
+      }
+      const now = new Date().toISOString();
+      // The narrow, critical race this whole feature exists to close: a
+      // cancellation already arrived (and is, by construction of the cancel
+      // endpoint, necessarily BEFORE any persistent Git side effect --
+      // sideEffectsStarted can never be true while status is still
+      // CANCEL_REQUESTED, see the pre-write gate below) -- so it is always
+      // safe to resolve straight to CANCELLED here, never to DISPATCHED.
+      if (fix.status === 'CANCEL_REQUESTED') {
+        const nextFix = cancelledFixRequest({ ...fix, n8nExecutionId: input.executionId,
+          executionRegisteredAt: fix.executionRegisteredAt || now,
+          lastHeartbeatAt: now, executionPhase: 'STARTED' }, now);
+        await repo.update(id, { metadata: { ...metadata, fixRequest: nextFix } } as any);
+        return { cancelRequested: true, cancelled: true };
+      }
+      if (!['FIX_STARTING', 'DISPATCHED'].includes(fix.status)) {
+        // Late/duplicate registration against an already-terminal request
+        // (including a plain CANCELLED with no pending cancellation) --
+        // idempotent no-op, never an error, never overwritten.
+        return { cancelRequested: true, cancelled: fix.status === 'CANCELLED', stale: true, status: fix.status };
+      }
+      const nextFix = { ...fix, n8nExecutionId: input.executionId,
+        executionRegisteredAt: fix.executionRegisteredAt || now,
+        lastHeartbeatAt: now, executionPhase: 'STARTED' };
+      await repo.update(id, { metadata: { ...metadata, fixRequest: nextFix } } as any);
+      return { cancelRequested: false, cancelled: false };
+    });
+    if (result.cancelled) {
+      const updated = await this.findOne(id);
+      this.gateway.emit('incident:updated', updated);
+    }
+    return { success: true, ...result };
+  }
+
+  /** Renvoie pre écriture contrôle pour le traitement ou l’affichage. */
+  async preWriteGate(id: string, requestId: string, input: PreWriteGateInput) {
+    validateExecutionBinding(input);
+    validateRequestIdentifier(requestId);
+    const result = await this.repo.manager.transaction(async manager => {
+      const repo = manager.getRepository(Incident);
+      const incident = await repo.findOne({ where: { id }, lock: { mode: 'pessimistic_write' } });
+      if (!incident) throw new NotFoundException('Incident introuvable.');
+      const metadata: any = incident.metadata || {};
+      const fix: any = metadata.fixRequest || {};
+      if (!input || requestId !== input.requestId || !matchesActiveAttempt(fix, requestId, input.batchId, input.attemptCount)) {
+        throw new ConflictException('La porte d’écriture WF2 ne correspond pas à la demande de correction active.');
+      }
+      if (fix.workflow !== 'WF2' || !isPositiveN8nExecutionId(input.executionId)
+        || fix.n8nExecutionId !== input.executionId
+        || typeof fix.executionRegisteredAt !== 'string' || !Number.isFinite(Date.parse(fix.executionRegisteredAt))) {
+        throw new ConflictException('WF2 execution ownership mismatch.');
+      }
+      const now = new Date().toISOString();
+      if (fix.status === 'CANCEL_REQUESTED') {
+        if (fix.sideEffectsStarted === true) throw new ConflictException('Inconsistent cancellation state.');
+        const nextFix = cancelledFixRequest(fix, now);
+        await repo.update(id, { metadata: { ...metadata, fixRequest: nextFix } } as any);
+        return { allowed: false, cancelRequested: true };
+      }
+      if (isTerminalFixRequestStatus(fix.status)) {
+        // Another terminal outcome already won (e.g. an admin's stale-
+        // dispatch reconciliation raced in) -- never overwritten, never
+        // allowed either: whatever already decided this request's fate
+        // stands.
+        return { allowed: false, cancelRequested: false };
+      }
+      if (!['FIX_STARTING', 'DISPATCHED'].includes(fix.status)) {
+        return { allowed: false, cancelRequested: false };
+      }
+      const nextFix = { ...fix, sideEffectsStarted: true, sideEffectsStartedAt: fix.sideEffectsStartedAt || now,
+        executionPhase: 'GIT_WRITE', lastHeartbeatAt: now };
+      await repo.update(id, { metadata: { ...metadata, fixRequest: nextFix } } as any);
+      return { allowed: true, cancelRequested: false };
+    });
+    if (!result.allowed && result.cancelRequested) {
+      const updated = await this.findOne(id);
+      this.gateway.emit('incident:updated', updated);
+    }
+    return result;
+  }
+
+  /** Annule correction demande. */
+  async cancelFixRequest(id: string, requestId: string, input: CancelFixRequestInput, user: any) {
+    this.assertCanApprove(user);
+    validateRequestIdentifier(requestId);
+    const reason = boundedCancelReason(input?.reason);
+
+    const phase1 = await this.repo.manager.transaction(async manager => {
+      const repo = manager.getRepository(Incident);
+      const incident = await repo.findOne({ where: { id }, lock: { mode: 'pessimistic_write' } });
+      if (!incident) throw new NotFoundException('Incident introuvable.');
+      const metadata: any = incident.metadata || {};
+      const fix: any = metadata.fixRequest || {};
+      if (!fix.requestId || fix.requestId !== requestId) {
+        throw new ConflictException('La demande de correction ciblée est introuvable ou obsolète.');
+      }
+      if (fix.workflow !== 'WF2' || !Number.isInteger(fix.attemptCount) || fix.attemptCount < 1) {
+        throw new ConflictException('Current WF2 attempt cannot be proven.');
+      }
+      if (fix.n8nExecutionId && (!isPositiveN8nExecutionId(fix.n8nExecutionId)
+        || typeof fix.executionRegisteredAt !== 'string' || !Number.isFinite(Date.parse(fix.executionRegisteredAt)))) {
+        throw new ConflictException('Invalid registered execution identifier.');
+      }
+      if (isTerminalFixRequestStatus(fix.status)) {
+        return { outcome: 'terminal' as const, status: fix.status };
+      }
+      if (fix.sideEffectsStarted === true) {
+        return { outcome: 'too_late' as const };
+      }
+      if (!['FIX_STARTING', 'DISPATCHED', 'CANCEL_REQUESTED'].includes(fix.status)) {
+        // Fail-closed: no known non-terminal status besides these three
+        // should ever reach here; never guess a behaviour for one that does.
+        throw new ConflictException('Cette demande de correction ne peut pas être annulée dans son état actuel.');
+      }
+      // B2 vs B16: a concurrent sibling call still resolving (no recorded
+      // attempt error yet) must never trigger a second real n8n stop call --
+      // but once a PRIOR attempt has actually finished and failed
+      // (lastCancelAttemptError set by finalizeCancellation), a fresh cancel
+      // click is a deliberate, explicit retry and must be allowed to try again.
+      const priorAttemptFailed = fix.status === 'CANCEL_REQUESTED' && !!fix.lastCancelAttemptError;
+      const alreadyRequested = fix.status === 'CANCEL_REQUESTED' && !priorAttemptFailed;
+      const now = new Date().toISOString();
+      const nextFix = { ...fix, status: 'CANCEL_REQUESTED',
+        cancelRequestedAt: fix.cancelRequestedAt || now,
+        cancelReason: fix.cancelReason ?? reason,
+        ...(priorAttemptFailed ? { lastCancelAttemptError: null } : {}) };
+      await repo.update(id, { metadata: { ...metadata, fixRequest: nextFix } } as any);
+      return { outcome: 'requested' as const, alreadyRequested, executionId: fix.n8nExecutionId || null, batchId: fix.batchId, attemptCount: fix.attemptCount };
+    });
+
+    if (phase1.outcome === 'terminal') {
+      const updated = await this.findOne(id);
+      this.gateway.emit('incident:updated', updated);
+      return { success: true, status: phase1.status, alreadyTerminal: true };
+    }
+    if (phase1.outcome === 'too_late') {
+      throw new ConflictException({ code: 'CANCELLATION_TOO_LATE',
+        message: 'La correction a déjà commencé à écrire sur GitHub et ne peut plus être annulée automatiquement.' });
+    }
+
+    const updatedAfterRequest = await this.findOne(id);
+    this.gateway.emit('incident:updated', updatedAfterRequest);
+
+    if (phase1.alreadyRequested) {
+      // B2 -- a cancellation is already pending: never call n8n stop a
+      // second time for the same reason it was already called once; just
+      // reflect the current real state.
+      const currentFix: any = (updatedAfterRequest.metadata as any)?.fixRequest || {};
+      return { success: true, status: currentFix.status, duplicate: true,
+        waitingForExecutionRegistration: currentFix.status === 'CANCEL_REQUESTED' && !currentFix.n8nExecutionId };
+    }
+
+    if (!phase1.executionId) {
+      // PART 7 -- cancelled before the execution id was ever registered:
+      // nothing to stop yet. recordExecutionStarted() above will see
+      // CANCEL_REQUESTED and resolve to CANCELLED itself when it arrives.
+      return { success: true, status: 'CANCEL_REQUESTED', waitingForExecutionRegistration: true };
+    }
+
+    const stop = await stopN8nExecution(phase1.executionId);
+    return this.finalizeCancellation(id, requestId, phase1.batchId, phase1.attemptCount, phase1.executionId, stop);
+  }
+
+  /** Prépare le résultat lié à finalize annulation. */
+  private async finalizeCancellation(id: string, requestId: string, batchId: string, attemptCount: number, executionId: string, stop: N8nStopResult) {
+    // Fail-closed: only an outcome that PROVES the execution is no longer
+    // running is allowed to resolve CANCEL_REQUESTED -> CANCELLED. NOT_FOUND
+    // is deliberately excluded -- n8n's own API returns the identical 404
+    // both when the execution is genuinely gone AND when this API key
+    // simply cannot see the workflow (misconfigured scope/sharing); treating
+    // that as "safely stopped" would not be fail-closed.
+    const resolvableOutcomes: N8nStopOutcome[] = ['STOP_SUCCEEDED', 'ALREADY_STOPPED'];
+    const result = await this.repo.manager.transaction(async manager => {
+      const repo = manager.getRepository(Incident);
+      const incident = await repo.findOne({ where: { id }, lock: { mode: 'pessimistic_write' } });
+      if (!incident) throw new NotFoundException('Incident introuvable.');
+      const metadata: any = incident.metadata || {};
+      const fix: any = metadata.fixRequest || {};
+      if (!matchesActiveAttempt(fix, requestId, batchId, attemptCount) || fix.n8nExecutionId !== executionId || fix.status !== 'CANCEL_REQUESTED') {
+        // Something else already resolved this request (a real terminal
+        // callback, an admin reconciliation, the pre-write gate, or even a
+        // second finalization) -- never overwritten.
+        return { status: fix.status, resolved: false, alreadyMoved: true };
+      }
+      if (fix.sideEffectsStarted === true) {
+        // The pre-write gate won the race between phase 1's commit and this
+        // transaction -- never claim CANCELLED once Git writes may have begun.
+        return { status: fix.status, resolved: false, tooLateDiscovered: true };
+      }
+      if (!resolvableOutcomes.includes(stop.outcome)) {
+        const nextFix = { ...fix, lastCancelAttemptError: stop.outcome, lastCancelAttemptAt: new Date().toISOString() };
+        await repo.update(id, { metadata: { ...metadata, fixRequest: nextFix } } as any);
+        return { status: 'CANCEL_REQUESTED', resolved: false, stopOutcome: stop.outcome };
+      }
+      const now = new Date().toISOString();
+      const attempts = (Array.isArray(fix.attempts) ? fix.attempts : []).map((attempt: any) =>
+        Number(attempt.attempt) === Number(fix.attemptCount) ? { ...attempt, status: 'CANCELLED', cancelledAt: now } : attempt);
+      const nextFix = { ...fix, status: 'CANCELLED', cancelledAt: now, attempts, retryEligible: true };
+      await repo.update(id, { metadata: { ...metadata, fixRequest: nextFix } } as any);
+      return { status: 'CANCELLED', resolved: true };
+    });
+    if (result.resolved || result.tooLateDiscovered) {
+      const updated = await this.findOne(id);
+      this.gateway.emit('incident:updated', updated);
+    }
+    if (result.tooLateDiscovered) {
+      throw new ConflictException({ code: 'CANCELLATION_TOO_LATE',
+        message: 'La correction a déjà commencé à écrire sur GitHub et ne peut plus être annulée automatiquement.' });
+    }
+    if (!result.resolved && result.stopOutcome) {
+      return { success: true, status: result.status, n8nStopOutcome: result.stopOutcome,
+        error: 'Impossible de confirmer l’arrêt de l’exécution n8n. Vous pouvez réessayer.' };
+    }
+    return { success: true, status: result.status };
+  }
+
+  /** Supprime un incident par son identifiant. */
   async remove(id: string) {
     const i = await this.findOne(id);
     await this.repo.remove(i);
     return { message: 'Incident supprimé.' };
   }
 
+  /** Persiste le résultat de validation post-PR envoyé par WF3 (findings approuvés, régression, autorisation de merge) sur l'incident. */
   async saveValidation(id: string, validation: any) {
     const incident = await this.repo.findOne({ where: { id }, relations: ['project'] });
     if (!incident) throw new NotFoundException('Incident introuvable.');
     const currentMeta = (incident as any).metadata || {};
     const fixRequest = currentMeta.fixRequest || {};
+    /** Normalise l’identité du dépôt avant comparaison. */
     const canonicalRepo = (value: string) => String(value || '').replace(/^https?:\/\/github\.com\//, '').replace(/\.git$/, '').toLowerCase();
     const repository = canonicalRepo(validation.repository);
     const projectRepository = canonicalRepo(incident.project?.githubRepo);
@@ -1067,22 +1278,19 @@ export class IncidentsService {
     }
     const buildNumber = Number(validation.buildNumber ?? validation.build?.buildNumber);
     if (!Number.isInteger(buildNumber) || buildNumber <= 0) throw new ConflictException('Le build de validation est invalide.');
-    if (validation.jenkinsJob !== incident.jenkinsJobName) throw new ConflictException('La validation ne correspond pas au job Jenkins attendu.');
-    const expectedPrJob = buildPrValidationJobName(incident.jenkinsJobName, prNumber);
+    // Même identité que requestPrValidation() (project.jenkinsJobName). Pour un job
+    // principal multibranch, incident.jenkinsJobName vaut « <job>/<branche> »
+    // (ex. projet-validation-vermeg/main) : le comparer rejetait en 409 toute
+    // validation WF3 légitime de ces projets.
+    const expectedJenkinsJob = incident.project?.jenkinsJobName || incident.jenkinsJobName;
+    if (validation.jenkinsJob !== expectedJenkinsJob) throw new ConflictException('La validation ne correspond pas au job Jenkins attendu.');
+    const expectedPrJob = buildPrValidationJobName(expectedJenkinsJob, prNumber);
     if (validation.prValidationJob !== expectedPrJob) throw new ConflictException('La validation ne correspond pas au job PR attendu.');
     if (!isFullGitSha(validation.expectedPrHeadSha) || !isFullGitSha(validation.checkoutSha)
       || validation.expectedPrHeadSha.toLowerCase() !== validation.checkoutSha.toLowerCase()
       || validation.expectedPrHeadSha.toLowerCase() !== String(validationRequest.expectedPrHeadSha).toLowerCase()) {
       throw new ConflictException('Le commit validé ne correspond pas au HEAD attendu de la Pull Request.');
     }
-    // BRIQUE 2 — additive, backend-side recomputation of the HEAD_ONLY leg of
-    // the identity invariant on final callback: never trust a boolean alone
-    // (WF3/Jenkins are already re-proven above via checkoutSha/expectedPrHeadSha).
-    // Deterministic, no fuzzy matching -- a headVerification computed for
-    // another incident/request/batch/PR/attempt/SHA must never satisfy this
-    // validation. Additive/backward-compatible: a prValidationRequest that
-    // predates this check (no headVerification persisted) is left alone, so
-    // this never breaks a record produced before Brique 2.
     const headVerification: any = validationRequest.headVerification;
     if (headVerification) {
       const expectedTarget = String(validationRequest.expectedPrHeadSha || '').toLowerCase();
@@ -1123,19 +1331,6 @@ export class IncidentsService {
     });
     const everyFindingValid = !fixRequest.batchId || (findingResults.length > 0 && findingResults.every(r => r.result === 'VALID' && !!r.evidence));
     const hasInvalidFinding = findingResults.some(r => r.result === 'INVALID');
-    // BRIQUE 4 — GLOBAL QUALITY GATE SEPARATION: `passed` (and everything
-    // derived from it below: validationStatus, incident.status,
-    // fixRequest.status, prValidationRequest.status/result, cycles[].status)
-    // is the REMEDIATION-evidence verdict only. It must NEVER depend on the
-    // global Sonar Quality Gate (`sonarStatus`) — a QG ERROR caused solely by
-    // pre-existing/out-of-batch findings must not turn a clean remediation
-    // into a failed one. Sonar analysis EXECUTION is still required
-    // (`correlationVerified`, which already requires `sonarCorrelationVerified`
-    // — proof the analysis actually ran and produced a real answer); only its
-    // pass/fail VERDICT is excluded. `sonarStatus` remains fully persisted on
-    // this record unchanged (see `sonarStatus` field below) so deployment
-    // readiness (governance.ts/azure-deploy-readiness.service.ts, untouched)
-    // keeps reading the real QG verdict as its own, separate, still-strict gate.
     const passed = jenkinsStatus === 'SUCCESS' && correlationVerified && !missingRequiredStage && !badStage && everyFindingValid;
     const validationStatus = passed ? 'VALIDATED' : (hasInvalidFinding ? 'INVALID' : 'INCONCLUSIVE');
     const validationRecord = {
@@ -1159,24 +1354,6 @@ export class IncidentsService {
     // are all still present, unchanged, for backward compatibility.
     (validationRecord as any).derived = deriveFindingsAndHealth(validationRecord);
 
-    // ── BRIQUE 3 — analyse de régression PR (ADDITIF STRICT) ───────────────
-    // Compare le candidat exact-SHA déjà prouvé (validation.checkoutSha,
-    // chaîne d'identité Brique 2) contre un instantané baseline immuable.
-    // Ne mélange JAMAIS ceci avec findingResults (verdict de remédiation
-    // ci-dessus) : les deux peuvent être simultanément VALIDATED/CLEAN,
-    // VALIDATED/CHANGES_REQUIRED, etc. Fail closed par construction
-    // (analyzeRegression).
-    //
-    // BRIQUE 3 CLOSEOUT — PART 2 : incident.metadata.enrichedData.sonar.issues
-    // et incident.metadata.sourceCommitSha sont écrits ATOMIQUEMENT en un seul
-    // PUT WF1 ("Save Final Decision to Backend" -> metadata: rawData), donc ne
-    // peuvent pas diverger aujourd'hui par construction -- mais on ne se fie
-    // JAMAIS à cette seule garantie architecturale : on revérifie ici que le
-    // sourceCommitSha ACTUELLEMENT persisté sur l'incident correspond encore
-    // exactement au baselineSha GELÉ dans fixRequest (startFix()). Si l'un des
-    // deux dérive (ex: un futur appel écrase enrichedData sans sourceCommitSha),
-    // la baseline devient non attribuable -> INCONCLUSIVE, jamais une
-    // comparaison silencieuse entre deux builds différents.
     const baselineSonar = (currentMeta as any)?.enrichedData?.sonar;
     const baselineSonarIssues = baselineSonar?.issues;
     const frozenBaselineSha = isFullGitSha((fixRequest as any).baselineSha) ? String((fixRequest as any).baselineSha).toLowerCase() : null;
@@ -1239,37 +1416,9 @@ export class IncidentsService {
         cause.type === 'SCANNER_FINDING' ? [cause.finding] : []),
     };
 
-    // ── R66 — default-value/deserialization-semantics review ───────────────
-    // Runs AFTER the exact-SHA correlation gate above (validation.checkoutSha
-    // is already proven === expectedPrHeadSha === validationRequest's frozen
-    // target) and BEFORE computeMergeAuthorization(), which stays pure — all
-    // IO happens here, in this one bounded call. Sourced entirely from data
-    // the platform already persists: fixRequest.fileResults' immutable blob
-    // SHAs (oldSha/newSha) plus the frozen candidateBaseSha/checkoutSha — no
-    // new WF2 payload field. See default-value-semantics-assembler.ts for
-    // the provenance verification (every fetch's returned blob SHA is
-    // checked against the persisted one before its content is trusted) and
-    // default-value-semantics.ts for the generic invariant itself. Never
-    // throws by contract; the extra try/catch is defense in depth only —
-    // any failure here degrades to VERIFICATION_REQUIRED, which is a no-op
-    // for authorization, never a blocker and never a fabricated pass.
     const candidateFileRecords: CandidateFileRecord[] = (Array.isArray(fixRequest.fileResults) ? fixRequest.fileResults : [])
       .map((fr: any) => ({ targetFile: String(fr.targetFile || ''), fileOperation: String(fr.fileOperation || ''), oldSha: fr.oldSha ?? null, newSha: String(fr.newSha || '') }))
       .filter((fr: CandidateFileRecord) => fr.targetFile && fr.newSha);
-    // R79 — the file content this candidate actually diffed against is the
-    // sha it branched writes from, NOT `fixRequest.baselineSha` (that field
-    // is the ORIGINAL source-scan commit, used for the unrelated Sonar
-    // scanner-regression diff — see validation.regression.baselineSha).
-    // Those two are only the same commit for a batch's very FIRST attempt;
-    // for a corrective (2nd+) attempt, prior attempts already moved the PR
-    // branch, so fetching file content at baselineSha either 404s or returns
-    // an unrelated blob, and every provenance check inside
-    // buildDefaultValueSemanticsEvidence() correctly fails closed — a real
-    // bug (data mixup), not a policy choice. correctiveDispatch.blockedSha is
-    // the exact, already-persisted "what this attempt's writes are based on"
-    // fact for a corrective attempt; only the first attempt (no
-    // correctiveDispatch yet) falls back to baselineSha, which is correct
-    // for that case since nothing has moved the branch yet.
     const defaultValueSemanticsBaseSha = resolveDefaultValueSemanticsBaseSha(fixRequest);
     let defaultValueSemanticsAudit: Awaited<ReturnType<typeof buildDefaultValueSemanticsEvidence>>;
     try {
@@ -1293,18 +1442,6 @@ export class IncidentsService {
         attemptCount: Number(fixRequest.attemptCount) || 0, evidence: [], checkedPairs: 0, checkedFieldPairs: [], computedAt: new Date().toISOString(),
       };
     }
-    // R80 — bridges AUTHORITATIVE EXECUTED test evidence into the same
-    // audit the static analyzer produced, when the SAME already-verified
-    // webhook body (checkoutSha/buildNumber already proven exact-match
-    // above, before this line is ever reached) also carries a
-    // semanticEvidence envelope. The adapter is selected purely by the
-    // envelope's own declared `reportFormat` (JUnit today; any future
-    // framework registers its own adapter in adapters/registry.ts without
-    // this call site — or the core model — ever changing). Evidence bound
-    // to any other sha/build/provider is rejected at
-    // validateCanonicalEvidenceBinding and never reaches the merger — there
-    // is no path for application code to assert this evidence outside this
-    // already-authenticated, already-correlated call.
     const semanticEvidenceEnvelope = (validation as any).semanticEvidence;
     const semanticEvidenceAdapter = resolveSemanticEvidenceAdapter(semanticEvidenceEnvelope?.reportFormat);
     if (semanticEvidenceAdapter) {
@@ -1333,17 +1470,6 @@ export class IncidentsService {
       fixRequest, defaultValueSemanticsAudit.checkedFieldPairs || [],
     );
 
-    // ── BRIQUE 4 — autorisation de merge : LA décision centrale ────────────
-    // computeMergeAuthorization() est désormais l'unique décision métier
-    // faisant autorité (VALIDATING/MERGE_READY/BLOCKED/INCONCLUSIVE). Découple
-    // le verdict de remédiation (findingResults) et la régression (Brique 3)
-    // du Quality Gate Sonar global — ce dernier n'est ici qu'un advisory ; il
-    // reste bloquant pour le DÉPLOIEMENT via DeployReadiness (intouché).
-    // `requiredStagesComplete` inclut désormais explicitement jenkinsStatus
-    // (défense en profondeur : les stages requis seuls pourraient en théorie
-    // être incohérents avec le statut global du build).
-    // Robuste aux records incomplets : deriveRemediationResult([]) => INCONCLUSIVE,
-    // computeMergeAuthorization est pur et total (jamais d'exception).
     const mergeAuth = computeMergeAuthorization({
       remediationResult: deriveRemediationResult(
         findingResults.map(r => r.result as 'VALID' | 'INVALID' | 'INCONCLUSIVE'),
@@ -1371,14 +1497,6 @@ export class IncidentsService {
     // gouvernée doit recalculer sa propre mergeAuthorization pour le SHA cible).
     const authorizedSha = mergeAuth.authorization === 'MERGE_READY' && isFullGitSha(validation.checkoutSha)
       ? String(validation.checkoutSha).toLowerCase() : null;
-    // BRIQUE 5 — explicit, named flag rather than asking every consumer
-    // (frontend included) to re-derive "is this BLOCKED for a remediable
-    // reason". Today this is exactly `authorization === 'BLOCKED'` (Brique 4
-    // guarantees blockingReasons only ever holds proven-defect codes,
-    // FINDING_INVALID/REGRESSION_CHANGES_REQUIRED, never an uncertain/
-    // infrastructure one) — but a future policy could in principle add a
-    // BLOCKED code this platform cannot act on causally, and this flag is
-    // the one place that distinction would be made, never the frontend.
     const correctiveActionAllowed = mergeAuth.authorization === 'BLOCKED';
     (validationRecord as any).mergeAuthorization = {
       ...mergeAuth,
@@ -1409,27 +1527,32 @@ export class IncidentsService {
 
     const newStatus = passed ? 'completed' : 'failed';
 
-    await this.repo.update(id, {
-      metadata: mergedMeta,
-      status: newStatus as IncidentStatus,
-    } as any);
+    await this.repo.manager.transaction(async manager => {
+      const repo = manager.getRepository(Incident);
+      const latest = await repo.findOne({ where: { id }, lock: { mode: 'pessimistic_write' } });
+      if (!latest || JSON.stringify(latest.metadata?.fixRequest || {}) !== JSON.stringify(fixRequest)
+        || JSON.stringify(latest.metadata?.prValidationRequest || null) !== JSON.stringify(validationRequest)
+        || ['CANCEL_REQUESTED', 'CANCELLED'].includes(String(latest.metadata?.fixRequest?.status))) {
+        throw new ConflictException('La correction ou la validation a changé pendant le traitement.');
+      }
+      await repo.update(id, { metadata: { ...(latest.metadata || {}), validation: mergedMeta.validation,
+        cycles: mergedMeta.cycles, prValidationRequest: mergedMeta.prValidationRequest, fixRequest: mergedMeta.fixRequest },
+        status: newStatus as IncidentStatus } as any);
+    });
 
     const updated = await this.findOne(id);
     this.gateway.emit('incident:updated', updated);
     return { ...updated, validation: validationRecord };
   }
 
+  /** Vérifie que l'utilisateur courant a le rôle requis pour approuver/rejeter une correction, sinon lève une interdiction. */
   private assertCanApprove(user: any) {
     if (!user || !['admin', 'developer'].includes(String(user.role || '').toLowerCase())) {
       throw new ForbiddenException('Vous n’avez pas l’autorisation de demander une correction pour ce projet.');
     }
   }
 
-  /**
-   * A validation is candidate evidence for exactly one SHA. When an existing
-   * validation target moves, retain the old record only as history and replace
-   * the active view with an explicitly inconclusive, evidence-free state.
-   */
+  /** Prépare le résultat lié à invalidate actif validation pour nouveau SHA. */
   private invalidateActiveValidationForNewSha(metadata: any, newSha: string, reason: string): any {
     const current: any = metadata?.validation;
     const targetSha = String(newSha || '').toLowerCase();
@@ -1481,6 +1604,7 @@ export class IncidentsService {
     return { ...metadata, validation: activeValidation, validationHistory: history };
   }
 
+  /** Rassemble tous les problèmes détectés (Sonar/Trivy/OWASP/ZAP) attachés à un incident, dans une liste unique. */
   private collectFindings(incident: any): any[] {
     const enriched = incident?.metadata?.enrichedData || {};
     const stageFindings = Object.values(enriched.stages || {}).flatMap((stage: any) =>
@@ -1500,6 +1624,7 @@ export class IncidentsService {
     return [...unique.values()];
   }
 
+  /** Détermine le ou les problèmes concernés par une demande d'approbation (un seul findingId explicite, ou tous les éligibles). */
   private resolveApprovalContext(incident: any, findingId?: string) {
     const findings = this.collectFindings(incident);
     const selected = findingId
@@ -1517,6 +1642,7 @@ export class IncidentsService {
     return { finding: selected, workflow };
   }
 
+  /** Résout l'URL du webhook n8n correspondant à un workflow de remédiation (WF2/WF4/WF5). */
   private workflowUrl(workflow: string): string {
     const base = process.env.N8N_URL || 'http://n8n:5678';
     const paths: Record<string, string> = {
@@ -1527,6 +1653,7 @@ export class IncidentsService {
     return paths[workflow];
   }
 
+  /** Lit l'identité de workflow WF2 configurée côté backend, utilisée pour corréler les dispatches. */
   private configuredWf2Identity(): string {
     const identity = process.env.N8N_WF2_ID;
     if (!isWorkflowIdentity(identity)) {
@@ -1536,6 +1663,7 @@ export class IncidentsService {
     return identity;
   }
 
+  /** Rassemble le contexte GitHub nécessaire au dispatch (branche par défaut, SHA, contenu du fichier ciblé). */
   private async githubContext(project: Project, filePath: string) {
     const repoPath = String(project.githubRepo || '').replace(/^https?:\/\/github\.com\//, '').replace(/\.git$/, '');
     const [owner, repo] = repoPath.split('/').filter(Boolean);
@@ -1554,14 +1682,76 @@ export class IncidentsService {
     return { owner, repo, defaultBranch, content };
   }
 
+  /** Point d'entrée de l'approbation humaine : lance la correction automatique pour le(s) problème(s) sélectionné(s). */
   async approveFix(id: string, user: any, body: { findingId?: string; findingIds?: string[] } = {}) {
     return this.startFix(id, user, body, false);
   }
 
+  /** Retente une correction précédemment échouée ou annulée, en réutilisant le même point d'entrée que l'approbation initiale. */
   async retryFix(id: string, user: any) {
     return this.startFix(id, user, {}, true);
   }
 
+  /** Identifie le détenteur d'une réservation de fichier : incident (bloque tant que sa correction tient ses fichiers), tâche WF6 (bloque toujours), ou réservation orpheline. */
+  private async describeSonarFileHolder(manager: EntityManager, holderId: string): Promise<SonarFileHolder> {
+    const holder = await manager.getRepository(Incident).findOne({ where: { id: holderId } });
+    if (holder) {
+      const fix = (holder.metadata as any)?.fixRequest;
+      return { kind: 'INCIDENT', needsFiles: fixRequestHoldsFiles(fix), title: holder.title,
+        prNumber: Number(fix?.prNumber) || null, prUrl: fix?.prUrl || holder.prUrl || null };
+    }
+    const [task] = await manager.query(`SELECT id FROM manual_remediation_tasks WHERE id = $1::uuid`, [holderId]);
+    return task ? { kind: 'SECURITY_TASK', needsFiles: true } : { kind: 'ORPHAN', needsFiles: false };
+  }
+
+  /** « Merge effectué » : constate sur GitHub que la PR de correction Sonar est fusionnée (ou fermée sans merge) et libère les fichiers qu'elle réservait. */
+  async confirmPullRequestMerged(id: string, user: any) {
+    this.assertCanApprove(user);
+    const incident = await this.repo.findOne({ where: { id } });
+    if (!incident) throw new NotFoundException('Incident introuvable.');
+    const fix: any = (incident.metadata as any)?.fixRequest;
+    if (!fix || fix.workflow !== 'WF2' || !fix.prUrl || !Number.isSafeInteger(Number(fix.prNumber))) {
+      throw new ConflictException('Aucune Pull Request de correction en attente de merge pour cet incident.');
+    }
+    if (fix.fileLock?.releasedAt) {
+      return { incidentId: id, status: 'FILES_RELEASED', alreadyReleased: true, reason: fix.fileLock.releaseReason, files: fix.fileLock.files || [] };
+    }
+    const project = await this.projectRepo.findOne({ where: { id: incident.projectId } });
+    if (!project) throw new BadRequestException('Le projet associé à cet incident est introuvable.');
+    const pr = await this.githubPullRequest(project, Number(fix.prNumber));
+    const merged = pr?.merged === true;
+    if (!merged && pr?.state !== 'closed') {
+      throw new ConflictException(`La Pull Request #${fix.prNumber} n’est pas encore fusionnée sur GitHub.`);
+    }
+    if (merged && (!pr?.base?.repo?.default_branch || pr?.base?.ref !== pr.base.repo.default_branch)) {
+      throw new ConflictException('La Pull Request n’a pas été fusionnée dans la branche par défaut.');
+    }
+    if (merged && (!isFullGitSha(String(pr?.merge_commit_sha || '')) || !pr?.merged_at)) {
+      throw new ConflictException('GitHub ne fournit pas le commit de merge.');
+    }
+    const reason = merged ? 'PR_MERGED' : 'PR_CLOSED_UNMERGED';
+    const releasedAt = new Date().toISOString();
+    const fileLock = await this.repo.manager.transaction(async manager => {
+      const repo = manager.getRepository(Incident);
+      const locked = await repo.findOne({ where: { id }, lock: { mode: 'pessimistic_write' } });
+      const current: any = (locked?.metadata as any)?.fixRequest;
+      if (!locked || current?.requestId !== fix.requestId) {
+        throw new ConflictException('La demande de correction a changé pendant la vérification. Actualisez la page.');
+      }
+      if (current.fileLock?.releasedAt) return current.fileLock;
+      await releaseSonarFiles(manager, locked.projectId, id, `${reason}:${String(user.id || user.role)}`);
+      const next = { ...(current.fileLock || {}), files: current.fileLock?.files || [], releasedAt, releaseReason: reason,
+        releasedBy: String(user.id || user.role),
+        ...(merged ? { prMergedAt: pr.merged_at, mergeCommitSha: String(pr.merge_commit_sha).toLowerCase() } : {}) };
+      await repo.update(id, { metadata: { ...(locked.metadata || {}), fixRequest: { ...current, fileLock: next } } } as any);
+      return next;
+    });
+    this.gateway.emit('incident:updated', await this.findOne(id));
+    return { incidentId: id, status: 'FILES_RELEASED', reason, files: fileLock.files || [],
+      ...(merged ? { mergeCommitSha: fileLock.mergeCommitSha } : {}) };
+  }
+
+  /** Cœur du déclenchement de correction : construit le lot, choisit le workflow cible et dispatche vers n8n (WF2/WF4/WF5). */
   private async startFix(id: string, user: any, body: { findingId?: string; findingIds?: string[] }, explicitRetry: boolean) {
     this.assertCanApprove(user);
     const claim = await this.repo.manager.transaction(async manager => {
@@ -1574,11 +1764,14 @@ export class IncidentsService {
       const project = await manager.getRepository(Project).findOne({ where: { id: incident.projectId } });
       if (!project) throw new BadRequestException('Le projet associé à cet incident est introuvable.');
       incident.project = project;
-      if (!explicitRetry && incident.prUrl) throw new ConflictException('Une Pull Request existe déjà pour cet incident.');
-      if ([IncidentStatus.COMPLETED, IncidentStatus.APPROVED, IncidentStatus.VALIDATING].includes(incident.status)) {
+      const current = (incident.metadata as any)?.fixRequest;
+      // Correction Sonar sur un incident qui a déjà une PR : refus explicite tant que son merge n'est pas
+      // confirmé (« Merge effectué »), puis nouveau cycle de correction sur ce même incident.
+      const sonarCycle = !explicitRetry && !!incident.prUrl && current?.workflow === 'WF2';
+      if (!explicitRetry && incident.prUrl && !sonarCycle) throw new ConflictException('Une Pull Request existe déjà pour cet incident.');
+      if (!sonarCycle && [IncidentStatus.COMPLETED, IncidentStatus.APPROVED, IncidentStatus.VALIDATING].includes(incident.status)) {
         throw new ConflictException(`L’état actuel de l’incident ne permet pas une nouvelle demande de correction.`);
       }
-      const current = (incident.metadata as any)?.fixRequest;
       const legacy = body.findingId ? [body.findingId] : [];
       if (!explicitRetry && body.findingIds !== undefined && !Array.isArray(body.findingIds)) throw new BadRequestException('Le champ technique findingIds doit être une liste.');
       if (!explicitRetry && Array.isArray(body.findingIds) && !body.findingIds.length) throw new BadRequestException('Sélectionnez au moins une erreur à corriger.');
@@ -1593,9 +1786,30 @@ export class IncidentsService {
       const fallback = !requestedIds.length ? this.resolveApprovalContext(incident).finding : null;
       const batch = resolveRemediationBatch(this.collectFindings(incident), requestedIds.length ? requestedIds : [fallback.id || fallback.key]);
       const meta: any = incident.metadata || {};
-      const results = meta.validation?.derived?.findings || meta.validation?.findingResults || meta.prValidationRequest?.findingResults || [];
+      if (sonarCycle) {
+        if (batch.workflow !== 'WF2') throw new ConflictException('Une Pull Request existe déjà pour cet incident.');
+        const prLabel = Number(current.prNumber) > 0 ? `#${Number(current.prNumber)}` : '';
+        if (!current.fileLock?.releasedAt) {
+          const held = sonarTargetFiles(current.fileLock?.files || (current.findings || []).map((f: any) => f.file || f.component));
+          const overlap = sonarTargetFiles(batch.findings.map((f: any) => f.file || f.component)).filter(file => held.includes(file));
+          throw new ConflictException({ code: 'SONAR_FILE_PR_PENDING_MERGE', status: 'TARGET_PR_PENDING', files: overlap, pullRequest: current.prUrl,
+            message: (overlap.length
+              ? `${overlap.length > 1 ? 'Les fichiers' : 'Le fichier'} ${overlap.join(', ')} ${overlap.length > 1 ? 'sont déjà modifiés' : 'est déjà modifié'} par la Pull Request ${prLabel ? prLabel + ' ' : ''}de cet incident, pas encore fusionnée. `
+              : `La Pull Request ${prLabel ? prLabel + ' ' : ''}de cet incident n’est pas encore fusionnée. `)
+              + 'Fusionnez-la sur GitHub puis cliquez « Merge effectué — libérer les fichiers » (onglet « Validation PR ») pour lancer cette correction. Aucune nouvelle correction n’a été lancée.' });
+        }
+        const corrected = new Set([...(meta.remediatedFindingIds || []), ...(current.findingIds || [])].map(String));
+        if (batch.findingIds.some(findingId => corrected.has(findingId))) {
+          throw new BadRequestException(`Un problème sélectionné a déjà été corrigé par la Pull Request ${prLabel ? prLabel + ' ' : ''}fusionnée.`);
+        }
+      }
+      const results = sonarCycle ? []
+        : meta.validation?.derived?.findings || meta.validation?.findingResults || meta.prValidationRequest?.findingResults || [];
       for (const finding of batch.findings) {
         const findingId = String(finding.id || finding.key);
+        if ((meta.remediatedFindingIds || []).map(String).includes(findingId)) {
+          throw new BadRequestException('Un problème sélectionné a déjà été corrigé par une Pull Request fusionnée de cet incident.');
+        }
         const validated = results.some((r: any) => String(r.findingId) === findingId && String(r.verdict ?? r.result).toUpperCase() === 'VALID');
         const baseline = finding.baselineSha || finding.sourceCommitSha;
         if (validated || finding.stale === true || ['RESOLVED', 'CLOSED', 'FIXED'].includes(String(finding.status || '').toUpperCase())
@@ -1609,22 +1823,22 @@ export class IncidentsService {
       const sameSelection = JSON.stringify([...new Set(currentFindingIds.map(v => v.trim()))].sort()) === JSON.stringify(batch.findingIds);
       const sameBatch = sameSelection && (!current?.batchId || current.batchId === batchId);
       const ownsRequestedFinding = batch.findingIds.some(findingId => currentFindingIds.includes(findingId));
-      // Une sélection MODIFIÉE (sous-ensemble/ensemble différent) après un
-      // échec définitif n'est pas une collision : c'est exactement le
-      // scénario « Modifier la sélection » -- une toute nouvelle demande de
-      // correction, jamais un doublon. Seule une resoumission du batch
-      // IDENTIQUE (sameBatch) doit continuer à rediriger vers « Réessayer ».
-      const isModifiedSelectionAfterFailure = !explicitRetry && current?.status === 'FIX_FAILED' && !sameSelection;
+      // Une sélection MODIFIÉE (sous-ensemble/ensemble différent) après un échec définitif n'est pas une collision.
+      const isModifiedSelectionAfterFailure = !explicitRetry && RETRYABLE_FIX_REQUEST_STATUSES.includes(current?.status) && !sameSelection;
       if (!explicitRetry && ownsRequestedFinding && !isModifiedSelectionAfterFailure) {
         throw new ConflictException('Une demande de correction existe déjà pour ce problème. Utilisez « Réessayer la correction ».');
       }
       if (explicitRetry && !sameBatch) {
         throw new ConflictException('La tentative de correction ne correspond pas au batch existant.');
       }
-      if (!explicitRetry && sameBatch && current.status !== 'FIX_FAILED') {
+      if (!explicitRetry && sameBatch && !RETRYABLE_FIX_REQUEST_STATUSES.includes(current.status)) {
         return { duplicate: true as const, attemptCount: Number(current.attemptCount || 1), incident, requestId: current.requestId, batchId, metadata: incident.metadata, ...batch };
       }
-      if (current && ['APPROVAL_REQUESTED', 'FIX_STARTING', 'DISPATCHED', 'PR_CREATED', 'VALIDATING'].includes(current.status)) {
+      // CANCEL_REQUESTED is deliberately included here (a pending
+      // cancellation must resolve to CANCELLED/terminal before a brand-new
+      // fixRequest can start) but CANCELLED itself is NOT -- it is terminal
+      // and retryable, same as FIX_FAILED.
+      if (!sonarCycle && current && ['APPROVAL_REQUESTED', 'FIX_STARTING', 'DISPATCHED', 'PR_CREATED', 'VALIDATING', 'CANCEL_REQUESTED'].includes(current.status)) {
         throw new ConflictException('Une demande de correction incompatible est déjà en cours.');
       }
       const requestId = explicitRetry ? current.requestId : randomUUID();
@@ -1636,17 +1850,6 @@ export class IncidentsService {
         { attempt: attemptCount, status: 'FIX_STARTING', authorizedBy: user.id, authorizedAt,
           ...(batch.workflow === 'WF2' ? { expectedWorkflowId: this.configuredWf2Identity() } : {}) },
       ];
-      // BRIQUE 3 CLOSEOUT — PART 1: incident.metadata.sourceCommitSha is the
-      // exact source commit Jenkins/WF1 reported for the build that produced
-      // this incident's findings (threaded from "Normalize Incident
-      // Payload"'s commitSha, see wf1-incident-intake-analysis-v5-1's
-      // "Prepare Final Report" node). Frozen here, once, at remediation
-      // start -- never re-derived from a live/"latest main" lookup, and
-      // never refreshed on retry (an explicit retry reuses the SAME frozen
-      // value the original attempt captured, exactly like prHeadSha/
-      // validationTargetSha elsewhere in this file). Absent/invalid source
-      // SHA -> baselineSha stays null, which the regression engine already
-      // treats as INCONCLUSIVE (never guessed).
       const baselineSha = explicitRetry && isFullGitSha(current?.baselineSha)
         ? String(current.baselineSha).toLowerCase()
         : (isFullGitSha((incident.metadata as any)?.sourceCommitSha)
@@ -1659,14 +1862,34 @@ export class IncidentsService {
       // d'être remplacé, preuve d'audit immuable pour l'ancienne tentative.
       const previousFixRequests = Array.isArray((incident.metadata as any)?.previousFixRequests)
         ? (incident.metadata as any).previousFixRequests : [];
+      // Verrou de fichier Sonar : un fichier déjà modifié par la PR non fusionnée d'une autre
+      // correction refuse ce lot (rollback complet de la transaction, rien n'est lancé).
+      let fileLock = explicitRetry ? current?.fileLock || null : null;
+      if (batch.workflow === 'WF2') {
+        if (!explicitRetry) await releaseSonarFiles(manager, incident.projectId, id, 'SONAR_SELECTION_REPLACED');
+        const files = await reserveSonarFiles(manager,
+          { projectId: incident.projectId, incidentId: id, batchId, files: canonicalFindings.map(f => f.file) },
+          holderId => this.describeSonarFileHolder(manager, holderId));
+        fileLock = { files: [...new Set([...(fileLock?.files || []), ...files])].sort(), reservedAt: fileLock?.reservedAt || authorizedAt };
+      }
       const metadata = { ...(incident.metadata || {}), fixRequest: {
         requestId, batchId, status: 'FIX_STARTING', workflow: batch.workflow,
         findingId: batch.findingIds[0], findingIds: batch.findingIds, findings: canonicalFindings,
         approvedBy: user.id, approvedAt: explicitRetry ? (current?.approvedAt || authorizedAt) : authorizedAt, baselineSha,
         attemptCount, attempts, lastError: null, failedAt: null, retryEligible: false,
+        ...(fileLock ? { fileLock } : {}),
       }, cycles: Array.isArray((incident.metadata as any)?.cycles) ? (incident.metadata as any).cycles : [],
-      previousFixRequests: isModifiedSelectionAfterFailure ? [...previousFixRequests, current] : previousFixRequests };
-      await repo.update(id, { metadata } as any);
+      previousFixRequests: isModifiedSelectionAfterFailure || sonarCycle ? [...previousFixRequests, current] : previousFixRequests } as any;
+      if (sonarCycle) {
+        // Nouveau cycle sur le même incident : la PR fusionnée et sa validation sont archivées, ses
+        // constats restent marqués corrigés, et la nouvelle demande repart d'un état sans PR.
+        metadata.closedCorrectionCycles = [...(Array.isArray(meta.closedCorrectionCycles) ? meta.closedCorrectionCycles : []),
+          { fixRequest: current, validation: meta.validation || null, prValidationRequest: meta.prValidationRequest || null, closedAt: authorizedAt }];
+        metadata.remediatedFindingIds = [...new Set([...(meta.remediatedFindingIds || []), ...(current.findingIds || [])].map(String))];
+        delete metadata.validation;
+        delete metadata.prValidationRequest;
+      }
+      await repo.update(id, { metadata, ...(sonarCycle ? { prUrl: null, status: IncidentStatus.ANALYZED } : {}) } as any);
       return { duplicate: false as const, retry: explicitRetry, attemptCount, incident, requestId, batchId, metadata, ...batch };
     });
 
@@ -1704,10 +1927,18 @@ export class IncidentsService {
       if (!response.ok) throw new Error(`n8n returned HTTP ${response.status}`);
     } catch (err: any) {
       const failedAt = new Date().toISOString();
-      const attempts = (claim.metadata.fixRequest.attempts || []).map((attempt: any) => attempt.attempt === claim.attemptCount
-        ? { ...attempt, status: 'FIX_FAILED', failedAt, error: err?.message || 'Workflow unavailable' } : attempt);
-      const metadata = { ...claim.metadata, fixRequest: { ...claim.metadata.fixRequest, status: 'FIX_FAILED', attempts, lastError: err?.message || 'Workflow unavailable', failedAt, retryEligible: true } };
-      await this.repo.update(id, { metadata } as any);
+      await this.repo.manager.transaction(async manager => {
+        const repo = manager.getRepository(Incident);
+        const current = await repo.findOne({ where: { id }, lock: { mode: 'pessimistic_write' } });
+        const meta = current?.metadata || {};
+        const fix = meta.fixRequest || {};
+        if (!matchesActiveAttempt(fix, claim.requestId, claim.batchId, claim.attemptCount)
+          || fix.status !== 'FIX_STARTING' || fix.n8nExecutionId || fix.sideEffectsStarted) return;
+        const attempts = (fix.attempts || []).map((a: any) => a.attempt === claim.attemptCount
+          ? { ...a, status: 'FIX_FAILED', failedAt, error: 'Workflow unavailable' } : a);
+        await repo.update(id, { metadata: { ...meta, fixRequest: { ...fix, status: 'FIX_FAILED', attempts,
+          lastError: 'Workflow unavailable', failedAt, retryEligible: true } } } as any);
+      });
       throw new ServiceUnavailableException({ code: 'FIX_WORKFLOW_UNAVAILABLE', message: 'La correction n’a pas pu démarrer. Vous pouvez réessayer.' });
     }
     const dispatchedAt = new Date().toISOString();
@@ -1727,39 +1958,39 @@ export class IncidentsService {
     });
     const updated = await this.findOne(id);
     this.gateway.emit('incident:updated', updated);
-    return { success: true, duplicate: false, status: 'DISPATCHED', incidentId: id, requestId: claim.requestId, batchId: claim.batchId, batchKey: claim.batchId, attemptCount: claim.attemptCount, findingIds: claim.findingIds };
+    return { success: true, duplicate: false, status: updated.metadata?.fixRequest?.status, incidentId: id, requestId: claim.requestId, batchId: claim.batchId, batchKey: claim.batchId, attemptCount: claim.attemptCount, findingIds: claim.findingIds };
   }
 
+  /** Rejette une proposition de correction : marque les problèmes concernés comme refusés, sans dispatcher de workflow. */
   async rejectFix(id: string, user: any, body: { reason?: string } = {}) {
     this.assertCanApprove(user);
-    const incident = await this.findOne(id);
-    if (incident.prUrl) throw new ConflictException('Une Pull Request existe déjà pour cet incident.');
-    const metadata = { ...(incident.metadata || {}), fixRequest: {
-      ...((incident.metadata as any)?.fixRequest || {}), status: 'REJECTED', rejectedBy: user.id,
-      rejectedAt: new Date().toISOString(), rejectionReason: body.reason || null,
-    }};
-    await this.repo.update(id, { status: 'rejected' as IncidentStatus, metadata });
+    await this.repo.manager.transaction(async manager => {
+      const repo = manager.getRepository(Incident);
+      const incident = await repo.findOne({ where: { id }, lock: { mode: 'pessimistic_write' } });
+      if (!incident) throw new NotFoundException('Incident introuvable.');
+      const fix = incident.metadata?.fixRequest || {};
+      if (incident.prUrl || fix.sideEffectsStarted || ['CANCEL_REQUESTED', 'CANCELLED'].includes(fix.status)) {
+        throw new ConflictException('La correction ne peut plus être rejetée dans cet état.');
+      }
+      const metadata = { ...(incident.metadata || {}), fixRequest: { ...fix, status: 'REJECTED', rejectedBy: user.id,
+        rejectedAt: new Date().toISOString(), rejectionReason: boundedCancelReason(body.reason) } };
+      await repo.update(id, { status: 'rejected' as IncidentStatus, metadata });
+    });
     const updated = await this.findOne(id);
     this.gateway.emit('incident:updated', updated);
     return { success: true, status: 'rejected', incidentId: id };
   }
 
-  // R21-AS — narrow, self-contained fix for exactly one proven gap: a freshly
-  // multibranch-indexed PR job exists but has never run its pipeline script,
-  // so PFE_VALIDATION_CONTEXT (declared via a scripted properties() step) is
-  // not yet registered in its parameter definitions. This does NOT address
-  // the separate multibranch indexing race (job not existing at all is
-  // classified JENKINS_JOB_NOT_FOUND by the metadata fetch itself, both here
-  // and in requestPrValidation, and never reaches this function transparently
-  // pretending to fix it) and it never triggers a build.
+  /** Garantit PR validation paramètre. */
   private async ensurePrValidationParameter(jenkinsInternalUrl: string, authHeader: string, resolvedJobPath: string):
     Promise<{ status: 'ALREADY_PRESENT' | 'INJECTED'; definitions: ReturnType<typeof getJenkinsParameterDefinitions> }> {
+    /** Classe l’échec Jenkins avec son code et son diagnostic. */
     const jenkinsFailure = (code: string, message: string) => Object.assign(new Error(message), { jenkinsFailureCode: code });
     const metadataTree = 'name,fullName,buildable,_class,property[_class,parameterDefinitions[name,type,_class,defaultParameterValue[value,_class]]]';
+    /** Récupère Metadata. */
     const fetchMetadata = async () => {
-      const response = await fetch(`${jenkinsInternalUrl}${resolvedJobPath}/api/json?tree=${metadataTree}`, {
-        headers: { Authorization: authHeader }, signal: AbortSignal.timeout(10_000),
-      });
+      const response = await fetchPrJobMetadataWithDiscovery(jenkinsInternalUrl, resolvedJobPath, authHeader,
+        `${jenkinsInternalUrl}${resolvedJobPath}/api/json?tree=${metadataTree}`);
       if (!response.ok) throw jenkinsFailure(classifyJenkinsTriggerStatus(response.status).code || 'JENKINS_JOB_NOT_FOUND', `Jenkins metadata HTTP ${response.status}`);
       let metadata: any;
       try { metadata = await response.json(); }
@@ -1767,6 +1998,7 @@ export class IncidentsService {
       if (!isConcreteJenkinsBuildJob(metadata)) throw jenkinsFailure('JENKINS_TARGET_NOT_BUILDABLE', 'Jenkins PR target is not a concrete buildable job');
       return metadata;
     };
+    /** Vérifie la présence de paramètre. */
     const hasParameter = (definitions: ReturnType<typeof getJenkinsParameterDefinitions>) =>
       definitions.some(definition => definition.name === 'PFE_VALIDATION_CONTEXT');
 
@@ -1797,9 +2029,7 @@ export class IncidentsService {
     return { status: 'INJECTED', definitions: afterDefinitions };
   }
 
-  // R21-AS Phase 8 — read/heal-only entry point: proves and, if needed, fixes
-  // the parameter bootstrap without ever reaching crumb issuance or
-  // buildWithParameters. Never mutates prValidationRequest.
+  /** Garantit PR validation Bootstrap. */
   async ensurePrValidationBootstrap(id: string, user: any) {
     this.assertCanApprove(user);
     const snapshot = await this.repo.findOne({ where: { id }, relations: ['project'] });
@@ -1831,6 +2061,7 @@ export class IncidentsService {
     }
   }
 
+  /** Déclenche une demande de validation de PR : calcule l'identité de validation et prépare le build Jenkins gouverné. */
   async requestPrValidation(id: string, user: any) {
     this.assertCanApprove(user);
     const snapshot = await this.repo.findOne({ where: { id }, relations: ['project'] });
@@ -1847,14 +2078,6 @@ export class IncidentsService {
     const remoteHeadSha = String(pull?.head?.sha || '').toLowerCase();
     const remoteHeadBranch = String(pull?.head?.ref || '');
     const expectedBranch = `fix/pfe-${snapshot.id}-${initialFix.requestId}`;
-    // R65 — fixRequest.prHeadSha is immutable provenance (the SHA WF2 itself
-    // verified at PR-creation time). The actual comparison baseline is the
-    // governed validation target: prHeadSha until a human explicitly accepts
-    // a legitimate follow-up commit via refresh-target (POST
-    // :id/pr-validation/refresh-target), which then becomes
-    // fixRequest.validationTargetSha. Never silently trust a live GitHub SHA
-    // that diverges from the governed target — that would defeat the
-    // freshness gate this proven bug protects (PR-24 R64).
     const initialTargetSha = String(initialFix.validationTargetSha || initialFix.prHeadSha).toLowerCase();
     if (pull?.state !== 'open' || remoteHeadBranch !== expectedBranch || remoteHeadSha !== initialTargetSha) {
       throw new ConflictException('La Pull Request a changé. Actualisez la cible avant de demander sa validation.');
@@ -1878,13 +2101,7 @@ export class IncidentsService {
       }
       const existing = metadata.prValidationRequest;
       const sameIdentity = existing?.validationRequestId === validationRequestId;
-      // Une transaction Jenkins FAILED (échec de mise en file, pas un
-      // résultat de remédiation) reste sur la même identité logique — un
-      // nouveau clic explicite doit pouvoir réessayer, jamais rester
-      // bloqué indéfiniment sur l'échec de transport précédent. Tout
-      // autre statut existant (REQUESTED/QUEUED/RUNNING/COMPLETED) reste
-      // un doublon : au plus une tentative active à la fois, garanti par
-      // le verrou pessimistic_write sur l'incident dans cette transaction.
+      // Une transaction Jenkins FAILED (échec de mise en file, pas un résultat de remédiation) reste sur la même identité logique.
       if (sameIdentity && existing.status !== 'FAILED') {
         return { duplicate: true, request: existing, project };
       }
@@ -1910,15 +2127,7 @@ export class IncidentsService {
     return this.triggerGovernedPrValidationBuild(id, claim);
   }
 
-  // R80.2 — extracted verbatim from requestPrValidation's tail (the one and
-  // only place this platform actually verifies a candidate HEAD and
-  // triggers Jenkins for PR validation), so reRunPrValidation's explicit
-  // same-SHA revalidation path can reuse it exactly rather than
-  // reimplementing Jenkins-triggering. Every caller must have ALREADY
-  // established `claim.request`/`claim.project` through its OWN governed
-  // eligibility checks and transaction (identity, PR-open/branch/SHA
-  // freshness, dedup) -- this method performs zero eligibility checks of
-  // its own; it only proves the HEAD and triggers/queues the build.
+  /** Déclenche Governed PR validation construction. */
   private async triggerGovernedPrValidationBuild(id: string, claim: { request: any; project: Project }) {
     const project: Project = claim.project;
     const prNumber = Number(claim.request.prNumber);
@@ -1937,15 +2146,6 @@ export class IncidentsService {
       throw new BadRequestException('Aucune clé SonarQube n’est configurée pour ce projet.');
     }
 
-    // BRIQUE 2 — the governed target (remoteHeadSha, already frozen above as
-    // claim.request.expectedPrHeadSha) must be independently proven by an
-    // exact-SHA HEAD_ONLY verification before Jenkins is ever triggered.
-    // HEAD_ONLY never authorizes a write (Brique 1 write-guard rejects it
-    // unconditionally) -- it only proves the exact PR-head commit compiles
-    // and its own regression suite passes, so a broken/unreachable candidate
-    // never consumes a Jenkins build. The input SHA is always the
-    // already-governed remoteHeadSha -- HEAD_ONLY never resolves its own
-    // "latest" branch tip.
     const headVerificationRequest: HeadVerificationRequest = {
       verifyHeadOnly: true, repository, targetSha: remoteHeadSha,
       validationRequestId, requestId: claim.request.requestId, batchId: claim.request.batchId,
@@ -2013,7 +2213,7 @@ export class IncidentsService {
         failureSummary: failureSummary.slice(0, 300), headVerification: headVerification ?? null,
         failedAt: now2, updatedAt: now2,
       };
-      await this.repo.update(id, { metadata: { ...currentMeta, prValidationRequest: failed } } as any);
+      await this.mergeNonLifecycleMetadata(id, { prValidationRequest: failed });
       throw new ServiceUnavailableException('La vérification HEAD exacte n’a pas confirmé un candidat valide pour cette Pull Request — Jenkins n’a pas été déclenché.');
     }
 
@@ -2026,26 +2226,12 @@ export class IncidentsService {
     const baseSonarProjectKey = project.sonarqubeKey;
     const validationSonarProjectKey = `${baseSonarProjectKey}-pr-${prNumber}`;
     const context = { ...claim.request, jenkinsJob: project.jenkinsJobName, prValidationJob, baseSonarProjectKey, validationSonarProjectKey };
-    // R21-AR — every failure below is classified with the same granular
-    // taxonomy already proven in triggerBuild() (classifyJenkinsTriggerStatus),
-    // instead of collapsing every Jenkins-side failure into one opaque
-    // JENKINS_TRIGGER_FAILED. This matters specifically for a freshly
-    // multibranch-indexed PR job: Jenkins only registers PFE_VALIDATION_CONTEXT
-    // in job metadata once its declarative `properties([parameters([...])])`
-    // step has executed at least once (proven live: PR-25's job existed after
-    // indexing but its config.xml carried no ParametersDefinitionProperty yet).
-    // JENKINS_PARAMETER_UNAVAILABLE names that exact bootstrap gap so it is
-    // observable and distinguishable from every other Jenkins failure mode,
-    // without attempting an automatic hidden bootstrap build here (rejected:
-    // that would be an uncorrelated build using default/empty parameters, and
-    // the shared library deliberately fails PR builds with an empty
-    // PFE_VALIDATION_CONTEXT rather than run unauthenticated).
+    /** Classe l’échec Jenkins avec son code et son diagnostic. */
     const jenkinsFailure = (code: string, message: string) => Object.assign(new Error(message), { jenkinsFailureCode: code });
     try {
       const metadataTree = 'name,fullName,buildable,_class,property[_class,parameterDefinitions[name,type,_class,defaultParameterValue[value,_class]]]';
-      const metadataResponse = await fetch(`${jenkinsInternalUrl}${resolvedJobPath}/api/json?tree=${metadataTree}`, {
-        headers: { Authorization: authHeader }, signal: AbortSignal.timeout(10_000),
-      });
+      const metadataResponse = await fetchPrJobMetadataWithDiscovery(jenkinsInternalUrl, resolvedJobPath, authHeader,
+        `${jenkinsInternalUrl}${resolvedJobPath}/api/json?tree=${metadataTree}`);
       if (!metadataResponse.ok) {
         throw jenkinsFailure(classifyJenkinsTriggerStatus(metadataResponse.status).code || 'JENKINS_TRIGGER_FAILED', `Jenkins metadata HTTP ${metadataResponse.status}`);
       }
@@ -2087,7 +2273,7 @@ export class IncidentsService {
       const current: any = await this.repo.findOne({ where: { id } });
       const currentMeta: any = current.metadata || {};
       const queued = { ...claim.request, status: 'QUEUED', headVerification, queueUrl, queuedAt: new Date().toISOString(), updatedAt: new Date().toISOString(), prValidationJob };
-      await this.repo.update(id, { metadata: { ...currentMeta, prValidationRequest: queued } } as any);
+      await this.mergeNonLifecycleMetadata(id, { prValidationRequest: queued });
       return { success: true, duplicate: false, validationRequest: queued };
     } catch (error: any) {
       const timeout = error?.name === 'AbortError' || error?.name === 'TimeoutError';
@@ -2101,27 +2287,12 @@ export class IncidentsService {
       // queue rejected, ...) is an infrastructure fact, never a proven
       // candidate defect: always INCONCLUSIVE, never BLOCKED.
       const failed = { ...claim.request, status: 'FAILED', result: 'INCONCLUSIVE', headVerification, failureCode, failureSummary, failedAt: new Date().toISOString(), updatedAt: new Date().toISOString(), prValidationJob };
-      await this.repo.update(id, { metadata: { ...currentMeta, prValidationRequest: failed } } as any);
+      await this.mergeNonLifecycleMetadata(id, { prValidationRequest: failed });
       throw new ServiceUnavailableException('La validation PR n’a pas pu être mise en file dans Jenkins.');
     }
   }
 
-  // R80.2 — explicit, human-gated, SAME-SHA governed revalidation. Exists
-  // for exactly one situation: validation INFRASTRUCTURE (Jenkins shared
-  // library, backend evidence-parsing code, adapters — never the
-  // application) changed after a validation already COMPLETED/FAILED for a
-  // still-open PR whose remote HEAD has not moved, and a human wants a
-  // fresh, governed Jenkins run against that SAME immutable candidate SHA
-  // so the corrected infrastructure gets a chance to observe it. This is
-  // NOT a new corrective attempt: fixRequest.attemptCount/batchId/requestId
-  // are never touched, no WF2 execution is ever implied, and no application
-  // commit is created. `validationEpoch` is the additive dimension that
-  // makes this safe: epoch 0 is the request requestPrValidation always
-  // creates (unchanged, byte-identical behavior, zero migration needed —
-  // any historical record with no `epoch` field is simply epoch 0); this
-  // method is the ONLY place epoch ever advances, and only past a terminal
-  // (COMPLETED/FAILED) predecessor for the exact same SHA, one explicit
-  // human call at a time.
+  /** Prépare le résultat lié à re Run PR validation. */
   async reRunPrValidation(id: string, user: any) {
     this.assertCanApprove(user);
     const snapshot = await this.repo.findOne({ where: { id }, relations: ['project'] });
@@ -2144,13 +2315,6 @@ export class IncidentsService {
       throw new ConflictException('Aucune validation terminée n’existe pour le SHA cible actuel.');
     }
     const prNumber = Number(initialFix.prNumber);
-    // Same live freshness proof requestPrValidation itself performs — never
-    // trust the persisted expectedPrHeadSha alone: PR state, branch, and
-    // remote HEAD are all re-proven against GitHub at call time, and any
-    // drift (PR closed, branch changed, a new commit pushed) fails closed,
-    // exactly like requestPrValidation. A genuine new commit must go through
-    // refresh-target (a NEW target, NEW epoch-0 validation), never through
-    // this same-SHA path.
     const pull = await this.githubPullRequest(snapshot.project, prNumber);
     const remoteHeadSha = String(pull?.head?.sha || '').toLowerCase();
     const remoteHeadBranch = String(pull?.head?.ref || '');
@@ -2189,14 +2353,6 @@ export class IncidentsService {
       const currentEpoch = Number(existing.epoch) || 0;
       const existingTerminal = TERMINAL_STATUSES.has(String(existing.status));
       if (!existingTerminal) {
-        // Exactly-once / race safety (R80.2 §4): a concurrent call that
-        // loses the lock race lands here and sees the FIRST call's
-        // just-created epoch (currentEpoch>=1, still REQUESTED/QUEUED/
-        // RUNNING) — return it as a duplicate, never allocate epoch+2.
-        // currentEpoch===0 here means the ORIGINAL (non-rerun) validation
-        // is still active/in-flight, which is a genuine precondition
-        // failure (R80.2 §9-G/H), not a duplicate of anything this method
-        // ever created.
         if (currentEpoch >= 1) {
           return { duplicate: true, request: existing, project };
         }
@@ -2238,16 +2394,7 @@ export class IncidentsService {
     return this.triggerGovernedPrValidationBuild(id, claim);
   }
 
-  // R65 — action gouvernée explicite pour accepter un commit de remédiation
-  // suivant légitime (même PR, même branche) comme nouvelle cible de
-  // validation. Proven-necessary: fixRequest.prHeadSha is frozen provenance
-  // (the SHA WF2 verified at PR-creation time) and requestPrValidation()
-  // rejects any drift from it with 409 -- including a genuine, approved,
-  // human-driven follow-up remediation commit on the SAME PR/branch (real
-  // case: PR-24's S125 fix, R64). Never touches fixRequest.prHeadSha. Never
-  // silently trusts GitHub -- only a human explicitly invoking this endpoint
-  // can move the governed target, and only after the same open/branch checks
-  // requestPrValidation itself performs. Never triggers Jenkins/WF1/WF3.
+  /** R65 — action gouvernée explicite pour accepter un commit de remédiation suivant légitime (même PR, même branche) comme nouvelle cible de validation. */
   async refreshPrValidationTarget(id: string, user: any) {
     this.assertCanApprove(user);
     const snapshot = await this.repo.findOne({ where: { id }, relations: ['project'] });
@@ -2282,7 +2429,13 @@ export class IncidentsService {
         snapshotMetadata, remoteHeadSha, 'PR_VALIDATION_TARGET_REFRESHED',
       );
       if (nextMetadata !== snapshotMetadata) {
-        await this.repo.update(id, { metadata: nextMetadata } as any);
+        await this.repo.manager.transaction(async manager => {
+          const repo = manager.getRepository(Incident);
+          const latest = await repo.findOne({ where: { id }, lock: { mode: 'pessimistic_write' } });
+          if (!latest || JSON.stringify(latest.metadata?.fixRequest) !== JSON.stringify(fix)) throw new ConflictException('La correction a changé pendant la vérification.');
+          const updatedMetadata = this.invalidateActiveValidationForNewSha(latest.metadata || {}, remoteHeadSha, 'PR_VALIDATION_TARGET_REFRESHED');
+          await repo.update(id, { metadata: updatedMetadata } as any);
+        });
       }
       return { success: true, changed: false, validationTargetSha: currentTarget, originalPrHeadSha: fix.prHeadSha };
     }
@@ -2327,33 +2480,7 @@ export class IncidentsService {
     return { success: true, changed: result.changed, validationTargetSha: result.validationTargetSha, originalPrHeadSha: fix.prHeadSha };
   }
 
-  // R67 — POST /:id/pr-validation/recompute-policy. The platform gap this
-  // closes: a candidate can already be COMPLETED/VALIDATED against evidence
-  // that was true and complete under the OLD policy, and then a NEW
-  // deterministic check (R66's default-value-semantics invariant, or any
-  // future one wired the same way) lands without the PR's SHA ever moving.
-  // Every existing revalidation path (requestPrValidation,
-  // refreshPrValidationTarget's non-idempotent branch, reconcilePrValidation)
-  // is keyed on "the SHA moved" and is a correct no-op here — none of them
-  // exist to re-run POLICY against unchanged, already-proven evidence. This
-  // action does exactly that and nothing else: it never talks to Jenkins,
-  // Sonar, or WF3, never creates a new prValidationRequest/validationRequestId,
-  // never touches the PR/branch, and never increments fixRequest.attemptCount.
-  // It reuses computeMergeAuthorization() (unchanged, still pure) fed with the
-  // SAME persisted facts that already fed it once (remediationResult/
-  // regressionResult/headVerificationResult are read back verbatim from the
-  // existing mergeAuthorization record; exactCorrelationVerified/
-  // requiredStagesComplete are re-derived from the same persisted
-  // correlationVerified/checkoutSha/jenkinsStatus/requiredStages facts,
-  // mirroring saveValidation()'s own derivation exactly) plus exactly one new
-  // input: defaultValueSemanticsResult, computed via the existing R66
-  // evidence assembler (buildDefaultValueSemanticsEvidence) against the same
-  // immutable candidateBaseSha/prHeadSha/fileResults blob SHAs — no new
-  // semantic detector. fixRequest.status is deliberately left at VALIDATED
-  // (never forced back to PR_CREATED): doing so would make
-  // requestPrValidation/refresh-target's SHA-moved branch believe a NEW
-  // remediation cycle is needed, which is false — the candidate is unchanged,
-  // only the verdict about it changed.
+  /** Vérifie la condition liée à recompute PR validation Policy. */
   async recomputePrValidationPolicy(id: string, user: any) {
     this.assertCanApprove(user);
     const snapshot = await this.repo.findOne({ where: { id }, relations: ['project'] });
@@ -2455,13 +2582,6 @@ export class IncidentsService {
         attemptCount: Number(fix.attemptCount) || 0, evidence: [], checkedPairs: 0, checkedFieldPairs: [], computedAt: new Date().toISOString(),
       };
     }
-    // R80 — recompute-policy receives no fresh Jenkins webhook body, so it
-    // can only reuse EXECUTED evidence already durably persisted from a
-    // prior saveValidation() call — never accept a fresh claim here. Safe
-    // because this action's own eligibility checks above already require
-    // validation.checkoutSha === expectedPrHeadSha for the CURRENT record,
-    // so any 'EXECUTED_TEST' pair already sitting on that same persisted
-    // audit is, by construction, bound to this exact sha.
     const previouslyExecutedEvidence = (Array.isArray(validation.defaultValueSemantics?.checkedFieldPairs)
       ? validation.defaultValueSemantics.checkedFieldPairs.filter((p: any) => p?.source === 'EXECUTED_TEST' && p?.ruleType && RULE_REGISTRY[p.ruleType]) : [])
       .map((p: any) => {
@@ -2568,18 +2688,7 @@ export class IncidentsService {
     return { success: true, mergeAuthorization: result.mergeAuth, defaultValueSemantics: result.defaultValueSemanticsAudit, policyReevaluation: result.policyReevaluation };
   }
 
-  // BRIQUE 5 — POST /:id/correct-and-revalidate. Exactly ONE causal
-  // corrective attempt per explicit human authorization, on the SAME
-  // remediation lineage (incidentId/requestId/batchId/PR/branch) — never a
-  // second PR, never automatic. Permitted ONLY when the CURRENT persisted
-  // validation.mergeAuthorization.authorization === 'BLOCKED': a PROVEN
-  // defect (TARGET_FINDING_INVALID / NEW_BLOCKING_FINDING). Brique 4's own
-  // design already guarantees BLOCKED never arises from an uncertain/
-  // infrastructure signal (those are INCONCLUSIVE, a different value
-  // entirely) — so this single check IS "reject INCONCLUSIVE causes"
-  // (Phase 1 requirement #4), with no separate taxonomy needed. Never
-  // touches fixRequest.findingIds/findings (the original approved batch is
-  // immutable) — causal evidence travels in a SEPARATE correctiveContext.
+  /** Prépare le résultat lié à correct et Revalidate. */
   async correctAndRevalidate(id: string, user: any) {
     this.assertCanApprove(user);
     const snapshot = await this.repo.findOne({ where: { id }, relations: ['project'] });
@@ -2659,6 +2768,9 @@ export class IncidentsService {
       };
       const nextFix = {
         ...currentFix, status: 'FIX_STARTING', attemptCount: nextAttempt, attempts,
+        n8nExecutionId: undefined, executionRegisteredAt: undefined, lastHeartbeatAt: undefined, executionPhase: undefined,
+        cancelRequestedAt: undefined, cancelledAt: undefined, cancelReason: undefined,
+        sideEffectsStarted: false, sideEffectsStartedAt: undefined, lastCancelAttemptError: undefined,
         lastError: null, failedAt: null, retryEligible: false, correctiveDispatch: correctiveDispatchRecord,
       };
       await incidents.update(id, { metadata: { ...currentMeta, fixRequest: nextFix } } as any);
@@ -2678,16 +2790,6 @@ export class IncidentsService {
       // exactly like a network/Jenkins failure below, never leave
       // fixRequest.status dangling at FIX_STARTING.
       const canonicalFindings = (Array.isArray(fix.findings) ? fix.findings : []).map(workflowFinding);
-      // Narrow pre-dispatch correlation guard, specific to THIS dispatch
-      // call (never a reimplementation of WF2's own "Adapt Webhook Payload"
-      // graph logic): the two independently-persisted arrays this payload
-      // is built from — fix.findingIds (flat list) and fix.findings
-      // (objects workflowFinding() just canonicalized) — must describe the
-      // exact same set of findings before anything is sent. Every finding
-      // already has a proven-non-sentinel findingId at this point
-      // (workflowFinding() would already have thrown otherwise); this only
-      // proves the two arrays agree with each other and with the payload's
-      // own singular `finding`.
       const expectedFindingIdSet = new Set((Array.isArray(fix.findingIds) ? fix.findingIds : []).map((value: any) => String(value)));
       const actualFindingIdSet = new Set(canonicalFindings.map(f => f.findingId));
       const correlationOk = expectedFindingIdSet.size > 0
@@ -2708,14 +2810,6 @@ export class IncidentsService {
         finding: canonicalFindings[0], findings: canonicalFindings,
         repository: project.githubRepo,
         defaultBranch: metadata.defaultBranch || null,
-        // BRIQUE 5 — causal corrective mode. WF2's "Policy Gate" already
-        // spreads every field of the incoming payload through unchanged (a
-        // generic `{...data, ...computed}`, no allowlist truncates unknown
-        // keys), so these two fields reach "Select Existing PR" without any
-        // other WF2 wiring change. correctiveAttempt=true is the one flag
-        // WF2 uses to refuse creating a replacement PR when the expected one
-        // is not open (see n8n-workflows/active/wf2-...json, "Select Existing
-        // PR" and n8n-workflows/scripts/wf2-corrective-same-pr.spec.mjs).
         correctiveAttempt: true, correctiveContext,
       };
       const response = await fetch(this.workflowUrl('WF2'), {
@@ -2731,7 +2825,9 @@ export class IncidentsService {
         if (!current) return;
         const currentMeta: any = current.metadata || {};
         const currentFix: any = currentMeta.fixRequest || {};
-        if (Number(currentFix.attemptCount) !== nextAttempt || currentFix.status !== 'FIX_STARTING') return;
+        if (currentFix.requestId !== fix.requestId || currentFix.batchId !== fix.batchId
+          || Number(currentFix.attemptCount) !== nextAttempt || currentFix.status !== 'FIX_STARTING'
+          || currentFix.n8nExecutionId || currentFix.sideEffectsStarted) return;
         const attempts = (currentFix.attempts || []).map((a: any) => a.attempt === nextAttempt
           ? { ...a, status: 'FIX_FAILED', failedAt, error: err?.message || 'Workflow unavailable' } : a);
         const correctiveDispatch = currentFix.correctiveDispatch?.identity === correctiveAttemptIdentity
@@ -2749,7 +2845,8 @@ export class IncidentsService {
       if (!current) return;
       const currentMeta: any = current.metadata || {};
       const currentFix: any = currentMeta.fixRequest || {};
-      if (Number(currentFix.attemptCount) !== nextAttempt || currentFix.status !== 'FIX_STARTING') return;
+      if (currentFix.requestId !== fix.requestId || currentFix.batchId !== fix.batchId
+        || Number(currentFix.attemptCount) !== nextAttempt || currentFix.status !== 'FIX_STARTING') return;
       const attempts = (currentFix.attempts || []).map((a: any) => a.attempt === nextAttempt ? { ...a, status: 'DISPATCHED', dispatchedAt } : a);
       const correctiveDispatch = currentFix.correctiveDispatch?.identity === correctiveAttemptIdentity
         ? { ...currentFix.correctiveDispatch, status: 'DISPATCHED' } : currentFix.correctiveDispatch;
@@ -2757,14 +2854,10 @@ export class IncidentsService {
     });
     const updated = await this.findOne(id);
     this.gateway.emit('incident:updated', updated);
-    return { success: true, duplicate: false, status: 'DISPATCHED', incidentId: id, requestId: fix.requestId, batchId: fix.batchId, attemptCount: nextAttempt, correctiveContext };
+    return { success: true, duplicate: false, status: updated.metadata?.fixRequest?.status, incidentId: id, requestId: fix.requestId, batchId: fix.batchId, attemptCount: nextAttempt, correctiveContext };
   }
 
-  /**
-   * Governed recovery for a historical WF2 attempt whose candidate was fully
-   * written before a post-write integration failure. This never dispatches
-   * WF2, creates a PR, rewrites an attempt, or increments attemptCount.
-   */
+  /** Prépare le résultat lié à recover Post écriture. */
   async recoverPostWrite(id: string, input: PostWriteRecoveryInput, user: any) {
     this.assertCanApprove(user);
     const recoveryIdentity = postWriteRecoveryIdentity(input);
@@ -2882,13 +2975,7 @@ export class IncidentsService {
       incidentId: id, requestId: fix.requestId, batchId: fix.batchId, postWriteRecovery: result.recovery };
   }
 
-  // R42A — réconciliation gouvernée d'une validation PR restée QUEUED/RUNNING
-  // alors que son build Jenkins exact est déjà terminal, sans callback jamais
-  // reçu (ex: crash pipeline avant l'étape de notification). Ne fabrique
-  // jamais un résultat VALIDATED : un build SUCCESS sans callback reste en
-  // échec fail-closed, nécessitant une intervention distincte. Ne touche
-  // jamais fixRequest.status ni les findings — seule prValidationRequest est
-  // mise à jour, avec l'historique précédent intact dans previousAttempts.
+  /** Réconcilie la validation de la PR. */
   async reconcilePrValidation(id: string, user: any) {
     this.assertCanApprove(user);
     const snapshot = await this.repo.findOne({ where: { id }, relations: ['project'] });
@@ -2958,33 +3045,33 @@ export class IncidentsService {
       return { reconciled: false, reason: 'STILL_RUNNING', validationRequest: request };
     }
     if (buildData.result === 'SUCCESS') {
-      // Fail-closed on purpose: a SUCCESS build with no callback is a different,
-      // more delicate gap (evidence may still be recoverable) than the proven
-      // early-crash case this reconciliation targets. Never guess VALIDATED.
-      throw new ConflictException('Le build Jenkins est SUCCESS sans callback reçu — réconciliation manuelle requise, non automatisée ici.');
+      // Never guess VALIDATED : un build SUCCESS sans callback n'est jamais conclu ici. On renvoie
+      // à WF1 la notification Jenkins d'origine de CE build (retrouvée dans n8n) pour que WF3
+      // recalcule l'évidence et que saveValidation() reste seul juge (SHA, job, batch, demande active).
+      const config = redeliveryConfig();
+      if (!config) throw new ConflictException('Le build Jenkins est SUCCESS sans callback reçu — réconciliation manuelle requise (récupération automatique non configurée).');
+      const delivery = await findPrValidationDeliveryInN8n(config, { buildPath: jobPath, buildNumber: Number(buildData.number),
+        validationRequestId: String(request.validationRequestId), notBefore: Date.parse(String(request.queuedAt || request.createdAt || '')) - 60_000 });
+      if (!delivery) throw new ConflictException('Le build Jenkins est SUCCESS sans callback reçu — notification Jenkins d’origine introuvable dans n8n, réconciliation manuelle requise.');
+      // Compteur écrit AVANT l'envoi, sur la valeur courante verrouillée : WF3 peut répondre en ~1 s et
+      // ne doit jamais être écrasé par une copie périmée de la demande.
+      const claimed = await this.repo.manager.transaction(async manager => {
+        const repo = manager.getRepository(Incident);
+        const current = await repo.findOne({ where: { id }, lock: { mode: 'pessimistic_write' } });
+        const live: any = (current?.metadata as any)?.prValidationRequest;
+        if (!current || !live || live.validationRequestId !== request.validationRequestId || !['QUEUED', 'RUNNING'].includes(String(live.status))) return null;
+        const redeliveries = Number(live.callbackRedeliveries || 0);
+        if (redeliveries >= MAX_PR_VALIDATION_REDELIVERIES) return { exhausted: true };
+        await repo.update(id, { metadata: { ...(current.metadata as any), prValidationRequest: { ...live, callbackRedeliveries: redeliveries + 1,
+          lastCallbackRedeliveryAt: new Date().toISOString(), lastCallbackRedeliveryBuild: buildData.number, lastCallbackRedeliveryBy: user?.id || 'system' } } } as any);
+        return { exhausted: false };
+      });
+      if (!claimed) return { reconciled: false, reason: 'NO_LONGER_ACTIVE', validationRequest: request };
+      if (claimed.exhausted) throw new ConflictException('Le build Jenkins est SUCCESS sans callback reçu après plusieurs réexpéditions — réconciliation manuelle requise.');
+      await postPrValidationDelivery(config, delivery);
+      return { reconciled: false, reason: 'CALLBACK_REDELIVERED', buildNumber: buildData.number, validationRequest: request };
     }
     const now = new Date().toISOString();
-    // R47 — UNSTABLE is not the same failure shape as FAILURE/ABORTED: the
-    // Shared Library wraps Sonar/Trivy/OWASP/ZAP in catchError(buildResult:
-    // 'UNSTABLE'), so an UNSTABLE build always still completes and reaches its
-    // terminal report/callback step (unlike a genuine pipeline crash, which
-    // never gets there). Proven directly against real PR-24 build #2: its
-    // callback DID reach n8n (WF1 execution 1894), which rejected the contract
-    // fail-closed with INVALID_PR_VALIDATION_CONTRACT:ceTaskId,analysisId
-    // because SonarQube Community Edition cannot produce native PR analysis
-    // evidence. Labeling this JENKINS_PIPELINE_FAILED ("no callback sent")
-    // would misstate what actually happened -- use the truthful code instead.
-    //
-    // R49 — UNSTABLE alone does not distinguish build #2 (Sonar never even
-    // completed -- no ceTaskId) from build #3 (Sonar DID complete -- real
-    // ceTaskId/analysisId/CE SUCCESS -- but WF3's evidence retrieval and the
-    // backend write-back both failed downstream, for unrelated reasons: a
-    // missing n8n Sonar credential and a job-format mismatch, both proven and
-    // fixed). Extracting ceTaskId from the Jenkins console log itself (the
-    // exact source ScannerRunner.resolveExactAnalysis() reads from) is real,
-    // unfakeable evidence that Sonar analysis actually ran, without asserting
-    // anything this endpoint cannot itself verify (it stays Jenkins-only,
-    // never queries n8n).
     let sonarAnalysisRan = false;
     if (buildData.result === 'UNSTABLE') {
       const consoleRes = await fetch(`${jenkinsInternalUrl}${jobPath}/${buildData.number}/consoleText`, {
@@ -3013,10 +3100,11 @@ export class IncidentsService {
       matchedBuildQueueId: typeof buildData.queueId === 'number' ? buildData.queueId : null,
       reconciledAt: now, reconciledBy: user.id, updatedAt: now,
     };
-    await this.repo.update(id, { metadata: { ...metadata, prValidationRequest: reconciled } } as any);
+    await this.mergeNonLifecycleMetadata(id, { prValidationRequest: reconciled });
     return { reconciled: true, validationRequest: reconciled };
   }
 
+  /** Déclenche manuellement un build Jenkins standard pour un projet (hors chaîne de validation de PR). */
   async triggerBuild(projectId: string) {
     const project = await this.projectRepo.findOne({ where: { id: projectId } });
     const jenkinsUrl = project ? resolveJenkinsInternalUrl(project) : null;
@@ -3030,17 +3118,29 @@ export class IncidentsService {
     const user = project.jenkinsToken.slice(0, separator);
     const token = project.jenkinsToken.slice(separator + 1);
     const authHeader = 'Basic ' + Buffer.from(user + ':' + token).toString('base64');
+    /** Prépare ou transmet la demande au service concerné. */
     const request = async (url: string, init: RequestInit = {}) => {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 10_000);
       try { return await fetch(url, { ...init, signal: controller.signal }); }
       finally { clearTimeout(timer); }
     };
-    const throwJenkinsFailure = (status: number) => {
+    /** Signale une erreur pour throw Jenkins échec. */
+    const throwJenkinsFailure = (status: number, queueUrl?: string | null) => {
       const result = classifyJenkinsTriggerStatus(status);
-      const body = { success: false, code: result.code, message: `Jenkins a refusé la requête (${status})` };
+      const body: Record<string, unknown> = { success: false, code: result.code, message: `Jenkins a refusé la requête (${status})` };
       if (result.code === 'JENKINS_JOB_NOT_FOUND') throw new NotFoundException(body);
       if (result.code === 'JENKINS_TRIGGER_CONFLICT') throw new ConflictException(body);
+      if (result.code === 'JENKINS_TRIGGER_ALREADY_QUEUED') {
+        // Défaut D-9 : message honnête + le queueId réellement concerné, pour
+        // que l'UI puisse dire « un build est déjà en file » plutôt que
+        // « agent injoignable ».
+        const existing = Number(String(queueUrl || '').match(/\/queue\/item\/(\d+)\/?$/)?.[1]);
+        body.message = 'Un déclenchement identique est déjà en file d’attente pour ce job — Jenkins a fusionné la demande.';
+        if (Number.isInteger(existing)) body.queueId = existing;
+        if (queueUrl) body.queueUrl = queueUrl;
+        throw new ConflictException(body);
+      }
       if (result.code === 'JENKINS_UNAVAILABLE') throw new ServiceUnavailableException(body);
       throw new BadGatewayException(body);
     };
@@ -3099,10 +3199,15 @@ export class IncidentsService {
           ...(parameterDefinitions.length > 0 ? { 'Content-Type': 'application/x-www-form-urlencoded' } : {}),
         },
         ...(parameterDefinitions.length > 0 ? { body: resolvedParameters.body.toString() } : {}),
+        // QA-E2E D-9 — NE PAS suivre la redirection : le 303 de Jenkins et son
+        // en-tête Location sont l'information utile (quel élément de file a
+        // absorbé la demande). La suivre transformait le diagnostic en un 200
+        // opaque et effaçait le Location.
+        redirect: 'manual',
       });
-      const classification = classifyJenkinsTriggerStatus(buildRes.status);
-      if (!classification.accepted) throwJenkinsFailure(buildRes.status);
       const queueUrl = buildRes.headers.get('location');
+      const classification = classifyJenkinsTriggerStatus(buildRes.status);
+      if (!classification.accepted) throwJenkinsFailure(buildRes.status, queueUrl);
       if (!isAcceptedJenkinsBuildResponse(buildRes.status, queueUrl)) {
         throw new BadGatewayException({
           success: false,

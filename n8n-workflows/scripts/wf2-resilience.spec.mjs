@@ -1,28 +1,9 @@
-// Offline contract tests for WF2's bounded transient-network retry hardening.
-// Context: two real E2E attempts failed for unrelated transient network
-// reasons (GitHub "socket hang up" on Get Main Branch SHA1, Anthropic DNS
-// EAI_AGAIN on Independent Semantic Review) with full network diagnosis
-// proving no persistent DNS/connectivity/configuration problem. This adds
-// bounded native n8n retry (retryOnFail/maxTries/waitBetweenTries) to
-// exactly those two non-mutating nodes, using the exact clamping behavior
-// of the live n8n 2.14.2 execution engine, without touching any node that
-// writes to GitHub or mutates backend/business state.
-//
-// R76 -- a real two-finding java:S4684 batch (incident
-// d56558c9-b057-4fca-847a-bc69894cfb83, fixRequest
-// 8d3153ee-1c44-4cff-a705-3c45e16705ec) failed twice at "de Patch - HTTP
-// Request" itself (attempt 1: "aborted", attempt 2: "read ETIMEDOUT"),
-// both before any patch response, preflight, semantic review or Git
-// mutation -- the same proven transient-network profile as the two nodes
-// above. Same pattern applied to this third, still purely non-mutating,
-// node (a single stateless POST to api.anthropic.com upstream of every
-// repository-changing node).
-//
-// No n8n execution, network or business action.
+// Teste le composant « wf2-resilience » et ses cas d’erreur.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 const wf = JSON.parse(readFileSync(new URL('../pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.PROMOTION-TARGET.json', import.meta.url)))[0];
+/** Retrouve ou construit le nœud du workflow demandé. */
 const node = name => wf.nodes.find(n => n.name === name);
 
 // ── Node classification (audit) ─────────────────────────────────────────────
@@ -97,6 +78,7 @@ assert.ok(node('Failure Envelope - Get Main Branch SHA1'), 'failure envelope for
 assert.ok(node('Failure Envelope - Independent Semantic Review'), 'failure envelope for Independent Semantic Review must remain');
 assert.ok(node('Failure Envelope - de Patch - HTTP Request'), 'failure envelope for de Patch - HTTP Request must remain');
 assert.ok(node('Failure Envelope - Generate Remediation Plan'), 'failure envelope for Generate Remediation Plan must remain');
+/** Prépare les données nécessaires à ce scénario. */
 const errorOutputTargets = (name) => (wf.connections[name]?.main?.[1] || []).map(e => e.node);
 assert.ok(errorOutputTargets('Get Main Branch SHA1').length > 0, 'Get Main Branch SHA1 error output must still be wired');
 assert.ok(errorOutputTargets('Independent Semantic Review').length > 0, 'Independent Semantic Review error output must still be wired');

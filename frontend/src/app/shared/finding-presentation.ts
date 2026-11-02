@@ -1,19 +1,4 @@
-// ─────────────────────────────────────────────────────────────────────
-// Présentation uniquement, scanner-agnostique : améliore la lisibilité du
-// détail d'un finding (Sonar, Trivy, OWASP, ZAP, Jenkins, ...) sans jamais
-// inventer une information non fournie par la source d'analyse.
-//
-// Règles suivies partout dans ce fichier :
-//   - Jamais de littéral spécifique à une règle/outil (pas d'identifiant de
-//     règle en dur, pas de "SonarQube" en dur) : uniquement les champs génériques déjà
-//     présents sur `finding` (severity, type/category, source/stage,
-//     rule/ruleKey, remediationType, owner/responsible).
-//   - Un texte de repli n'affirme jamais un fait non prouvé : il ne fait
-//     que reformuler les champs réellement disponibles, ou l'admet
-//     honnêtement quand rien n'est disponible.
-//   - La preuve technique brute (evidence/message) n'est jamais réécrite :
-//     seule sa PRÉSENCE/ABSENCE est gérée proprement (voir findingEvidenceText).
-// ─────────────────────────────────────────────────────────────────────
+// Fonctions de présentation scanner-agnostiques pour le détail d'un finding (Sonar, Trivy, OWASP, ZAP, Jenkins...).
 
 export interface FindingLike {
   message?: string | null;
@@ -38,16 +23,17 @@ export interface FindingLike {
   key?: string | null;
 }
 
+// Indique si une valeur est présente et non vide une fois convertie en texte.
 function hasValue(v: unknown): boolean {
   return v !== null && v !== undefined && String(v).trim().length > 0;
 }
 
+// Renvoie le texte trimmé si présent, sinon null.
 function textOrNull(v: unknown): string | null {
   return hasValue(v) ? String(v).trim() : null;
 }
 
-// Nettoyage typographique minimal (espaces, casse initiale, ponctuation
-// finale) -- ne reformule jamais le FOND du texte source, seulement sa forme.
+// Nettoyage typographique minimal (espaces, casse initiale, ponctuation finale) du texte source, sans en changer le fond.
 function humanizeSentence(raw: string): string {
   const trimmed = raw.replace(/\s+/g, ' ').trim();
   if (!trimmed) return trimmed;
@@ -55,24 +41,14 @@ function humanizeSentence(raw: string): string {
   return /[.!?…]$/.test(capitalized) ? capitalized : `${capitalized}.`;
 }
 
-/**
- * Description lisible du finding : reformule légèrement (casse, ponctuation)
- * le premier champ texte disponible (description/message/title), sans
- * jamais inventer un contenu que la source ne fournit pas.
- */
+// Description lisible du finding : reformule le premier champ texte disponible (description/message/title).
 export function findingDescriptionText(finding: FindingLike): string {
   const raw = finding?.description ?? finding?.message ?? finding?.title;
   if (!hasValue(raw)) return "Aucune description détaillée n'est fournie par la source d'analyse.";
   return humanizeSentence(String(raw));
 }
 
-/**
- * Preuve technique BRUTE (jamais reformulée -- exigence de traçabilité) :
- * la valeur `evidence` si elle est exploitable (ni vide, ni simple doublon
- * de l'identifiant, ni un UUID technique), sinon le message brut, sinon
- * `null` (au caller de décider d'afficher un message neutre ou de masquer
- * le bloc).
- */
+// Preuve technique brute (jamais reformulée) : la valeur evidence si exploitable, sinon le message brut, sinon null.
 export function findingEvidenceText(finding: FindingLike): string | null {
   const evidence = textOrNull(finding?.evidence);
   const id = textOrNull(finding?.id ?? finding?.key);
@@ -81,13 +57,7 @@ export function findingEvidenceText(finding: FindingLike): string | null {
   return textOrNull(finding?.message ?? finding?.description);
 }
 
-/**
- * "Pourquoi c'est important" : utilise l'explication fournie par la source
- * si elle existe ; sinon construit une phrase générique à partir des SEULS
- * champs factuels disponibles (sévérité, type, règle, source) -- jamais une
- * affirmation de risque non prouvée. Si aucun champ n'est exploitable,
- * l'admet honnêtement plutôt que d'inventer.
- */
+// "Pourquoi c'est important" : l'explication fournie par la source si elle existe, sinon une phrase construite depuis les seuls champs factuels disponibles.
 export function findingWhyImportantText(finding: FindingLike): string {
   const raw = finding?.impact ?? finding?.whyImportant;
   if (hasValue(raw)) return humanizeSentence(String(raw));
@@ -109,11 +79,7 @@ export function findingWhyImportantText(finding: FindingLike): string {
   );
 }
 
-/**
- * "Action recommandée" : la recommandation fournie par la source si elle
- * existe, sinon un message de repli utile (jamais "Non disponible" brut),
- * enrichi de la source/règle quand elles sont connues.
- */
+// "Action recommandée" : la recommandation fournie par la source si elle existe, sinon un message de repli utile.
 export function findingRecommendationText(finding: FindingLike): string {
   const raw = finding?.recommendation;
   if (hasValue(raw)) return humanizeSentence(String(raw));
@@ -125,35 +91,15 @@ export function findingRecommendationText(finding: FindingLike): string {
   return "Aucune recommandation fournie par l'outil source.";
 }
 
-/**
- * "Responsable" : jamais "Non assigné" brut, et jamais un responsable
- * inventé -- un libellé honnête quand la source n'en fournit pas.
- */
+// "Responsable" : le responsable fourni par la source, sinon un libellé honnête d'absence.
 export function findingResponsibleText(finding: FindingLike): string {
   const raw = finding?.owner ?? finding?.responsible ?? finding?.assignee;
   return hasValue(raw) ? String(raw) : 'Aucun responsable assigné pour le moment.';
 }
 
-/**
- * "Éligibilité" : dérivé exclusivement de remediationType (déjà un fait
- * fourni par le backend) -- jamais "Automatisation non disponible" (qui se
- * lit comme une donnée manquante) mais une formulation qui décrit l'état réel.
- */
+// "Éligibilité" : traduit remediationType en libellé, en distinguant une correction de dépendance (déterministe) d'une correction de code source (candidate, non garantie).
 export function findingEligibilityText(finding: FindingLike): string {
   if (finding?.remediationType !== 'AUTO_FIX_ELIGIBLE') return 'Nécessite une action humaine';
-  // R46 — distinction de sincérité, selon ce que le constat déclare lui-même.
-  //
-  // Pour une DÉPENDANCE, la qualification est déterministe et prouvée :
-  // provenance supportée, version corrigée de même majeure, candidat construit,
-  // tests passés, double rescan. « Automatisable » y est exact.
-  //
-  // Pour un défaut de CODE SOURCE, l'étiquette posée en amont vient d'un
-  // classement par SÉVÉRITÉ (WF1), pas d'une qualification. Le planificateur de
-  // WF2 statue ensuite lui-même et peut conclure MANUAL_OR_SPECIALIST -- cela
-  // s'est déjà produit en réel sur une règle d'injection de dépendance, depuis
-  // ajoutée à la liste d'exclusion de WF1. Ce module reste volontairement sans
-  // aucun littéral propre à une règle : un test l'impose.
-  // On annonce donc une candidature, jamais une garantie.
   const isSourceDefect = String(finding?.source || '').toUpperCase() === 'SONARQUBE';
   return isSourceDefect ? 'Correction assistée candidate' : 'Correction automatisable';
 }

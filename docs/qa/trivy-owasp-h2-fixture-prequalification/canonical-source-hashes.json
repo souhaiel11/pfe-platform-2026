@@ -1,0 +1,6 @@
+{
+  "candidate-verifier/test-fixtures/maven-h2-safe-retry/README.md": "8a5f8ee67a45314ef9e577b988303e903d4b3898028cb5cceed530a34995ccea",
+  "candidate-verifier/test-fixtures/maven-h2-safe-retry/pom.xml": "522a82df990724c8c868a1b46d887063a9976a637ef67e62202b60b2bea5b18b",
+  "candidate-verifier/test-fixtures/maven-h2-safe-retry/src/main/java/fixture/Smoke.java": "235f40002a8adeef5c8b5bbe46151e0be3f66f20531e73a17ee6052e5f783005",
+  "candidate-verifier/test-fixtures/maven-h2-safe-retry/src/test/java/fixture/SmokeTest.java": "3268e6ba4c6d251312fc8d33625caee8dc6f0064fa5cc3bcc9900e457026425f"
+}

@@ -1,3 +1,4 @@
+// Agrège les verdicts de régression en tenant compte de la comparabilité et de la disponibilité des scanners. Une preuve absente peut rendre le résultat indéterminé.
 import type { HeadVerificationResult } from './merge-authorization';
 import type { IdentifiedFinding, RegressionOutput, RegressionResult } from './pr-regression-engine';
 
@@ -6,12 +7,10 @@ export type ScannerComparability = 'PROVEN' | 'UNPROVEN';
 export interface RegressionVerdictInput {
   headVerificationResult: HeadVerificationResult;
   scannerDiff: RegressionOutput;
-  /** Caller-owned SHA, completeness and attribution checks; never inferred from HEAD PASS. */
   evidenceIntegrity: { ok: boolean; reasons: string[] };
   scannerComparability?: ScannerComparability;
 }
 
-/** A verifier failure carries no invented scanner rule, file or finding. */
 export type RegressionBlockingCause =
   | { type: 'HEAD_CODE_FAILURE' }
   | { type: 'SCANNER_FINDING'; finding: IdentifiedFinding };
@@ -19,7 +18,6 @@ export type RegressionBlockingCause =
 export interface RegressionAdvisory {
   code: string;
   message: string;
-  /** Full finding evidence, including null fingerprints and duplicate occurrences. */
   findingRef?: IdentifiedFinding;
 }
 
@@ -30,7 +28,7 @@ export interface RegressionVerdict {
   decisionReasons: string[];
 }
 
-/** Pure composition only: no collection, identity verification or lifecycle transition. */
+/** Combine la vérification HEAD et le diff scanner en un verdict unique. */
 export function combineRegressionVerdict(input: RegressionVerdictInput): RegressionVerdict {
   const { headVerificationResult, scannerDiff, evidenceIntegrity } = input;
   if (headVerificationResult === 'CODE_FAILURE') {
@@ -69,9 +67,6 @@ export function combineRegressionVerdict(input: RegressionVerdictInput): Regress
     };
   }
 
-  // The raw engine shares occurrence objects between these two lists. Also
-  // accept a JSON round-trip: match full records, consuming each occurrence
-  // once. Fingerprint alone would collapse distinct findings in the same file.
   const remainingBlocking = [...scannerDiff.blockingIntroducedFindings];
   const advisories: RegressionAdvisory[] = [];
   for (const finding of scannerDiff.introducedFindings) {

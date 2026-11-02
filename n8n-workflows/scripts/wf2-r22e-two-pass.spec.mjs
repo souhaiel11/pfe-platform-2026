@@ -1,16 +1,4 @@
-// R22-E — structural + logic proofs for the two-pass WF2 restructuring,
-// run against the generated `pending-live-update` artifact (NOT the live
-// n8n instance — nothing here imports/publishes anything). Two kinds of
-// proof, matching what's actually achievable without a live n8n:
-//   (a) graph reachability analysis on the real connections object, and
-//   (b) extraction+eval of each new Code node's real jsCode against mock
-//       n8n expression helpers ($, $input, $json, $items, $execution),
-//       same technique already used for the WF3 Quality-Gate-conditions
-//       node in R22-A (wf3-qg-conditions.spec.mjs).
-// This is the "non-live test harness / workflow simulation" Phase 17
-// explicitly calls for -- it proves the new nodes' own logic and the
-// graph's topology, not n8n's runtime engine itself (which can only be
-// proven by an actual (out of scope) deployment).
+// Teste le composant « wf2-r22e-two-pass » et ses cas d’erreur.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -24,12 +12,14 @@ const workflow = JSON.parse(readFileSync(artifactPath, 'utf8'))[0];
 const nodesByName = new Map(workflow.nodes.map(n => [n.name, n]));
 const conns = workflow.connections;
 
+/** Prépare les données nécessaires à ce scénario. */
 function successors(name) {
   const c = conns[name];
   if (!c) return [];
   return c.main.flatMap(outputArr => outputArr.map(t => t.node));
 }
 
+/** Prépare les données nécessaires à ce scénario. */
 function reachableFrom(startName, { stopAt = new Set() } = {}) {
   const seen = new Set();
   const queue = [startName];
@@ -98,22 +88,29 @@ function reachableFrom(startName, { stopAt = new Set() } = {}) {
   console.log('Test 3 (spec #8-12) PASS - every failure route leads away from Git mutation');
 }
 
-// ============================================================
-// Mock n8n expression runtime for jsCode extraction+eval.
-// ============================================================
+/** Simule les dépendances nécessaires au scénario. */
 function makeMockRuntime(nodeOutputs, currentItemsByNode = {}) {
+  /** Simule l’accès à un nœud n8n pour le scénario. */
   const $ = (name) => ({
+    /** Renvoie le premier élément disponible. */
     first: () => ({ json: nodeOutputs[name]?.[0] }),
+    /** Renvoie tous les éléments disponibles. */
     all: () => (nodeOutputs[name] || []).map(json => ({ json })),
     item: { json: currentItemsByNode[name] },
   });
-  const $input = { all: () => (nodeOutputs.__CURRENT_INPUT__ || []).map(json => ({ json })), first: () => ({ json: (nodeOutputs.__CURRENT_INPUT__ || [])[0] }) };
+  const $input = {
+  /** Renvoie tous les éléments disponibles. */
+  all: () => (nodeOutputs.__CURRENT_INPUT__ || []).map(json => ({ json })),
+  /** Renvoie le premier élément disponible. */
+  first: () => ({ json: (nodeOutputs.__CURRENT_INPUT__ || [])[0] }) };
+  /** Simule la lecture des éléments d’un nœud n8n. */
   const $items = () => [{ json: { correlationEnvelope: { incidentId: 'incident-1' } } }];
   const $execution = { id: 'exec-1' };
   const $json = nodeOutputs.__CURRENT_JSON__;
   return { $, $input, $items, $execution, $json };
 }
 
+/** Prépare les données nécessaires à ce scénario. */
 function runCode(node, runtime) {
   const fn = new Function('$', '$input', '$items', '$execution', '$json', 'require', `${node.parameters.jsCode}`);
   return fn(runtime.$, runtime.$input, runtime.$items, runtime.$execution, runtime.$json, require);
@@ -135,6 +132,7 @@ function runCode(node, runtime) {
   assert.doesNotMatch(reference, /targetBranchName/,
     'an absent remediation branch must never be dereferenced by source-context fetch');
 
+  /** Prépare les données nécessaires à ce scénario. */
   const resolveAuthoritativeSourceSha = ({ lookupStatus, branchHeadSha, baseSha }) =>
     Number(lookupStatus) === 200 ? branchHeadSha : baseSha;
   const fixtures = [
@@ -152,6 +150,7 @@ function runCode(node, runtime) {
 
 {
   const policyNode = nodesByName.get('Build Independent Repository Policy');
+  /** Vérifie donnée de test dans ce scénario de test. */
   const verifyFixture = ({ file, source, tree, manifest }) => {
     const runtime = makeMockRuntime({
       'Prepare Batch Context': [{ findings: [{ file, source }], repository_owner: 'fixture-owner', repository_name: 'fixture-repository' }],
@@ -167,22 +166,15 @@ function runCode(node, runtime) {
   console.log('R22-E2J PASS - repository policy accepts Maven/Java and npm/TypeScript fixtures and fails closed for a missing source');
 }
 
-// ============================================================
-// R22-E2P: EVERY Pass-1 github file:get read (planner-input read AND the
-// Pass-1 patch-target read) resolves from the authoritative immutable SHA,
-// never from the not-yet-created remediation branch name. Root cause of
-// execution 1950's GitHub 404: 'Fetch Repository Files' still referenced
-// $('Prepare Batch Context').targetBranchName during Pass 1.
-// Independent of repository, language, framework, scanner, finding
-// category/rule, file name, incident id, and branch naming.
-// ============================================================
 {
   const PASS1_FILE_READ_NODES = ['Fetch Finding Source Context', 'Fetch Repository Files'];
 
-  // Evaluate the real n8n reference expression the same way n8n would.
+  /** Prépare les données nécessaires à ce scénario. */
   const evalReference = (referenceExpr, { lookupStatus, branchHeadSha, baseSha }) => {
     const inner = referenceExpr.replace(/^=\{\{\s*/, '').replace(/\s*\}\}$/, '');
+    /** Simule l’accès à un nœud n8n pour le scénario. */
     const $ = (name) => ({
+      /** Renvoie le premier élément disponible. */
       first: () => ({
         json: name === 'Lookup Remediation Branch'
           ? { statusCode: lookupStatus, body: { object: { sha: branchHeadSha } } }
@@ -266,12 +258,7 @@ function runCode(node, runtime) {
   console.log('R22-E2P PASS - CASE E (branch creation after all 3 guards) + CASE F (no Git mutation from the Pass-1 read pre-verification)');
 }
 
-// ============================================================
-// R22-E2Q FIX A — sandbox compatibility. `require('crypto')` is disallowed
-// in n8n's Code-node task-runner (proven by R22-E2O-R3 execution 1952).
-// This test would have FAILED before the fix. It must never be weakened to
-// make the workflow pass — it is the whole reason 1952 was not caught.
-// ============================================================
+/** Prépare les données nécessaires à ce scénario. */
 const sha256hex = (s) => require('node:crypto').createHash('sha256').update(String(s), 'utf8').digest('hex');
 {
   const cryptoRequirePattern = /require\(\s*['"](?:node:)?crypto['"]\s*\)/;
@@ -305,14 +292,6 @@ const sha256hex = (s) => require('node:crypto').createHash('sha256').update(Stri
   console.log('R22-E2Q PASS - 0 require(crypto) in Code nodes; 4 native SHA-256 hex Crypto nodes; hash matches backend byte-for-byte across test vectors');
 }
 
-// ============================================================
-// R22-E2Q FIX C — 'Accumulate Candidate File' re-derives candidateBaseSha +
-// branchExists (lost when 'Fetch Repository Tree' replaces the item JSON).
-// The OLD spec hand-injected these into every mock item, so it could never
-// have caught the missing propagation (R22-E2O-R3: Assemble Candidate
-// Manifest would throw CANDIDATE_MANIFEST_INVALID:candidateBaseSha). Now
-// the derivation itself is exercised: nothing is hand-injected.
-// ============================================================
 {
   const node = nodesByName.get('Accumulate Candidate File');
   const enforceOut = { patchedCode: 'controller content', targetFile: 'A.java', fileOperation: 'MODIFY' };
@@ -353,8 +332,7 @@ const sha256hex = (s) => require('node:crypto').createHash('sha256').update(Stri
 // REAL compiled backend computeCandidateDigest.
 // ============================================================
 {
-  // Items shaped like real 'Accumulate Candidate File' output (FIX C ⇒ these
-  // fields are genuinely present now, not injected by the test harness).
+  /** Prépare les données communes à ce contrôle. */
   const mk = (path, op, code, extra) => ({
     target_file_path: path, fileOperation: op, patchedCode: code, oldSha: extra.oldSha ?? null,
     repository_owner: 'souhaiel11', repository_name: 'pfe-app-test', branchName: 'fix/pfe-x', commitMessage: 'fix',
@@ -421,19 +399,6 @@ const sha256hex = (s) => require('node:crypto').createHash('sha256').update(Stri
   console.log('Test 5 (spec #14) PASS - Verify Content Hash Before Send catches a mismatch against the native-Crypto recompute');
 }
 
-// ============================================================
-// R22-E2R — Pass 2 expands the FROZEN CandidateManifest, never $json.
-// Root cause of R22-E2O-R4 execution 1953: 'Expand Manifest Files' read
-// `const manifest = $json`. In Pass 2 $json is whichever predecessor fired
-// — 'Create Missing Branch' (a GitHub ref-creation response) or the
-// 'Branch Existed At Generation? (Pass 2 Entry)' IF node passing through
-// the 'Call Remote Head Drift Guard' {ok:true} item. Neither carries
-// `.files`, so `manifest.files.map(...)` threw
-// `Cannot read properties of undefined (reading 'map')` and Pass 2
-// dead-ended before any Git write. This test reproduces both real
-// predecessor shapes; the pre-fix code (from the accepted baseline) MUST
-// fail on them, the shipped code MUST expand exactly the frozen manifest.
-// ============================================================
 {
   const node = nodesByName.get('Expand Manifest Files');
 
@@ -444,6 +409,7 @@ const sha256hex = (s) => require('node:crypto').createHash('sha256').update(Stri
   assert.match(preFixNode.parameters.jsCode, /const manifest\s*=\s*\$json/,
     'R22-E2R - the baseline (pre-fix) really did read $json — this is the bug being fixed');
 
+  /** Prépare les données nécessaires à ce scénario. */
   const mkFile = (pathName, content, op) => ({
     path: pathName, operation: op, originalBlobSha: op === 'CREATE' ? null : `blob-${pathName}`,
     content, contentSha256: sha256hex(content),
@@ -537,6 +503,7 @@ const sha256hex = (s) => require('node:crypto').createHash('sha256').update(Stri
 {
   const node = nodesByName.get('Evaluate GitHub Write Reconciliation (Pass 2)');
   const patch = { target_file_path: 'A.java', patchedCode: 'CANDIDATE', sourceContent: 'ORIGINAL', contentSha256: sha256hex('CANDIDATE') };
+  /** Exécute le traitement et collecte son résultat. */
   const run = (extra) => runCode(node, makeMockRuntime(
     { __CURRENT_JSON__: { sha: 'newsha', ...extra } }, { 'Expand Manifest Files': patch }));
   assert.equal(run({ _reconciledRemoteContent: 'CANDIDATE', _reconciledRemoteSha256: sha256hex('CANDIDATE') }).json.remoteState, 'EXPECTED_CANDIDATE');
@@ -557,7 +524,7 @@ const sha256hex = (s) => require('node:crypto').createHash('sha256').update(Stri
   const deadEnds = feNodes.filter(fe => !reachableFrom(fe).has('Persist WF2 Failure Status'));
   assert.deepEqual(deadEnds, [], `FIX B - every Failure Envelope must reach Persist WF2 Failure Status (dead-ends: ${deadEnds.join(', ')})`);
 
-  // No cycle reachable from the persistence entry point.
+  /** Prépare les données nécessaires à ce scénario. */
   const walkForCycle = (start) => {
     const stack = [[start, []]];
     while (stack.length) {
@@ -588,6 +555,7 @@ const sha256hex = (s) => require('node:crypto').createHash('sha256').update(Stri
     { path: 'A.java', contentSha256: 'sha-a' },
     { path: 'B.java', contentSha256: 'sha-b' },
   ];
+  /** Prépare les données nécessaires à ce scénario. */
   const fullResult = (path, sha) => ({ targetFile: path, approvedFindingIds: [], processedFindingIds: [], candidateAcceptedFindingIds: [], validationEvidence: {}, outcome: 'CANDIDATE_ACCEPTABLE_FOR_SCANNER_VALIDATION', candidateStateVerified: true, updateApplied: true, fileOperation: 'MODIFY', oldSha: 'x', newSha: 'y', commitSha: 'c', contentSha256: sha });
 
   // Only 1 of 2 files confirmed -> PARTIAL_REMOTE_WRITE, not the generic incomplete code.

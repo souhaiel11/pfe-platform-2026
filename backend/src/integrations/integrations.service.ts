@@ -1,3 +1,5 @@
+// Gère les intégrations d'outils externes (Grafana/Prometheus/Kubernetes/Nexus) : lecture assainie
+// (jamais de secret en clair vers le front), upsert par type d'outil, test de connexion réel.
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -10,31 +12,25 @@ import * as https from 'https';
 
 @Injectable()
 export class IntegrationsService {
+  /** Initialise les dépendances et l’état de ce composant. */
   constructor(
     @InjectRepository(Integration)
     private readonly repo: Repository<Integration>,
     private readonly http: HttpService,
   ) {}
 
-  // Un credential (token/password) ne doit jamais repartir en clair vers le
-  // front une fois enregistré — seule sa présence est utile côté UI (afficher
-  // "configuré" plutôt que la valeur). Deny-list par construction, même
-  // logique que sanitizeProject (voir common/sanitize-project.ts) : un champ
-  // secret ajouté à Integration sans être ajouté ici fuiterait silencieusement.
+  // Retire token/password/URL-avec-identifiants de l'objet renvoyé au front ; ne garde que des booléens
+  // hasToken/hasPassword pour savoir si un secret est configuré, sans jamais le révéler.
   private sanitize(integration: Integration) {
     const { token, password, ...rest } = integration;
     let url = rest.url;
     try { const parsed = new URL(url); if (parsed.username || parsed.password || parsed.search || parsed.hash) url = null; } catch { url = null; }
-    // Diagnostic payloads are not a trusted configuration source. Never echo
-    // remote errors or arbitrary metadata into the settings response.
     const metadata = rest.lastChecked ? { message: rest.status === IntegrationStatus.CONNECTED ? 'Connexion vérifiée.' : 'Échec de la vérification.' } : null;
     return { ...rest, url, metadata, hasToken: !!token, hasPassword: !!password };
   }
 
-  // Un champ token/password vide envoyé par le front lors d'un update ne veut
-  // pas dire "efface le secret existant" — le front ne reçoit plus jamais la
-  // vraie valeur (voir sanitize()), donc un champ laissé vide à l'écran est
-  // par construction une valeur inchangée, pas une intention d'effacement.
+  // Retire d'un DTO entrant les champs token/password laissés vides, pour qu'un formulaire qui ne
+  // réaffiche jamais le secret existant ne l'efface pas accidentellement à l'enregistrement.
   private dropBlankSecrets<T extends Record<string, any>>(dto: T): T {
     const clean: any = { ...dto };
     if (clean.token === '' || clean.token === null || clean.token === undefined) delete clean.token;
@@ -42,24 +38,26 @@ export class IntegrationsService {
     return clean;
   }
 
+  // Liste toutes les intégrations, assainies, triées par type d'outil.
   async findAll() {
     const rows = await this.repo.find({ order: { toolType: 'ASC' } });
     return rows.map((r) => this.sanitize(r));
   }
 
+  // Récupère une intégration assainie par id.
   async findOne(id: string) {
     return this.sanitize(await this.findOneRaw(id));
   }
 
-  // Réservé à l'usage interne (testConnection doit lire le vrai token/
-  // password pour construire l'en-tête Authorization) — ne jamais renvoyer
-  // ceci directement dans une réponse HTTP.
+  // Récupère l'intégration avec ses secrets en clair (usage interne uniquement, ex. testConnection) —
+  // ne doit jamais être renvoyée directement dans une réponse HTTP.
   private async findOneRaw(id: string) {
     const i = await this.repo.findOne({ where: { id } });
     if (!i) throw new NotFoundException('Intégration introuvable.');
     return i;
   }
 
+  // Crée l'intégration pour ce type d'outil si elle n'existe pas encore, sinon la met à jour.
   async upsert(dto: CreateIntegrationDto) {
     const existing = await this.repo.findOne({ where: { toolType: dto.toolType } });
     if (existing) {
@@ -72,12 +70,14 @@ export class IntegrationsService {
     return this.sanitize(saved);
   }
 
+  // Met à jour une intégration existante (en préservant les secrets non resoumis).
   async update(id: string, dto: UpdateIntegrationDto) {
     await this.findOne(id);
     await this.repo.update(id, this.dropBlankSecrets(dto) as any);
     return this.findOne(id);
   }
 
+  // Teste réellement la connexion à l'outil et persiste le résultat (statut + horodatage + métadonnées).
   async testConnection(id: string) {
     const integration = await this.findOneRaw(id);
     const now = new Date();
@@ -96,6 +96,8 @@ export class IntegrationsService {
     }
   }
 
+  // Appelle l'endpoint de santé propre à chaque outil (Grafana/Prometheus/Kubernetes/Nexus) avec
+  // l'authentification appropriée, et normalise sa réponse.
   private async doTest(integration: Integration): Promise<Record<string, any>> {
     const headers: Record<string, string> = {};
     if (integration.token) {

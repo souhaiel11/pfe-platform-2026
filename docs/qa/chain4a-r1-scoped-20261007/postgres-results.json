@@ -1,0 +1,15 @@
+[
+  {
+    "suite": "scoped",
+    "exitCode": 0,
+    "rerunEvidence": "scoped-postgres.log \u2014 pass:true after correcting stale callback assertion to expected HTTP409"
+  },
+  {
+    "suite": "phase4g",
+    "exitCode": 0
+  },
+  {
+    "suite": "harness",
+    "exitCode": 0
+  }
+]

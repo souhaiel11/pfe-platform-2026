@@ -1,3 +1,4 @@
+/* Définit les styles de le widget de discussion. */
     .chat-wrapper {
       position: fixed;
       bottom: 24px;
@@ -7,20 +8,20 @@
 
     .chat-fab {
       width: 52px; height: 52px;
-      border-radius: 50%;
-      background: var(--accent-blue);
-      border: none;
-      color: #080c14;
+      border-radius: 10px;
+      background: var(--accent-primary);
+      border: 1px solid var(--accent-primary);
+      color: var(--accent-text-on);
       font-size: 20px;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
       margin-left: auto;
-      box-shadow: 0 0 0 4px #38bdf822;
+      box-shadow: 0 4px 16px #202d2926;
       transition: all 0.2s;
 
-      &:hover { transform: scale(1.05); }
+      &:hover { transform: translateY(-2px); }
       &.open  { background: var(--bg-secondary); color: var(--text-secondary); border: 1px solid var(--border); }
     }
 
@@ -258,3 +259,9 @@
       .chat-wrapper { right: 16px; bottom: 16px; }
       .chat-messages { padding: 12px; }
     }
+
+/* The assistant belongs to the same Atelier instrument family. */
+.chat-fab svg { width: 24px; height: 24px; }
+.chat-panel { box-shadow: 0 14px 44px #16251e24; }
+.agent-avatar { border-radius: 7px; color: var(--accent-primary); background: var(--bg-tertiary); border-color: var(--border-light); }
+.send-btn { background: var(--accent-primary); color: var(--accent-text-on); border-radius: 5px; }

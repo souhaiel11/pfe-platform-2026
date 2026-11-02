@@ -1,8 +1,5 @@
 #!/usr/bin/env node
-// V1.7 — static, offline proof that EVERY WF6 terminal outcome now reaches
-// the existing recordWf6BatchResult() callback before its (no-op) terminal
-// node, closing the 26/28 gap found by the ack-contract audit. No n8n
-// execution, no network, no live workflow touched.
+// Vérifie WF6 retour automatique completeness et ses cas d’erreur.
 import { readFileSync } from 'node:fs';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
@@ -12,10 +9,13 @@ const dir = new URL('../pending-live-update/', import.meta.url);
 const ackFixed = JSON.parse(readFileSync(new URL('wf6-security-remediation-maven-RdYyfjVpOm2LxS95.V1.7-ACK-CONTRACT.json', dir)))[0];
 const fixed = JSON.parse(readFileSync(new URL('wf6-security-remediation-maven-RdYyfjVpOm2LxS95.V1.7-CALLBACK-COMPLETENESS.json', dir)))[0];
 
+/** Prépare les données nécessaires à ce scénario. */
 const nodesOf = w => new Map(w.nodes.map(n => [n.name, n]));
 const ackNodes = nodesOf(ackFixed);
 const fixedNodes = nodesOf(fixed);
+/** Prépare les données nécessaires à ce scénario. */
 const terminals = w => w.nodes.filter(n => n.type === 'n8n-nodes-base.noOp').map(n => n.name);
+/** Prépare les données nécessaires à ce scénario. */
 const incomingOf = w => {
   const map = new Map();
   for (const [src, outs] of Object.entries(w.connections)) {

@@ -1,0 +1,21 @@
+{
+  "reservationTable": "remediation_target_reservations",
+  "planTable": null,
+  "migrationTables": null,
+  "constraints": [
+    "CHECK ((jsonb_typeof(claims) = 'object'::text))",
+    "CHECK (((state)::text = ANY ((ARRAY['ACTIVE'::character varying, 'RELEASED'::character varying])::text[])))",
+    "CHECK ((\"expiresAt\" IS NULL))",
+    "CHECK (((((state)::text = 'ACTIVE'::text) AND (claims <> '{}'::jsonb) AND (\"releasedAt\" IS NULL)) OR (((state)::text = 'RELEASED'::text) AND (claims = '{}'::jsonb) AND (\"releasedAt\" IS NOT NULL))))",
+    "PRIMARY KEY (id)"
+  ],
+  "indexes": [
+    "CREATE UNIQUE INDEX remediation_target_reservations_pkey ON public.remediation_target_reservations USING btree (id)",
+    "CREATE UNIQUE INDEX remediation_target_one_active ON public.remediation_target_reservations USING btree (\"projectId\", \"targetKey\") WHERE ((state)::text = 'ACTIVE'::text)",
+    "CREATE INDEX remediation_target_stale ON public.remediation_target_reservations USING btree (\"updatedAt\") WHERE ((state)::text = 'ACTIVE'::text)"
+  ],
+  "reservations": 0,
+  "activeReservations": 0,
+  "quarantined": 0,
+  "legacyPointers": 0
+}

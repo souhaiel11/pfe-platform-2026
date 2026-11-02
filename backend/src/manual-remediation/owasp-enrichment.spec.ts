@@ -1,3 +1,4 @@
+// Teste le composant « owasp-enrichment » et ses cas d’erreur.
 import { strict as assert } from 'assert';
 import { readFileSync } from 'fs';
 import { join } from 'path';
@@ -5,6 +6,7 @@ import { normalizeOwaspFinding } from '../common/owasp-finding-normalizer';
 import { ManualRemediationService } from './manual-remediation.service';
 import { findingFingerprint } from './finding-fingerprint';
 
+/** Exécute le traitement et collecte son résultat. */
 async function run() {
   const fixture = JSON.parse(readFileSync(join(__dirname, '../common/fixtures/owasp-149-dependencies.json'), 'utf8'));
   const findings = fixture.dependencies.flatMap((d: any) => d.vulnerabilities.map((v: any) => normalizeOwaspFinding(d, v)));
@@ -13,12 +15,19 @@ async function run() {
   const initialIds = rows.map(r => r.id);
   const initialFingerprints = rows.map(r => r.findingFingerprint);
   const repo: any = {
+    /** Recherche les éléments correspondants. */
     find: async ({ where }: any) => rows.filter(r => !where.source || r.source === where.source),
+    /** Crée et enregistre un nouvel élément. */
     create: (v: any) => ({ id: `new-${rows.length}`, ...v }),
+    /** Enregistre les données fournies. */
     save: async (v: any) => { if (!rows.includes(v)) rows.push(v); return v; },
+    /** Applique les modifications autorisées à l’élément. */
     update: async () => {},
   };
-  const service = new ManualRemediationService(repo, {} as any, { dispatch: async () => { throw new Error('WF6 must never run'); } });
+  const service = new ManualRemediationService(repo, {} as any, {
+  /** Transmet la demande au service chargé de l’exécuter. */
+  dispatch: async () => { throw new Error('WF6 must never run'); } });
+  /** Prépare les données nécessaires à ce scénario. */
   const incident = (cves: any[]) => ({ id: 'incident', projectId: 'project', buildNumber: 149, metadata: { enrichedData: { owasp: { status: 'COMPLETED', completed: true, resultAvailable: true, cves }, trivy: { status: 'NOT_RUN', cves: [] }, zap: { status: 'NOT_RUN', alerts: [] } } } } as any);
   await service.syncIncident(incident(findings));
   await service.syncIncident(incident(findings));

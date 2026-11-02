@@ -1,9 +1,5 @@
 #!/usr/bin/env node
-// V1.7 — static, offline proof for the WF6 immediate-ack contract change.
-// Compares the BASELINE (wf6-security-remediation-maven-RdYyfjVpOm2LxS95.
-// REVALIDATE-BATCH-FIX.PROMOTION-TARGET.json) against the CORRECTED draft
-// (wf6-security-remediation-maven-RdYyfjVpOm2LxS95.V1.7-ACK-CONTRACT.json).
-// No n8n execution, no network, no live workflow touched.
+// Vérifie WF6 ack contract et ses cas d’erreur.
 import { readFileSync } from 'node:fs';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
@@ -13,10 +9,13 @@ const dir = new URL('../pending-live-update/', import.meta.url);
 const baseline = JSON.parse(readFileSync(new URL('wf6-security-remediation-maven-RdYyfjVpOm2LxS95.REVALIDATE-BATCH-FIX.PROMOTION-TARGET.json', dir)))[0];
 const fixed = JSON.parse(readFileSync(new URL('wf6-security-remediation-maven-RdYyfjVpOm2LxS95.V1.7-ACK-CONTRACT.json', dir)))[0];
 
+/** Prépare les données nécessaires à ce scénario. */
 const nodesOf = w => new Map(w.nodes.map(n => [n.name, n]));
 const baseNodes = nodesOf(baseline);
 const fixedNodes = nodesOf(fixed);
+/** Prépare les données nécessaires à ce scénario. */
 const webhookOf = w => w.nodes.find(n => n.type === 'n8n-nodes-base.webhook');
+/** Prépare les données nécessaires à ce scénario. */
 const respondNamesOf = w => w.nodes.filter(n => n.type === 'n8n-nodes-base.respondToWebhook').map(n => n.name);
 const SECURITY_NODES = ['Evaluate Security Remediation', 'Revalidate Before Write (New Branch)', 'Revalidate Before Write (Reuse)', 'Revalidate Before Write (PR)'];
 
@@ -41,7 +40,7 @@ test('3. every terminal outcome path still exists, now as a noOp with the SAME n
     assert.equal(fixedNode.typeVersion, 1);
     assert.deepEqual(fixedNode.parameters, {}, `"${name}" must carry no parameters (a plain no-op)`);
   }
-  // Incoming wiring identical: same source node, same output index, for every terminal.
+  /** Prépare les données nécessaires à ce scénario. */
   const incomingOf = w => {
     const map = new Map();
     for (const [src, outs] of Object.entries(w.connections)) {
@@ -70,10 +69,7 @@ test('4. recordWf6BatchResult callback path ("Record Batch Result" nodes) is unt
 });
 
 test('5. every outcome that reached a callback in the baseline still reaches the SAME callback in the fixed draft', () => {
-  // Only 2 of 28 terminals have a real backend callback upstream today
-  // (a pre-existing gap, not introduced by this change -- see MISSING_CALLBACKS
-  // in this increment's own report). This test proves the fix does not
-  // regress even those 2.
+  /** Prépare les données nécessaires à ce scénario. */
   const incomingOf = w => {
     const map = new Map();
     for (const [src, outs] of Object.entries(w.connections)) {
@@ -120,7 +116,11 @@ test('9. both workflow JSON files are structurally valid (parseable, single work
 });
 
 test('10. n8n 2.14.2 compatibility: noOp node shape matches the installed node\'s real contract', () => {
-  const nb = JSON.parse(readFileSync('/tmp/wf6-n8n-package.json', 'utf8'));
+  // package.json du n8n RÉELLEMENT installé, extrait du conteneur. Le chemin est
+  // surchargeable par WF6_N8N_PACKAGE_JSON : sans cela ce contrôle est
+  // inexécutable dès que /tmp n'est pas inscriptible, et il échouait en
+  // permanence au lieu de vérifier quoi que ce soit. Valeur par défaut inchangée.
+  const nb = JSON.parse(readFileSync(process.env.WF6_N8N_PACKAGE_JSON || '/tmp/wf6-n8n-package.json', 'utf8'));
   assert.equal(nb.version, '2.14.2');
   // The installed NoOp node (verified separately against the real n8n
   // container: nodes/NoOp/NoOp.node.js) is name:'noOp', version:1, no

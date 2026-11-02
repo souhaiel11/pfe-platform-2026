@@ -1,0 +1,46 @@
+{
+  "status": "TECHNICAL_FAILURE",
+  "reason": "RUNTIME_IO_FAILED:BUILD_SCAN_HANDLER",
+  "findings": [
+    {
+      "findingIdentity": "qualified-fixture-finding",
+      "cveId": "CVE-2022-45868",
+      "status": "PENDING",
+      "reason": "BATCH_ABORTED_BY_SIBLING_FINDING",
+      "patchEvidence": null
+    }
+  ],
+  "decisions": [
+    {
+      "findingIdentity": "qualified-fixture-finding",
+      "evaluatedSha": "13af977f770f78d47462b5ccbe856de9c0a4f077",
+      "provenance": {
+        "ecosystem": "MAVEN",
+        "kind": "DIRECT_EXPLICIT",
+        "package": "com.h2database:h2",
+        "installedVersion": "2.1.212",
+        "controllingFile": "pom.xml",
+        "controllingElement": "<version>2.1.212</version>",
+        "controllingProperty": null,
+        "groundedSha": "13af977f770f78d47462b5ccbe856de9c0a4f077",
+        "evidence": "<dependency><groupId>com.h2database</groupId><artifactId>h2</artifactId><version>2.1.212</version></dependency> found directly in <dependencies> of pom.xml."
+      },
+      "fixedVersions": [
+        "2.2.220"
+      ],
+      "selectedTargetVersion": "2.2.220",
+      "remediationType": "AUTO_FIX_ELIGIBLE",
+      "reason": "DIRECT_EXPLICIT:SELECTED"
+    }
+  ],
+  "candidateIdentity": null,
+  "candidateManifest": null,
+  "guardResult": null,
+  "failureClass": "VERIFIER_UNAVAILABLE",
+  "executionTimings": {
+    "GROUNDING_DURATION_MS": 65141,
+    "ARTIFACT_VALIDATION_DURATION_MS": 103,
+    "CLEANUP_DURATION_MS": 3,
+    "TOTAL_WORKER_DURATION_MS": 65268
+  }
+}

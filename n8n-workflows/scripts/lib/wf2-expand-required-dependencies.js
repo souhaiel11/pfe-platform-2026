@@ -1,3 +1,4 @@
+// Prépare WF2 expand required dépendances pour les workflows n8n.
 const ctx = $('Build Independent Repository Policy').first().json;
 // Provenance of the EVIDENCE, not the write target. Every source fetch node
 // (Finding Source Context / Referenced API Sources / Required Dependency
@@ -14,16 +15,10 @@ const selected = new Set(initial.map(source=>source.path));
 const existing = new Set(ctx.repositoryPolicy.existingFiles);
 const infos = initial.filter(source=>safeJavaPath(source.path)).map(source=>javaInfo(source.path,source.content));
 const requiredRelationships = infos.flatMap(relationFields);
-// Counts ONLY the single-valued owning associations the relationship grounding
-// contract can actually prove (repository findById -> Optional<T>). Collection
-// associations (@OneToMany/@ManyToMany, always the inverse mappedBy side here)
-// carry no single-entity lookup to ground, so counting them produced a false
-// mismatch against requiredRelationships. Both sides of this comparison must
-// span the SAME relationship categories; the fail-closed property is retained
-// for a @ManyToOne/@OneToOne whose declaration relationFields cannot parse.
 const associationCount=infos.reduce((count,info)=>count+[...info.code.matchAll(/@(?:[\w.]+\.)?(?:ManyToOne|OneToOne)\b/g)].length,0);
 if(associationCount!==requiredRelationships.length) throw new Error('SOURCE_API_CONTEXT_INCOMPLETE: unsupported relationship declaration requires explicit source evidence');
 const reasons = new Map();
+/** Ajoute l’élément au résultat en cours. */
 const add = (path, reason) => { if(safeJavaPath(path)&&existing.has(path)) {selected.add(path); reasons.set(path,reason);} };
 for (const info of infos) {
   const root = sourceRoot(info.path);

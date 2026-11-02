@@ -1,15 +1,4 @@
-// Offline contract tests for WF2's Generic Candidate Preflight raw-cast
-// detector, proven against the exact real generated file from incident
-// 754328c4-4351-4f44-985b-34b9a031dfb2 / fixRequest
-// 88d58fc8-6056-43a5-a3de-28c1e1a9575c (WF2 execution 1986, n8n).
-//
-// The OLD detector was a bare structural regex with no exclusion for the
-// standard Java instanceof-guarded-cast idiom inside equals(), and falsely
-// rejected a safe, additive-only, correctly-generated TaskDTO.java. This
-// proves the NEW detector clears that exact real file while still catching
-// a genuinely unguarded raw cast.
-//
-// No n8n execution, network or business action.
+// Teste le composant « wf2-preflight-rawcast » et ses cas d’erreur.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
@@ -30,6 +19,7 @@ const start = code.indexOf(startMarker);
 assert.ok(start > 0, 'rawCastMatch detector must be present in the deployed node');
 const end = code.indexOf("if(/placeholder", start);
 const detectorSrc = code.slice(start, end);
+/** Prépare les données nécessaires à ce scénario. */
 function detect(candidateCode) {
   const fn = new Function('code', `let violations=[];
     ${detectorSrc}

@@ -1,3 +1,4 @@
+// Pilote l’analyse et l’application des optimisations Dockerfile.
 import { userHttpError } from '../../core/http-error-message';
 import { Component, Input, OnInit, OnDestroy, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -5,19 +6,6 @@ import { HttpClient } from '@angular/common/http';
 import { Subscription, interval, switchMap } from 'rxjs';
 import { PresentationLabelPipe } from '../../shared/presentation-label.pipe';
 
-// ─────────────────────────────────────────────────────────────────────
-//  Optimiseur de Dockerfile — agent IA (MVP minimal, calqué sur
-//  JenkinsfileOptimizerComponent mais volontairement réduit) :
-//    - pas de sélection fine par finding : "Corriger" applique TOUS les
-//      findings détectés (raffinement possible plus tard) ;
-//    - pas de polling sur l'apply : la branche n8n dockerfile-apply
-//      exécute agent + gate + PR dans une seule requête synchrone
-//      (contrairement à jenkinsfile-apply), donc POST /dockerfile/apply
-//      répond directement avec le résultat final (~30-90s observés,
-//      nginx a un proxy_read_timeout de 200s, voir docker/nginx.conf).
-//
-//  Usage : <app-dockerfile-optimizer [projectId]="project?.id" [projectName]="project?.name" [repo]="project?.githubRepo">
-// ─────────────────────────────────────────────────────────────────────
 
 @Component({
   selector: 'app-dockerfile-optimizer',
@@ -39,8 +27,8 @@ import { PresentationLabelPipe } from '../../shared/presentation-label.pipe';
       </div>
 
       <div class="do-analyze-row">
-        <button class="do-btn" [disabled]="loading() || !canAnalyze()" (click)="analyze()">
-          {{ loading() ? 'Analyse en cours…' : 'Analyser le Dockerfile' }}
+        <button class="do-btn" [disabled]="loading() || checkingHistory() || !canAnalyze()" (click)="analyze()">
+          {{ checkingHistory() ? 'Chargement de l’analyse…' : loading() ? 'Analyse en cours…' : 'Analyser le Dockerfile' }}
         </button>
       </div>
       <p class="do-error" *ngIf="error()">{{ error() }}</p>
@@ -64,12 +52,23 @@ import { PresentationLabelPipe } from '../../shared/presentation-label.pipe';
         <button class="do-btn ghost" (click)="reset()">Nouvelle analyse</button>
       </section>
 
+      <div class="do-selection" *ngIf="(r.issues || []).length">
+        <span role="status">{{ selectedFindings().length }} / {{ r.issues.length }} problèmes sélectionnés</span>
+        <button class="do-btn ghost" [disabled]="applying()" (click)="selectAllIssues()">Tout sélectionner</button>
+        <button class="do-btn ghost" [disabled]="applying()" (click)="clearIssueSelection()">Tout désélectionner</button>
+      </div>
+
       <!-- Findings groupés par catégorie -->
       <section class="block" *ngFor="let g of groupedIssues()">
         <span class="eyebrow">{{ g.label }} ({{ g.items.length }})</span>
         <div class="do-issues">
           <div class="do-issue" *ngFor="let i of g.items">
             <div class="do-issue-head">
+              <label class="do-pick">
+                <input type="checkbox" [checked]="isIssueSelected(i)" [disabled]="applying()"
+                       [attr.aria-label]="'Sélectionner la correction : ' + i.description" (change)="toggleIssue(i)" />
+                À corriger
+              </label>
               <span class="sev" [attr.data-sev]="sevKey(i.severity)">{{ i.severity | presentationLabel }}</span>
               <span class="do-det" *ngIf="i.deterministic">déterministe</span>
               <strong class="do-issue-cat mono">{{ i.category }}</strong>
@@ -80,17 +79,17 @@ import { PresentationLabelPipe } from '../../shared/presentation-label.pipe';
         </div>
       </section>
 
-      <div class="do-empty" *ngIf="!(r.issues || []).length">Aucun problème détecté.</div>
+      <div class="do-empty" *ngIf="!(r.issues || []).length">Aucun problème critique, bloquant ou de sécurité élevée identifié.</div>
 
       <!-- ── Remédiation ── -->
       <section class="block" *ngIf="!applyResult()">
         <div class="do-decision">
           <p class="do-sub" style="margin:0">
-            « Corriger » applique <strong>tous</strong> les problèmes ci-dessus et ouvre une Pull Request sur le dépôt —
+            « Corriger » applique <strong>uniquement les problèmes sélectionnés</strong> et ouvre une Pull Request sur le dépôt —
             rien n'est poussé directement sur la branche cible. Un contrôle automatique vérifie la correction avant toute PR.
           </p>
-          <button class="do-btn" [disabled]="applying() || !(r.issues || []).length" (click)="apply(r)">
-            {{ applying() ? 'Correction en cours…' : 'Corriger et créer une PR' }}
+          <button class="do-btn" [disabled]="applying() || !selectedFindings().length" (click)="apply(r)">
+            {{ applying() ? 'Correction en cours…' : 'Corriger la sélection (' + selectedFindings().length + ') et créer une PR' }}
           </button>
         </div>
         <div class="do-loading" *ngIf="applying()">
@@ -126,6 +125,10 @@ import { PresentationLabelPipe } from '../../shared/presentation-label.pipe';
     </ng-container>
   `,
   styles: [`
+    .do-selection { display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin:16px 0; }
+    .do-selection > span { flex:1; }
+    .do-pick { display:inline-flex; align-items:center; gap:6px; cursor:pointer; }
+    .do-pick input { width:18px; height:18px; accent-color:var(--c-accent, #2563eb); }
     :host {
       display: block; font-size: 13px;
       --c-fail: var(--accent-red,    #dc2626);
@@ -212,14 +215,25 @@ export class DockerfileOptimizerComponent implements OnInit, OnDestroy {
   applyError = signal<string>('');
   applyResult = signal<any>(null);
 
+  selectedIssueIndexes = signal<Set<number>>(new Set());
+  checkingHistory = signal<boolean>(false);
+  private historySub?: Subscription;
   private pollSub?: Subscription;
 
+  /** Initialise les dépendances et l’état de ce composant. */
+  private validationTimer?: ReturnType<typeof setInterval>;
+  private validationRefresh?: Subscription;
   constructor(private http: HttpClient) {}
 
+  /** Arrête le polling en cours si le composant est détruit avant la fin de l'analyse. */
   ngOnDestroy(): void {
+    clearInterval(this.validationTimer);
+    this.validationRefresh?.unsubscribe();
+    this.historySub?.unsubscribe();
     this.pollSub?.unsubscribe();
   }
 
+  /** Pré-remplit propriétaire/dépôt depuis les inputs du parent ; sait aussi extraire "owner/repo" d'une URL GitHub complète fournie dans `repo`. */
   ngOnInit(): void {
     let o = (this.owner || '').trim();
     let r = (this.repo || '').trim();
@@ -233,10 +247,89 @@ export class DockerfileOptimizerComponent implements OnInit, OnDestroy {
     }
     if (o) this.ownerInput.set(o);
     if (r) this.repoInput.set(r);
+    this.loadLatestAnalysis();
+    this.validationTimer = setInterval(() => {
+      if (!this.result() || this.loading() || this.applying()) return;
+      this.validationRefresh?.unsubscribe();
+      this.validationRefresh = this.http.get<any[]>(`/api/dockerfile/analyses?projectId=${encodeURIComponent(this.projectId || '')}`).subscribe({
+        next: rows => {
+          const result = rows?.[0]?.result;
+          if (result && JSON.stringify(result.validation) !== JSON.stringify(this.result()?.validation)) {
+            this.result.set(result);
+          }
+        },
+        error: () => { /* Keep the last confirmed verdict while offline. */ },
+      });
+    }, 30000);
   }
 
+  /** Restaure le résultat enregistré ou reprend le suivi de l’analyse en cours. */
+  private loadLatestAnalysis(): void {
+    const projectId = (this.projectId || '').trim();
+    if (!projectId) return;
+    this.checkingHistory.set(true);
+    this.historySub = this.http.get<any[]>(`/api/dockerfile/analyses?projectId=${encodeURIComponent(projectId)}`).subscribe({
+      next: (rows) => {
+        this.checkingHistory.set(false);
+        const latest = rows?.[0];
+        if (!latest) return;
+        this.dockerfileSource.set(latest.sourceDockerfile || '');
+        if (latest.status === 'done' && latest.result) this.setAnalysisResult(latest.result);
+        else if (latest.status === 'pending') {
+          this.loading.set(true);
+          this.startPolling(latest.jobId);
+        } else if (latest.status === 'error') {
+          this.error.set(`Analyse interrompue : ${latest.reason || 'raison inconnue'}${latest.detail ? ' — ' + latest.detail : ''}`);
+        }
+      },
+      error: (error) => {
+        this.checkingHistory.set(false);
+        this.error.set(userHttpError(error, 'Impossible de charger la dernière analyse Dockerfile. Réessayez.'));
+      },
+    });
+  }
+
+  /** Indique si l’analyse peut être demandée. */
   canAnalyze(): boolean { return !!this.ownerInput().trim() && !!this.repoInput().trim(); }
 
+  /** Affiche un rapport et sélectionne ses problèmes par défaut. */
+  private setAnalysisResult(result: any): void {
+    this.result.set(result);
+    this.selectedIssueIndexes.set(new Set<number>((result?.issues || []).map((_: any, index: number) => index)));
+  }
+
+  /** Renvoie uniquement les problèmes cochés du rapport actuel. */
+  selectedFindings(): any[] {
+    return (this.result()?.issues || []).filter((_: any, index: number) => this.selectedIssueIndexes().has(index));
+  }
+
+  /** Indique si ce problème est coché. */
+  isIssueSelected(issue: any): boolean {
+    return this.selectedIssueIndexes().has((this.result()?.issues || []).indexOf(issue));
+  }
+
+  /** Ajoute ou retire un problème de la sélection. */
+  toggleIssue(issue: any): void {
+    if (this.applying()) return;
+    const index = (this.result()?.issues || []).indexOf(issue);
+    if (index < 0) return;
+    const next = new Set(this.selectedIssueIndexes());
+    if (next.has(index)) next.delete(index); else next.add(index);
+    this.selectedIssueIndexes.set(next);
+  }
+
+  /** Sélectionne tous les problèmes du rapport. */
+  selectAllIssues(): void {
+    if (this.applying()) return;
+    this.selectedIssueIndexes.set(new Set<number>((this.result()?.issues || []).map((_: any, index: number) => index)));
+  }
+
+  /** Décoche tous les problèmes du rapport. */
+  clearIssueSelection(): void {
+    if (!this.applying()) this.selectedIssueIndexes.set(new Set());
+  }
+
+  /** Regroupe les problèmes détectés par catégorie d'affichage (runtime / image / sécurité) et masque les groupes vides. */
   groupedIssues(): { label: string; items: any[] }[] {
     const issues: any[] = this.result()?.issues || [];
     const runtime = issues.filter((i) => ['CAT-JDK', 'CAT-PORT', 'CAT-ARTIFACT'].includes(i.category));
@@ -249,13 +342,16 @@ export class DockerfileOptimizerComponent implements OnInit, OnDestroy {
     ].filter((g) => g.items.length > 0);
   }
 
+  /** Filtre les résultats de classification de sécurité par statut (ex: corrigé/non corrigé). */
   byStatus(ar: any, status: string): any[] {
     return (ar?.classification || []).filter((c: any) => c.status === status);
   }
+  /** Concatène les identifiants d'une liste de classifications pour affichage compact. */
   joinReasons(items: any[]): string {
     return items.map((c) => c.id).join(', ');
   }
 
+  /** Normalise une sévérité française vers une des 4 classes d'affichage. */
   sevKey(s: string): string {
     const u = String(s || '').toUpperCase();
     if (u === 'CRITIQUE') return 'critical';
@@ -264,17 +360,16 @@ export class DockerfileOptimizerComponent implements OnInit, OnDestroy {
     return 'low';
   }
 
+  /** Code de tonalité visuelle d'un score sur 100 (échec / avertissement / réussite). */
   scoreTone(score: number): string {
     if (score < 40) return 'fail';
     if (score < 70) return 'warn';
     return 'pass';
   }
 
-  // Récupère le Dockerfile en amont (nécessaire pour l'apply, l'analyse ne
-  // le renvoie pas — voir dockerfile-optimizer.module.ts:optimize()) puis
-  // lance l'analyse (async, polling — mêmes principes que Jenkinsfile).
+  /** Récupère le Dockerfile en amont (nécessaire pour l'apply, l'analyse ne le renvoie pas. */
   analyze(): void {
-    if (!this.canAnalyze()) return;
+    if (!this.canAnalyze() || this.checkingHistory()) return;
     this.loading.set(true);
     this.error.set('');
     this.pollSub?.unsubscribe();
@@ -283,6 +378,7 @@ export class DockerfileOptimizerComponent implements OnInit, OnDestroy {
       owner: this.ownerInput().trim(),
       repo: this.repoInput().trim(),
     }).subscribe({
+      /** Traite le résultat reçu et actualise les données locales. */
       next: (fetchRes) => {
         this.dockerfileSource.set(fetchRes?.content || '');
         this.http.post<any>('/api/dockerfile/optimize', {
@@ -291,6 +387,7 @@ export class DockerfileOptimizerComponent implements OnInit, OnDestroy {
           projectId: this.projectId || undefined,
           projectName: this.projectName || 'projet',
         }).subscribe({
+          /** Traite le résultat reçu et actualise les données locales. */
           next: (r) => {
             if (!r?.id) {
               this.error.set("Réponse inattendue du serveur : identifiant d'analyse manquant.");
@@ -299,12 +396,14 @@ export class DockerfileOptimizerComponent implements OnInit, OnDestroy {
             }
             this.startPolling(r.id);
           },
+          /** Traite l’erreur reçue et termine le suivi de la demande. */
           error: (e) => {
             this.error.set(userHttpError(e, 'Impossible de démarrer l’analyse. Réessayez après avoir vérifié le dépôt.'));
             this.loading.set(false);
           },
         });
       },
+      /** Traite l’erreur reçue et termine le suivi de la demande. */
       error: (e) => {
         this.error.set(userHttpError(e, 'Dockerfile introuvable. Vérifiez le dépôt et la branche.'));
         this.loading.set(false);
@@ -312,32 +411,36 @@ export class DockerfileOptimizerComponent implements OnInit, OnDestroy {
     });
   }
 
+  /** Démarre la consultation périodique du statut. */
   private startPolling(id: string): void {
     this.pollSub = interval(3000).pipe(
       switchMap(() => this.http.get<any>(`/api/dockerfile/optimize/${id}/status`)),
     ).subscribe({
+      /** Traite le résultat reçu et actualise les données locales. */
       next: (s) => {
         if (s.status === 'pending') return;
         this.pollSub?.unsubscribe();
         this.loading.set(false);
         if (s.status === 'done') {
-          this.result.set(s.result);
+          this.setAnalysisResult(s.result);
           this.applyResult.set(null);
           this.applyError.set('');
         } else {
           this.error.set(`Bloqué : ${s.reason || 'raison inconnue'}${s.detail ? ' — ' + s.detail : ''}`);
         }
       },
+      /** Traite l’erreur reçue et termine le suivi de la demande. */
       error: () => {
         // erreur transitoire de polling — on continue, pas de coupure
       },
     });
   }
 
-  // Synchrone (pas de polling) : la branche n8n dockerfile-apply répond une
-  // fois agent + gate + PR terminés. Tous les findings sont envoyés, sans
-  // sélection fine (MVP — voir en-tête du fichier).
+  /** Transmet uniquement les problèmes cochés pour préparer la correction. */
   apply(r: any): void {
+    if (this.applying()) return;
+    const findings = this.selectedFindings();
+    if (!findings.length) { this.applyError.set('Sélectionnez au moins un problème à corriger.'); return; }
     if (!this.baseBranch.trim()) { this.applyError.set('Renseignez la branche cible de la PR avant de continuer.'); return; }
     this.applying.set(true);
     this.applyError.set('');
@@ -347,17 +450,19 @@ export class DockerfileOptimizerComponent implements OnInit, OnDestroy {
       requestId: crypto.randomUUID(),
       projectId: this.projectId,
       dockerfile: this.dockerfileSource(),
-      findings: r.issues || [],
+      findings,
       context: {},
       owner: this.ownerInput().trim(),
       repo: this.repoInput().trim(),
       baseBranch: this.baseBranch,
       filePath: 'Dockerfile',
     }).subscribe({
+      /** Traite le résultat reçu et actualise les données locales. */
       next: (res) => {
         this.applying.set(false);
         this.applyResult.set(res);
       },
+      /** Traite l’erreur reçue et termine le suivi de la demande. */
       error: (e) => {
         this.applying.set(false);
         this.applyError.set(userHttpError(e, 'La correction a échoué. Vérifiez le rapport avant de réessayer.'));
@@ -365,9 +470,14 @@ export class DockerfileOptimizerComponent implements OnInit, OnDestroy {
     });
   }
 
+  /** Arrête un polling en cours et remet l'état du composant à zéro pour une nouvelle analyse. */
   reset(): void {
+    this.historySub?.unsubscribe();
+    this.checkingHistory.set(false);
+    this.loading.set(false);
     this.pollSub?.unsubscribe();
     this.result.set(null);
+    this.selectedIssueIndexes.set(new Set());
     this.error.set('');
     this.applyResult.set(null);
     this.applyError.set('');

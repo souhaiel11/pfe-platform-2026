@@ -1,3 +1,4 @@
+// Teste le composant « version-selection-policy » et ses cas d’erreur.
 import * as assert from 'node:assert/strict';
 import { compareVersions, parseVersion, selectEligibleTargetVersion } from './version-selection-policy';
 
@@ -40,13 +41,6 @@ console.log('version-selection-policy: 9.0.63 + [9.0.99, 10.1.35] -> 9.0.99: PAS
 }
 console.log('version-selection-policy: 9.0.63 + [10.1.35, 11.0.3] -> null/CROSS_MAJOR_ONLY: PASS');
 
-// ============================================================================
-// L. multiple fixed versions -> lowest safe same-major selected. REAL
-// persisted example: pfe-app-test, CVE-2023-6378, ch.qos.logback:logback-
-// classic, installed 1.2.11 (matches the real pom.xml's literal <version>),
-// fixedVersion "1.3.12, 1.4.12, 1.2.13" (all technically major=1 -- logback's
-// own versioning quirk, not a test artifact).
-// ============================================================================
 {
   const result = selectEligibleTargetVersion('1.2.11', ['1.3.12', '1.4.12', '1.2.13']);
   assert.equal(result.eligibleTargetVersion, '1.2.13', 'L: the LOWEST same-major candidate (1.2.13), not the first-listed (1.3.12) nor the highest (1.4.12)');

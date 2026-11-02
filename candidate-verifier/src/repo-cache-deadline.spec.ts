@@ -1,10 +1,4 @@
-/** Execution-2057 root-cause fix (Part 2) — deterministic coverage for
- * RepoCacheService's new bounded-timeout / orphan-sweep behavior. No
- * external network dependence anywhere in this file: successful-path
- * coverage uses a real LOCAL git fixture (a bare repo on disk); every
- * failure/timeout/budget scenario uses the injected `GitCommand` seam
- * (mirrors TrivyImageArtifactValidator's own injectable `command`), never
- * a real subprocess to github.com. */
+// Teste le composant « repo-cache-deadline » et ses cas d’erreur.
 import * as assert from 'node:assert/strict';
 import * as fs from 'fs';
 import * as os from 'os';
@@ -13,6 +7,7 @@ import { execFileSync, spawn } from 'child_process';
 import { RepoCacheService, GIT_OPERATION_CAP_MS, GitCommand } from './repo-cache.service';
 import { MIN_STAGE_BUDGET_MS } from '../../backend/src/security-remediation/security-remediation-deadline-contract';
 
+/** Prépare les données nécessaires à ce scénario. */
 function dnsFailure() {
   return Object.assign(new Error('Command failed'), {
     status: 128, stderr: "fatal: unable to access 'https://github.com/x/y.git/': Could not resolve host: github.com\n",
@@ -59,8 +54,10 @@ const mockCacheRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'repo-cache-deadline
 {
   const originalConsoleError = console.error;
   const captured: string[] = [];
+  /** Traite l’erreur reçue et termine le suivi de la demande. */
   console.error = (line: string) => { captured.push(line); };
   const injected = dnsFailure();
+  /** Prépare les données nécessaires à ce scénario. */
   const gitCommand: GitCommand = () => { throw injected; };
   const service = new RepoCacheService(mockCacheRoot, gitCommand);
   let thrown: any;
@@ -80,6 +77,7 @@ const mockCacheRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'repo-cache-deadline
 // === Test 3: timeout is derived from the remaining budget, capped at GIT_OPERATION_CAP_MS ===
 {
   const seenTimeouts: number[] = [];
+  /** Prépare les données nécessaires à ce scénario. */
   const gitCommand: GitCommand = (_args, options) => { seenTimeouts.push(options.timeout); };
   const service = new RepoCacheService(mockCacheRoot, gitCommand);
 
@@ -98,6 +96,7 @@ const mockCacheRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'repo-cache-deadline
 // === Test 4: no command is attempted once the budget is already exhausted ===
 {
   let calls = 0;
+  /** Prépare les données nécessaires à ce scénario. */
   const gitCommand: GitCommand = () => { calls++; };
   const service = new RepoCacheService(mockCacheRoot, gitCommand);
   assert.throws(() => service.ensureRepo('x/y', MIN_STAGE_BUDGET_MS - 1), /refused to start/);
@@ -108,6 +107,7 @@ const mockCacheRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'repo-cache-deadline
 // === Test 5: the budget is never silently reset between sequential calls ===
 {
   const calls: Array<{ timeout: number }> = [];
+  /** Prépare les données nécessaires à ce scénario. */
   const gitCommand: GitCommand = (_args, options) => { calls.push({ timeout: options.timeout }); };
   const service = new RepoCacheService(mockCacheRoot, gitCommand);
 
@@ -118,15 +118,7 @@ const mockCacheRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'repo-cache-deadline
   console.log('Test 5: PASS (shared/shrinking budget across sequential calls -- never silently reset)');
 }
 
-// === Test 6: a timed-out git invocation's own DESCENDANT (same process
-// group) is terminated, while a genuinely INDEPENDENT process that started
-// during the same interval (a stand-in for a health check / `docker exec`)
-// survives untouched. This supersedes the previous PID-diff-based version
-// of this test: that mechanism killed every PID merely new in /proc, which
-// could not distinguish "spawned by this git invocation" from "started by
-// something else at the same time" -- exactly the ownership gap the
-// process-group rewrite (terminateGitProcessGroup) closes. Group membership
-// (real /proc pgrp, not PID-diff timing) is what this test verifies.
+/** Vérifie Six dans ce scénario de test. */
 async function testSix() {
   // Stand-in for the real `git` process: a detached session leader (same
   // property production code gets via `setsid`) that itself backgrounds a
@@ -144,10 +136,7 @@ async function testSix() {
   const independentPid = independent.pid!;
   independent.unref();
 
-  // /proc/<pid>/stat fields after "(comm) " are: state ppid pgrp session ...
-  // -- pgrp is index 2 in that post-comm split. Split from AFTER the last
-  // ')' rather than naively on spaces, robust to a comm containing spaces
-  // or parens.
+  /** Prépare les données nécessaires à ce scénario. */
   const pgrpOf = (pid: number): number | null => {
     try {
       const stat = fs.readFileSync(`/proc/${pid}/stat`, 'utf8');
@@ -155,11 +144,13 @@ async function testSix() {
       return Number(afterComm.split(' ')[2]);
     } catch { return null; }
   };
+  /** Prépare les données nécessaires à ce scénario. */
   const anyProcessInGroup = (pgid: number): boolean => {
     let entries: string[];
     try { entries = fs.readdirSync('/proc'); } catch { return false; }
     return entries.some(e => /^\d+$/.test(e) && pgrpOf(Number(e)) === pgid);
   };
+  /** Prépare les données nécessaires à ce scénario. */
   const isAlive = (pid: number): boolean => { try { process.kill(pid, 0); return true; } catch { return false; } };
 
   // Let the leader's shell actually background `sleep 30` into the real
@@ -175,6 +166,7 @@ async function testSix() {
   // re-implemented here). Injected error carries `pid: leaderPid`, exactly
   // as defaultGitCommand's own thrown errors now do.
   try { process.kill(leaderPid, 'SIGKILL'); } catch { /* already gone */ }
+  /** Prépare les données nécessaires à ce scénario. */
   const gitCommand: GitCommand = () => {
     throw Object.assign(new Error('Command failed'), { status: null, signal: 'SIGKILL', pid: leaderPid });
   };

@@ -1,4 +1,4 @@
-// Offline Code-node policy tests. No model, network, n8n import, or business action.
+// Vérifie les preuves de comportement du code dans WF2.
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {
@@ -9,6 +9,7 @@ import {
 } from './harden-wf2-fix-h-semantic-policy.mjs';
 
 const artifact=JSON.parse(readFileSync(new URL('../pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.PROMOTION-TARGET.json',import.meta.url)))[0];
+/** Retrouve ou construit le nœud du workflow demandé. */
 const node=name=>{const found=artifact.nodes.find(item=>item.name===name);assert.ok(found,name);return found;};
 assert.equal(artifact.nodes.length,186);
 assert.equal(new Set(artifact.nodes.map(item=>item.id)).size,186);
@@ -44,10 +45,14 @@ const candidate={candidateSetComplete:true,llmRequestBody:{},reviewBodyString:'{
   path:'src/main/java/example/Boundary.java',approvedFindingIds:['finding'],validationEvidence:{},
 }],_canonicalJson:'{}'};
 const enforceCode=node('Enforce Independent Review').parameters.jsCode;
+/** Vérifie les résultats attendus dans ce scénario. */
 const runReview=review=>new Function('$json','$',enforceCode)(
   {content:[{type:'text',text:JSON.stringify(review)}],stop_reason:'end_turn'},
-  name=>{assert.equal(name,'Prepare Candidate Manifest');return{first:()=>({json:candidate})};},
+  name=>{assert.equal(name,'Prepare Candidate Manifest');return{
+  /** Renvoie le premier élément disponible. */
+  first:()=>({json:candidate})};},
 );
+/** Simule la lecture des données demandées par le composant. */
 const finding=(name,classification,evidence=['supplied source'])=>({
   finding:name,classification,file:'src/main/java/example/Boundary.java',symbol:'Boundary#operation',
   conflictingSignatures:['Boundary#operation(Input)'],affectedCallSite:'Boundary#operation request boundary',

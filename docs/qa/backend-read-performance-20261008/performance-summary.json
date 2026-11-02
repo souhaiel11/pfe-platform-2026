@@ -1,0 +1,19 @@
+{
+  "sharedHistoryBeforeBytes": 27619067,
+  "sharedHistoryAfterBytes": 642106,
+  "payloadReductionPercent": 97.6751350796897,
+  "incidentBeforeBytes": 15516430,
+  "incidentAfterBytes": 634274,
+  "reportBeforeBytes": 12102637,
+  "reportAfterBytes": 7832,
+  "requestsBefore": 198,
+  "requestsAfter": 278,
+  "samplesPerRelease": 56,
+  "exceptionsBefore": [],
+  "exceptionsAfter": [],
+  "bodyErrorsBefore": 0,
+  "bodyErrorsAfter": 0,
+  "largestCompleteNavigationBeforeBytes": 28652608.0,
+  "largestCompleteNavigationAfterBytes": 1675647.0,
+  "medianColdCompletionImprovementPercent": 26.316795717426633
+}

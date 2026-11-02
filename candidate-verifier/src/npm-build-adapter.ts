@@ -1,3 +1,4 @@
+// Compile et teste les projets npm dans un espace isolé.
 import { execFileSync } from 'child_process';
 import * as fs from 'fs';
 import * as os from 'os';
@@ -9,11 +10,12 @@ import { isProcessTimeout } from './process-timeout';
 
 const DEFAULT_TIMEOUT_MS = 5 * 60 * 1000;
 
+/** Conserve les dernières lignes du journal. */
 function tail(text: string, maxChars = 20_000): string {
   return text.length <= maxChars ? text : text.slice(-maxChars);
 }
 
-// Deliberately duplicated: npm has its own strict allowlist, never process.env.
+/** Prépare le résultat lié à sûr npm environnement. */
 function safeNpmEnv(): NodeJS.ProcessEnv {
   const env: NodeJS.ProcessEnv = {};
   for (const key of ['PATH', 'HOME', 'LANG', 'LC_ALL', 'npm_config_cache']) {
@@ -22,6 +24,7 @@ function safeNpmEnv(): NodeJS.ProcessEnv {
   return env;
 }
 
+/** Exécute la commande npm et collecte son résultat. */
 function runNpm(args: string[], cwd: string, timeoutMs: number): {
   status: number | null; stdout: string; stderr: string; timedOut: boolean; durationMs: number;
 } {
@@ -46,14 +49,18 @@ function runNpm(args: string[], cwd: string, timeoutMs: number): {
 
 export class NpmBuildAdapter implements BuildAdapter {
   readonly buildType = 'npm';
+  /** Indique si ce mode est pris en charge. */
   supportsMode(mode: import('../../backend/src/candidate-verification/candidate-verification.types').VerificationMode): boolean { return mode !== 'COMPILE_TESTS'; }
 
+  /** Indique si cet adaptateur prend en charge les données. */
   supports(workspacePath: string): boolean {
     return fs.existsSync(path.join(workspacePath, 'package.json'));
   }
 
+  /** Compile le projet dans le délai disponible. */
   compile(workspacePath: string, timeoutMs: number = DEFAULT_TIMEOUT_MS): CompileResult {
     const start = Date.now();
+    /** Finalise le résultat et libère les ressources de l’opération. */
     const finish = (status: CompileResult['status'], exitCode: number | null, evidenceTail: string): CompileResult =>
       ({ status, exitCode, durationMs: Date.now() - start, evidenceTail: tail(evidenceTail) });
     // v1 requires a lock; never fall back to a non-reproducible npm install.
@@ -89,8 +96,10 @@ export class NpmBuildAdapter implements BuildAdapter {
       `${installEvidence}\nnpm run build:\n${result.stdout}\n${result.stderr}`);
   }
 
+  /** Exécute les tests pour détecter les régressions. */
   runRegressionTests(workspacePath: string, timeoutMs: number = DEFAULT_TIMEOUT_MS): RegressionTestResult {
     const start = Date.now();
+    /** Construit le résultat inconnu. */
     const unknown = (evidenceRef: string): RegressionTestResult => ({
       status: 'UNKNOWN', total: null, failures: null, errors: null, skipped: null,
       durationMs: Date.now() - start, evidenceRef: tail(evidenceRef, 4000),
@@ -134,6 +143,7 @@ export class NpmBuildAdapter implements BuildAdapter {
       const aggregate = aggregateJestReport(outputFile);
       if (aggregate.matchCount === 0) return unknown(`no usable Jest report\n${evidence}`);
       const failures = aggregate.failures + aggregate.errors;
+      /** Construit le résultat d’une étape terminée. */
       const completed = (status: 'FAILED' | 'SUCCESS', evidenceRef = evidence): RegressionTestResult => ({
         status, total: aggregate.total, failures, errors: aggregate.errors,
         skipped: aggregate.skipped, durationMs: Date.now() - start, evidenceRef,

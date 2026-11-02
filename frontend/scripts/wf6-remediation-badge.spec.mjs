@@ -1,19 +1,4 @@
-// wf6-remediation-badge.ts — corrige l'écart de vocabulaire prouvé par
-// TEST 1 (PR #38) et TEST 2 (PR #39) : le badge testait
-// status === 'CANDIDATE_READY' (vocabulaire du chemin mono-CVE historique,
-// /result) alors que le chemin batch (/batch-result) persiste le statut de
-// fermeture PAR CVE ('CLOSED'/'STILL_OPEN'/'NOT_OBSERVED'/...).
-//
-// Charge le module PARTAGÉ réel (pas une réimplémentation), même discipline
-// que finding-presentation.spec.mjs / score-display.spec.mjs. Fixtures
-// status/prUrl/prNumber/batchId tirées des lignes RÉELLES observées en base
-// (manual_remediation_tasks) pour PR #37 (chemin mono-CVE historique),
-// PR #38 (TEST 1, batch N=1) et PR #39 (TEST 2, batch N=2) ; le cas
-// STILL_OPEN n'a encore jamais été produit par un run réel (aucun lot n'a
-// encore échoué en tout-ou-rien) donc c'est la SEULE fixture construite ici,
-// dérivée du contrat documenté de deriveCveClosureStatus().
-//
-// Run: node frontend/scripts/wf6-remediation-badge.spec.mjs
+// Teste le composant « wf6-remediation-badge » et ses cas d’erreur.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -21,13 +6,16 @@ import vm from 'node:vm';
 
 const require = createRequire(import.meta.url);
 const ts = require('typescript');
+/** Lit les données depuis leur source. */
 const read = path => readFileSync(new URL(path, import.meta.url), 'utf8');
 
 const sharedSource = read('../src/app/shared/wf6-remediation-badge.ts');
 const sharedExports = {};
 vm.runInNewContext(
   ts.transpileModule(sharedSource, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText,
-  { exports: sharedExports, require: () => ({}), console },
+  { exports: sharedExports,
+  /** Charge la dépendance prévue pour le scénario. */
+  require: () => ({}), console },
 );
 const { wf6ProposedPr, wf6StillOpenInBatch } = sharedExports;
 

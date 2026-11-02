@@ -1,12 +1,5 @@
+// Regroupe les traitements de v1 8 compatibilité presentation.
 import { presentationLabel } from './status-labels';
-// V1.8 Phase 4 ticket — Phase 9: read-only presentation of the additive
-// `v1_8Decision` field (backend: manual-remediation.service.ts's list(),
-// opt-in via includeV18=true; source of truth: backend/src/dependency-
-// compatibility/v1_8-evidence-store.json, real sandbox/mvn evidence).
-//
-// Deliberately NOT wired into cve-selection-eligibility.ts/canSelectCveTask()
-// -- backend gates and dispatch rules remain authoritative. The scanner
-// presentation uses these labels to explain blocked corrections.
 export type V1_8PresentationStyleKey = 'success' | 'warning' | 'muted' | 'danger';
 
 export interface V1_8Presentation {
@@ -31,6 +24,7 @@ const STATE_STYLES: Record<string, V1_8PresentationStyleKey> = {
   NOT_YET_SANDBOXED: 'muted',
 };
 
+/** Construit le libellé du « gestionnaire » de la version (parent Maven, BOM importé, ou gestion locale), ou null si l'un des deux champs manque. */
 function ownerLabel(ownerType: string | null, ownerCoordinate: string | null): string | null {
   if (!ownerType || !ownerCoordinate) return null;
   if (ownerCoordinate === 'org.springframework.boot:spring-boot-starter-parent') return 'Spring Boot Parent';
@@ -38,7 +32,7 @@ function ownerLabel(ownerType: string | null, ownerCoordinate: string | null): s
   return `${kind} : ${ownerCoordinate}`;
 }
 
-/** `decision` is the raw `v1_8Decision` object attached by the backend (V1_8CompatibilityDecision), or null/undefined when includeV18 was not requested or the finding predates the evidence store. */
+/** Renvoie V1 8 Presentation. */
 export function getV1_8Presentation(decision: any, installedVersion: string | null): V1_8Presentation | null {
   if (!decision) return null;
   const meta = { label: STATE_STYLES[decision.state] ? presentationLabel(decision.state) : 'Intervention manuelle requise', styleKey: STATE_STYLES[decision.state] || 'muted' as const };

@@ -1,8 +1,10 @@
+// Prépare le choix de la référence de comparaison dans WF2.
 import fs from 'node:fs';
 
 const workflowPath = new URL('../pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.PROMOTION-TARGET.json', import.meta.url);
 const exported = JSON.parse(fs.readFileSync(workflowPath));
 const workflow = Array.isArray(exported) ? exported[0] : exported;
+/** Retrouve ou construit le nœud du workflow demandé. */
 const node = name => {
   const found = workflow.nodes.find(candidate => candidate.name === name);
   if (!found) throw new Error(`NODE_NOT_FOUND:${name}`);

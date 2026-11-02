@@ -1,3 +1,4 @@
+// Affiche l’incident, sa correction et les preuves de validation.
 import { Subject, takeUntil } from 'rxjs';
 import { scannerMetric } from '../../shared/data-truth';
 import { PresentationTextPipe } from '../../shared/presentation-label.pipe';
@@ -26,13 +27,11 @@ import { PresentationLabelPipe } from '../../shared/presentation-label.pipe';
 import { FrenchDatePipe } from '../../shared/french-date.pipe';
 import { userHttpError } from '../../core/http-error-message';
 
-// ═══════════════════════════════════════════════════════════════════
-//  INCIDENT DETAIL — v2.0
-//  Ajouts : timeline cycle de vie + onglet Validation WF3
-//  Données WF1 : incident.metadata.enrichedData + incident.aiAnalysis
-//  Données WF3 : incident.metadata.validation
-// ═══════════════════════════════════════════════════════════════════
-
+/**
+ * Page détail d'un incident : analyse IA, guide de correction, timeline de
+ * cycle de vie, validation post-PR (WF3) et actions gouvernées (approuver,
+ * refuser, demander/relancer la validation, annuler).
+ */
 @Component({
   selector: 'app-incident-detail',
   standalone: true,
@@ -47,14 +46,10 @@ export class IncidentDetailComponent implements OnInit, OnDestroy, OnChanges {
 
   incident:    any  = null;
   reports:     any[] = [];
-  aiAnalysis:  any  = null;   // colonne aiAnalysis (WF1)
+  aiAnalysis:  any  = null;
   developerGuide: DeveloperGuide | null = null;
-  enrichedData: any = null;   // metadata.enrichedData (WF1)
-  validation:  any  = null;   // metadata.validation (WF3)
-  // Classification déterministe (errorReason) : type détermine si un bouton
-  // WF4/WF5 peut être proposé — voir jenkins-known-fixes.ts pour le garde-fou.
-  // 'vulnerability' n'affiche JAMAIS de bouton (ni WF4 ni WF5), voir le
-  // template — le vrai fix est dans le code/les dépendances.
+  enrichedData: any = null;
+  validation:  any  = null;
   classification: { type: 'jenkinsfile' | 'dockerfile' | 'vulnerability' | 'infra' | 'code' | 'unknown'; solution: string | null } =
     { type: 'unknown', solution: null };
   generatingWF4Fix = false;
@@ -62,58 +57,30 @@ export class IncidentDetailComponent implements OnInit, OnDestroy, OnChanges {
   approvalBusy = false;
   prValidationBusy = false;
   prValidationRequest: any = null;
-  // R65 — la Pull Request a légitimement changé (nouveau commit de
-  // remédiation approuvé sur la même PR/branche) depuis la demande de
-  // correction initiale. Deux actions humaines distinctes et explicites :
-  // « Actualiser la cible » puis, séparément, « Réessayer la validation ».
-  // Jamais de nouvelle tentative automatique après actualisation.
   prValidationTargetStale = false;
   refreshValidationTargetBusy = false;
   approvalError: string | null = null;
-  decision:    any  = null;   // legacy
+  decision:    any  = null;
   loadError = '';
   loading      = true;
   activeTab    = 'analysis';
 
-  // ── Polling prUrl après "Approuver le fix" ──
-  // Signal de succès = incident.prUrl non vide, JAMAIS incident.status : vérifié
-  // sur données réelles que status peut retomber à 'approved' après un second
-  // appel alors qu'une vraie PR existe déjà (18 incidents avec prUrl réel dont
-  // 5 en status='approved', 13 en 'fix_generated') — status n'est pas monotone,
-  // prUrl l'est.
   prGenerationState: 'idle' | 'polling' | 'timeout' = 'idle';
   private pollHandle: ReturnType<typeof setInterval> | null = null;
   private pollAttempts = 0;
   private readonly POLL_INTERVAL_MS = 4000;
-  private readonly POLL_MAX_ATTEMPTS = 22; // ~90s — les 2 exécutions réelles observées ont pris 14s et 23s
-  // Statuts fixRequest.status qui mettent fin au polling "génération de PR" —
-  // au-delà de prUrl seul (audit stuck-UX 2026-10-04) : un FIX_FAILED ne doit
-  // jamais attendre les 88s du plafond, et REJECTED/VALIDATING/VALIDATED/
-  // COMPLETED n'ont plus de sens à faire patienter sur ce spinner générique.
+  private readonly POLL_MAX_ATTEMPTS = 22;
   private readonly TERMINAL_FIX_STATUSES = ['CANCELLED', 'PR_CREATED', 'FIX_FAILED', 'REJECTED', 'VALIDATING', 'VALIDATED', 'COMPLETED'];
-  // Seuil de dispatch "potentiellement bloqué" — MIROIR du défaut backend
-  // (incidents.service.ts: WF2_STALE_DISPATCH_MS, 30 min par défaut). Ce
-  // n'est pas une nouvelle règle : juste l'affichage du même seuil déjà
-  // appliqué côté serveur par reconcile-stale-dispatch. Si un opérateur
-  // surcharge WF2_STALE_DISPATCH_MS côté backend, ce seuil frontend peut
-  // diverger — limite connue d'un correctif frontend-only (voir audit).
   readonly STALE_DISPATCH_THRESHOLD_MS = 30 * 60 * 1000;
   reconcileBusy = false;
   reconcileError: string | null = null;
 
-  // ── Sources & preuves (§12) ────────────────────────────────────────
-  // Provenance de CET incident : build d'origine, commit, rapports de
-  // scanner, image publiée, PR, exécution n8n, et la chaîne de preuve de
-  // chaque correction automatique. Servie par GET /api/source-evidence/
-  // incident/:id ; aucune URL n'est construite dans ce composant.
   sourceEvidence: IncidentSourceEvidence | null = null;
-  // Chargement vs disponibilité : une requête en échec n'est pas une absence
-  // de preuve, et ne doit jamais s'afficher comme telle (§17).
   sourceEvidenceState: EvidenceLoadState = 'loading';
 
-  // ── Tabs (mis à jour dans load()) ──
   tabs: any[] = [];
 
+  /** Reconstruit la liste des onglets (avec leurs pastilles d'état) à partir des données chargées. */
   private updateTabs() {
     this.tabs = [
       { id: 'analysis',   label: 'Analyse IA', dot: null },
@@ -127,30 +94,18 @@ export class IncidentDetailComponent implements OnInit, OnDestroy, OnChanges {
     ];
   }
 
-  // ── Timeline étapes (mis à jour dans load()) ──
   lifecycleSteps: any[] = [];
 
+  /** Reconstruit la timeline du cycle de vie (détecté → analysé → corrigé → validé → résolu) à partir du statut de l'incident. */
   private updateLifecycle() {
     const s = this.incident?.status || '';
     const ORDER = ['pending','analyzing','analyzed','fix_generated','validating','approved','completed'];
 
-    // Etats terminaux qui interrompent le chemin normal apres l'analyse.
-    // Le Judge a tranche (Detecte + Analyse sont donc acquis), mais la suite
-    // ne suit pas la sequence standard fix_generated -> validating -> approved.
     const TERMINAL_AFTER_ANALYSIS = ['blocked', 'rejected', 'failed'];
     const isTerminal = TERMINAL_AFTER_ANALYSIS.includes(s);
 
     const idx = isTerminal ? 2 : ORDER.indexOf(s);
 
-    // §10/§11/§26 — chaque étape dit en français CE QUI s'est passé, et le
-    // sous-titre garde l'identifiant de workflow en second rang (§5 : le
-    // libellé humain est primaire, la valeur technique reste consultable).
-    //
-    // « Fix proposé » devient « Correction proposée » : ce n'est pas
-    // seulement du franglais, c'est la frontière que §11 interdit de
-    // brouiller — une proposition de l'IA n'est pas une correction
-    // vérifiée, et l'étape suivante s'appelle donc explicitement
-    // « Validation déterministe ».
     this.lifecycleSteps = [
       { label: 'Détecté',  sub: 'Détection automatique · WF1', done: idx >= 0, active: idx === 0 },
       { label: 'Analysé',  sub: 'Analyse IA · WF1',            done: idx >= 2, active: idx === 1 || idx === 2 },
@@ -166,9 +121,9 @@ export class IncidentDetailComponent implements OnInit, OnDestroy, OnChanges {
     ];
   }
 
-  // Onglet demandé explicitement via ?tab=... (ex: lien depuis le Rapport IA d'un projet)
   private requestedTab: string | null = null;
 
+  /** Initialise les dépendances et l’état de ce composant. */
   constructor(
     private api: ApiService,
     private toast: ToastService,
@@ -177,66 +132,48 @@ export class IncidentDetailComponent implements OnInit, OnDestroy, OnChanges {
     public auth: AuthService,
   ) {}
 
-  /**
-   * Un opérateur peut intervenir sur cet incident (§7).
-   *
-   * Sert UNIQUEMENT à étiqueter la nature d'une zone (information ou
-   * action) : l'autorisation réelle de chaque bouton reste décidée par sa
-   * propre garde, et in fine par le backend. Une étiquette ne doit jamais
-   * devenir le contrôle d'accès.
-   */
+  /** Vrai si l'utilisateur connecté peut agir sur cet incident (étiquette informative, l'autorisation réelle reste côté backend). */
   get canOperate(): boolean {
     return ['admin', 'developer'].includes(String(this.auth.currentUser?.role || '').toLowerCase());
   }
 
+  /** Revient à la page du projet de cet incident. */
   goBack(): void {
     const projectId = this.incident?.projectId;
     this.router.navigate(projectId ? ['/projects', projectId] : ['/projects']);
   }
 
+  /** Renvoie les étapes de pipeline gouvernées (enrichedData.stages), triées pour affichage. */
   governedStages(): any[] {
     const stages = this.enrichedData?.stages;
     return stages && typeof stages === 'object' ? sortPipelineStages(Object.values(stages) as any[]) : [];
   }
 
-  // ── Carte Jenkins (Couche 2, mode A) ────────────────────────────────────
-  // Mode DYNAMIQUE ici, pas la table statique PHASE_MODE : cette carte
-  // reflète l'erreur RÉELLE de CET incident (classify(errorReason)), qui
-  // peut pointer vers jenkinsfile OU dockerfile selon ce qui a vraiment
-  // cassé — remediationModeForPhase('jenkins') sert aux cartes de phase
-  // génériques (Trivy/OWASP/ZAP/Sonar, statiques), pas à celle-ci.
-  // 'auto-fix-bulk' ici, PAS 'auto-fix-selective' : avant de lancer
-  // l'analyse, on n'a qu'UN résumé synthétique de l'erreur (errorReason),
-  // pas encore la vraie liste d'issues avec id individuel que WF4/WF5
-  // produiront — rien de réel à cocher tant que optimize() n'a pas tourné.
+  /** Mode de correction pour la carte Jenkins, selon la classification réelle de l'erreur de build. */
   jenkinsRemediationMode(): RemediationMode {
     const t = this.classification.type;
     return t === 'jenkinsfile' || t === 'dockerfile' ? 'auto-fix-bulk' : 'signal-only';
   }
+  /** Liste (à un seul élément) représentant l'erreur de build Jenkins pour la carte générique d'issues. */
   jenkinsIssues(): RemediationIssue[] {
     if (!this.incident?.errorReason) return [];
     return [{ id: 'build-error', title: this.incident.errorStep || '', detail: this.incident.errorReason }];
   }
+  /** Libellé du bouton de correction Jenkins selon le type de fichier en cause. */
   jenkinsActionLabel(): string {
     return this.classification.type === 'dockerfile' ? 'Générer la correction via WF5' : 'Générer la correction via WF4';
   }
+  /** Vrai si une génération de correction Jenkins/Dockerfile est en cours. */
   jenkinsCorrecting(): boolean {
     return this.classification.type === 'dockerfile' ? this.generatingWF5Fix : this.generatingWF4Fix;
   }
+  /** Déclenche la bonne correction (WF4 Jenkinsfile ou WF5 Dockerfile) selon le type détecté. */
   onJenkinsCorrect(): void {
     if (this.classification.type === 'dockerfile') this.generateWF5Fix();
     else this.generateWF4Fix();
   }
 
-  // ── Instructions humaines par CVE (Trivy/OWASP) ──────────────────────────
-  // enrichedData.{trivy,owasp}.cves[] est déjà au format v2.1 (voir
-  // report-normalizer.ts::Cve, vérifié en base sur de vraies données WF1 :
-  // {id, pkg, cvss, title, source, severity, primaryUrl, fixedVersion,
-  // installedVersion}) — WF1 écrit directement ce format dans
-  // incident.metadata.enrichedData, aucun passage par normalizeReport() ici
-  // (celui-ci ne s'applique qu'aux Report), mais même contrat de données.
-  // fixedVersion/installedVersion arrivent en "" (jamais absents) quand
-  // inconnus — jamais null — donc `!cve.fixedVersion` couvre les deux cas.
+  /** Construit le texte d'instruction humaine pour une CVE (mise à jour vers la version corrigée, ou vérification manuelle si inconnue). */
   private cveInstruction(cve: any): string {
     const pkg = cve?.pkg || 'paquet non identifié par le scan';
     const id = cve?.id || 'CVE non identifiée';
@@ -244,10 +181,9 @@ export class IncidentDetailComponent implements OnInit, OnDestroy, OnChanges {
       const from = cve.installedVersion || 'version installée non fournie par le scan';
       return `Mettre à jour ${pkg} de ${from} vers ${cve.fixedVersion} (corrige ${id}).`;
     }
-    // Honnête : le scan ne fournit pas de version corrigée — on ne
-    // l'invente jamais, on dit explicitement qu'il faut vérifier à la main.
     return `${id} sur ${pkg} : aucune version corrigée indiquée par le scan — vérifier manuellement l'existence d'un correctif, ou évaluer un contournement.`;
   }
+  /** Construit le texte de détail d'une CVE (titre, score CVSS, lien) pour affichage. */
   private cveDetail(cve: any): string {
     const parts: string[] = [];
     if (cve?.title) parts.push(cve.title);
@@ -256,6 +192,7 @@ export class IncidentDetailComponent implements OnInit, OnDestroy, OnChanges {
     return parts.length ? parts.join(' — ') : 'Aucun détail supplémentaire fourni par le scan.';
   }
   private static readonly SEV_RANK: Record<string, number> = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3 };
+  /** Trie une liste de CVE par sévérité décroissante, puis par score CVSS décroissant. */
   private sortBySeverity(cves: any[]): any[] {
     return [...cves].sort((a, b) => {
       const ra = IncidentDetailComponent.SEV_RANK[String(a?.severity).toUpperCase()] ?? 9;
@@ -263,6 +200,7 @@ export class IncidentDetailComponent implements OnInit, OnDestroy, OnChanges {
       return ra !== rb ? ra - rb : (b?.cvss || 0) - (a?.cvss || 0);
     });
   }
+  /** Convertit une CVE brute en item de correction affichable (RemediationIssue). */
   private cveToIssue(cve: any): RemediationIssue {
     return {
       id: `${cve?.id || 'cve'}-${cve?.pkg || ''}`,
@@ -271,10 +209,7 @@ export class IncidentDetailComponent implements OnInit, OnDestroy, OnChanges {
       severity: cve?.severity,
     };
   }
-  // Filet honnête : si un jour la forme des données change et que les
-  // compteurs agrégés sont présents sans le détail cves[] (ne devrait plus
-  // arriver au format v2.1 actuel, vérifié en base), on ne fabrique pas de
-  // CVE — on affiche le fait brut plutôt que de masquer le problème.
+  /** Repli honnête quand seuls des compteurs agrégés sont disponibles (pas de détail CVE par CVE). */
   private aggregateFallback(t: any, phaseLabel: string): RemediationIssue[] {
     const total = (t?.critical || 0) + (t?.high || 0);
     if (!total) return [];
@@ -282,10 +217,9 @@ export class IncidentDetailComponent implements OnInit, OnDestroy, OnChanges {
     return [{ id: `${phaseLabel}-summary`, title: `${count} ${count === 1 ? 'CVE détectée' : 'CVE détectées'} par ${phaseLabel}, détail indisponible dans cette analyse`, detail: null }];
   }
 
-  // ── Carte Trivy (Couche 2, mode B — signalement) ─────────────────────────
-  // Statique : la phase Trivy est TOUJOURS 'vulnerability', jamais besoin de
-  // classify() dessus (voir remediationModeForPhase, jenkins-known-fixes.ts).
+  /** Mode de correction pour la carte Trivy (toujours signalement, jamais auto-fix). */
   trivyMode(): RemediationMode { return remediationModeForPhase('trivy'); }
+  /** Liste des CVE Trivy, triées par sévérité, converties en issues affichables. */
   trivyIssues(): RemediationIssue[] {
     const t = this.enrichedData?.trivy;
     if (!t || t.status !== 'COMPLETED') return [];
@@ -294,9 +228,9 @@ export class IncidentDetailComponent implements OnInit, OnDestroy, OnChanges {
     return this.aggregateFallback(t, 'Trivy');
   }
 
-  // ── Carte OWASP Dependency-Check (Couche 2, signalement) ─────────────────
-  // Même contrat de données que Trivy (ScannerBlock), source différente.
+  /** Mode de correction pour la carte OWASP Dependency-Check (toujours signalement). */
   owaspMode(): RemediationMode { return remediationModeForPhase('owasp'); }
+  /** Liste des CVE OWASP, triées par sévérité, converties en issues affichables. */
   owaspIssues(): RemediationIssue[] {
     const o = this.enrichedData?.owasp;
     if (!o || o.status !== 'COMPLETED') return [];
@@ -305,16 +239,9 @@ export class IncidentDetailComponent implements OnInit, OnDestroy, OnChanges {
     return this.aggregateFallback(o, 'OWASP');
   }
 
-  // ── Carte ZAP (Couche 2, signalement) ─────────────────────────────────
-  // enrichedData.zap.alerts[] : présent dans le rawData brut (vérifié en
-  // base — ex. report 043c6f66, zap.alerts=[] mais la clé existe) mais
-  // JAMAIS observé non-vide sur aucun report de ce projet (ZAP timeout /
-  // scanner UNKNOWN sur tous les builds récents, voir dette connue) — donc
-  // AUCUNE forme réelle de ces objets n'a pu être vérifiée. Lecture
-  // défensive sur les noms de champs standards du rapport JSON ZAP
-  // (alert/risk/desc/solution/instances[].uri) ; si rien d'exploitable,
-  // on le dit honnêtement plutôt que d'inventer une alerte.
+  /** Mode de correction pour la carte ZAP (toujours signalement). */
   zapMode(): RemediationMode { return remediationModeForPhase('zap'); }
+  /** Liste des alertes ZAP converties en issues affichables, avec repli honnête sur les champs manquants. */
   zapIssues(): RemediationIssue[] {
     const alerts = this.enrichedData?.zap?.alerts;
     if (!Array.isArray(alerts) || !alerts.length) return [];
@@ -340,12 +267,7 @@ export class IncidentDetailComponent implements OnInit, OnDestroy, OnChanges {
     });
   }
 
-  // ── Couche 3 : verrou de déploiement (Bloc C) ────────────────────────────
-  // evaluateProjectCleanliness() (project-cleanliness.ts) est la SEULE
-  // source de vérité pour clean/blocked — ce composant se contente de la
-  // traduire en texte lisible, jamais de recalculer la logique de blocage.
-  // Fail-closed explicite : enrichedData absent => verrouillé, pas "on ne
-  // sait pas donc on laisse passer".
+  /** Évalue si le projet est "propre" (déploiement non verrouillé), fail-closed si aucune donnée n'est disponible. */
   cleanliness(): ProjectCleanliness {
     if (!this.enrichedData) {
       return {
@@ -358,29 +280,17 @@ export class IncidentDetailComponent implements OnInit, OnDestroy, OnChanges {
     return evaluateProjectCleanliness(this.enrichedData);
   }
 
-  // Phase 3 (couche d'interprétation) : contexte errorReason/errorStep du
-  // MÊME incident, seul endroit où ces colonnes existent (incident.entity.ts
-  // — pas dans enrichedData). Passé à diagnose*() pour que le cascade pointe
-  // la vraie cause capturée plutôt qu'une hypothèse générique.
+  /** Construit le contexte (errorReason/errorStep) transmis aux fonctions de diagnostic de phase. */
   private diagnosticContext(): IncidentContext {
     return { errorReason: this.incident?.errorReason || null, errorStep: this.incident?.errorStep || null };
   }
 
-  // Une ligne par point bloquant, avec l'acteur responsable. Pour les 2
-  // phases vulnérabilité, on n'affiche PAS le compteur agrégé de
-  // blockingPhases : on éclate en une ligne par CVE CRITICAL réelle, en
-  // réutilisant cveInstruction() (Bloc A, déjà prouvé) — c'est ça qui donne
-  // "Log4Shell (log4j) → mettre à jour vers 2.15.0" plutôt que "2 CVE".
-  // Pour tout le reste, on délègue à phase-diagnostics.ts (Phase 2) plutôt
-  // qu'à un hint statique — un "UNKNOWN" ne doit plus jamais atteindre
-  // l'écran nu. Docker et SonarQube en particulier : l'ancien hint disait
-  // toujours "→ lancer WF5/WF2" même quand la vraie cause est un bug de
-  // câblage plateforme (Docker) ou un appel API cassé (Sonar gate) que WF2/
-  // WF5 ne peuvent pas corriger — c'était une fausse piste, corrigée ici.
+  /** Construit la liste des lignes "ce qui bloque / qui doit agir" à partir des phases bloquantes et des CVE critiques. */
   deploymentLines(): { actor: 'Agent' | 'Vous'; phase: string; text: string }[] {
     const c = this.cleanliness();
     const ctx = this.diagnosticContext();
     const lines: { actor: 'Agent' | 'Vous'; phase: string; text: string }[] = [];
+    /** Ajoute un message à la liste des diagnostics. */
     const pushDiag = (diag: { actor: string | null; message: string; phase: string }) => {
       lines.push({ actor: diag.actor === 'agent' ? 'Agent' : 'Vous', phase: diag.phase, text: diag.message });
     };
@@ -408,35 +318,22 @@ export class IncidentDetailComponent implements OnInit, OnDestroy, OnChanges {
       if (bp.phase === 'Docker') { pushDiag(diagnoseDocker(this.enrichedData)); continue; }
       if (bp.phase === 'Tests') { pushDiag(diagnoseTests(this.enrichedData, ctx)); continue; }
       if (bp.phase === 'Jenkinsfile') {
-        // Déjà le mécanisme le plus riche (classify() + vrai log console,
-        // voir jenkinsIssues()/Bloc A) — pas de diagnose dédié à dupliquer ici.
         lines.push({ actor: 'Agent', phase: bp.phase, text: `${bp.raison} → lancer la correction via WF4 (carte "⬡ Build Jenkins" ci-dessus)` });
         continue;
       }
-      // Filet : phase future non couverte par phase-diagnostics.ts.
       lines.push({ actor: bp.type === 'agent' ? 'Agent' : 'Vous', phase: bp.phase, text: bp.raison });
     }
     return lines;
   }
 
-  // Texte discret pour le cas "propre" : ce qui reste signalé sans bloquer.
+  /** Résumé discret des points signalés mais non bloquants. */
   nonBlockingSummary(): string {
     const c = this.cleanliness();
     const parts = [...c.nonExecutedPhases, ...c.nonBlockingFindings].map(p => p.raison);
     return parts.join(' · ');
   }
 
-  // ── Guide de priorisation (structure : barre → action prioritaire → "ensuite" → verrou) ──
-  // Réutilise UNIQUEMENT cleanliness().blockingPhases (déjà déterministe :
-  // Jenkinsfile/Docker/SonarQube — agent, cause racine — avant Trivy/OWASP/
-  // ZAP/Tests — humain, voir project-cleanliness.ts) — aucun nouveau tri
-  // inventé ici, juste sa traduction en ordre visuel + emphase.
-
-  // 7 phases suivies (Jenkinsfile, Docker, Sonar, Trivy, OWASP, ZAP, Tests).
-  // "Résolues" = ni bloquantes ni hors-périmètre (nonExecutedPhases, ex. ZAP
-  // en dette connue) — Y exclut volontairement ce qui est hors périmètre du
-  // verrou pour que la barre atteigne 100% EXACTEMENT quand cleanliness().clean
-  // devient vrai (cohérence barre ↔ verrou, demandée explicitement).
+  /** Calcule la progression (phases résolues / total) pour la barre de progression du verrou de déploiement. */
   progress(): { resolved: number; total: number; percent: number } {
     const c = this.cleanliness();
     const total = Math.max(7 - c.nonExecutedPhases.length, 0);
@@ -444,30 +341,36 @@ export class IncidentDetailComponent implements OnInit, OnDestroy, OnChanges {
     return { resolved, total, percent: total > 0 ? Math.round((resolved / total) * 100) : 100 };
   }
 
+  /** Renvoie le meilleur rang (position) parmi les phases nommées dans la liste des phases bloquantes. */
   private phaseRank(...names: string[]): number {
     const order = this.cleanliness().blockingPhases.map(p => p.phase);
     const idxs = names.map(n => order.indexOf(n)).filter(i => i !== -1);
     return idxs.length ? Math.min(...idxs) : 999;
   }
-  // Jenkinsfile/Docker/Tests partagent la même carte "⬡ Build Jenkins"
-  // (mode dynamique via classify(), voir jenkinsRemediationMode()) — son
-  // rang est le meilleur des 3 phases qu'elle peut représenter.
+  /** Rang de priorité de la carte Jenkins/Docker/Tests (la meilleure des trois phases qu'elle représente). */
   jenkinsRank(): number { return this.phaseRank('Jenkinsfile', 'Docker', 'Tests'); }
+  /** Rang de priorité de la carte Trivy. */
   trivyRank():   number { return this.phaseRank('Vulnérabilités conteneur (Trivy)'); }
+  /** Rang de priorité de la carte OWASP. */
   owaspRank():   number { return this.phaseRank('Vulnérabilités dépendances (OWASP)'); }
+  /** Rang de priorité de la carte ZAP. */
   zapRank():     number { return this.phaseRank('DAST (ZAP)'); }
+  /** Rang de priorité de la carte SonarQube. */
   sonarRank():   number { return this.phaseRank('SonarQube'); }
 
+  /** Renvoie le meilleur rang parmi toutes les cartes de phase. */
   private topRank(): number {
     const real = [this.jenkinsRank(), this.trivyRank(), this.owaspRank(), this.zapRank(), this.sonarRank()].filter(r => r < 999);
     return real.length ? Math.min(...real) : 999;
   }
+  /** Vrai s'il existe au moins une phase bloquante à prioriser. */
   hasPriorityPhase(): boolean { return this.topRank() < 999; }
+  /** Vrai si le rang donné est le rang prioritaire courant. */
   isPriority(rank: number): boolean { return this.hasPriorityPhase() && rank === this.topRank(); }
-  // order CSS du slot : 0 = prioritaire (toujours en tête), 1 = titre
-  // "Ensuite", 2+rang = le reste, groupé par priorité décroissante.
+  /** Calcule l'ordre d'affichage CSS d'une carte selon sa priorité. */
   slotOrder(rank: number): number { return this.isPriority(rank) ? 0 : 2 + Math.min(rank, 900); }
 
+  /** Vrai s'il existe des cartes visibles autres que la carte prioritaire (section "Ensuite"). */
   hasLaterCards(): boolean {
     if (!this.hasPriorityPhase()) return false;
     const cards: { visible: boolean; rank: number }[] = [
@@ -480,23 +383,11 @@ export class IncidentDetailComponent implements OnInit, OnDestroy, OnChanges {
     return cards.some(c => c.visible && !this.isPriority(c.rank));
   }
 
-  // ── Carte SonarQube (Couche 2, mode C — auto-fix-bulk) ──────────────────
-  // Statique comme Trivy : la phase Sonar est TOUJOURS 'auto-fix-bulk'
-  // (PHASE_MODE, jenkins-known-fixes.ts) — WF2 ne cible pas encore une
-  // issue précise, correction assumée sur l'ensemble des findings.
-  // onSonarCorrect() appelle le MÊME approveFix() que le bouton générique
-  // "✓ Approuver le fix" du header : aucun nouvel endpoint, aucun nouveau
-  // workflow — cette carte ne fait que rendre visibles les vraies findings
-  // Sonar (enrichedData.sonar.issues, déjà écrites par WF1) avant de
-  // déclencher l'action déjà prouvée. Les deux boutons coexistent : le
-  // bouton du header reste le contrôle de cycle de vie générique de
-  // l'incident (gaté sur incident.status), celui-ci est contextuel à la
-  // phase Sonar — ils appellent la même méthode donc ne peuvent jamais se
-  // contredire, et `correcting` est branché sur le même signal de polling
-  // pour que les deux reflètent "en cours" ensemble.
+  /** Mode de correction de la carte SonarQube : sélective si au moins une issue est auto-corrigeable. */
   sonarMode(): RemediationMode {
     return this.sonarIssues().some(i => i.remediationType === 'AUTO_FIX_ELIGIBLE') ? 'auto-fix-selective' : 'signal-only';
   }
+  /** Convertit les findings SonarQube bruts en issues affichables pour la carte de correction. */
   sonarIssues(): RemediationIssue[] {
     const issues = this.enrichedData?.sonar?.issues || [];
     return issues.map((i: any) => ({
@@ -511,30 +402,27 @@ export class IncidentDetailComponent implements OnInit, OnDestroy, OnChanges {
       remediationType: i.remediationType || 'DEVELOPER_ACTION_REQUIRED',
     }));
   }
+  /** Vrai si une correction Sonar est en cours (approbation ou génération de PR). */
   sonarCorrecting(): boolean { return this.approvalBusy || this.prGenerationState === 'polling'; }
+  /** Demande confirmation puis lance la correction des findings Sonar sélectionnés. */
   onSonarCorrect(selected?: Set<string>): void {
     const findingIds = selected ? [...selected] : [];
-    // PR existante ou cycle en cours : le backend rejetterait (409). Le verrou
-    // du composant masque déjà le bouton ; garde contre un appel résiduel.
-    if (this.newCorrectionBlocked()) return;
+    if (this.sonarSelectionLocked()) return;
     if (!findingIds.length || !globalThis.confirm(`Confirmer une demande unique pour ${findingIds.length} ${findingIds.length === 1 ? 'problème SonarQube sélectionné' : 'problèmes SonarQube sélectionnés'} ?`)) return;
     this.approveFix(findingIds);
   }
 
+  /** Vrai si au moins un finding (toute phase) est marqué auto-corrigeable. */
   hasAutoFixEligible(): boolean {
     const stages = this.enrichedData?.stages || {};
     return Object.values(stages).some((s: any) => (s?.findings || []).some((f: any) => f.remediationType === 'AUTO_FIX_ELIGIBLE'))
       || this.sonarIssues().some(i => i.remediationType === 'AUTO_FIX_ELIGIBLE');
   }
 
-  // Traduit les clés abstraites émises par <app-project-overview> (le rail
-  // de phases, réutilisé tel quel — voir project-overview.component.ts)
-  // vers les vrais onglets de la page Projet. Même mapping que
-  // project-detail.component.ts::tabMap/onGoToTab, adapté : 'guide' reste
-  // ICI (cette page a déjà un onglet 'guide' local), pas de navigation.
   private readonly overviewTabMap: Record<string, string> = {
     jenkins: 'jenkins', sonar: 'sonarqube', security: 'securite',
   };
+  /** Navigue vers l'onglet projet correspondant à la phase cliquée dans le rail d'étapes gouvernées. */
   onGoToTab(event: string): void {
     if (event === 'guide') { this.activeTab = 'guide'; return; }
     const projectId = this.incident?.projectId;
@@ -545,6 +433,7 @@ export class IncidentDetailComponent implements OnInit, OnDestroy, OnChanges {
     this.router.navigate(['/projects', projectId], { queryParams: { tab } });
   }
 
+  /** Applique l'onglet demandé via l'URL (?tab=...) le cas échéant, puis charge l'incident. */
   ngOnInit() {
     const tabParam = this.route.snapshot.queryParamMap.get('tab');
     const validTabs = ['analysis', 'guide', 'validation', 'raw'];
@@ -555,6 +444,7 @@ export class IncidentDetailComponent implements OnInit, OnDestroy, OnChanges {
     this.load();
   }
 
+  /** Réinitialise tout l'état local et recharge quand l'id d'incident change (navigation entre deux incidents). */
   ngOnChanges(changes: SimpleChanges) {
     if (!changes['id'] || changes['id'].firstChange) return;
     this.incidentScopeReset$.next();
@@ -577,29 +467,28 @@ export class IncidentDetailComponent implements OnInit, OnDestroy, OnChanges {
     this.load();
   }
 
-  /**
-   * Table de preuve de l'incident. Une absence n'est jamais bloquante : la
-   * vue affiche « Source non disponible », qui est l'état honnête.
-   */
+  /** Charge la table de preuve de provenance de l'incident. */
   loadSourceEvidence() {
     this.sourceEvidenceState = 'loading';
     this.api.getIncidentSourceEvidence(this.id).pipe(takeUntil(this.incidentScopeReset$)).subscribe({
+      /** Traite le résultat reçu et actualise les données locales. */
       next: view => {
         this.sourceEvidenceState = 'ready';
-        // Garde d'isolation : une réponse qui ne porte pas CET incident est
-        // rejetée (réponse tardive après navigation), jamais affichée.
         this.sourceEvidence = view?.incidentId === this.id
           ? normalizeEvidenceView(view)
           : null;
       },
+      /** Traite l’erreur reçue et termine le suivi de la demande. */
       error: () => { this.sourceEvidence = null; this.sourceEvidenceState = 'error'; },
     });
   }
 
+  /** Renvoie la preuve de provenance d'un emplacement donné. */
   evidence(slot: string): SourceEvidence | null {
     return this.sourceEvidence?.slots?.[slot] || null;
   }
 
+  /** Renvoie la table complète des emplacements de preuve. */
   evidenceSlots(): Record<string, SourceEvidence> | null {
     return this.sourceEvidence?.slots || null;
   }
@@ -614,18 +503,19 @@ export class IncidentDetailComponent implements OnInit, OnDestroy, OnChanges {
     return this.evidenceSections().filter(section => section.id === 'validation' || section.id === 'fix');
   }
 
+  /** Renvoie les preuves de provenance par finding. */
   findingEvidence(): FindingEvidence[] | null {
     return this.sourceEvidence?.findings || null;
   }
 
-  /** Chaîne de preuve d'une correction automatique (constat → PR). */
+  /** Chaîne de preuve d'une correction automatique (constat → PR) pour un taskId donné. */
   remediationEvidence(taskId: string | null | undefined) {
     const id = String(taskId || '').trim();
     if (!id) return null;
     return this.sourceEvidence?.remediations?.find(r => r.taskId === id) || null;
   }
 
-  /** Identité factuelle de la provenance affichée — jamais implicite. */
+  /** Identité factuelle (build/commit) affichée pour la provenance. */
   provenanceNote(): string {
     const build = this.sourceEvidence?.buildNumber;
     const commit = this.sourceEvidence?.commitSha;
@@ -635,14 +525,15 @@ export class IncidentDetailComponent implements OnInit, OnDestroy, OnChanges {
     ].join(' — ');
   }
 
+  /** Charge l'incident complet (analyse IA, validation, preuves) et reconstruit timeline/onglets. */
   load() {
     this.loadError = '';
     this.loading = true;
     this.loadSourceEvidence();
     this.api.getIncident(this.id).pipe(takeUntil(this.incidentScopeReset$)).subscribe({
+      /** Traite le résultat reçu et actualise les données locales. */
       next: (inc: any) => {
         this.incident     = inc;
-        // Rapports agents depuis metadata (rootCause, security, remediation)
         const meta = inc.metadata || {};
         this.reports = [
           meta.rootCause && Object.keys(meta.rootCause).length > 0
@@ -656,13 +547,10 @@ export class IncidentDetailComponent implements OnInit, OnDestroy, OnChanges {
             : null,
         ].filter(r => r !== null);
         this.decision     = inc.decision || null;
-        // ── Données WF1 ──
-        // aiAnalysis peut être du JSON string OU du texte brut — parse sûr
         if (inc.aiAnalysis && typeof inc.aiAnalysis === 'string') {
           try {
             this.aiAnalysis = JSON.parse(inc.aiAnalysis);
           } catch (e) {
-            // texte brut : on l'enveloppe pour l'affichage
             this.aiAnalysis = { justification: inc.aiAnalysis };
           }
         } else {
@@ -670,43 +558,34 @@ export class IncidentDetailComponent implements OnInit, OnDestroy, OnChanges {
         }
         this.developerGuide = this.aiAnalysis?.developerGuide ?? null;
         this.enrichedData = inc.metadata?.enrichedData || null;
-        // ── Données WF3 ──
         this.validation   = inc.metadata?.validation || null;
         this.prValidationRequest = inc.metadata?.prValidationRequest || null;
-        // ── Build Jenkins direct (source='jenkins') ──
         this.classification = inc.source === 'jenkins'
           ? classify(inc.errorReason)
           : { type: 'unknown', solution: null };
         this.updateLifecycle();
         this.updateTabs();
         this.loading = false;
-        // Si validé, ouvrir directement l'onglet validation — sauf si un onglet a été demandé explicitement via l'URL
         if (!this.requestedTab && this.validation) this.activeTab = 'validation';
         this.restoreInProgressStateFromServer();
       },
+      /** Traite l’erreur reçue et termine le suivi de la demande. */
       error: () => { this.loadError = 'Impossible de charger cet incident. Vérifiez son existence puis réessayez.'; this.toast.error('Erreur', this.loadError); this.loading = false; }
     });
   }
 
-  // GOAL 2 — un rechargement de page ne doit JAMAIS retomber sur un état
-  // "idle" silencieux alors que le backend dit encore FIX_STARTING/
-  // DISPATCHED : on réévalue systématiquement depuis metadata.fixRequest.
-  // status (source de vérité serveur), jamais depuis la seule mémoire du
-  // composant. Idempotent : startPrPolling()/stopPrPolling() peuvent être
-  // appelés plusieurs fois sans effet de bord (stopPrPolling() est toujours
-  // appelé en premier par startPrPolling()).
+  /** Relance le polling de génération de PR si le backend indique encore un cycle en cours après un rechargement de page. */
   private restoreInProgressStateFromServer(): void {
     if (this.incident?.prUrl && this.fixRequestStatus() !== 'CANCEL_REQUESTED') { this.prGenerationState = 'idle'; return; }
     if (this.isFixInProgress() || this.fixRequestStatus() === 'CANCEL_REQUESTED') {
       if (this.prGenerationState !== 'polling') this.startPrPolling();
       return;
     }
-    // Statut déjà terminal (FIX_FAILED/REJECTED/VALIDATING/VALIDATED/COMPLETED)
-    // ou absent : aucun polling génération-PR n'a plus de raison de tourner.
     this.stopPrPolling();
     this.prGenerationState = 'idle';
   }
 
+  /** Approuve la correction (globale ou sur les findings sélectionnés), ou relance une tentative annulée compatible. */
   approveFix(findingIds?: string[] | string) {
     if (this.approvalBusy) return;
     this.approvalBusy = true;
@@ -722,12 +601,14 @@ export class IncidentDetailComponent implements OnInit, OnDestroy, OnChanges {
       ? this.api.approveFixBatch(this.id, findingIds)
       : this.api.approveFix(this.id, findingIds);
     request.subscribe({
+      /** Traite le résultat reçu et actualise les données locales. */
       next: (result: any) => {
         this.approvalBusy = false;
         this.toast.success(result?.duplicate ? 'Cette demande de correction existe déjà.' : 'Demande de correction enregistrée.');
         this.load();
         this.startPrPolling();
       },
+      /** Traite l’erreur reçue et termine le suivi de la demande. */
       error: (err: any) => {
         this.approvalBusy = false;
         this.approvalError = userHttpError(err, 'Impossible de démarrer la correction. Actualisez les données puis réessayez.');
@@ -736,31 +617,27 @@ export class IncidentDetailComponent implements OnInit, OnDestroy, OnChanges {
     });
   }
 
+  /** Refuse la correction proposée (l'action manuelle reste à faire). */
   rejectFix() {
     if (this.approvalBusy) return;
     this.approvalBusy = true;
     this.api.rejectFix(this.id).subscribe({
+      /** Traite le résultat reçu et actualise les données locales. */
       next: () => { this.approvalBusy = false; this.toast.success('Correction refusée — action manuelle conservée'); this.load(); },
+      /** Traite l’erreur reçue et termine le suivi de la demande. */
       error: (err: any) => { this.approvalBusy = false; this.approvalError = userHttpError(err, 'Impossible de refuser la correction. Réessayez.'); this.toast.error('Erreur', this.approvalError || 'Impossible de rejeter'); }
     });
   }
 
+  /** Vrai si une demande de validation de la Pull Request peut être soumise maintenant. */
   canRequestPrValidation(): boolean {
     const fix = this.incident?.metadata?.fixRequest;
     const state = this.prValidationRequest?.status;
-    // Un échec de transport Jenkins (FAILED) reste réessayable explicitement.
     return fix?.status === 'PR_CREATED' && !!this.incident?.prUrl && (!state || state === 'FAILED');
   }
 
-  // BRIQUE 5 — "Corriger et revalider" : backend reste seul décisionnaire.
-  // Le bouton n'apparaît que si mergeAuthorization === BLOCKED ET que le
-  // backend a lui-même déclaré la cause exploitable (correctiveActionAllowed) ;
-  // jamais recalculé ici. Une validation en cours (REQUESTED/QUEUED/RUNNING)
-  // désactive toute action concurrente, y compris la correction.
   correctiveBusy = false;
-  // "Correction supplémentaire en cours" : distinct du libellé de la toute
-  // première tentative — seule la dernière entrée d'attempts[] marquée
-  // corrective:true (posée par correctAndRevalidate()) le déclenche.
+  /** Vrai si une correction supplémentaire (corrective, sur la même PR) est actuellement en cours. */
   isCorrectiveInFlight(): boolean {
     const fix = this.incident?.metadata?.fixRequest;
     if (!fix || !['FIX_STARTING', 'DISPATCHED'].includes(fix.status)) return false;
@@ -768,12 +645,14 @@ export class IncidentDetailComponent implements OnInit, OnDestroy, OnChanges {
     const last = attempts[attempts.length - 1];
     return !!last?.corrective;
   }
+  /** Vrai si le backend autorise une correction corrective (PR bloquée avec cause exploitable). */
   canCorrectAndRevalidate(): boolean {
     const ma = this.mergeAuthorization();
     const state = this.prValidationRequest?.status;
     if (state === 'REQUESTED' || state === 'QUEUED' || state === 'RUNNING') return false;
     return ma?.authorization === 'BLOCKED' && ma?.correctiveActionAllowed === true;
   }
+  /** Demande confirmation puis lance une nouvelle tentative de correction sur la Pull Request existante. */
   correctAndRevalidate(): void {
     if (this.correctiveBusy || !this.canCorrectAndRevalidate()) return;
     if (!globalThis.confirm(
@@ -782,11 +661,13 @@ export class IncidentDetailComponent implements OnInit, OnDestroy, OnChanges {
     )) return;
     this.correctiveBusy = true;
     this.api.correctAndRevalidate(this.id).subscribe({
+      /** Traite le résultat reçu et actualise les données locales. */
       next: (result: any) => {
         this.correctiveBusy = false;
         this.toast.success(result?.duplicate ? 'Cette correction est déjà en cours.' : 'Correction supplémentaire en cours.');
         this.load();
       },
+      /** Traite l’erreur reçue et termine le suivi de la demande. */
       error: (err: any) => {
         this.correctiveBusy = false;
         this.toast.error('Correction refusée', userHttpError(err, 'La correction n’a pas pu être autorisée.'));
@@ -795,24 +676,22 @@ export class IncidentDetailComponent implements OnInit, OnDestroy, OnChanges {
     });
   }
 
+  /** Demande la validation (WF3) de la Pull Request en cours. */
   requestPrValidation(): void {
     if (this.prValidationBusy || !this.canRequestPrValidation()) return;
     this.prValidationBusy = true;
     this.prValidationTargetStale = false;
     this.api.requestPrValidation(this.id).subscribe({
+      /** Traite le résultat reçu et actualise les données locales. */
       next: (result: any) => {
         this.prValidationBusy = false;
         this.prValidationRequest = result?.validationRequest || this.prValidationRequest;
         this.toast.success(result?.duplicate ? 'Cette validation existe déjà.' : 'Validation de la Pull Request mise en attente.');
         this.load();
       },
+      /** Traite l’erreur reçue et termine le suivi de la demande. */
       error: (err: any) => {
         this.prValidationBusy = false;
-        // R65 — ce conflit précis signifie qu'un nouveau commit légitime est
-        // arrivé sur la même PR/branche depuis la demande de correction
-        // initiale (ex. une remédiation Sonar approuvée ultérieure). Ce n'est
-        // pas une erreur générique : l'action gouvernée « Actualiser la
-        // cible » doit être proposée explicitement, jamais déclenchée seule.
         const message = err?.error?.message;
         this.prValidationTargetStale = err?.status === 409 && typeof message === 'string' && message.includes('a changé');
         this.toast.error('Validation refusée', userHttpError(err, 'Impossible de demander la validation de la Pull Request.'));
@@ -821,20 +700,21 @@ export class IncidentDetailComponent implements OnInit, OnDestroy, OnChanges {
     });
   }
 
+  /** Actualise la cible de validation après un nouveau commit légitime sur la même PR. */
   refreshValidationTarget(): void {
     if (this.refreshValidationTargetBusy) return;
     this.refreshValidationTargetBusy = true;
     this.api.refreshPrValidationTarget(this.id).subscribe({
+      /** Traite le résultat reçu et actualise les données locales. */
       next: (result: any) => {
         this.refreshValidationTargetBusy = false;
         this.prValidationTargetStale = false;
         this.toast.success(result?.changed
           ? 'Cible de validation actualisée — vous pouvez maintenant réessayer la validation.'
           : 'La cible de validation est déjà à jour.');
-        // Ne jamais relancer la validation automatiquement : l'utilisateur
-        // doit cliquer explicitement sur « Réessayer la validation » ensuite.
         this.load();
       },
+      /** Traite l’erreur reçue et termine le suivi de la demande. */
       error: (err: any) => {
         this.refreshValidationTargetBusy = false;
         this.toast.error('Actualisation refusée', userHttpError(err, 'Impossible d’actualiser la cible de validation.'));
@@ -843,16 +723,13 @@ export class IncidentDetailComponent implements OnInit, OnDestroy, OnChanges {
     });
   }
 
-  // Déclenche WF4 (optimize) avec le contexte d'erreur du build en plus du
-  // Jenkinsfile actuel — GARDE-FOU : n'est appelable QUE depuis le bouton du
-  // template, lui-même gaté sur classification.type === 'jenkinsfile' (voir
-  // incident-detail.component.html). WF4 lit déjà pom.xml/Dockerfile de son
-  // côté (projectContext) — on ne duplique pas cette lecture ici.
+  /** Déclenche WF4 (optimisation du Jenkinsfile) avec le Jenkinsfile actuel et le contexte d'erreur du build. */
   generateWF4Fix(): void {
     const projectId = this.incident?.projectId;
     if (!projectId || this.classification.type !== 'jenkinsfile') return;
     this.generatingWF4Fix = true;
     this.api.getProject(projectId).subscribe({
+      /** Traite le résultat reçu et actualise les données locales. */
       next: (project: any) => {
         const githubRepo = (project?.githubRepo || '').replace('https://github.com/', '');
         const [owner, repo] = githubRepo.split('/');
@@ -862,6 +739,7 @@ export class IncidentDetailComponent implements OnInit, OnDestroy, OnChanges {
           return;
         }
         this.api.fetchJenkinsfile(owner, repo).subscribe({
+          /** Traite le résultat reçu et actualise les données locales. */
           next: (fetchRes: any) => {
             this.api.optimizeJenkinsfile({
               projectId,
@@ -869,33 +747,32 @@ export class IncidentDetailComponent implements OnInit, OnDestroy, OnChanges {
               jenkinsfile: fetchRes.jenkinsfile,
               buildError: this.incident?.errorReason,
             }).subscribe({
+              /** Traite le résultat reçu et actualise les données locales. */
               next: () => {
                 this.generatingWF4Fix = false;
                 this.toast.success('Analyse WF4 lancée', "Voir l'onglet Jenkinsfile Optimizer du projet.");
                 this.router.navigate(['/projects', projectId]);
               },
+              /** Traite l’erreur reçue et termine le suivi de la demande. */
               error: () => { this.generatingWF4Fix = false; this.toast.error('Erreur', 'Échec du déclenchement WF4.'); },
             });
           },
+          /** Traite l’erreur reçue et termine le suivi de la demande. */
           error: () => { this.generatingWF4Fix = false; this.toast.error('Erreur', 'Impossible de récupérer le Jenkinsfile.'); },
         });
       },
+      /** Traite l’erreur reçue et termine le suivi de la demande. */
       error: () => { this.generatingWF4Fix = false; this.toast.error('Erreur', 'Projet introuvable.'); },
     });
   }
 
-  // Déclenche WF5 (optimize) — jumeau de generateWF4Fix(). GARDE-FOU : n'est
-  // appelable QUE depuis le bouton du template, lui-même gaté sur
-  // classification.type === 'dockerfile' (voir incident-detail.component.html).
-  // Contrairement à WF4, WF5 optimize() fetch le Dockerfile lui-même côté
-  // backend (voir dockerfile-optimizer.module.ts) — pas de fetch séparé ici.
-  // buildError est déjà envoyé pour préparer le câblage backend/n8n à venir ;
-  // WF5 ne l'exploite pas encore côté n8n à ce stade.
+  /** Déclenche WF5 (optimisation du Dockerfile), jumeau de generateWF4Fix() pour les erreurs de build liées au Dockerfile. */
   generateWF5Fix(): void {
     const projectId = this.incident?.projectId;
     if (!projectId || this.classification.type !== 'dockerfile') return;
     this.generatingWF5Fix = true;
     this.api.getProject(projectId).subscribe({
+      /** Traite le résultat reçu et actualise les données locales. */
       next: (project: any) => {
         const githubRepo = (project?.githubRepo || '').replace('https://github.com/', '');
         const [owner, repo] = githubRepo.split('/');
@@ -911,18 +788,22 @@ export class IncidentDetailComponent implements OnInit, OnDestroy, OnChanges {
           projectName: project?.name,
           buildError: this.incident?.errorReason,
         }).subscribe({
+          /** Traite le résultat reçu et actualise les données locales. */
           next: () => {
             this.generatingWF5Fix = false;
             this.toast.success('Analyse WF5 lancée', "Voir l'onglet Dockerfile Optimizer du projet.");
             this.router.navigate(['/projects', projectId]);
           },
+          /** Traite l’erreur reçue et termine le suivi de la demande. */
           error: () => { this.generatingWF5Fix = false; this.toast.error('Erreur', 'Échec du déclenchement WF5.'); },
         });
       },
+      /** Traite l’erreur reçue et termine le suivi de la demande. */
       error: () => { this.generatingWF5Fix = false; this.toast.error('Erreur', 'Projet introuvable.'); },
     });
   }
 
+  /** Démarre le polling périodique qui attend l'apparition de la Pull Request (ou un échec/timeout) après approbation. */
   private startPrPolling() {
     this.stopPrPolling();
     this.pollAttempts = 0;
@@ -930,24 +811,21 @@ export class IncidentDetailComponent implements OnInit, OnDestroy, OnChanges {
     this.pollHandle = setInterval(() => {
       this.pollAttempts++;
       this.api.getIncident(this.id).pipe(takeUntil(this.incidentScopeReset$)).subscribe({
+        /** Traite le résultat reçu et actualise les données locales. */
         next: (inc: any) => {
-          // GOAL 1 — piloté par metadata.fixRequest.status, pas seulement
-          // prUrl : un FIX_FAILED (ou REJECTED/VALIDATING/VALIDATED/COMPLETED)
-          // arrête le polling IMMÉDIATEMENT, jamais après les 88s du plafond.
           const status = inc?.metadata?.fixRequest?.status;
           const terminal = (status !== 'CANCEL_REQUESTED' && !!inc?.prUrl) || this.TERMINAL_FIX_STATUSES.includes(status);
-          // Garde le statut visible à jour PENDANT le polling (pas seulement
-          // au tick final) : l'utilisateur voit l'état réel, pas un spinner figé.
           this.incident = inc;
           if (terminal) {
             this.prGenerationState = 'idle';
             this.stopPrPolling();
-            this.load(); // resynchronise timeline/tabs avec le nouvel état complet
+            this.load();
           } else if (this.pollAttempts >= this.POLL_MAX_ATTEMPTS) {
             this.prGenerationState = 'timeout';
             this.stopPrPolling();
           }
         },
+        /** Traite l’erreur reçue et termine le suivi de la demande. */
         error: () => {
           if (this.pollAttempts >= this.POLL_MAX_ATTEMPTS) {
             this.prGenerationState = 'timeout';
@@ -958,6 +836,7 @@ export class IncidentDetailComponent implements OnInit, OnDestroy, OnChanges {
     }, this.POLL_INTERVAL_MS);
   }
 
+  /** Arrête le polling de génération de PR s'il est actif. */
   private stopPrPolling() {
     if (this.pollHandle !== null) {
       clearInterval(this.pollHandle);
@@ -965,58 +844,104 @@ export class IncidentDetailComponent implements OnInit, OnDestroy, OnChanges {
     }
   }
 
+  /** Nettoie l'abonnement et arrête le polling à la destruction du composant. */
   ngOnDestroy() {
     this.incidentScopeReset$.next();
     this.incidentScopeReset$.complete();
     this.stopPrPolling();
   }
 
+  /** Couleur associée à une sévérité (CRITICAL/HIGH/MEDIUM/LOW). */
   getSeverityColor(s: string) {
     const map: any = { CRITICAL:'var(--accent-red)', HIGH:'var(--accent-red)',
       MEDIUM:'var(--accent-orange)', LOW:'var(--accent-green)' };
     return map[s] || 'var(--border)';
   }
 
+  /** Vrai si l'incident porte une URL de Pull Request réelle. */
   hasRealPr(): boolean { return /^https?:\/\//i.test(String(this.incident?.prUrl || '')); }
-  // Miroir exact des gardes backend startFix (incidents.service.ts:929 + :960) :
-  // aucune nouvelle demande de correction tant qu'une PR existe OU qu'un cycle
-  // est déjà en cours. FIX_FAILED / REJECTED sans PR restent permis.
+  /** Vrai si une nouvelle demande de correction doit être bloquée (PR déjà existante ou cycle déjà en cours). */
+  /** Sélection Sonar verrouillée seulement pendant qu'une correction tourne : avec une PR ouverte, une nouvelle
+   *  demande reste possible et reçoit du serveur le refus explicite « merge requis » ; après « Merge effectué »,
+   *  elle démarre un nouveau cycle sur cet incident. */
+  sonarSelectionLocked(): boolean {
+    const fix = this.incident?.metadata?.fixRequest;
+    if (this.hasRealPr() && fix?.workflow !== 'WF2') return true;
+    return ['APPROVAL_REQUESTED', 'FIX_STARTING', 'DISPATCHED', 'CANCEL_REQUESTED'].includes(fix?.status);
+  }
   newCorrectionBlocked(): boolean {
     if (this.hasRealPr()) return true;
     return ['APPROVAL_REQUESTED', 'FIX_STARTING', 'DISPATCHED', 'PR_CREATED', 'VALIDATING', 'CANCEL_REQUESTED']
       .includes(this.incident?.metadata?.fixRequest?.status);
   }
 
-  // ── Visibilité du cycle de vie WF2 (GOALS 1-5, audit stuck-UX 2026-10-04) ──
-  // Tout est dérivé de metadata.fixRequest.status à CHAQUE lecture — jamais
-  // d'état local qui pourrait désynchroniser l'affichage de la vérité serveur.
+  /** Renvoie la demande de correction courante (metadata.fixRequest), ou null. */
   fixRequest(): any { return this.incident?.metadata?.fixRequest || null; }
+  /** Statut brut de la demande de correction courante. */
   fixRequestStatus(): string | null { return this.fixRequest()?.status || null; }
+  /** Libellé français du statut de la demande de correction. */
   fixRequestStatusLabel(): string { return fixRequestStatusLabel(this.fixRequestStatus()); }
 
+  confirmMergePending = false;
+  /** Fichiers réservés par la correction Sonar de cet incident (verrou levé par « Merge effectué »), ou null. */
+  sonarFileLock(): { files: string[]; releasedAt?: string; releaseReason?: string; contestedFiles?: string[] } | null {
+    const fix = this.fixRequest();
+    return fix?.workflow === 'WF2' && Array.isArray(fix?.fileLock?.files) && fix.fileLock.files.length ? fix.fileLock : null;
+  }
+  /** Vrai si la PR Sonar de cet incident tient encore ses fichiers et peut être déclarée fusionnée. */
+  canConfirmSonarMerge(): boolean {
+    const fix = this.fixRequest();
+    return this.canOperate && !!this.sonarFileLock() && !this.sonarFileLock()!.releasedAt && !!fix?.prNumber && !!this.incident?.prUrl;
+  }
+  /** « Merge effectué » : le backend vérifie sur GitHub que la PR est fusionnée, puis libère ses fichiers pour une autre correction. */
+  confirmSonarMerge(): void {
+    if (!this.canConfirmSonarMerge() || this.confirmMergePending) return;
+    this.confirmMergePending = true;
+    this.api.confirmIncidentMerge(this.id).subscribe({
+      /** Traite le résultat reçu et actualise les données locales. */
+      next: (result) => {
+        this.confirmMergePending = false;
+        this.toast.success(result?.reason === 'PR_CLOSED_UNMERGED'
+          ? 'Pull Request fermée sans merge — fichiers libérés.'
+          : 'Merge constaté sur GitHub — fichiers libérés pour une nouvelle correction.');
+        this.load();
+      },
+      /** Traite l’erreur reçue et termine le suivi de la demande. */
+      error: (err: any) => {
+        this.confirmMergePending = false;
+        this.toast.error('Merge non confirmé', userHttpError(err, 'Impossible de vérifier le merge sur GitHub. Réessayez.'));
+      },
+    });
+  }
+
+  /** Vrai si une correction est en cours de démarrage ou de dispatch. */
   isFixInProgress(): boolean {
     return ['FIX_STARTING', 'DISPATCHED'].includes(this.fixRequestStatus() || '');
   }
   cancelBusy = false;
   cancelError: string | null = null;
 
+  /** Vrai si la demande de correction en cours peut être annulée (pas encore d'effet de bord démarré). */
   canCancelFix(): boolean {
     const fix = this.fixRequest();
     return fix?.workflow === 'WF2' && !!fix.requestId && fix.sideEffectsStarted !== true
       && ['FIX_STARTING', 'DISPATCHED', 'CANCEL_REQUESTED'].includes(fix.status);
   }
 
+  /** Demande confirmation puis annule la demande de correction en cours. */
   cancelFix(): void {
     if (this.cancelBusy || !this.canCancelFix() || this.fixRequestStatus() === 'CANCEL_REQUESTED') return;
     if (!globalThis.confirm("Voulez-vous annuler cette correction ?\nLa correction sera arrêtée si elle n'a pas encore commencé à écrire sur GitHub.")) return;
     this.cancelBusy = true;
     this.cancelError = null;
     this.api.cancelFixRequest(this.id, this.fixRequest().requestId).subscribe({
+      /** Traite le résultat reçu et actualise les données locales. */
       next: (result: any) => {
         this.cancelBusy = false;
         if (result.error) this.cancelError = 'Impossible de confirmer l’arrêt. La demande d’annulation reste en cours.';
         this.load();
       },
+      /** Traite l’erreur reçue et termine le suivi de la demande. */
       error: (err: any) => {
         this.cancelBusy = false;
         this.cancelError = err?.status === 409 && err?.error?.code === 'CANCELLATION_TOO_LATE'
@@ -1027,27 +952,30 @@ export class IncidentDetailComponent implements OnInit, OnDestroy, OnChanges {
     });
   }
 
+  /** Vrai si la correction est au stade "validation en cours". */
   isFixValidatingStage(): boolean { return this.fixRequestStatus() === 'VALIDATING'; }
+  /** Vrai si la correction a échoué techniquement. */
   isFixFailedStage(): boolean { return this.fixRequestStatus() === 'FIX_FAILED'; }
+  /** Vrai si WF2 a refusé le lot parce qu'il demande une correction humaine (pas une panne). */
+  isManualReviewRequired(): boolean {
+    const fix = this.fixRequest();
+    return fix?.manualReviewRequired === true || fix?.lastErrorCode === 'WF2_MANUAL_REVIEW_REQUIRED';
+  }
+  /** Vrai si la correction a été refusée. */
   isFixRejectedStage(): boolean { return this.fixRequestStatus() === 'REJECTED'; }
+  /** Vrai si la correction a atteint un état terminal de succès (validée ou complétée). */
   isFixTerminalSuccessStage(): boolean {
     return ['VALIDATED', 'COMPLETED'].includes(this.fixRequestStatus() || '');
   }
 
-  // GOAL 4 — n'expose QUE les deux champs plats, déjà bornés côté backend
-  // pour l'affichage humain (lastError ≤500 car., lastErrorCode ≤80 car.,
-  // voir incidents.service.ts saveWorkflowBatchStatus/reconcileStaleDispatch).
-  // Ne lit JAMAIS verificationEvidence, attempts[], ni aucun payload brut —
-  // aucun risque d'exposer un secret, un token ou une pile d'appels n8n.
+  /** Renvoie le détail d'échec de la correction (message + code), sans jamais exposer de données brutes sensibles. */
   fixFailureDetails(): { message: string; code: string | null } | null {
     const fix = this.fixRequest();
     if (!fix?.lastError) return null;
     return { message: String(fix.lastError), code: fix.lastErrorCode ? String(fix.lastErrorCode) : null };
   }
 
-  // GOAL 5 — "semble bloqué" réutilise le SEUIL existant côté backend
-  // (WF2_STALE_DISPATCH_MS, reconcile-stale-dispatch) ; aucun heartbeat
-  // inventé ici, juste dispatchedAt déjà persisté sur la tentative active.
+  /** Calcule l'horodatage (ms) du dernier dispatch de correction, pour détecter un blocage apparent. */
   private dispatchedAtMs(): number | null {
     const fix = this.fixRequest();
     if (!fix) return null;
@@ -1058,18 +986,18 @@ export class IncidentDetailComponent implements OnInit, OnDestroy, OnChanges {
     const ms = Date.parse(raw);
     return Number.isFinite(ms) ? ms : null;
   }
+  /** Vrai si la correction en cours dépasse le seuil de blocage apparent. */
   looksStuck(): boolean {
     if (!this.isFixInProgress()) return false;
     const dispatchedAt = this.dispatchedAtMs();
     if (dispatchedAt === null) return false;
     return Date.now() - dispatchedAt >= this.STALE_DISPATCH_THRESHOLD_MS;
   }
-  // Admin-only : ce bouton n'arrête PAS n8n (voir audit) — il ne fait
-  // qu'acter, côté backend, l'abandon d'un dispatch qui a dépassé le seuil
-  // existant. Jamais appelé automatiquement.
+  /** Vrai si un administrateur peut acter manuellement l'abandon d'un dispatch bloqué. */
   canReconcileStaleDispatch(): boolean {
     return !!this.auth.isAdmin && this.looksStuck();
   }
+  /** Demande confirmation puis marque côté plateforme la correction bloquée comme échouée. */
   reconcileStaleDispatch(): void {
     if (this.reconcileBusy || !this.canReconcileStaleDispatch()) return;
     const fix = this.fixRequest();
@@ -1084,6 +1012,7 @@ export class IncidentDetailComponent implements OnInit, OnDestroy, OnChanges {
     this.reconcileBusy = true;
     this.reconcileError = null;
     this.api.reconcileStaleDispatch(this.id, fix.requestId, { batchId: fix.batchId, attemptCount }).subscribe({
+      /** Traite le résultat reçu et actualise les données locales. */
       next: () => {
         this.reconcileBusy = false;
         this.toast.success('Correction marquée comme échouée.');
@@ -1091,6 +1020,7 @@ export class IncidentDetailComponent implements OnInit, OnDestroy, OnChanges {
         this.prGenerationState = 'idle';
         this.load();
       },
+      /** Traite l’erreur reçue et termine le suivi de la demande. */
       error: (err: any) => {
         this.reconcileBusy = false;
         this.reconcileError = userHttpError(err, 'Impossible de marquer cette correction comme échouée.');
@@ -1098,8 +1028,7 @@ export class IncidentDetailComponent implements OnInit, OnDestroy, OnChanges {
       },
     });
   }
-  // Verdict per-finding AUTORITAIRE (WF3) — jamais un statut global. Ordre :
-  // validation.derived.findings[].verdict puis findingResults[].result.
+  /** Renvoie les verdicts par finding (WF3), toujours la source autoritaire, jamais un statut global. */
   private findingResultEntries(): any[] {
     const m: any = this.incident?.metadata || {};
     const derived = m.validation?.derived?.findings;
@@ -1108,28 +1037,34 @@ export class IncidentDetailComponent implements OnInit, OnDestroy, OnChanges {
     if (Array.isArray(m.prValidationRequest?.findingResults)) return m.prValidationRequest.findingResults;
     return [];
   }
+  /** Renvoie les ids des findings du lot courant validés (verdict VALID). */
   validatedSonarIds(): Set<string> {
     const fix = this.incident?.metadata?.fixRequest;
     const batchIds = new Set(
       (Array.isArray(fix?.findingIds) ? fix.findingIds : (fix?.findingId ? [fix.findingId] : []))
         .map(String),
     );
-    return new Set(this.findingResultEntries()
+    const validated = this.findingResultEntries()
       .filter(e => String(e?.verdict ?? e?.result ?? '').toUpperCase() === 'VALID'
         && batchIds.has(String(e?.findingId)))
-      .map(e => String(e.findingId)));
+      .map(e => String(e.findingId));
+    // Déjà corrigés par une PR fusionnée de cet incident, ou inclus dans la PR encore ouverte.
+    const remediated = (this.incident?.metadata?.remediatedFindingIds || []).map(String);
+    const inOpenPr = this.hasRealPr() && fix?.workflow === 'WF2' ? [...batchIds] : [];
+    return new Set([...validated, ...remediated, ...inOpenPr]);
   }
+  /** Renvoie l'URL de la Pull Request du lot courant, si elle est valide. */
   batchPrUrl(): string | null {
     const u = this.incident?.metadata?.fixRequest?.prUrl || this.incident?.prUrl || '';
     return /^https?:\/\//i.test(String(u)) ? String(u) : null;
   }
+  /** Renvoie le libellé d'affichage de la Pull Request du lot courant. */
   batchPrLabel(): string {
     const n = Number(this.incident?.metadata?.fixRequest?.prNumber);
     return Number.isInteger(n) && n > 0 ? `PR #${n}` : 'Voir la Pull Request';
   }
 
-  // Utilise l'autorisation normalisée afin de conserver le déclassement
-  // stale-SHA de mergeAuthorization() vers INCONCLUSIVE.
+  /** Vrai si la validation est un succès prêt-à-fusionner, sur le commit réellement ciblé. */
   isMergeReadySuccess(): boolean {
     return this.prValidationRequest?.status === 'COMPLETED'
       && this.prValidationRequest?.result === 'VALIDATED'
@@ -1137,9 +1072,7 @@ export class IncidentDetailComponent implements OnInit, OnDestroy, OnChanges {
       && !!this.batchPrUrl();
   }
 
-  // ── UI-1 : autorisation de merge + santé globale (LECTURE PURE) ─────────
-  // validation.mergeAuthorization : null sur les incidents antérieurs à bb32694
-  // → le template affiche un état historique neutre, jamais une autorisation.
+  /** Renvoie l'autorisation de merge normalisée, déclassée en INCONCLUSIVE si elle porte sur un commit obsolète. */
   mergeAuthorization(): any {
     const ma = this.validation?.mergeAuthorization;
     if (!ma) return null;
@@ -1153,9 +1086,9 @@ export class IncidentDetailComponent implements OnInit, OnDestroy, OnChanges {
       technicalReasons: ['VALIDATION_STALE'],
     };
   }
+  /** Renvoie l'état de santé global du pipeline de validation. */
   pipelineHealth(): any { return this.validation?.derived?.pipelineHealth ?? null; }
 
-  // BRIQUE 4 — titre/sous-titre exactement le texte gouverné requis.
   private readonly MERGE_AUTH_META: Record<string, { color: string; icon: string; title: string; subtitle: string }> = {
     VALIDATING:   { color: 'var(--accent-blue)',   icon: '⏳', title: 'Analyse de la Pull Request en cours',
                     subtitle: 'Les corrections, les tests et les éventuelles régressions sont en cours de vérification.' },
@@ -1166,6 +1099,7 @@ export class IncidentDetailComponent implements OnInit, OnDestroy, OnChanges {
     INCONCLUSIVE: { color: 'var(--accent-orange)', icon: '⚠️', title: 'Validation non concluante',
                     subtitle: 'La plateforme ne dispose pas encore de preuves suffisantes pour autoriser la fusion.' },
   };
+  /** Renvoie le libellé/icône/couleur à afficher pour un état d'autorisation de merge donné. */
   mergeAuthMeta(a: string): { color: string; icon: string; title: string; subtitle: string } {
     if (a === 'INCONCLUSIVE' && this.mergeAuthForShaStale()) {
       return { color: 'var(--accent-orange)', icon: '⚠️', title: 'Validation obsolète — nouvelle validation requise',
@@ -1174,10 +1108,6 @@ export class IncidentDetailComponent implements OnInit, OnDestroy, OnChanges {
     return this.MERGE_AUTH_META[a] || { color: 'var(--border)', icon: 'ℹ️', title: 'État de validation inconnu', subtitle: '' };
   }
 
-  // BRIQUE 4 — labels partagés par les deux vocabulaires distincts persistés
-  // par computeMergeAuthorization() : blockingReasons (défaut prouvé — état
-  // BLOCKED) et technicalReasons (preuve incertaine/non résolue — état
-  // INCONCLUSIVE ou VALIDATING). Un même code n'apparaît jamais dans les deux.
   private readonly MERGE_BLOCKING_LABELS: Record<string, string> = {
     FINDING_INVALID: "Finding ciblé non corrigé",
     REGRESSION_CHANGES_REQUIRED: 'Nouvelle régression bloquante introduite',
@@ -1188,10 +1118,10 @@ export class IncidentDetailComponent implements OnInit, OnDestroy, OnChanges {
     SHA_MISMATCH: 'Le commit validé ne correspond pas à la PR',
     VALIDATION_IN_PROGRESS: 'Analyse en cours',
   };
+  /** Traduit un code de blocage de merge en libellé français lisible. */
   mergeBlockingLabel(code: string): string { return this.MERGE_BLOCKING_LABELS[code] || String(code); }
 
-  // BRIQUE 4 — checklist MERGE_READY : chaque item reflète un signal
-  // backend déjà persisté, jamais recalculé côté Angular.
+  /** Construit la checklist affichée quand la PR est prête à fusionner (items purement informatifs, jamais recalculés). */
   mergeReadyChecklist(): string[] {
     const ma = this.mergeAuthorization();
     if (!ma || ma.authorization !== 'MERGE_READY') return [];
@@ -1203,21 +1133,20 @@ export class IncidentDetailComponent implements OnInit, OnDestroy, OnChanges {
     ];
   }
 
-  // BRIQUE 4 — avertissement séparé, jamais mélangé à la décision de merge :
-  // un QG rouge causé par des findings préexistants n'est jamais présenté
-  // comme une régression. Le compte de findings historiques n'est affiché
-  // que lorsqu'il est fiable (régression complète, jamais estimé).
+  /** Vrai si un avertissement Quality Gate doit s'afficher malgré une PR prête à fusionner. */
   showMergeReadyQualityWarning(): boolean {
     const ma = this.mergeAuthorization();
     return ma?.authorization === 'MERGE_READY'
       && String(this.pipelineHealth()?.sonarQualityGate || '').toUpperCase() === 'ERROR';
   }
+  /** Renvoie le nombre de findings préexistants, uniquement si l'instantané de régression est fiable (jamais une estimation). */
   preexistingFindingCountIfReliable(): number | null {
     const regression = this.validation?.regression;
     if (!regression || regression.baselineSnapshotComplete !== true || regression.candidateSnapshotComplete !== true) return null;
     return typeof regression.preExistingCount === 'number' ? regression.preExistingCount : null;
   }
 
+  /** Construit le libellé affiché pour un avertissement de validation. */
   advisoryLabel(a: any): string {
     const code = String(a?.code || '');
     if (code.startsWith('SONAR_QUALITY_GATE_')) {
@@ -1227,10 +1156,10 @@ export class IncidentDetailComponent implements OnInit, OnDestroy, OnChanges {
     return 'Un point de validation nécessite votre attention. Consultez les détails techniques.';
   }
 
+  /** Raccourcit un SHA de commit pour affichage. */
   shortSha(s: string): string { return String(s || '').slice(0, 10); }
 
-  // forSha lie l'autorisation à un commit précis : signaler si ce commit n'est
-  // plus la cible de validation courante (nouveau commit de remédiation, etc.).
+  /** Vrai si l'autorisation de merge porte sur un commit qui n'est plus la cible de validation courante. */
   mergeAuthForShaStale(): boolean {
     const forSha = String(this.validation?.mergeAuthorization?.forSha || '').toLowerCase();
     const target = String(
@@ -1240,6 +1169,7 @@ export class IncidentDetailComponent implements OnInit, OnDestroy, OnChanges {
     return !!forSha && !!target && forSha !== target;
   }
 
+  /** Construit les lignes affichées pour le détail de santé du pipeline (build/tests/Quality Gate/scanners). */
   pipelineHealthRows(): { label: string; value: string }[] {
     const h = this.pipelineHealth();
     if (!h) return [];
@@ -1253,12 +1183,14 @@ export class IncidentDetailComponent implements OnInit, OnDestroy, OnChanges {
       { label: 'Étapes requises', value: h.requiredStagesStatus },
     ];
   }
+  /** Classe CSS de badge associée à une valeur de santé de pipeline. */
   healthBadgeClass(v: string): string {
     const s = String(v || '').toUpperCase();
     if (['OK', 'PASSED', 'SUCCESS', 'COMPLETED'].includes(s)) return 'info';
     if (['ERROR', 'FAILED'].includes(s)) return 'high';
     return 'medium';
   }
+  /** Libellé français d'une valeur de santé de pipeline. */
   healthLabel(v: string): string {
     const map: Record<string, string> = {
       OK: 'OK', PASSED: 'Réussi', SUCCESS: 'Réussi', COMPLETED: 'Exécuté',
@@ -1268,8 +1200,7 @@ export class IncidentDetailComponent implements OnInit, OnDestroy, OnChanges {
     const s = String(v || 'UNKNOWN').toUpperCase();
     return map[s] || s;
   }
-  // QG global rouge, mais le merge n'est PAS bloqué à cause de Sonar → ce sont
-  // des problèmes préexistants hors du lot corrigé.
+  /** Vrai si le Quality Gate global est rouge pour des raisons préexistantes, non liées au lot corrigé. */
   showPreexistingSonarNote(): boolean {
     const ma = this.mergeAuthorization();
     const qgRed = String(this.pipelineHealth()?.sonarQualityGate || '').toUpperCase() === 'ERROR';
@@ -1277,33 +1208,30 @@ export class IncidentDetailComponent implements OnInit, OnDestroy, OnChanges {
     return qgRed && !!ma && !blockedBySonar;
   }
 
+  /** Classe CSS de badge associée à une sévérité. */
   getSeverityBadgeClass(s: string) {
     const map: any = { CRITICAL:'high', HIGH:'high', MEDIUM:'medium', LOW:'info' };
     return map[s] || '';
   }
+  /** Classe CSS de badge associée à un statut d'incident. */
   getStatusBadgeClass(s: string) {
     const map: any = { approved:'info', analyzed:'medium', failed:'high',
       pending:'', completed:'info', validating:'medium' };
     return map[s] || '';
   }
+  /** Classe CSS de badge associée à une décision du Judge. */
   getDecisionBadgeClass(d: string) {
     const map: any = { FIX_PROPOSED:'info', AUTO_FIX:'info', BLOCK:'high', NOTIFY_ONLY:'medium' };
     return map[d] || '';
   }
 
-  // ── Statut dominant du header (Couche 1) ────────────────────────────────
-  // Les 3 dimensions (cycle de vie incident.status, sévérité aiAnalysis.
-  // securityLevel, décision aiAnalysis.decision) ne sont PAS le même signal
-  // — avant, affichées en badges de même taille, elles se faisaient
-  // concurrence sans hiérarchie. Ici : la décision du Judge est LA
-  // information qui compte pour un développeur ("qu'est-ce que je fais ?"),
-  // le reste passe en secondaire. Repli sur incident.status si le Judge n'a
-  // pas encore tranché (ex: incident Jenkins brut, WF1 pas encore passé).
+  /** Libellé du statut dominant affiché en en-tête (décision du Judge en priorité, sinon statut de l'incident). */
   dominantStatusLabel(): string {
     if (this.aiAnalysis?.decision) return this.aiAnalysis.decision;
     if (this.incident?.status === 'completed') return 'OK';
     return String(this.incident?.status || 'INCONNU').toUpperCase();
   }
+  /** Couleur associée au statut dominant affiché en en-tête. */
   dominantStatusColor(): string {
     if (this.aiAnalysis?.decision) {
       const map: any = { FIX_PROPOSED: 'var(--accent-blue)', AUTO_FIX: 'var(--accent-blue)',
@@ -1314,21 +1242,25 @@ export class IncidentDetailComponent implements OnInit, OnDestroy, OnChanges {
     if (this.incident?.status === 'failed') return 'var(--accent-red)';
     return 'var(--text-muted)';
   }
+  /** Classe CSS de badge associée à l'état du Quality Gate SonarQube. */
   getSonarGateBadgeClass(s: string) {
     if (s === 'OK') return 'info';
     if (s === 'ERROR') return 'high';
     if (s === 'SKIPPED') return 'medium';
     return '';
   }
+  /** Couleur associée à un type d'agent IA. */
   getAgentColor(t: string) {
     const map: any = { ROOT_CAUSE:'#38bdf8', SECURITY:'#e24b4a',
       REMEDIATION:'#22c55e', JUDGE:'#f59e0b' };
     return map[t] || '#7ba8c8';
   }
+  /** Icône associée à un type d'agent IA. */
   getAgentIcon(t: string) {
     const map: any = { ROOT_CAUSE:'◈', SECURITY:'⬡', REMEDIATION:'◆', JUDGE:'▣' };
     return map[t] || '◉';
   }
+  /** Libellé français d'un type d'agent IA. */
   getAgentLabel(t: string) {
     const map: any = { ROOT_CAUSE:'Analyse de la cause racine', SECURITY:'Analyse du risque de sécurité',
       REMEDIATION:'Correction', JUDGE:'Décision de gouvernance' };

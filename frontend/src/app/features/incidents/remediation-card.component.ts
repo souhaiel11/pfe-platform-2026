@@ -1,33 +1,16 @@
+// Gère l’affichage et les actions de correction card.
 import { Component, EventEmitter, Input, Output, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { PresentationLabelPipe } from '../../shared/presentation-label.pipe';
 import { SourceEvidenceLinkComponent } from '../../shared/source-evidence/source-evidence-link.component';
 import { SourceEvidence } from '../../shared/source-evidence/source-evidence.types';
 
-// ─────────────────────────────────────────────────────────────────────────
-//  Composant de remédiation unifié — Couche 2.
-//  Ne CORRIGE rien lui-même, n'appelle AUCUN backend : affiche erreurs +
-//  proposition/conseil, gère UNIQUEMENT l'état local de sélection (cases à
-//  cocher), et délègue toute action réseau au parent via (correct) —
-//  chaque phase sait déjà appeler son propre workflow (WF4/WF5/WF2
-//  existent, prouvés, ce composant ne fait qu'unifier leur présentation).
-//
-//  3 modes, jamais devinés ici — décidés par l'appelant à partir du TYPE de
-//  la phase (voir PHASE_MODE / remediationModeForPhase, jenkins-known-fixes.ts) :
-//
-//    - 'auto-fix-selective' (Jenkins/WF4, Docker/WF5) : issues avec case à
-//      cocher (retain/discard, patron repris tel quel de
-//      jenkinsfile-optimizer.component.ts), récap "X / Y retenues", bouton
-//      qui émet (correct) avec le Set des ids retenus.
-//    - 'auto-fix-bulk' (SonarQube/WF2) : issues en LECTURE seule (WF2 ne
-//      sait pas encore cibler une correction par issue précise — décision
-//      assumée, note affichée honnêtement), bouton unique qui émet
-//      (correct) sans sélection (correction sur l'ensemble).
-//    - 'signal-only' (OWASP/Trivy/ZAP) : JAMAIS de bouton. Garde-fou en dur
-//      dans le template, non paramétrable — une vulnérabilité ne doit
-//      jamais pouvoir déclencher une correction automatique.
-// ─────────────────────────────────────────────────────────────────────────
-
+/**
+ * Composant de remédiation unifié : affiche les issues d'une phase et gère
+ * uniquement la sélection locale (cases à cocher) selon son mode
+ * ('auto-fix-selective', 'auto-fix-bulk' ou 'signal-only', décidé par
+ * l'appelant) ; délègue toute action réseau au parent via (correct).
+ */
 export type RemediationMode = 'auto-fix-selective' | 'auto-fix-bulk' | 'signal-only';
 
 export interface RemediationIssue {
@@ -189,24 +172,16 @@ export class RemediationCardComponent implements OnChanges {
   @Input() advice: string | null = null;
   @Input() actionLabel = 'Corriger';
   @Input() correcting = false;
-  // Verrou de cycle de vie décidé par le parent (ex: une PR de correction
-  // existe déjà). true = pas de sélection, pas de bouton d'action, note affichée.
   @Input() locked = false;
   @Input() lockedNote: string | null = null;
-  // Verdict per-finding AUTORITAIRE (WF3) + provenance PR — décidés par le
-  // parent à partir de validation.derived.findings / findingResults et de
-  // fixRequest.prUrl. Le composant ne fait que les afficher.
   @Input() validatedIds: readonly string[] | Set<string> = [];
   @Input() prUrl: string | null = null;
   @Input() prLabel = '';
   @Input() mergeReady = false;
 
-  // Sources de la phase : le rapport de scanner qui a produit ces constats et
-  // le build qui l'a exécuté. Dérivées par le backend (GET /api/source-
-  // evidence/*) ; ce composant ne construit aucune URL. Vide = rien n'est
-  // affiché, jamais un lien vers l'accueil d'un outil en guise de preuve.
   @Input() sources: (SourceEvidence | null)[] = [];
 
+  /** Ne garde que les preuves de source réellement disponibles (jamais une preuve "indisponible" affichée comme si elle existait). */
   presentSources(): SourceEvidence[] {
     return (this.sources || []).filter((s): s is SourceEvidence => !!s && s.availability !== 'UNAVAILABLE');
   }
@@ -214,20 +189,21 @@ export class RemediationCardComponent implements OnChanges {
 
   selected = new Set<string>();
 
-  // Nouvelle liste d'issues (ex: résultat frais d'optimize()) -> tout
-  // retenu par défaut, comme le patron jenkinsfile-optimizer.component.ts
-  // (voir applyResult -> defaultSelected).
+  /** Réinitialise la sélection quand une nouvelle liste d'issues arrive (rien n'est retenu par défaut). */
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['issues']) {
       this.selected = new Set();
     }
   }
 
+  /** Vrai si cette issue est actuellement cochée pour correction. */
   isSelected(id: string): boolean { return this.selected.has(id); }
+  /** Vrai si cette issue a déjà un verdict WF3 validé (Set ou tableau selon ce que fournit le parent). */
   isValidated(id: string): boolean {
     const v = this.validatedIds;
     return v instanceof Set ? v.has(id) : Array.isArray(v) && v.includes(id);
   }
+  /** Coche/décoche une issue pour correction sélective — refuse les issues non éligibles ou déjà validées. */
   toggle(id: string): void {
     const issue = this.issues.find(i => i.id === id);
     if (issue?.remediationType !== 'AUTO_FIX_ELIGIBLE' || this.isValidated(id)) return;
@@ -235,8 +211,10 @@ export class RemediationCardComponent implements OnChanges {
     if (next.has(id)) next.delete(id); else next.add(id);
     this.selected = next;
   }
+  /** Délègue la demande de correction au parent avec le Set des issues retenues. */
   emitCorrect(): void { this.correct.emit(this.selected); }
 
+  /** Normalise une sévérité (française ou anglaise, variantes Sonar incluses) vers une des 4 classes d'affichage. */
   sevKey(s: string): string {
     const u = String(s || '').toUpperCase();
     if (u === 'CRITICAL' || u === 'CRITIQUE' || u === 'BLOCKER') return 'critical';

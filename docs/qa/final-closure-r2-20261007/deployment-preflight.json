@@ -1,0 +1,17 @@
+{
+  "image": "sha256:8581ec8d1cbd9332d3b9294bea63292f7880f54b4ae98aa394af8401b1613196",
+  "sourceCommit": "9038f556d8e8e27eb31c1a31feeac5168e529908",
+  "component": "builder-scanner",
+  "safetyFlags": {
+    "dispatch": "false",
+    "harness": "false"
+  },
+  "safetyCounts": {
+    "plans": 0,
+    "reservations": 0,
+    "writers": 0
+  },
+  "activeWf6Executions": 0,
+  "newVulnerabilityCache": "r2_qualification_trivy_cache",
+  "javaCache": "existing current Java database, read-only subpath"
+}

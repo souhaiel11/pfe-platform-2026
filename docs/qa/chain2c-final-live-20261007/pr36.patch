@@ -1,0 +1,23 @@
+From 4402e8977e4984f5ab759e0af0010901abd10a45 Mon Sep 17 00:00:00 2001
+From: souhaiel amri <131708236+souhaiel11@users.noreply.github.com>
+Date: Thu, 24 Sep 2026 23:55:25 +0100
+Subject: [PATCH] fix(security): remediate CVE-2023-6378 in logback-classic
+ (1.2.11 -> 1.2.13)
+
+---
+ pom.xml | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/pom.xml b/pom.xml
+index 9d657db..5eb97ce 100644
+--- a/pom.xml
++++ b/pom.xml
+@@ -61,7 +61,7 @@
+         <dependency>
+             <groupId>ch.qos.logback</groupId>
+             <artifactId>logback-classic</artifactId>
+-            <version>1.2.11</version>
++            <version>1.2.13</version>
+         </dependency>
+ 
+         <!-- SnakeYAML 1.29 — CVE-2022-25857 HIGH -->

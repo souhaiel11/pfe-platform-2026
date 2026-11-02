@@ -1,9 +1,11 @@
+// Prépare harden WF2 patch jeton budget de temps pour les workflows n8n.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
 const workflowPath = new URL('../pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.PROMOTION-TARGET.json', import.meta.url);
 const document = JSON.parse(fs.readFileSync(workflowPath, 'utf8'));
 const workflow = document[0];
+/** Retrouve ou construit le nœud du workflow demandé. */
 const node = name => {
   const found = workflow.nodes.find(item => item.name === name);
   assert.ok(found, `missing node: ${name}`);

@@ -1,3 +1,4 @@
+// État et logique du widget ChatOps : historique de conversation, ouverture/fermeture, envoi des questions au proxy backend.
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, defer, finalize } from 'rxjs';
@@ -8,10 +9,6 @@ export interface ChatMessage {
   content: string;
   timestamp: Date;
   loading?: boolean;
-  /** True only for a client-side failure fallback (HTTP error, or a 200
-   * response the backend itself marked unusable) -- never for a real
-   * assistant answer, so the UI can tell the two apart instead of
-   * rendering a failed request as if it were a normal reply. */
   isError?: boolean;
 }
 
@@ -25,11 +22,12 @@ export class ChatService {
   messages$ = this.messagesSubject.asObservable();
   loading$  = this.loadingSubject.asObservable();
 
-  // FIX: production webhook URL (not /webhook-test/)
   private readonly chatUrl = `${environment.apiUrl}/chat/ask`;
 
+  /** Injecte le client HTTP utilisé par sendMessage(). */
   constructor(private http: HttpClient) {}
 
+  /** Ouvre/ferme le widget ChatOps ; envoie un message d'accueil à la première ouverture si l'historique est vide. */
   toggle() {
     const opening = !this.isOpenSubject.value;
     this.isOpenSubject.next(opening);
@@ -40,8 +38,10 @@ export class ChatService {
     }
   }
 
+  /** Ferme le widget ChatOps. */
   close() { this.isOpenSubject.next(false); }
 
+  /** Envoie la question au proxy ChatOps backend (qui relaie vers n8n), affiche la réponse ou un message d'erreur distinct si la requête échoue ou si la réponse est inutilisable. */
   sendMessage(question: string, projectId?: string) {
     if (!question.trim() || this.loadingSubject.value) return;
 
@@ -54,22 +54,26 @@ export class ChatService {
     })).pipe(
       finalize(() => this.loadingSubject.next(false)),
     ).subscribe({
+      /** Traite le résultat reçu et actualise les données locales. */
       next: res => {
         const response = res as { ok?: unknown; answer?: unknown } | null;
         const ok = response?.ok === true && typeof response.answer === 'string';
         const answer = ok ? (response!.answer as string).trim() : '';
         this.addMessage('assistant', answer || "Réponse indisponible. Vous pouvez réessayer.", !answer);
       },
+      /** Traite l’erreur reçue et termine le suivi de la demande. */
       error: () => {
         this.addMessage('assistant', "Le service de discussion n'a pas pu répondre. Vous pouvez réessayer.", true);
       }
     });
   }
 
+  /** Vide l'historique de conversation affiché (ne touche à aucune donnée serveur). */
   clearHistory() {
     this.messagesSubject.next([]);
   }
 
+  /** Ajoute un message local au flux affiché, sans appel réseau. */
   private addMessage(role: 'user' | 'assistant', content: string, isError = false) {
     const current = this.messagesSubject.value;
     this.messagesSubject.next([...current, { role, content, timestamp: new Date(), isError }]);

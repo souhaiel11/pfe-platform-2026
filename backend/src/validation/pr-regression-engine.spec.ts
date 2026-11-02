@@ -1,29 +1,26 @@
+// Teste le composant « pr-regression-engine » et ses cas d’erreur.
 import * as assert from 'node:assert/strict';
 import { analyzeRegression, conservativeRegressionPolicy, RegressionFinding, RegressionPolicy } from './pr-regression-engine';
 import { computeFindingFingerprint, normalizeFindingPath } from './finding-fingerprint';
 import { normalizeSonarFindings, isActiveSonarIssue, RawSonarIssue } from './sonar-regression-adapter';
 
-// BRIQUE 3 (original Phase 11 Cases A-I) + CLOSEOUT (Part 9 Tests A-L,
-// letters re-used for closely related scenarios -- see the closeout report
-// for the exact mapping). Cases A/E/F/G/H/I and closeout TEST J run on the
-// pure engine directly with synthetic findings (source 'TEST') -- they are
-// about engine SEMANTICS, not any scanner. Case B/C also use the pure
-// engine to prove policy is respected exactly as given, never fabricated.
-// Case D and the PR #25 fixture go through the real Sonar adapter, since
-// line-number tolerance and componentKey-prefix stripping are
-// adapter-boundary concerns. Closeout TEST L (Brique 1/2 must remain green)
-// is the unmodified regression suite re-run alongside this file.
 
 const ABC = 'a'.repeat(40);
 const DEF = 'd'.repeat(40);
 
+/** Simule la lecture des données demandées par le composant. */
 function finding(rule: string, path = 'Service.java', message?: string): RegressionFinding {
   return { source: 'TEST', rule, path, message: message ?? null };
 }
 
-const alwaysBlocking: RegressionPolicy = { isBlocking: () => true };
-const neverBlocking: RegressionPolicy = { isBlocking: () => false };
+const alwaysBlocking: RegressionPolicy = {
+/** Prépare les données nécessaires à ce scénario. */
+isBlocking: () => true };
+const neverBlocking: RegressionPolicy = {
+/** Prépare les données nécessaires à ce scénario. */
+isBlocking: () => false };
 
+/** Exécute les étapes principales de ce programme. */
 function main() {
   // ------------------------------------------------------------------
   // CASE A — clean incremental remediation
@@ -49,7 +46,9 @@ function main() {
       expectedCandidateSha: ABC,
       baseline: { sha: ABC, findings: ['A', 'B', 'C', 'D'].map(r => finding(r)), complete: true },
       candidate: { sha: ABC, findings: ['C', 'D', 'X'].map(r => finding(r)), complete: true },
-      policy: { isBlocking: f => f.rule === 'X' },
+      policy: {
+      /** Prépare les données nécessaires à ce scénario. */
+      isBlocking: f => f.rule === 'X' },
     });
     assert.deepEqual(out.introducedFindings.map(f => f.rule), ['X']);
     assert.deepEqual(out.blockingIntroducedFindings.map(f => f.rule), ['X']);
@@ -65,7 +64,9 @@ function main() {
       expectedCandidateSha: ABC,
       baseline: { sha: ABC, findings: ['A', 'B'].map(r => finding(r)), complete: true },
       candidate: { sha: ABC, findings: ['B', 'W'].map(r => finding(r)), complete: true },
-      policy: { isBlocking: f => f.rule === 'W' ? false : true },
+      policy: {
+      /** Prépare les données nécessaires à ce scénario. */
+      isBlocking: f => f.rule === 'W' ? false : true },
     });
     assert.deepEqual(out.resolvedFindings.map(f => f.rule), ['A']);
     assert.deepEqual(out.preExistingFindings.map(f => f.rule), ['B']);
@@ -80,7 +81,9 @@ function main() {
       expectedCandidateSha: ABC,
       baseline: { sha: ABC, findings: ['A', 'B'].map(r => finding(r)), complete: true },
       candidate: { sha: ABC, findings: ['B', 'W'].map(r => finding(r)), complete: true },
-      policy: { isBlocking: f => f.rule === 'W' },
+      policy: {
+      /** Prépare les données nécessaires à ce scénario. */
+      isBlocking: f => f.rule === 'W' },
     });
     assert.equal(out.result, 'CHANGES_REQUIRED', 'CASE C (inverted policy): the exact same finding set flips result when only the policy changes');
   }
@@ -157,14 +160,6 @@ function main() {
     assert.equal(introduced.result, 'CHANGES_REQUIRED');
   }
 
-  // ------------------------------------------------------------------
-  // CLOSEOUT TEST J — same rule + same file + multiple occurrences
-  // (a fingerprint collision), with insufficient secondary evidence to pair
-  // them confidently: a plausible resolution (baseline-only message) and a
-  // plausible introduction (candidate-only message) coexist at the exact
-  // same (source, rule, path) identity. Equal or unequal counts must never
-  // be silently trusted here -- expected AMBIGUOUS / INCONCLUSIVE.
-  // ------------------------------------------------------------------
   {
     const out = analyzeRegression({
       expectedCandidateSha: ABC,
@@ -257,13 +252,6 @@ function main() {
     assert.equal(out.result, 'CLEAN', 'CASE I: 14 pre-existing findings, global QG ERROR is not this engine\'s concern, result stays CLEAN');
   }
 
-  // ------------------------------------------------------------------
-  // PHASE 10 — PR #25 semantic fixture (read-only static data; nothing here
-  // calls GitHub/Jenkins/Sonar/n8n, and incident 65e35d1b is never touched).
-  // Baseline: 16 Sonar findings. Approved batch: 2 x java:S4684 (resolved in
-  // the candidate). 14 other historical findings remain. No new finding.
-  // Global Sonar Quality Gate may still be ERROR -- irrelevant here.
-  // ------------------------------------------------------------------
   {
     const PR25_SHA = '8a315b0dd508eb9843bb3037fe2827f02f6faa78';
     const otherRules = Array.from({ length: 14 }, (_, i) => ({

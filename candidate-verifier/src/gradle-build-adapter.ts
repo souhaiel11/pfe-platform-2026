@@ -1,8 +1,4 @@
-// R22 (Gradle adapter) — calqued 1:1 on maven-build-adapter.ts. Same
-// BuildAdapter interface, same behavioural contracts (timeout -> 'FAILED' with
-// a 'WORKSPACE_TIMEOUT'-tagged evidence string for compile / 'UNKNOWN' for
-// tests; matchCount 0 -> honest UNKNOWN, never a fabricated 0/PASS;
-// failures = failures + errors, errors kept separately).
+// Compile et teste les projets Gradle dans un espace isolé.
 import { execFileSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -14,18 +10,12 @@ import { isProcessTimeout } from './process-timeout';
 const DEFAULT_TIMEOUT_MS = 5 * 60 * 1000;
 const EVIDENCE_TAIL_CHARS = 20_000;
 
+/** Conserve les dernières lignes du journal. */
 function tail(text: string, maxChars = EVIDENCE_TAIL_CHARS): string {
   return text.length <= maxChars ? text : text.slice(text.length - maxChars);
 }
 
-/**
- * Deliberately NOT `...process.env` -- same rule as safeMavenEnv(): a Gradle
- * subprocess compiling/testing candidate code has no legitimate need to see
- * this process's DB_PASS/JWT_SECRET/etc, and "no secret values in stored
- * evidence" is easiest to guarantee by never handing them to the child.
- * Duplicated on purpose (no shared base with Maven for now) -- the keep lists
- * genuinely differ (GRADLE_USER_HOME/GRADLE_OPTS vs M2_HOME/MAVEN_*).
- */
+/** Prépare le résultat lié à sûr Gradle environnement. */
 function safeGradleEnv(): NodeJS.ProcessEnv {
   const keep = ['PATH', 'HOME', 'JAVA_HOME', 'LANG', 'LC_ALL', 'GRADLE_USER_HOME', 'GRADLE_OPTS'];
   const env: NodeJS.ProcessEnv = {};
@@ -33,7 +23,7 @@ function safeGradleEnv(): NodeJS.ProcessEnv {
   return env;
 }
 
-/** './gradlew' when it exists AND is executable, otherwise the 'gradle' on PATH. */
+/** Résout Gradle Binary. */
 function resolveGradleBinary(cwd: string): string {
   const wrapper = path.join(cwd, 'gradlew');
   try {
@@ -44,6 +34,7 @@ function resolveGradleBinary(cwd: string): string {
   }
 }
 
+/** Exécute Gradle et collecte son résultat. */
 function runGradle(args: string[], cwd: string, timeoutMs: number): { status: number | null; stdout: string; stderr: string; timedOut: boolean; durationMs: number } {
   const bin = resolveGradleBinary(cwd);
   // Always run with plain console output; idempotent if the caller already passed it.
@@ -69,13 +60,16 @@ function runGradle(args: string[], cwd: string, timeoutMs: number): { status: nu
 export class GradleBuildAdapter implements BuildAdapter {
   readonly buildType = 'gradle';
 
+  /** Indique si cet adaptateur prend en charge les données. */
   supports(workspacePath: string): boolean {
     return fs.existsSync(path.join(workspacePath, 'build.gradle'))
       || fs.existsSync(path.join(workspacePath, 'build.gradle.kts'));
   }
 
+  /** Indique si ce mode est pris en charge. */
   supportsMode(): boolean { return true; }
 
+  /** Compile le projet dans le délai disponible. */
   compile(workspacePath: string, timeoutMs: number = DEFAULT_TIMEOUT_MS): CompileResult {
     const result = runGradle(['compileJava', '--console=plain'], workspacePath, timeoutMs);
     if (result.timedOut) {
@@ -89,6 +83,7 @@ export class GradleBuildAdapter implements BuildAdapter {
     };
   }
 
+  /** Compile les tests du projet. */
   compileTests(workspacePath: string, timeoutMs: number = DEFAULT_TIMEOUT_MS): CompileResult {
     const result = runGradle(['testClasses', '--console=plain'], workspacePath, timeoutMs);
     if (result.timedOut) return { status: 'FAILED', exitCode: result.status, durationMs: result.durationMs, evidenceTail: 'WORKSPACE_TIMEOUT during gradle testClasses' };
@@ -96,6 +91,7 @@ export class GradleBuildAdapter implements BuildAdapter {
       durationMs: result.durationMs, evidenceTail: (result.stdout + '\n' + result.stderr).slice(-20_000) };
   }
 
+  /** Exécute les tests pour détecter les régressions. */
   runRegressionTests(workspacePath: string, timeoutMs: number = DEFAULT_TIMEOUT_MS): RegressionTestResult {
     const result = runGradle(['test', '--console=plain'], workspacePath, timeoutMs);
     if (result.timedOut) {

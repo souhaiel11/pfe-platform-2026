@@ -1,3 +1,4 @@
+// Teste le composant « security-remediation-git-metadata » et ses cas d’erreur.
 import * as assert from 'node:assert/strict';
 import { computeSecurityCommitMessage, computeSecurityPrTitle, computeSecurityPrBody } from './security-remediation-git-metadata';
 

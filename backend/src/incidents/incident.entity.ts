@@ -1,4 +1,4 @@
-// incident.entity.ts
+// Entité Incident : cœur du cycle de vie surveillé par la plateforme (pending -> ...
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne } from 'typeorm';
 import { Project } from '../projects/project.entity';
 
@@ -22,11 +22,6 @@ export class Incident {
   @Column({ nullable: true }) jenkinsJobName: string;
   @Column({ nullable: true }) buildNumber: number;
   @Column({ nullable: true }) aiAnalysis: string;
-  // Raison honnête d'un statut 'failed' (ou d'un échec partiel sur un statut
-  // intermédiaire) — écrits par les workflows n8n (WF1/WF2) via PUT :id, sur
-  // le même modèle que JenkinsAnalysis.reason/detail. Nullable, jamais
-  // rétro-remplis : un incident existant sans ces champs reste simplement
-  // sans erreur affichée, ce n'est pas un état particulier à gérer.
   @Column({ nullable: true }) errorReason: string;
   @Column({ type: 'text', nullable: true }) errorDetail: string;
   @Column({ nullable: true }) errorStep: string;

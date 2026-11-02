@@ -1,3 +1,4 @@
+// Teste le composant « chat-markdown » et ses cas d’erreur.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -10,7 +11,9 @@ const exports = {};
 const source = readFileSync(new URL('../src/app/shared/chat-widget/chat-markdown.ts', import.meta.url), 'utf8');
 vm.runInNewContext(ts.transpileModule(source, { compilerOptions: {
   module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022,
-} }).outputText, { exports, require: name => {
+} }).outputText, { exports,
+/** Charge la dépendance prévue pour le scénario. */
+require: name => {
   assert.equal(name, 'marked');
   return marked;
 } });

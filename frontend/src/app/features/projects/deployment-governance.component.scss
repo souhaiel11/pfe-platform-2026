@@ -1,3 +1,4 @@
+/* Définit les styles de les autorisations de déploiement. */
 .dg-box { margin-top: 10px; padding: 16px; border: 1px solid var(--border-color, #30363d); border-radius: 8px; }
 .dg-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
 .dg-loading, .dg-error { color: var(--text-secondary, #8b949e); }
@@ -156,3 +157,15 @@
   color: var(--text-secondary);
 }
 .dg-wait strong { display: block; color: var(--text-primary); margin-bottom: 3px; }
+
+// Historique des déploiements (conservé côté serveur, visible après actualisation).
+.dg-history { margin: 18px 0; padding: 16px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-secondary); }
+.dg-history h4 { margin: 0 0 10px; font-size: 13px; font-weight: 600; }
+.dg-history-app { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 12px; }
+.dg-app-btn { display: inline-flex; align-items: center; gap: 4px; padding: 4px 12px; border-radius: 4px; background: var(--accent, #0078d4); color: #fff; font-weight: 600; text-decoration: none; }
+.dg-app-btn:hover { filter: brightness(1.1); }
+.dg-history-empty { margin: 0; color: var(--text-secondary); font-size: 12px; }
+.dg-history-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.dg-history-table th, .dg-history-table td { padding: 6px 8px; border-top: 1px solid var(--border-color); text-align: left; }
+.dg-history-status[data-status="DEPLOYED"] { color: var(--success, #2e7d32); font-weight: 600; }
+.dg-history-status[data-status="FAILED"] { color: var(--danger, #c62828); font-weight: 600; }

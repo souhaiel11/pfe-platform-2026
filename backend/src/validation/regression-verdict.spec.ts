@@ -1,3 +1,4 @@
+// Teste le composant « regression-verdict » et ses cas d’erreur.
 import * as assert from 'node:assert/strict';
 import { combineRegressionVerdict, RegressionVerdictInput } from './regression-verdict';
 import { analyzeRegression, IdentifiedFinding, RegressionOutput } from './pr-regression-engine';
@@ -7,6 +8,7 @@ const finding: IdentifiedFinding = {
   fingerprint: 'SONARQUBE::generic-rule::src/example.ts', line: 10, message: 'Example',
 };
 
+/** Prépare les données nécessaires à ce scénario. */
 function diff(overrides: Partial<RegressionOutput> = {}): RegressionOutput {
   return {
     baselineSha: 'a'.repeat(40), candidateSha: 'b'.repeat(40),
@@ -18,6 +20,7 @@ function diff(overrides: Partial<RegressionOutput> = {}): RegressionOutput {
   };
 }
 
+/** Prépare les données nécessaires à ce scénario. */
 function input(overrides: Partial<RegressionVerdictInput> = {}): RegressionVerdictInput {
   return {
     headVerificationResult: 'PASS', evidenceIntegrity: { ok: true, reasons: [] },
@@ -122,7 +125,7 @@ const duplicate = combineRegressionVerdict(input({ scannerComparability: 'PROVEN
 assert.equal(duplicate.blockingCauses.length, 1);
 assert.equal(duplicate.advisories.length, 1);
 
-// No mutation, deterministic results, and returned records do not alias input findings.
+/** Prépare les données nécessaires à ce scénario. */
 function freezeDeep<T>(value: T): T {
   if (value && typeof value === 'object') {
     Object.values(value).forEach(freezeDeep);

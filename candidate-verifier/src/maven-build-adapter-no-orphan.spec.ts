@@ -1,21 +1,4 @@
-/** V1.7 runtime stabilization phase, Phase I — orphan-process validation
- * for candidate-verifier's OWN direct `mvn` invocations (as distinct from
- * builder-scanner's nested nested-under-podman-build ones, already
- * covered by security-artifact-validator-orphan-sweep.spec.ts).
- *
- * Structural claim being tested: the REAL `mvn` launcher script ends with
- * `exec "$JAVACMD" ...` (verified by inspecting the actual installed
- * script on this host) -- `exec` REPLACES the shell's own process image
- * with java, keeping the SAME pid throughout, rather than forking a
- * separate child. That means killing the one pid execFileSync tracks
- * (the `mvn` shell script) kills the ACTUAL running Maven/JVM process
- * directly -- there is no separate descendant left behind, unlike the
- * nested-podman-build case where a real fork boundary exists.
- *
- * Proven here empirically, not just by code inspection: a fake `mvn` on
- * PATH mirrors the real script's own `exec` pattern (`exec sleep N`)
- * rather than a real multi-minute Maven build, keeping this test fast
- * while exercising the identical mechanism. */
+// Teste le composant « maven-build-adapter-no-orphan » et ses cas d’erreur.
 import * as assert from 'assert';
 import { execFileSync } from 'child_process';
 import * as fs from 'fs';
@@ -24,6 +7,7 @@ import * as path from 'path';
 import { MavenBuildAdapter } from './maven-build-adapter';
 
 const MARKER_SECONDS = '63.219';
+/** Simule la mise à jour de l’état du formulaire. */
 function markerStillRunning(): boolean {
   try { execFileSync('pgrep', ['-f', `sleep ${MARKER_SECONDS}`], { encoding: 'utf8' }); return true; }
   catch { return false; }

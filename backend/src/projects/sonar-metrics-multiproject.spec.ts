@@ -1,28 +1,24 @@
+// Teste le composant « sonar-metrics-multiproject » et ses cas d’erreur.
 import * as assert from 'node:assert/strict';
 import { of } from 'rxjs';
 import { ProjectsService } from './projects.service';
 
-/**
- * R47 — getSonarMetrics() doit etre generique sur tous les projets.
- *
- * Constate en audit : SonarQube detenait de vraies mesures pour
- * devsecops-testbed (3 bugs, 3 vulnerabilites, 37 code smells, QG ERROR) et
- * devsecops-platform-testbed (couverture 27,6 %, 141 lignes), mais la
- * plateforme rapportait SONAR_NOT_CONFIGURED pour le premier -- parce que son
- * `sonarqubeUrl` etait nul, alors que waitForSonarQualityGate() applique deja
- * un repli sur l'adresse de service interne. La donnee etait PERDUE par la
- * plateforme, pas absente de la source.
- *
- * Verifie aussi que les etats d'absence restent distincts les uns des autres
- * et qu'aucune decision ne depend d'un nom ou d'un identifiant de projet.
- */
+// R47 — getSonarMetrics() doit etre generique sur tous les projets.
 const PLATFORM_SONAR = 'http://sonarqube:9000';
 
+/** Prépare le service utilisé dans le scénario. */
 function service(project: any, httpGet: (url: string, opts: any) => any) {
-  const repo: any = { findOne: async () => project };
-  const http: any = { get: (url: string, opts: any) => httpGet(url, opts) };
-  return new ProjectsService(repo, { find: async () => [] } as any, http);
+  const repo: any = {
+  /** Recherche l’élément correspondant à l’identifiant. */
+  findOne: async () => project };
+  const http: any = {
+  /** Récupère les données demandées. */
+  get: (url: string, opts: any) => httpGet(url, opts) };
+  return new ProjectsService(repo, {
+  /** Recherche les éléments correspondants. */
+  find: async () => [] } as any, http);
 }
+/** Prépare les données nécessaires à ce scénario. */
 const measures = (m: Record<string, string>) => ({
   status: 200,
   data: { component: { measures: Object.entries(m).map(([metric, value]) => ({ metric, value })) } },
@@ -103,6 +99,7 @@ const measures = (m: Record<string, string>) => ({
 
   // ── 5. GENERICITE — un projet nouveau, arbitraire, se comporte pareil ──
   {
+    /** Prépare les données nécessaires à ce scénario. */
     const build = (name: string, key: string) => service(
       { id: 'x', name, sonarqubeUrl: null, sonarqubeKey: key, sonarqubeToken: 'tok' },
       (url) => url.includes('/api/measures/component') ? of(measures({ bugs: '7' })) : of({ status: 500, data: {} }));

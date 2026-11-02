@@ -1,17 +1,5 @@
+// Teste le composant « owasp-task-matching » et ses cas d’erreur.
 import { sharedDependency } from './security-lifecycle-test-loader.mjs';
-// taskFor() OWASP source-aware matching fix — loads the REAL
-// cve-table.component.ts (never a re-implementation), same discipline as
-// cve-selection-eligibility.spec.mjs / security-remediation-presentation.spec.mjs.
-//
-// Root cause fixed: cve.pkg (raw Dependency-Check identity, e.g. a jar
-// filename) was compared against findingSnapshot.component (a Maven
-// coordinate computed by normalizeOwaspFinding() for a DIFFERENT purpose --
-// WF6/correlation). The two never share a format, so every live OWASP row
-// failed to match its task (see the live-data validation report). The fix
-// compares cve.pkg against findingSnapshot.legacyPackage instead, for
-// OWASP only; Trivy's own matching (component-based) is untouched.
-//
-// Run: node frontend/scripts/owasp-task-matching.spec.mjs
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -19,19 +7,39 @@ import vm from 'node:vm';
 
 const require = createRequire(import.meta.url);
 const ts = require('typescript');
+/** Lit les données depuis leur source. */
 const read = path => readFileSync(new URL(path, import.meta.url), 'utf8');
 const angular = {
-  Component: () => value => value, Injectable: () => value => value,
-  Input: () => () => {}, Output: () => () => {}, ViewChild: () => () => {},
-  EventEmitter: class { emit(value) { this.value = value; } },
-  signal: value => { const f = () => value; f.set = v => value = v; return f; },
+  /** Simule le décorateur de composant Angular. */
+  Component: () => value => value,
+  /** Simule le décorateur de service Angular. */
+  Injectable: () => value => value,
+  /** Simule une entrée de composant Angular. */
+  Input: () => () => {},
+  /** Simule une sortie de composant Angular. */
+  Output: () => () => {},
+  /** Simule une référence à un élément de vue Angular. */
+  ViewChild: () => () => {},
+  EventEmitter: class {
+  /** Diffuse ou construit le résultat prévu. */
+  emit(value) { this.value = value; } },
+  /** Prépare une valeur réactive pour le scénario. */
+  signal: value => {
+  /** Renvoie les contrôles du formulaire. */
+  const f = () => value;
+  /** Affecte la valeur prévue au champ. */
+  f.set = v => value = v; return f; },
+  /** Prépare le calcul réactif du scénario. */
   computed: f => f,
 };
+/** Charge les données nécessaires au composant. */
 function load(path, dependencies = {}) {
   const exports = {};
   vm.runInNewContext(ts.transpileModule(read(path), { compilerOptions: {
     module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, experimentalDecorators: true,
-  } }).outputText, { exports, require: name => dependencies[name] || sharedDependency(name) || (name === '@angular/core' ? angular : {}), console });
+  } }).outputText, { exports,
+  /** Charge la dépendance prévue pour le scénario. */
+  require: name => dependencies[name] || sharedDependency(name) || (name === '@angular/core' ? angular : {}), console });
   return exports;
 }
 
@@ -42,14 +50,17 @@ const { CveTableComponent } = load('../src/app/features/projects/cve-table.compo
   '../../shared/security-remediation-presentation': owaspPres,
 });
 
+/** Prépare les données nécessaires à ce scénario. */
 function makeTable(source, cves, tasks) {
   const t = new CveTableComponent();
   t.source = source;
   t.cves = cves;
   t.tasks = tasks;
+  /** Décrit la règle de sélection appliquée à la tâche. */
   t.selectionRule = (task, c) => eligibility.canSelectCveTask(task, true, c);
   return t;
 }
+/** Prépare les données nécessaires à ce scénario. */
 function owaspTask(overrides = {}, snapshotOverrides = {}) {
   return {
     id: 'task-1', source: 'OWASP',

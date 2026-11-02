@@ -1,8 +1,10 @@
+<!-- Présente la liste des projets. -->
 <div class="page-container">
 
-  <div class="page-header" style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+  <div class="page-header signature-masthead" style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;">
     <div>
-      <h1 class="page-title">Projets</h1>
+      <p class="signature-kicker">02 / LE PORTEFEUILLE</p>
+      <h1 class="page-title">Chaque projet.<br><em>Un cap précis.</em></h1>
       <p class="page-subtitle">Projets sous surveillance DevSecOps</p>
     </div>
     <button *ngIf="canEdit" class="btn btn-primary" (click)="goToNewProject()">
@@ -64,10 +66,11 @@
     <!-- §29 — mêmes champs, même ordre pour chaque projet : les projets sont
          comparables d'un coup d'œil. -->
     <div class="projects-grid" *ngIf="rows.length">
-      <article class="project-card" *ngFor="let row of rows" [class.attention]="needsAttention(row)">
+      <article class="project-card" *ngFor="let row of rows; let position = index" [class.attention]="needsAttention(row)">
 
         <header class="pc-head">
           <div class="pc-ident">
+            <div class="pc-folio" aria-hidden="true"><span>{{position + 1 < 10 ? '0' : ''}}{{position + 1}}</span><svg viewBox="0 0 52 28" fill="none"><path d="M1 14h12l7-10h12l7 20h12M20 4v20M32 4v20" stroke="currentColor"/><circle cx="13" cy="14" r="3" fill="currentColor"/></svg></div>
             <!-- Action primaire UNIQUE de la carte : ouvrir le projet (§7). -->
             <a class="pc-name" [routerLink]="['/projects', row.id]">{{row.name}}</a>
             <div class="pc-repo">

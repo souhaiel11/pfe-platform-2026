@@ -1,3 +1,4 @@
+// Teste le composant « maven-dependency-resolution-check » et ses cas d’erreur.
 import * as assert from 'node:assert/strict';
 import { dependencyTreeResolvesTo } from './maven-dependency-resolution-check';
 

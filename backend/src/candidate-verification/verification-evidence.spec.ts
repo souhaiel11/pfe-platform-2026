@@ -1,6 +1,4 @@
-// R76 -- focused unit tests for the bounded verification-evidence helper
-// itself (write-guard.spec.ts already proves it end-to-end through
-// assertCandidateStillValidForWrite). Pure functions, no side effects.
+// Teste le composant « verification-evidence » et ses cas d’erreur.
 import * as assert from 'node:assert/strict';
 import { redactAndCapEvidence, buildVerificationEvidence } from './verification-evidence';
 import { CandidateVerification } from './candidate-verification.types';
@@ -23,6 +21,7 @@ assert.equal(redactAndCapEvidence('token=abc123 password: hunter2 api_key=XYZ'),
   'token=[REDACTED] password=[REDACTED] api_key=[REDACTED]');
 assert.doesNotMatch(redactAndCapEvidence('secret=sk-real-secret-value')!, /sk-real-secret-value/);
 
+/** Prépare les données nécessaires à ce scénario. */
 function baseVerification(): CandidateVerification {
   return {
     identity: { candidateId: 'c1', requestId: 'r1', batchId: 'b1', candidateAttempt: 1, candidateBaseSha: 'a'.repeat(40), candidateDigest: 'd1' },

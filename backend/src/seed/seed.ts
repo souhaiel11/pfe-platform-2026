@@ -1,11 +1,4 @@
-// Seed de données de démo — isolé, n'affecte que les projets source='demo'.
-// Idempotent : upsert des projets par jenkinsJobName ; les lignes enfants
-// (reports/incidents/bugs) sont supprimées puis recréées à chaque run pour
-// garantir que les compteurs collent EXACTEMENT à la matrice, sans dupliquer.
-// N'utilise PAS ReportsService : score et statut sont écrits directement
-// (voir décision actée : pas de recalcul, pas d'appel n8n).
-//
-// Usage : npm run seed        (depuis backend/)
+// Script (npm run seed) qui crée ou met à jour les projets de démonstration et leurs reports/incidents/bugs, de façon idempotente et isolée aux projets source='demo'.
 import { seedDataSource } from './data-source';
 import { Project } from '../projects/project.entity';
 import { Incident, IncidentStatus } from '../incidents/incident.entity';
@@ -18,6 +11,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 
 const BUG_STATUS_CYCLE = [BugStatus.OPEN, BugStatus.OPEN, BugStatus.AI_FIXING, BugStatus.PR_CREATED, BugStatus.RESOLVED, BugStatus.IGNORED];
 
+/** Crée le projet de démonstration s'il n'existe pas encore (par jenkinsJobName), sinon met à jour ses champs. */
 async function upsertProject(repo: import('typeorm').Repository<Project>, def: DemoProjectDef): Promise<Project> {
   let project = await repo.findOne({ where: { jenkinsJobName: def.jenkinsJobName } });
   const fields: Partial<Project> = {
@@ -41,11 +35,10 @@ async function upsertProject(repo: import('typeorm').Repository<Project>, def: D
   return repo.save(project);
 }
 
+/** Construit les 3 reports de démonstration du projet (actuel + 2 historiques, mêmes chiffres, dates espacées de 7 jours). */
 function seedReports(def: DemoProjectDef, project: Project): Partial<Report>[] {
   const now = Date.now();
   const riskLevel = riskLevelFor(def.securityScore);
-  // Report courant + 2 plus anciens, ~7 jours d'écart. Mêmes chiffres matrice
-  // sur les 3 (pas de tendance inventée) — seul createdAt/build.number varie.
   return [0, 1, 2].map(i => {
     const createdAt = new Date(now - i * 7 * DAY_MS);
     const buildNumber = def.build.number - i;
@@ -63,6 +56,7 @@ function seedReports(def: DemoProjectDef, project: Project): Partial<Report>[] {
   });
 }
 
+/** Construit les incidents de démonstration du projet, répartis sur les ~35 derniers jours selon le PRNG fourni. */
 function seedIncidents(def: DemoProjectDef, project: Project, rng: () => number): Partial<Incident>[] {
   const now = Date.now();
   const buckets: { status: IncidentStatus; titles: string[] }[] = [
@@ -74,7 +68,6 @@ function seedIncidents(def: DemoProjectDef, project: Project, rng: () => number)
   const rows: Partial<Incident>[] = [];
   for (const bucket of buckets) {
     for (const title of bucket.titles) {
-      // Étalé sur les ~35 derniers jours
       const createdAt = new Date(now - Math.floor(rng() * 35) * DAY_MS - Math.floor(rng() * DAY_MS));
       let resolvedAt: Date | null = null;
       if (bucket.status === IncidentStatus.COMPLETED) {
@@ -96,11 +89,12 @@ function seedIncidents(def: DemoProjectDef, project: Project, rng: () => number)
   return rows;
 }
 
+/** Construit les bugs SonarQube de démonstration du projet, en recyclant les modèles de bug si leur nombre dépasse le pool. */
 function seedBugs(def: DemoProjectDef, project: Project): Partial<Bug>[] {
   const rows: Partial<Bug>[] = [];
   for (let i = 0; i < def.sonar.bugs; i++) {
     const tpl = def.bugTemplates[i % def.bugTemplates.length];
-    const pass = Math.floor(i / def.bugTemplates.length); // >0 si on recycle le pool
+    const pass = Math.floor(i / def.bugTemplates.length);
     rows.push({
       projectId: project.id,
       project,
@@ -116,6 +110,7 @@ function seedBugs(def: DemoProjectDef, project: Project): Partial<Bug>[] {
   return rows;
 }
 
+/** Point d'entrée du script : upsert chaque projet de démonstration puis recrée ses reports/incidents/bugs. */
 async function main() {
   await seedDataSource.initialize();
   const projectRepo = seedDataSource.getRepository(Project);
@@ -128,7 +123,6 @@ async function main() {
   for (const def of DEMO_PROJECTS) {
     const project = await upsertProject(projectRepo, def);
 
-    // Idempotence des lignes enfants : purge puis recréation, scopée au projectId.
     await reportRepo.delete({ projectId: project.id });
     await incidentRepo.delete({ projectId: project.id });
     await bugRepo.delete({ projectId: project.id });

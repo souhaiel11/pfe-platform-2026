@@ -1,3 +1,4 @@
+// Prépare qa WF2 hotfix pour le frontend.
 import { readFileSync } from 'node:fs';
 import { strict as assert } from 'node:assert';
 

@@ -1,0 +1,108 @@
+{
+  "receipts": [
+    {
+      "groupId": "c8fb2207-c8de-40af-acd4-1d2f96896715",
+      "groupDigest": "20d8468869bb9ab733d28a62e592949d4eb7160227c8e64ab38de637b6b5a58c",
+      "repository": "souhaiel11/pfe-app-test",
+      "targetFile": "pom.xml",
+      "approvedBy": "souhaiel11",
+      "evidenceReference": "docs/qa/chain2c-final-live-20261007/quiescence-observations.json",
+      "unrecordedEffectsReviewed": true,
+      "writerFreezeConfirmed": true,
+      "reviewedAt": "2026-10-07T11:20:52.188Z",
+      "expiresAt": "2026-10-07T11:30:52.188Z",
+      "inventoryDigest": "41102bf5fc7a2ac62331143b81d4da892cd2cc8cedf30042387c20600e326f62"
+    },
+    {
+      "groupId": "sec-batch-181e0a6587c834e1",
+      "groupDigest": "3706f076612bac0d2a1ca95a9e017133247faddb5601f57d07883f200659ef40",
+      "repository": "souhaiel11/pfe-app-test",
+      "targetFile": "pom.xml",
+      "approvedBy": "souhaiel11",
+      "evidenceReference": "docs/qa/chain2c-final-live-20261007/quiescence-observations.json",
+      "unrecordedEffectsReviewed": true,
+      "writerFreezeConfirmed": true,
+      "reviewedAt": "2026-10-07T11:20:52.188Z",
+      "expiresAt": "2026-10-07T11:30:52.188Z",
+      "inventoryDigest": "41102bf5fc7a2ac62331143b81d4da892cd2cc8cedf30042387c20600e326f62"
+    },
+    {
+      "groupId": "sec-batch-215851539abb7f37",
+      "groupDigest": "5b0950efc5bd82e8c9ef1876926921f3aec6abee3998fe5792ff101bf5b6ddc8",
+      "repository": "souhaiel11/pfe-app-test",
+      "targetFile": "pom.xml",
+      "approvedBy": "souhaiel11",
+      "evidenceReference": "docs/qa/chain2c-final-live-20261007/quiescence-observations.json",
+      "unrecordedEffectsReviewed": true,
+      "writerFreezeConfirmed": true,
+      "reviewedAt": "2026-10-07T11:20:52.188Z",
+      "expiresAt": "2026-10-07T11:30:52.188Z",
+      "inventoryDigest": "41102bf5fc7a2ac62331143b81d4da892cd2cc8cedf30042387c20600e326f62"
+    },
+    {
+      "groupId": "sec-batch-a4646d8385306b84",
+      "groupDigest": "7543e0e8e034f610fa12b608ab0ef868b43b2e90644e99b0b42b84cc9ff25896",
+      "repository": "souhaiel11/pfe-app-test",
+      "targetFile": "pom.xml",
+      "approvedBy": "souhaiel11",
+      "evidenceReference": "docs/qa/chain2c-final-live-20261007/quiescence-observations.json",
+      "unrecordedEffectsReviewed": true,
+      "writerFreezeConfirmed": true,
+      "reviewedAt": "2026-10-07T11:20:52.188Z",
+      "expiresAt": "2026-10-07T11:30:52.188Z",
+      "inventoryDigest": "41102bf5fc7a2ac62331143b81d4da892cd2cc8cedf30042387c20600e326f62"
+    },
+    {
+      "groupId": "sec-batch-bd22285c1649ea80",
+      "groupDigest": "aa8356c09cfd181426aaabbcb12372e75b8b179af814319d4854ec013a9fccb9",
+      "repository": "souhaiel11/pfe-app-test",
+      "targetFile": "pom.xml",
+      "approvedBy": "souhaiel11",
+      "evidenceReference": "docs/qa/chain2c-final-live-20261007/quiescence-observations.json",
+      "unrecordedEffectsReviewed": true,
+      "writerFreezeConfirmed": true,
+      "reviewedAt": "2026-10-07T11:20:52.188Z",
+      "expiresAt": "2026-10-07T11:30:52.188Z",
+      "inventoryDigest": "41102bf5fc7a2ac62331143b81d4da892cd2cc8cedf30042387c20600e326f62"
+    },
+    {
+      "groupId": "sec-batch-c808d8203ba03491",
+      "groupDigest": "cc324e1fd1f35d0258eced36fdb7d9ee6010cdf7098590bcc861d5435e9180d9",
+      "repository": "souhaiel11/pfe-app-test",
+      "targetFile": "pom.xml",
+      "approvedBy": "souhaiel11",
+      "evidenceReference": "docs/qa/chain2c-final-live-20261007/quiescence-observations.json",
+      "unrecordedEffectsReviewed": true,
+      "writerFreezeConfirmed": true,
+      "reviewedAt": "2026-10-07T11:20:52.188Z",
+      "expiresAt": "2026-10-07T11:30:52.188Z",
+      "inventoryDigest": "41102bf5fc7a2ac62331143b81d4da892cd2cc8cedf30042387c20600e326f62"
+    },
+    {
+      "groupId": "sec-batch-d359edf8f878f1dd",
+      "groupDigest": "d4acf7d37ebf06c26fd98810b061f3841e8e12e647888211014d4c7ac0eaa4f4",
+      "repository": "souhaiel11/pfe-app-test",
+      "targetFile": "pom.xml",
+      "approvedBy": "souhaiel11",
+      "evidenceReference": "docs/qa/chain2c-final-live-20261007/quiescence-observations.json",
+      "unrecordedEffectsReviewed": true,
+      "writerFreezeConfirmed": true,
+      "reviewedAt": "2026-10-07T11:20:52.188Z",
+      "expiresAt": "2026-10-07T11:30:52.188Z",
+      "inventoryDigest": "41102bf5fc7a2ac62331143b81d4da892cd2cc8cedf30042387c20600e326f62"
+    },
+    {
+      "groupId": "sec-batch-fb980983352c6d7c",
+      "groupDigest": "bc8b8a1dfd62379c936161e2fe421273668f29a8d5b269fa89a7c1317072c571",
+      "repository": "souhaiel11/pfe-app-test",
+      "targetFile": "pom.xml",
+      "approvedBy": "souhaiel11",
+      "evidenceReference": "docs/qa/chain2c-final-live-20261007/quiescence-observations.json",
+      "unrecordedEffectsReviewed": true,
+      "writerFreezeConfirmed": true,
+      "reviewedAt": "2026-10-07T11:20:52.188Z",
+      "expiresAt": "2026-10-07T11:30:52.188Z",
+      "inventoryDigest": "41102bf5fc7a2ac62331143b81d4da892cd2cc8cedf30042387c20600e326f62"
+    }
+  ]
+}

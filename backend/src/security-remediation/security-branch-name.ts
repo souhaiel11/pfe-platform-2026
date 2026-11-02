@@ -1,25 +1,26 @@
-// R-SEC-V1.5 §6 — deterministic security remediation branch naming. Pure,
-// no I/O, no caller-controlled text of any kind: both inputs are already-
-// trusted, backend-computed hashes (findingFingerprint identifies the
-// finding across builds; candidateIdentity -- see security-candidate-
-// identity.ts -- binds evaluatedSha+package+installedVersion+targetVersion+
-// controllingFile). Computed HERE, server-side, and returned directly on
-// the /evaluate and /revalidate responses so WF6 needs ZERO branch-naming
-// logic of its own (no n8n Code node reimplementing this, no risk of the
-// two diverging) -- "WF6 only orchestrates already-authoritative backend
-// results" applies to branch identity exactly as much as to patch content.
-//
-// Both inputs are sha256 hex digests (64 lowercase [0-9a-f] chars) --
-// already git-ref-safe by construction (no need to sanitize arbitrary
-// caller text, because no caller text is ever an input here).
-const HEX_PREFIX_LENGTH = 12; // 12 hex chars = 48 bits per segment; two segments combined (96 bits) is collision-resistant enough for this platform's scale, short enough to stay a readable branch name.
+/** Calcule, de façon déterministe et sans texte fourni par l'appelant, le nom de la branche Git d'une remédiation de sécurité à partir de deux empreintes déjà fiables. */
+import { createHash } from 'crypto';
 
-export function computeSecurityBranchName(findingFingerprint: string, candidateIdentity: string): string {
+const HEX_PREFIX_LENGTH = 12;
+
+/**
+ * Construit le nom de branche "security/fix/<préfixe-finding>-<préfixe-candidat>" à partir de deux empreintes SHA-256 hexadécimales.
+ * Avec `baseSha` (commit évalué) et `launchId` (lot WF6, identique pour toutes les étapes d'une même exécution), le préfixe
+ * candidat est propre à chaque lancement : le même correctif relancé après un retour arrière de pom.xml ouvre une nouvelle
+ * branche au lieu de retomber sur la PR déjà fusionnée (ALREADY_MERGED). Le commit évalué seul ne suffit pas : c'est celui du
+ * dernier build analysé, inchangé tant qu'aucun build n'est relancé.
+ */
+export function computeSecurityBranchName(findingFingerprint: string, candidateIdentity: string, baseSha?: string | null, launchId?: string | null): string {
   if (!/^[0-9a-f]{64}$/.test(findingFingerprint)) {
     throw new Error(`computeSecurityBranchName: findingFingerprint must be a 64-hex sha256 digest, got ${JSON.stringify(findingFingerprint)}.`);
   }
   if (!/^[0-9a-f]{64}$/.test(candidateIdentity)) {
     throw new Error(`computeSecurityBranchName: candidateIdentity must be a 64-hex sha256 digest, got ${JSON.stringify(candidateIdentity)}.`);
   }
-  return `security/fix/${findingFingerprint.slice(0, HEX_PREFIX_LENGTH)}-${candidateIdentity.slice(0, HEX_PREFIX_LENGTH)}`;
+  if (baseSha != null && !/^[0-9a-f]{40}$/.test(baseSha)) {
+    throw new Error(`computeSecurityBranchName: baseSha must be a 40-hex git sha, got ${JSON.stringify(baseSha)}.`);
+  }
+  const salt = [baseSha, launchId].filter(Boolean).join(':');
+  const candidatePart = salt ? createHash('sha256').update(`${candidateIdentity}:${salt}`).digest('hex') : candidateIdentity;
+  return `security/fix/${findingFingerprint.slice(0, HEX_PREFIX_LENGTH)}-${candidatePart.slice(0, HEX_PREFIX_LENGTH)}`;
 }

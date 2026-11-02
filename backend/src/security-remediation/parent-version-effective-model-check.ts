@@ -1,17 +1,10 @@
-// V1.8 Phase 7 — §6: proves a PARENT_VERSION patch's REAL effect on the
-// resolved dependency graph, never inferred from the parent version alone.
-// A parent bump can fail to actually move a given dependency (a closer
-// dependencyManagement entry, a BOM, or an explicit override elsewhere can
-// all pin it) -- this only ever trusts a REAL `mvn dependency:tree` run
-// against the candidate workspace (see mavenGraph(), already proven by
-// maven-remediation-scope.ts), never the parent's own declared version as
-// a proxy for what its managed dependencies actually resolved to.
+/** Prouve, à partir d'un arbre de dépendances réel post-patch, l'effet concret d'une bascule de version du `<parent>` sur les dépendances gérées — jamais déduit de la seule version du parent. */
 import { mavenGraph } from './maven-remediation-scope';
 
 export interface AffectedDependencyExpectation {
   /** groupId:artifactId */
   package: string;
-  /** The resolved version V1.8 expects this package to have AFTER the parent bump (e.g. evidence.recommendedVersion / expectedResolvedDependency). */
+  /** Version résolue que V1.8 attend pour ce paquet après la bascule du parent. */
   expectedVersion: string;
 }
 
@@ -24,14 +17,7 @@ export type ParentEffectiveModelCheckResult =
   | { ok: true }
   | { ok: false; reason: ParentEffectiveModelCheckReason; detail: string };
 
-/**
- * `candidateDependencyTree` = the REAL `mvn dependency:tree` output from the
- * PATCHED workspace (parent already bumped). For every CVE-affected
- * dependency V1.8's evidence names, proves it resolves in that REAL tree to
- * EXACTLY the version V1.8 expected -- never "some version", never assumed
- * from the parent bump succeeding structurally. A dependency absent from
- * the candidate tree, or present at any other version, fails closed.
- */
+/** Vérifie que chaque dépendance affectée par une bascule de version du parent résout bien, dans l'arbre réel du candidat patché, à la version exacte attendue — refuse si absente ou différente. */
 export function verifyParentUpgradeEffectiveVersions(
   candidateDependencyTree: string,
   affected: AffectedDependencyExpectation[],

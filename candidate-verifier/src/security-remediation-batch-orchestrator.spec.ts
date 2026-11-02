@@ -1,9 +1,4 @@
-/** Increment 1 — multi-CVE batch orchestrator. Section A replays the SAME
- * real fixture/repo the singular orchestrator's own spec uses (non-
- * regression: singleton batch == today's proven PR #37 shape). Sections
- * B-E use a synthetic local git repo + fully injected fakes (no real
- * Maven/Trivy call) to exercise genuine multi-CVE coordination, conflict,
- * partial-closure, and build-failure paths deterministically. */
+// Teste le composant « security-remediation-batch-orchestrator » et ses cas d’erreur.
 import * as assert from 'assert';
 import * as fs from 'fs';
 import * as os from 'os';
@@ -18,12 +13,7 @@ import { SecurityRemediationOrchestratorService } from './security-remediation-o
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'v1-batch-orchestrator-'));
 
 interface ScanTarget { id: string; pkg: string; installed: string; fixed: string }
-// cveTargets()/allVulnerabilityIds() (security-artifact-scan.ts) both fail
-// closed on an "incomplete" scan shape -- Type:'jar' + a non-empty Packages
-// array is the completeness signal, exactly like a real Trivy image report.
-// Takes explicit {id, pkg, installed, fixed} targets (not just bare ids) so
-// each test controls exactly which package each CVE is reported against --
-// required for deriveMavenRemediationScope()'s own package-family check.
+/** Prépare les données nécessaires à ce scénario. */
 function scanFor(targets: ScanTarget[], digest: string): SecurityArtifactScan {
   return {
     mode: 'TRIVY_IMAGE_ARCHIVE', sourceDigest: digest, artifactDigest: 'b'.repeat(64),
@@ -37,29 +27,21 @@ function scanFor(targets: ScanTarget[], digest: string): SecurityArtifactScan {
 }
 
 try {
-  // ==========================================================================
-  // A. Batch of 1 — NON-REGRESSION. Replays the EXACT real fixture the
-  // singular orchestrator's own spec (security-remediation-orchestrator.
-  // spec.ts) uses for CVE-2023-6378/PR #37, as a singleton batch, and
-  // asserts the resulting candidate content and identity-relevant fields
-  // match what the SINGULAR orchestrator itself produces for the identical
-  // input -- proving the new batch path is not a behavioral regression.
-  // ==========================================================================
   {
     const f = JSON.parse(fs.readFileSync(path.join(__dirname, '../../backend/src/security-remediation/fixtures/v17/logback.json'), 'utf8'));
     const repoA = path.join(root, 'repo-a');
     execFileSync('git', ['clone', '--no-hardlinks', process.env.SECURITY_TEST_REPO || '/home/souhaiel/pfe-2026/pfe-app-test', repoA], { stdio: 'pipe' });
     const wmA = new WorkspaceManager(path.join(root, 'workspaces-a'));
     let serial = 0;
+    /** Prépare les données nécessaires à ce scénario. */
     const singularInput = () => ({ repository: 'souhaiel11/pfe-app-test', candidateBaseSha: f.sha, requestId: 'v1-batch-a-' + ++serial, batchId: 'tests', candidateAttempt: 0,
       finding: { findingIdentity: 'a'.repeat(64), cveId: 'CVE-2023-6378', source: 'TRIVY', package: 'ch.qos.logback:logback-classic', expectedInstalledVersion: '1.2.11', fixedVersion: '1.3.12, 1.4.12, 1.2.13' } });
+    /** Prépare les données nécessaires à ce scénario. */
     const batchInput = () => ({ repository: 'souhaiel11/pfe-app-test', candidateBaseSha: f.sha, requestId: 'v1-batch-a-' + ++serial, batchId: 'tests-batch', candidateAttempt: 0,
       findings: [{ findingIdentity: 'a'.repeat(64), cveId: 'CVE-2023-6378', source: 'TRIVY', package: 'ch.qos.logback:logback-classic', expectedInstalledVersion: '1.2.11', fixedVersion: '1.3.12, 1.4.12, 1.2.13' }] });
+    /** Prépare les données nécessaires à ce scénario. */
     const decision = () => ({ findingIdentity: 'a'.repeat(64), evaluatedSha: f.sha, provenance: { ecosystem: 'MAVEN', kind: 'DIRECT_EXPLICIT', package: 'ch.qos.logback:logback-classic', installedVersion: '1.2.11', controllingFile: 'pom.xml', controllingElement: '<version>1.2.11</version>', controllingProperty: null, groundedSha: f.sha, evidence: 'fixture' }, fixedVersions: ['1.2.13'], selectedTargetVersion: '1.2.13', remediationType: 'AUTO_FIX_ELIGIBLE', reason: 'fixture' });
-    // Verbatim from security-remediation-orchestrator.spec.ts's own
-    // variant()/adapter/scan() -- this section's whole point is proving the
-    // batch path reproduces the SAME real fixture behavior, so it must
-    // exercise it identically, not a simplified approximation.
+    /** Simule l’échec attendu par ce scénario. */
     function variant(w: string) {
       const s = fs.readFileSync(path.join(w, 'pom.xml'), 'utf8');
       if (s === f.source) return { source: f.source, tree: f.baseTree, effective: f.baseEffective };
@@ -67,21 +49,29 @@ try {
       throw new Error('UNEXPECTED_SOURCE');
     }
     const adapter: any = {
+      /** Prépare les données nécessaires à ce scénario. */
       dependencyTree: (w: string) => ({ status: 'SUCCESS', text: variant(w).tree }),
+      /** Produit le POM effectif pour établir les versions Maven. */
       effectivePom: (w: string) => ({ status: 'SUCCESS', text: variant(w).effective }),
+      /** Prépare les données nécessaires à ce scénario. */
       packageCandidateWithTests: () => ({ status: 'SUCCESS', testsExecuted: true, testsPassed: true, testsTotal: 1, testsFailures: 0, testsErrors: 0, testsSkipped: 0, durationMs: 1, evidenceTail: '', timedOut: false }),
     };
+    /** Prépare les données nécessaires à ce scénario. */
     function scan(w: string): SecurityArtifactScan {
       const v = variant(w), r = JSON.parse(JSON.stringify(v.source === f.source ? f.baseReport
         : v.source === f.coordinated.source ? f.coordinatedReport : f.v16Report));
       return { mode: 'TRIVY_IMAGE_ARCHIVE', sourceDigest: trackedSourceDigest(w), artifactDigest: 'b'.repeat(64),
         reportDigest: createHash('sha256').update(JSON.stringify(r)).digest('hex'), scannerVersion: 'unit-fixture', report: r, buildPassed: true };
     }
-    const singular = new SecurityRemediationOrchestratorService({ decide: decision } as any, wmA, { ensureRepo: () => repoA } as any, adapter, { inspect: scan });
+    const singular = new SecurityRemediationOrchestratorService({ decide: decision } as any, wmA, {
+    /** Prépare le dépôt et la révision nécessaires. */
+    ensureRepo: () => repoA } as any, adapter, { inspect: scan });
     const singularResult = singular.orchestrate(singularInput());
     assert.equal(singularResult.status, 'CANDIDATE_READY', `A setup: singular orchestrator must reach CANDIDATE_READY, got ${singularResult.status}/${singularResult.reason}`);
 
-    const batchSvc = new SecurityRemediationBatchOrchestratorService({ decide: decision } as any, wmA, { ensureRepo: () => repoA } as any, adapter, { inspect: scan });
+    const batchSvc = new SecurityRemediationBatchOrchestratorService({ decide: decision } as any, wmA, {
+    /** Prépare le dépôt et la révision nécessaires. */
+    ensureRepo: () => repoA } as any, adapter, { inspect: scan });
     const batchResult = batchSvc.orchestrate(batchInput());
     assert.equal(batchResult.status, 'CANDIDATE_READY', `A: ${JSON.stringify(batchResult)}`);
     assert.equal(batchResult.findings.length, 1);
@@ -118,24 +108,21 @@ try {
   const findingB = { findingIdentity: 'f-jackson', cveId: 'CVE-2020-36518', source: 'TRIVY', package: 'com.fasterxml.jackson.core:jackson-databind', expectedInstalledVersion: '2.13.3', fixedVersion: '2.13.5' };
   const TARGET_A: ScanTarget = { id: findingA.cveId, pkg: findingA.package, installed: findingA.expectedInstalledVersion, fixed: findingA.fixedVersion };
   const TARGET_B: ScanTarget = { id: findingB.cveId, pkg: findingB.package, installed: findingB.expectedInstalledVersion, fixed: findingB.fixedVersion };
+  /** Prépare les données nécessaires à ce scénario. */
   const decisionFor = (finding: any): any => ({
     findingIdentity: finding.findingIdentity, evaluatedSha: SHA,
     provenance: { ecosystem: 'MAVEN', kind: 'DIRECT_EXPLICIT', package: finding.package, installedVersion: finding.expectedInstalledVersion, controllingFile: 'pom.xml', controllingElement: `<version>${finding.expectedInstalledVersion}</version>`, controllingProperty: null, groundedSha: SHA, evidence: 'synthetic' },
     fixedVersions: [finding.fixedVersion], selectedTargetVersion: finding.fixedVersion, remediationType: 'AUTO_FIX_ELIGIBLE', reason: 'synthetic',
   });
+  /** Prépare les données nécessaires à ce scénario. */
   const decisionServiceFor = (findings: any[]) => {
     let call = 0;
-    return { decide: (_finding: any) => decisionFor(findings[call++]) };
+    return {
+    /** Détermine la décision à partir des preuves disponibles. */
+    decide: (_finding: any) => decisionFor(findings[call++]) };
   };
 
-  // Generic, content-driven Maven-tree/effective-pom fakes: read whatever
-  // <version> values are ACTUALLY in the workspace's pom.xml right now and
-  // synthesize real-shaped `mvn dependency:tree`/effective-pom text from
-  // them — works unmodified for the baseline, every per-finding control
-  // experiment, AND the final fully-chained candidate, since scope
-  // derivation (maven-remediation-scope.ts) only cares that the text is
-  // well-formed and internally consistent with the file it was "derived"
-  // from, not that it came from a real `mvn` process.
+  /** Prépare les données nécessaires à ce scénario. */
   function parsePomVersions(pomText: string): Record<string, string> {
     const out: Record<string, string> = {};
     const depRe = /<dependency>\s*<groupId>([^<]+)<\/groupId>\s*<artifactId>([^<]+)<\/artifactId>\s*<version>([^<]+)<\/version>\s*<\/dependency>/g;
@@ -143,17 +130,24 @@ try {
     while ((m = depRe.exec(pomText))) out[`${m[1]}:${m[2]}`] = m[3];
     return out;
   }
+  /** Prépare les données nécessaires à ce scénario. */
   function currentPom(workspacePath: string): string { return fs.readFileSync(path.join(workspacePath, 'pom.xml'), 'utf8'); }
+  /** Prépare les données nécessaires à ce scénario. */
   const genericDependencyTree = (w: string) => ({ status: 'SUCCESS', text: Object.entries(parsePomVersions(currentPom(w))).map(([ga, v]) => `+- ${ga}:jar:${v}:compile`).join('\n') + '\n' });
+  /** Prépare les données nécessaires à ce scénario. */
   const genericEffectivePom = (w: string) => ({ status: 'SUCCESS', text: `<project><dependencies>${Object.entries(parsePomVersions(currentPom(w))).map(([ga, v]) => { const [g, a] = ga.split(':'); return `<dependency><groupId>${g}</groupId><artifactId>${a}</artifactId><version>${v}</version></dependency>`; }).join('')}</dependencies></project>` });
 
   // ==========================================================================
   // B. Two DISTINCT, non-conflicting CVEs -> ONE build, ONE scan, BOTH closed.
   // ==========================================================================
   {
-    const adapter: any = { dependencyTree: genericDependencyTree, effectivePom: genericEffectivePom, packageCandidateWithTests: () => ({ status: 'SUCCESS', testsExecuted: true, testsPassed: true, testsTotal: 1, testsFailures: 0, testsErrors: 0, testsSkipped: 0, durationMs: 1, evidenceTail: '', timedOut: false }) };
+    const adapter: any = { dependencyTree: genericDependencyTree, effectivePom: genericEffectivePom,
+    /** Prépare les données nécessaires à ce scénario. */
+    packageCandidateWithTests: () => ({ status: 'SUCCESS', testsExecuted: true, testsPassed: true, testsTotal: 1, testsFailures: 0, testsErrors: 0, testsSkipped: 0, durationMs: 1, evidenceTail: '', timedOut: false }) };
     let scanCall = 0;
-    const scanner = { inspect: (w: string) => {
+    const scanner = {
+    /** Inspecte les données ou l’artefact pour en tirer des preuves. */
+    inspect: (w: string) => {
       scanCall++;
       const digest = trackedSourceDigest(w);
       // Call 1 = baseline (pre-patch, also reused per-finding for scope
@@ -161,7 +155,9 @@ try {
       // candidate: both gone.
       return scanCall === 1 ? scanFor([TARGET_A, TARGET_B], digest) : scanFor([], digest);
     } };
-    const svc = new SecurityRemediationBatchOrchestratorService(decisionServiceFor([findingA, findingB]) as any, wmBE, { ensureRepo: () => repoBE } as any, adapter, scanner as any);
+    const svc = new SecurityRemediationBatchOrchestratorService(decisionServiceFor([findingA, findingB]) as any, wmBE, {
+    /** Prépare le dépôt et la révision nécessaires. */
+    ensureRepo: () => repoBE } as any, adapter, scanner as any);
     const result = svc.orchestrate({ repository: 'x/y', candidateBaseSha: SHA, requestId: 'b-req', batchId: 'b-batch', candidateAttempt: 0, findings: [findingA, findingB] });
     assert.equal(result.status, 'CANDIDATE_READY', `B: ${JSON.stringify(result)}`);
     assert.equal(result.findings.length, 2);
@@ -169,36 +165,28 @@ try {
     assert.match(result.candidateManifest!.files[0].content, /<version>1\.2\.13<\/version>/);
     assert.match(result.candidateManifest!.files[0].content, /<version>2\.13\.5<\/version>/);
     assert.ok(result.candidateIdentity);
-    // ★ WF6 multi-CVE wiring: the callback node must zip result.findings[i]
-    // against the CALLER's own original findingTaskIds[i] by index -- this
-    // only works if result.findings preserves the CALLER's input order,
-    // never writeSecurityPatchBatch()'s internal cveId-sorted order.
-    // findingA=CVE-2023-6378, findingB=CVE-2020-36518 is DELIBERATELY
-    // reverse-alphabetical so this assertion actually distinguishes the two
-    // orders (a same-order coincidence would hide a real bug here).
     assert.equal(result.findings[0].cveId, findingA.cveId, 'findings[0] must correspond to the FIRST input finding (input order), not cveId-sorted order');
     assert.equal(result.findings[1].cveId, findingB.cveId, 'findings[1] must correspond to the SECOND input finding');
   }
   console.log('security-remediation-batch-orchestrator B) two distinct CVEs -> one build/scan, both CLOSED, one PR-ready candidate, findings[] preserves CALLER input order: PASS');
 
-  // ==========================================================================
-  // C. ★ Conflict — two CVEs claim the SAME package/declaration with
-  // incompatible expected installed versions -> refused BEFORE any
-  // build/closure-scan (proven by making the build and the SECOND scanner
-  // call throw if ever reached; the FIRST scanner call, the baseline scan
-  // that legitimately runs before conflict detection, is allowed).
-  // ==========================================================================
   {
     const conflictingB = { ...findingB, package: 'ch.qos.logback:logback-classic', expectedInstalledVersion: '1.2.11', fixedVersion: '1.2.20' }; // same package as A, different target
     const TARGET_CONFLICT_B: ScanTarget = { id: conflictingB.cveId, pkg: conflictingB.package, installed: conflictingB.expectedInstalledVersion, fixed: conflictingB.fixedVersion };
-    const adapter: any = { dependencyTree: genericDependencyTree, effectivePom: genericEffectivePom, packageCandidateWithTests: () => { throw new Error('MUST_NOT_BUILD_ON_CONFLICT'); } };
+    const adapter: any = { dependencyTree: genericDependencyTree, effectivePom: genericEffectivePom,
+    /** Simule l’échec attendu par ce scénario. */
+    packageCandidateWithTests: () => { throw new Error('MUST_NOT_BUILD_ON_CONFLICT'); } };
     let scanCall = 0;
-    const scanner = { inspect: (w: string) => {
+    const scanner = {
+    /** Inspecte les données ou l’artefact pour en tirer des preuves. */
+    inspect: (w: string) => {
       scanCall++;
       if (scanCall > 1) throw new Error('MUST_NOT_CLOSURE_SCAN_ON_CONFLICT');
       return scanFor([TARGET_A, TARGET_CONFLICT_B], trackedSourceDigest(w));
     } };
-    const svc = new SecurityRemediationBatchOrchestratorService(decisionServiceFor([findingA, conflictingB]) as any, wmBE, { ensureRepo: () => repoBE } as any, adapter, scanner as any);
+    const svc = new SecurityRemediationBatchOrchestratorService(decisionServiceFor([findingA, conflictingB]) as any, wmBE, {
+    /** Prépare le dépôt et la révision nécessaires. */
+    ensureRepo: () => repoBE } as any, adapter, scanner as any);
     const result = svc.orchestrate({ repository: 'x/y', candidateBaseSha: SHA, requestId: 'c-req', batchId: 'c-batch', candidateAttempt: 0, findings: [findingA, conflictingB] });
     assert.equal(result.status, 'PATCH_CONFLICT', `C: ${JSON.stringify(result)}`);
     assert.equal(result.candidateManifest, null);
@@ -218,15 +206,21 @@ try {
   // detail names exactly which one stayed open.
   // ==========================================================================
   {
-    const adapter: any = { dependencyTree: genericDependencyTree, effectivePom: genericEffectivePom, packageCandidateWithTests: () => ({ status: 'SUCCESS', testsExecuted: true, testsPassed: true, testsTotal: 1, testsFailures: 0, testsErrors: 0, testsSkipped: 0, durationMs: 1, evidenceTail: '', timedOut: false }) };
+    const adapter: any = { dependencyTree: genericDependencyTree, effectivePom: genericEffectivePom,
+    /** Prépare les données nécessaires à ce scénario. */
+    packageCandidateWithTests: () => ({ status: 'SUCCESS', testsExecuted: true, testsPassed: true, testsTotal: 1, testsFailures: 0, testsErrors: 0, testsSkipped: 0, durationMs: 1, evidenceTail: '', timedOut: false }) };
     let scanCall = 0;
-    const scanner = { inspect: (w: string) => {
+    const scanner = {
+    /** Inspecte les données ou l’artefact pour en tirer des preuves. */
+    inspect: (w: string) => {
       scanCall++;
       const digest = trackedSourceDigest(w);
       // Baseline: both present. Candidate: jackson's CVE incorrectly still reported (simulates an insufficient real-world fix).
       return scanCall === 1 ? scanFor([TARGET_A, TARGET_B], digest) : scanFor([TARGET_B], digest);
     } };
-    const svc = new SecurityRemediationBatchOrchestratorService(decisionServiceFor([findingA, findingB]) as any, wmBE, { ensureRepo: () => repoBE } as any, adapter, scanner as any);
+    const svc = new SecurityRemediationBatchOrchestratorService(decisionServiceFor([findingA, findingB]) as any, wmBE, {
+    /** Prépare le dépôt et la révision nécessaires. */
+    ensureRepo: () => repoBE } as any, adapter, scanner as any);
     const result = svc.orchestrate({ repository: 'x/y', candidateBaseSha: SHA, requestId: 'd-req', batchId: 'd-batch', candidateAttempt: 0, findings: [findingA, findingB] });
     assert.equal(result.status, 'CANDIDATE_SECURITY_VALIDATION_FAILED', `D: ${JSON.stringify(result)}`);
     assert.equal(result.candidateManifest, null, 'D: no PR-worthy candidate when the batch is not all-closed');
@@ -242,8 +236,14 @@ try {
   // ==========================================================================
   {
     const MAVEN_ERROR_OUTPUT = '[ERROR] Failed to execute goal ... -> [Help 1]\nBUILD FAILURE';
-    const adapter: any = { dependencyTree: genericDependencyTree, effectivePom: genericEffectivePom, packageCandidateWithTests: () => ({ status: 'FAILED', testsExecuted: false, testsPassed: null, durationMs: 1, evidenceTail: MAVEN_ERROR_OUTPUT, timedOut: false }) };
-    const svc = new SecurityRemediationBatchOrchestratorService(decisionServiceFor([findingA, findingB]) as any, wmBE, { ensureRepo: () => repoBE } as any, adapter, { inspect: (w: string) => scanFor([TARGET_A, TARGET_B], trackedSourceDigest(w)) } as any);
+    const adapter: any = { dependencyTree: genericDependencyTree, effectivePom: genericEffectivePom,
+    /** Prépare les données nécessaires à ce scénario. */
+    packageCandidateWithTests: () => ({ status: 'FAILED', testsExecuted: false, testsPassed: null, durationMs: 1, evidenceTail: MAVEN_ERROR_OUTPUT, timedOut: false }) };
+    const svc = new SecurityRemediationBatchOrchestratorService(decisionServiceFor([findingA, findingB]) as any, wmBE, {
+    /** Prépare le dépôt et la révision nécessaires. */
+    ensureRepo: () => repoBE } as any, adapter, {
+    /** Inspecte les données ou l’artefact pour en tirer des preuves. */
+    inspect: (w: string) => scanFor([TARGET_A, TARGET_B], trackedSourceDigest(w)) } as any);
     const result = svc.orchestrate({ repository: 'x/y', candidateBaseSha: SHA, requestId: 'e-req', batchId: 'e-batch', candidateAttempt: 0, findings: [findingA, findingB] });
     assert.equal(result.status, 'CANDIDATE_BUILD_FAILED', `E: ${JSON.stringify(result)}`);
     assert.equal(result.buildOutput, MAVEN_ERROR_OUTPUT, 'E: the real captured Maven output is returned verbatim');
@@ -252,14 +252,6 @@ try {
   }
   console.log('security-remediation-batch-orchestrator E) build failure -> whole batch fails, real Maven output captured, NO per-CVE attribution: PASS');
 
-  // ==========================================================================
-  // F. V1.8 Phase 7B — a SHARED PARENT_VERSION plan across 3 findings ->
-  // ONE candidate/build/scan (never 3), each CVE closed INDEPENDENTLY.
-  // Mirrors the real 11-finding Spring Boot parent case: one CVE (mirroring
-  // real Tomcat CVE-2024-24549) must remain STILL_OPEN even though its
-  // sibling CVEs on the SAME package close, proving closure is never
-  // "everyone passes because the shared build succeeded".
-  // ==========================================================================
   {
     const repoF = path.join(root, 'repo-f');
     fs.mkdirSync(repoF, { recursive: true });
@@ -281,6 +273,7 @@ try {
     const findings = [findingJackson, findingTomcatA, findingTomcatStillOpen];
 
     const decisionServiceParent = {
+      /** Détermine la décision à partir des preuves disponibles. */
       decide: (finding: any): any => ({
         findingIdentity: finding.findingIdentity, evaluatedSha: SHA_F,
         provenance: { ecosystem: 'MAVEN', kind: 'PARENT_MANAGED', package: finding.package, installedVersion: finding.expectedInstalledVersion, controllingFile: 'pom.xml', controllingElement: null, controllingProperty: null, groundedSha: SHA_F, evidence: 'synthetic parent test' },
@@ -291,17 +284,21 @@ try {
 
     let dependencyTreeCallCount = 0;
     const adapterF: any = {
+      /** Prépare les données nécessaires à ce scénario. */
       dependencyTree: (w: string) => {
         dependencyTreeCallCount++;
         const parentVersion = /<parent>[\s\S]*?<version>([^<]+)<\/version>/.exec(fs.readFileSync(path.join(w, 'pom.xml'), 'utf8'))![1];
         const resolved = parentVersion === '2.7.18' ? { jackson: '2.13.5', tomcat: '9.0.83' } : { jackson: '2.13.3', tomcat: '9.0.63' };
         return { status: 'SUCCESS', text: `+- com.fasterxml.jackson.core:jackson-databind:jar:${resolved.jackson}:compile\n+- org.apache.tomcat.embed:tomcat-embed-core:jar:${resolved.tomcat}:compile\n` };
       },
+      /** Produit le POM effectif pour établir les versions Maven. */
       effectivePom: () => ({ status: 'SUCCESS', text: '<project></project>' }),
+      /** Prépare les données nécessaires à ce scénario. */
       packageCandidateWithTests: () => ({ status: 'SUCCESS', testsExecuted: true, testsPassed: true, testsTotal: 1, testsFailures: 0, testsErrors: 0, testsSkipped: 0, durationMs: 1, evidenceTail: '', timedOut: false }),
     };
     let scanCallF = 0;
     const scannerF = {
+      /** Inspecte les données ou l’artefact pour en tirer des preuves. */
       inspect: (w: string) => {
         scanCallF++;
         const digest = trackedSourceDigest(w);
@@ -318,7 +315,9 @@ try {
       },
     };
 
-    const svc = new SecurityRemediationBatchOrchestratorService(decisionServiceParent as any, wmF, { ensureRepo: () => repoF } as any, adapterF, scannerF as any);
+    const svc = new SecurityRemediationBatchOrchestratorService(decisionServiceParent as any, wmF, {
+    /** Prépare le dépôt et la révision nécessaires. */
+    ensureRepo: () => repoF } as any, adapterF, scannerF as any);
     const result = svc.orchestrate({ repository: 'x/y', candidateBaseSha: SHA_F, requestId: 'f-req', batchId: 'f-batch', candidateAttempt: 0, findings });
 
     assert.equal(result.status, 'CANDIDATE_SECURITY_VALIDATION_FAILED', `F: expected the whole batch to fail closed (one CVE still open), got ${JSON.stringify(result)}`);
@@ -354,6 +353,7 @@ try {
     const findingJ1 = { findingIdentity: 'g-jackson-1', cveId: 'CVE-2022-42003', source: 'OWASP', package: 'com.fasterxml.jackson.core:jackson-databind', expectedInstalledVersion: '2.13.3', fixedVersion: null };
     const findingJ2 = { findingIdentity: 'g-jackson-2', cveId: 'CVE-2022-42004', source: 'TRIVY', package: 'com.fasterxml.jackson.core:jackson-databind', expectedInstalledVersion: '2.13.3', fixedVersion: null };
     const decisionServiceG = {
+      /** Détermine la décision à partir des preuves disponibles. */
       decide: (finding: any): any => ({
         findingIdentity: finding.findingIdentity, evaluatedSha: SHA_G,
         provenance: { ecosystem: 'MAVEN', kind: 'PARENT_MANAGED', package: finding.package, installedVersion: finding.expectedInstalledVersion, controllingFile: 'pom.xml', controllingElement: null, controllingProperty: null, groundedSha: SHA_G, evidence: 'synthetic parent test' },
@@ -362,22 +362,29 @@ try {
       }),
     };
     const adapterG: any = {
+      /** Prépare les données nécessaires à ce scénario. */
       dependencyTree: (w: string) => {
         const parentVersion = /<parent>[\s\S]*?<version>([^<]+)<\/version>/.exec(fs.readFileSync(path.join(w, 'pom.xml'), 'utf8'))![1];
         return { status: 'SUCCESS', text: `+- com.fasterxml.jackson.core:jackson-databind:jar:${parentVersion === '2.7.18' ? '2.13.5' : '2.13.3'}:compile\n` };
       },
+      /** Produit le POM effectif pour établir les versions Maven. */
       effectivePom: () => ({ status: 'SUCCESS', text: '<project></project>' }),
+      /** Prépare les données nécessaires à ce scénario. */
       packageCandidateWithTests: () => ({ status: 'SUCCESS', testsExecuted: true, testsPassed: true, testsTotal: 1, testsFailures: 0, testsErrors: 0, testsSkipped: 0, durationMs: 1, evidenceTail: '', timedOut: false }),
     };
     let scanCallG = 0;
-    const scannerG = { inspect: (w: string) => {
+    const scannerG = {
+    /** Inspecte les données ou l’artefact pour en tirer des preuves. */
+    inspect: (w: string) => {
       scanCallG++;
       const digest = trackedSourceDigest(w);
       return scanCallG === 1
         ? scanFor([{ id: 'CVE-2022-42003', pkg: findingJ1.package, installed: '2.13.3', fixed: '2.13.5' }, { id: 'CVE-2022-42004', pkg: findingJ2.package, installed: '2.13.3', fixed: '2.13.5' }], digest)
         : scanFor([], digest);
     } };
-    const svc = new SecurityRemediationBatchOrchestratorService(decisionServiceG as any, wmG, { ensureRepo: () => repoG } as any, adapterG, scannerG as any);
+    const svc = new SecurityRemediationBatchOrchestratorService(decisionServiceG as any, wmG, {
+    /** Prépare le dépôt et la révision nécessaires. */
+    ensureRepo: () => repoG } as any, adapterG, scannerG as any);
     const result = svc.orchestrate({ repository: 'x/y', candidateBaseSha: SHA_G, requestId: 'g-req', batchId: 'g-batch', candidateAttempt: 0, findings: [findingJ1, findingJ2] });
     assert.equal(result.status, 'CANDIDATE_READY', `G: ${JSON.stringify(result)}`);
     assert.ok(result.findings.every(f => f.status === 'CLOSED'), `G: both OWASP+TRIVY findings for the SAME package, sharing the SAME parent plan, both closed: ${JSON.stringify(result.findings)}`);
@@ -392,11 +399,18 @@ try {
   // ==========================================================================
   {
     const mixedDecisionService = {
+      /** Détermine la décision à partir des preuves disponibles. */
       decide: (finding: any): any => finding.cveId === 'CVE-PARENT'
         ? { findingIdentity: finding.findingIdentity, evaluatedSha: SHA, provenance: { ecosystem: 'MAVEN', kind: 'PARENT_MANAGED', package: 'com.example:owned', installedVersion: '1.0.0', controllingFile: 'pom.xml', controllingElement: null, controllingProperty: null, groundedSha: SHA, evidence: 'x' }, fixedVersions: [], selectedTargetVersion: '2.7.18', remediationType: 'AUTO_FIX_ELIGIBLE', reason: 'x', editType: 'PARENT_VERSION', parentRemediationPlan: { actualEditTarget: 'org.springframework.boot:spring-boot-starter-parent', fromVersion: '2.7.0', toVersion: '2.7.18', expectedResolvedDependency: '1.0.1' } }
         : decisionFor(findingA),
     };
-    const svc = new SecurityRemediationBatchOrchestratorService(mixedDecisionService as any, wmBE, { ensureRepo: () => repoBE } as any, { dependencyTree: genericDependencyTree, effectivePom: genericEffectivePom, packageCandidateWithTests: () => ({ status: 'SUCCESS' }) } as any, { inspect: () => scanFor([TARGET_A], 'x') } as any);
+    const svc = new SecurityRemediationBatchOrchestratorService(mixedDecisionService as any, wmBE, {
+    /** Prépare le dépôt et la révision nécessaires. */
+    ensureRepo: () => repoBE } as any, { dependencyTree: genericDependencyTree, effectivePom: genericEffectivePom,
+    /** Prépare les données nécessaires à ce scénario. */
+    packageCandidateWithTests: () => ({ status: 'SUCCESS' }) } as any, {
+    /** Inspecte les données ou l’artefact pour en tirer des preuves. */
+    inspect: () => scanFor([TARGET_A], 'x') } as any);
     const result = svc.orchestrate({ repository: 'x/y', candidateBaseSha: SHA, requestId: 'h-req', batchId: 'h-batch', candidateAttempt: 0, findings: [{ ...findingA, cveId: 'CVE-PARENT' }, findingA] });
     assert.equal(result.status, 'NOT_ELIGIBLE');
     assert.equal(result.reason, 'MIXED_PARENT_AND_NON_PARENT_BATCH_UNSUPPORTED');

@@ -1,14 +1,16 @@
-/** Identity is frozen on dispatch; callback validation never reads configuration. */
+// Reconstitue de façon fiable quel workflow (WF2/WF4/WF5) a traité une tentative de correction donnée,
+// pour qu'un callback tardif ne soit jamais attribué à la mauvaise tentative.
+
+/** Vérifie que la valeur a bien la forme d'un identifiant de workflow n8n valide. */
 export function isWorkflowIdentity(value: unknown): value is string {
   return typeof value === 'string' && /^[A-Za-z0-9_-]{1,128}$/.test(value);
 }
 
+/** Reconstitue l'identité de workflow réelle d'une tentative (valeur gelée si présente, sinon preuves historiques cohérentes), ou null si ambiguë. */
 export function resolveAttemptWorkflowIdentity(fix: any, attempt: any): string | null {
-  // An explicitly frozen but malformed value must not fall back to legacy evidence.
   if (Object.prototype.hasOwnProperty.call(attempt, 'expectedWorkflowId')) {
     return isWorkflowIdentity(attempt.expectedWorkflowId) ? attempt.expectedWorkflowId : null;
   }
-  // Legacy evidence must belong to this attempt, never a later attempt or current config.
   const evidence: unknown[] = [attempt.workflowId];
   for (const event of Array.isArray(fix.workflowEvents) ? fix.workflowEvents : []) {
     if (Number(event.attempt) === Number(attempt.attempt)) evidence.push(event.workflowId);

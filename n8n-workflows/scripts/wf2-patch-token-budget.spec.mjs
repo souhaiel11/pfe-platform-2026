@@ -1,7 +1,9 @@
+// Teste le composant « wf2-patch-token-budget » et ses cas d’erreur.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
 const workflow = JSON.parse(fs.readFileSync(new URL('../pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.PROMOTION-TARGET.json', import.meta.url)))[0];
+/** Retrouve ou construit le nœud du workflow demandé. */
 const node = name => workflow.nodes.find(item => item.name === name);
 const prepare = node('Prepare - Code Patch Body');
 const parser = node('Parse - Code Patch Output');
@@ -16,11 +18,18 @@ const plan = { findingId, target: { file: targetFile, line: 34 }, filesToModify:
 const planned = { target_file_path: targetFile, fileOperation: 'MODIFY', remediationPlans: [plan], plannedFiles: [targetFile], repositoryPolicy: {} };
 const gate = { batchId: 'token-budget', targetBranchName: 'fix/token-budget' };
 const sourceSnapshots = sourceFixture.sources.map(source => ({ file: source.file, content: source.content }));
+/** Recherche la décision correspondant au contexte demandé. */
 const lookup = name => name === 'Prepare Batch Context'
-  ? { first: () => ({ json: gate }) }
+  ? {
+  /** Renvoie le premier élément disponible. */
+  first: () => ({ json: gate }) }
   : name === 'Prepare Generic Remediation Plan'
-    ? { first: () => ({ json: { remediationContract: { sourceSnapshots, sourceGrounding: { initialPaths: [], groundedRelationshipApis: [] } } } }) }
-    : { all: () => [{ json: planned }] };
+    ? {
+    /** Renvoie le premier élément disponible. */
+    first: () => ({ json: { remediationContract: { sourceSnapshots, sourceGrounding: { initialPaths: [], groundedRelationshipApis: [] } } } }) }
+    : {
+    /** Renvoie tous les éléments disponibles. */
+    all: () => [{ json: planned }] };
 const request = new Function('$json', '$', 'Buffer', prepare.parameters.jsCode)(
   { path: targetFile, content: Buffer.from(baseline).toString('base64'), sha: 'baseline-blob' }, lookup, Buffer).json;
 
@@ -35,8 +44,10 @@ const observedVisibleHeadroom = request.llmRequestBody.max_tokens - observedThin
 assert.equal(observedVisibleHeadroom, 20132);
 assert.ok(observedVisibleHeadroom >= 8192, 'must reserve at least 8k visible tokens at observed thinking usage');
 
+/** Lit les données et les convertit au format attendu. */
 const parse = response => new Function('$json', '$', parser.parameters.jsCode)(response,
   name => { assert.equal(name, 'Prepare - Code Patch Body'); return { item: { json: request } }; }).json;
+/** Construit la réponse utilisée par le scénario. */
 const response = text => ({ stop_reason: 'end_turn', content: [{ type: 'text', text }] });
 
 // 4-5. Both provider and structural truncation remain fail-closed.

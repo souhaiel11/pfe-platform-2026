@@ -1,14 +1,9 @@
-// Increment 1 (sélection multiple CVE) -- offline contract tests for
-// withFindingTaskIds(). No TypeORM, no database: the lookup is a plain
-// function so this proves the PURE merge logic in isolation (the I/O half,
-// batching the real DB query, is proven separately in
-// manual-remediation.service.finding-task-ids.spec.ts).
-//
-// Run: npx ts-node backend/src/manual-remediation/finding-task-id-enrichment.spec.ts
+// Increment 1 (sélection multiple CVE) -- offline contract tests for withFindingTaskIds().
 import * as assert from 'node:assert/strict';
 import { withFindingTaskIds } from './finding-task-id-enrichment';
 import { findingFingerprint } from './finding-fingerprint';
 
+/** Exécute les étapes principales de ce programme. */
 async function main() {
   // 1. Additive: existing fields on a matched CVE are untouched, byte for
   // byte, only findingTaskId is added.

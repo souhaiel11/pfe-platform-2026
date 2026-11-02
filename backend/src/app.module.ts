@@ -1,4 +1,11 @@
+// Assemble les modules et la connexion à la base du backend.
+import { SourceEvidenceModule } from './source-evidence/source-evidence.module';
+import { ConfigCheckModule } from './config-check/config-check.module';
+import { ProjectReadsModule } from './project-reads/project-reads.module';
+import { HealthController } from './health.controller';
 import { Module } from '@nestjs/common';
+import { APP_INTERCEPTOR } from '@nestjs/core';
+import { FrenchFindingsInterceptor } from './common/fr-localization/french-findings.interceptor';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
@@ -22,10 +29,12 @@ import { SecurityRemediationModule } from './security-remediation/security-remed
 import { EffectiveConfigModule } from './effective-config/effective-config.module';
 
 @Module({
+  controllers: [HealthController],
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
+      /** Construit la configuration ou le service injecté par le module. */
       useFactory: (config: ConfigService) => ({
         type: 'postgres',
         host: config.get('DB_HOST', 'postgres'),
@@ -40,6 +49,9 @@ import { EffectiveConfigModule } from './effective-config/effective-config.modul
       }),
       inject: [ConfigService],
     }),
+    SourceEvidenceModule,
+    ConfigCheckModule,
+    ProjectReadsModule,
     AuthModule,
     ProjectsModule,
     IncidentsModule,
@@ -59,5 +71,7 @@ import { EffectiveConfigModule } from './effective-config/effective-config.modul
     SecurityRemediationModule,
     EffectiveConfigModule,
   ],
+  // Constats de scanners affichés en français dans l'interface (données stockées inchangées).
+  providers: [{ provide: APP_INTERCEPTOR, useClass: FrenchFindingsInterceptor }],
 })
 export class AppModule {}

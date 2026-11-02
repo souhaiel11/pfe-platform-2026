@@ -1,3 +1,4 @@
+// Vérifie et teste les projets Python dans un espace isolé.
 import { execFileSync } from 'child_process';
 import * as fs from 'fs';
 import * as os from 'os';
@@ -8,8 +9,10 @@ import { aggregatePytestReport } from './pytest-report';
 import { isProcessTimeout } from './process-timeout';
 
 const DEFAULT_TIMEOUT_MS = 5 * 60 * 1000;
+/** Conserve les dernières lignes du journal. */
 function tail(text: string, limit = 20_000): string { return text.slice(-limit); }
 
+/** Prépare un environnement Python limité aux paramètres utiles. */
 function safePythonEnv(): NodeJS.ProcessEnv {
   // Never inherit PYTHONPATH, PYTHONHOME, PIP_* or PYTEST_ADDOPTS.
   const env: NodeJS.ProcessEnv = {};
@@ -19,6 +22,7 @@ function safePythonEnv(): NodeJS.ProcessEnv {
   return env;
 }
 
+/** Exécute Python et collecte son résultat. */
 function runPython(args: string[], cwd: string, timeoutMs: number, binary = 'python3') {
   if (timeoutMs <= 0) return { status: null as number | null, output: '', timedOut: true };
   const start = Date.now();
@@ -39,11 +43,11 @@ function runPython(args: string[], cwd: string, timeoutMs: number, binary = 'pyt
   }
 }
 
-// v1 convention: conventional application .py files only. Custom pytest
-// discovery patterns are not inferred. Never traverse symlinks or dependency dirs.
+/** Prépare le résultat lié à application sources. */
 function applicationSources(root: string): string[] {
   const files: string[] = [];
   const excluded = new Set(['test', 'tests', '__tests__', 'venv', 'env', 'node_modules', '__pycache__', 'site-packages']);
+  /** Parcourt les données pour en extraire les éléments utiles. */
   function visit(dir: string) {
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
       if (entry.name.startsWith('.') || entry.isSymbolicLink()) continue;
@@ -61,20 +65,24 @@ function applicationSources(root: string): string[] {
 
 export class PythonBuildAdapter implements BuildAdapter {
   readonly buildType = 'python';
+  /** Indique si ce mode est pris en charge. */
   supportsMode(mode: import('../../backend/src/candidate-verification/candidate-verification.types').VerificationMode): boolean { return mode !== 'COMPILE_TESTS'; }
   // Same instance must run compile then tests. No global or repo-local venv
   // fallback. Successful preparations remain owned here until tests/recompile.
   private readonly venvs = new Map<string, string>();
 
+  /** Indique si cet adaptateur prend en charge les données. */
   supports(workspacePath: string): boolean {
     return fs.existsSync(path.join(workspacePath, 'requirements.txt'));
   }
 
+  /** Compile le projet dans le délai disponible. */
   compile(workspacePath: string, timeoutMs = DEFAULT_TIMEOUT_MS): CompileResult {
     const start = Date.now();
     const ws = path.resolve(workspacePath);
     let venv: string | undefined;
     let keep = false;
+    /** Finalise le résultat et libère les ressources de l’opération. */
     const finish = (status: 'SUCCESS' | 'FAILED', exitCode: number | null, evidenceTail: string): CompileResult =>
       ({ status, exitCode, durationMs: Date.now() - start, evidenceTail: tail(evidenceTail) });
     try {
@@ -116,10 +124,12 @@ export class PythonBuildAdapter implements BuildAdapter {
     }
   }
 
+  /** Exécute les tests pour détecter les régressions. */
   runRegressionTests(workspacePath: string, timeoutMs = DEFAULT_TIMEOUT_MS): RegressionTestResult {
     const start = Date.now();
     const ws = path.resolve(workspacePath);
     const venv = this.venvs.get(ws);
+    /** Construit le résultat inconnu. */
     const unknown = (evidenceRef: string): RegressionTestResult => ({
       status: 'UNKNOWN', total: null, failures: null, errors: null, skipped: null,
       durationMs: Date.now() - start, evidenceRef: tail(evidenceRef, 4000),
@@ -138,6 +148,7 @@ export class PythonBuildAdapter implements BuildAdapter {
       const aggregate = aggregatePytestReport(report);
       if (aggregate.matchCount === 0) return unknown(`no usable pytest report\n${evidence}`);
       const failures = aggregate.failures + aggregate.errors;
+      /** Construit le résultat d’une étape terminée. */
       const completed = (status: 'SUCCESS' | 'FAILED', evidenceRef = evidence): RegressionTestResult => ({
         status, total: aggregate.total, failures, errors: aggregate.errors, skipped: aggregate.skipped,
         durationMs: Date.now() - start, evidenceRef,

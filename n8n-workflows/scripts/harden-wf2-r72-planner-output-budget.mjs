@@ -1,22 +1,18 @@
+// Borne la taille de sortie demandée au planificateur.
 import fs from 'node:fs';
 
 const sourcePath = new URL('../pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.R71-CORRECTIVE-SOURCE-AUTHORITY.json', import.meta.url);
 const outputPath = new URL('../pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.R72-PLANNER-OUTPUT-BUDGET.json', import.meta.url);
 
+/** Borne la taille de sortie demandée au planificateur. */
 export function hardenPlannerOutputBudget(workflow) {
+  /** Retrouve ou construit le nœud du workflow demandé. */
   const node = name => {
     const found = workflow.nodes.find(candidate => candidate.name === name);
     if (!found) throw new Error('R72_NODE_NOT_FOUND:' + name);
     return found;
   };
 
-  // Execution 2031 (attempt 7): claude-sonnet-5 hit stop_reason=max_tokens with
-  // output_tokens=8192 entirely consumed by thinking_tokens=8191, leaving zero
-  // tokens for the required plan JSON. "Validate Generic Remediation Plan"
-  // correctly raised CLAUDE_EMPTY_TEXT_RESPONSE. Apply the same supported
-  // contract already proven for the opus-5 patch-generation call ("Prepare -
-  // Code Patch Body"): double the hard cap and bound thinking below it so a
-  // visible-text floor remains guaranteed regardless of reasoning length.
   const preparePlan = node('Prepare Generic Remediation Plan');
   const before = preparePlan.parameters.jsCode;
   preparePlan.parameters.jsCode = before.replace(

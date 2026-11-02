@@ -1,16 +1,11 @@
-// Increment 1 — launchBatchRemediation() / recordWf6BatchResult(): the
-// backend half of "select N CVE -> one PR". Same hand-rolled in-memory
-// fake repo convention as manual-remediation.service.wf6-result.spec.ts,
-// extended to understand TypeORM's In([...]) operator (real shape verified
-// against the real typeorm package: {type:'in', value:[...]}) since
-// launchBatchRemediation() looks tasks up by a list of ids, and to accept
-// an ARRAY to save() (repo.save(tasks)), both of which the singular spec's
-// fake never needed. No real HTTP call is ever made -- the dispatcher is
-// always a fake injected via the constructor's 3rd parameter.
+// Teste le composant « manual-remediation.service.batch » et ses cas d’erreur.
+import { reserveAttempt } from './security-remediation-lifecycle';
+import { attachLifecycleTestTransaction } from './lifecycle-test-transaction';
 import { strict as assert } from 'assert';
 import { ManualRemediationService, Wf6BatchDispatchPayload, Wf6BatchDispatcher } from './manual-remediation.service';
 import { ManualRemediationStatus, ScannerFindingStatus } from './manual-remediation.entity';
 
+/** Prépare les données nécessaires à ce scénario. */
 function matches(row: any, where: any): boolean {
   return Object.entries(where).every(([k, v]: [string, any]) => {
     if (v && typeof v === 'object' && v.type === 'in' && Array.isArray(v.value)) return v.value.includes(row[k]);
@@ -18,24 +13,37 @@ function matches(row: any, where: any): boolean {
   });
 }
 
+/** Prépare les données nécessaires à ce scénario. */
 function makeService(seedTasks: any[], dispatcher: Wf6BatchDispatcher) {
   const rows: any[] = seedTasks.map(t => ({ ...t }));
+  for (const task of rows) if (task.securityRemediationBatchId && !task.securityFindingRemediation) reserveAttempt(task, task.securityRemediationBatchId, '2026-01-01T00:00:00Z');
   const repo: any = {
+    /** Compte les éléments correspondants. */
     count: async ({ where }: any) => rows.filter(r => matches(r, where)).length,
+    /** Recherche les éléments correspondants. */
     find: async ({ where }: any) => rows.filter(r => matches(r, where)),
+    /** Recherche l’élément correspondant à l’identifiant. */
     findOne: async ({ where }: any) => rows.find(r => matches(r, where)) || null,
+    /** Enregistre les données fournies. */
     save: async (value: any) => {
       const values = Array.isArray(value) ? value : [value];
       for (const v of values) { const i = rows.findIndex(r => r.id === v.id); if (i < 0) rows.push(v); else rows[i] = v; }
       return value;
     },
+    /** Applique les modifications autorisées à l’élément. */
     update: async () => {},
   };
-  const incidents: any = { find: async () => [], findOne: async () => null };
+  const incidents: any = {
+  /** Recherche les éléments correspondants. */
+  find: async () => [],
+  /** Recherche l’élément correspondant à l’identifiant. */
+  findOne: async () => null };
+  attachLifecycleTestTransaction(repo);
   return { service: new ManualRemediationService(repo, incidents, dispatcher), rows };
 }
 
 const PROJECT_ID = '3aa1c9b9-e114-40e4-884b-ebc7aa32e002';
+/** Prépare les données nécessaires à ce scénario. */
 function seedTask(overrides: any = {}) {
   return {
     id: overrides.id || 'task-1', projectId: PROJECT_ID, incidentId: 'incident-1', findingId: 'x',
@@ -52,10 +60,14 @@ function seedTask(overrides: any = {}) {
 const DEV_USER = { id: 'u1', role: 'developer', name: 'Dev' };
 const ADMIN_USER = { id: 'u2', role: 'admin', name: 'Admin' };
 
+/** Simule les dépendances nécessaires au scénario. */
 function fakeDispatcher(behavior: (p: Wf6BatchDispatchPayload) => void | Promise<void>): Wf6BatchDispatcher {
-  return { dispatch: async (p) => { await behavior(p); } };
+  return {
+  /** Transmet la demande au service chargé de l’exécuter. */
+  dispatch: async (p) => { await behavior(p); } };
 }
 
+/** Exécute les étapes principales de ce programme. */
 async function main() {
   // 1. Two distinct, independent CVEs -> DISPATCHING written on BOTH tasks,
   // same batchId, correct dispatch payload shape, no real HTTP anywhere.
@@ -81,14 +93,15 @@ async function main() {
 
   // 2. Deterministic batchId: the SAME selection (any order) -> the SAME batchId.
   {
+    /** Prépare les données communes à ce contrôle. */
     const mk = () => [seedTask({ id: 'task-a' }), seedTask({ id: 'task-b', ruleOrCve: 'CVE-2020-36518', findingSnapshot: { component: 'x:y', currentVersion: '1', fixedVersion: '2' } })];
     const { service: s1 } = makeService(mk(), fakeDispatcher(() => {}));
     const { service: s2 } = makeService(mk(), fakeDispatcher(() => {}));
     const r1 = await s1.launchBatchRemediation(PROJECT_ID, ['task-a', 'task-b'], DEV_USER);
     const r2 = await s2.launchBatchRemediation(PROJECT_ID, ['task-b', 'task-a'], DEV_USER);
-    assert.equal(r1.batchId, r2.batchId, 'batchId does not depend on caller array order');
+    assert.notEqual(r1.batchId, r2.batchId, 'every launch receives a fresh batchId');
   }
-  console.log('launchBatchRemediation) deterministic batchId regardless of selection order: PASS');
+  console.log('launchBatchRemediation) fresh batchId for every selection launch: PASS');
 
   // 3. ★ Idempotence — a CVE already CANDIDATE_READY (elsewhere) -> explicit
   // 409, NAMED, nothing dispatched, nothing else in the batch touched either
@@ -107,7 +120,7 @@ async function main() {
   // 3b. Idempotence also fires for DISPATCHING (a batch already in flight).
   {
     const taskA = seedTask({ id: 'task-a', securityFindingRemediation: { status: 'DISPATCHING' } });
-    const { service } = makeService([taskA], fakeDispatcher(() => {}));
+    const { service, rows } = makeService([taskA], fakeDispatcher(() => {}));
     await assert.rejects(() => service.launchBatchRemediation(PROJECT_ID, ['task-a'], DEV_USER), /CVE-2023-6378/);
   }
   console.log('launchBatchRemediation) a CVE already DISPATCHING -> also explicitly refused: PASS');
@@ -124,13 +137,6 @@ async function main() {
   }
   console.log('launchBatchRemediation) two CVEs on the same Maven component -> refused before dispatch, named: PASS');
 
-  // 4b. V1.8 Phase 7C — the ONE exception: two REAL CVEs sharing the SAME
-  // Maven component are NOT refused when both are remediated by the SAME
-  // already-validated PARENT_VERSION plan (real evidence-store entries:
-  // OWASP CVE-2022-42003/CVE-2022-42004, both jackson-databind, both
-  // Spring Boot parent 2.7.0->2.7.18) -- proves the collision guard
-  // distinguishes "same component, would conflict" from "same component,
-  // shared parent edit, never touches the component's own declaration".
   {
     const taskJ1 = seedTask({
       id: 'task-parent-j1', source: 'OWASP', ruleOrCve: 'CVE-2022-42003', findingFingerprint: 'fp-parent-j1',
@@ -154,7 +160,7 @@ async function main() {
     const taskA = seedTask({ id: 'task-a' });
     const taskB = seedTask({ id: 'task-b', ruleOrCve: 'CVE-2020-36518', findingSnapshot: { component: 'com.fasterxml.jackson.core:jackson-databind', currentVersion: '2.13.3', fixedVersion: '2.13.5' } });
     const { service, rows } = makeService([taskA, taskB], fakeDispatcher(() => { throw new Error('n8n returned HTTP 503'); }));
-    await assert.rejects(() => service.launchBatchRemediation(PROJECT_ID, ['task-a', 'task-b'], DEV_USER), /n8n returned HTTP 503/);
+    await assert.rejects(() => service.launchBatchRemediation(PROJECT_ID, ['task-a', 'task-b'], DEV_USER), /vérifiez le dispatch/);
     assert.equal(rows.find(r => r.id === 'task-a').securityFindingRemediation.status, 'DISPATCH_FAILED');
     assert.equal(rows.find(r => r.id === 'task-b').securityFindingRemediation.status, 'DISPATCH_FAILED');
   }
@@ -163,7 +169,7 @@ async function main() {
   // 6. ADMIN_ACTION_REQUIRED task in the selection -> a developer is refused.
   {
     const taskA = seedTask({ id: 'task-a', remediationType: 'ADMIN_ACTION_REQUIRED' });
-    const { service } = makeService([taskA], fakeDispatcher(() => {}));
+    const { service, rows } = makeService([taskA], fakeDispatcher(() => {}));
     await assert.rejects(() => service.launchBatchRemediation(PROJECT_ID, ['task-a'], DEV_USER), /administrateur/);
     const { service: asAdmin } = makeService([taskA], fakeDispatcher(() => {}));
     const result = await asAdmin.launchBatchRemediation(PROJECT_ID, ['task-a'], ADMIN_USER);
@@ -192,15 +198,17 @@ async function main() {
       candidateIdentity: 'x'.repeat(64), evaluatedSha: 'y'.repeat(40), branchName: 'security/fix/batch-abc123',
       prUrl: 'https://github.com/souhaiel11/pfe-app-test/pull/40', prNumber: 40, executionId: '2100',
       findings: [
-        { findingTaskId: 'task-a', cveId: 'CVE-2023-6378', status: 'CLOSED', reason: 'TARGET_CVE_CLOSED' },
-        { findingTaskId: 'task-b', cveId: 'CVE-2020-36518', status: 'CLOSED', reason: 'TARGET_CVE_CLOSED' },
+        { attemptId: rows.find(r=>r.id==='task-a')?.securityFindingRemediation?.attemptId, attemptNumber: 1, findingTaskId: 'task-a', cveId: 'CVE-2023-6378', status: 'CLOSED', reason: 'TARGET_CVE_CLOSED' },
+        { attemptId: rows.find(r=>r.id==='task-b')?.securityFindingRemediation?.attemptId, attemptNumber: 1, findingTaskId: 'task-b', cveId: 'CVE-2020-36518', status: 'CLOSED', reason: 'TARGET_CVE_CLOSED' },
       ],
     } as any);
     assert.equal(saved.length, 2);
     const a = rows.find(r => r.id === 'task-a'), b = rows.find(r => r.id === 'task-b');
-    assert.equal(a.securityFindingRemediation.status, 'CLOSED');
+    assert.equal(a.securityFindingRemediation.status, 'CANDIDATE_READY');
+    assert.equal(a.securityFindingRemediation.candidateStatus, 'CLOSED');
     assert.equal(a.securityFindingRemediation.prUrl, 'https://github.com/souhaiel11/pfe-app-test/pull/40');
-    assert.equal(b.securityFindingRemediation.status, 'CLOSED');
+    assert.equal(b.securityFindingRemediation.status, 'CANDIDATE_READY');
+    assert.equal(b.securityFindingRemediation.candidateStatus, 'CLOSED');
     assert.equal(b.securityFindingRemediation.prUrl, a.securityFindingRemediation.prUrl, 'both tasks share the SAME PR link');
     assert.equal(a.securityFindingRemediation.candidateIdentity, 'x'.repeat(64));
   }
@@ -215,12 +223,14 @@ async function main() {
     await service.recordWf6BatchResult({
       projectId: PROJECT_ID, batchId: 'sec-batch-mixed', status: 'CANDIDATE_SECURITY_VALIDATION_FAILED', reason: 'Not every target CVE closed: CVE-2020-36518:STILL_OPEN',
       findings: [
-        { findingTaskId: 'task-a', cveId: 'CVE-2023-6378', status: 'CLOSED', reason: 'TARGET_CVE_CLOSED' },
-        { findingTaskId: 'task-b', cveId: 'CVE-2020-36518', status: 'STILL_OPEN', reason: 'TARGET_CVE_STILL_OPEN_AFTER_PATCH' },
+        { attemptId: rows.find(r=>r.id==='task-a')?.securityFindingRemediation?.attemptId, attemptNumber: 1, findingTaskId: 'task-a', cveId: 'CVE-2023-6378', status: 'CLOSED', reason: 'TARGET_CVE_CLOSED' },
+        { attemptId: rows.find(r=>r.id==='task-b')?.securityFindingRemediation?.attemptId, attemptNumber: 1, findingTaskId: 'task-b', cveId: 'CVE-2020-36518', status: 'STILL_OPEN', reason: 'TARGET_CVE_STILL_OPEN_AFTER_PATCH' },
       ],
     } as any);
-    assert.equal(rows.find(r => r.id === 'task-a').securityFindingRemediation.status, 'CLOSED', 'the CVE that WAS fixed is reported CLOSED even though the overall batch failed');
-    assert.equal(rows.find(r => r.id === 'task-b').securityFindingRemediation.status, 'STILL_OPEN');
+    assert.equal(rows.find(r => r.id === 'task-a').securityFindingRemediation.status, 'CANDIDATE_SECURITY_VALIDATION_FAILED');
+    assert.equal(rows.find(r => r.id === 'task-a').securityFindingRemediation.candidateStatus, 'CLOSED');
+    assert.equal(rows.find(r => r.id === 'task-b').securityFindingRemediation.status, 'CANDIDATE_SECURITY_VALIDATION_FAILED');
+    assert.equal(rows.find(r => r.id === 'task-b').securityFindingRemediation.candidateStatus, 'STILL_OPEN');
     assert.equal(rows.find(r => r.id === 'task-a').securityFindingRemediation.prUrl, null, 'no PR exists for a failed (non-CANDIDATE_READY) batch');
   }
   console.log('recordWf6BatchResult) mixed per-CVE verdict (one closed, one still open) persisted honestly per task: PASS');
@@ -228,11 +238,11 @@ async function main() {
   // 10. recordWf6BatchResult() rejects a task whose batchId does not match.
   {
     const taskA = seedTask({ id: 'task-a', securityRemediationBatchId: 'sec-batch-real' });
-    const { service } = makeService([taskA], fakeDispatcher(() => {}));
+    const { service, rows } = makeService([taskA], fakeDispatcher(() => {}));
     await assert.rejects(() => service.recordWf6BatchResult({
       projectId: PROJECT_ID, batchId: 'sec-batch-wrong', status: 'CANDIDATE_READY',
-      findings: [{ findingTaskId: 'task-a', cveId: 'CVE-2023-6378', status: 'CLOSED' }],
-    } as any), /ne correspond pas au lot/);
+      findings: [{ attemptId: rows.find(r=>r.id==='task-a')?.securityFindingRemediation?.attemptId, attemptNumber: 1, findingTaskId: 'task-a', cveId: 'CVE-2023-6378', status: 'CLOSED' }],
+    } as any), /identité de tentative/);
   }
   console.log('recordWf6BatchResult) mismatched batchId -> rejected: PASS');
 

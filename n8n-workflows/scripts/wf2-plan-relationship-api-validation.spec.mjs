@@ -1,8 +1,10 @@
+// Teste le composant « wf2-plan-relationship-api-validation » et ses cas d’erreur.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { groundingInstruction, relationshipPatchGuard, relationshipPlanSchema, relationshipPlanValidation } from './harden-wf2-relationship-source-grounding.mjs';
 
 const workflow = JSON.parse(readFileSync(new URL('../pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.PROMOTION-TARGET.json', import.meta.url)))[0];
+/** Retrouve ou construit le nœud du workflow demandé. */
 const node = name => workflow.nodes.find(candidate => candidate.name === name);
 const validatorCode = node('Validate Generic Remediation Plan').parameters.jsCode;
 const validationStart = validatorCode.indexOf('const groundedApis=');
@@ -28,12 +30,19 @@ assert.ok(plannerCode.includes(groundingInstruction));
 
 const userProof = { ownerPath: 'src/main/java/com/pfe/devsecops/model/Task.java', field: 'user', repositoryType: 'com.pfe.devsecops.repository.UserRepository', repositorySourcePath: 'src/main/java/com/pfe/devsecops/repository/UserRepository.java', entityType: 'com.pfe.devsecops.model.User', method: 'findById', idType: 'Long' };
 const projectProof = { ownerPath: userProof.ownerPath, field: 'project', repositoryType: 'com.pfe.devsecops.repository.ProjectRepository', repositorySourcePath: 'src/main/java/com/pfe/devsecops/repository/ProjectRepository.java', entityType: 'com.pfe.devsecops.model.Project', method: 'findById', idType: 'Long' };
+/** Prépare les données nécessaires à ce scénario. */
 const api = proof => Object.fromEntries(['repositoryType', 'repositorySourcePath', 'entityType', 'method', 'idType'].map(key => [key, proof[key]]));
+/** Retrouve les données fiables correspondant à la demande. */
 const resolve = proof => ({ ownerPath: proof.ownerPath, field: proof.field, relatedEntityType: proof.entityType, operation: 'RESOLVE_BY_ID', requiredApi: api(proof) });
+/** Prépare les données nécessaires à ce scénario. */
 const preserve = proof => ({ ownerPath: proof.ownerPath, field: proof.field, relatedEntityType: proof.entityType, operation: 'PRESERVE', requiredApi: null });
+/** Prépare les données nécessaires à ce scénario. */
 const plan = (findingId, operations, requiredRelationshipApis = operations.filter(op => op.requiredApi).map(op => op.requiredApi), dto = 'TaskDTO.java') => ({ findingId, remediationIntent: 'DTO entity mapping with explicit relationship semantics', filesToCreate: [`src/main/java/com/pfe/devsecops/dto/${dto}`], relationshipOperations: operations, requiredRelationshipApis });
+/** Prépare les données nécessaires à ce scénario. */
 const prepared = proofs => ({ remediationContract: { sourceGrounding: { groundedRelationshipApis: proofs } } });
+/** Vérifie les données et renvoie leur forme utilisable. */
 const validate = (plans, proofs = [userProof]) => new Function('prepared', 'normalized', realValidation)(prepared(proofs), plans);
+/** Vérifie les résultats attendus dans ce scénario. */
 const blocks = (plans, proofs) => assert.throws(() => validate(plans, proofs), /SOURCE_API_CONTEXT_INCOMPLETE/);
 
 // Execution 2013's actual malformed shape remains blocked: owner type was put in the old ambiguous field.
@@ -67,8 +76,11 @@ assert.doesNotThrow(() => validate([plan('duplicate', [resolve(userProof), resol
 const sourceGrounding = { initialPaths: [userProof.ownerPath], groundedRelationshipApis: [userProof, projectProof] };
 const sourceApiContext = [{ file: userProof.ownerPath }, { file: userProof.repositorySourcePath }, { file: projectProof.repositorySourcePath }];
 const relationships = [{ ownerPath: userProof.ownerPath, field: 'user', entityType: userProof.entityType }, { ownerPath: userProof.ownerPath, field: 'project', entityType: projectProof.entityType }];
+/** Prépare les données nécessaires à ce scénario. */
 const runPatchGuard = plans => new Function('$', 'sourceApiContext', 'plans', 'relationFields', 'javaInfo', realPatchGuard)(
-  () => ({ first: () => ({ json: { remediationContract: { sourceGrounding } } }) }), sourceApiContext, plans,
+  () => ({
+  /** Renvoie le premier élément disponible. */
+  first: () => ({ json: { remediationContract: { sourceGrounding } } }) }), sourceApiContext, plans,
   source => relationships.filter(relation => relation.ownerPath === source.path), (path, content) => ({ path, content }),
 );
 assert.doesNotThrow(() => runPatchGuard([plan('patch-user', [resolve(userProof)])]));

@@ -1,0 +1,56 @@
+[
+  {
+    "case": {
+      "name": "snake-only",
+      "snake": "2.4"
+    },
+    "exitCode": 0,
+    "buildPass": true,
+    "testPass": true,
+    "descriptor": "/tmp/sec2-qualification/snake-only/qualification.xml",
+    "originalPomUnchanged": true,
+    "tests": 18,
+    "yamlCompatibilityPass": false
+  },
+  {
+    "case": {
+      "name": "boot218-snake24",
+      "parent": "2.7.18",
+      "snake": "2.4",
+      "alignSecurity": true
+    },
+    "exitCode": 0,
+    "buildPass": true,
+    "testPass": true,
+    "descriptor": "/tmp/sec2-qualification/boot218-snake24/qualification.xml",
+    "originalPomUnchanged": true,
+    "tests": 18,
+    "yamlCompatibilityPass": true
+  },
+  {
+    "case": {
+      "name": "tomcat90119",
+      "tomcat": "9.0.119"
+    },
+    "exitCode": 0,
+    "buildPass": true,
+    "testPass": true,
+    "descriptor": "/tmp/sec2-qualification/tomcat90119/qualification.xml",
+    "originalPomUnchanged": true,
+    "tests": 18,
+    "yamlCompatibilityPass": true
+  },
+  {
+    "case": {
+      "name": "boot3516-java17",
+      "parent": "3.5.16",
+      "java": "17",
+      "alignSecurity": true
+    },
+    "exitCode": 1,
+    "buildPass": false,
+    "testPass": false,
+    "descriptor": "/tmp/sec2-qualification/boot3516-java17/qualification.xml",
+    "originalPomUnchanged": true
+  }
+]

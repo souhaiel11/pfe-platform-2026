@@ -1,3 +1,4 @@
+// Teste le composant « maven-build-adapter » et ses cas d’erreur.
 import * as assert from 'node:assert/strict';
 import * as fs from 'fs';
 import * as os from 'os';
@@ -19,6 +20,7 @@ const scratchRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'pfe-maven-adapter-spe
 const manager = new WorkspaceManager(scratchRoot);
 const adapter = new MavenBuildAdapter();
 
+/** Exécute les étapes principales de ce programme. */
 async function main() {
   // --- Test 11: compile PASS (real, fixed commit) ---
   {

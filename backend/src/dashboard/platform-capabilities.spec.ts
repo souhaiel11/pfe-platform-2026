@@ -1,3 +1,4 @@
+// Teste le composant « platform-capabilities » et ses cas d’erreur.
 import * as assert from 'node:assert/strict';
 import { platformCapabilities } from './platform-capabilities';
 import { LIVE_WRITER_SUPPORTED_EDIT_TYPES } from '../dependency-compatibility/v1_8-security-remediation-gate';

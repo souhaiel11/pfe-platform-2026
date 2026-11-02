@@ -1,0 +1,109 @@
+[
+  {
+    "id": 2090,
+    "status": "success",
+    "startedAt": "2026-10-07 15:03:08.291",
+    "stoppedAt": "2026-10-07 15:03:08.659",
+    "executedNodes": [
+      "Webhook - Security Remediation Request",
+      "Evaluate Security Remediation",
+      "Evaluation HTTP OK?",
+      "Evaluation Not Technical Failure?",
+      "Record Batch Result (EVALUATION_FAILED)",
+      "Respond - EVALUATION_FAILED"
+    ],
+    "evaluation": [
+      [
+        {
+          "status": "TECHNICAL_FAILURE",
+          "failureClass": "VERIFIER_TIMEOUT",
+          "reason": "VERIFIER_TIMEOUT",
+          "batchId": "sec-batch-61727477-9c75-4445-857d-69da14e4636f",
+          "attempts": [
+            {
+              "findingTaskId": "a390e383-42b7-4348-894c-5e02a7e5f98d",
+              "attemptId": "93c68aed-1fcb-4917-8493-1dfe89b30f0d",
+              "attemptNumber": 1
+            }
+          ],
+          "repository": "souhaiel11/remediation-retry-e2e-fixture",
+          "decision": null,
+          "branchName": null,
+          "commitMessage": null,
+          "prTitle": null,
+          "prBody": null
+        }
+      ]
+    ],
+    "request": [
+      [
+        {
+          "projectId": "ebe3bd94-8240-4c30-a2d9-6de2106a28bc",
+          "batchId": "sec-batch-61727477-9c75-4445-857d-69da14e4636f",
+          "findingTaskIds": [
+            "a390e383-42b7-4348-894c-5e02a7e5f98d"
+          ],
+          "attempts": [
+            {
+              "findingTaskId": "a390e383-42b7-4348-894c-5e02a7e5f98d",
+              "attemptId": "93c68aed-1fcb-4917-8493-1dfe89b30f0d",
+              "attemptNumber": 1
+            }
+          ]
+        }
+      ]
+    ],
+    "executedGitWriters": []
+  },
+  {
+    "id": 2091,
+    "status": "success",
+    "startedAt": "2026-10-07 15:03:51.006",
+    "stoppedAt": "2026-10-07 15:04:04.252",
+    "executedNodes": [
+      "Webhook - Security Remediation Request",
+      "Evaluate Security Remediation",
+      "Evaluation HTTP OK?",
+      "Evaluation Not Technical Failure?",
+      "Candidate Ready?",
+      "Record Batch Result (Not Ready)",
+      "Respond - Not Eligible"
+    ],
+    "evaluation": [
+      [
+        {
+          "status": "OPERATOR_TEST_STOPPED",
+          "operatorTestBarrier": true,
+          "operatorTestEvaluationPassed": false,
+          "batchId": "sec-batch-4e6f6ec2-8523-4b1e-b9a9-2e25488b1bfc",
+          "attempts": [
+            {
+              "findingTaskId": "a390e383-42b7-4348-894c-5e02a7e5f98d",
+              "attemptId": "39c77b06-e1cc-4366-be96-b1cd98a437e1",
+              "attemptNumber": 2
+            }
+          ]
+        }
+      ]
+    ],
+    "request": [
+      [
+        {
+          "projectId": "ebe3bd94-8240-4c30-a2d9-6de2106a28bc",
+          "batchId": "sec-batch-4e6f6ec2-8523-4b1e-b9a9-2e25488b1bfc",
+          "findingTaskIds": [
+            "a390e383-42b7-4348-894c-5e02a7e5f98d"
+          ],
+          "attempts": [
+            {
+              "findingTaskId": "a390e383-42b7-4348-894c-5e02a7e5f98d",
+              "attemptId": "39c77b06-e1cc-4366-be96-b1cd98a437e1",
+              "attemptNumber": 2
+            }
+          ]
+        }
+      ]
+    ],
+    "executedGitWriters": []
+  }
+]

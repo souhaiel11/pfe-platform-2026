@@ -1,7 +1,9 @@
+// Vérifie les libellés des annotations visuelles dans WF2.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { relabelStickyZones } from './harden-wf2-r85-sticky-zone-labels.mjs';
 
+/** Vérifie les résultats attendus dans ce scénario. */
 const ALL_74_FAILURE_ENVELOPES_SAMPLE_CHECK = (workflow) => {
   const fe = workflow.nodes.filter(n => n.name.startsWith('Failure Envelope'));
   assert.equal(fe.length, 74);

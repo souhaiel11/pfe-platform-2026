@@ -1,19 +1,12 @@
+// Teste le composant « pr-validation-head-verification » et ses cas d’erreur.
 import * as assert from 'node:assert/strict';
 import { IncidentsService } from './incidents.service';
 
-// BRIQUE 2 — proves the exact-SHA HEAD_ONLY verifier (Brique 1) is wired into
-// requestPrValidation()/saveValidation() as governed, correlated evidence,
-// never as an independent "latest branch" check and never as authorization
-// to write. Covers PHASE 11 Cases A-H (Case I -- the Brique 1 regression
-// suite itself -- is re-run unmodified alongside this file, see the Brique 2
-// closeout report). Real, read-only PR #25 data (repository souhaiel11/
-// pfe-app-test, head 8a315b0dd508eb9843bb3037fe2827f02f6faa78) is used as
-// static fixture data only -- nothing here calls GitHub, Jenkins, n8n, or the
-// real candidate-verifier worker.
 
 const PR25_SHA = '8a315b0dd508eb9843bb3037fe2827f02f6faa78';
 const PR25_REPO = 'souhaiel11/pfe-app-test';
 
+/** Prépare les données nécessaires à ce scénario. */
 function passingHeadVerification(request: any) {
   return {
     mode: 'HEAD_ONLY',
@@ -29,6 +22,7 @@ function passingHeadVerification(request: any) {
   };
 }
 
+/** Prépare les données nécessaires à ce scénario. */
 function shaUnavailableHeadVerification(request: any) {
   return {
     mode: 'HEAD_ONLY',
@@ -44,11 +38,7 @@ function shaUnavailableHeadVerification(request: any) {
   };
 }
 
-// Same failureClass as SHA_UNAVAILABLE (Brique 1's real contract: a checked-
-// out workspace whose HEAD doesn't match the requested SHA collapses to
-// SHA_UNAVAILABLE too, proven in candidate-verifier/src/head-verification.spec.ts)
-// but with a distinct, non-null checkoutSha to represent "checked out the
-// wrong commit" rather than "the commit doesn't exist at all".
+/** Prépare les données nécessaires à ce scénario. */
 function mismatchHeadVerification(request: any, wrongSha: string) {
   return {
     ...shaUnavailableHeadVerification(request),
@@ -56,6 +46,7 @@ function mismatchHeadVerification(request: any, wrongSha: string) {
   };
 }
 
+/** Prépare les données nécessaires à ce scénario. */
 function makeFixture(candidateVerification: any, opts: { sha?: string; repo?: string } = {}) {
   const sha = opts.sha || PR25_SHA;
   const repo = opts.repo || PR25_REPO;
@@ -73,29 +64,47 @@ function makeFixture(candidateVerification: any, opts: { sha?: string; repo?: st
     sonarqubeKey: 'pfe-app-test',
   };
   incident.project = project;
-  const incidentRepo: any = { findOne: async () => incident, update: async (_id: string, patch: any) => Object.assign(incident, patch) };
-  const projectRepo: any = { findOne: async () => project };
+  const incidentRepo: any = {
+  /** Recherche l’élément correspondant à l’identifiant. */
+  findOne: async () => incident,
+  /** Applique les modifications autorisées à l’élément. */
+  update: async (_id: string, patch: any) => Object.assign(incident, patch) };
+  const projectRepo: any = {
+  /** Recherche l’élément correspondant à l’identifiant. */
+  findOne: async () => project };
   let tail = Promise.resolve();
   const repository: any = {
-    manager: { transaction: async (fn: any) => {
+    manager: {
+    /** Exécute les opérations dans le cadre transactionnel prévu. */
+    transaction: async (fn: any) => {
       const previous = tail; let release!: () => void;
       tail = new Promise<void>(resolve => { release = resolve; });
       await previous;
-      try { return await fn({ getRepository: (entity: any) => entity?.name === 'Project' ? projectRepo : incidentRepo }); }
+      try { return await fn({
+      /** Simule la lecture des données demandées par le composant. */
+      getRepository: (entity: any) => entity?.name === 'Project' ? projectRepo : incidentRepo }); }
       finally { release(); }
     } },
     findOne: incidentRepo.findOne, update: incidentRepo.update,
   };
-  const service = new IncidentsService(repository, projectRepo, { emit: () => undefined } as any, { syncIncident: async () => undefined } as any, candidateVerification);
+  const service = new IncidentsService(repository, projectRepo, {
+  /** Diffuse ou construit le résultat prévu. */
+  emit: () => undefined } as any, {
+  /** Prépare les données nécessaires à ce scénario. */
+  syncIncident: async () => undefined } as any, candidateVerification);
   return { incident, project, service, repository };
 }
 
+/** Construit la réponse HTTP prévue par le scénario. */
 function githubOpenPr(sha: string, incident: any) {
   return new Response(JSON.stringify({ state: 'open', head: { sha, ref: `fix/pfe-${incident.id}-${incident.metadata.fixRequest.requestId}` } }), { status: 200 });
 }
+/** Construit la réponse HTTP prévue par le scénario. */
 const validMetadata = () => new Response(JSON.stringify({ buildable: true, _class: 'org.jenkinsci.plugins.workflow.job.WorkflowJob', property: [{ _class: 'hudson.model.ParametersDefinitionProperty', parameterDefinitions: [{ name: 'PFE_VALIDATION_CONTEXT', type: 'StringParameterDefinition', defaultParameterValue: { value: '' } }] }] }), { status: 200 });
+/** Construit la réponse HTTP prévue par le scénario. */
 const validCrumb = () => new Response(JSON.stringify({ crumbRequestField: 'Jenkins-Crumb', crumb: 'opaque' }), { status: 200 });
 
+/** Vérifie les résultats attendus dans ce scénario. */
 function decodePrValidationContext(body: unknown): any {
   const form = new URLSearchParams(String(body));
   const encoded = form.get('PFE_VALIDATION_CONTEXT');
@@ -103,6 +112,7 @@ function decodePrValidationContext(body: unknown): any {
   return JSON.parse(Buffer.from(String(encoded), 'base64url').toString('utf8'));
 }
 
+/** Exécute les étapes principales de ce programme. */
 async function main() {
   const originalFetch = globalThis.fetch;
   const user = { id: 'admin-1', role: 'admin' };
@@ -114,7 +124,9 @@ async function main() {
   // ------------------------------------------------------------------
   {
     let headOnlyCalls = 0;
-    const candidateVerification = { verifyHead: async (req: any) => { headOnlyCalls++; return passingHeadVerification(req); } };
+    const candidateVerification = {
+    /** Vérifie le code exact du HEAD de la PR. */
+    verifyHead: async (req: any) => { headOnlyCalls++; return passingHeadVerification(req); } };
     const { incident, service } = makeFixture(candidateVerification);
     let triggers = 0;
     let lastContext: any = null;
@@ -159,7 +171,9 @@ async function main() {
   // CASE B — HEAD_ONLY SHA_UNAVAILABLE
   // ------------------------------------------------------------------
   {
-    const candidateVerification = { verifyHead: async (req: any) => shaUnavailableHeadVerification(req) };
+    const candidateVerification = {
+    /** Vérifie le code exact du HEAD de la PR. */
+    verifyHead: async (req: any) => shaUnavailableHeadVerification(req) };
     const { incident, service } = makeFixture(candidateVerification);
     let triggers = 0;
     globalThis.fetch = (async (url: any) => {
@@ -186,7 +200,9 @@ async function main() {
   // ------------------------------------------------------------------
   {
     const wrongSha = 'f'.repeat(40);
-    const candidateVerification = { verifyHead: async (req: any) => mismatchHeadVerification(req, wrongSha) };
+    const candidateVerification = {
+    /** Vérifie le code exact du HEAD de la PR. */
+    verifyHead: async (req: any) => mismatchHeadVerification(req, wrongSha) };
     const { incident, service } = makeFixture(candidateVerification);
     let triggers = 0;
     globalThis.fetch = (async (url: any) => {
@@ -203,7 +219,9 @@ async function main() {
 
     // Defense in depth: a dishonest sub-service claiming PASS with a
     // mismatched checkoutSha must still be rejected, never trusted blindly.
-    const dishonest = { verifyHead: async (req: any) => ({ ...passingHeadVerification(req), workspace: { ...passingHeadVerification(req).workspace, checkoutSha: wrongSha } }) };
+    const dishonest = {
+    /** Vérifie le code exact du HEAD de la PR. */
+    verifyHead: async (req: any) => ({ ...passingHeadVerification(req), workspace: { ...passingHeadVerification(req).workspace, checkoutSha: wrongSha } }) };
     const { incident: incident2, service: service2 } = makeFixture(dishonest);
     globalThis.fetch = (async (url: any) => {
       const value = String(url);
@@ -221,7 +239,9 @@ async function main() {
   // is fail-safe INCONCLUSIVE.
   // ------------------------------------------------------------------
   {
-    const candidateVerification = { verifyHead: async (req: any) => ({
+    const candidateVerification = {
+    /** Vérifie le code exact du HEAD de la PR. */
+    verifyHead: async (req: any) => ({
       ...passingHeadVerification(req), overall: 'FAIL', compile: { status: 'SUCCESS', exitCode: 0, durationMs: 1, evidenceRef: null },
       tests: { targeted: { status: 'NOT_RUN', reason: 'NO_HIGH_CONFIDENCE_TARGET_SELECTION' },
         regression: { status: 'FAILED', total: 5, failures: 2, errors: 0, skipped: 0, durationMs: 1, evidenceRef: null } },
@@ -254,7 +274,9 @@ async function main() {
     { failureClass: 'UNKNOWN', expected: 'INCONCLUSIVE' },
     { failureClass: 'UNRECOGNIZED_FAILURE', expected: 'INCONCLUSIVE' },
   ]) {
-    const candidateVerification = { verifyHead: async (req: any) => ({
+    const candidateVerification = {
+    /** Vérifie le code exact du HEAD de la PR. */
+    verifyHead: async (req: any) => ({
       ...passingHeadVerification(req), overall: 'FAIL', failureClass: scenario.failureClass,
     }) };
     const { incident, service } = makeFixture(candidateVerification);
@@ -277,7 +299,9 @@ async function main() {
   // CASE D — worker unavailable (transport failure / thrown error)
   // ------------------------------------------------------------------
   {
-    const candidateVerification = { verifyHead: async () => { throw new Error('ECONNREFUSED candidate-verifier:4100'); } };
+    const candidateVerification = {
+    /** Vérifie le code exact du HEAD de la PR. */
+    verifyHead: async () => { throw new Error('ECONNREFUSED candidate-verifier:4100'); } };
     const { incident, service } = makeFixture(candidateVerification);
     let triggers = 0;
     let remediationDispatches = 0;
@@ -311,7 +335,9 @@ async function main() {
   // disagrees on the checked-out commit).
   // ------------------------------------------------------------------
   {
-    const candidateVerification = { verifyHead: async (req: any) => passingHeadVerification(req) };
+    const candidateVerification = {
+    /** Vérifie le code exact du HEAD de la PR. */
+    verifyHead: async (req: any) => passingHeadVerification(req) };
     const { incident, service } = makeFixture(candidateVerification);
     globalThis.fetch = (async (url: any, init?: RequestInit) => {
       const value = String(url);
@@ -344,7 +370,9 @@ async function main() {
   // reused/misattributed evidence record; must never satisfy this validation.
   // ------------------------------------------------------------------
   {
-    const candidateVerification = { verifyHead: async (req: any) => passingHeadVerification(req) };
+    const candidateVerification = {
+    /** Vérifie le code exact du HEAD de la PR. */
+    verifyHead: async (req: any) => passingHeadVerification(req) };
     const { incident, service } = makeFixture(candidateVerification);
     globalThis.fetch = (async (url: any) => {
       const value = String(url);
@@ -378,7 +406,9 @@ async function main() {
   // ------------------------------------------------------------------
   {
     let headOnlyCalls = 0;
-    const candidateVerification = { verifyHead: async (req: any) => { headOnlyCalls++; return passingHeadVerification(req); } };
+    const candidateVerification = {
+    /** Vérifie le code exact du HEAD de la PR. */
+    verifyHead: async (req: any) => { headOnlyCalls++; return passingHeadVerification(req); } };
     const { incident, service } = makeFixture(candidateVerification);
     let triggers = 0;
     globalThis.fetch = (async (url: any) => {
@@ -400,7 +430,9 @@ async function main() {
   // evidence tied to PR25_SHA must never silently validate a later commit.
   // ------------------------------------------------------------------
   {
-    const candidateVerification = { verifyHead: async (req: any) => passingHeadVerification(req) };
+    const candidateVerification = {
+    /** Vérifie le code exact du HEAD de la PR. */
+    verifyHead: async (req: any) => passingHeadVerification(req) };
     const { incident, service } = makeFixture(candidateVerification);
     globalThis.fetch = (async (url: any) => {
       const value = String(url);

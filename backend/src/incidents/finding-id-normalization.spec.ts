@@ -1,19 +1,8 @@
+// Teste le composant « finding-id-normalization » et ses cas d’erreur.
 import * as assert from 'node:assert/strict';
 import { IncidentsService, workflowFinding, buildPrValidationJobName } from './incidents.service';
 
-// R69 — canonical finding ID normalization. Proven root cause: workflowFinding()
-// is called on two genuinely different shapes (raw scanner findings, always
-// carrying .id/.key; and its OWN already-canonicalized persisted output,
-// which only carries .findingId) and its old id-resolution only understood
-// the first, silently producing the literal string "undefined" for the
-// second — exactly what broke WF2 execution 2023027's real corrective
-// dispatch (FINDING_CORRELATION_MISMATCH at "Adapt Webhook Payload").
-//
-// Part 1 (cases A-F): workflowFinding() unit tests, synthetic shapes only.
-// Part 2 (cases G-J + §6/§7): full correctAndRevalidate() offline
-// simulation reusing the exact real PR #34 finding shape that produced the
-// real failure, proving the dispatched payload is now correct end-to-end —
-// still never touching PR #34, never calling WF2 for real (mocked fetch).
+/** Exécute les étapes principales de ce programme. */
 
 function main() {
   // ── CASE A — finding.findingId populated => use findingId ──────────────
@@ -97,6 +86,7 @@ const REAL_FINDINGS = [
   { file: 'src/main/java/com/pfe/devsecops/controller/TaskController.java', line: 39, rule: 'java:S4684', type: 'VULNERABILITY', stage: 'sonar', source: 'SONARQUBE', message: 'Replace this persistent entity with a simple POJO or DTO object.', evidence: 'f11d4686-a7ba-4c0c-abbb-a12998c57220', findingId: 'f11d4686-a7ba-4c0c-abbb-a12998c57220', recommendation: null, remediationType: 'AUTO_FIX_ELIGIBLE' },
 ];
 
+/** Prépare les données nécessaires à ce scénario. */
 function makeFixture(overrides: { findings?: any[]; findingIds?: string[] } = {}) {
   const incidentId = 'incident-pr34';
   const requestId = 'req-r67';
@@ -135,24 +125,39 @@ function makeFixture(overrides: { findings?: any[]; findingIds?: string[] } = {}
   };
   const project: any = { id: 'project-1', githubRepo: REPO, githubToken: null, jenkinsUrl: 'http://jenkins', jenkinsToken: 'user:x', jenkinsJobName: JOB, sonarqubeKey: 'key' };
   incident.project = project;
-  const incidentRepo: any = { findOne: async () => incident, update: async (_id: string, patch: any) => Object.assign(incident, patch) };
-  const projectRepo: any = { findOne: async () => project };
+  const incidentRepo: any = {
+  /** Recherche l’élément correspondant à l’identifiant. */
+  findOne: async () => incident,
+  /** Applique les modifications autorisées à l’élément. */
+  update: async (_id: string, patch: any) => Object.assign(incident, patch) };
+  const projectRepo: any = {
+  /** Recherche l’élément correspondant à l’identifiant. */
+  findOne: async () => project };
   let tail = Promise.resolve();
   const repository: any = {
-    manager: { transaction: async (fn: any) => {
+    manager: {
+    /** Exécute les opérations dans le cadre transactionnel prévu. */
+    transaction: async (fn: any) => {
       const previous = tail; let release!: () => void;
       tail = new Promise<void>(resolve => { release = resolve; });
       await previous;
-      try { return await fn({ getRepository: (entity: any) => entity?.name === 'Project' ? projectRepo : incidentRepo }); }
+      try { return await fn({
+      /** Simule la lecture des données demandées par le composant. */
+      getRepository: (entity: any) => entity?.name === 'Project' ? projectRepo : incidentRepo }); }
       finally { release(); }
     } },
     findOne: incidentRepo.findOne, update: incidentRepo.update,
   };
-  const service = new IncidentsService(repository, projectRepo, { emit: () => undefined } as any, { syncIncident: async () => undefined } as any, {} as any);
+  const service = new IncidentsService(repository, projectRepo, {
+  /** Diffuse ou construit le résultat prévu. */
+  emit: () => undefined } as any, {
+  /** Prépare les données nécessaires à ce scénario. */
+  syncIncident: async () => undefined } as any, {} as any);
   return { incident, project, service, incidentId, requestId, batchId, expectedBranch };
 }
 
 let capturedWf2Payload: any = null;
+/** Simule les dépendances nécessaires au scénario. */
 function mockGithubAndWf2(expectedBranch: string) {
   capturedWf2Payload = null;
   return (async (url: any, init?: any) => {
@@ -168,6 +173,7 @@ function mockGithubAndWf2(expectedBranch: string) {
   }) as any;
 }
 
+/** Vérifie les résultats attendus dans ce scénario. */
 async function main2() {
   const originalFetch = globalThis.fetch;
   const originalWorkflowId = process.env.N8N_WF2_ID;

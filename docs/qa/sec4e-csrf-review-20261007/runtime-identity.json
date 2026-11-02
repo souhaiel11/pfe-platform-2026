@@ -1,0 +1,26 @@
+{
+  "commit": "a216ed75f1cfb30a910aad3b9a6360a3cd81ab3d",
+  "tree": "58c443b3e59f9e0f9e8ba431efd6df810c48107f",
+  "instances": [
+    {
+      "container": "sec4e-app",
+      "imageId": "sha256:d063a4c52b8478b42efc09f730d072fb33cb61b5cbb2bc256c21fd05305c0e76",
+      "running": true,
+      "environmentProfile": [],
+      "jarSha256": "8abf6a5dec4359f5523335897844a52facc126605ee7fc62f4aea3625ee0c3ab",
+      "matchesQualifiedJar": true,
+      "h2LocalConsoleAvailable": true
+    },
+    {
+      "container": "sec4e-prod-probe",
+      "imageId": "sha256:d063a4c52b8478b42efc09f730d072fb33cb61b5cbb2bc256c21fd05305c0e76",
+      "running": true,
+      "environmentProfile": [
+        "SPRING_PROFILES_ACTIVE=prod"
+      ],
+      "jarSha256": "8abf6a5dec4359f5523335897844a52facc126605ee7fc62f4aea3625ee0c3ab",
+      "matchesQualifiedJar": true,
+      "h2LocalConsoleAvailable": true
+    }
+  ]
+}

@@ -1,13 +1,4 @@
-// R-SEC-V1.4 §4/§12 — real HTTP proof for the worker's new
-// /security-remediation/evaluate route, spawned exactly like head-http.
-// spec.ts spawns /verify (same real worker process, same real HTTP
-// parsing/dispatch). The /verify leg here reuses that file's own
-// monkeypatch technique (stub-only, structural) purely to prove the
-// ROUTING refactor in server.ts did not break the existing route (§12 P)
-// -- head-http.spec.ts itself remains the authoritative /verify proof.
-// The /security-remediation/evaluate leg is REAL and unmocked: real git
-// worktree, real `mvn dependency:tree`, against the real local
-// souhaiel11/pfe-app-test clone (same fixture SHA used throughout V1-V1.3).
+// Teste le composant « security-remediation-http » et ses cas d’erreur.
 import * as assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import * as path from 'node:path';
@@ -18,6 +9,7 @@ import * as os from 'node:os';
 const REPO_PATH = '/home/souhaiel/pfe-2026/pfe-app-test';
 const EXACT_SHA = 'a81be45709aba07da50d44206d073c2eb55892b5';
 
+/** Prépare les données nécessaires à ce scénario. */
 async function reservePort(): Promise<number> {
   const reservation = net.createServer();
   await new Promise<void>(resolve => reservation.listen(0, '127.0.0.1', resolve));
@@ -26,6 +18,7 @@ async function reservePort(): Promise<number> {
   return port;
 }
 
+/** Exécute les étapes principales de ce programme. */
 async function main() {
   const port = await reservePort();
   const scratchRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'pfe-sec-http-spec-'));
@@ -54,7 +47,9 @@ async function main() {
       child.on('exit', () => { clearTimeout(timer); reject(Error('worker exited before startup')); });
     });
 
+    /** Prépare les données nécessaires à ce scénario. */
     const postVerify = (body: any) => fetch(`http://127.0.0.1:${port}/verify`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    /** Prépare les données nécessaires à ce scénario. */
     const postSecEval = (body: any) => fetch(`http://127.0.0.1:${port}/security-remediation/evaluate`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
 
     // P. existing /verify route still works after the routing refactor.

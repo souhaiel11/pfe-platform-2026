@@ -1,15 +1,10 @@
-// R76 -- observability-only: extracts a small, bounded, redaction-safe
-// summary from a real CandidateVerification, for the exact non-PASS case
-// (see write-guard.ts). Never influences PASS/FAIL/INCONCLUSIVE semantics
-// and never returns the full compiler/test log or workspace content --
-// only what's needed to later tell FAIL apart from INCONCLUSIVE and which
-// stage rejected the candidate.
+// Construit les preuves de vérification persistables en limitant leur taille et en masquant les informations sensibles.
 import { CandidateVerification, VerificationEvidence } from './candidate-verification.types';
 
 const MAX_EVIDENCE_LENGTH = 500;
 const SECRET_PATTERN = /(token|password|secret|authorization|api[_-]?key)\s*[=:]\s*[^ ,;]+/ig;
 
-/** Same redaction/truncation convention already used by WF2's failure-envelope nodes. */
+/** Nettoie une valeur de preuve avant exposition : masque les motifs qui ressemblent à un secret (token/mot de passe/clé API), aplatit les retours à la ligne et tronque à maxLength. */
 export function redactAndCapEvidence(value: unknown, maxLength: number = MAX_EVIDENCE_LENGTH): string | null {
   if (value === null || value === undefined) return null;
   const text = String(value).replace(/[\r\n]+/g, ' ').replace(SECRET_PATTERN, '$1=[REDACTED]');
@@ -17,6 +12,8 @@ export function redactAndCapEvidence(value: unknown, maxLength: number = MAX_EVI
   return text.slice(0, maxLength);
 }
 
+// Construit un résumé borné et nettoyé d'une vérification candidate (statut global,
+// classe d'échec, et pour chaque étape : statut + extrait de preuve rédigé).
 export function buildVerificationEvidence(verification: CandidateVerification): VerificationEvidence {
   return {
     overall: verification?.overall ?? null,

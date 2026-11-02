@@ -1,3 +1,4 @@
+// Teste le composant « reconcile-sha-fallback » et ses cas d’erreur.
 import * as assert from 'node:assert/strict';
 import {
   IncidentsService,
@@ -19,6 +20,7 @@ const REQUEST_TS = Date.parse(REQUEST_CREATED_AT);
 const APP_REMOTE = 'https://github.com/souhaiel11/pfe-app-test.git';
 const LIB_REMOTE = 'https://github.com/souhaiel11/pfe-devsecops-shared-library.git';
 
+/** Prépare les données nécessaires à ce scénario. */
 function contextParam(overrides: Record<string, unknown> = {}) {
   const context = { validationRequestId: VRID, expectedPrHeadSha: SHA, prNumber: 24, ...overrides };
   return {
@@ -33,11 +35,11 @@ function contextParam(overrides: Record<string, unknown> = {}) {
     ],
   };
 }
+/** Prépare les données nécessaires à ce scénario. */
 function gitBuildData(sha: string, remote: string) {
   return { _class: 'hudson.plugins.git.util.BuildData', lastBuiltRevision: { SHA1: sha }, remoteUrls: [remote] };
 }
-// A realistic PR-24 build #7: two BuildData actions (shared lib + app repo),
-// the PFE_VALIDATION_CONTEXT parameter, UNSTABLE, started after the request.
+/** Prépare les données nécessaires à ce scénario. */
 function build(over: Record<string, unknown> = {}, contextOverrides: Record<string, unknown> = {}) {
   return {
     number: 7,
@@ -62,6 +64,7 @@ const CRITERIA = {
   notBefore: REQUEST_TS,
 };
 
+/** Prépare les données nécessaires à ce scénario. */
 function makeService() {
   const incident: any = {
     id: 'd1f5e9ce-f039-475d-9a50-41f217e6444b',
@@ -91,20 +94,35 @@ function makeService() {
   };
   incident.project = project;
   const incidentRepo: any = {
+    /** Recherche l’élément correspondant à l’identifiant. */
     findOne: async () => incident,
+    /** Applique les modifications autorisées à l’élément. */
     update: async (_id: string, patch: any) => Object.assign(incident, patch),
   };
   const repository: any = {
-    manager: { transaction: async (fn: any) => fn({ getRepository: (e: any) => e?.name === 'Project' ? { findOne: async () => project } : incidentRepo }) },
+    manager: {
+    /** Exécute les opérations dans le cadre transactionnel prévu. */
+    transaction: async (fn: any) => fn({
+    /** Simule la lecture des données demandées par le composant. */
+    getRepository: (e: any) => e?.name === 'Project' ? {
+    /** Recherche l’élément correspondant à l’identifiant. */
+    findOne: async () => project } : incidentRepo }) },
     findOne: incidentRepo.findOne,
     update: incidentRepo.update,
   };
-  const service = new IncidentsService(repository, { findOne: async () => project } as any, { emit: () => undefined } as any, { syncIncident: async () => undefined } as any, {} as any);
+  const service = new IncidentsService(repository, {
+  /** Recherche l’élément correspondant à l’identifiant. */
+  findOne: async () => project } as any, {
+  /** Diffuse ou construit le résultat prévu. */
+  emit: () => undefined } as any, {
+  /** Prépare les données nécessaires à ce scénario. */
+  syncIncident: async () => undefined } as any, {} as any);
   return { service, incident, project };
 }
 
 const user = { id: 'admin-1', role: 'admin' };
 
+/** Exécute les étapes principales de ce programme. */
 async function main() {
   const originalFetch = globalThis.fetch;
 
@@ -165,6 +183,7 @@ async function main() {
     {
       const { service, incident } = makeService();
       let calls = 0;
+      /** Envoie la requête et lit la réponse distante. */
       globalThis.fetch = async (url: any) => {
         const value = String(url);
         calls++;
@@ -188,6 +207,7 @@ async function main() {
     // G — queueId absent AND no fallback candidate → STILL_QUEUED, no write.
     {
       const { service, incident } = makeService();
+      /** Envoie la requête et lit la réponse distante. */
       globalThis.fetch = async (url: any) => {
         const value = String(url);
         if (value.includes('/job/PR-24/api/json')) return new Response(JSON.stringify({ builds: [] }), { status: 200 });
@@ -202,6 +222,7 @@ async function main() {
     // C (service) — queueId mismatch + a terminal build for the WRONG SHA → no reconciliation.
     {
       const { service, incident } = makeService();
+      /** Envoie la requête et lit la réponse distante. */
       globalThis.fetch = async (url: any) => {
         const value = String(url);
         if (value.includes('/job/PR-24/api/json')) {
@@ -218,6 +239,7 @@ async function main() {
     // E (service) — queueId mismatch + the only SHA/context match is still building → no write.
     {
       const { service, incident } = makeService();
+      /** Envoie la requête et lit la réponse distante. */
       globalThis.fetch = async (url: any) => {
         const value = String(url);
         if (value.includes('/job/PR-24/api/json')) return new Response(JSON.stringify({ builds: [build({ queueId: 1505, building: true, result: null })] }), { status: 200 });
@@ -232,6 +254,7 @@ async function main() {
     // F (service) — two builds each satisfy every correlation fact → CORRELATION_AMBIGUOUS, no write.
     {
       const { service, incident } = makeService();
+      /** Envoie la requête et lit la réponse distante. */
       globalThis.fetch = async (url: any) => {
         const value = String(url);
         if (value.includes('/job/PR-24/api/json')) {
@@ -256,6 +279,7 @@ async function main() {
       const { service, incident } = makeService();
       let triggers = 0;
       let consoleFetched = false;
+      /** Envoie la requête et lit la réponse distante. */
       globalThis.fetch = async (url: any, init?: RequestInit) => {
         const value = String(url);
         if (value.includes('/buildWithParameters') || value.includes('/build?')) { triggers++; throw new Error('reconciliation must never trigger a Jenkins build'); }
@@ -304,6 +328,7 @@ async function main() {
     // job's validation identity (different validationRequestId in context) → no reconcile.
     {
       const { service, incident } = makeService();
+      /** Envoie la requête et lit la réponse distante. */
       globalThis.fetch = async (url: any) => {
         const value = String(url);
         if (value.includes('/job/PR-24/api/json')) {
@@ -320,6 +345,7 @@ async function main() {
     // SUCCESS via fallback — still fails closed exactly like the primary path.
     {
       const { service, incident } = makeService();
+      /** Envoie la requête et lit la réponse distante. */
       globalThis.fetch = async (url: any) => {
         const value = String(url);
         if (value.includes('/job/PR-24/api/json')) return new Response(JSON.stringify({ builds: [build({ queueId: 1505, result: 'SUCCESS' })] }), { status: 200 });

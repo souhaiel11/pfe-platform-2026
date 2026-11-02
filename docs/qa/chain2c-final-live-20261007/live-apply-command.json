@@ -1,0 +1,9 @@
+{
+  "START_TIME": "2026-10-07T11:22:14.603140+00:00",
+  "END_TIME": "2026-10-07T11:22:33.177451+00:00",
+  "exitCode": 0,
+  "stdout": "{\"runId\":\"1ec2aff0-1235-427d-be0c-2331e3c31384\",\"status\":\"PASS\",\"mode\":\"APPLY\",\"committedRows\":14,\"audit\":\"/tmp/chain2c-final-private/runner-live-apply.json\"}\n",
+  "stderr": "",
+  "applyInvocationCount": 1,
+  "manifestHash": "5cbc586edf9779136f3d2f2e6d5665cd22d29ed6f2fbd89335ec6a34698e00f6"
+}

@@ -1,3 +1,4 @@
+// Teste le composant « wf2-state-model » et ses cas d’erreur.
 import * as assert from 'node:assert/strict';
 import { translateCurrentFixRequestStatus, CURRENT_FIX_REQUEST_STATUSES } from './wf2-state-model';
 

@@ -1,3 +1,4 @@
+// Teste le composant « maven-provenance-resolver » et ses cas d’erreur.
 import * as assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -39,17 +40,6 @@ console.log('maven-provenance-resolver A) REAL DIRECT_EXPLICIT (logback-classic,
 }
 console.log('maven-provenance-resolver A) second REAL DIRECT_EXPLICIT (snakeyaml): PASS');
 
-// ============================================================================
-// B/PROPERTY_MANAGED — HONEST NOTE: pfe-app-test's real pom.xml declares
-// <properties><logback.version>/<snakeyaml.version></properties> but its
-// actual <dependency> entries use LITERAL versions, not ${...} references
-// (the properties are effectively vestigial in this specific repo) -- so
-// there is NO real property-managed dependency to fixture in this target
-// repository today. This case is therefore tested against a minimal,
-// clearly-labeled SYNTHETIC pom fragment using ordinary, standard Maven
-// ${property} syntax (not an invented/non-standard format) rather than a
-// real captured example.
-// ============================================================================
 {
   const syntheticPomXmlText = `<project>
   <properties>

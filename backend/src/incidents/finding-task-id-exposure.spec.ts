@@ -1,34 +1,26 @@
-// Increment 1 (sélection multiple CVE, cadrage OPTION A) -- proves that
-// IncidentsService.findAll()/findOneForClient() actually route their result
-// through ManualRemediationService.attachFindingTaskIds() before responding
-// (GET /incidents and GET /incidents/:id, the two endpoints that actually
-// reach the frontend -- api.getDecisions() in
-// project-detail.component.ts::loadReports(), whose metadata.enrichedData
-// is what cve-table renders), while the shared internal findOne() helper
-// (reused by ~12 other service methods) stays untouched. The enrichment
-// logic itself (fingerprint matching, additive-only merge) is proven
-// independently in finding-task-id-enrichment.spec.ts and
-// manual-remediation.service.finding-task-ids.spec.ts -- this file only
-// proves the WIRING, with a spy fake standing in for ManualRemediationService.
-//
-// Same fake-repo/no-network convention as modify-failed-selection.spec.ts.
-//
-// Run: npx ts-node backend/src/incidents/finding-task-id-exposure.spec.ts
+// Teste le composant « finding-task-id-exposure » et ses cas d’erreur.
 import * as assert from 'node:assert/strict';
 import { IncidentsService } from './incidents.service';
 
+/** Prépare les données nécessaires à ce scénario. */
 function makeIncident(overrides: any = {}) {
   return { id: 'incident-1', projectId: 'project-1', status: 'pending', metadata: { enrichedData: { trivy: { cves: [{ id: 'CVE-1' }] } } }, ...overrides };
 }
+/** Prépare les données nécessaires à ce scénario. */
 function makeService(incidents: any[]) {
   const project = { id: 'project-1', githubRepo: 'owner/repo' };
-  const projectRepo = { findOne: async () => project };
+  const projectRepo = {
+  /** Recherche l’élément correspondant à l’identifiant. */
+  findOne: async () => project };
   const repository: any = {
+    /** Recherche les éléments correspondants. */
     find: async () => incidents,
+    /** Recherche l’élément correspondant à l’identifiant. */
     findOne: async ({ where }: any) => incidents.find(i => i.id === where.id) || null,
   };
   let attachCalls: any[][] = [];
   const manualRemediation: any = {
+    /** Prépare les données nécessaires à ce scénario. */
     attachFindingTaskIds: async (rows: any[]) => {
       attachCalls.push(rows);
       // Marqueur observable, distinct d'une forme reconstruite par erreur
@@ -38,10 +30,13 @@ function makeService(incidents: any[]) {
       return rows.map(r => ({ ...r, _wentThroughAttachFindingTaskIds: true }));
     },
   };
-  const service = new IncidentsService(repository, projectRepo as any, { emit: () => undefined } as any, manualRemediation, {} as any);
+  const service = new IncidentsService(repository, projectRepo as any, {
+  /** Diffuse ou construit le résultat prévu. */
+  emit: () => undefined } as any, manualRemediation, {} as any);
   return { service, attachCalls };
 }
 
+/** Exécute les étapes principales de ce programme. */
 async function main() {
   // 1. findAll() passe le résultat par attachFindingTaskIds() et renvoie SON
   // résultat (pas les incidents sanitizés bruts).

@@ -1,0 +1,79 @@
+/* Inter and JetBrains Mono: SIL OFL. License files in this directory. */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url(./inter-latin-ext.woff2) format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url(./inter-latin.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url(./jetbrains-mono-latin-ext.woff2) format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url(./jetbrains-mono-latin.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* Tabler Icons 2.47.0 — MIT. See Tabler-LICENSE.txt. */
+@font-face{font-family:tabler-icons;font-style:normal;font-weight:400;font-display:block;src:url('./tabler-icons.woff2') format('woff2')}
+.ti{font-family:tabler-icons!important;speak:none;font-style:normal;font-weight:normal;font-variant:normal;text-transform:none;line-height:1;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+.ti-activity:before{content:"\ed23"}
+.ti-adjustments:before{content:"\ea03"}
+.ti-alert-octagon:before{content:"\ecc6"}
+.ti-alert-triangle:before{content:"\ea06"}
+.ti-brand-docker:before{content:"\edca"}
+.ti-brand-github:before{content:"\ec1c"}
+.ti-bug:before{content:"\ea48"}
+.ti-chart-bar:before{content:"\ea59"}
+.ti-circle-check:before{content:"\ea67"}
+.ti-clipboard:before{content:"\ea6f"}
+.ti-cloud-upload:before{content:"\ea75"}
+.ti-file-description:before{content:"\f028"}
+.ti-flask:before{content:"\ebd2"}
+.ti-folder:before{content:"\eaad"}
+.ti-gauge:before{content:"\eab1"}
+.ti-gavel:before{content:"\ef90"}
+.ti-git-branch:before{content:"\eab2"}
+.ti-hammer:before{content:"\ef91"}
+.ti-layout-dashboard:before{content:"\f02c"}
+.ti-link:before{content:"\eade"}
+.ti-list-details:before{content:"\ef40"}
+.ti-lock:before{content:"\eae2"}
+.ti-logout:before{content:"\eba8"}
+.ti-menu-2:before{content:"\ec42"}
+.ti-moon:before{content:"\eaf8"}
+.ti-package:before{content:"\eaff"}
+.ti-plug-connected-x:before{content:"\f0a0"}
+.ti-plus:before{content:"\eb0b"}
+.ti-radar:before{content:"\f017"}
+.ti-report-analytics:before{content:"\eecb"}
+.ti-robot:before{content:"\f00b"}
+.ti-search:before{content:"\eb1c"}
+.ti-settings:before{content:"\eb20"}
+.ti-settings-automation:before{content:"\eed6"}
+.ti-shield:before{content:"\eb24"}
+.ti-shield-check:before{content:"\eb22"}
+.ti-shield-lock:before{content:"\ed58"}
+.ti-shield-search:before{content:"\f9cd"}
+.ti-sun:before{content:"\eb30"}
+.ti-target-arrow:before{content:"\f51a"}
+.ti-tool:before{content:"\eb40"}
+.ti-trash:before{content:"\eb41"}
+.ti-world:before{content:"\eb54"}

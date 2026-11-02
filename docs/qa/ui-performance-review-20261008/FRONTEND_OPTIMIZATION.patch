@@ -1,0 +1,250 @@
+--- a/frontend/src/app/features/projects/project-detail.component.html
++++ b/frontend/src/app/features/projects/project-detail.component.html
+@@ -246,6 +246,7 @@
+         </div>
+ 
+         <!-- Historique builds depuis Jenkins API -->
++        <p *ngIf="jenkinsLoading" role="status">Chargement de l’historique Jenkins…</p>
+         <div class="card mt-10" *ngIf="jenkinsBuilds.length">
+           <div class="card-title">📊 Derniers builds</div>
+           <div class="build-list">
+@@ -263,13 +264,13 @@
+         <!-- État dégradé honnête (non configuré / indisponible) — jamais un
+              tableau de builds fabriqués (getMockJenkinsStatus supprimé).
+              Neutre gris, jamais rouge : absence d'info ≠ échec. -->
+-        <div class="empty-state" *ngIf="!jenkinsBuilds.length && jenkinsMessage" style="color:var(--text-secondary)">
++        <div class="empty-state" *ngIf="!jenkinsLoading && !jenkinsBuilds.length && jenkinsMessage" style="color:var(--text-secondary)">
+           <div class="empty-icon" style="color:var(--text-secondary)">⚙️</div>
+           <div class="empty-title" style="color:var(--text-secondary)">{{jenkinsMessage | presentationText}}</div>
+           <div class="empty-sub">Aucun historique de build à afficher.</div>
+         </div>
+ 
+-        <div class="empty-state" *ngIf="!ed.build && !jenkinsBuilds.length && !jenkinsMessage">
++        <div class="empty-state" *ngIf="!jenkinsLoading && !ed.build && !jenkinsBuilds.length && !jenkinsMessage">
+           <div class="empty-icon">⚙️</div>
+           <div class="empty-title">Aucune donnée Jenkins</div>
+           <div class="empty-sub">Lancez un build pour voir les données</div>
+@@ -575,6 +576,7 @@
+       <!-- ONGLET SÉCURITÉ                             -->
+       <!-- ═══════════════════════════════════════════ -->
+       <div *ngIf="activeTab === 'securite'">
++        <p *ngIf="manualTasksLoading" role="status">Chargement du suivi des remédiations…</p>
+ 
+         <!-- ── KPIs vue d'ensemble ── -->
+         <div class="kpi-grid">
+@@ -697,7 +699,7 @@
+               <span class="sec-badge orange" *ngIf="ed.trivy?.high">{{ed.trivy.high}} ÉLEVÉ</span>
+             </div>
+           </div>
+-          <app-cve-table [cves]="ed.trivy?.cves || []" source="TRIVY" [guide]="devGuide(ed)" [tasks]="manualTasks" [statusFilter]="manualStatusFilter" [severityFilter]="manualSeverityFilter" [userRole]="manualUserRole" [selectedTaskIds]="selectedCveTaskIds" [selectionRule]="canSelectCveTask" [selectionBusy]="launchingCveBatch" [retryPendingIds]="retryPendingIds" (retryTask)="retrySecurityFinding($event)" (correctTask)="correctSecurityFinding($event)" (toggleSelection)="toggleCveTaskSelection($event)" (completeTask)="completeManualTask($event)" (reopenTask)="reopenManualTask($event)"></app-cve-table>
++          <app-cve-table *ngIf="!manualTasksLoading || manualTasks.length" [cves]="ed.trivy?.cves || []" source="TRIVY" [guide]="devGuide(ed)" [tasks]="manualTasks" [statusFilter]="manualStatusFilter" [severityFilter]="manualSeverityFilter" [userRole]="manualUserRole" [selectedTaskIds]="selectedCveTaskIds" [selectionRule]="canSelectCveTask" [selectionBusy]="launchingCveBatch" [retryPendingIds]="retryPendingIds" (retryTask)="retrySecurityFinding($event)" (correctTask)="correctSecurityFinding($event)" (toggleSelection)="toggleCveTaskSelection($event)" (completeTask)="completeManualTask($event)" (reopenTask)="reopenManualTask($event)"></app-cve-table>
+         </div>
+         <div class="sec-section scanner-not-run" *ngIf="(securityFilter === 'all' || securityFilter === 'trivy') && isScannerMissing(ed.trivy)">
+           <div class="sec-section-title">🐳 Vulnérabilités conteneur</div>
+@@ -720,7 +722,7 @@
+               <span class="sec-badge orange" *ngIf="ed.owasp?.high">{{ed.owasp.high}} ÉLEVÉ</span>
+             </div>
+           </div>
+-          <app-cve-table [cves]="ed.owasp?.cves || []" source="OWASP" [guide]="devGuide(ed)" [tasks]="manualTasks" [statusFilter]="manualStatusFilter" [severityFilter]="manualSeverityFilter" [userRole]="manualUserRole" [selectedTaskIds]="selectedCveTaskIds" [selectionRule]="canSelectCveTask" [selectionBusy]="launchingCveBatch" [retryPendingIds]="retryPendingIds" (retryTask)="retrySecurityFinding($event)" (correctTask)="correctSecurityFinding($event)" (toggleSelection)="toggleCveTaskSelection($event)" (completeTask)="completeManualTask($event)" (reopenTask)="reopenManualTask($event)"></app-cve-table>
++          <app-cve-table *ngIf="!manualTasksLoading || manualTasks.length" [cves]="ed.owasp?.cves || []" source="OWASP" [guide]="devGuide(ed)" [tasks]="manualTasks" [statusFilter]="manualStatusFilter" [severityFilter]="manualSeverityFilter" [userRole]="manualUserRole" [selectedTaskIds]="selectedCveTaskIds" [selectionRule]="canSelectCveTask" [selectionBusy]="launchingCveBatch" [retryPendingIds]="retryPendingIds" (retryTask)="retrySecurityFinding($event)" (correctTask)="correctSecurityFinding($event)" (toggleSelection)="toggleCveTaskSelection($event)" (completeTask)="completeManualTask($event)" (reopenTask)="reopenManualTask($event)"></app-cve-table>
+         </div>
+         <div class="sec-section scanner-not-run" *ngIf="(securityFilter === 'all' || securityFilter === 'owasp') && isScannerMissing(ed.owasp)">
+           <div class="sec-section-title">📦 Vulnérabilités de dépendances</div>
+@@ -743,7 +745,7 @@
+               <span class="sec-badge yellow" *ngIf="ed.zap?.alerts_medium">{{ed.zap.alerts_medium}} MOYEN</span>
+             </div>
+           </div>
+-          <app-zap-table [alerts]="ed.zap.alerts" [tasks]="manualTasks" [statusFilter]="manualStatusFilter" [severityFilter]="manualSeverityFilter" [userRole]="manualUserRole" (completeTask)="completeManualTask($event)" (reopenTask)="reopenManualTask($event)"></app-zap-table>
++          <app-zap-table *ngIf="!manualTasksLoading || manualTasks.length" [alerts]="ed.zap.alerts" [tasks]="manualTasks" [statusFilter]="manualStatusFilter" [severityFilter]="manualSeverityFilter" [userRole]="manualUserRole" (completeTask)="completeManualTask($event)" (reopenTask)="reopenManualTask($event)"></app-zap-table>
+         </div>
+         <div class="sec-section scanner-not-run" *ngIf="(securityFilter === 'all' || securityFilter === 'zap') && isScannerMissing(ed.zap)">
+           <div class="sec-section-title">🌐 Alertes DAST</div>
+--- a/frontend/src/app/features/projects/project-detail.component.ts
++++ b/frontend/src/app/features/projects/project-detail.component.ts
+@@ -45,6 +45,7 @@
+   dataErrors: Record<string, string> = {};
+   repositoryUrl = repositoryUrl;
+   jenkinsLive = false;
++  jenkinsLoading = false;
+   jenkinsConnectionState(): string { return this.jenkinsMessage ? 'Indisponible' : this.jenkinsLive ? 'Données reçues' : this.project?.jenkinsJobName ? 'Configuré, connexion non vérifiée' : 'Non configuré'; }
+   reportedBranch(): string { return this.rp?.metadata?.sourceBranch || this.rp?.metadata?.branch || this.ed?.build?.branch || ''; }
+   orderedStages(): any[] { return sortPipelineStages(this.deployReadiness?.requiredStages || []); }
+@@ -83,6 +84,7 @@
+   activeTab = 'rapport';
+   securityFilter: 'all' | 'trivy' | 'owasp' | 'zap' = 'all';
+   manualTasks: any[] = [];
++  manualTasksLoading = false;
+   manualSummaryLoaded = false;
+   reportsLoading = true;
+   manualSummary = { todo: 0, doneByUser: 0, stillDetected: 0, verified: 0, total: 0 };
+@@ -773,6 +775,7 @@
+   // l'onglet actif survive à un F5. replaceUrl:true pour ne pas polluer
+   // l'historique/bouton retour à chaque clic d'onglet.
+   setActiveTab(tab: string) {
++    const previousTab = this.activeTab;
+     this.activeTab = this.VALID_TABS.includes(tab) ? tab : 'rapport';
+     this.router.navigate([], {
+       relativeTo: this.route,
+@@ -780,6 +783,7 @@
+       queryParamsHandling: 'merge',
+       replaceUrl: true,
+     });
++    if (this.project && this.activeTab !== previousTab) this.loadActiveTabData();
+   }
+ 
+   onGoToTab(event: string) {
+@@ -893,6 +897,7 @@
+     this.scanIncomplete = false;
+     this.missingScanners = [];
+     this.jenkinsLive = false;
++    this.jenkinsLoading = false;
+     this.jenkinsMessage = null;
+     this.buildReliability = null;
+     this.selectedSonarFinding = null;
+@@ -908,6 +913,7 @@
+     this.allReportsRaw = [];
+     this.jenkinsBuilds = [];
+     this.manualTasks = [];
++    this.manualTasksLoading = false;
+     this.manualSummaryLoaded = false;
+     this.reportsLoading = true;
+     this.manualSummary = { todo: 0, doneByUser: 0, stillDetected: 0, verified: 0, total: 0 };
+@@ -934,13 +940,9 @@
+       next: p => {
+         this.project = p;
+         this.loading = false;
+-        this.loadIncidents();
+         this.loadReports();
+-        this.loadJenkinsBuilds();
+         this.loadJudgeStatus();
+-        this.loadDeployReadiness();
+-        this.loadConvergence();
+-        this.loadManualRemediation();
++        this.loadActiveTabData();
+       },
+       error: () => {
+         this.toast.error('Erreur', 'Projet introuvable');
+@@ -950,14 +952,28 @@
+     });
+   }
+ 
++  // Shared report/header evidence remains project-scoped. Feature reads run
++  // only while their tab is open; re-entry revalidates rather than using a
++  // global cache (especially readiness, current tasks and live Jenkins).
++  private loadActiveTabData() {
++    if (this.activeTab === 'jenkins') this.loadJenkinsBuilds();
++    if (['rapport', 'securite', 'deploiement', 'config'].includes(this.activeTab)) this.loadDeployReadiness();
++    if (this.activeTab === 'securite') {
++      this.loadConvergence();
++      this.loadManualRemediation();
++    }
++  }
++
+   loadManualRemediation(onLoaded?: () => void) {
++    this.manualTasksLoading = true;
+     delete this.dataErrors['tasks'];
+     // includeV18=true: additive `v1_8Decision` field per task, read-only
+     // display (cve-table.component.ts's own v1_8Presentation()) -- see
+     // api.service.ts's own header comment on this parameter.
+     this.api.getManualRemediationTasks(this.id, true).pipe(takeUntil(this.projectScopeReset$)).subscribe({
+-      next: tasks => { this.manualTasks = tasks || []; this.syncBatchPolling(); onLoaded?.(); },
++      next: tasks => { this.manualTasksLoading = false; this.manualTasks = tasks || []; this.syncBatchPolling(); onLoaded?.(); },
+       error: () => {
++        this.manualTasksLoading = false;
+         // Pendant un polling actif, une erreur transitoire ne doit pas
+         // effacer les tâches déjà connues -- sinon les badges "en cours"
+         // disparaîtraient à tort. Seul le tout premier chargement part de [].
+@@ -991,16 +1007,20 @@
+   loadReports() {
+     this.reportsLoading = true;
+     delete this.dataErrors['decisions'];
++    delete this.dataErrors['incidents'];
+     this.api.getDecisions({ projectId: this.id }).pipe(takeUntil(this.projectScopeReset$)).subscribe({
+       next: (r: any) => {
+         const list: any[] = Array.isArray(r) ? r : [];
++        // Same endpoint, project filter and descending date order as the old
++        // separate size=20 read; retain the exact incident table/badge window.
++        this.incidents = list.slice(0, 20);
+         this.reportsLoading = false;
+         this.allReports = list
+           .filter(x => x.aiAnalysis)
+           .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+         if (this.allReports.length > 0) this.selectReport(this.allReports[0]);
+       },
+-      error: () => { this.reportsLoading = false; this.dataErrors['decisions'] = 'Impossible de charger les analyses du projet.'; }
++      error: () => { this.reportsLoading = false; this.dataErrors['decisions'] = 'Impossible de charger les analyses du projet.'; this.dataErrors['incidents'] = 'Impossible de charger les incidents du projet.'; }
+     });
+   }
+ 
+@@ -1044,6 +1064,8 @@
+ 
+   loadDeployReadiness() {
+     this.deployReadyLoading = true;
++    this.deployReadiness = null;
++    this.deployReady = false;
+     this.api.getDeployReadiness(this.id).pipe(takeUntil(this.projectScopeReset$)).subscribe({
+       next: (r: any) => {
+         this.deployReadiness = r;
+@@ -1078,11 +1100,13 @@
+   }
+ 
+   loadJenkinsBuilds() {
++    this.jenkinsLoading = true;
+     // Pas de garde côté front sur jenkinsJobName : le backend est la seule
+     // source de vérité sur "configuré ou pas" (getJenkinsStatus), y compris
+     // pour le message exact à afficher — jamais deviné côté client.
+     this.api.getJenkins(this.id).pipe(takeUntil(this.projectScopeReset$)).subscribe({
+       next: (d: any) => {
++        this.jenkinsLoading = false;
+         this.jenkinsBuilds = d?.builds || [];
+         // Même source que le dashboard (getJenkinsStatus) — null si _liveData
+         // est faux (non configuré/erreur/timeout — plus aucun mock possible),
+@@ -1091,7 +1115,7 @@
+         this.buildReliability = { rate: d?.buildSuccessRate ?? null, sampleSize: d?.sampleSize ?? 0 };
+         this.jenkinsMessage = d?._liveData ? null : (d?.message || 'Données Jenkins indisponibles. Vérifiez sa configuration.');
+       },
+-      error: () => { this.jenkinsLive = false; this.buildReliability = null; this.jenkinsBuilds = []; this.jenkinsMessage = 'Impossible de contacter le backend'; }
++      error: () => { this.jenkinsLoading = false; this.jenkinsLive = false; this.buildReliability = null; this.jenkinsBuilds = []; this.jenkinsMessage = 'Impossible de contacter le backend'; }
+     });
+   }
+ 
+--- a/frontend/src/app/features/projects/cve-table.component.ts
++++ b/frontend/src/app/features/projects/cve-table.component.ts
+@@ -96,7 +96,7 @@
+           </tr>
+         </thead>
+         <tbody>
+-          <ng-container *ngFor="let c of filtered()">
++          <ng-container *ngFor="let c of filtered(); trackBy: trackCve">
+             <tr class="cve-row" [class.open]="isOpen(c.id + c.pkg)" [class.verified-fixed]="owaspPresentation(c)?.state === 'PROJECT_FIX_VERIFIED'" (click)="toggle(c.id + c.pkg)">
+               <td class="cve-select" (click)="$event.stopPropagation()">
+                 <input type="checkbox"
+@@ -330,6 +330,15 @@
+   @Input() set tasks(value: SecurityRemediationTask[]) { this._tasks.set(value ?? []); }
+   get tasks(): SecurityRemediationTask[] { return this._tasks(); }
+   private _tasks = signal<SecurityRemediationTask[]>([]);
++  private readonly tasksByIdentity = computed(() => {
++    const index = new Map<string, SecurityRemediationTask>();
++    for (const task of this._tasks()) {
++      const key = `${task.id}\u0000${task.source}`;
++      // Preserve Array.find's first-match behavior, including duplicate input.
++      if (!index.has(key)) index.set(key, task);
++    }
++    return index;
++  });
+   @Input() retryPendingIds: ReadonlySet<string> = new Set();
+   @Output() retryTask = new EventEmitter<SecurityRemediationTask>();
+   @Output() correctTask = new EventEmitter<string>();
+@@ -462,7 +471,11 @@
+   // match -> "Non suivi"), it is never treated as a wildcard.
+   taskFor(c: NormCve): any {
+     if (!c.findingTaskId) return undefined;
+-    return this.tasks.find(t => t.id === c.findingTaskId && t.source === (this.source || c.source));
++    return this.tasksByIdentity().get(`${c.findingTaskId}\u0000${this.source || c.source}`);
++  }
++
++  trackCve(_index: number, c: NormCve): string {
++    return JSON.stringify([c.source, c.id, c.pkg]);
+   }
+ 
+   componentLabel(c: NormCve): string { const component = this.taskFor(c)?.findingSnapshot?.component; return component ? String(component).split(':').pop() || c.pkg : c.pkg || 'Composant non identifié'; }

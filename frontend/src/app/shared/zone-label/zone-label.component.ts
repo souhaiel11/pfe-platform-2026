@@ -1,32 +1,8 @@
+// Gère l’affichage et les actions de zone libellé.
 import { Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
-// ─────────────────────────────────────────────────────────────────────
-//  <app-zone-label> — déclare la NATURE d'une zone d'écran.
-//
-//  Deux natures, et une seule question à laquelle elles répondent :
-//  « est-ce que j'ai quelque chose à faire ici, ou est-ce que je lis ? »
-//
-//    information — zone de lecture. Constats, mesures, preuves. Rien à
-//                  décider, rien à déclencher. On peut la parcourir puis
-//                  passer à autre chose.
-//    action      — zone d'intervention humaine. Un bouton y engage la
-//                  plateforme : approuver, corriger, relancer, autoriser,
-//                  déployer, modifier une configuration.
-//
-//  Pourquoi le dire explicitement plutôt que de le laisser deviner : sur un
-//  écran dense, un tableau de résultats et un panneau de décision se
-//  ressemblent — même carte, même bordure, même densité. Le développeur doit
-//  alors lire le contenu pour savoir s'il est concerné. L'étiquette répond
-//  avant la lecture, et c'est tout son intérêt : elle réduit le coût
-//  d'orientation, pas le volume d'information.
-//
-//  Discipline : l'étiquette décrit ce qui est VRAIMENT là. Une zone marquée
-//  « action » doit contenir au moins un contrôle réellement actionnable par
-//  l'utilisateur courant ; sinon elle est « information ». Une étiquette qui
-//  mentirait sur ce point serait pire que pas d'étiquette — elle enverrait
-//  chercher un bouton qui n'existe pas.
-// ─────────────────────────────────────────────────────────────────────
+// ───────────────────────────────────────────────────────────────────── <app-zone-label> — déclare la NATURE d'une zone d'écran.
 
 export type ZoneKind = 'information' | 'action';
 

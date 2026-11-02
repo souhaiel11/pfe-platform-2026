@@ -1,3 +1,4 @@
+// Affiche les projets et permet de gérer leur configuration.
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
@@ -11,6 +12,11 @@ import { InfoHintComponent } from '../../shared/info-hint/info-hint.component';
 import { ZoneLabelComponent } from '../../shared/zone-label/zone-label.component';
 import { ProjectListRow, buildProjectListRow, needsAttention } from './project-list-row';
 
+/**
+ * Page de liste des projets : chargement étagé (projets, sécurité, Jenkins,
+ * disponibilité au déploiement), suppression de projet et mise en forme des
+ * colonnes (score, note sécurité, infobulle de déploiement).
+ */
 @Component({
   selector: 'app-projects',
   standalone: true,
@@ -22,21 +28,17 @@ export class ProjectsComponent implements OnInit {
   rows: ProjectListRow[] = [];
   loadError = '';
   loading = false;
-  /** §17 — dégradations PARTIELLES : la liste s'affiche, la colonne le dit. */
   partialErrors: string[] = [];
-  /** §18 — tant que la gouvernance n'a pas répondu, la colonne le dit. */
   deploymentLoading = false;
-  /** §18 — idem pour Jenkins, qui est la lecture la plus lente des trois. */
   buildLoading = false;
   needsAttention = needsAttention;
 
-  // Chaque lecture arrive à son rythme et dépose son résultat ici ; les
-  // lignes sont recomposées à chaque arrivée depuis ce qui est connu.
   private rawProjects: any[] = [];
   private securityByProject = new Map<string, any>();
   private jenkinsByProject = new Map<string, any>();
   private readinessByProject = new Map<string, any>();
 
+  /** Initialise les dépendances et l’état de ce composant. */
   constructor(
     private api: ApiService,
     private toast: ToastService,
@@ -45,36 +47,19 @@ export class ProjectsComponent implements OnInit {
     public auth: AuthService,
   ) {}
 
+  /** Vrai si l'utilisateur connecté peut modifier les projets. */
   get canEdit() { return ['admin', 'developer'].includes(this.auth.currentUser?.role); }
 
   /** Nombre de projets demandant une attention — compté, jamais estimé. */
   get attentionCount() { return this.rows.filter(r => needsAttention(r)).length; }
 
+  /** Charge la liste des projets dès l'affichage de la page. */
   ngOnInit() { this.load(); }
 
+  /** Navigue vers le formulaire de création de projet. */
   goToNewProject() { this.router.navigate(['/projects/new']); }
 
-  /**
-   * Lectures étagées, et l'étagement est le correctif.
-   *
-   * Mesures sur le backend live : /projects répond en 7 ms,
-   * /dashboard/security-global en 20 ms, /azure-deploy/ready/:id en 6 à
-   * 23 ms — et /dashboard/jenkins-global en **5 008 ms**, parce qu'il touche
-   * son propre plafond de 5 000 ms dès qu'un seul projet pointe vers une
-   * adresse Jenkins injoignable.
-   *
-   * Agréger les trois dans un `forkJoin` bloquant alignait donc toute la
-   * page sur la plus lente : 5 s d'écran de chargement pour des données
-   * disponibles en 27 ms. Jenkins part maintenant en parallèle et ne retient
-   * plus rien ; la colonne « Dernier build » dit « Vérification… » le temps
-   * qu'il réponde, ce qui est exact, et ne montre jamais un état de build
-   * provisoire.
-   *
-   * Seul GET /projects reste bloquant : sans lui il n'y a rien à afficher.
-   * Un échec de l'une des lectures secondaires dégrade la colonne concernée
-   * en « non disponible » explicite — jamais en « 0 vulnérabilité » ni en
-   * « build en échec », qui seraient des affirmations non constatées.
-   */
+  /** Charge les projets et le résumé sécurité, puis déclenche les lectures Jenkins et de disponibilité au déploiement (hors chemin critique). */
   load() {
     this.loadError = '';
     this.partialErrors = [];
@@ -85,6 +70,7 @@ export class ProjectsComponent implements OnInit {
       projects: this.api.getProjects(),
       security: this.api.getSecurityGlobal().pipe(catchError(() => of(null))),
     }).subscribe({
+      /** Traite le résultat reçu et actualise les données locales. */
       next: ({ projects, security }) => {
         if (!security) this.partialErrors.push('Les résultats de sécurité n’ont pas pu être chargés.');
         this.securityByProject = new Map<string, any>(
@@ -98,6 +84,7 @@ export class ProjectsComponent implements OnInit {
         this.loadDeploymentState();
         this.loadBuildState();
       },
+      /** Traite l’erreur reçue et termine le suivi de la demande. */
       error: () => {
         this.loadError = 'La requête vers le backend n’a pas abouti. Les projets existants ne sont pas affichés.';
         this.rows = [];
@@ -117,10 +104,7 @@ export class ProjectsComponent implements OnInit {
     ));
   }
 
-  /**
-   * Jenkins, hors du chemin critique. La lecture peut prendre 5 s ; la liste
-   * est déjà à l'écran quand elle arrive.
-   */
+  /** Charge les données Jenkins (colonne "dernier build") indépendamment du reste. */
   private loadBuildState() {
     if (!this.rawProjects.length) { this.buildLoading = false; return; }
     this.api.getJenkinsGlobal().pipe(catchError(() => of(null))).subscribe(jenkins => {
@@ -131,13 +115,7 @@ export class ProjectsComponent implements OnInit {
     });
   }
 
-  /**
-   * L'état de déploiement est gouverné PAR PROJET : il n'existe pas de
-   * lecture globale, donc un appel par projet, chacun tolérant à l'échec.
-   * Chargé après coup pour que la liste s'affiche sans attendre : la colonne
-   * reste « Vérification… » tant que la réponse n'est pas là, jamais
-   * « non configuré » par défaut (§18).
-   */
+  /** Charge l'état de disponibilité au déploiement de chaque projet (un appel par projet, tolérant à l'échec). */
   private loadDeploymentState() {
     if (!this.rawProjects.length) { this.deploymentLoading = false; return; }
     const projects = this.rawProjects;
@@ -149,16 +127,19 @@ export class ProjectsComponent implements OnInit {
       });
   }
 
+  /** Supprime un projet après confirmation explicite, recharge la liste et notifie les autres composants. */
   confirmDelete(row: ProjectListRow, event: Event) {
     event.stopPropagation();
     event.preventDefault();
     if (!confirm(`Supprimer le projet "${row.name}" ?`)) return;
     this.api.deleteProject(row.id).subscribe({
+      /** Traite le résultat reçu et actualise les données locales. */
       next: () => {
         this.toast.success('Projet supprimé');
         this.load();
         this.projectEvents.notifyChanged();
       },
+      /** Traite l’erreur reçue et termine le suivi de la demande. */
       error: () => this.toast.error('Erreur', 'Impossible de supprimer le projet'),
     });
   }
@@ -171,7 +152,7 @@ export class ProjectsComponent implements OnInit {
     return 'var(--accent-red)';
   }
 
-  /** Libellé de la colonne sécurité, hors score. */
+  /** Libellé complémentaire de la colonne sécurité (score absent ou analyse partielle). */
   securityNote(row: ProjectListRow): string | null {
     if (row.security.state === 'UNAVAILABLE') return 'Score non disponible';
     if (row.security.state === 'INCOMPLETE') {
@@ -183,6 +164,7 @@ export class ProjectsComponent implements OnInit {
     return null;
   }
 
+  /** Construit l'infobulle expliquant pourquoi un projet n'est pas prêt à déployer (ou null si rien à préciser). */
   deploymentTooltip(row: ProjectListRow): string | null {
     if (row.deployment.state === 'NOT_READY' && row.deployment.firstReason) {
       const n = row.deployment.blockingCount ?? 0;

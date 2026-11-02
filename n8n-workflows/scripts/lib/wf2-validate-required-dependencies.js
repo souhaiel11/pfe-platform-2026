@@ -1,6 +1,8 @@
+// Prépare WF2 validation required dépendances pour les workflows n8n.
 const requests = $('Expand Required Dependency Sources').all().map(item=>item.json);
 const request = requests[0]?.sourceGroundingRequest;
 const requested = request?.requiredPaths || [];
+/** Signale une erreur pour incomplete. */
 const incomplete = (paths, count=0) => {throw new Error('SOURCE_API_CONTEXT_INCOMPLETE: '+JSON.stringify({
   requestedCount:requested.length,fetchedCount:count,missing:[...new Set(paths)].slice(0,12).map(p=>String(p).slice(0,240))}));};
 if(!request || !requested.length || !/^[a-f0-9]{40}$/.test(request.frozenSourceSha)) incomplete([]);
@@ -12,14 +14,7 @@ for(const item of items) {
   if(fetched.has(source.path)) incomplete([source.path],fetched.size);
   const content=Buffer.from(String(source.content||'').replace(/\n/g,''),'base64').toString('utf8');
   if(!content.trim() || !/^[a-f0-9]{40}$/.test(String(source.sha||''))) continue;
-  // Commit provenance is typed. GitHub Contents `sha` and `git_url` identify the
-  // file BLOB, not the commit/ref used to read it. Likewise, arbitrary SHA-looking
-  // path segments in download_url/html_url are not accepted as provenance.
-  // The Contents ref is read with a literal query match rather than the WHATWG URL
-  // parser: `URL` is not a global in the n8n Code node sandbox, so constructing one
-  // threw there and a swallowing empty catch turned every source into "no
-  // provenance" (execution 2008). Only the `ref` query parameter is read, and only
-  // when it is a full commit SHA -- a branch name or tag never satisfies this.
+  /** Normalise commit Ref. */
   const normalizeCommitRef=value=>{const ref=String(value||'').trim().toLowerCase();return /^[a-f0-9]{40}$/.test(ref)?ref:''};
   const explicitRef=normalizeCommitRef(source.requestedCommitSha||source.sourceCommitSha);
   const contentsUrl=String(source.url||'');

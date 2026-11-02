@@ -1,39 +1,45 @@
-// R-SEC-V1.4 §8/§12 (L/M/N) — proves a caller cannot override trusted
-// values. The DTO (SecurityRemediationEvaluateDto) already makes this
-// structurally impossible at the class-validator layer (targetVersion/
-// package/controllingFile simply do not exist as fields), reinforced by
-// the app's global `whitelist: true` ValidationPipe (main.ts). This spec
-// proves the SECOND, independent layer: even if a raw object with extra
-// fields somehow reached the controller method (e.g. a future refactor
-// that loosens the DTO), the controller itself only ever reads
-// body.projectId/body.findingTaskId -- every other field the orchestrator
-// needs is built EXCLUSIVELY from the resolver's trusted output.
+// Teste le composant « security-remediation.controller » et ses cas d’erreur.
 import * as assert from 'node:assert/strict';
 import { SecurityRemediationController } from './security-remediation.controller';
 import { computeSecurityBranchName } from './security-branch-name';
 
+/** Simule les dépendances nécessaires au scénario. */
 function fakeResolver(resolution: any) {
   let capturedArgs: any[] | null = null;
-  const resolver: any = { resolve: async (...args: any[]) => { capturedArgs = args; return resolution; } };
-  return { resolver, getCapturedArgs: () => capturedArgs };
+  const resolver: any = {
+  /** Retrouve les données fiables correspondant à la demande. */
+  resolve: async (...args: any[]) => { capturedArgs = args; return resolution; } };
+  return { resolver,
+  /** Simule la lecture des données demandées par le composant. */
+  getCapturedArgs: () => capturedArgs };
 }
 
+/** Simule les dépendances nécessaires au scénario. */
 function fakeCandidateVerification() {
   let capturedInput: any = null;
-  const client: any = { evaluateSecurityRemediation: async (input: any) => { capturedInput = input; return { status: 'CANDIDATE_READY', reason: 'x', decision: {}, candidateIdentity: 'id', candidateManifest: null, patchEvidence: null, guardResult: null, dependencyResolutionEvidence: null }; } };
-  return { client, getCapturedInput: () => capturedInput };
+  const client: any = {
+  /** Prépare les données nécessaires à ce scénario. */
+  evaluateSecurityRemediation: async (input: any) => { capturedInput = input; return { status: 'CANDIDATE_READY', reason: 'x', decision: {}, candidateIdentity: 'id', candidateManifest: null, patchEvidence: null, guardResult: null, dependencyResolutionEvidence: null }; } };
+  return { client,
+  /** Simule la lecture des données demandées par le composant. */
+  getCapturedInput: () => capturedInput };
 }
 
 // Unused by any test in this file (none of them exercise POST /result) --
 // exists purely to satisfy the constructor's third parameter now that
 // SecurityRemediationController also depends on ManualRemediationService.
-const fakeManualRemediation: any = { recordWf6Result: async () => { throw new Error('not exercised by this spec'); } };
+const fakeManualRemediation: any = {
+/** Vérifie WF6 cible Ownership dans ce scénario de test. */
+verifyWf6TargetOwnership: async () => {},
+/** Simule l’échec attendu par ce scénario. */
+recordWf6Result: async () => { throw new Error('not exercised by this spec'); } };
 
 const TRUSTED_RESOLUTION = {
   ok: true, repository: 'souhaiel11/pfe-app-test', candidateBaseSha: 'a81be45709aba07da50d44206d073c2eb55892b5',
   finding: { findingIdentity: 'fp-trusted', source: 'TRIVY', package: 'ch.qos.logback:logback-classic', expectedInstalledVersion: '1.2.11', fixedVersion: '1.2.13' },
 };
 
+/** Exécute les étapes principales de ce programme. */
 async function main() {
   // L/M/N: a caller attempts to override targetVersion, package, and
   // controllingFile (plus provenance and installedVersion for good
@@ -104,7 +110,9 @@ async function main() {
   // R-SEC-V1.5 §4 — revalidate(): matching fresh candidateIdentity -> WRITE_AUTHORIZED.
   {
     const { resolver } = fakeResolver(TRUSTED_RESOLUTION);
-    const client: any = { evaluateSecurityRemediation: async () => ({ status: 'CANDIDATE_READY', reason: 'x', decision: { findingIdentity: 'fp-trusted' }, candidateIdentity: 'abc123', candidateManifest: { files: [{ path: 'pom.xml' }] }, patchEvidence: null, guardResult: { ok: true }, dependencyResolutionEvidence: null }) };
+    const client: any = {
+    /** Prépare les données nécessaires à ce scénario. */
+    evaluateSecurityRemediation: async () => ({ status: 'CANDIDATE_READY', reason: 'x', decision: { findingIdentity: 'fp-trusted' }, candidateIdentity: 'abc123', candidateManifest: { files: [{ path: 'pom.xml' }] }, patchEvidence: null, guardResult: { ok: true }, dependencyResolutionEvidence: null }) };
     const controller = new SecurityRemediationController(resolver, client, fakeManualRemediation);
     const result: any = await controller.revalidate({ projectId: 'p', findingTaskId: 't', expectedCandidateIdentity: 'abc123' } as any);
     assert.equal(result.status, 'WRITE_AUTHORIZED');
@@ -116,7 +124,9 @@ async function main() {
   // I: candidate identity drifted between evaluate and write -> CANDIDATE_DRIFTED, never WRITE_AUTHORIZED.
   {
     const { resolver } = fakeResolver(TRUSTED_RESOLUTION);
-    const client: any = { evaluateSecurityRemediation: async () => ({ status: 'CANDIDATE_READY', reason: 'x', decision: {}, candidateIdentity: 'DIFFERENT-FRESH-IDENTITY', candidateManifest: { files: [{ path: 'pom.xml', content: 'tampered' }] }, patchEvidence: null, guardResult: { ok: true }, dependencyResolutionEvidence: null }) };
+    const client: any = {
+    /** Prépare les données nécessaires à ce scénario. */
+    evaluateSecurityRemediation: async () => ({ status: 'CANDIDATE_READY', reason: 'x', decision: {}, candidateIdentity: 'DIFFERENT-FRESH-IDENTITY', candidateManifest: { files: [{ path: 'pom.xml', content: 'tampered' }] }, patchEvidence: null, guardResult: { ok: true }, dependencyResolutionEvidence: null }) };
     const controller = new SecurityRemediationController(resolver, client, fakeManualRemediation);
     const result: any = await controller.revalidate({ projectId: 'p', findingTaskId: 't', expectedCandidateIdentity: 'abc123' } as any);
     assert.equal(result.status, 'CANDIDATE_DRIFTED', 'I: content/identity mutation between evaluation and write must be rejected, never authorized');
@@ -131,7 +141,9 @@ async function main() {
   // unchanged -- revalidate() never overrides or upgrades a real rejection.
   for (const freshStatus of ['NOT_ELIGIBLE', 'TECHNICAL_FAILURE', 'GUARD_REJECTED', 'MAVEN_RESOLUTION_MISMATCH']) {
     const { resolver } = fakeResolver(TRUSTED_RESOLUTION);
-    const client: any = { evaluateSecurityRemediation: async () => ({ status: freshStatus, reason: 'real reason', decision: {} }) };
+    const client: any = {
+    /** Prépare les données nécessaires à ce scénario. */
+    evaluateSecurityRemediation: async () => ({ status: freshStatus, reason: 'real reason', decision: {} }) };
     const controller = new SecurityRemediationController(resolver, client, fakeManualRemediation);
     const result: any = await controller.revalidate({ projectId: 'p', findingTaskId: 't', expectedCandidateIdentity: 'abc123' } as any);
     assert.equal(result.status, freshStatus, `a non-CANDIDATE_READY fresh outcome (${freshStatus}) must pass through unchanged, never become WRITE_AUTHORIZED`);
@@ -147,10 +159,12 @@ async function main() {
   {
     const { resolver } = fakeResolver(TRUSTED_RESOLUTION);
     const decision = { findingIdentity: REAL_FP, evaluatedSha: 'a81be45709aba07da50d44206d073c2eb55892b5', selectedTargetVersion: '1.2.13', provenance: { ecosystem: 'MAVEN', kind: 'DIRECT_EXPLICIT', package: 'ch.qos.logback:logback-classic', installedVersion: '1.2.11', controllingFile: 'pom.xml', controllingElement: null, controllingProperty: null, groundedSha: 'a81be45709aba07da50d44206d073c2eb55892b5', evidence: 'x' } };
-    const client: any = { evaluateSecurityRemediation: async () => ({ status: 'CANDIDATE_READY', reason: 'x', decision, candidateIdentity: REAL_CI, candidateManifest: { files: [] }, patchEvidence: null, guardResult: null, dependencyResolutionEvidence: null }) };
+    const client: any = {
+    /** Prépare les données nécessaires à ce scénario. */
+    evaluateSecurityRemediation: async () => ({ status: 'CANDIDATE_READY', reason: 'x', decision, candidateIdentity: REAL_CI, candidateManifest: { files: [] }, patchEvidence: null, guardResult: null, dependencyResolutionEvidence: null }) };
     const evalResult: any = await new SecurityRemediationController(resolver, client, fakeManualRemediation).evaluate({ projectId: 'p', findingTaskId: 't' } as any);
     const revalResult: any = await new SecurityRemediationController(resolver, client, fakeManualRemediation).revalidate({ projectId: 'p', findingTaskId: 't', expectedCandidateIdentity: REAL_CI } as any);
-    const expected = computeSecurityBranchName(REAL_FP, REAL_CI);
+    const expected = computeSecurityBranchName(REAL_FP, REAL_CI, decision.evaluatedSha);
     assert.equal(evalResult.branchName, expected);
     assert.equal(revalResult.branchName, expected, 'branchName is identical between evaluate (CANDIDATE_READY) and revalidate (WRITE_AUTHORIZED) for the same finding/candidate');
     assert.equal(evalResult.commitMessage, 'fix(security): remediate security-advisory in logback-classic (1.2.11 -> 1.2.13)', 'commitMessage computed server-side too (TRUSTED_RESOLUTION carries no cveId -> safe fallback advisory label)');
@@ -161,7 +175,9 @@ async function main() {
   }
   {
     const { resolver } = fakeResolver({ ok: false, reason: 'UNKNOWN_FINDING', detail: 'x' });
-    const client: any = { evaluateSecurityRemediation: async () => ({}) };
+    const client: any = {
+    /** Prépare les données nécessaires à ce scénario. */
+    evaluateSecurityRemediation: async () => ({}) };
     const result: any = await new SecurityRemediationController(resolver, client, fakeManualRemediation).evaluate({ projectId: 'p', findingTaskId: 't' } as any);
     assert.equal(result.branchName, null, 'a REJECTED outcome never carries a branch name');
   }

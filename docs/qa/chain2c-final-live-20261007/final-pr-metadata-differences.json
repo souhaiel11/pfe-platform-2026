@@ -1,0 +1,1297 @@
+[
+  {
+    "pr": 44,
+    "differences": [
+      {
+        "path": "/base/repo/open_issues",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/base/repo/open_issues_count",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/base/repo/pushed_at",
+        "before": "2026-10-06T19:19:39Z",
+        "after": "2026-10-07T11:19:45Z"
+      },
+      {
+        "path": "/head/repo/open_issues",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/head/repo/open_issues_count",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/head/repo/pushed_at",
+        "before": "2026-10-06T19:19:39Z",
+        "after": "2026-10-07T11:19:45Z"
+      }
+    ]
+  },
+  {
+    "pr": 43,
+    "differences": [
+      {
+        "path": "/base/repo/open_issues",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/base/repo/open_issues_count",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/base/repo/pushed_at",
+        "before": "2026-10-06T19:19:39Z",
+        "after": "2026-10-07T11:19:45Z"
+      },
+      {
+        "path": "/head/repo/open_issues",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/head/repo/open_issues_count",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/head/repo/pushed_at",
+        "before": "2026-10-06T19:19:39Z",
+        "after": "2026-10-07T11:19:45Z"
+      }
+    ]
+  },
+  {
+    "pr": 35,
+    "differences": [
+      {
+        "path": "/base/repo/open_issues",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/base/repo/open_issues_count",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/base/repo/pushed_at",
+        "before": "2026-10-06T19:19:39Z",
+        "after": "2026-10-07T11:19:45Z"
+      },
+      {
+        "path": "/head/repo/open_issues",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/head/repo/open_issues_count",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/head/repo/pushed_at",
+        "before": "2026-10-06T19:19:39Z",
+        "after": "2026-10-07T11:19:45Z"
+      }
+    ]
+  },
+  {
+    "pr": 34,
+    "differences": [
+      {
+        "path": "/base/repo/open_issues",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/base/repo/open_issues_count",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/base/repo/pushed_at",
+        "before": "2026-10-06T19:19:39Z",
+        "after": "2026-10-07T11:19:45Z"
+      },
+      {
+        "path": "/head/repo/open_issues",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/head/repo/open_issues_count",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/head/repo/pushed_at",
+        "before": "2026-10-06T19:19:39Z",
+        "after": "2026-10-07T11:19:45Z"
+      }
+    ]
+  },
+  {
+    "pr": 33,
+    "differences": [
+      {
+        "path": "/base/repo/open_issues",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/base/repo/open_issues_count",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/base/repo/pushed_at",
+        "before": "2026-10-06T19:19:39Z",
+        "after": "2026-10-07T11:19:45Z"
+      },
+      {
+        "path": "/head/repo/open_issues",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/head/repo/open_issues_count",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/head/repo/pushed_at",
+        "before": "2026-10-06T19:19:39Z",
+        "after": "2026-10-07T11:19:45Z"
+      }
+    ]
+  },
+  {
+    "pr": 32,
+    "differences": [
+      {
+        "path": "/base/repo/open_issues",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/base/repo/open_issues_count",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/base/repo/pushed_at",
+        "before": "2026-10-06T19:19:39Z",
+        "after": "2026-10-07T11:19:45Z"
+      },
+      {
+        "path": "/head/repo/open_issues",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/head/repo/open_issues_count",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/head/repo/pushed_at",
+        "before": "2026-10-06T19:19:39Z",
+        "after": "2026-10-07T11:19:45Z"
+      }
+    ]
+  },
+  {
+    "pr": 31,
+    "differences": [
+      {
+        "path": "/base/repo/open_issues",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/base/repo/open_issues_count",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/base/repo/pushed_at",
+        "before": "2026-10-06T19:19:39Z",
+        "after": "2026-10-07T11:19:45Z"
+      },
+      {
+        "path": "/head/repo/open_issues",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/head/repo/open_issues_count",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/head/repo/pushed_at",
+        "before": "2026-10-06T19:19:39Z",
+        "after": "2026-10-07T11:19:45Z"
+      }
+    ]
+  },
+  {
+    "pr": 30,
+    "differences": [
+      {
+        "path": "/base/repo/open_issues",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/base/repo/open_issues_count",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/base/repo/pushed_at",
+        "before": "2026-10-06T19:19:39Z",
+        "after": "2026-10-07T11:19:45Z"
+      },
+      {
+        "path": "/head/repo/open_issues",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/head/repo/open_issues_count",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/head/repo/pushed_at",
+        "before": "2026-10-06T19:19:39Z",
+        "after": "2026-10-07T11:19:45Z"
+      }
+    ]
+  },
+  {
+    "pr": 29,
+    "differences": [
+      {
+        "path": "/base/repo/open_issues",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/base/repo/open_issues_count",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/base/repo/pushed_at",
+        "before": "2026-10-06T19:19:39Z",
+        "after": "2026-10-07T11:19:45Z"
+      },
+      {
+        "path": "/head/repo/open_issues",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/head/repo/open_issues_count",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/head/repo/pushed_at",
+        "before": "2026-10-06T19:19:39Z",
+        "after": "2026-10-07T11:19:45Z"
+      }
+    ]
+  },
+  {
+    "pr": 28,
+    "differences": [
+      {
+        "path": "/base/repo/open_issues",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/base/repo/open_issues_count",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/base/repo/pushed_at",
+        "before": "2026-10-06T19:19:39Z",
+        "after": "2026-10-07T11:19:45Z"
+      },
+      {
+        "path": "/head/repo/open_issues",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/head/repo/open_issues_count",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/head/repo/pushed_at",
+        "before": "2026-10-06T19:19:39Z",
+        "after": "2026-10-07T11:19:45Z"
+      }
+    ]
+  },
+  {
+    "pr": 27,
+    "differences": [
+      {
+        "path": "/base/repo/open_issues",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/base/repo/open_issues_count",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/base/repo/pushed_at",
+        "before": "2026-10-06T19:19:39Z",
+        "after": "2026-10-07T11:19:45Z"
+      },
+      {
+        "path": "/head/repo/open_issues",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/head/repo/open_issues_count",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/head/repo/pushed_at",
+        "before": "2026-10-06T19:19:39Z",
+        "after": "2026-10-07T11:19:45Z"
+      }
+    ]
+  },
+  {
+    "pr": 26,
+    "differences": [
+      {
+        "path": "/base/repo/open_issues",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/base/repo/open_issues_count",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/base/repo/pushed_at",
+        "before": "2026-10-06T19:19:39Z",
+        "after": "2026-10-07T11:19:45Z"
+      },
+      {
+        "path": "/head/repo/open_issues",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/head/repo/open_issues_count",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/head/repo/pushed_at",
+        "before": "2026-10-06T19:19:39Z",
+        "after": "2026-10-07T11:19:45Z"
+      }
+    ]
+  },
+  {
+    "pr": 25,
+    "differences": [
+      {
+        "path": "/base/repo/open_issues",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/base/repo/open_issues_count",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/base/repo/pushed_at",
+        "before": "2026-10-06T19:19:39Z",
+        "after": "2026-10-07T11:19:45Z"
+      },
+      {
+        "path": "/head/repo/open_issues",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/head/repo/open_issues_count",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/head/repo/pushed_at",
+        "before": "2026-10-06T19:19:39Z",
+        "after": "2026-10-07T11:19:45Z"
+      }
+    ]
+  },
+  {
+    "pr": 24,
+    "differences": [
+      {
+        "path": "/base/repo/open_issues",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/base/repo/open_issues_count",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/base/repo/pushed_at",
+        "before": "2026-10-06T19:19:39Z",
+        "after": "2026-10-07T11:19:45Z"
+      },
+      {
+        "path": "/head/repo/open_issues",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/head/repo/open_issues_count",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/head/repo/pushed_at",
+        "before": "2026-10-06T19:19:39Z",
+        "after": "2026-10-07T11:19:45Z"
+      }
+    ]
+  },
+  {
+    "pr": 23,
+    "differences": [
+      {
+        "path": "/base/repo/open_issues",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/base/repo/open_issues_count",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/base/repo/pushed_at",
+        "before": "2026-10-06T19:19:39Z",
+        "after": "2026-10-07T11:19:45Z"
+      },
+      {
+        "path": "/head/repo/open_issues",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/head/repo/open_issues_count",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/head/repo/pushed_at",
+        "before": "2026-10-06T19:19:39Z",
+        "after": "2026-10-07T11:19:45Z"
+      }
+    ]
+  },
+  {
+    "pr": 22,
+    "differences": [
+      {
+        "path": "/base/repo/open_issues",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/base/repo/open_issues_count",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/base/repo/pushed_at",
+        "before": "2026-10-06T19:19:39Z",
+        "after": "2026-10-07T11:19:45Z"
+      },
+      {
+        "path": "/head/repo/open_issues",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/head/repo/open_issues_count",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/head/repo/pushed_at",
+        "before": "2026-10-06T19:19:39Z",
+        "after": "2026-10-07T11:19:45Z"
+      }
+    ]
+  },
+  {
+    "pr": 21,
+    "differences": [
+      {
+        "path": "/base/repo/open_issues",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/base/repo/open_issues_count",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/base/repo/pushed_at",
+        "before": "2026-10-06T19:19:39Z",
+        "after": "2026-10-07T11:19:45Z"
+      },
+      {
+        "path": "/head/repo/open_issues",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/head/repo/open_issues_count",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/head/repo/pushed_at",
+        "before": "2026-10-06T19:19:39Z",
+        "after": "2026-10-07T11:19:45Z"
+      }
+    ]
+  },
+  {
+    "pr": 20,
+    "differences": [
+      {
+        "path": "/base/repo/open_issues",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/base/repo/open_issues_count",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/base/repo/pushed_at",
+        "before": "2026-10-06T19:19:39Z",
+        "after": "2026-10-07T11:19:45Z"
+      },
+      {
+        "path": "/head/repo/open_issues",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/head/repo/open_issues_count",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/head/repo/pushed_at",
+        "before": "2026-10-06T19:19:39Z",
+        "after": "2026-10-07T11:19:45Z"
+      }
+    ]
+  },
+  {
+    "pr": 19,
+    "differences": [
+      {
+        "path": "/base/repo/open_issues",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/base/repo/open_issues_count",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/base/repo/pushed_at",
+        "before": "2026-10-06T19:19:39Z",
+        "after": "2026-10-07T11:19:45Z"
+      },
+      {
+        "path": "/head/repo/open_issues",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/head/repo/open_issues_count",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/head/repo/pushed_at",
+        "before": "2026-10-06T19:19:39Z",
+        "after": "2026-10-07T11:19:45Z"
+      }
+    ]
+  },
+  {
+    "pr": 18,
+    "differences": [
+      {
+        "path": "/base/repo/open_issues",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/base/repo/open_issues_count",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/base/repo/pushed_at",
+        "before": "2026-10-06T19:19:39Z",
+        "after": "2026-10-07T11:19:45Z"
+      },
+      {
+        "path": "/head/repo/open_issues",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/head/repo/open_issues_count",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/head/repo/pushed_at",
+        "before": "2026-10-06T19:19:39Z",
+        "after": "2026-10-07T11:19:45Z"
+      }
+    ]
+  },
+  {
+    "pr": 17,
+    "differences": [
+      {
+        "path": "/base/repo/open_issues",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/base/repo/open_issues_count",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/base/repo/pushed_at",
+        "before": "2026-10-06T19:19:39Z",
+        "after": "2026-10-07T11:19:45Z"
+      },
+      {
+        "path": "/head/repo/open_issues",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/head/repo/open_issues_count",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/head/repo/pushed_at",
+        "before": "2026-10-06T19:19:39Z",
+        "after": "2026-10-07T11:19:45Z"
+      }
+    ]
+  },
+  {
+    "pr": 16,
+    "differences": [
+      {
+        "path": "/base/repo/open_issues",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/base/repo/open_issues_count",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/base/repo/pushed_at",
+        "before": "2026-10-06T19:19:39Z",
+        "after": "2026-10-07T11:19:45Z"
+      },
+      {
+        "path": "/head/repo/open_issues",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/head/repo/open_issues_count",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/head/repo/pushed_at",
+        "before": "2026-10-06T19:19:39Z",
+        "after": "2026-10-07T11:19:45Z"
+      }
+    ]
+  },
+  {
+    "pr": 15,
+    "differences": [
+      {
+        "path": "/base/repo/open_issues",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/base/repo/open_issues_count",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/base/repo/pushed_at",
+        "before": "2026-10-06T19:19:39Z",
+        "after": "2026-10-07T11:19:45Z"
+      },
+      {
+        "path": "/head/repo/open_issues",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/head/repo/open_issues_count",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/head/repo/pushed_at",
+        "before": "2026-10-06T19:19:39Z",
+        "after": "2026-10-07T11:19:45Z"
+      }
+    ]
+  },
+  {
+    "pr": 14,
+    "differences": [
+      {
+        "path": "/base/repo/open_issues",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/base/repo/open_issues_count",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/base/repo/pushed_at",
+        "before": "2026-10-06T19:19:39Z",
+        "after": "2026-10-07T11:19:45Z"
+      },
+      {
+        "path": "/head/repo/open_issues",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/head/repo/open_issues_count",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/head/repo/pushed_at",
+        "before": "2026-10-06T19:19:39Z",
+        "after": "2026-10-07T11:19:45Z"
+      }
+    ]
+  },
+  {
+    "pr": 13,
+    "differences": [
+      {
+        "path": "/base/repo/open_issues",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/base/repo/open_issues_count",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/base/repo/pushed_at",
+        "before": "2026-10-06T19:19:39Z",
+        "after": "2026-10-07T11:19:45Z"
+      },
+      {
+        "path": "/head/repo/open_issues",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/head/repo/open_issues_count",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/head/repo/pushed_at",
+        "before": "2026-10-06T19:19:39Z",
+        "after": "2026-10-07T11:19:45Z"
+      }
+    ]
+  },
+  {
+    "pr": 12,
+    "differences": [
+      {
+        "path": "/base/repo/open_issues",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/base/repo/open_issues_count",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/base/repo/pushed_at",
+        "before": "2026-10-06T19:19:39Z",
+        "after": "2026-10-07T11:19:45Z"
+      },
+      {
+        "path": "/head/repo/open_issues",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/head/repo/open_issues_count",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/head/repo/pushed_at",
+        "before": "2026-10-06T19:19:39Z",
+        "after": "2026-10-07T11:19:45Z"
+      }
+    ]
+  },
+  {
+    "pr": 11,
+    "differences": [
+      {
+        "path": "/base/repo/open_issues",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/base/repo/open_issues_count",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/base/repo/pushed_at",
+        "before": "2026-10-06T19:19:39Z",
+        "after": "2026-10-07T11:19:45Z"
+      },
+      {
+        "path": "/head/repo/open_issues",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/head/repo/open_issues_count",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/head/repo/pushed_at",
+        "before": "2026-10-06T19:19:39Z",
+        "after": "2026-10-07T11:19:45Z"
+      }
+    ]
+  },
+  {
+    "pr": 10,
+    "differences": [
+      {
+        "path": "/base/repo/open_issues",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/base/repo/open_issues_count",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/base/repo/pushed_at",
+        "before": "2026-10-06T19:19:39Z",
+        "after": "2026-10-07T11:19:45Z"
+      },
+      {
+        "path": "/head/repo/open_issues",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/head/repo/open_issues_count",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/head/repo/pushed_at",
+        "before": "2026-10-06T19:19:39Z",
+        "after": "2026-10-07T11:19:45Z"
+      }
+    ]
+  },
+  {
+    "pr": 9,
+    "differences": [
+      {
+        "path": "/base/repo/open_issues",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/base/repo/open_issues_count",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/base/repo/pushed_at",
+        "before": "2026-10-06T19:19:39Z",
+        "after": "2026-10-07T11:19:45Z"
+      },
+      {
+        "path": "/head/repo/open_issues",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/head/repo/open_issues_count",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/head/repo/pushed_at",
+        "before": "2026-10-06T19:19:39Z",
+        "after": "2026-10-07T11:19:45Z"
+      }
+    ]
+  },
+  {
+    "pr": 8,
+    "differences": [
+      {
+        "path": "/base/repo/open_issues",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/base/repo/open_issues_count",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/base/repo/pushed_at",
+        "before": "2026-10-06T19:19:39Z",
+        "after": "2026-10-07T11:19:45Z"
+      },
+      {
+        "path": "/head/repo/open_issues",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/head/repo/open_issues_count",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/head/repo/pushed_at",
+        "before": "2026-10-06T19:19:39Z",
+        "after": "2026-10-07T11:19:45Z"
+      }
+    ]
+  },
+  {
+    "pr": 7,
+    "differences": [
+      {
+        "path": "/base/repo/open_issues",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/base/repo/open_issues_count",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/base/repo/pushed_at",
+        "before": "2026-10-06T19:19:39Z",
+        "after": "2026-10-07T11:19:45Z"
+      },
+      {
+        "path": "/head/repo/open_issues",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/head/repo/open_issues_count",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/head/repo/pushed_at",
+        "before": "2026-10-06T19:19:39Z",
+        "after": "2026-10-07T11:19:45Z"
+      }
+    ]
+  },
+  {
+    "pr": 6,
+    "differences": [
+      {
+        "path": "/base/repo/open_issues",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/base/repo/open_issues_count",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/base/repo/pushed_at",
+        "before": "2026-10-06T19:19:39Z",
+        "after": "2026-10-07T11:19:45Z"
+      },
+      {
+        "path": "/head/repo/open_issues",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/head/repo/open_issues_count",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/head/repo/pushed_at",
+        "before": "2026-10-06T19:19:39Z",
+        "after": "2026-10-07T11:19:45Z"
+      }
+    ]
+  },
+  {
+    "pr": 5,
+    "differences": [
+      {
+        "path": "/base/repo/open_issues",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/base/repo/open_issues_count",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/base/repo/pushed_at",
+        "before": "2026-10-06T19:19:39Z",
+        "after": "2026-10-07T11:19:45Z"
+      },
+      {
+        "path": "/head/repo/open_issues",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/head/repo/open_issues_count",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/head/repo/pushed_at",
+        "before": "2026-10-06T19:19:39Z",
+        "after": "2026-10-07T11:19:45Z"
+      }
+    ]
+  },
+  {
+    "pr": 4,
+    "differences": [
+      {
+        "path": "/base/repo/open_issues",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/base/repo/open_issues_count",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/base/repo/pushed_at",
+        "before": "2026-10-06T19:19:39Z",
+        "after": "2026-10-07T11:19:45Z"
+      },
+      {
+        "path": "/head/repo/open_issues",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/head/repo/open_issues_count",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/head/repo/pushed_at",
+        "before": "2026-10-06T19:19:39Z",
+        "after": "2026-10-07T11:19:45Z"
+      }
+    ]
+  },
+  {
+    "pr": 3,
+    "differences": [
+      {
+        "path": "/base/repo/open_issues",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/base/repo/open_issues_count",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/base/repo/pushed_at",
+        "before": "2026-10-06T19:19:39Z",
+        "after": "2026-10-07T11:19:45Z"
+      },
+      {
+        "path": "/head/repo/open_issues",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/head/repo/open_issues_count",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/head/repo/pushed_at",
+        "before": "2026-10-06T19:19:39Z",
+        "after": "2026-10-07T11:19:45Z"
+      }
+    ]
+  },
+  {
+    "pr": 2,
+    "differences": [
+      {
+        "path": "/base/repo/open_issues",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/base/repo/open_issues_count",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/base/repo/pushed_at",
+        "before": "2026-10-06T19:19:39Z",
+        "after": "2026-10-07T11:19:45Z"
+      },
+      {
+        "path": "/head/repo/open_issues",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/head/repo/open_issues_count",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/head/repo/pushed_at",
+        "before": "2026-10-06T19:19:39Z",
+        "after": "2026-10-07T11:19:45Z"
+      }
+    ]
+  },
+  {
+    "pr": 1,
+    "differences": [
+      {
+        "path": "/base/repo/open_issues",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/base/repo/open_issues_count",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/base/repo/pushed_at",
+        "before": "2026-10-06T19:19:39Z",
+        "after": "2026-10-07T11:19:45Z"
+      },
+      {
+        "path": "/head/repo/open_issues",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/head/repo/open_issues_count",
+        "before": 10,
+        "after": 3
+      },
+      {
+        "path": "/head/repo/pushed_at",
+        "before": "2026-10-06T19:19:39Z",
+        "after": "2026-10-07T11:19:45Z"
+      }
+    ]
+  }
+]

@@ -1,4 +1,5 @@
-// webhooks.module.ts
+// Déclaration NestJS du module webhooks : branche le contrôleur d'entrée brute sur Projects, Bugs,
+// Incidents, et fournit un JWT de service pour les appels internes backend->backend (routage WF5).
 import { Module } from '@nestjs/common';
 import { HttpModule } from '@nestjs/axios';
 import { JwtModule } from '@nestjs/jwt';
@@ -15,13 +16,9 @@ import { IncidentsModule } from '../incidents/incidents.module';
   imports: [
     HttpModule, ProjectsModule, BugsModule, IncidentsModule,
     TypeOrmModule.forFeature([RoutedBuild]),
-    // Nécessaire UNIQUEMENT pour le routage auto vers WF5 (POST
-    // /api/dockerfile/optimize, protégé par JwtAuthGuard — voir
-    // dockerfile-optimizer.module.ts, non modifié). Même secret/config que
-    // AuthModule, sans y toucher : un appel interne backend->backend n'a pas
-    // de session à réutiliser, on signe un token de service à la volée.
     JwtModule.registerAsync({
       imports: [ConfigModule],
+      /** Construit la configuration ou le service injecté par le module. */
       useFactory: (config: ConfigService) => ({
         secret: config.get('JWT_SECRET', 'devsecops-secret-2024'),
       }),

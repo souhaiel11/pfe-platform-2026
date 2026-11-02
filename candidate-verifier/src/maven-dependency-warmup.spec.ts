@@ -1,5 +1,4 @@
-// Real subprocesses with a deterministic mvn stand-in. No network, no WF6.
-// This tests sequencing and classification, not real Maven performance.
+// Teste le composant « maven-dependency-warmup » et ses cas d’erreur.
 import * as assert from 'node:assert/strict';
 import * as fs from 'fs';
 import * as os from 'os';
@@ -18,7 +17,9 @@ const gav = 'com.example:missing:jar:2.0.0';
 const miss = `Cannot access central (https://repo.maven.apache.org/maven2) in offline mode and the artifact ${gav} has not been downloaded from it before.`;
 // A non-network plugin-resolution failure representative of MDEP-82.
 const pluginMiss = '[ERROR] Failed to execute goal org.apache.maven.plugins:maven-dependency-plugin:3.3.0:go-offline (default-cli): Could not find artifact org.example:plugin-dependency:jar:1.0 in central (https://repo.maven.apache.org/maven2)';
+/** Prépare les données nécessaires à ce scénario. */
 const quote = (s: string) => "'" + s.replace(/'/g, "'\\''") + "'";
+/** Prépare les données nécessaires à ce scénario. */
 function install(warm: string, tree: string, target = 'exit 0') {
   fs.writeFileSync(trace, '');
   fs.writeFileSync(path.join(bin, 'mvn'), `#!/bin/sh
@@ -31,6 +32,7 @@ case "$*" in
 esac
 `, { mode: 0o755 });
 }
+/** Prépare les données nécessaires à ce scénario. */
 const fail = (message: string) => `echo ${quote(message)} >&2; exit 1`;
 const success = 'echo TREE_STDOUT; for a in "$@"; do case "$a" in -DoutputFile=*) echo "com.example:root:jar:1.0" > "${a#-DoutputFile=}" ;; esac; done; exit 0';
 const warmOk = 'echo WARM_STDOUT; exit 0';
@@ -102,8 +104,11 @@ try {
   const budgets: number[] = [];
   const ok = { status: 'SUCCESS' as const, timedOut: false, durationMs: 0, exitCode: 0, evidenceTail: 'ok' };
   const budgetAdapter = {
+    /** Prépare les données nécessaires à ce scénario. */
     dependencyGoOffline: (_: string, ms: number) => { budgets.push(ms); return ok; },
+    /** Prépare les données nécessaires à ce scénario. */
     resolveArtifact: (_: string, __: string, ms: number) => { budgets.push(ms); return ok; },
+    /** Vérifie les résultats attendus dans ce scénario. */
     dependencyTree: (_: string, ms: number, options: { offline: boolean }) => {
       budgets.push(ms); assert.equal(options.offline, true);
       return { status: 'SUCCESS' as const, text: 'tree', timedOut: false, evidenceTail: 'ok' };

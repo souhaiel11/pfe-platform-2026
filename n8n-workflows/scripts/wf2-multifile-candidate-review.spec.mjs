@@ -1,4 +1,4 @@
-// Offline execution of the artifact Code nodes and graph contracts. No model/network calls.
+// Vérifie la vérification des correctifs sur plusieurs fichiers dans WF2.
 import assert from 'node:assert/strict';
 import { readFileSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
@@ -9,9 +9,13 @@ import { relationshipContract, batchReviewContract, harden } from './harden-wf2-
 
 const wf = JSON.parse(readFileSync(new URL('../pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.PROMOTION-TARGET.json', import.meta.url)))[0];
 const fixture = JSON.parse(readFileSync(new URL('./fixtures/wf2-attempt-1999-atomic-review.json', import.meta.url)));
+/** Retrouve ou construit le nœud du workflow demandé. */
 const node = name => wf.nodes.find(n => n.name === name);
+/** Retrouve les nœuds visés par le contrôle. */
 const targets = (name, port = 0) => (wf.connections[name]?.main[port] || []).map(e => e.node);
+/** Prépare les données nécessaires à ce scénario. */
 const hash = code => createHash('sha256').update(code).digest('hex');
+/** Prépare les données nécessaires à ce scénario. */
 const jsonItems = values => values.map(json => ({json}));
 const planItems = fixture.plannedFiles.map(file => ({plannedFiles: fixture.plannedFiles,
   remediationPlans: fixture.remediationPlans, target_file_path: file.path, fileOperation: file.operation}));
@@ -19,19 +23,29 @@ const prepared = {remediationContract: {sourceSnapshots: fixture.sources, findin
   sourceGrounding:{frozenSourceSha:fixture.sourceCommitSha,groundedRelationshipApis:[{repositoryType:'com.pfe.devsecops.repository.UserRepository',method:'findById'}]}}};
 const context = {batchId:'fixture-1999', requestId:fixture.requestId, attemptCount:3,
   repository_owner:'souhaiel11', repository_name:'pfe-app-test', baseSha:fixture.sourceCommitSha};
+/** Exécute le traitement et collecte son résultat. */
 function run(name, values, extra = {}) {
   const refs = {'Prepare Batch Context': [context], 'Validate Generic Remediation Plan': planItems,
     'Prepare Generic Remediation Plan': [prepared], 'Lookup Remediation Branch': [{statusCode:404}], ...extra};
+  /** Simule l’accès à un nœud n8n pour le scénario. */
   const $ = ref => { assert.ok(refs[ref], 'unexpected node reference: ' + ref); return {
-    all: () => jsonItems(refs[ref]), first: () => ({json:refs[ref][0]}), item: {json:refs[ref][0]}}; };
+    /** Renvoie tous les éléments disponibles. */
+    all: () => jsonItems(refs[ref]),
+    /** Renvoie le premier élément disponible. */
+    first: () => ({json:refs[ref][0]}), item: {json:refs[ref][0]}}; };
   return new Function('$input', '$json', '$', node(name).parameters.jsCode)(
-    {all:() => jsonItems(values), first:() => ({json:values[0]})}, values[0], $);
+    {
+    /** Renvoie tous les éléments disponibles. */
+    all:() => jsonItems(values),
+    /** Renvoie le premier élément disponible. */
+    first:() => ({json:values[0]})}, values[0], $);
 }
 const codes = [
   'package com.pfe.devsecops.controller; import com.pfe.devsecops.dto.TaskDTO; public class TaskController { public TaskDTO echo(TaskDTO dto) { return dto; } }',
   'package com.pfe.devsecops.service; public class TaskService { public String kind() { return "task"; } }',
   'package com.pfe.devsecops.dto; public class TaskDTO { private Long userId; }'
 ];
+/** Prépare les données nécessaires à ce scénario. */
 function preflight(index, code = codes[index]) {
   const file = fixture.plannedFiles[index];
   return run('Generic Candidate Preflight', [{patchedCode:code, sourceContent:fixture.sources.find(s=>s.file===file.path)?.content || '',
@@ -46,8 +60,10 @@ const candidates = codes.map((code, index) => {
   return run('Accumulate Candidate File', [{...candidate, contentSha256:hash(code)}],
     {'Generic Candidate Preflight':[candidate]}).json;
 });
+/** Prépare les données nécessaires à ce scénario. */
 const assemble = items => run('Prepare Candidate Manifest', items)[0].json;
 let reviewCalls = 0;
+/** Prépare les données nécessaires à ce scénario. */
 const beginReview = items => { const manifest = assemble(items); reviewCalls++; return manifest; };
 for (const incomplete of [[], candidates.slice(0,1), candidates.slice(0,2)]) {
   assert.throws(() => beginReview(incomplete), /CANDIDATE_SET_INCOMPLETE/);
@@ -92,6 +108,7 @@ const canonical = structuredClone(candidates);
 canonical[0].targetFile = canonical[0].file_path = canonical[0].file_path.replaceAll('/', '\\');
 assert.deepEqual(assemble(canonical).files.map(f=>f.path), manifest.files.map(f=>f.path));
 
+/** Applique les contrôles obligatoires du traitement. */
 function enforce(verdict, evidence = []) {
   const findings=evidence.map((entry,index)=>({
     finding:typeof entry==='string'?entry:String(entry.category||'review finding'),
@@ -136,6 +153,7 @@ assert.deepEqual(targets('Independent Semantic Review'), ['Enforce Independent R
 assert.deepEqual(targets('Enforce Independent Review'), ['Hash Candidate Manifest']);
 assert.deepEqual(targets('Assemble Candidate Manifest'), ['Call Candidate Verification']);
 assert.deepEqual(targets('Call Candidate Verification'), ['Call Write Guard']);
+/** Recherche les nœuds accessibles depuis le point de départ. */
 function reachable(start, stops = []) {
   const seen = new Set(); const todo = [start];
   while (todo.length) { const name=todo.pop(); if(seen.has(name)||stops.includes(name))continue;
@@ -161,10 +179,9 @@ for (const name of ['Prepare Generic Remediation Plan','Prepare - Code Patch Bod
   assert.ok(node(name).parameters.jsCode.includes(JSON.stringify(relationshipContract)));
 assert.ok(node('Prepare Candidate Manifest').parameters.jsCode.includes(readFileSync(new URL('./lib/wf2-candidate-set-guard.js',import.meta.url),'utf8')));
 
-// Relationship behavior is exercised in Java using the REAL create/update methods,
-// the real rejected toEntity method, and small explicit dependency test doubles.
-// This proves fixture semantics, not how an external LLM will judge arbitrary code.
+/** Prépare la source de données utilisée par le scénario. */
 const source = suffix => fixture.sources.find(s=>s.file.endsWith(suffix)).content;
+/** Vérifie les résultats attendus dans ce scénario. */
 function method(code, signature) {
   const start=code.indexOf(signature); assert.ok(start>=0,signature);
   let end=code.indexOf('{',start), depth=1; end++;

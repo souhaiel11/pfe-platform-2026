@@ -1,25 +1,8 @@
+// Teste le composant « jenkins-platform-fallback » et ses cas d’erreur.
 import * as assert from 'node:assert/strict';
 import { resolveJenkinsInternalUrl, resolveJenkinsPublicUrl } from '../common/jenkins-url';
 
-/**
- * R48 — repli plateforme pour l'adresse interne Jenkins, et Sonar security_hotspots.
- *
- * Constate en audit : Jenkins detenait de vrais builds pour six projets sur
- * sept, que la plateforme rapportait indisponibles. Deux causes de
- * configuration, aucune propre a un projet :
- *
- *   - app-test-pfe-vermeg / devsecops-remediation-testbed : jenkinsInternalUrl
- *     = http://jenkins:8080 (joignable, HTTP 403 => auth requise) mais aucun
- *     jeton ;
- *   - devsecops-testbed / vuln-testapp : jenkinsUrl = une IP d'hote devenue
- *     obsolete (delai d'attente depasse depuis le backend), jeton present.
- *
- * L'adresse interne de Jenkins est une propriete de la PLATEFORME : tous les
- * projets parlent au meme serveur. Le repli la rend disponible sans toucher a
- * la configuration par projet, qui reste prioritaire.
- *
- *   npx ts-node src/projects/jenkins-platform-fallback.spec.ts
- */
+// R48 — repli plateforme pour l'adresse interne Jenkins, et Sonar security_hotspots.
 const PLATFORM = 'http://jenkins:8080';
 
 (async () => {

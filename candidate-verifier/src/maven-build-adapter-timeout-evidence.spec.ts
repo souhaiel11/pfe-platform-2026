@@ -1,16 +1,4 @@
-/** Execution-2058 observability fix — dependencyTree() previously discarded
- * whatever real stdout/stderr execFileSync had already captured before a
- * timeout SIGKILL, replacing it with a fixed "WORKSPACE_TIMEOUT..." string.
- * This is the exact gap that made execution 2058's real cause (a large,
- * legitimately in-progress, cold-cache dependency download -- not a stall,
- * DNS failure, or lock) reconstructable only via the .m2 repository's own
- * file timestamps, never from application evidence.
- *
- * Same fake-mvn-on-PATH, real-subprocess, real-timeout technique already
- * established by maven-build-adapter-no-orphan.spec.ts -- a fast stand-in
- * for a real multi-minute Maven run, not a mock of the timeout mechanism
- * itself.
- */
+// Teste le composant « maven-build-adapter-timeout-evidence » et ses cas d’erreur.
 import * as assert from 'node:assert/strict';
 import { execFileSync } from 'child_process';
 import * as fs from 'fs';
@@ -19,6 +7,7 @@ import * as path from 'path';
 import { MavenBuildAdapter } from './maven-build-adapter';
 
 const MARKER_SECONDS = '61.417';
+/** Simule la mise à jour de l’état du formulaire. */
 function markerStillRunning(): boolean {
   try { execFileSync('pgrep', ['-f', `sleep ${MARKER_SECONDS}`], { encoding: 'utf8' }); return true; }
   catch { return false; }
@@ -28,13 +17,6 @@ const root = fs.mkdtempSync(path.join(os.tmpdir(), 'v17-maven-timeout-evidence-'
 const fakeMavenDir = path.join(root, 'bin');
 fs.mkdirSync(fakeMavenDir);
 const fakeMavenPath = path.join(fakeMavenDir, 'mvn');
-// Real Maven wagon/resolver transport-log wording (verified against a real
-// `mvn -o dependency:tree` run against this exact Maven/resolver version --
-// not invented): a first artifact resolved cleanly, a second one retried
-// once (two "Downloading from" for the same URL, no "Downloaded from"
-// between them -- exactly the shape lastArtifactFrom()/retryCountFrom()
-// look for), a credential-shaped URL fragment that must be redacted, then
-// the hang.
 fs.writeFileSync(
   fakeMavenPath,
   '#!/bin/sh\n' +

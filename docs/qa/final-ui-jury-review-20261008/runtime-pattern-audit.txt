@@ -1,0 +1,104 @@
+frontend/src/app/shared/chat-widget/chat-widget.component.ts:41:        setTimeout(() => this.scrollToBottom(), 50);
+frontend/src/app/core/services/toast.service.ts:25:    setTimeout(() => this.remove(id), 4000);
+frontend/src/app/shared/security-remediation-presentation.ts:79:  return Math.max(0, r?.attemptNumber ?? r?.attemptCount ?? 0,
+frontend/src/app/shared/security-remediation-presentation.ts:80:    ...(r?.attempts ?? []).map(a => a.attemptNumber ?? a.attempt ?? 0));
+frontend/src/app/core/services/chat.service.ts:75:    this.messagesSubject.next([...current, { role, content, timestamp: new Date(), isError }]);
+frontend/src/app/core/services/websocket.service.ts:22:      this.ws.onclose = () => setTimeout(() => this.connect(), 5000);
+frontend/src/app/core/http-error-message.ts:4:  const status = error instanceof HttpErrorResponse ? error.status : Number((error as any)?.status || 0);
+frontend/src/app/features/projects/cve-table.component.ts:395:      (b.cvss ?? 0) - (a.cvss ?? 0)
+frontend/src/app/features/analysis/analysis.component.ts:63:              confidence: a.confidenceScore || 0,
+frontend/src/app/features/analysis/analysis.component.ts:70:          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+frontend/src/app/features/analysis/analysis.component.ts:93:    const confSum = parsed.reduce((s, x) => s + (x.confidence || 0), 0);
+frontend/src/app/features/analysis/analysis.component.ts:110:      decisionCounts[key] = (decisionCounts[key] || 0) + 1;
+frontend/src/app/features/analysis/analysis.component.ts:128:      severityCounts[key] = (severityCounts[key] || 0) + 1;
+frontend/src/app/shared/french-format.ts:3:  const date = new Date(value);
+frontend/src/app/features/projects/projects.component.html:38:              <div class="stat-val red">{{p.openIncidents || 0}}</div>
+frontend/src/app/features/projects/projects.component.html:42:              <div class="stat-val orange">{{p.analyzingIncidents || 0}}</div>
+frontend/src/app/features/projects/projects.component.html:46:              <div class="stat-val green">{{p.resolvedIncidents || 0}}</div>
+frontend/src/app/features/projects/projects.component.html:53:              <div [style.width]="(p.securityScore ?? 0)+'%'"
+frontend/src/app/features/projects/project-detail.component.html:172:              {{ed.tests?.total || 0}}
+frontend/src/app/features/projects/project-detail.component.html:174:            <div class="kpi-sub">{{ed.tests?.failures || 0}} échecs</div>
+frontend/src/app/features/projects/project-detail.component.html:211:              <div class="kpi-sub" [title]="buildReliability!.sampleSize + (buildReliability!.sampleSize === 1 ? ' build pris en compte' : ' builds pris en compte')">
+frontend/src/app/features/projects/project-detail.component.html:212:                sur {{buildReliability!.sampleSize}} build{{buildReliability!.sampleSize! > 1 ? 's' : ''}}
+frontend/src/app/features/projects/project-detail.component.html:300:            <div class="kpi-value" [style.color]="ed.sonar.bugs>0?'var(--accent-red)':'var(--accent-green)'">{{ed.sonar.bugs || 0}}</div>
+frontend/src/app/features/projects/project-detail.component.html:303:            <div class="kpi-value" [style.color]="ed.sonar.vulnerabilities>0?'var(--accent-orange)':'var(--accent-green)'">{{ed.sonar.vulnerabilities || 0}}</div>
+frontend/src/app/features/projects/project-detail.component.html:306:            <div class="kpi-value" style="color:var(--accent-yellow,#f59e0b)">{{ed.sonar.code_smells || 0}}</div>
+frontend/src/app/features/projects/project-detail.component.html:408:                {{evidence.processedFindingCount || 0}} correction appliquée sur {{evidence.approvedFindingCount || requestFindingIds().length}}.
+frontend/src/app/features/projects/project-detail.component.html:581:              {{ed.trivy?.critical || 0}} <span style="font-size:13px;opacity:.6">{{(ed.trivy?.critical || 0) === 1 ? 'critique' : 'critiques'}}</span>
+frontend/src/app/features/projects/project-detail.component.html:583:            <div class="kpi-sub">{{ed.trivy?.high || 0}} {{(ed.trivy?.high || 0) === 1 ? 'élevée' : 'élevées'}} · {{ed.trivy?.cves_count || 0}} au total</div>
+frontend/src/app/features/projects/project-detail.component.html:594:              {{ed.owasp?.critical || 0}} <span style="font-size:13px;opacity:.6">{{(ed.owasp?.critical || 0) === 1 ? 'critique' : 'critiques'}}</span>
+frontend/src/app/features/projects/project-detail.component.html:596:            <div class="kpi-sub">{{ed.owasp?.high || 0}} {{(ed.owasp?.high || 0) === 1 ? 'élevée' : 'élevées'}} · {{ed.owasp?.cves_count || 0}} au total</div>
+frontend/src/app/features/projects/project-detail.component.html:607:              {{ed.zap?.alerts_high || 0}} <span style="font-size:13px;opacity:.6">{{(ed.zap?.alerts_high || 0) === 1 ? 'élevée' : 'élevées'}}</span>
+frontend/src/app/features/projects/project-detail.component.html:609:            <div class="kpi-sub">{{ed.zap?.alerts_medium || 0}} {{(ed.zap?.alerts_medium || 0) === 1 ? 'moyenne' : 'moyennes'}} · {{ed.zap?.alerts_count || 0}} au total</div>
+frontend/src/app/features/projects/project-detail.component.html:784:              <small>Source : {{stage.source || 'Plateforme'}} · Problèmes : {{stage.findingCount ?? 0}} · Bloquant : {{stage.blocking ? 'oui' : 'non'}} · Requis : {{stage.required ? 'oui' : 'non'}}</small>
+frontend/src/app/features/projects/project-detail.component.html:800:                <small>{{cycle.blockingCount ?? 0}} {{(cycle.blockingCount ?? 0) === 1 ? 'blocage' : 'blocages'}} · Pull Request {{cycle.prNumber ? '#' + cycle.prNumber : 'non disponible'}} · {{cycle.correlationVerified ? 'Corrélation vérifiée' : 'Non vérifié'}}</small>
+frontend/src/app/features/projects/deployment-governance.component.ts:656:      this.deployRequestId = globalThis.crypto?.randomUUID?.() || `deploy-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+frontend/src/app/features/projects/project-detail.component.ts:142:  buildReliability: { rate: number | null; sampleSize: number } | null = null;
+frontend/src/app/features/projects/project-detail.component.ts:321:    setTimeout(() => this.sonarDrawer?.nativeElement.focus());
+frontend/src/app/features/projects/project-detail.component.ts:326:    setTimeout(() => this.sonarTrigger?.focus());
+frontend/src/app/features/projects/project-detail.component.ts:359:  // confusing/alarming during a demo. Generic on (severity, remediationType)
+frontend/src/app/features/projects/project-detail.component.ts:669:    setTimeout(() => this.batchDialog?.nativeElement.focus());
+frontend/src/app/features/projects/project-detail.component.ts:835:    const trivy = this.ed?.trivy?.cves?.length || 0;
+frontend/src/app/features/projects/project-detail.component.ts:836:    const owasp = this.ed?.owasp?.cves?.length || 0;
+frontend/src/app/features/projects/project-detail.component.ts:837:    const zap = this.ed?.zap?.alerts?.length || 0;
+frontend/src/app/features/projects/project-detail.component.ts:961:          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+frontend/src/app/features/projects/project-detail.component.ts:1049:        // est faux (non configuré/erreur/timeout — plus aucun mock possible),
+frontend/src/app/features/projects/project-detail.component.ts:1052:        this.buildReliability = { rate: d?.buildSuccessRate ?? null, sampleSize: d?.sampleSize ?? 0 };
+frontend/src/app/features/projects/project-detail.component.ts:1188:        confidence:       (json.confidenceScore || 0) + '%',
+frontend/src/app/features/dashboard/dashboard.component.html:231:            <div class="reliability-sub" [title]="buildReliability!.sampleSize + (buildReliability!.sampleSize === 1 ? ' build pris en compte' : ' builds pris en compte')">
+frontend/src/app/features/dashboard/dashboard.component.html:232:              sur {{buildReliability!.sampleSize}} build{{buildReliability!.sampleSize! > 1 ? 's' : ''}} (historique Jenkins)
+frontend/src/app/features/projects/project-overview.component.ts:329:      const critical = key === 'sonar' ? (data.issues || []).filter((x:any) => ['BLOCKER','CRITICAL'].includes(String(x.severity).toUpperCase())).length : (data.critical || data.alerts_high || 0);
+frontend/src/app/features/projects/project-overview.component.ts:385:        detail: (() => { const count = Number(s.findingCount ?? s.findings?.length ?? 0); return `${humanStatus[String(s.status || 'NOT_RUN').toUpperCase()] || 'Non disponible'} · ${count} ${count === 1 ? 'problème' : 'problèmes'}`; })(),
+frontend/src/app/features/projects/project-overview.component.ts:409:        detail: (tests.total ?? 0) === 0 ? 'aucun test' : `${tests.failures ?? 0} échec(s)`,
+frontend/src/app/features/projects/project-overview.component.ts:414:        detail: `${d?.trivy?.critical ?? 0} critique(s)`,
+frontend/src/app/features/projects/project-overview.component.ts:417:        detail: `${d?.owasp?.critical ?? 0} critique(s)`,
+frontend/src/app/features/projects/project-overview.component.ts:420:        detail: `${d?.zap?.alerts_count ?? 0} alerte(s)`,
+frontend/src/app/features/projects/project-overview.component.ts:464:      { key: 'sonar', name: 'SonarQube', tab: 'sonar', count: d?.sonar?.issues_count ?? 0,
+frontend/src/app/features/projects/project-overview.component.ts:466:      { key: 'trivy', name: 'CVE conteneur', tab: 'security:trivy', count: d?.trivy?.cves_count ?? 0,
+frontend/src/app/features/projects/project-overview.component.ts:467:        detail: `${d?.trivy?.critical ?? 0} critique · ${d?.trivy?.high ?? 0} élevée`,
+frontend/src/app/features/projects/project-overview.component.ts:468:        tone: governedTone('trivy', d?.trivy?.critical ?? 0, d?.trivy?.high ?? 0) },
+frontend/src/app/features/projects/project-overview.component.ts:469:      { key: 'owasp', name: 'CVE dépendances', tab: 'security:owasp', count: d?.owasp?.cves_count ?? 0,
+frontend/src/app/features/projects/project-overview.component.ts:470:        detail: `${d?.owasp?.critical ?? 0} critique · ${d?.owasp?.high ?? 0} élevée`,
+frontend/src/app/features/projects/project-overview.component.ts:471:        tone: governedTone('owasp', d?.owasp?.critical ?? 0, d?.owasp?.high ?? 0) },
+frontend/src/app/features/projects/project-overview.component.ts:472:      { key: 'zap', name: 'Alertes DAST', tab: 'security:zap', count: d?.zap?.alerts_count ?? 0,
+frontend/src/app/features/projects/project-overview.component.ts:473:        detail: `${d?.zap?.alerts_high ?? 0} élevée · ${d?.zap?.alerts_medium ?? 0} moyenne`,
+frontend/src/app/features/projects/project-overview.component.ts:474:        tone: governedTone('zap', d?.zap?.alerts_high ?? 0, d?.zap?.alerts_medium ?? 0) },
+frontend/src/app/features/projects/project-overview.component.ts:475:      { key: 'tests', name: 'Tests', tab: 'jenkins', count: d?.tests?.total ?? 0,
+frontend/src/app/features/projects/project-overview.component.ts:476:        detail: `${d?.tests?.failures ?? 0} échec · ${d?.tests?.coverage ?? 0}% couverture`,
+frontend/src/app/features/projects/project-overview.component.ts:477:        tone: governedTone('tests', d?.tests?.failures ?? 0, 0) },
+frontend/src/app/features/projects/project-overview.component.ts:492:      { key: 'critical', label: 'critiques', count: s.BLOCKER + s.CRITICAL + (d?.trivy?.critical ?? 0) + (d?.owasp?.critical ?? 0) },
+frontend/src/app/features/projects/project-overview.component.ts:493:      { key: 'high', label: 'élevés', count: s.MAJOR + (d?.trivy?.high ?? 0) + (d?.owasp?.high ?? 0) + (d?.zap?.alerts_high ?? 0) },
+frontend/src/app/features/projects/project-overview.component.ts:494:      { key: 'medium', label: 'moyens', count: s.MINOR + (d?.zap?.alerts_medium ?? 0) },
+frontend/src/app/features/projects/project-overview.component.ts:506:      .reduce((a, i) => a + (Number(i.estimatedEffortMinutes) || 0), 0));
+frontend/src/app/features/incidents/phase-diagnostics.ts:187:    if ((z.alerts_high || 0) > 0) {
+frontend/src/app/features/incidents/phase-diagnostics.ts:222:      message: `Quality gate SonarQube en échec (${gate}) — ${s?.vulnerabilities || 0} vulnérabilité(s), ${s?.bugs || 0} bug(s), ${s?.code_smells || 0} code smell(s) réels détectés. `
+frontend/src/app/features/incidents/phase-diagnostics.ts:238:  if ((s?.issues?.length || 0) > 0 || (s?.bugs || 0) + (s?.vulnerabilities || 0) + (s?.code_smells || 0) > 0) {
+frontend/src/app/features/incidents/phase-diagnostics.ts:241:      message: `SonarQube a bien analysé le code (${s.issues?.length || 0} issue(s) réelle(s) détectée(s)) mais l'appel quality gate n'a renvoyé aucun statut exploitable (${gate || 'absent'}). `
+frontend/src/app/features/incidents/phase-diagnostics.ts:254:  if ((t?.failures || 0) > 0) {
+frontend/src/app/features/incidents/incident-detail.component.html:362:                    <div style="font-size:18px;font-weight:700;color:var(--accent-red);">{{enrichedData.sonar?.vulnerabilities || 0}}</div>
+frontend/src/app/features/incidents/incident-detail.component.html:366:                    <div style="font-size:18px;font-weight:700;color:var(--accent-orange);">{{enrichedData.sonar?.code_smells || 0}}</div>
+frontend/src/app/features/incidents/incident-detail.component.html:380:                    <div style="font-size:18px;font-weight:700;color:var(--accent-red);">{{enrichedData.trivy?.critical || 0}}</div>
+frontend/src/app/features/incidents/incident-detail.component.html:384:                    <div style="font-size:18px;font-weight:700;color:var(--accent-orange);">{{enrichedData.trivy?.high || 0}}</div>
+frontend/src/app/features/incidents/incident-detail.component.html:398:                    <div style="font-size:18px;font-weight:700;color:var(--accent-red);">{{enrichedData.owasp?.critical || 0}}</div>
+frontend/src/app/features/incidents/incident-detail.component.html:402:                    <div style="font-size:18px;font-weight:700;color:var(--accent-orange);">{{enrichedData.owasp?.high || 0}}</div>
+frontend/src/app/features/incidents/incident-detail.component.html:416:                    <div style="font-size:18px;font-weight:700;color:var(--accent-red);">{{enrichedData.zap?.alerts_high || 0}}</div>
+frontend/src/app/features/incidents/incident-detail.component.html:420:                    <div style="font-size:18px;font-weight:700;color:var(--accent-orange);">{{enrichedData.zap?.alerts_medium || 0}}</div>
+frontend/src/app/features/incidents/incident-detail.component.ts:223:      return ra !== rb ? ra - rb : (b?.cvss || 0) - (a?.cvss || 0);
+frontend/src/app/features/incidents/incident-detail.component.ts:239:    const total = (t?.critical || 0) + (t?.high || 0);
+frontend/src/app/features/incidents/incident-detail.component.ts:528:            ? { agentType: 'ROOT_CAUSE', analysis: meta.rootCause.rootCause || meta.rootCause.analysisSummary || '', confidence: meta.rootCause.confidence || 0 }
+frontend/src/app/features/incidents/incident-detail.component.ts:531:            ? { agentType: 'SECURITY', analysis: meta.security.securitySummary || '', confidence: meta.security.confidence || 0 }
+frontend/src/app/features/incidents/incident-detail.component.ts:534:            ? { agentType: 'REMEDIATION', analysis: meta.remediation.fixDescription || (meta.remediation.fixSteps || []).join('\n') || '', confidence: meta.remediation.confidence || 0 }
+frontend/src/app/features/incidents/project-cleanliness.ts:55:  return (block?.critical || 0) > 0;
+frontend/src/app/features/incidents/project-cleanliness.ts:93:    if ((trivy.high || 0) > 0) {
+frontend/src/app/features/incidents/project-cleanliness.ts:106:    if ((owasp.high || 0) > 0) {
+frontend/src/app/features/incidents/project-cleanliness.ts:115:  } else if ((zap.alerts_high || 0) > 0) {
+frontend/src/app/features/incidents/project-cleanliness.ts:122:  if ((tests?.failures || 0) > 0) {
+frontend/src/app/features/dashboard/dashboard.component.ts:46:  buildReliability: { rate: number | null; sampleSize: number } | null = null;
+frontend/src/app/features/dashboard/dashboard.component.ts:94:          ? { rate: s.aggregateSuccessRate ?? null, sampleSize: s.aggregateSampleSize ?? 0 }
+frontend/src/app/features/dashboard/dashboard.component.ts:116:          meta: `${this.timeAgo(new Date(i.createdAt).getTime())} · ${i.project?.name || 'projet inconnu'} · ${presentationLabel(i.status)}`,
+frontend/src/app/features/dashboard/dashboard.component.ts:125:            meta: `${this.timeAgo(new Date(i.createdAt).getTime())} · ${i.project?.name || 'projet inconnu'}`,
+frontend/src/app/features/dashboard/dashboard.component.ts:153:        setTimeout(() => this.buildRiskRings(), 50);
+frontend/src/app/features/dashboard/dashboard.component.ts:168:      incidents: (p.openIncidents || 0) + (p.analyzingIncidents || 0),
+frontend/src/app/features/dashboard/dashboard.component.ts:172:      lastUpdate: p.updatedAt ? this.timeAgo(new Date(p.updatedAt).getTime()) : 'Non disponible',
+frontend/src/app/features/dashboard/dashboard.component.ts:259:    setTimeout(() => this.buildRiskRings(), 50);
+frontend/src/app/features/incidents/developer-guide/developer-guide-tab.component.ts:294:    setTimeout(() =>

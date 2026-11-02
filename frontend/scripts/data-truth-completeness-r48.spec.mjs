@@ -1,15 +1,4 @@
 // R48 — completude des donnees, sans regression de la verite des donnees.
-//
-// Couvre les quatre fronts du bouclage :
-//   - les constats retenus d'une execution anterieure sont annonces, pas tus,
-//     et n'alimentent AUCUN compteur de ce build ;
-//   - l'absence de configuration Azure se distingue de l'impossibilite
-//     technique, sans toucher READY / CONDITIONAL / CRITICAL_RISK ;
-//   - les mesures Sonar courantes sont lues du contrat backend, chaque absence
-//     gardant son motif, et un zero reel restant zero ;
-//   - aucune identite de projet n'est requise pour tout cela.
-//
-//   node frontend/scripts/data-truth-completeness-r48.spec.mjs
 
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -17,13 +6,16 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 const here = dirname(fileURLToPath(import.meta.url));
+/** Lit les données depuis leur source. */
 const read = (rel) => readFileSync(join(here, rel), 'utf8');
 const truthSrc = read('../src/app/shared/data-truth.ts');
 
+/** Retire les commentaires du code utilisé par le test. */
 const strip = (s) => s
   .replace(/export function /g, 'function ')
   .replace(/: *number \| null/g, '').replace(/: *boolean/g, '')
   .replace(/: *string/g, '').replace(/: *unknown/g, '').replace(/: *any/g, '');
+/** Sélectionne les champs utiles de la donnée. */
 const pick = (name, src = truthSrc) => {
   const start = src.indexOf(`export function ${name}`);
   assert.notEqual(start, -1, `${name} doit exister`);

@@ -1,3 +1,4 @@
+// Déclaration NestJS du module integrations.
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { HttpModule } from '@nestjs/axios';

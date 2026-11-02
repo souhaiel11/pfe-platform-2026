@@ -1,0 +1,18 @@
+{
+  "consoleErrors": [],
+  "exceptions": [],
+  "failedResources": [],
+  "requestFailures": [],
+  "routes": [
+    "dashboard",
+    "projects",
+    "analysis",
+    "security",
+    "prediction",
+    "settings",
+    "admin",
+    "incidents",
+    "projects/new",
+    "not-found"
+  ]
+}

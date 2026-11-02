@@ -1,8 +1,10 @@
+// Teste le composant « security-remediation-revalidate.dto » et ses cas d’erreur.
 import * as assert from 'node:assert/strict';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { SecurityRemediationRevalidateDto } from './security-remediation-revalidate.dto';
 
+/** Exécute les étapes principales de ce programme. */
 async function main() {
   const validBody = {
     projectId: '3aa1c9b9-e114-40e4-884b-ebc7aa32e002',

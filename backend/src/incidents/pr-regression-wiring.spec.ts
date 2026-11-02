@@ -1,20 +1,12 @@
+// Teste le composant « pr-regression-wiring » et ses cas d’erreur.
 import * as assert from 'node:assert/strict';
 import { IncidentsService, buildPrValidationJobName } from './incidents.service';
 
-// BRIQUE 3 (+ CLOSEOUT) — proves the saveValidation() wiring (not just the
-// pure engine) end to end: (1) today's default behavior is unchanged when
-// no baseline/candidate evidence is supplied; (2) the wiring genuinely
-// combines HEAD proof with scanner evidence once both snapshots are supplied
-// and correlated; UNPROVEN comparability makes introduced findings advisory;
-// (3) the mandatory semantic separation between
-// remediationResult and regressionResult; (4) CLOSEOUT PART 2/3/4: a
-// baseline whose sourceCommitSha has drifted from the frozen fixRequest.
-// baselineSha, or a candidate snapshot lacking an explicit completeness
-// flag, must never be silently trusted (TEST C / TEST E).
 
 const SHA = 'a'.repeat(40);
 const OTHER_SHA = 'b'.repeat(40);
 
+/** Vérifie les résultats attendus dans ce scénario. */
 function makeFixture() {
   const incident: any = {
     id: 'incident-1', projectId: 'project-1', status: 'validating', prUrl: 'https://github.com/owner/repo/pull/7',
@@ -46,13 +38,31 @@ function makeFixture() {
     },
   };
   const repo: any = {
+    /** Recherche l’élément correspondant à l’identifiant. */
     findOne: async () => incident,
+    /** Applique les modifications autorisées à l’élément. */
     update: async (_id: string, patch: any) => Object.assign(incident, patch),
   };
-  const service = new IncidentsService(repo, { findOne: async () => incident.project } as any, { emit: () => undefined } as any, { syncIncident: async () => undefined } as any, {} as any);
+  repo.manager = {
+  /** Exécute les opérations dans le cadre transactionnel prévu. */
+  transaction: async (fn: any) => fn({
+  /** Vérifie les résultats attendus dans ce scénario. */
+  getRepository: () => ({
+    ...repo,
+    /** Recherche l’élément correspondant à l’identifiant. */
+    findOne: async (options: any) => { assert.equal(options.lock?.mode, 'pessimistic_write'); return incident; },
+  }) }) };
+  const service = new IncidentsService(repo, {
+  /** Recherche l’élément correspondant à l’identifiant. */
+  findOne: async () => incident.project } as any, {
+  /** Diffuse ou construit le résultat prévu. */
+  emit: () => undefined } as any, {
+  /** Prépare les données nécessaires à ce scénario. */
+  syncIncident: async () => undefined } as any, {} as any);
   return { incident, service };
 }
 
+/** Prépare les données nécessaires à ce scénario. */
 function baseValidationContract(incident: any) {
   return {
     validationRequestId: 'validation-1', projectId: incident.projectId, fixRequestId: incident.metadata.fixRequest.requestId,
@@ -65,6 +75,7 @@ function baseValidationContract(incident: any) {
   };
 }
 
+/** Exécute les étapes principales de ce programme. */
 async function main() {
   // (1) No candidate evidence supplied -- default, unchanged behavior (a
   // correlated baseline alone is not enough; the candidate snapshot is

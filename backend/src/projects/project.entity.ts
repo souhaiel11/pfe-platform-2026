@@ -1,7 +1,9 @@
+// Décrit la table des projets : identité du dépôt et de la branche, configuration CI/analyses, paramètres et état Azure, relations avec incidents, rapports et bugs.
 import {
   Entity, PrimaryGeneratedColumn, Column,
   CreateDateColumn, UpdateDateColumn
 } from 'typeorm';
+import { encryptedTokenTransformer, githubTokenTransformer } from './token-crypto';
 
 export enum ProjectStatus {
   HEALTHY  = 'healthy',
@@ -33,6 +35,12 @@ export interface AzureDeploymentConfig {
   cpu?: string;
   memoryInGb?: string;
   ports?: string[];
+  healthCheck?: {
+    path: string;
+    port: string;
+    client: 'curl' | 'wget';
+    expectedBody: string;
+  };
 }
 
 @Entity('projects')
@@ -118,14 +126,16 @@ export class Project {
   @Column({ nullable: true })
   jenkinsJobPath: string;
 
-  @Column({ nullable: true })
+  // Chiffré au repos (AES-256-GCM, cf. token-crypto.ts).
+  @Column({ nullable: true, transformer: encryptedTokenTransformer })
   jenkinsToken: string;
 
   // ── GitHub ────────────────────────────────────────────────
   @Column({ nullable: true })
   githubRepo: string;
 
-  @Column({ nullable: true })
+  // Chiffré au repos (AES-256-GCM, cf. token-crypto.ts).
+  @Column({ nullable: true, transformer: githubTokenTransformer })
   githubToken: string;
 
   // ── SonarQube ─────────────────────────────────────────────
@@ -135,7 +145,8 @@ export class Project {
   @Column({ nullable: true })
   sonarqubeKey: string;
 
-  @Column({ nullable: true })
+  // Chiffré au repos (AES-256-GCM, cf. token-crypto.ts).
+  @Column({ nullable: true, transformer: encryptedTokenTransformer })
   sonarqubeToken: string;
 
   // ── Notifications ─────────────────────────────────────────
@@ -151,7 +162,8 @@ export class Project {
   @Column({ nullable: true })
   slackChannel: string;
 
-  @Column({ nullable: true })
+  // Chiffré au repos (AES-256-GCM, cf. token-crypto.ts).
+  @Column({ nullable: true, transformer: encryptedTokenTransformer })
   slackToken: string;
 
   // ── Validation status (calculé automatiquement) ───────────
@@ -175,6 +187,10 @@ export class Project {
     imageTag: string;
     updatedAt: string;
     result?: Record<string, any>;
+    attemptId?: string;
+    authorizationId?: string;
+    failureCode?: string | null;
+    failureReason?: string | null;
   } | null;
 
   @CreateDateColumn()

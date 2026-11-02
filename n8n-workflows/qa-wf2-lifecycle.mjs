@@ -1,3 +1,4 @@
+// Regroupe les traitements de qa WF2 cycle de vie.
 import { readFileSync } from 'node:fs';
 import { strict as assert } from 'node:assert';
 
@@ -6,10 +7,12 @@ const raw = JSON.parse(readFileSync(path, 'utf8'));
 const workflow = Array.isArray(raw) ? raw[0] : raw;
 assert.equal(workflow.id, '9adcV31eaIgJyMR0');
 const nodes = new Map(workflow.nodes.map(node => [node.name, node]));
+/** Retrouve ou construit le nœud du workflow demandé. */
 const node = name => {
   assert.ok(nodes.has(name), `missing node: ${name}`);
   return nodes.get(name);
 };
+/** Retrouve les nœuds visés par le contrôle. */
 const targets = (name, output = 0) => (workflow.connections[name]?.main?.[output] || []).map(edge => edge.node);
 
 const envelope = node('Capture Correlation Envelope');
@@ -142,7 +145,9 @@ for (const failurePoint of ['Adapt Webhook Payload', 'Create Branch1', 'de Patch
     failureNode: failurePoint };
   assert.equal(callback.attemptCount, 2, `${failurePoint} lost attempt correlation`);
 }
+/** Normalise la valeur avant comparaison. */
 const norm = values => [...new Set(values)].sort();
+/** Vérifie l’égalité avec la valeur attendue. */
 const exact = (expected, actual) => JSON.stringify(norm(expected)) === JSON.stringify(norm(actual));
 assert.equal(exact(['A', 'B'], ['A']), false);
 assert.equal(exact(['A', 'B'], ['A', 'C']), false);
@@ -166,13 +171,13 @@ const completeResults = grouped.map((group, index) => ({ ...group,
   outcome: index ? 'ALREADY_REMEDIATED' : 'MODIFIED_AND_REMEDIATED', updateApplied: index === 0,
   oldSha: `old-${index}`, newSha: index ? `old-${index}` : `new-${index}`, commitSha: index ? null : '1'.repeat(40),
 }));
+/** Vérifie que toutes les données exigées sont présentes. */
 const completeness = results => exact(payload.findingIds, results.flatMap(result => result.effectiveRemediatedFindingIds))
   && exact(payload.findings.map(f => f.file), results.filter(result => result.finalStateVerified).map(result => result.targetFile));
 assert.equal(completeness(completeResults), true);
 assert.equal(completeness(completeResults.slice(0, 1)), false);
 
-// Execute the exact per-item preparation contract twice. n8n requires the
-// returned item itself (and its json property) to be plain objects.
+/** Exécute code. */
 const executeCode = (code, bindings) => Function(...Object.keys(bindings), code)(...Object.values(bindings));
 const gateForPerItem = {
   ...payload, decision: 'FIX_PROPOSED', enrichedData: { sonar: { issues: payload.findings.map(f => ({
@@ -185,7 +190,10 @@ const currentSources = {
 };
 const preparedItems = payload.findings.map(finding => executeCode(node('Prepare - Code Patch Body').parameters.jsCode, {
   $json: { path: finding.file, sha: `sha-${finding.rule}`, content: Buffer.from(currentSources[finding.file]).toString('base64') },
-  $: () => ({ first: () => ({ json: gateForPerItem }) }), Buffer,
+  /** Simule l’accès à un nœud n8n pour le scénario. */
+  $: () => ({
+  /** Renvoie le premier élément disponible. */
+  first: () => ({ json: gateForPerItem }) }), Buffer,
 }));
 assert.equal(preparedItems.length, 2);
 assert.ok(preparedItems.every(item => item && !Array.isArray(item) && item.json && !Array.isArray(item.json)));
@@ -206,9 +214,12 @@ const parsedItems = preparedItems.filter(prepared => prepared.json.requiresPatch
   }) }] };
   return executeCode(node('Parse - Code Patch Output').parameters.jsCode, {
     $json: response,
+    /** Simule l’accès à un nœud n8n pour le scénario. */
     $: name => name === 'Prepare - Code Patch Body'
       ? { item: { json: prepared.json } }
-      : { first: () => ({ json: gateForPerItem }) },
+      : {
+      /** Renvoie le premier élément disponible. */
+      first: () => ({ json: gateForPerItem }) },
   });
 });
 assert.equal(parsedItems.length, 1);
@@ -225,6 +236,7 @@ assert.throws(() => executeCode(node('Validate Candidate Remediation').parameter
 }), /WF2_PATCH_NOT_EFFECTIVE/);
 const modifiedResult = executeCode(node('Build File Result').parameters.jsCode, {
   $json: { commit: { sha: '1'.repeat(40) }, content: { sha: 'new-task-sha' } },
+  /** Simule l’accès à un nœud n8n pour le scénario. */
   $: () => ({ item: { json: validatedItems[0] } }),
 }).json;
 const alreadyResult = executeCode(node('Build Already Remediated Result').parameters.jsCode, {
@@ -235,11 +247,10 @@ assert.equal(alreadyResult.outcome, 'ALREADY_REMEDIATED');
 assert.equal(alreadyResult.oldSha, alreadyResult.newSha);
 assert.equal(preparedItems[1].json.requiresPatch, false);
 
-// Safe transport recovery: no blind mutation retry. Read-back recognizes an
-// applied candidate, unchanged content fails safely, and unexpected content
-// fails closed.
+/** Évalue lecture Back. */
 const evaluateReadBack = (content, sha = 'remote-sha') => executeCode(node('Evaluate GitHub Write Reconciliation').parameters.jsCode, {
   $json: { content: Buffer.from(content).toString('base64'), sha },
+  /** Simule l’accès à un nœud n8n pour le scénario. */
   $: () => ({ item: { json: validatedItems[0] } }), Buffer,
 }).json;
 assert.equal(evaluateReadBack(validatedItems[0].patchedCode).reconciledWrite, true);
@@ -247,19 +258,30 @@ assert.equal(evaluateReadBack(validatedItems[0].sourceContent).failureCode, 'GIT
 assert.equal(evaluateReadBack('package p; class Unexpected {}').failureCode, 'GITHUB_REMOTE_STATE_UNEXPECTED');
 const dnsFailure = executeCode(node('Classify GitHub Write Error').parameters.jsCode, {
   $json: { error: { message: 'The DNS server returned an error, perhaps the server is offline' } },
+  /** Simule l’accès à un nœud n8n pour le scénario. */
   $: () => ({ item: { json: validatedItems[0] } }),
 }).json;
 assert.equal(dnsFailure.requiresReadBack, false);
 assert.equal(dnsFailure.failureCode, 'GITHUB_DNS_UNAVAILABLE');
 const completeV2 = executeCode(node('Validate Batch Completeness').parameters.jsCode, {
-  $input: { all: () => [{ json: modifiedResult }, { json: alreadyResult }] },
-  $: () => ({ first: () => ({ json: payload }) }),
+  $input: {
+  /** Renvoie tous les éléments disponibles. */
+  all: () => [{ json: modifiedResult }, { json: alreadyResult }] },
+  /** Simule l’accès à un nœud n8n pour le scénario. */
+  $: () => ({
+  /** Renvoie le premier élément disponible. */
+  first: () => ({ json: payload }) }),
 });
 assert.equal(completeV2[0].json.completenessPassed, true);
 assert.deepEqual(completeV2[0].json.effectiveRemediatedFindingIds, [...payload.findingIds].sort());
 assert.throws(() => executeCode(node('Validate Batch Completeness').parameters.jsCode, {
-  $input: { all: () => [{ json: modifiedResult }, { json: { ...alreadyResult, effectiveRemediatedFindingIds: [], finalStateVerified: false, outcome: 'FAILED' } }] },
-  $: () => ({ first: () => ({ json: payload }) }),
+  $input: {
+  /** Renvoie tous les éléments disponibles. */
+  all: () => [{ json: modifiedResult }, { json: { ...alreadyResult, effectiveRemediatedFindingIds: [], finalStateVerified: false, outcome: 'FAILED' } }] },
+  /** Simule l’accès à un nœud n8n pour le scénario. */
+  $: () => ({
+  /** Renvoie le premier élément disponible. */
+  first: () => ({ json: payload }) }),
 }), /WF2_BATCH_INCOMPLETE/);
 
 const capturedEnvelope = { incidentId: payload.incidentId, projectId: payload.projectId,
@@ -270,7 +292,10 @@ for (const failurePoint of ['Prepare - Code Patch Body', 'de Patch - HTTP Reques
   'Update File in Branch', 'Build File Result', 'Validate Batch Completeness', 'Lookup Existing Batch PR',
   'Create Pull Request1', 'Save Execution Result to Backend']) {
   const output = executeCode(failureCode, {
-    $input: { first: () => ({ json: { error: { message: 'mock failure', node: { name: failurePoint } } } }) },
+    $input: {
+    /** Renvoie le premier élément disponible. */
+    first: () => ({ json: { error: { message: 'mock failure', node: { name: failurePoint } } } }) },
+    /** Simule la lecture des éléments d’un nœud n8n. */
     $items: name => name === 'Capture Correlation Envelope' ? [{ json: { correlationEnvelope: capturedEnvelope } }] : [],
     $execution: { id: 'mock-execution' },
   });
@@ -288,9 +313,15 @@ assert.deepEqual(targets('Branch Exists?', 1), ['Create Missing Branch']);
 assert.deepEqual(targets('Existing PR?'), ['Use Existing PR']);
 assert.deepEqual(targets('Existing PR?', 1), ['Create Pull Request1']);
 
+/** Sélectionne PR. */
 const selectPr = inputItems => executeCode(node('Select Existing PR').parameters.jsCode, {
-  $input: { all: () => inputItems.map(json => ({ json })) },
-  $: () => ({ first: () => ({ json: { ...payload, githubRepo: 'souhaiel11/pfe-app-test', targetBranchName: 'fix/batch', baseBranch: 'main' } }) }),
+  $input: {
+  /** Renvoie tous les éléments disponibles. */
+  all: () => inputItems.map(json => ({ json })) },
+  /** Simule l’accès à un nœud n8n pour le scénario. */
+  $: () => ({
+  /** Renvoie le premier élément disponible. */
+  first: () => ({ json: { ...payload, githubRepo: 'souhaiel11/pfe-app-test', targetBranchName: 'fix/batch', baseBranch: 'main' } }) }),
 })[0].json;
 const pr24 = { number: 24, state: 'open', body: `Batch : ${payload.batchId}`,
   head: { ref: 'fix/batch', repo: { full_name: 'souhaiel11/pfe-app-test' } },

@@ -1,21 +1,4 @@
-// R48 — WF1 ne doit plus perdre de champs reellement fournis par la source,
-// ni presenter des constats d'une execution anterieure comme ceux de ce build.
-//
-// Deux defauts corriges a leur PREMIER point de verite (le node
-// « Merge All Fetched Data » de WF1), pas dans le frontend :
-//
-//   1. Le rapport ZAP porte pluginid, confidence, cweid, et par instance l'URL
-//      et le parametre atteints. L'ingestion ne gardait `pluginid` que comme
-//      identifiant de repli et jetait tout le reste. La table ZAP du frontend
-//      lie DEJA `url` et `param` : elle affichait « Non disponible » faute
-//      d'import, pas faute de source.
-//
-//   2. Un scanner hors perimetre pour un build (etat NOT_RUN) dont le fichier
-//      de rapport se parse quand meme lit le rapport d'un build ANTERIEUR : le
-//      volume partage n'est pas purge. devsecops-testbed build #19 annoncait
-//      ainsi `status: NOT_RUN` avec 154 CVE Trivy et 169 CVE OWASP reelles.
-//
-//   node n8n-workflows/scripts/wf1-r48-ingestion-completeness.spec.mjs
+// R48 — WF1 ne doit plus perdre de champs reellement fournis par la source, ni presenter des constats d'une execution anterieure comme ceux de ce build.
 
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -148,14 +131,6 @@ try {
 
 console.log(`R48 WF1 ingestion completeness: PASS (rapport reel : ${realChecked})`);
 
-// ════════════════════════════════════════════════════════════════════════════
-// 9. R50 — les faits de PUBLICATION ne sont plus perdus a l'ingestion
-// Le bloc docker ne transportait que image/build_status/push_status : le
-// registre, le depot, le tag publie et le digest etaient jetes.
-// ════════════════════════════════════════════════════════════════════════════
-// Bornes exactes de la normalisation docker : du debut de `const docker={`
-// jusqu'a sa fin. Une fenetre approximative deborderait sur le bloc `deploy`
-// voisin, qui parle legitimement de deploiement.
 const dockerStart = code.indexOf('const docker={image_tag:');
 assert.notEqual(dockerStart, -1, 'la normalisation docker doit etre identifiable');
 const dockerNorm = code.slice(dockerStart, code.indexOf('};', dockerStart) + 2);

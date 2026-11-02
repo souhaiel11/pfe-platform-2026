@@ -1,78 +1,5 @@
 #!/usr/bin/env node
-// BRIQUE 5 FINAL CLOSEOUT — MISSION 2/3/4/5: ports the proven Brique 5
-// causal same-PR convergence semantics INTO the hardened R22E two-pass
-// candidate (the safety baseline), producing exactly one new,
-// clearly-named, inactive, non-colliding LOCAL canonical artifact for
-// later promotion. ALSO fixes a real, demonstrated failure-persistence
-// defect discovered while auditing this exact artifact (Mission 5) --
-// see Patch 4 below.
-//
-// This never touches n8n-workflows/active/*, never imports/publishes
-// anything, and is a REPO-ONLY generator (mirrors the existing convention
-// of harden-wf2-r22e-two-pass.mjs: read one artifact, write another).
-//
-// MISSION 5 FINDING (proven by reading the real jsCode + connections
-// graph, not assumed): "Prepare WF2 Failure Status" itself is correctly
-// designed -- it unwraps `input.correlationEnvelope` into a top-level
-// `incidentId` that "Persist WF2 Failure Status" reads. BUT two nodes,
-// "Persist Verification Failure" (fed by "Write Guard Passed?"=false) and
-// "Persist Base Moved Failure" (fed by "Remote Head Drift Passed?"=false),
-// connect DIRECTLY to "Persist WF2 Failure Status", bypassing "Prepare"
-// entirely. Both output `correlationEnvelope` nested (not a top-level
-// `incidentId`), so for exactly these two failure paths --
-// CANDIDATE_VERIFICATION_* and CANDIDATE_BASE_MOVED, i.e. a Write Guard or
-// Remote Head Drift Guard rejection -- `$json.incidentId` at the Persist
-// HTTP node resolves to nothing, producing exactly the
-// `POST /api/incidents//workflow-status` defect this closeout's Mission 5
-// describes. This is a REAL, reproducible defect in this exact artifact
-// (not "disproven" by the absence of the bug in the unrelated active/
-// file's simpler failure path), proven by static analysis of the
-// connections graph and the two nodes' own jsCode (n8n-workflows/scripts/
-// wf2-canonical-final.spec.mjs Cases I2/I3 assert the pre-fix shape would
-// fail, then assert the fix routes both through "Prepare" correctly).
-//
-// FIX (Patch 4, pure rewiring, zero logic change): route both nodes' output
-// edge to "Prepare WF2 Failure Status" instead of directly to "Persist WF2
-// Failure Status". "Prepare" already reads exactly the field names both
-// nodes already produce (correlationEnvelope, failureCode, failedNode,
-// failureSummary, executionId) -- so no node's own jsCode needs to change,
-// and the primary failure information (failedNode/failureCode/
-// failureSummary) survives unmodified, exactly as Mission 5 requires.
-// Applies exactly three targeted, generic (no rule/project-specific
-// branches) patches on top of the R22E-TWO-PASS-CANDIDATE.json source:
-//
-//  1. "Select Existing PR"      -> MISSION 2/Phase 5: EXPECTED_PR_NOT_OPEN
-//                                  fail-closed when a corrective attempt
-//                                  finds no matching OPEN PR (never a
-//                                  replacement PR). Normal/initial behavior
-//                                  (correctiveAttempt absent/false) is
-//                                  byte-for-byte unchanged.
-//  2. "Use Existing Branch"     -> MISSION 4: an explicit, corrective-only
-//                                  freeze check -- the freshly-resolved
-//                                  candidateBaseSha (the real branch HEAD at
-//                                  generation time, already computed here in
-//                                  R22E) must equal the backend-frozen
-//                                  previousValidatedSha/blockedSha carried in
-//                                  correctiveContext. This is the FIRST of
-//                                  two independent checks (the second is the
-//                                  existing, unmodified Remote Head Drift
-//                                  Guard right before any write) -- neither
-//                                  replaces the other. Initial mode
-//                                  (correctiveAttempt absent/false) is
-//                                  unaffected.
-//  3. "Prepare Generic Remediation Plan" -> MISSION 3: when
-//                                  correctiveAttempt===true, the LLM
-//                                  request's structured `contract` gains an
-//                                  additive `correctiveContext` block, and
-//                                  the user-message instructions gain a
-//                                  GENERIC corrective-mode addendum (the
-//                                  exact 8 numbered rules). When
-//                                  correctiveAttempt is absent/false, the
-//                                  produced contract/llmRequestBody is
-//                                  BYTE-IDENTICAL to before (the additive
-//                                  spread contributes nothing, the addendum
-//                                  string is empty) -- proven by
-//                                  wf2-causal-prompt.spec.mjs Case A.
+// Prépare port brique5 into r22e pour les workflows n8n.
 import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
@@ -85,6 +12,7 @@ const data = JSON.parse(readFileSync(sourcePath, 'utf8'));
 const workflow = Array.isArray(data) ? data[0] : data;
 const byName = new Map(workflow.nodes.map(n => [n.name, n]));
 
+/** Signale une erreur pour patch nœud. */
 function patchNode(name, matcher, replacer, label) {
   const node = byName.get(name);
   if (!node) throw new Error(`PORT_FAILED: node not found: ${name}`);

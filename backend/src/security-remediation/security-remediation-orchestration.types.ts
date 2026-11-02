@@ -1,25 +1,4 @@
-// R-SEC-V1.3 §2/§3 — the orchestration contract connecting the pieces
-// already built and committed in V1/V1.1 (grounded decision, foundation
-// commit bcde8eb3) and V1.2 (deterministic writer + guard, commit
-// 14846855) into one coherent flow. Pure types only; no I/O.
-//
-// §2 — "decision envelope": deliberately NOT a new type. SecurityFindingDecision
-// (security-finding-decision.types.ts, committed in the Foundation) already
-// carries exactly the shape this section asks for: findingIdentity,
-// evaluatedSha, provenance{ecosystem,kind,package,installedVersion,
-// controllingFile,controllingElement,controllingProperty,groundedSha,evidence},
-// fixedVersions, selectedTargetVersion, remediationType, reason. Introducing
-// a second, parallel "decision envelope" type here would be exactly the
-// "duplicate existing types unnecessarily" this task explicitly forbids.
-// The non-override guarantee the task asks for (evaluatedSha/provenance/
-// installedVersion/targetVersion/controllingFile can never be caller/LLM-
-// controlled) already holds structurally: SecurityFindingDecisionService.decide()
-// (candidate-verifier/src/security-finding-decision.service.ts) accepts only
-// {findingIdentity, source, package, expectedInstalledVersion, fixedVersion}
-// plus workspace identity (repository/candidateBaseSha/requestId/batchId/
-// candidateAttempt) as input -- every other field on SecurityFindingDecision
-// is COMPUTED internally from real grounding + the pure classifier, never
-// echoed back from caller input.
+// Définit les données et résultats de l’orchestration unitaire : finding fiable, dépôt/commit, candidat, preuves de tests, sécurité, statuts et classes d’échec.
 import { CandidateManifest } from '../candidate-verification/candidate-verification.types';
 import { SecurityFindingDecision, SecurityFindingDecisionInput } from './security-finding-decision.types';
 import { SecurityPatchGuardResult } from './security-patch-guard';
@@ -38,19 +17,8 @@ export interface SecurityRemediationOrchestrationInput {
   requestId: string;
   batchId: string;
   candidateAttempt: number;
-  /**
-   * V1.7 Blocker B: the caller's own overall time budget for this single
-   * evaluation, in milliseconds. Forwarded unchanged by the backend's
-   * CandidateVerificationService.evaluateSecurityRemediation() from the SAME
-   * `timeoutMs` it already uses to bound its own HTTP wait -- so the
-   * worker's internal deadline and the backend's HTTP abort finally agree,
-   * instead of the abort firing over a synchronous worker that keeps
-   * running regardless. Optional/absent falls back to the worker's own
-   * default (createWorkerDeadline() in candidate-verifier/src/
-   * worker-deadline.ts); always clamped server-side, never trusted as an
-   * unbounded request.
-   */
   overallDeadlineMs?: number;
+  additionalCveIds?: string[];
 }
 
 /**
@@ -82,15 +50,6 @@ export type SecurityRemediationCandidateStatus =
   | 'MAVEN_RESOLUTION_FAILED'
   | 'MAVEN_RESOLUTION_MISMATCH';
 
-/**
- * V1.8 — always present once the build+test phase has actually been
- * attempted (absent only for statuses that stop strictly BEFORE that phase,
- * e.g. NOT_ELIGIBLE/GROUNDING_FAILED/MAVEN_RESOLUTION_*). Exposed regardless
- * of the final status so a caller can see WHY a candidate stopped even when
- * it never reached CANDIDATE_READY -- never folded away into a single
- * boolean, per this phase's own instruction not to fabricate metrics the
- * real Surefire aggregation cannot support.
- */
 export interface ApplicationTestEvidence {
   executed: boolean;
   passed: boolean | null;
@@ -102,14 +61,6 @@ export interface ApplicationTestEvidence {
   evidenceTail: string;
 }
 
-/**
- * §3 — the ONE new type this phase introduces. `candidateManifest` reuses
- * the EXISTING CandidateManifest/CandidateFile shape byte-for-byte (a
- * single-file manifest whose one entry is the SAME CandidateFile the V1.2
- * writer/guard already produce) so a future GitHub-write step can consume
- * it unchanged through the existing write-guard/candidate-verification
- * pipeline -- no second, incompatible candidate model.
- */
 export interface SecurityClosureEvidence {
   status: 'TARGET_CVE_CLOSED';
   targetCve: string;
@@ -126,6 +77,14 @@ export interface SecurityClosureEvidence {
   // suite has actually run and passed (see ApplicationTestEvidence above /
   // orchestrate()'s own gate) -- 'SKIPPED' can no longer occur here.
   tests: 'PASSED';
+  newHighCriticalCount: number | null;
+  /**
+   * V1.8 Phase 3 ticket — one entry per input.additionalCveIds, each
+   * independently checked against this SAME real candidate scan via the
+   * existing cveTargets() (never assumed closed just because the primary
+   * targetCve closed). Absent/empty when additionalCveIds was absent/empty.
+   */
+  additionalCveClosure?: { cve: string; closed: boolean }[];
 }
 
 export interface SecurityRemediationCandidateResult {
@@ -156,29 +115,22 @@ export interface SecurityRemediationCandidateResult {
   } | null;
 }
 
-// R-SEC-V1.4 §4 — structural request validation for the candidate-verifier
-// worker's new /security-remediation/evaluate route. Same role as
-// assertHeadVerificationRequest/assertVerificationStep in
-// candidate-verification.types.ts: a pure guard the worker calls BEFORE
-// invoking the orchestrator, so a malformed body is rejected with a clean
-// 400 rather than reaching real git/Maven I/O. This is a SHAPE check only
-// (right fields, right types) -- it has no opinion on whether the values
-// are TRUSTED; that guarantee is the backend's job (the worker's only
-// caller is the backend's own SecurityRemediationController, over the same
-// isolated internal network as /verify -- see server.ts's own header
-// comment -- so the worker itself does not re-authenticate the caller).
 export class SecurityRemediationRequestValidationError extends Error {
+  /** Initialise l’erreur avec son contexte. */
   constructor(message: string) {
     super(message);
     this.name = 'SecurityRemediationRequestValidationError';
   }
 }
 
+/** Vérifie l’état suivant : Non vide chaîne. */
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === 'string' && value.trim().length > 0;
 }
 
+/** Vérifie sécurité correction Orchestration entrée. */
 export function assertSecurityRemediationOrchestrationInput(body: any): asserts body is SecurityRemediationOrchestrationInput {
+  /** Signale une erreur pour fail. */
   const fail = (msg: string): never => { throw new SecurityRemediationRequestValidationError(msg); };
   if (!body || typeof body !== 'object') fail('Request body must be an object.');
   const f = body.finding;
@@ -197,16 +149,6 @@ export function assertSecurityRemediationOrchestrationInput(body: any): asserts 
     fail('overallDeadlineMs must be a positive finite number when present.');
 }
 
-/**
- * §5/§7 — the backend HTTP client's own result contract. A UNION, never a
- * mutation of SecurityRemediationCandidateResult: a transport failure means
- * the orchestrator never ran at all (no decision was ever computed), so it
- * would be dishonest to force it into that type's `decision`-always-present
- * shape. Mirrors the EXISTING CandidateVerificationService failure
- * vocabulary (VERIFIER_TIMEOUT/VERIFIER_UNAVAILABLE/VERIFIER_PROTOCOL_ERROR
- * -- candidate-verification.service.ts's own FailureClass) instead of
- * inventing a new one.
- */
 export interface SecurityRemediationTransportFailure {
   status: 'TECHNICAL_FAILURE';
   failureClass: 'VERIFIER_TIMEOUT' | 'VERIFIER_UNAVAILABLE' | 'VERIFIER_PROTOCOL_ERROR';

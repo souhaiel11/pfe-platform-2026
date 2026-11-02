@@ -1,10 +1,4 @@
-// R22-C — applies a CandidateManifest's files onto an already-verified
-// exact-SHA workspace, LOCALLY ONLY. Never touches GitHub. Every check here
-// fails closed: an unrecognized operation, an out-of-scope path, a
-// MODIFY-target that doesn't exist, a CREATE-target that already exists, or
-// a post-write digest mismatch all reject the candidate rather than
-// silently reinterpreting it (explicit requirement: "Never silently
-// reinterpret operations").
+// Applique les fichiers proposés sur le commit de base du candidat.
 import { Injectable, Optional } from '@nestjs/common';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -13,6 +7,7 @@ import { computeContentSha256 } from '../../backend/src/candidate-verification/c
 import { ScopeLockService } from '../../backend/src/context/scope-lock.service';
 
 export class MaterializationError extends Error {
+  /** Initialise l’erreur avec son contexte. */
   constructor(message: string, public readonly failureClass: 'CANDIDATE_MANIFEST_INVALID' | 'CANDIDATE_MATERIALIZATION_FAILED' | 'CANDIDATE_CONTENT_MISMATCH') {
     super(message);
     this.name = 'MaterializationError';
@@ -21,9 +16,10 @@ export class MaterializationError extends Error {
 
 @Injectable()
 export class CandidateMaterializer {
+  /** Initialise les dépendances et l’état de ce composant. */
   constructor(@Optional() private readonly scopeLock: ScopeLockService = new ScopeLockService()) {}
 
-  /** allowedPaths: when supplied, any file outside it is CANDIDATE_MANIFEST_INVALID (ScopeLockService, R22-A). */
+  /** Prépare les fichiers du candidat dans son espace de travail. */
   materialize(workspacePath: string, manifest: CandidateManifest, allowedPaths?: string[]): void {
     const resolvedRoot = path.resolve(workspacePath) + path.sep;
 
@@ -40,6 +36,7 @@ export class CandidateMaterializer {
     }
   }
 
+  /** Refuse un chemin qui sort du périmètre autorisé. */
   private validatePath(candidatePath: string, resolvedRoot: string): void {
     if (path.isAbsolute(candidatePath)) {
       throw new MaterializationError(`Absolute path rejected: ${candidatePath}`, 'CANDIDATE_MANIFEST_INVALID');
@@ -58,6 +55,7 @@ export class CandidateMaterializer {
     }
   }
 
+  /** Écrit élément. */
   private writeOne(workspacePath: string, resolvedRoot: string, file: CandidateFile): void {
     const targetPath = path.resolve(resolvedRoot, file.path);
     const existsOnDisk = fs.existsSync(targetPath);

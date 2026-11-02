@@ -1,6 +1,6 @@
 [
   {
-    "name": "WF6 — Security Remediation (Maven, V1.6 offline draft)",
+    "name": "WF6 \u2014 Security Remediation (Maven, V1.6 offline draft)",
     "active": false,
     "nodes": [
       {
@@ -4482,6 +4482,117 @@
           "responseBody": "={{ ({state: \"PR_HEAD_DRIFTED\"}) }}",
           "options": {}
         }
+      },
+      {
+        "id": "wf6-n145",
+        "name": "PR36 Protection Check (Target)",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          2100,
+          750
+        ],
+        "parameters": {
+          "mode": "runOnceForAllItems",
+          "jsCode": "try {\n  const c = $(\"Trusted Candidate\").first().json;\n  const repoOk = typeof c.repository === 'string' && c.repository.length > 0;\n  const branchOk = typeof c.branchName === 'string' && c.branchName.length > 0;\n  if (!repoOk || !branchOk) return [{json: {pr36Protected: true, pr36GuardReason: 'IDENTITY_MISSING'}}];\n  const isProtected = c.repository === 'souhaiel11/pfe-app-test' && c.branchName === 'security/fix/a37e178f7ce1-1ebe4cecc872';\n  return [{json: {pr36Protected: isProtected, pr36GuardReason: isProtected ? 'MATCHES_PR36_TARGET_BRANCH' : null}}];\n} catch { return [{json: {pr36Protected: true, pr36GuardReason: 'CHECK_FAILED'}}]; }"
+        }
+      },
+      {
+        "id": "wf6-n146",
+        "name": "PR36 Protection Passed? (Target)",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          2100,
+          900
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "PR36 Protection Passed? (Target)",
+                "leftValue": "={{ Boolean($json.pr36Protected === false) }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "wf6-n147",
+        "name": "PR36 Protection Check (Resolved PR)",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1200,
+          900
+        ],
+        "parameters": {
+          "mode": "runOnceForAllItems",
+          "jsCode": "try {\n  const state = $json;\n  const c = $(\"Trusted Candidate\").first().json;\n  if (state.pullRequestNumber == null) return [{json: {...state, pr36Protected: false, pr36GuardReason: null}}];\n  const repoOk = typeof c.repository === 'string' && c.repository.length > 0;\n  if (!repoOk || !Number.isSafeInteger(state.pullRequestNumber)) return [{json: {...state, pr36Protected: true, pr36GuardReason: 'IDENTITY_MISSING'}}];\n  const isProtected = c.repository === 'souhaiel11/pfe-app-test' && state.pullRequestNumber === 36;\n  return [{json: {...state, pr36Protected: isProtected, pr36GuardReason: isProtected ? 'MATCHES_PR36_NUMBER' : null}}];\n} catch { return [{json: {pr36Protected: true, pr36GuardReason: 'CHECK_FAILED'}}]; }"
+        }
+      },
+      {
+        "id": "wf6-n148",
+        "name": "PR36 Protection Passed? (Resolved PR)",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          1350,
+          900
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "PR36 Protection Passed? (Resolved PR)",
+                "leftValue": "={{ Boolean($json.pr36Protected === false) }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      },
+      {
+        "id": "wf6-n149",
+        "name": "Respond - PR36_PROTECTED",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          1650,
+          1050
+        ],
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ ({state: \"PR36_PROTECTED\"}) }}",
+          "options": {}
+        }
       }
     ],
     "connections": {
@@ -4775,7 +4886,7 @@
         "main": [
           [
             {
-              "node": "Early Historical PR Lookup",
+              "node": "PR36 Protection Check (Target)",
               "type": "main",
               "index": 0
             }
@@ -4851,7 +4962,7 @@
         "main": [
           [
             {
-              "node": "Historical PR Shape Valid?",
+              "node": "PR36 Protection Check (Resolved PR)",
               "type": "main",
               "index": 0
             }
@@ -6242,6 +6353,64 @@
           [
             {
               "node": "Drifted PR Closure Confirmed?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "PR36 Protection Check (Target)": {
+        "main": [
+          [
+            {
+              "node": "PR36 Protection Passed? (Target)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "PR36 Protection Passed? (Resolved PR)": {
+        "main": [
+          [
+            {
+              "node": "Historical PR Shape Valid?",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Respond - PR36_PROTECTED",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "PR36 Protection Passed? (Target)": {
+        "main": [
+          [
+            {
+              "node": "Early Historical PR Lookup",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Respond - PR36_PROTECTED",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "PR36 Protection Check (Resolved PR)": {
+        "main": [
+          [
+            {
+              "node": "PR36 Protection Passed? (Resolved PR)",
               "type": "main",
               "index": 0
             }

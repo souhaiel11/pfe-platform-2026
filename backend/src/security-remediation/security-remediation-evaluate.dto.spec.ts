@@ -1,13 +1,10 @@
-// R-SEC-V1.4 §8 (option A) — proves the app's REAL global ValidationPipe
-// config (main.ts: `new ValidationPipe({ whitelist: true, transform: true })`)
-// actually strips any field not declared on SecurityRemediationEvaluateDto,
-// using the SAME class-transformer/class-validator machinery Nest's
-// ValidationPipe uses internally -- not a hand-rolled approximation.
+// Teste le composant « security-remediation-evaluate.dto » et ses cas d’erreur.
 import * as assert from 'node:assert/strict';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { SecurityRemediationEvaluateDto } from './security-remediation-evaluate.dto';
 
+/** Exécute les étapes principales de ce programme. */
 async function main() {
   const maliciousBody = {
     projectId: '3aa1c9b9-e114-40e4-884b-ebc7aa32e002',

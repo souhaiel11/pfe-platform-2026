@@ -1,29 +1,4 @@
-/** CORRECTIF 2 primitives — none of these are wired into any live caller
- * yet (dependencyTree()'s options.offline, dependencyGoOffline(),
- * resolveArtifact()). This proves each primitive's own command
- * construction and result classification in isolation, fast and
- * deterministic, via a fake mvn-on-PATH that echoes its own argv (so the
- * test can assert exactly what was invoked) and can be told to fail with
- * Maven's own REAL offline-miss wording.
- *
- * That wording (OFFLINE_MISSING_ARTIFACT's regex target) was captured from
- * an actual `mvn -o dependency:tree` run against this exact Maven 3.8.7
- * install, against a pom referencing a nonexistent version -- reproduced
- * here verbatim as a fixture, not invented:
- *
- *   [ERROR] Failed to execute goal on project offline-probe: Could not
- *   resolve dependencies for project com.example:offline-probe:jar:1.0.0:
- *   Cannot access central (https://repo.maven.apache.org/maven2) in
- *   offline mode and the artifact
- *   ch.qos.logback:logback-classic:jar:1.9.9-does-not-exist-probe has not
- *   been downloaded from it before. -> [Help 1]
- *
- * `mvn dependency:get` working standalone with no pom.xml at all (used by
- * resolveArtifact()) was also verified for real, separately, against the
- * real ch.qos.logback:logback-classic:1.2.13 target version -- not
- * exercised here (real network, ~50s, not repeatable-fast) but confirmed:
- * exit 0, BUILD SUCCESS, artifact landed in .m2/repository/ch/qos/logback.
- */
+// Teste le composant « maven-build-adapter-offline » et ses cas d’erreur.
 import * as assert from 'node:assert/strict';
 import { execFileSync } from 'child_process';
 import * as fs from 'fs';
@@ -44,8 +19,7 @@ const REAL_OFFLINE_MISS_STDERR =
   'Cannot access central (https://repo.maven.apache.org/maven2) in offline mode and the artifact ' +
   'ch.qos.logback:logback-classic:jar:1.9.9-does-not-exist-probe has not been downloaded from it before. -> [Help 1]';
 
-/** Writes a fake `mvn` that records its own argv (one line per invocation,
- *  appended) to argsCapturePath, then exits with the given code/stderr. */
+/** Simule les dépendances nécessaires au scénario. */
 function installFakeMaven(exitCode: number, stderr = ''): void {
   const script =
     '#!/bin/sh\n' +
@@ -54,13 +28,12 @@ function installFakeMaven(exitCode: number, stderr = ''): void {
     `exit ${exitCode}\n`;
   fs.writeFileSync(fakeMavenPath, script, { mode: 0o755 });
 }
+/** Prépare les données nécessaires à ce scénario. */
 function lastCapturedArgs(): string {
   const lines = fs.readFileSync(argsCapturePath, 'utf8').trim().split('\n');
   return lines[lines.length - 1];
 }
-// Exact-token check, never substring: the tmpdir fixture path itself
-// legitimately contains "-o" as a substring (this file's own "-offline-"
-// prefix), which a naive .includes('-o') would false-positive on.
+/** Prépare les données nécessaires à ce scénario. */
 function hasToken(args: string, token: string): boolean {
   return args.split(/\s+/).includes(token);
 }
@@ -103,13 +76,6 @@ try {
     assert.equal(result.offlineFailure!.primaryMissingArtifact, 'ch.qos.logback:logback-classic:jar:1.9.9-does-not-exist-probe');
   }
 
-  // 4. The SAME real failure text, but WITHOUT options.offline -- must
-  // never be classified as offlineFailure. Detection is gated on the
-  // caller's own declared intent, never inferred from text content alone
-  // (the exact scenario this file's own maven-build-adapter.ts comment
-  // calls out: a misconfigured mirror could theoretically print similar
-  // text in a genuinely online run, where it would not mean the same
-  // thing).
   {
     installFakeMaven(1, REAL_OFFLINE_MISS_STDERR);
     const result = adapter.dependencyTree(root, 30_000); // offline omitted
@@ -166,6 +132,7 @@ try {
     assert.equal(result.timedOut, true, 'a real subprocess timeout during warm-up must be reported as timedOut');
     assert.equal(result.networkFailure, undefined, 'timedOut and networkFailure are reported separately, never both -- text-based classification is skipped once the cause is already known to be a timeout');
     const deadline = Date.now() + 5_000;
+    /** Prépare les données nécessaires à ce scénario. */
     const stillRunning = () => { try { execFileSync('pgrep', ['-f', `sleep ${HANG_SECONDS}`], { encoding: 'utf8' }); return true; } catch { return false; } };
     while (stillRunning() && Date.now() < deadline) { /* brief poll */ }
     assert.equal(stillRunning(), false, 'no orphan left behind by a warm-up timeout');

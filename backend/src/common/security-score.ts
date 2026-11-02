@@ -1,30 +1,24 @@
-// Score de sécurité d'un report — figé, 100% dérivé des findings scanner de
-// CE scan (Trivy/OWASP/Sonar/ZAP), jamais de openIncidents/buildFailed (qui
-// changent en continu et rendraient une valeur stockée périmée). Plafonné
-// par catégorie de sévérité pour rester discriminant à fort volume de CVE.
+// Score de sécurité d'un report.
 import { EnrichedData } from './report-normalizer';
 
 export interface SecurityScoreResult {
   score: number;
-  // true si au moins un scanner v2.1 n'a pas tourné (status présent et
-  // différent de 'COMPLETED') — jamais déclenché sur un report legacy/vide,
-  // dont l'absence de `status` est une donnée de confiance historique, pas
-  // une preuve d'échec. Voir isScannerComplete ci-dessous.
   incomplete: boolean;
   missingScanners: string[];
 }
 
-// Un scanner sans `status` (legacy, ou report antérieur à cette convention)
-// est traité comme fiable — on ne requalifie jamais rétroactivement une
-// donnée historique réelle en "incomplète". Seul un `status` explicitement
-// présent et différent de 'COMPLETED' (ex. 'UNKNOWN', 'FAILED') marque le
-// scanner comme n'ayant pas tourné.
+/** Indique si un scanner est considéré complet (absence de `status` = donnée historique fiable, présence différente de 'COMPLETED' = n'a pas tourné). */
 function isScannerComplete(status?: string): boolean {
   return !status || status === 'COMPLETED';
 }
 
+/** Calcule le score de sécurité d'un report à partir des findings normalisés, en excluant du calcul tout scanner qui n'a pas tourné (jamais pénalisé ni compté comme "0 trouvé"). */
 export function calculateSecurityScore(normalized: EnrichedData): SecurityScoreResult {
   const { trivy, owasp, sonar, zap } = normalized;
+
+  if (normalized._sourceFormat === 'empty') {
+    return { score: 0, incomplete: true, missingScanners: ['trivy', 'owasp', 'zap', 'sonar'] };
+  }
 
   const trivyOk = isScannerComplete(trivy.status);
   const owaspOk = isScannerComplete(owasp.status);
@@ -37,11 +31,6 @@ export function calculateSecurityScore(normalized: EnrichedData): SecurityScoreR
   if (!zapOk) missingScanners.push('zap');
   if (!sonarOk) missingScanners.push('sonar');
 
-  // Un scanner qui n'a pas tourné est exclu du calcul — ni compté "0 trouvé"
-  // (masquerait son absence), ni pénalisé d'une valeur forfaitaire inventée
-  // (indéfendable : "pourquoi X points et pas Y ?"). L'absence de preuve
-  // n'améliore ni ne dégrade le score brut ; c'est `incomplete` ci-dessous
-  // qui porte la conséquence réelle (jamais LOW/healthy, voir getRiskLevel).
   const critical = (trivyOk ? trivy.critical || 0 : 0) + (owaspOk ? owasp.critical || 0 : 0);
   const high     = (trivyOk ? trivy.high || 0 : 0)     + (owaspOk ? owasp.high || 0 : 0);
   const medium   = (trivyOk ? trivy.cves.filter(c => c.severity === 'MEDIUM').length : 0)
@@ -69,10 +58,7 @@ export function calculateSecurityScore(normalized: EnrichedData): SecurityScoreR
   return { score, incomplete: missingScanners.length > 0, missingScanners };
 }
 
-// incomplete=true → 'INDETERMINE', jamais LOW ni aucun autre palier dérivé
-// du score brut : un scanner absent n'a rien trouvé DU TOUT (ni risque, ni
-// absence de risque) — forcer HIGH inventerait un risque jamais détecté,
-// exactement le péché symétrique du faux LOW qu'on corrige ici.
+/** Convertit un score (et son éventuelle incomplétude) en niveau de risque (LOW/MEDIUM/HIGH/CRITICAL/INDETERMINE). */
 export function getRiskLevel(score: number, incomplete = false): string {
   if (incomplete) return 'INDETERMINE';
   if (score >= 80) return 'LOW';

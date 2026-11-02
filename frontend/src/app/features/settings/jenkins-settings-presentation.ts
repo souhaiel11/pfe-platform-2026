@@ -1,4 +1,6 @@
-// Configuration is not connectivity: only a dated diagnostic proves a check.
+// Regroupe les traitements de Jenkins paramètres presentation.
+/** Prépare les paramètres Jenkins pour leur affichage. */
+/** Prépare les paramètres Jenkins pour leur affichage. */
 export function jenkinsSettingsPresentation(project: any) {
   const configured = !!(project?.jenkinsJobName?.trim() && (project?.jenkinsInternalUrl?.trim() || project?.jenkinsUrl?.trim()));
   const diagnostic = project?.validationStatus?.jenkins;

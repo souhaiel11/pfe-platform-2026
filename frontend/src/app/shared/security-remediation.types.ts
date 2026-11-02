@@ -1,4 +1,6 @@
-/** Additive Phase 2A wire contract. Legacy rows may omit modern identity. */
+// Décrit la forme d'une tâche de remédiation de sécurité (vulnérabilité) et de son historique de
+// tentatives, telle que renvoyée par le backend.
+
 export interface SecurityRemediationAttempt {
   attemptId?: string;
   attemptNumber?: number;

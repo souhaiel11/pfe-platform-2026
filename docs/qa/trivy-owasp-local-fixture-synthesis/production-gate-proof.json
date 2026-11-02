@@ -1,0 +1,146 @@
+{
+  "outputs": [
+    {
+      "workspace": "/tmp/remediation-fixture-candidate-10",
+      "gate": {
+        "decision": "ALLOW",
+        "reason": "ALL_GATES_PASSED",
+        "evidence": {
+          "schemaVersion": 2,
+          "evidenceId": "320ce631812a80ac34f49149309ca7f4d7746b68a44e9b8902e929d883f23d77",
+          "repository": "LOCAL_DISPOSABLE_FIXTURE",
+          "validatedCommitSha": "7234ec4995996ce130ba4848c472c93310d9f4de",
+          "findingSource": "TRIVY",
+          "cve": "CVE-2022-45868",
+          "component": "com.h2database:h2",
+          "installedVersion": "2.1.212",
+          "validationRunId": "/tmp/remediation-fixture-candidate-10",
+          "validatedAt": "2026-10-05T22:23:10.166Z",
+          "state": "VALIDATED_RECOMMENDED",
+          "recommendedVersion": "2.2.220",
+          "actualEditTarget": "com.h2database:h2",
+          "editType": "DEPENDENCY_VERSION",
+          "fromVersion": "2.1.212",
+          "toVersion": "2.2.220",
+          "expectedResolvedDependency": "2.2.220",
+          "ownerType": null,
+          "ownerCoordinate": null,
+          "evidenceSummary": "Actual local Maven builds/tests, image-archive Trivy scans and derived production scope",
+          "recommendationReason": "ALL_GATES_PASSED",
+          "sandboxValidated": true,
+          "targetCveClosed": true,
+          "newHighCriticalCount": 0,
+          "requiresDeveloperReview": false
+        }
+      },
+      "evidencePersistedToBusinessStore": false
+    },
+    {
+      "workspace": "/tmp/remediation-fixture-h2-repro-1",
+      "gate": {
+        "decision": "ALLOW",
+        "reason": "ALL_GATES_PASSED",
+        "evidence": {
+          "schemaVersion": 2,
+          "evidenceId": "17fb7777a6006b92b1f21cff85a5bc234ca63628abef590d0e77753fd60d8bdd",
+          "repository": "LOCAL_DISPOSABLE_FIXTURE",
+          "validatedCommitSha": "7205eb7f6e5d85cfdc79b59a4f6b2bfed4240348",
+          "findingSource": "TRIVY",
+          "cve": "CVE-2022-45868",
+          "component": "com.h2database:h2",
+          "installedVersion": "2.1.212",
+          "validationRunId": "/tmp/remediation-fixture-h2-repro-1",
+          "validatedAt": "2026-10-05T22:23:10.167Z",
+          "state": "VALIDATED_RECOMMENDED",
+          "recommendedVersion": "2.2.220",
+          "actualEditTarget": "com.h2database:h2",
+          "editType": "DEPENDENCY_VERSION",
+          "fromVersion": "2.1.212",
+          "toVersion": "2.2.220",
+          "expectedResolvedDependency": "2.2.220",
+          "ownerType": null,
+          "ownerCoordinate": null,
+          "evidenceSummary": "Actual local Maven builds/tests, image-archive Trivy scans and derived production scope",
+          "recommendationReason": "ALL_GATES_PASSED",
+          "sandboxValidated": true,
+          "targetCveClosed": true,
+          "newHighCriticalCount": 0,
+          "requiresDeveloperReview": false
+        }
+      },
+      "evidencePersistedToBusinessStore": false
+    },
+    {
+      "workspace": "/tmp/remediation-fixture-h2-repro-2",
+      "gate": {
+        "decision": "ALLOW",
+        "reason": "ALL_GATES_PASSED",
+        "evidence": {
+          "schemaVersion": 2,
+          "evidenceId": "145eef312bf36d01e499f02d84a6459822ae074277a8b1dc9a8afa954bdec697",
+          "repository": "LOCAL_DISPOSABLE_FIXTURE",
+          "validatedCommitSha": "e08267c60b7eaaddb1f3790f51028360ffd3b2ef",
+          "findingSource": "TRIVY",
+          "cve": "CVE-2022-45868",
+          "component": "com.h2database:h2",
+          "installedVersion": "2.1.212",
+          "validationRunId": "/tmp/remediation-fixture-h2-repro-2",
+          "validatedAt": "2026-10-05T22:23:10.167Z",
+          "state": "VALIDATED_RECOMMENDED",
+          "recommendedVersion": "2.2.220",
+          "actualEditTarget": "com.h2database:h2",
+          "editType": "DEPENDENCY_VERSION",
+          "fromVersion": "2.1.212",
+          "toVersion": "2.2.220",
+          "expectedResolvedDependency": "2.2.220",
+          "ownerType": null,
+          "ownerCoordinate": null,
+          "evidenceSummary": "Actual local Maven builds/tests, image-archive Trivy scans and derived production scope",
+          "recommendationReason": "ALL_GATES_PASSED",
+          "sandboxValidated": true,
+          "targetCveClosed": true,
+          "newHighCriticalCount": 0,
+          "requiresDeveloperReview": false
+        }
+      },
+      "evidencePersistedToBusinessStore": false
+    }
+  ],
+  "extras": [
+    {
+      "package": "org.apache.logging.log4j:log4j-api",
+      "selection": {
+        "eligibleTargetVersion": "2.25.5",
+        "reason": "SELECTED"
+      }
+    },
+    {
+      "package": "org.apache.tomcat.embed:tomcat-embed-websocket",
+      "selection": {
+        "eligibleTargetVersion": "9.0.86",
+        "reason": "SELECTED"
+      }
+    },
+    {
+      "package": "org.springframework:spring-context",
+      "selection": {
+        "eligibleTargetVersion": null,
+        "reason": "CROSS_MAJOR_ONLY"
+      }
+    },
+    {
+      "package": "org.springframework:spring-core",
+      "selection": {
+        "eligibleTargetVersion": null,
+        "reason": "CROSS_MAJOR_ONLY"
+      }
+    },
+    {
+      "package": "org.hibernate:hibernate-core",
+      "selection": {
+        "eligibleTargetVersion": null,
+        "reason": "NO_FIXED_VERSIONS"
+      }
+    }
+  ]
+}

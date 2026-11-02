@@ -1,0 +1,135 @@
+{
+  "SchemaVersion": 2,
+  "Trivy": {
+    "Version": "0.72.0"
+  },
+  "ReportID": "01a10e26-aa79-770b-80ae-03ed13135d7a",
+  "CreatedAt": "2026-10-06T00:19:37.465463268+02:00",
+  "ArtifactID": "sha256:9efe02148bbb0eb9c8176bf53580f4295168d97458b388c15801b2c6f7de8d2d",
+  "ArtifactName": "/tmp/remediation-fixture-candidate-12/image.tar",
+  "ArtifactType": "container_image",
+  "Metadata": {
+    "Size": 307200,
+    "ImageID": "sha256:211df0268b09872ef44396e5e8faea84c3ff9e76282fce732c1798152b145863",
+    "DiffIDs": [
+      "sha256:54405b41b8e590ada2cf2eef2528c9a9933ff60024e9af94d9c8cda9fb2ab346"
+    ],
+    "RepoTags": [
+      "local-fixture:12"
+    ],
+    "Reference": "local-fixture:12",
+    "ImageConfig": {
+      "architecture": "amd64",
+      "created": "0001-01-01T00:00:00Z",
+      "os": "linux",
+      "rootfs": {
+        "type": "layers",
+        "diff_ids": [
+          "sha256:54405b41b8e590ada2cf2eef2528c9a9933ff60024e9af94d9c8cda9fb2ab346"
+        ]
+      },
+      "config": {}
+    },
+    "Layers": [
+      {
+        "Size": 307200,
+        "DiffID": "sha256:54405b41b8e590ada2cf2eef2528c9a9933ff60024e9af94d9c8cda9fb2ab346"
+      }
+    ]
+  },
+  "Results": [
+    {
+      "Target": "Java",
+      "Class": "lang-pkgs",
+      "Type": "jar",
+      "Packages": [
+        {
+          "Name": "org.apache.logging.log4j:log4j-api",
+          "Identifier": {
+            "PURL": "pkg:maven/org.apache.logging.log4j/log4j-api@2.17.2",
+            "UID": "2d4578568e8d6d5c"
+          },
+          "Version": "2.17.2",
+          "Licenses": [
+            "Apache-2.0"
+          ],
+          "Layer": {
+            "DiffID": "sha256:54405b41b8e590ada2cf2eef2528c9a9933ff60024e9af94d9c8cda9fb2ab346"
+          },
+          "FilePath": "app/log4j-api-2.17.2.jar",
+          "AnalyzedBy": "jar"
+        }
+      ],
+      "Vulnerabilities": [
+        {
+          "VulnerabilityID": "CVE-2026-49844",
+          "VendorIDs": [
+            "GHSA-qv9r-c865-cp47"
+          ],
+          "PkgName": "org.apache.logging.log4j:log4j-api",
+          "PkgPath": "app/log4j-api-2.17.2.jar",
+          "PkgIdentifier": {
+            "PURL": "pkg:maven/org.apache.logging.log4j/log4j-api@2.17.2",
+            "UID": "2d4578568e8d6d5c"
+          },
+          "InstalledVersion": "2.17.2",
+          "FixedVersion": "2.25.5, 2.26.1",
+          "Status": "fixed",
+          "Layer": {
+            "DiffID": "sha256:54405b41b8e590ada2cf2eef2528c9a9933ff60024e9af94d9c8cda9fb2ab346"
+          },
+          "SeveritySource": "ghsa",
+          "PrimaryURL": "https://avd.aquasec.com/nvd/cve-2026-49844",
+          "DataSource": {
+            "ID": "ghsa",
+            "Name": "GitHub Security Advisory Maven",
+            "URL": "https://github.com/advisories?query=type%3Areviewed+ecosystem%3Amaven"
+          },
+          "Fingerprint": "sha256:54e271817c7b5b27ee56b612e8df6595696e663b13497019b18689e3b27b4b49",
+          "Title": "org.apache.logging.log4j/log4j-api: Apache Log4j API: Malformed JSON output due to improper encoding of floating-point values",
+          "Description": "Improper encoding of non-finite floating-point values during MapMessage JSON serialization in Apache Log4j API produces output that is not valid JSON. This issue affects Apache Log4j API versions 2.13.1 through 2.25.4 and version 2.26.0.\n\nThe fix for CVE-2026-34481 did not cover all code paths: when a MapMessage contains a non-finite IEEE 754 value (NaN, Infinity, or -Infinity), MapMessage.asJson() emits the corresponding bare token. RFC 8259 does not permit these tokens, so a conformant parser rejects the resulting document.\n\nThe defect is reachable only when both of the following conditions hold:\n\n  *  The application uses the  message resolver https://logging.apache.org/log4j/2.x/manual/json-template-layout.html#event-template-resolver-message  of JsonTemplateLayout or any other layout that relies on MapMessage.asJson() or MapMessage.getFormattedMessage(new String[]{\"JSON\"}).\n  *  The application logs a MapMessage that contains an attacker-controlled floating-point value.\n\n\nAn attacker who can supply a non-finite value can cause the affected layout to emit malformed JSON, which may corrupt the enclosing log record or disrupt downstream log ingestion and parsing.\n\nUsers are advised to upgrade to Apache Log4j API 2.25.5 or 2.26.1, both of which emit RFC 8259-compliant JSON for non-finite values.",
+          "Severity": "MEDIUM",
+          "CweIDs": [
+            "CWE-116"
+          ],
+          "VendorSeverity": {
+            "amazon": 2,
+            "ghsa": 2,
+            "nvd": 2,
+            "redhat": 2
+          },
+          "CVSS": {
+            "ghsa": {
+              "V40Vector": "CVSS:4.0/AV:N/AC:L/AT:P/PR:N/UI:N/VC:N/VI:N/VA:N/SC:N/SI:L/SA:N",
+              "V40Score": 6.3
+            },
+            "nvd": {
+              "V3Vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:H/A:N",
+              "V3Score": 5.9
+            },
+            "redhat": {
+              "V3Vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:H/A:N",
+              "V3Score": 5.9
+            }
+          },
+          "References": [
+            "https://access.redhat.com/security/cve/CVE-2026-49844",
+            "https://github.com/apache/logging-log4j2",
+            "https://github.com/apache/logging-log4j2/commit/19edb23e162d6c728a8c2221a240037d389ed300",
+            "https://github.com/apache/logging-log4j2/commit/feadf8eb0b4acb6ddfa4c0ab2bbc6d88b8e12d82",
+            "https://github.com/apache/logging-log4j2/pull/4163",
+            "https://github.com/apache/logging-log4j2/releases/tag/rel/2.25.5",
+            "https://github.com/apache/logging-log4j2/releases/tag/rel/2.26.1",
+            "https://logging.apache.org/cyclonedx/vdr.xml",
+            "https://logging.apache.org/log4j/2.x/manual/json-template-layout.html#event-template-resolver-message",
+            "https://logging.apache.org/security.html#CVE-2026-49844",
+            "https://nvd.nist.gov/vuln/detail/CVE-2026-49844",
+            "https://www.cve.org/CVERecord?id=CVE-2026-49844"
+          ],
+          "PublishedDate": "2026-07-10T22:16:42.54Z",
+          "LastModifiedDate": "2026-07-14T20:03:09.91Z"
+        }
+      ]
+    }
+  ]
+}

@@ -1,8 +1,10 @@
+// Teste le composant « jenkins-settings » et ses cas d’erreur.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 import {createRequire} from 'node:module';
 const ts=createRequire(import.meta.url)('typescript');
+/** Lit les données depuis leur source. */
 const read=p=>fs.readFileSync(new URL(p,import.meta.url),'utf8');
 const exports={};vm.runInNewContext(ts.transpileModule(read('../src/app/features/settings/jenkins-settings-presentation.ts'),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText,{exports,Date,Number});
 const present=exports.jenkinsSettingsPresentation;
@@ -12,7 +14,15 @@ assert.equal(present(p).configuration,'Configuré');assert.equal(present(p).conn
 const success={...p,validationStatus:{jenkins:{valid:true,checkedAt:'2026-10-01T18:00:00Z'}}};assert.equal(present(success).connection,'Connexion réussie lors de la dernière vérification');assert.equal(present(success).checkedAt,'2026-10-01T18:00:00Z');
 assert.equal(present({...success,validationStatus:{jenkins:{valid:false,checkedAt:'2026-10-02T09:00:00Z'}}}).connection,'Dernière vérification échouée');
 assert.equal(present({...success,jenkinsJobName:'second-job',jenkinsInternalUrl:'https://second.example'}).job,'second-job');
-const componentExports={};let observer;vm.runInNewContext(ts.transpileModule(read('../src/app/features/settings/settings.component.ts'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,experimentalDecorators:true}}).outputText,{exports:componentExports,require:n=>n==='@angular/core'?{Component:()=>v=>v}:{},Set,URL});
-const c=new componentExports.SettingsComponent({},{getProject:()=>({subscribe:o=>observer=o})},{});c.selectedProjectId='other';c.selectProject();observer.error(new Error('connection failed'));assert.equal(c.projectState,'ERROR');assert.equal(c.project,null);
+const componentExports={};let observer;vm.runInNewContext(ts.transpileModule(read('../src/app/features/settings/settings.component.ts'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,experimentalDecorators:true}}).outputText,{exports:componentExports,
+/** Charge la dépendance prévue pour le scénario. */
+require:n=>n==='@angular/core'?{
+/** Simule le décorateur de composant Angular. */
+Component:()=>v=>v}:{},Set,URL});
+const c=new componentExports.SettingsComponent({},{
+/** Simule la lecture des données demandées par le composant. */
+getProject:()=>({
+/** Prépare les données nécessaires à ce scénario. */
+subscribe:o=>observer=o})},{});c.selectedProjectId='other';c.selectProject();observer.error(new Error('connection failed'));assert.equal(c.projectState,'ERROR');assert.equal(c.project,null);
 const html=read('../src/app/features/settings/settings.component.html');assert.match(html,/Impossible de récupérer la configuration du projet/);for(const field of ['configuration','connection','checkedAt','job'])assert.ok(html.includes('jenkinsSummary.'+field));assert.doesNotMatch(html,/Non connecté|En ligne/);
 console.log('Jenkins configuration distinct from dated diagnostics, success/failure/untested/API-error/second project PASS');

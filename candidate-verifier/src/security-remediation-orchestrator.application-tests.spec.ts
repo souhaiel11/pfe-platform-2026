@@ -1,25 +1,4 @@
-/** V1.8 — dedicated regression coverage for the new application-test gate
- * (MavenBuildAdapter.packageCandidateWithTests(), wired into both
- * SecurityRemediationOrchestratorService and SecurityRemediationBatchOrchestratorService).
- * Same real-fixture/real-repo-clone pattern as the sibling orchestrator
- * specs (security-remediation-orchestrator.spec.ts) -- Maven/scanner
- * outputs are injected fakes, so this runs fast and deterministically; the
- * REAL end-to-end proof (actual `mvn clean package`, actual Podman+Trivy)
- * is the separate OWASP E2E revalidation run, not this file.
- *
- * Covers this phase's own 12 required scenarios:
- *   1. tests PASS -> pipeline continues to CANDIDATE_READY
- *   2. test FAIL -> pipeline stops, image build/scanner NEVER called
- *   3. Maven compile FAIL -> candidate rejected (CANDIDATE_BUILD_FAILED)
- *   4. Maven timeout during tests -> candidate rejected, TECHNICAL_FAILURE
- *   5. deadline insufficient before Maven -> Maven never started
- *   6. build PASS + scanner-would-PASS but tests FAIL -> never CANDIDATE_READY
- *   7. tests PASS + build PASS + scanner PASS -> CANDIDATE_READY (== #1)
- *   8. cleanup always executed (PASS and FAIL paths alike)
- * Scenarios 9-12 (Trivy/OWASP unchanged, existing deadline tests still pass,
- * deterministic verdict stable) are covered by re-running the EXISTING
- * sibling specs unmodified in behavior -- see this increment's own report.
- */
+// Teste le composant « security-remediation-orchestrator.application-tests » et ses cas d’erreur.
 import * as assert from 'assert';
 import * as fs from 'fs';
 import * as os from 'os';
@@ -36,26 +15,33 @@ const root = fs.mkdtempSync(path.join(os.tmpdir(), 'v18-app-tests-'));
 const repo = path.join(root, 'repo');
 execFileSync('git', ['clone', '--no-hardlinks', process.env.SECURITY_TEST_REPO || '/home/souhaiel/pfe-2026/pfe-app-test', repo], { stdio: 'pipe' });
 
+/** Simule l’échec attendu par ce scénario. */
 function variant(w: string) {
   const s = fs.readFileSync(path.join(w, 'pom.xml'), 'utf8');
   if (s === f.source) return { source: f.source, tree: f.baseTree, effective: f.baseEffective };
   for (const k of ['v16', 'property-only', 'coordinated']) if (s === f[k].source) return f[k];
   throw new Error('UNEXPECTED_SOURCE');
 }
+/** Prépare les données nécessaires à ce scénario. */
 function scan(w: string): SecurityArtifactScan {
   const v = variant(w), r = JSON.parse(JSON.stringify(v.source === f.source ? f.baseReport
     : v.source === f.coordinated.source ? f.coordinatedReport : f.v16Report));
   return { mode: 'TRIVY_IMAGE_ARCHIVE', sourceDigest: trackedSourceDigest(w), artifactDigest: 'b'.repeat(64),
     reportDigest: createHash('sha256').update(JSON.stringify(r)).digest('hex'), scannerVersion: 'unit-fixture', report: r, buildPassed: true };
 }
+/** Prépare les données nécessaires à ce scénario. */
 const decision = () => ({ findingIdentity: 'a'.repeat(64), evaluatedSha: f.sha, provenance: { ecosystem: 'MAVEN', kind: 'DIRECT_EXPLICIT', package: 'ch.qos.logback:logback-classic', installedVersion: '1.2.11', controllingFile: 'pom.xml', controllingElement: '<version>1.2.11</version>', controllingProperty: null, groundedSha: f.sha, evidence: 'fixture' }, fixedVersions: ['1.2.13'], selectedTargetVersion: '1.2.13', remediationType: 'AUTO_FIX_ELIGIBLE', reason: 'fixture' });
 let serial = 0;
+/** Prépare les données nécessaires à ce scénario. */
 const singularInput = () => ({ repository: 'souhaiel11/pfe-app-test', candidateBaseSha: f.sha, requestId: 'v18-' + ++serial, batchId: 'tests', candidateAttempt: 0,
   finding: { findingIdentity: 'a'.repeat(64), cveId: 'CVE-2023-6378', source: 'TRIVY', package: 'ch.qos.logback:logback-classic', expectedInstalledVersion: '1.2.11', fixedVersion: '1.3.12, 1.4.12, 1.2.13' } });
+/** Prépare les données nécessaires à ce scénario. */
 const batchInput = () => ({ repository: 'souhaiel11/pfe-app-test', candidateBaseSha: f.sha, requestId: 'v18-batch-' + ++serial, batchId: 'tests', candidateAttempt: 0,
   findings: [{ findingIdentity: 'a'.repeat(64), cveId: 'CVE-2023-6378', source: 'TRIVY', package: 'ch.qos.logback:logback-classic', expectedInstalledVersion: '1.2.11', fixedVersion: '1.3.12, 1.4.12, 1.2.13' }] });
 
+/** Prépare les données nécessaires à ce scénario. */
 const dependencyTree = (w: string) => ({ status: 'SUCCESS', text: variant(w).tree });
+/** Produit le POM effectif pour établir les versions Maven. */
 const effectivePom = (w: string) => ({ status: 'SUCCESS', text: variant(w).effective });
 const PASS_RESULT = { status: 'SUCCESS', testsExecuted: true, testsPassed: true, testsTotal: 4, testsFailures: 0, testsErrors: 0, testsSkipped: 0, durationMs: 1200, evidenceTail: 'Tests run: 4, Failures: 0, Errors: 0, Skipped: 0', timedOut: false };
 const FAIL_RESULT = { status: 'FAILED', testsExecuted: true, testsPassed: false, testsTotal: 4, testsFailures: 1, testsErrors: 0, testsSkipped: 0, durationMs: 900, evidenceTail: 'Tests run: 4, Failures: 1, Errors: 0, Skipped: 0', timedOut: false };
@@ -63,13 +49,19 @@ const COMPILE_FAIL_RESULT = { status: 'FAILED', testsExecuted: false, testsPasse
 const TIMEOUT_RESULT = { status: 'FAILED', testsExecuted: false, testsPassed: null, testsTotal: null, testsFailures: null, testsErrors: null, testsSkipped: null, durationMs: 300000, evidenceTail: 'WORKSPACE_TIMEOUT during mvn clean package (with tests)', timedOut: true };
 const NOT_EXECUTED_RESULT = { status: 'SUCCESS', testsExecuted: false, testsPassed: null, testsTotal: null, testsFailures: null, testsErrors: null, testsSkipped: null, durationMs: 500, evidenceTail: '', timedOut: false };
 
+/** Prépare les données nécessaires à ce scénario. */
 function makeSingular(packageCandidateWithTests: () => any, inspect: (w: string) => SecurityArtifactScan = scan, wm = new WorkspaceManager(path.join(root, 'ws-' + Math.random()))) {
   const adapter: any = { dependencyTree, effectivePom, packageCandidateWithTests };
-  return new SecurityRemediationOrchestratorService({ decide: decision } as any, wm, { ensureRepo: () => repo } as any, adapter, { inspect });
+  return new SecurityRemediationOrchestratorService({ decide: decision } as any, wm, {
+  /** Prépare le dépôt et la révision nécessaires. */
+  ensureRepo: () => repo } as any, adapter, { inspect });
 }
+/** Prépare les données nécessaires à ce scénario. */
 function makeBatch(packageCandidateWithTests: () => any, inspect: (w: string) => SecurityArtifactScan = scan, wm = new WorkspaceManager(path.join(root, 'ws-batch-' + Math.random()))) {
   const adapter: any = { dependencyTree, effectivePom, packageCandidateWithTests };
-  return new SecurityRemediationBatchOrchestratorService({ decide: decision } as any, wm, { ensureRepo: () => repo } as any, adapter, { inspect });
+  return new SecurityRemediationBatchOrchestratorService({ decide: decision } as any, wm, {
+  /** Prépare le dépôt et la révision nécessaires. */
+  ensureRepo: () => repo } as any, adapter, { inspect });
 }
 
 try {
@@ -136,20 +128,22 @@ try {
   // guard, no new/parallel timeout system).
   {
     let called = 0;
-    const adapter: any = { dependencyTree, effectivePom, packageCandidateWithTests: () => { called++; return PASS_RESULT; } };
+    const adapter: any = { dependencyTree, effectivePom,
+    /** Prépare les données nécessaires à ce scénario. */
+    packageCandidateWithTests: () => { called++; return PASS_RESULT; } };
     const wm = new WorkspaceManager(path.join(root, 'ws-deadline5'));
-    // Reuses the exact busy-wait deadline-exhaustion technique already
-    // proven in security-remediation-orchestrator.deadline.spec.ts scenario 5:
-    // make the post-patch dependency:tree call slow enough to exhaust a
-    // small overall budget, so the build phase's own deadline.expired() gate
-    // refuses to start.
+    /** Prépare les données nécessaires à ce scénario. */
     const slowTree = (w: string) => {
       const start = process.hrtime.bigint();
       while (Number(process.hrtime.bigint() - start) / 1_000_000 < 1300) { /* busy-wait */ }
       return { status: 'SUCCESS', text: variant(w).tree };
     };
-    const svc = new SecurityRemediationOrchestratorService({ decide: decision } as any, wm, { ensureRepo: () => repo } as any,
-      { dependencyTree: slowTree, effectivePom, packageCandidateWithTests: () => { called++; return PASS_RESULT; } } as any, { inspect: scan });
+    const svc = new SecurityRemediationOrchestratorService({ decide: decision } as any, wm, {
+    /** Prépare le dépôt et la révision nécessaires. */
+    ensureRepo: () => repo } as any,
+      { dependencyTree: slowTree, effectivePom,
+      /** Prépare les données nécessaires à ce scénario. */
+      packageCandidateWithTests: () => { called++; return PASS_RESULT; } } as any, { inspect: scan });
     const result = svc.orchestrate({ ...singularInput(), overallDeadlineMs: 2_000 });
     assert.equal(called, 0, '5: packageCandidateWithTests must never be called once the deadline is exhausted');
     assert.equal(result.status, 'TECHNICAL_FAILURE');

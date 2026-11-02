@@ -1,23 +1,4 @@
-// R66 Phase 2 — assembles the bounded evidence analyzeDefaultValueSemantics()
-// needs from data the platform ALREADY persists (fixRequest.fileResults'
-// immutable blob SHAs + the frozen candidateBaseSha/prHeadSha), instead of
-// carrying new source-snapshot payloads through WF2/WF3. Two layers,
-// deliberately separated:
-//
-//   1. evaluateDefaultValueSemantics() — PURE, network-free, fully
-//      unit-testable with injected file content. Discovers entity/DTO
-//      migration field pairs from already-fetched source text and runs the
-//      generic detector (default-value-semantics.ts) on each.
-//   2. buildDefaultValueSemanticsEvidence() — the only IO-performing
-//      function here. Fetches exact immutable content via a caller-supplied
-//      `fetchFileAtSha` (bound to the existing githubFileAtSha helper in
-//      production; a fake in tests), verifies each fetch's returned blob SHA
-//      against the persisted oldSha/newSha before trusting it, then delegates
-//      to layer 1. computeMergeAuthorization() itself stays pure — this
-//      module is the boundary where IO happens, nowhere near it.
-//
-// Generic by construction: no rule ID, entity name, DTO name, or field name
-// is hardcoded anywhere in this file.
+// Réunit les fichiers et correspondances nécessaires pour analyser la propagation des valeurs par défaut, avec leur provenance et leur lien au candidat.
 
 import {
   analyzeDefaultValueSemantics,
@@ -28,16 +9,13 @@ import {
 export interface FetchedFile {
   path: string;
   content: string;
-  /** The blob SHA GitHub actually returned for this content. */
   blobSha: string;
 }
 
 export interface CandidateFileRecord {
   targetFile: string;
   fileOperation: string;
-  /** Baseline blob SHA (null for CREATE). */
   oldSha: string | null;
-  /** Candidate blob SHA (always present for a completed write). */
   newSha: string;
 }
 
@@ -48,31 +26,17 @@ export interface AssemblyProvenance {
   candidateId: string;
   candidateDigest: string | null;
   candidateBaseSha: string;
-  /** The exact SHA this evidence is bound to — the SAME SHA saveValidation just proved via checkoutSha === expectedPrHeadSha. */
   prHeadSha: string;
 }
 
-/**
- * R79 — a lightweight, bounded record of ONE (sourceType, sourceField,
- * candidateType, candidateField) pair this run actually analyzed, and what
- * analyzeDefaultValueSemantics() concluded for it, regardless of verdict.
- * Exists so a caller can answer "was the SPECIFIC pair a blocking cause
- * names actually checked (and found safe), or did NO_DEFECT come from
- * checking zero pairs / only unrelated ones?" — a distinction the bare
- * batch-level `verdict` cannot make on its own. Never carries the full
- * evidence object (that stays bounded to PROVEN_DEFECT only, in `evidence`).
- */
 export interface DefaultValueSemanticsCheckedPair {
   sourceType: string;
   sourceField: string;
   candidateType: string;
   candidateField: string;
   verdict: DefaultValueSemanticsVerdict;
-  /** R80 — absent means static analysis (the original, pre-R80 producer). 'EXECUTED_TEST' marks a pair proven by a real, exact-SHA/build-bound Jenkins test run instead. */
   source?: 'STATIC_ANALYSIS' | 'EXECUTED_TEST';
-  /** R80 — the registered rule type this pair belongs to (see semantic-evidence-core.ts's RULE_REGISTRY). Absent on pairs from before R80 — treated as "this platform's one legacy rule", never a hard requirement. */
   ruleType?: string;
-  /** R80 — allows the generic identity/merge machinery in semantic-evidence-core.ts to read/spread arbitrary identity keys without this type needing to enumerate every possible rule's identity shape. */
   [key: string]: unknown;
 }
 
@@ -84,16 +48,13 @@ export interface DefaultValueSemanticsAudit {
   fixRequestId: string;
   batchId: string;
   attemptCount: number;
-  /** Full evidence only for PROVEN_DEFECT pairs — bounded, never a source dump. */
   evidence: DefaultValueSemanticsEvidence[];
   checkedPairs: number;
-  /** R79 — one entry per field actually analyzed, every verdict, not just PROVEN_DEFECT. */
   checkedFieldPairs: DefaultValueSemanticsCheckedPair[];
   computedAt: string;
 }
 
-// ── Layer 1 — pure, network-free ────────────────────────────────────────
-
+// Échappe les caractères spéciaux pour une utilisation littérale dans une RegExp.
 function escapeForRegex(token: string): string {
   return token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
@@ -103,7 +64,8 @@ interface RequestBodyBinding {
   type: string;
 }
 
-/** Finds every `... methodName(... @RequestBody TypeName varName ...)` declaration. Conservative: only the common single-@RequestBody-parameter shape. */
+// Trouve chaque déclaration de méthode liée à un `@RequestBody`, forme simple à un
+// seul paramètre annoté.
 function findRequestBodyBindings(source: string): RequestBodyBinding[] {
   const pattern = /\b(\w+)\s*\([^)]*@RequestBody\s+(\w+)\s+\w+[^)]*\)/g;
   const out: RequestBodyBinding[] = [];
@@ -114,7 +76,8 @@ function findRequestBodyBindings(source: string): RequestBodyBinding[] {
   return out;
 }
 
-/** Extracts `class <name> { ... }`'s body via brace matching. Null if not found or unbalanced. */
+// Extrait le corps d'une classe par appariement d'accolades ; `null` si non trouvée
+// ou déséquilibrée (ne devine jamais).
 function extractClassBody(source: string, typeName: string): string | null {
   const declPattern = new RegExp('\\bclass\\s+' + escapeForRegex(typeName) + '\\b[^{]*\\{');
   const declMatch = declPattern.exec(source);
@@ -128,26 +91,11 @@ function extractClassBody(source: string, typeName: string): string | null {
       if (depth === 0) return source.slice(start, i);
     }
   }
-  return null; // unbalanced — never guess
+  return null;
 }
 
-/**
- * Extracts the body of the specific method overload whose parameter list
- * contains `paramType` (Java allows the SAME method name overloaded on
- * parameter type — e.g. `updateTask(Long, Task)` and `updateTask(Long,
- * TaskDTO)` coexisting in the same class — so matching by name alone would
- * silently pick up the WRONG overload, or worse, conflate a
- * response-mapping method (`toDto`, which maps the ENTITY's own getters
- * into the DTO — the opposite direction from what this invariant cares
- * about) with the actual write-path mapping). Brace-matched, null if not
- * found or unbalanced — never guesses.
- */
+/** Extrait méthode Bodies. */
 function extractMethodBodies(source: string, methodName: string, paramType: string): string[] {
-  // Overloaded across files (a controller pass-through AND a service's real
-  // implementation commonly share the same name+param-type shape) — collect
-  // every match, not just the first, so the real mapping body is never
-  // silently missed in favor of an unrelated pass-through match earlier in
-  // the concatenated batch text.
   const declPattern = new RegExp(
     '\\b' + escapeForRegex(methodName) + '\\s*\\([^)]*\\b' + escapeForRegex(paramType) + '\\b[^)]*\\)\\s*\\{', 'g',
   );
@@ -167,19 +115,14 @@ function extractMethodBodies(source: string, methodName: string, paramType: stri
   return bodies;
 }
 
-/**
- * R70 — the repository-relative path of the SINGLE fetched file whose
- * content satisfies `predicate`, or undefined when zero or more than one
- * file matches. Ambiguity is never resolved by picking the first match: an
- * unproven path is strictly better than a wrong one, since a wrong grounded
- * path would let WF2 authorize editing the wrong file with false confidence.
- */
+/** Renvoie le chemin du SEUL fichier parmi ceux déjà récupérés qui satisfait le prédicat. */
 function resolveUniqueFile(files: readonly FetchedFile[], predicate: (content: string) => boolean): string | undefined {
   const matches = files.filter(f => predicate(f.content));
   return matches.length === 1 ? matches[0].path : undefined;
 }
 
-/** Field names declared directly in a class body (shallow — one nesting level, matching default-value-semantics.ts's own field-declaration scanner). */
+// Liste les noms de champs déclarés directement dans un corps de classe (un seul
+// niveau d'imbrication).
 function listFieldNames(classBody: string): string[] {
   const pattern = /(?:private|protected|public)\s+[\w.<>[\],\s]+?\s+(\w+)\s*(?:=[^;]+)?;/g;
   const names = new Set<string>();
@@ -188,16 +131,7 @@ function listFieldNames(classBody: string): string[] {
   return [...names];
 }
 
-/**
- * A migrated field's OWN type is very often declared in a file this batch
- * never wrote (the common case: only the controller/service/new-DTO were
- * written; the pre-existing entity being replaced was only referenced). That
- * file is still cheaply, exactly locatable: any Java source importing it
- * carries `import <package>.<TypeName>;`, and the standard Maven/Gradle
- * source layout (package dots -> directories, rooted at `src/main/java`) is
- * a fixed, generic language/build convention — not a project-specific
- * guess. Returns null when no such import is found (fails closed).
- */
+/** Retrouve le chemin du fichier déclarant typeName via l'instruction import qui le référence et la convention standard de layout Maven/Gradle. */
 export function resolveTypeSourcePath(source: string, typeName: string): string | null {
   const pattern = new RegExp('^import\\s+([\\w.]+)\\.' + escapeForRegex(typeName) + ';', 'm');
   const match = pattern.exec(source);
@@ -212,7 +146,8 @@ interface DiscoveredMigration {
   binding: string;
 }
 
-/** Pure. Every `@RequestBody` binding whose type changed for the same method name between baseline and candidate text. */
+// Détecte chaque migration de type `@RequestBody` pour une même méthode entre le
+// texte baseline et candidat.
 export function discoverMigrations(baselineText: string, candidateText: string): DiscoveredMigration[] {
   const baselineBindings = findRequestBodyBindings(baselineText);
   const candidateBindings = findRequestBodyBindings(candidateText);
@@ -229,15 +164,7 @@ export function discoverMigrations(baselineText: string, candidateText: string):
   return migrations;
 }
 
-/**
- * Pure. Given already-fetched baseline and candidate file sets, discovers
- * every `@RequestBody` binding whose type changed for the SAME method
- * between baseline and candidate, then — for every field the candidate type
- * declares that the baseline type also declares — runs
- * analyzeDefaultValueSemantics(). Zero migrations found is the common case
- * (most PRs never touch this shape) and correctly yields NO_DEFECT with zero
- * checked pairs, never a fabricated finding.
- */
+/** Découvre chaque migration de DTO puis lance l'analyse default-value-semantics sur chaque champ partagé entre type source et candidat. */
 export function evaluateDefaultValueSemantics(
   baselineFiles: readonly FetchedFile[],
   candidateFiles: readonly FetchedFile[],
@@ -257,29 +184,10 @@ export function evaluateDefaultValueSemantics(
     const candidateClassBody = extractClassBody(candidateText, migration.candidateType);
     if (!baselineClassBody || !candidateClassBody) { anyVerificationRequired = true; continue; }
 
-    // Scoped to the SPECIFIC (method, candidateType) overload body/bodies —
-    // never the whole batch text — so a reverse-direction response-mapping
-    // method (e.g. `toDto(Task task)`, which propagates the ENTITY's own
-    // getters INTO the DTO) can never be mistaken for this migration's
-    // actual DTO-to-entity write path, and so an unrelated same-named method
-    // elsewhere in the batch can never contaminate this migration's result.
     const methodBodies = extractMethodBodies(candidateText, migration.method, migration.candidateType);
     if (methodBodies.length === 0) { anyVerificationRequired = true; continue; }
     const mappingSource = methodBodies.join('\n');
 
-    // R70 — resolve exactly which fetched file each piece of evidence came
-    // from, so a proven defect can carry a grounded edit target through to
-    // WF2 (corrective-context.ts / WF2's Validate Generic Remediation Plan).
-    // Resolved per-file (not against the concatenated batch text) and only
-    // when exactly one file matches — see resolveUniqueFile. sourceFile and
-    // candidateFile are resolved here (class declaration is unambiguous per
-    // compilation unit); mappingFile is NOT — a controller pass-through
-    // method commonly shares the same (methodName, paramType) shape as the
-    // real service-layer mapping method (both literally match
-    // `updateTask(..., TaskDTO ...)`), so it is instead resolved per-FIELD
-    // below, against the exact unconditional-propagation snippet each
-    // PROVEN_DEFECT's own evidence already pinpoints — which the
-    // pass-through method never contains.
     const sourceFile = resolveUniqueFile(baselineFiles, content => extractClassBody(content, migration.baselineType) !== null);
     const candidateFile = resolveUniqueFile(candidateFiles, content => extractClassBody(content, migration.candidateType) !== null);
 
@@ -294,11 +202,6 @@ export function evaluateDefaultValueSemantics(
         externalBindingEvidence: migration.binding,
         sourceFile, candidateFile,
       });
-      // R79 — record EVERY analyzed pair's verdict, not only PROVEN_DEFECT,
-      // so a caller can tell "this exact (type,field) pair was checked and
-      // cleared" apart from "zero pairs were checked, or only unrelated
-      // ones were" — the batch-level `verdict` string alone cannot make
-      // that distinction.
       checkedFieldPairs.push({
         sourceType: migration.baselineType, sourceField: fieldName,
         candidateType: migration.candidateType, candidateField: fieldName,
@@ -323,19 +226,12 @@ export function evaluateDefaultValueSemantics(
   };
 }
 
-// ── Layer 2 — the only IO boundary ──────────────────────────────────────
-
-/**
- * R66 provenance requirement: semantic evidence computed for one SHA/blob
- * MUST NOT be reusable for another. Every fetch is verified against the
- * blob SHA already persisted on fixRequest.fileResults (oldSha for the
- * baseline fetch, newSha for the candidate fetch) before its content is
- * trusted. A single mismatch or fetch failure degrades the WHOLE evaluation
- * to VERIFICATION_REQUIRED — never a partial/fabricated PROVEN_DEFECT.
- */
-/** Same bound already used for sourceSnapshots elsewhere in the pipeline — an unusually large batch skips this check rather than issuing unbounded IO from a webhook callback. */
+// Même borne que celle déjà utilisée pour les sourceSnapshots ailleurs dans le
+// pipeline — un lot inhabituellement grand saute ce contrôle plutôt que de lancer
+// des entrées/sorties non bornées depuis un callback webhook.
 const MAX_FILES = 12;
 
+/** Construit par défaut valeur sémantique preuve. */
 export async function buildDefaultValueSemanticsEvidence(
   files: readonly CandidateFileRecord[],
   provenance: AssemblyProvenance,
@@ -376,17 +272,10 @@ export async function buildDefaultValueSemanticsEvidence(
     };
   }
 
-  // The source type being migrated away from is very often NOT among the
-  // written files at all (the common case: only the controller/service/new
-  // DTO were written; the pre-existing type being replaced was only
-  // referenced) — fixRequest.fileResults, and therefore `files` above, never
-  // lists it. Resolve it by the fixed Maven/Gradle import->path convention
-  // (resolveTypeSourcePath) and fetch it, bounded to exactly the unresolved
-  // types this batch's own migrations need, deduplicated. This file has no
-  // persisted oldSha to cross-check (it was never written), so its
-  // provenance rests on being fetched at the already-proven, frozen
-  // candidateBaseSha commit itself — the strongest guarantee available
-  // without a new WF2 payload field.
+  // Le type source dont on migre n'est souvent PAS parmi les fichiers écrits du
+  // tout (cas fréquent : seuls le contrôleur/service/nouveau DTO ont été écrits) ;
+  // on le résout via la convention Maven/Gradle import -> chemin et on le récupère,
+  // borné aux seuls types non résolus dont ces migrations ont besoin.
   let baselineText = baselineFiles.map(f => f.content).join('\n');
   const candidateText = candidateFiles.map(f => f.content).join('\n');
   const migrations = discoverMigrations(baselineText, candidateText);
@@ -403,8 +292,7 @@ export async function buildDefaultValueSemanticsEvidence(
       resolvedPaths.add(importPath);
       baselineText = baselineFiles.map(f => f.content).join('\n');
     } catch {
-      // Fails closed to VERIFICATION_REQUIRED for this type inside
-      // evaluateDefaultValueSemantics() below — never fabricated.
+      // Dégrade à VERIFICATION_REQUIRED pour ce type dans evaluateDefaultValueSemantics() ci-dessous — jamais fabriqué.
     }
   }
 

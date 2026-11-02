@@ -1,3 +1,4 @@
+# Expose les valeurs utiles des ressources Azure créées.
 output "resource_group_name" {
   description = "Nom du resource group créé"
   value       = azurerm_resource_group.main.name

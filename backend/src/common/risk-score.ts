@@ -1,9 +1,4 @@
-// Indicateur de risque par projet — LIVE, jamais stocké. Contrairement à
-// Report.securityScore (figé, findings scanner uniquement), ce score mélange
-// findings + état opérationnel courant (dernier build Jenkins, incidents
-// ouverts) donc il doit être recalculé à chaque requête pour ne jamais être
-// périmé. Même barème que l'ancien computeRisks() frontend (prediction.component.ts),
-// extrait ici comme source unique — le frontend ne fait plus ce calcul lui-même.
+// Calcule en direct le risque courant du projet à partir des CVE critiques, du dernier build, des incidents ouverts, du Quality Gate et de la couverture.
 export interface RiskRule {
   label: string;
   points: number;
@@ -24,6 +19,7 @@ export interface RiskResult {
   rules: RiskRule[];
 }
 
+/** Calcule un score de risque 0-100 par addition de règles plafonnées (CVE critiques, build en échec, incidents ouverts, quality gate, couverture faible). */
 export function computeRiskScore(input: RiskInput): RiskResult {
   const rules: RiskRule[] = [];
   let risk = 0;
@@ -61,6 +57,7 @@ export function computeRiskScore(input: RiskInput): RiskResult {
   return { risk, level, levelClass, rules };
 }
 
+/** Traduit un score numérique en palier d'affichage (FAIBLE/MODÉRÉ/ÉLEVÉ/CRITIQUE). */
 function levelFor(risk: number): { level: string; levelClass: string } {
   if (risk <= 25) return { level: 'FAIBLE', levelClass: 'faible' };
   if (risk <= 50) return { level: 'MODÉRÉ', levelClass: 'modere' };

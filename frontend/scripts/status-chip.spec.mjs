@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import { loadFrontend } from './security-lifecycle-test-loader.mjs';
 
+/** Lit les données depuis leur source. */
 const read = p => readFileSync(new URL(p, import.meta.url), 'utf8');
 const tone = loadFrontend('../src/app/shared/status-chip/status-tone.ts');
 const labels = loadFrontend('../src/app/shared/status-labels.ts');
@@ -71,8 +72,10 @@ const chipSource = read('../src/app/shared/status-chip/status-chip.component.ts'
 
 // ── 4. Le binaire vert/rouge sur statut a disparu des gabarits ─────────
 {
+  /** Prépare les données nécessaires à ce scénario. */
   const walk = dir => readdirSync(new URL(dir, import.meta.url), { withFileTypes: true })
     .flatMap(e => e.isDirectory() ? walk(`${dir}${e.name}/`) : [`${dir}${e.name}`]);
+  /** Retire les commentaires du code utilisé par le test. */
   const strip = s => s
     .replace(/<!--[\s\S]*?-->/g, m => m.replace(/[^\n]/g, ' '))
     .replace(/^[ \t]*\/\/.*$/gm, '');

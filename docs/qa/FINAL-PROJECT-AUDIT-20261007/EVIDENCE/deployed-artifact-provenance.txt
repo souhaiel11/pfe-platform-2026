@@ -1,0 +1,3 @@
+/pfe-backend image=sha256:8ee224f973389451be32820381201e8466c8f710b887aed55f6d3363fb8f1fcd revision=0957ab63280b32e4180ba47ae72bfb5a802db15a config=/tmp/r2-backend-config.private.json
+/pfe-candidate-verifier image=sha256:947ceacfa1633f8b36889a77bb7040d2abce90d51c5972c3fd12a41f45d6a244 revision=62dd93fed2b519b1b7f8a63ae92e95158df5e91a config=/tmp/practical-verifier-deploy.private.json
+/pfe-builder-scanner image=sha256:8581ec8d1cbd9332d3b9294bea63292f7880f54b4ae98aa394af8401b1613196 revision=9038f556d8e8e27eb31c1a31feeac5168e529908 config=/tmp/r2-scanner-deploy.private.json

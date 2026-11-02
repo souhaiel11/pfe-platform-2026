@@ -1,14 +1,16 @@
-// Offline regression for execution 1993's failure shape, using synthetic source/IDs.
-// No HTTP, generation, verification service, n8n execution or Git write.
+// Teste le composant « wf2-patch-truncation » et ses cas d’erreur.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 const wf = JSON.parse(readFileSync(new URL('../pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.PROMOTION-TARGET.json', import.meta.url), 'utf8'))[0];
+/** Retrouve ou construit le nœud du workflow demandé. */
 const node = name => wf.nodes.find(n => n.name === name);
 const targetFile = 'src/TaskService.java';
 const prepared = { targetFile, approvedFindingIdsForFile: ['finding-a', 'finding-b'], file_sha: 'blob-sha', branchName: 'fix/example' };
+/** Lit les données et les convertit au format attendu. */
 const parse = response => new Function('$json', '$', node('Parse - Code Patch Output').parameters.jsCode)(response,
   name => { assert.equal(name, 'Prepare - Code Patch Body'); return { item: { json: prepared } }; }).json;
+/** Construit la réponse utilisée par le scénario. */
 const response = text => ({ stop_reason: 'end_turn', content: [{ type: 'text', text }] });
 const patch = { targetFile, processedFindingIds: ['finding-a', 'finding-b'], patchedCode: 'class TaskService {}',
   patchDescription: 'Preserve behavior.', conformanceEvidence: ['mapping retained'] };
@@ -59,9 +61,15 @@ const planned = { target_file_path: targetFile, fileOperation: 'MODIFY', remedia
 const makeRequest = new Function('$json', '$', 'Buffer', node('Prepare - Code Patch Body').parameters.jsCode);
 const input = { path: targetFile, content: Buffer.from('class TaskService {}').toString('base64') };
 const out = makeRequest(input, name => name === 'Prepare Batch Context'
-  ? { first: () => ({ json: gate }) } : name === 'Prepare Generic Remediation Plan'
-    ? {first:()=>({json:{remediationContract:{sourceSnapshots:[],sourceGrounding:{initialPaths:[],groundedRelationshipApis:[]}}}})}
-    : { all: () => [{ json: planned }] }, Buffer).json;
+  ? {
+  /** Renvoie le premier élément disponible. */
+  first: () => ({ json: gate }) } : name === 'Prepare Generic Remediation Plan'
+    ? {
+    /** Renvoie le premier élément disponible. */
+    first:()=>({json:{remediationContract:{sourceSnapshots:[],sourceGrounding:{initialPaths:[],groundedRelationshipApis:[]}}}})}
+    : {
+    /** Renvoie tous les éléments disponibles. */
+    all: () => [{ json: planned }] }, Buffer).json;
 assert.equal(out.llmRequestBody.model, 'claude-opus-5');
 assert.equal(out.llmRequestBody.max_tokens, 32768);
 assert.deepEqual(out.llmRequestBody.thinking, { type: 'adaptive' });
@@ -77,7 +85,9 @@ assert.equal(node('de Patch - HTTP Request').retryOnFail, true);
 assert.equal(node('de Patch - HTTP Request').maxTries, 3);
 // New deterministic failure is retained by the existing canonical failure funnel.
 const envelope = new Function('$input', '$items', '$execution', node('Failure Envelope - Parse - Code Patch Output').parameters.jsCode)(
-  { first: () => ({ json: { error: { message: 'PATCH_LLM_RESPONSE_TRUNCATED:Patch generation response was truncated because the model reached its output token limit.' } } }) },
+  {
+  /** Renvoie le premier élément disponible. */
+  first: () => ({ json: { error: { message: 'PATCH_LLM_RESPONSE_TRUNCATED:Patch generation response was truncated because the model reached its output token limit.' } } }) },
   () => [{ json: { correlationEnvelope: { incidentId: 'i', requestId: 'r', batchId: 'b', batchKey: 'b', attemptCount: 4, workflowId: wf.id } } }],
   { id: 'offline' })[0].json;
 assert.equal(envelope.failureCode, 'PATCH_LLM_RESPONSE_TRUNCATED');

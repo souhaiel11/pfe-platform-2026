@@ -1,0 +1,33 @@
+{
+  "backend": {
+    "status": 200,
+    "body": {
+      "status": "ok"
+    }
+  },
+  "verifier": {
+    "status": 200,
+    "body": {
+      "status": "ok"
+    }
+  },
+  "scanner": {
+    "status": 200,
+    "body": {
+      "ready": true,
+      "reason": null,
+      "vulnDb": {
+        "present": true,
+        "updatedAt": "2026-10-07 07:38:55.515026687 +0000 UTC",
+        "nextUpdate": "2026-10-08 07:38:55.515026457 +0000 UTC",
+        "stale": false
+      },
+      "javaDb": {
+        "present": true,
+        "updatedAt": "2026-10-05 01:08:25.742361399 +0000 UTC",
+        "nextUpdate": "2026-10-08 01:08:25.742361269 +0000 UTC",
+        "stale": false
+      }
+    }
+  }
+}

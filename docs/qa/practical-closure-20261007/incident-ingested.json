@@ -1,0 +1,95 @@
+{
+  "status": 201,
+  "body": {
+    "projectId": "ebe3bd94-8240-4c30-a2d9-6de2106a28bc",
+    "title": "Dedicated corrected-baseline real dual-scanner evidence",
+    "description": "Exact corrected fixture baseline; real Trivy and OWASP evidence, with a fresh OWASP remediation task",
+    "status": "analyzed",
+    "source": "OWASP",
+    "metadata": {
+      "sourceCommitSha": "13af977f770f78d47462b5ccbe856de9c0a4f077",
+      "qualificationRunId": "practical-closure-20261007",
+      "scannerEvidence": {
+        "trivyReportDigest": "91ac0b31184c0b68f72f83b152ed68c50bcec9ccbfca7535768bd2a04c0b5724",
+        "owaspNativeReport": "baseline-owasp.json"
+      },
+      "enrichedData": {
+        "trivy": {
+          "status": "COMPLETED",
+          "executed": true,
+          "completed": true,
+          "resultAvailable": true,
+          "findingCount": 1,
+          "cves_count": 1,
+          "critical": 0,
+          "high": 1,
+          "cves": [
+            {
+              "id": "CVE-2022-45868",
+              "pkg": "com.h2database:h2",
+              "installedVersion": "2.1.212",
+              "fixedVersion": "2.2.220",
+              "source": "TRIVY",
+              "severity": "HIGH",
+              "title": "The web-based admin console in H2 Database Engine before 2.2.220 can b ...",
+              "primaryUrl": "https://avd.aquasec.com/nvd/cve-2022-45868"
+            }
+          ]
+        },
+        "owasp": {
+          "status": "COMPLETED",
+          "executed": true,
+          "completed": true,
+          "resultAvailable": true,
+          "findingCount": 1,
+          "cves_count": 1,
+          "critical": 0,
+          "high": 1,
+          "cves": [
+            {
+              "id": "CVE-2022-45868",
+              "ruleOrCve": "CVE-2022-45868",
+              "cve": "CVE-2022-45868",
+              "stage": "owasp",
+              "source": "OWASP",
+              "severity": "HIGH",
+              "category": "DEPENDENCY",
+              "title": "CVE-2022-45868",
+              "description": "The web-based admin console in H2 Database Engine before 2.2.220 can be started via the CLI with the argument -webAdminPassword, which allows the user to specify the password in cleartext for the web admin console. Consequently, a local user (or an attacker that has obtained local access through some means) would be able to discover the password by listing processes and their arguments. NOTE: the ",
+              "file": "h2-2.1.212.jar",
+              "fileName": "h2-2.1.212.jar",
+              "line": null,
+              "legacyPackage": "h2-2.1.212.jar",
+              "dependency": "h2-2.1.212.jar",
+              "packageType": "maven",
+              "pkg": "com.h2database:h2",
+              "package": "com.h2database:h2",
+              "purl": "pkg:maven/com.h2database/h2@2.1.212",
+              "groupId": "com.h2database",
+              "artifactId": "h2",
+              "installedVersion": "2.1.212",
+              "fixedVersion": null,
+              "recommendation": null,
+              "evidence": "https://sites.google.com/sonatype.com/vulnerabilities/sonatype-2022-6243",
+              "primaryUrl": "https://sites.google.com/sonatype.com/vulnerabilities/sonatype-2022-6243",
+              "cvss": 7.8,
+              "blocking": false,
+              "remediationType": "DEVELOPER_ACTION_REQUIRED"
+            }
+          ]
+        }
+      }
+    },
+    "prUrl": null,
+    "jenkinsJobName": null,
+    "buildNumber": null,
+    "aiAnalysis": null,
+    "errorReason": null,
+    "errorDetail": null,
+    "errorStep": null,
+    "resolvedAt": null,
+    "id": "492b38c7-99bc-49f7-aa03-df11828c71ba",
+    "createdAt": "2026-10-07T19:00:52.931Z",
+    "updatedAt": "2026-10-07T19:00:52.931Z"
+  }
+}

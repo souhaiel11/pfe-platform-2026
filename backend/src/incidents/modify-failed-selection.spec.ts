@@ -1,45 +1,55 @@
-// Offline contract tests for "Modifier la sélection" -- after a fixRequest
-// reaches FIX_FAILED, the user may submit a REDUCED/DIFFERENT finding
-// selection through the existing approveFix/approveFixBatch contract instead
-// of retryFix(). This must create a brand new fixRequest (new requestId,
-// new deterministic batchId, fresh attempt lifecycle) and must NEVER mutate
-// the old failed fixRequest in place -- it is archived, unchanged, into
-// metadata.previousFixRequests.
-//
-// RETRY (explicitRetry=true, retryFix()) is a completely separate contract
-// (same requestId/batchId, attempt+1) and is proven unaffected here too.
-//
-// No live n8n execution, no network, no database. fetch/N8N_WF2_ID mocked.
+// Teste le composant « modify-failed-selection » et ses cas d’erreur.
+import { emptyReservationQuery } from './sonar-file-reservation.test-double';
 import * as assert from 'node:assert/strict';
 import { IncidentsService, remediationBatchIdentity } from './incidents.service';
 
+/** Prépare les données nécessaires à ce scénario. */
 const sonar = (id: string, extra: any = {}) => ({
   id, source: 'SONARQUBE', stage: 'sonar', remediationType: 'AUTO_FIX_ELIGIBLE',
   rule: 'java:S1068', file: `src/${id}.java`, line: 10, message: `Finding ${id}`, ...extra,
 });
 
+/** Prépare les données nécessaires à ce scénario. */
 function makeIncident(issues: any[], overrides: any = {}) {
   return {
     id: 'incident-modify', projectId: 'project-1', status: 'blocked', prUrl: null, buildNumber: 200,
     metadata: { enrichedData: { sonar: { issues } }, sourceCommitSha: 'a'.repeat(40), ...overrides },
   };
 }
+/** Prépare les données nécessaires à ce scénario. */
 function makeService(incident: any) {
   const project = { id: 'project-1', githubRepo: 'owner/repo' };
-  const projectRepo = { findOne: async () => project };
-  const incidentRepo = { findOne: async () => incident, update: async (_id: string, patch: any) => Object.assign(incident, patch) };
+  const projectRepo = {
+  /** Recherche l’élément correspondant à l’identifiant. */
+  findOne: async () => project };
+  const incidentRepo = {
+  /** Recherche l’élément correspondant à l’identifiant. */
+  findOne: async () => incident,
+  /** Applique les modifications autorisées à l’élément. */
+  update: async (_id: string, patch: any) => Object.assign(incident, patch) };
   const repository: any = {
-    manager: { transaction: async (fn: any) => fn({ getRepository: (entity: any) => entity?.name === 'Project' ? projectRepo : incidentRepo }) },
+    manager: {
+    /** Exécute les opérations dans le cadre transactionnel prévu. */
+    transaction: async (fn: any) => fn({
+    /** Simule la lecture des données demandées par le composant. */
+    query: emptyReservationQuery, getRepository: (entity: any) => entity?.name === 'Project' ? projectRepo : incidentRepo }) },
+    /** Recherche l’élément correspondant à l’identifiant. */
     findOne: async () => incident, update: incidentRepo.update,
   };
-  return new IncidentsService(repository, projectRepo as any, { emit: () => undefined } as any, { syncIncident: async () => undefined } as any, {} as any);
+  return new IncidentsService(repository, projectRepo as any, {
+  /** Diffuse ou construit le résultat prévu. */
+  emit: () => undefined } as any, {
+  /** Prépare les données nécessaires à ce scénario. */
+  syncIncident: async () => undefined } as any, {} as any);
 }
 
+/** Exécute les étapes principales de ce programme. */
 async function main() {
   const originalFetch = globalThis.fetch;
   const originalWorkflowId = process.env.N8N_WF2_ID;
   process.env.N8N_WF2_ID = '9adcV31eaIgJyMR0';
   let dispatches = 0;
+  /** Envoie la requête et lit la réponse distante. */
   globalThis.fetch = async () => { dispatches++; return new Response('{}', { status: 200 }); };
   const user = { id: 'developer-1', role: 'developer' };
   try {
@@ -202,10 +212,34 @@ async function main() {
     (incidentK as any).prUrl = 'https://github.com/owner/repo/pull/9';
     await assert.rejects(
       () => serviceK.approveFix(incidentK.id, user, { findingIds: ['A', 'C'] }),
-      /Pull Request existe déjà/,
-      'a real PR must still block any new/modified selection, exactly as before',
+      (e: any) => /Pull Request existe déjà|n’est pas encore fusionnée|déjà modifiés? par la Pull Request/.test(String(e?.response?.message || e?.message)),
+      'a real PR must still block any new/modified selection until its merge is confirmed',
     );
-    console.log('modify-failed-selection K (real PR still blocks unconditionally): PASS');
+    console.log('modify-failed-selection K (real PR blocks until merge confirmed): PASS');
+  }
+
+  // ── L. même incident : PR ouverte → refus « merge requis » ; merge confirmé → nouveau cycle ──
+  {
+    const incidentL = makeIncident([sonar('A'), sonar('B'), sonar('D')]);
+    const serviceL = makeService(incidentL);
+    await serviceL.approveFix(incidentL.id, user, { findingIds: ['A', 'B'] });
+    Object.assign(incidentL.metadata.fixRequest, { status: 'VALIDATED', prNumber: 28, prUrl: 'https://github.com/owner/repo/pull/28',
+      fileLock: { files: [String(incidentL.metadata.fixRequest.findings[0].file)], reservedAt: 't' } });
+    (incidentL as any).prUrl = 'https://github.com/owner/repo/pull/28';
+    (incidentL as any).status = 'completed';
+    await assert.rejects(
+      () => serviceL.approveFix(incidentL.id, user, { findingIds: ['D'] }),
+      (e: any) => e.response?.code === 'SONAR_FILE_PR_PENDING_MERGE' && /#28/.test(e.response.message) && /Merge effectué/.test(e.response.message),
+      'PR not merged yet: explicit merge-required refusal');
+    incidentL.metadata.fixRequest.fileLock.releasedAt = 'merged';
+    await assert.rejects(() => serviceL.approveFix(incidentL.id, user, { findingIds: ['A'] }), /déjà été corrigé/);
+    await serviceL.approveFix(incidentL.id, user, { findingIds: ['D'] });
+    assert.deepEqual(incidentL.metadata.fixRequest.findingIds, ['D']);
+    assert.equal((incidentL as any).prUrl, null, 'new cycle starts without the merged PR');
+    assert.deepEqual(incidentL.metadata.remediatedFindingIds, ['A', 'B']);
+    assert.equal(incidentL.metadata.closedCorrectionCycles.length, 1);
+    assert.equal(incidentL.metadata.validation, undefined);
+    console.log('modify-failed-selection L (same-incident cycle after merge): PASS');
   }
 
   } finally {
@@ -213,7 +247,7 @@ async function main() {
     if (originalWorkflowId === undefined) delete process.env.N8N_WF2_ID; else process.env.N8N_WF2_ID = originalWorkflowId;
   }
 
-  console.log('modify-failed-selection contract (A,B,C,D,E,F,G,H,I,J,K): PASS');
+  console.log('modify-failed-selection contract (A,B,C,D,E,F,G,H,I,J,K,L): PASS');
 }
 
 main().catch(error => { console.error(error); process.exitCode = 1; });

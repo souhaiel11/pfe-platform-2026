@@ -1,0 +1,8 @@
+{
+  "checkedAt": "2026-10-07T11:24:07.714Z",
+  "migrationSourceSha256": "8b02321e206ab23039130529607caec4dad363e0128edba746f1d9d5cae55474",
+  "guard": "exact source predicate and IF EXISTS query; CTE replaces session-only temp view",
+  "pass": true,
+  "blockingProjects": 0,
+  "migrationApplied": false
+}

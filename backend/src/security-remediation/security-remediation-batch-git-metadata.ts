@@ -1,29 +1,21 @@
-// Increment 1 (WF6 multi-CVE wiring) — batch-aware commit message/PR title/
-// body. Deliberately does NOT modify security-remediation-git-metadata.ts
-// at all (that file, and its own real PR #37 output, stay untouched) —
-// this is a separate, additive layer that DELEGATES to it verbatim for the
-// N=1 case (non-regression: a singleton batch's commit/PR text must be
-// byte-identical to today's), and only diverges for N>1, where no
-// existing text format could apply anyway (there is no "the CVE" to name
-// alone).
+/** Construit le message de commit et le titre/corps de PR pour un lot de remédiations ; délègue verbatim au cas singulier pour un lot d'un seul élément. */
 import { computeSecurityCommitMessage, computeSecurityPrBody, computeSecurityPrTitle, SecurityRemediationGitMetadataInput } from './security-remediation-git-metadata';
 
+/** Construit le message de commit d'un lot (délègue au cas singulier pour N=1). */
 export function computeSecurityBatchCommitMessage(inputs: SecurityRemediationGitMetadataInput[]): string {
   if (inputs.length === 1) return computeSecurityCommitMessage(inputs[0]);
   return `fix(security): remediate ${inputs.length} dependency versions`;
 }
 
+/** Construit le titre de PR d'un lot (délègue au cas singulier pour N=1). */
 export function computeSecurityBatchPrTitle(inputs: SecurityRemediationGitMetadataInput[]): string {
   if (inputs.length === 1) return computeSecurityPrTitle(inputs[0]);
   return computeSecurityBatchCommitMessage(inputs);
 }
 
+/** Construit le corps de PR d'un lot (tableau multi-CVE), en réutilisant le rendu par ligne déjà sanitizé du cas singulier. */
 export function computeSecurityBatchPrBody(inputs: SecurityRemediationGitMetadataInput[], candidateIdentity: string): string {
   if (inputs.length === 1) return computeSecurityPrBody(inputs[0]);
-  // Reuses computeSecurityPrBody()'s OWN per-row rendering (display()'s
-  // sanitization, sanitizeAdvisoryId()'s allowlist) by delegating one row
-  // at a time and slicing out just its table row -- never a second,
-  // independently-maintained sanitizer for the same text.
   const rows = inputs.map(input => {
     const single = computeSecurityPrBody(input);
     const row = single.split('\n').find(line => line.startsWith('| Advisory |'));

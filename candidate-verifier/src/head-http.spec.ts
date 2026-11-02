@@ -1,8 +1,10 @@
+// Teste le composant « head-http » et ses cas d’erreur.
 import * as assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import * as path from 'node:path';
 import * as net from 'node:net';
 
+/** Exécute les étapes principales de ce programme. */
 async function main() {
   const reservation = net.createServer();
   await new Promise<void>(resolve => reservation.listen(0, '127.0.0.1', resolve));
@@ -22,6 +24,7 @@ async function main() {
       child.stdout.on('data', b => { if (String(b).includes('listening')) { clearTimeout(timer); resolve(); } });
       child.on('exit', () => { clearTimeout(timer); reject(Error('worker exited before startup')); });
     });
+    /** Prépare les données nécessaires à ce scénario. */
     const post = (body: any) => fetch(`http://127.0.0.1:${port}/verify`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     const head = { verifyHeadOnly: true, repository: 'owner/repo', targetSha: 'a'.repeat(40), validationRequestId: 'v', requestId: 'r', batchId: 'b', candidateAttempt: 0 };
     const response = await post(head); assert.equal(response.status, 200); assert.equal((await response.json() as any).mode, 'HEAD_ONLY');

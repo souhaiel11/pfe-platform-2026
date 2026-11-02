@@ -1,28 +1,13 @@
-// ─────────────────────────────────────────────────────────────
-//  Dockerfile Optimizer — proxy vers le workflow n8n WF5
-//  Fichier : src/dockerfile-optimizer/dockerfile-optimizer.module.ts
-//  Enregistrement : ajouter DockerfileOptimizerModule aux imports de AppModule
-//
-//  Jumeau architectural de jenkins-optimizer/jenkins-optimizer.module.ts —
-//  même mode async (fire-and-forget + polling + callback).
-//
-//  Couche 2 (branche analyse) : la branche n8n "dockerfile-optimize" ne
-//  fetch RIEN elle-même — elle reçoit dockerfile + pomXml + appConfig déjà
-//  en texte. C'est CE module qui appelle jusqu'à 3 fois la branche fetch
-//  existante (dockerfile-fetch) avant de déclencher l'analyse : Dockerfile
-//  (obligatoire), pom.xml (optionnel, RC-1/RC-3), application.properties/.yml
-//  (optionnel, RC-2) — un échec sur ces deux derniers n'est JAMAIS une
-//  erreur, les checks concernés s'abstiennent simplement (voir Runtime
-//  Coherence Checker côté n8n). Choix (a) plutôt que (b) : réutilise 100% de
-//  la branche fetch déjà prouvée, la branche optimize reste pure (texte in,
-//  findings out), symétrique à jenkinsfile-optimize côté WF4.
-// ─────────────────────────────────────────────────────────────
-import { Module, Controller, Post, Get, Param, Body, Headers, UseGuards, HttpException, HttpStatus, Req } from '@nestjs/common';
+import { currentOptimizerVerdict } from '../common/optimizer-verdict';
+import { fetchDockerfile } from './fetch-dockerfile';
+// Contient le contrôleur et le module de l'optimiseur Dockerfile.
+import { Module, Controller, Post, Get, Param, Body, Headers, UseGuards, HttpException, HttpStatus, Req, Query } from '@nestjs/common';
 import { TypeOrmModule, InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, Not, Like } from 'typeorm';
 import { randomUUID } from 'crypto';
 import { DockerfileAnalysis, DockerfileAnalysisStatus } from './dockerfile-analysis.entity';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { JwtOrInternalSecretGuard } from '../auth/jwt-or-internal-secret.guard';
 import { Project } from '../projects/project.entity';
 
 const N8N_URL = process.env.N8N_URL || 'http://172.31.172.61:5678';
@@ -64,6 +49,7 @@ setInterval(() => {
 @Controller('dockerfile')
 export class DockerfileOptimizerController {
 
+  /** Initialise les dépendances et l’état de ce composant. */
   constructor(
     @InjectRepository(DockerfileAnalysis)
     private readonly analyses: Repository<DockerfileAnalysis>,
@@ -71,9 +57,7 @@ export class DockerfileOptimizerController {
     private readonly projects: Repository<Project>,
   ) {}
 
-  // Même logique que JenkinsOptimizerController.resolveDefaultBranch() —
-  // voir son commentaire pour le détail (fail-safe, jamais fail-loud,
-  // même mécanisme d'auth que ProjectsService.getGithubStats()).
+  /** Même logique que JenkinsOptimizerController.resolveDefaultBranch(). */
   private async resolveDefaultBranch(owner: string, repo: string, token?: string): Promise<string> {
     try {
       const headers: Record<string, string> = { 'User-Agent': 'DevSecOps-Platform' };
@@ -96,6 +80,7 @@ export class DockerfileOptimizerController {
   // part côté front pour l'instant), cette branche est destinée à être
   // appelée directement par le front dès son intégration.
   @UseGuards(JwtAuthGuard)
+  /** Endpoint HTTP : récupère un Dockerfile depuis GitHub via la branche n8n dockerfile-fetch déjà prouvée. */
   @Post('fetch')
   async fetch(@Body() body: { owner: string; repo: string; filePath?: string; ref?: string }) {
     if (!body?.owner || !body?.repo) {
@@ -103,23 +88,18 @@ export class DockerfileOptimizerController {
     }
     const result = await this.callFetch(body.owner, body.repo, body.filePath || 'Dockerfile', body.ref);
     if (!result?.success) {
-      throw new HttpException(result?.message || 'Dockerfile introuvable', HttpStatus.NOT_FOUND);
+      throw new HttpException({ code: result?.code || 'DOCKERFILE_NOT_FOUND', message: result?.message || 'Dockerfile introuvable' }, result?.statusCode || HttpStatus.NOT_FOUND);
     }
     return result;
   }
 
-  // Remédiation (couche apply WF5) — MVP volontairement synchrone (Option B,
-  // pas de stockage intermédiaire) : la branche n8n dockerfile-apply exécute
-  // agent + gate + PR GitHub dans une seule exécution qui répond à la fin
-  // (contrairement à jenkins-optimizer, pas de polling/callback ici). Testé
-  // en pratique entre ~30 et 90s ; nginx a un proxy_read_timeout de 200s
-  // (déjà élargi pour l'agent Jenkinsfile, voir docker/nginx.conf) — signal
-  // borné à 190s pour que le backend réponde avec un message clair avant que
-  // nginx ne coupe sec.
-  // Le front envoie directement dockerfile + findings (tous, pas de
-  // sélection fine dans ce MVP) + context — aucune réhydratation depuis une
-  // analyse stockée, il n'y a pas d'entité DockerfileApply pour l'instant.
+  /** Remédiation (couche apply WF5). */
   @UseGuards(JwtAuthGuard)
+  /**
+   * Endpoint HTTP : remédiation Dockerfile MVP, volontairement SYNCHRONE (agent + gate + PR
+   * GitHub dans un seul aller-retour n8n borné à 190s) — contrairement à jenkins-optimizer,
+   * aucun polling/callback ici. Déduplique par requestId via une ligne-témoin DockerfileAnalysis.
+   */
   @Post('apply')
   async apply(@Body() body: {
     requestId: string;
@@ -189,9 +169,7 @@ export class DockerfileOptimizerController {
     }
   }
 
-  // Essaie chaque chemin candidat jusqu'au premier succès — utilisé pour
-  // application.properties/.yml (RC-2) dont le chemin/format varie selon le
-  // projet. Aucun trouvé → chaîne vide, jamais une erreur (voir optimize()).
+  /** Essaie chaque chemin candidat jusqu'au premier succès — utilisé pour application.properties/.yml (RC-2) dont le chemin/format varie selon le projet. */
   private async fetchFirstAvailable(owner: string, repo: string, candidates: string[], ref?: string): Promise<string> {
     for (const filePath of candidates) {
       const res = await this.callFetch(owner, repo, filePath, ref);
@@ -200,33 +178,20 @@ export class DockerfileOptimizerController {
     return '';
   }
 
-  // Appelle la branche n8n dockerfile-fetch déjà prouvée — jamais throw :
-  // un échec (fichier absent) est un résultat normal ({success:false,...}),
-  // c'est à l'appelant de décider si c'est bloquant (Dockerfile) ou pas
-  // (pom.xml, application config, voir optimize()).
+  /** Appelle la branche n8n dockerfile-fetch déjà prouvée. */
   private async callFetch(owner: string, repo: string, filePath: string, ref?: string): Promise<any> {
-    try {
-      const res = await fetch(FETCH_WEBHOOK, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ owner, repo, filePath, ref: ref || 'main' }),
-        signal: AbortSignal.timeout(30000),
-      });
-      if (!res.ok) return { success: false, message: `Workflow n8n indisponible (${res.status})` };
-      const data = await res.json();
-      return Array.isArray(data) ? data[0] : data;
-    } catch (e: any) {
-      return { success: false, message: e.message };
-    }
+    return fetchDockerfile(FETCH_WEBHOOK, { owner, repo, filePath, ref });
   }
 
-  // Lance l'analyse en tâche de fond et renvoie un id immédiatement — même
-  // principe que jenkins-optimizer/optimize() (voir ses commentaires pour
-  // le détail du traitement des erreurs réseau vs timeout ambigu).
-  // Nommée optimize() (pas analyze()) pour matcher le webhook n8n
-  // "dockerfile-optimize" et la convention du jumeau jenkins-optimizer
-  // (/jenkins/optimize ↔ jenkinsfile-optimize) — voir commit de réalignement.
-  @UseGuards(JwtAuthGuard)
+  /** Lance l'analyse en tâche de fond et renvoie un id immédiatement. */
+  // JWT humain ou secret interne (routage automatique d'un échec de build, cf. webhooks.service).
+  @UseGuards(JwtOrInternalSecretGuard)
+  /**
+   * Endpoint HTTP : récupère Dockerfile (obligatoire) + pom.xml + config applicative Spring Boot
+   * (les deux derniers optionnels, absence jamais une erreur) depuis GitHub via la branche fetch,
+   * puis lance l'analyse en tâche de fond (fire-and-forget) — le résultat arrive uniquement via
+   * /optimize/:id/callback.
+   */
   @Post('optimize')
   async optimize(@Body() body: {
     owner: string;
@@ -257,7 +222,7 @@ export class DockerfileOptimizerController {
 
     const dockerfileRes = await this.callFetch(body.owner, body.repo, body.dockerfilePath || 'Dockerfile', ref);
     if (!dockerfileRes?.success) {
-      throw new HttpException(dockerfileRes?.message || 'Dockerfile introuvable', HttpStatus.NOT_FOUND);
+      throw new HttpException({ code: dockerfileRes?.code || 'DOCKERFILE_NOT_FOUND', message: dockerfileRes?.message || 'Dockerfile introuvable' }, dockerfileRes?.statusCode || HttpStatus.NOT_FOUND);
     }
 
     // pom.xml optionnel — absent (projet non-Java, ou chemin différent) ne
@@ -330,23 +295,33 @@ export class DockerfileOptimizerController {
     return { id, pomFound: !!pomXml, appConfigFound: !!appConfig };
   }
 
+  /** Recharge la dernière analyse du projet, hors demandes d’application. */
+  @Get('analyses')
+  @UseGuards(JwtAuthGuard)
+  async listAnalyses(@Query('projectId') projectId?: string) {
+    if (!projectId?.trim()) throw new HttpException('projectId requis', HttpStatus.BAD_REQUEST);
+    const rows = await this.analyses.find({
+      where: { projectId: projectId.trim(), jobId: Not(Like('apply:%')) },
+      order: { createdAt: 'DESC' },
+      take: 1,
+    });
+    const project = await this.projects.findOneBy({ id: projectId.trim() });
+    return Promise.all(rows.map(row => currentOptimizerVerdict(row, project, 'Dockerfile')));
+  }
+
+  /** Renvoie Optimize statut. */
   @UseGuards(JwtAuthGuard)
   @Get('optimize/:id/status')
   async getOptimizeStatus(@Param('id') id: string) {
-    const job = jobs.get(id);
-    if (job) {
-      return { status: job.status, result: job.result, reason: job.reason, detail: job.detail };
-    }
     const row = await this.analyses.findOneBy({ jobId: id });
     if (!row) {
       throw new HttpException('Analyse introuvable ou expirée', HttpStatus.NOT_FOUND);
     }
-    return { status: row.status, result: row.result, reason: row.reason, detail: row.detail };
+    const view = await currentOptimizerVerdict(row, await this.projects.findOneBy({ id: row.projectId }), 'Dockerfile');
+    return { status: view.status, result: view.result, reason: view.reason, detail: view.detail };
   }
 
-  // Appelé PAR n8n (WF5) à la fin du workflow — succès ou échec explicite.
-  // Pas de JwtAuthGuard (appelé depuis n8n, pas depuis le navigateur), mais
-  // protégé par le même secret partagé que les callbacks jenkins-optimizer.
+  /** Appelé PAR n8n (WF5) à la fin du workflow — succès ou échec explicite. */
   @Post('optimize/:id/callback')
   async receiveOptimizeCallback(
     @Param('id') id: string,

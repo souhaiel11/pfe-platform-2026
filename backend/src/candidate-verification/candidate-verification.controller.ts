@@ -1,17 +1,4 @@
-// R22-E — the one new HTTP surface this phase adds: lets WF2 (n8n) call the
-// R22-C verification engine, the write guard, and the remote-head-drift
-// check as plain HTTP requests, guarded the same way every other n8n->
-// backend call in this codebase already is (InternalSecretGuard — see
-// incidents.controller.ts's saveValidation/saveWorkflowStatus). n8n itself
-// still performs the actual GitHub read/write calls (it already holds the
-// GitHub credential); these endpoints only make the three R22-C/R22-E
-// decisions reusable from n8n instead of being reimplemented as duplicate
-// Code-node logic that could drift from the backend's own tested version.
-//
-// R22-E2C2: /verify no longer resolves a repository path itself (that moved
-// to the candidate-verifier worker, along with RepoCacheService) -- this
-// controller forwards the manifest and lets CandidateVerificationService's
-// thin HTTP client talk to the worker.
+// Expose les points d'entrée de vérification du candidat, de garde avant écriture et de détection d'un déplacement du HEAD distant.
 import { Body, Controller, Post, UseGuards, BadRequestException } from '@nestjs/common';
 import { InternalSecretGuard } from '../auth/internal-secret.guard';
 import { CandidateVerificationService } from './candidate-verification.service';
@@ -21,8 +8,11 @@ import { CandidateManifest, CandidateVerification, VerificationRequest, Verifica
 
 @Controller('candidate-verification')
 export class CandidateVerificationController {
+  /** Initialise les dépendances et l’état de ce composant. */
   constructor(private readonly service: CandidateVerificationService) {}
 
+  // Lance soit une vérification HEAD seule (si `verifyHeadOnly`), soit une vérification
+  // complète d'un manifeste candidat (compilation + tests), après avoir validé la forme de la requête.
   @UseGuards(InternalSecretGuard)
   @Post('verify')
   verify(@Body() body: VerificationRequest) {
@@ -39,6 +29,8 @@ export class CandidateVerificationController {
       ...(body.options?.mode ? {mode: body.options.mode} : {}), ...(body.verificationStep ? {verificationStep: body.verificationStep} : {}) });
   }
 
+  // Expose le dernier verrou avant écriture à n8n, pour que WF2 revérifie un
+  // candidat juste avant de l'écrire sur GitHub.
   @UseGuards(InternalSecretGuard)
   @Post('write-guard')
   writeGuard(@Body() body: { verification: VerificationResult; candidateManifest: CandidateManifest }) {
@@ -48,6 +40,8 @@ export class CandidateVerificationController {
     return assertCandidateStillValidForWrite(body.verification, body.candidateManifest);
   }
 
+  // Expose la détection de dérive de branche distante à n8n, pour que WF2
+  // vérifie que la branche n'a pas bougé juste avant d'écrire.
   @UseGuards(InternalSecretGuard)
   @Post('remote-head-drift')
   remoteHeadDrift(@Body() body: { remoteHeadSha: string | null; candidateBaseSha: string }) {

@@ -1,0 +1,22 @@
+   1 server.port=8080
+   2 
+   3 # H2 Database embarquée
+   4 spring.datasource.url=jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+   5 spring.datasource.driverClassName=org.h2.Driver
+   6 spring.datasource.username=sa
+   7 spring.datasource.password=
+   8 spring.jpa.database-platform=org.hibernate.dialect.H2Dialect
+   9 spring.h2.console.enabled=true
+  10 spring.h2.console.path=/h2-console
+  11 
+  12 # JPA
+  13 spring.jpa.hibernate.ddl-auto=create-drop
+  14 spring.jpa.show-sql=true
+  15 spring.jpa.properties.hibernate.format_sql=true
+  16 
+  17 # Logging
+  18 logging.level.com.pfe=DEBUG
+  19 logging.level.org.springframework.security=DEBUG
+  20 
+  21 # Actuator
+  22 management.endpoints.web.exposure.include=health,info,metrics

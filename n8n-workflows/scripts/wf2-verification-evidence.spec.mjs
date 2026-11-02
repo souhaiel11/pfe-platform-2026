@@ -1,15 +1,9 @@
-// Offline contract tests for WF2's "Persist Verification Failure" node:
-// proves it now includes a bounded, redacted verificationEvidence summary
-// built from the REAL "Call Candidate Verification" node output already
-// available in the same execution (R76), without changing failedNode/
-// failureCode/failureSummary/candidateDigest/candidateBaseSha at all, and
-// without introducing any new route toward a Git-mutating node.
-//
-// No n8n execution, network or business action.
+// Teste le composant « wf2-verification-evidence » et ses cas d’erreur.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 const wf = JSON.parse(readFileSync(new URL('../pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.PROMOTION-TARGET.json', import.meta.url)))[0];
+/** Retrouve ou construit le nœud du workflow demandé. */
 const node = name => wf.nodes.find(n => n.name === name);
 const code = node('Persist Verification Failure').parameters.jsCode;
 
@@ -22,15 +16,18 @@ assert.match(code, /candidateBaseSha:manifest\.candidateBaseSha/);
 assert.match(code, /verificationEvidence/);
 assert.match(code, /\$\('Call Candidate Verification'\)\.first\(\)\.json/, 'must read the real, already-available Call Candidate Verification output');
 
-// ── Execute the real node code with a mocked n8n item-linking API ──────────
+/** Exécute le traitement et collecte son résultat. */
 function run({ guardJson, verificationJson, manifestJson = {}, envelopeJson = {} }) {
+  /** Simule l’accès à un nœud n8n pour le scénario. */
   const $ = (nodeName) => ({
+    /** Renvoie le premier élément disponible. */
     first: () => {
       if (nodeName === 'Assemble Candidate Manifest') return { json: manifestJson };
       if (nodeName === 'Call Candidate Verification') return { json: verificationJson };
       throw new Error('unmocked node reference: ' + nodeName);
     },
   });
+  /** Simule la lecture des éléments d’un nœud n8n. */
   const $items = (nodeName) => {
     if (nodeName === 'Capture Correlation Envelope') return [{ json: { correlationEnvelope: envelopeJson } }];
     throw new Error('unmocked $items reference: ' + nodeName);
@@ -140,6 +137,26 @@ function run({ guardJson, verificationJson, manifestJson = {}, envelopeJson = {}
   // Phase 1 adds an isolated cross-file subgraph. Remove that additive graph
   // before comparing the pre-existing routing byte-for-byte with its base.
   for (const name of Object.keys(connections)) if (name === 'Classify Candidate Coordination Scope' || name.includes('Cross-File')) delete connections[name];
+  // R91 inserts permission chains on exactly two success edges. Prove the
+  // complete added topology before contracting it for the historical routing
+  // comparison; no existing failure output or Git route may be skipped.
+  if (connections['Register WF2 Execution']) {
+    /** Construit une liaison entre deux nœuds. */
+    const edge = node => ({ node, type: 'main', index: 0 });
+    assert.deepEqual(connections['Adapt Webhook Payload'].main[0], [edge('Register WF2 Execution')]);
+    assert.deepEqual(connections['Register WF2 Execution'], { main: [[edge('Execution May Continue?')]] });
+    assert.deepEqual(connections['Execution May Continue?'], { main: [[edge('Restore Registered Intake')], [edge('WF2 Cancellation Terminal')]] });
+    assert.deepEqual(connections['Restore Registered Intake'], { main: [[edge('Fetch Repository Metadata')]] });
+    assert.deepEqual(connections['Remote Head Drift Passed?'].main[0], [edge('Pre-Git Cancellation Gate')]);
+    assert.deepEqual(connections['Pre-Git Cancellation Gate'], { main: [[edge('Git Write Allowed?')]] });
+    assert.deepEqual(connections['Git Write Allowed?'], { main: [[edge('Restore Pre-Git Context')], [edge('WF2 Cancellation Terminal')]] });
+    assert.deepEqual(connections['Restore Pre-Git Context'], { main: [[edge('Branch Existed At Generation? (Pass 2 Entry)')]] });
+    assert.equal(connections['WF2 Cancellation Terminal'], undefined);
+    connections['Adapt Webhook Payload'].main[0] = [edge('Fetch Repository Metadata')];
+    connections['Remote Head Drift Passed?'].main[0] = [edge('Branch Existed At Generation? (Pass 2 Entry)')];
+    for (const name of ['Register WF2 Execution', 'Execution May Continue?', 'Restore Registered Intake',
+      'Pre-Git Cancellation Gate', 'Git Write Allowed?', 'Restore Pre-Git Context']) delete connections[name];
+  }
   assert.deepEqual(connections, base.connections, 'existing failure and Git routing unchanged');
 }
 

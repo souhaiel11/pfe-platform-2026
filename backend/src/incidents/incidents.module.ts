@@ -1,3 +1,5 @@
+// Déclaration NestJS du module incidents : branche service/contrôleur/gateway sur Incident/Project,
+// ManualRemediation et CandidateVerification.
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { HttpModule } from '@nestjs/axios';

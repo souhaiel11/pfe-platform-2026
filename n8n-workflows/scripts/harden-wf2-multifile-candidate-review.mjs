@@ -1,14 +1,18 @@
-// Local artifact transformation only. No imports into n8n or business actions.
+// Applique les contrôles supplémentaires au workflow.
 import { readFileSync, writeFileSync } from 'node:fs';
 import assert from 'node:assert/strict';
 
 export const relationshipContract = ' When replacing persistence entities with DTOs, preserve all semantically relevant entity relationships; never silently drop association fields. Inventory each association and explicitly distinguish create vs update semantics in requiredChanges and expectedBehaviorPreserved. Map relationship IDs only through APIs proven in supplied source context, including the actual repository declaration or existing service implementation. Preserve the existing entity relationship on update when the original update leaves it unchanged; do not introduce reassignment or clearing semantics. Resolve a supplied create-time relationship ID using the proven project API and handle missing IDs and unknown entities explicitly according to existing behavior. Do not instantiate fake/stub entities merely to satisfy a foreign key unless supplied project convention explicitly supports it. Never invent a repository/service method. If required relationship API evidence is absent, fail rather than guess: the planner must return MANUAL_OR_SPECIALIST with CONTEXT_REQUIRED, and the patch generator must stop without a speculative patch.';
 export const batchReviewContract = ' Evaluate this entire candidate set atomically. All planned sibling files are supplied together: resolve imports, types and method signatures against these candidate files before falling back to original sources. A DTO supplied in this batch is not missing just because it is CREATE. Reject genuine cross-file defects: DTO/entity persistence coupling, incompatible method signatures, missing mappings, dropped relationships, enum conversion errors and controller/service/DTO semantic mismatches. Trace every original entity association through create and update paths. A DTO-to-entity mapping that silently drops a supplied association is REJECTED; updates must preserve relationships that the original update preserves. Accept relationship ID resolution only through APIs proven by original source context; fake/stub entities or invented methods are not proof. If source evidence is insufficient, return INCONCLUSIVE. Any rejected or inconclusive file or cross-file contract rejects the entire batch. Do not relax any existing semantic criterion; do not claim scanner resolution.';
 
+/** Applique les contrôles supplémentaires au workflow. */
 export function harden(workflow) {
+  /** Retrouve ou construit le nœud du workflow demandé. */
   const node = name => { const n = workflow.nodes.find(n => n.name === name); assert.ok(n, name); return n; };
   if (node('Prepare Candidate Manifest').parameters.jsCode.includes('failCandidateSet')) return workflow;
+  /** Construit une liaison entre deux nœuds. */
   const edge = name => ({node: name, type: 'main', index: 0});
+  /** Relie les nœuds du workflow. */
   const connect = (from, to) => { workflow.connections[from].main[0] = [edge(to)]; };
   connect('Generic Candidate Preflight', 'Hash Candidate File Content');
   connect('Prepare Candidate Manifest', 'Independent Semantic Review');

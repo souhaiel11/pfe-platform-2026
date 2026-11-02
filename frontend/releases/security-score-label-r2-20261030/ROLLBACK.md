@@ -1,0 +1,1 @@
+Retour arrière : remettre ./frontend/releases/partial-security-score-20261030/browser dans docker-compose.yml puis recréer le service frontend avec docker compose -f docker-compose.yml -p platform up -d --no-deps --force-recreate frontend.

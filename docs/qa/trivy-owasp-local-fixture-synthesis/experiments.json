@@ -1,0 +1,390 @@
+[
+  {
+    "stage": "PRIMARY_12",
+    "package": "org.springframework.security:spring-security-core",
+    "currentVersion": "5.6.4",
+    "candidateVersion": "5.7.14",
+    "cves": [
+      "CVE-2024-38827"
+    ],
+    "sources": [
+      "TRIVY"
+    ],
+    "workspace": "/tmp/remediation-fixture-candidate-1",
+    "maven": {
+      "exit": 0,
+      "seconds": 2.24,
+      "log": "/tmp/remediation-fixture-candidate-1/maven.log"
+    },
+    "scanner": {
+      "exit": 0,
+      "seconds": 0.83,
+      "log": "/tmp/remediation-fixture-candidate-1/trivy.log"
+    },
+    "owasp": {
+      "run": false,
+      "reason": "Not run for this experiment; Trivy collision already proves rejection, or see broadened evidence. OWASP database was subsequently provisioned in /tmp."
+    }
+  },
+  {
+    "stage": "PRIMARY_12",
+    "package": "com.fasterxml.jackson.core:jackson-databind",
+    "currentVersion": "2.13.3",
+    "candidateVersion": "2.13.5",
+    "cves": [
+      "CVE-2022-42003",
+      "CVE-2022-42004"
+    ],
+    "sources": [
+      "OWASP"
+    ],
+    "workspace": "/tmp/remediation-fixture-candidate-2",
+    "maven": {
+      "exit": 0,
+      "seconds": 4.58,
+      "log": "/tmp/remediation-fixture-candidate-2/maven.log"
+    },
+    "scanner": {
+      "exit": 0,
+      "seconds": 0.84,
+      "log": "/tmp/remediation-fixture-candidate-2/trivy.log"
+    },
+    "owasp": {
+      "run": false,
+      "reason": "Not run for this experiment; Trivy collision already proves rejection, or see broadened evidence. OWASP database was subsequently provisioned in /tmp."
+    }
+  },
+  {
+    "stage": "PRIMARY_12",
+    "package": "org.springframework.security:spring-security-core",
+    "currentVersion": "5.6.4",
+    "candidateVersion": "5.6.9",
+    "cves": [
+      "CVE-2022-31692"
+    ],
+    "sources": [
+      "OWASP"
+    ],
+    "workspace": "/tmp/remediation-fixture-candidate-3",
+    "maven": {
+      "exit": 0,
+      "seconds": 2.24,
+      "log": "/tmp/remediation-fixture-candidate-3/maven.log"
+    },
+    "scanner": {
+      "exit": 0,
+      "seconds": 0.74,
+      "log": "/tmp/remediation-fixture-candidate-3/trivy.log"
+    },
+    "owasp": {
+      "run": false,
+      "reason": "Not run for this experiment; Trivy collision already proves rejection, or see broadened evidence. OWASP database was subsequently provisioned in /tmp."
+    }
+  },
+  {
+    "stage": "PRIMARY_12",
+    "package": "org.apache.tomcat.embed:tomcat-embed-core",
+    "currentVersion": "9.0.63",
+    "candidateVersion": "9.0.83",
+    "cves": [
+      "CVE-2022-42252",
+      "CVE-2022-45143",
+      "CVE-2023-41080"
+    ],
+    "sources": [
+      "OWASP"
+    ],
+    "workspace": "/tmp/remediation-fixture-candidate-4",
+    "maven": {
+      "exit": 0,
+      "seconds": 2.18,
+      "log": "/tmp/remediation-fixture-candidate-4/maven.log"
+    },
+    "scanner": {
+      "exit": 0,
+      "seconds": 1.36,
+      "log": "/tmp/remediation-fixture-candidate-4/trivy.log"
+    },
+    "owasp": {
+      "run": false,
+      "reason": "Not run for this experiment; Trivy collision already proves rejection, or see broadened evidence. OWASP database was subsequently provisioned in /tmp."
+    }
+  },
+  {
+    "stage": "PRIMARY_12",
+    "package": "org.yaml:snakeyaml",
+    "currentVersion": "1.29",
+    "candidateVersion": "1.32",
+    "cves": [
+      "CVE-2022-38752",
+      "CVE-2022-41854"
+    ],
+    "sources": [
+      "OWASP",
+      "TRIVY"
+    ],
+    "workspace": "/tmp/remediation-fixture-candidate-5",
+    "maven": {
+      "exit": 0,
+      "seconds": 2.4,
+      "log": "/tmp/remediation-fixture-candidate-5/maven.log"
+    },
+    "scanner": {
+      "exit": 0,
+      "seconds": 0.76,
+      "log": "/tmp/remediation-fixture-candidate-5/trivy.log"
+    },
+    "owasp": {
+      "run": false,
+      "reason": "Not run for this experiment; Trivy collision already proves rejection, or see broadened evidence. OWASP database was subsequently provisioned in /tmp."
+    }
+  },
+  {
+    "stage": "PRIMARY_12",
+    "package": "org.yaml:snakeyaml",
+    "currentVersion": "1.29",
+    "candidateVersion": "1.31",
+    "cves": [
+      "CVE-2022-38750"
+    ],
+    "sources": [
+      "OWASP",
+      "TRIVY"
+    ],
+    "workspace": "/tmp/remediation-fixture-candidate-6",
+    "maven": {
+      "exit": 0,
+      "seconds": 2.18,
+      "log": "/tmp/remediation-fixture-candidate-6/maven.log"
+    },
+    "scanner": {
+      "exit": 0,
+      "seconds": 0.74,
+      "log": "/tmp/remediation-fixture-candidate-6/trivy.log"
+    },
+    "owasp": {
+      "run": false,
+      "reason": "Not run for this experiment; Trivy collision already proves rejection, or see broadened evidence. OWASP database was subsequently provisioned in /tmp."
+    }
+  },
+  {
+    "stage": "BROADENED_REAL_ASSETS",
+    "package": "ch.qos.logback:logback-classic",
+    "currentVersion": "1.2.11",
+    "candidateVersion": "1.2.13",
+    "cves": [
+      "CVE-2023-6378"
+    ],
+    "sources": [
+      "TRIVY"
+    ],
+    "workspace": "/tmp/remediation-fixture-candidate-7",
+    "maven": {
+      "exit": 0,
+      "seconds": 2.17,
+      "log": "/tmp/remediation-fixture-candidate-7/maven.log"
+    },
+    "scanner": {
+      "exit": 0,
+      "seconds": 0.73,
+      "log": "/tmp/remediation-fixture-candidate-7/trivy.log"
+    },
+    "owasp": {
+      "run": false,
+      "reason": "Not run for this experiment; Trivy collision already proves rejection, or see broadened evidence. OWASP database was subsequently provisioned in /tmp."
+    }
+  },
+  {
+    "stage": "BROADENED_REAL_ASSETS",
+    "package": "org.springframework.security:spring-security-config",
+    "currentVersion": "5.7.1",
+    "candidateVersion": "5.7.11",
+    "cves": [
+      "CVE-2023-34034"
+    ],
+    "sources": [
+      "TRIVY"
+    ],
+    "workspace": "/tmp/remediation-fixture-candidate-8",
+    "maven": {
+      "exit": 0,
+      "seconds": 2.15,
+      "log": "/tmp/remediation-fixture-candidate-8/maven.log"
+    },
+    "scanner": {
+      "exit": 0,
+      "seconds": 0.74,
+      "log": "/tmp/remediation-fixture-candidate-8/trivy.log"
+    },
+    "owasp": {
+      "run": false,
+      "reason": "Not run for this experiment; Trivy collision already proves rejection, or see broadened evidence. OWASP database was subsequently provisioned in /tmp."
+    }
+  },
+  {
+    "stage": "BROADENED_REAL_ASSETS",
+    "package": "org.springframework.security:spring-security-core",
+    "currentVersion": "5.6.4",
+    "candidateVersion": "5.7.12",
+    "cves": [
+      "CVE-2024-22257"
+    ],
+    "sources": [
+      "TRIVY"
+    ],
+    "workspace": "/tmp/remediation-fixture-candidate-9",
+    "maven": {
+      "exit": 0,
+      "seconds": 2.24,
+      "log": "/tmp/remediation-fixture-candidate-9/maven.log"
+    },
+    "scanner": {
+      "exit": 0,
+      "seconds": 0.73,
+      "log": "/tmp/remediation-fixture-candidate-9/trivy.log"
+    },
+    "owasp": {
+      "run": false,
+      "reason": "Not run for this experiment; Trivy collision already proves rejection, or see broadened evidence. OWASP database was subsequently provisioned in /tmp."
+    }
+  },
+  {
+    "stage": "BROADENED_REAL_SCANNER_ASSETS",
+    "package": "org.apache.logging.log4j:log4j-api",
+    "currentVersion": "2.17.2",
+    "candidateVersion": null,
+    "cves": [
+      "CVE-2026-49844"
+    ],
+    "sources": [
+      "TRIVY"
+    ],
+    "rawFixedVersion": "2.25.5, 2.26.1",
+    "workspace": "/tmp/remediation-fixture-candidate-12",
+    "maven": {
+      "exit": 0,
+      "seconds": 5.27,
+      "log": "/tmp/remediation-fixture-candidate-12/maven.log"
+    },
+    "scanner": {
+      "exit": 0,
+      "seconds": 1.33,
+      "log": "/tmp/remediation-fixture-candidate-12/trivy.log"
+    },
+    "owasp": {
+      "run": false,
+      "reason": "Not run for this experiment; Trivy collision already proves rejection, or see broadened evidence. OWASP database was subsequently provisioned in /tmp."
+    }
+  },
+  {
+    "stage": "BROADENED_REAL_SCANNER_ASSETS",
+    "package": "org.apache.tomcat.embed:tomcat-embed-websocket",
+    "currentVersion": "9.0.63",
+    "candidateVersion": null,
+    "cves": [
+      "CVE-2024-23672"
+    ],
+    "sources": [
+      "TRIVY"
+    ],
+    "rawFixedVersion": "11.0.0-M17, 10.1.19, 9.0.86, 8.5.99",
+    "workspace": "/tmp/remediation-fixture-candidate-13",
+    "maven": {
+      "exit": 0,
+      "seconds": 2.44,
+      "log": "/tmp/remediation-fixture-candidate-13/maven.log"
+    },
+    "scanner": {
+      "exit": 0,
+      "seconds": 1.36,
+      "log": "/tmp/remediation-fixture-candidate-13/trivy.log"
+    },
+    "owasp": {
+      "run": false,
+      "reason": "Not run for this experiment; Trivy collision already proves rejection, or see broadened evidence. OWASP database was subsequently provisioned in /tmp."
+    }
+  },
+  {
+    "stage": "BROADENED_REAL_SCANNER_ASSETS",
+    "package": "org.springframework:spring-context",
+    "currentVersion": "5.3.20",
+    "candidateVersion": null,
+    "cves": [
+      "CVE-2024-38820"
+    ],
+    "sources": [
+      "TRIVY"
+    ],
+    "rawFixedVersion": "6.1.14",
+    "workspace": "/tmp/remediation-fixture-candidate-14",
+    "maven": {
+      "exit": 0,
+      "seconds": 2.37,
+      "log": "/tmp/remediation-fixture-candidate-14/maven.log"
+    },
+    "scanner": {
+      "exit": 0,
+      "seconds": 1.32,
+      "log": "/tmp/remediation-fixture-candidate-14/trivy.log"
+    },
+    "owasp": {
+      "run": false,
+      "reason": "Not run for this experiment; Trivy collision already proves rejection, or see broadened evidence. OWASP database was subsequently provisioned in /tmp."
+    }
+  },
+  {
+    "stage": "BROADENED_REAL_SCANNER_ASSETS",
+    "package": "org.springframework:spring-core",
+    "currentVersion": "5.3.20",
+    "candidateVersion": null,
+    "cves": [
+      "CVE-2025-41249"
+    ],
+    "sources": [
+      "TRIVY"
+    ],
+    "rawFixedVersion": "6.2.11",
+    "workspace": "/tmp/remediation-fixture-candidate-15",
+    "maven": {
+      "exit": 0,
+      "seconds": 2.89,
+      "log": "/tmp/remediation-fixture-candidate-15/maven.log"
+    },
+    "scanner": {
+      "exit": 0,
+      "seconds": 2.55,
+      "log": "/tmp/remediation-fixture-candidate-15/trivy.log"
+    },
+    "owasp": {
+      "run": false,
+      "reason": "Not run for this experiment; Trivy collision already proves rejection, or see broadened evidence. OWASP database was subsequently provisioned in /tmp."
+    }
+  },
+  {
+    "stage": "BROADENED_REAL_SCANNER_ASSETS",
+    "package": "org.hibernate:hibernate-core",
+    "currentVersion": "5.6.9.Final",
+    "candidateVersion": null,
+    "cves": [
+      "CVE-2026-0603"
+    ],
+    "sources": [
+      "TRIVY"
+    ],
+    "rawFixedVersion": null,
+    "workspace": "/tmp/remediation-fixture-candidate-16",
+    "maven": {
+      "exit": 1,
+      "seconds": 1.22,
+      "log": "/tmp/remediation-fixture-candidate-16/maven.log"
+    },
+    "scanner": {
+      "exit": null,
+      "reason": "MAVEN_BASELINE_FAILED"
+    },
+    "owasp": {
+      "run": false,
+      "reason": "Not run for this experiment; Trivy collision already proves rejection, or see broadened evidence. OWASP database was subsequently provisioned in /tmp."
+    }
+  }
+]

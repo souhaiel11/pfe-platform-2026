@@ -1,3 +1,4 @@
+// Teste le composant « security-remediation-batch-git-metadata » et ses cas d’erreur.
 import * as assert from 'node:assert/strict';
 import { computeSecurityCommitMessage, computeSecurityPrBody, computeSecurityPrTitle } from './security-remediation-git-metadata';
 import { computeSecurityBatchCommitMessage, computeSecurityBatchPrBody, computeSecurityBatchPrTitle } from './security-remediation-batch-git-metadata';

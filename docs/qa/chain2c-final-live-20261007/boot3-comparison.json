@@ -1,0 +1,357 @@
+{
+  "url": "https://api.github.com/repos/souhaiel11/pfe-app-test/compare/main...security/boot3-remediation",
+  "html_url": "https://github.com/souhaiel11/pfe-app-test/compare/main...security/boot3-remediation",
+  "permalink_url": "https://github.com/souhaiel11/pfe-app-test/compare/souhaiel11:393816c...souhaiel11:b62c0d6",
+  "diff_url": "https://github.com/souhaiel11/pfe-app-test/compare/main...security/boot3-remediation.diff",
+  "patch_url": "https://github.com/souhaiel11/pfe-app-test/compare/main...security/boot3-remediation.patch",
+  "base_commit": {
+    "sha": "393816c250f73d907eb5a2dd43b2ec2288c7abcb",
+    "node_id": "C_kwDOSVuMS9oAKDM5MzgxNmMyNTBmNzNkOTA3ZWI1YTJkZDQzYjJlYzIyODhjN2FiY2I",
+    "commit": {
+      "author": {
+        "name": "souhaiel11",
+        "email": "souhaiel.amri@esprit.tn",
+        "date": "2026-10-06T16:06:18Z"
+      },
+      "committer": {
+        "name": "souhaiel11",
+        "email": "souhaiel.amri@esprit.tn",
+        "date": "2026-10-06T16:06:18Z"
+      },
+      "message": "fix(runtime): close malformed task repository query",
+      "tree": {
+        "sha": "2d81cd7724ec6e740cacf6aa938f3c2bdbe2ec0d",
+        "url": "https://api.github.com/repos/souhaiel11/pfe-app-test/git/trees/2d81cd7724ec6e740cacf6aa938f3c2bdbe2ec0d"
+      },
+      "url": "https://api.github.com/repos/souhaiel11/pfe-app-test/git/commits/393816c250f73d907eb5a2dd43b2ec2288c7abcb",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null,
+        "verified_at": null
+      }
+    },
+    "url": "https://api.github.com/repos/souhaiel11/pfe-app-test/commits/393816c250f73d907eb5a2dd43b2ec2288c7abcb",
+    "html_url": "https://github.com/souhaiel11/pfe-app-test/commit/393816c250f73d907eb5a2dd43b2ec2288c7abcb",
+    "comments_url": "https://api.github.com/repos/souhaiel11/pfe-app-test/commits/393816c250f73d907eb5a2dd43b2ec2288c7abcb/comments",
+    "author": {
+      "login": "souhaiel11",
+      "id": 131708236,
+      "node_id": "U_kgDOB9m1TA",
+      "avatar_url": "https://avatars.githubusercontent.com/u/131708236?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/souhaiel11",
+      "html_url": "https://github.com/souhaiel11",
+      "followers_url": "https://api.github.com/users/souhaiel11/followers",
+      "following_url": "https://api.github.com/users/souhaiel11/following{/other_user}",
+      "gists_url": "https://api.github.com/users/souhaiel11/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/souhaiel11/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/souhaiel11/subscriptions",
+      "organizations_url": "https://api.github.com/users/souhaiel11/orgs",
+      "repos_url": "https://api.github.com/users/souhaiel11/repos",
+      "events_url": "https://api.github.com/users/souhaiel11/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/souhaiel11/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "souhaiel11",
+      "id": 131708236,
+      "node_id": "U_kgDOB9m1TA",
+      "avatar_url": "https://avatars.githubusercontent.com/u/131708236?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/souhaiel11",
+      "html_url": "https://github.com/souhaiel11",
+      "followers_url": "https://api.github.com/users/souhaiel11/followers",
+      "following_url": "https://api.github.com/users/souhaiel11/following{/other_user}",
+      "gists_url": "https://api.github.com/users/souhaiel11/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/souhaiel11/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/souhaiel11/subscriptions",
+      "organizations_url": "https://api.github.com/users/souhaiel11/orgs",
+      "repos_url": "https://api.github.com/users/souhaiel11/repos",
+      "events_url": "https://api.github.com/users/souhaiel11/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/souhaiel11/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "7ae0f954f99628b69ce9b42f42c1e2acc8568d99",
+        "url": "https://api.github.com/repos/souhaiel11/pfe-app-test/commits/7ae0f954f99628b69ce9b42f42c1e2acc8568d99",
+        "html_url": "https://github.com/souhaiel11/pfe-app-test/commit/7ae0f954f99628b69ce9b42f42c1e2acc8568d99"
+      }
+    ]
+  },
+  "merge_base_commit": {
+    "sha": "393816c250f73d907eb5a2dd43b2ec2288c7abcb",
+    "node_id": "C_kwDOSVuMS9oAKDM5MzgxNmMyNTBmNzNkOTA3ZWI1YTJkZDQzYjJlYzIyODhjN2FiY2I",
+    "commit": {
+      "author": {
+        "name": "souhaiel11",
+        "email": "souhaiel.amri@esprit.tn",
+        "date": "2026-10-06T16:06:18Z"
+      },
+      "committer": {
+        "name": "souhaiel11",
+        "email": "souhaiel.amri@esprit.tn",
+        "date": "2026-10-06T16:06:18Z"
+      },
+      "message": "fix(runtime): close malformed task repository query",
+      "tree": {
+        "sha": "2d81cd7724ec6e740cacf6aa938f3c2bdbe2ec0d",
+        "url": "https://api.github.com/repos/souhaiel11/pfe-app-test/git/trees/2d81cd7724ec6e740cacf6aa938f3c2bdbe2ec0d"
+      },
+      "url": "https://api.github.com/repos/souhaiel11/pfe-app-test/git/commits/393816c250f73d907eb5a2dd43b2ec2288c7abcb",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null,
+        "verified_at": null
+      }
+    },
+    "url": "https://api.github.com/repos/souhaiel11/pfe-app-test/commits/393816c250f73d907eb5a2dd43b2ec2288c7abcb",
+    "html_url": "https://github.com/souhaiel11/pfe-app-test/commit/393816c250f73d907eb5a2dd43b2ec2288c7abcb",
+    "comments_url": "https://api.github.com/repos/souhaiel11/pfe-app-test/commits/393816c250f73d907eb5a2dd43b2ec2288c7abcb/comments",
+    "author": {
+      "login": "souhaiel11",
+      "id": 131708236,
+      "node_id": "U_kgDOB9m1TA",
+      "avatar_url": "https://avatars.githubusercontent.com/u/131708236?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/souhaiel11",
+      "html_url": "https://github.com/souhaiel11",
+      "followers_url": "https://api.github.com/users/souhaiel11/followers",
+      "following_url": "https://api.github.com/users/souhaiel11/following{/other_user}",
+      "gists_url": "https://api.github.com/users/souhaiel11/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/souhaiel11/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/souhaiel11/subscriptions",
+      "organizations_url": "https://api.github.com/users/souhaiel11/orgs",
+      "repos_url": "https://api.github.com/users/souhaiel11/repos",
+      "events_url": "https://api.github.com/users/souhaiel11/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/souhaiel11/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "souhaiel11",
+      "id": 131708236,
+      "node_id": "U_kgDOB9m1TA",
+      "avatar_url": "https://avatars.githubusercontent.com/u/131708236?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/souhaiel11",
+      "html_url": "https://github.com/souhaiel11",
+      "followers_url": "https://api.github.com/users/souhaiel11/followers",
+      "following_url": "https://api.github.com/users/souhaiel11/following{/other_user}",
+      "gists_url": "https://api.github.com/users/souhaiel11/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/souhaiel11/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/souhaiel11/subscriptions",
+      "organizations_url": "https://api.github.com/users/souhaiel11/orgs",
+      "repos_url": "https://api.github.com/users/souhaiel11/repos",
+      "events_url": "https://api.github.com/users/souhaiel11/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/souhaiel11/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "7ae0f954f99628b69ce9b42f42c1e2acc8568d99",
+        "url": "https://api.github.com/repos/souhaiel11/pfe-app-test/commits/7ae0f954f99628b69ce9b42f42c1e2acc8568d99",
+        "html_url": "https://github.com/souhaiel11/pfe-app-test/commit/7ae0f954f99628b69ce9b42f42c1e2acc8568d99"
+      }
+    ]
+  },
+  "status": "ahead",
+  "ahead_by": 1,
+  "behind_by": 0,
+  "total_commits": 1,
+  "commits": [
+    {
+      "sha": "b62c0d663268d87cc4c3c7b0abdd1c97c75f3f56",
+      "node_id": "C_kwDOSVuMS9oAKGI2MmMwZDY2MzI2OGQ4N2NjNGMzYzdiMGFiZGQxYzk3Yzc1ZjNmNTY",
+      "commit": {
+        "author": {
+          "name": "souhaiel11",
+          "email": "souhaiel.amri@esprit.tn",
+          "date": "2026-10-06T19:10:52Z"
+        },
+        "committer": {
+          "name": "souhaiel11",
+          "email": "souhaiel.amri@esprit.tn",
+          "date": "2026-10-06T19:10:52Z"
+        },
+        "message": "security: migrate application to Spring Boot 3 and Jakarta",
+        "tree": {
+          "sha": "3f6f19ad20c1af661ec25e11efb8e3ef6ade1c9c",
+          "url": "https://api.github.com/repos/souhaiel11/pfe-app-test/git/trees/3f6f19ad20c1af661ec25e11efb8e3ef6ade1c9c"
+        },
+        "url": "https://api.github.com/repos/souhaiel11/pfe-app-test/git/commits/b62c0d663268d87cc4c3c7b0abdd1c97c75f3f56",
+        "comment_count": 0,
+        "verification": {
+          "verified": false,
+          "reason": "unsigned",
+          "signature": null,
+          "payload": null,
+          "verified_at": null
+        }
+      },
+      "url": "https://api.github.com/repos/souhaiel11/pfe-app-test/commits/b62c0d663268d87cc4c3c7b0abdd1c97c75f3f56",
+      "html_url": "https://github.com/souhaiel11/pfe-app-test/commit/b62c0d663268d87cc4c3c7b0abdd1c97c75f3f56",
+      "comments_url": "https://api.github.com/repos/souhaiel11/pfe-app-test/commits/b62c0d663268d87cc4c3c7b0abdd1c97c75f3f56/comments",
+      "author": {
+        "login": "souhaiel11",
+        "id": 131708236,
+        "node_id": "U_kgDOB9m1TA",
+        "avatar_url": "https://avatars.githubusercontent.com/u/131708236?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/souhaiel11",
+        "html_url": "https://github.com/souhaiel11",
+        "followers_url": "https://api.github.com/users/souhaiel11/followers",
+        "following_url": "https://api.github.com/users/souhaiel11/following{/other_user}",
+        "gists_url": "https://api.github.com/users/souhaiel11/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/souhaiel11/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/souhaiel11/subscriptions",
+        "organizations_url": "https://api.github.com/users/souhaiel11/orgs",
+        "repos_url": "https://api.github.com/users/souhaiel11/repos",
+        "events_url": "https://api.github.com/users/souhaiel11/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/souhaiel11/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "committer": {
+        "login": "souhaiel11",
+        "id": 131708236,
+        "node_id": "U_kgDOB9m1TA",
+        "avatar_url": "https://avatars.githubusercontent.com/u/131708236?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/souhaiel11",
+        "html_url": "https://github.com/souhaiel11",
+        "followers_url": "https://api.github.com/users/souhaiel11/followers",
+        "following_url": "https://api.github.com/users/souhaiel11/following{/other_user}",
+        "gists_url": "https://api.github.com/users/souhaiel11/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/souhaiel11/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/souhaiel11/subscriptions",
+        "organizations_url": "https://api.github.com/users/souhaiel11/orgs",
+        "repos_url": "https://api.github.com/users/souhaiel11/repos",
+        "events_url": "https://api.github.com/users/souhaiel11/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/souhaiel11/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "parents": [
+        {
+          "sha": "393816c250f73d907eb5a2dd43b2ec2288c7abcb",
+          "url": "https://api.github.com/repos/souhaiel11/pfe-app-test/commits/393816c250f73d907eb5a2dd43b2ec2288c7abcb",
+          "html_url": "https://github.com/souhaiel11/pfe-app-test/commit/393816c250f73d907eb5a2dd43b2ec2288c7abcb"
+        }
+      ]
+    }
+  ],
+  "files": [
+    {
+      "sha": "33341e63b9ebc142f5c3ddd506c050a1be7e8caf",
+      "filename": "Dockerfile",
+      "status": "modified",
+      "additions": 2,
+      "deletions": 2,
+      "changes": 4,
+      "blob_url": "https://github.com/souhaiel11/pfe-app-test/blob/b62c0d663268d87cc4c3c7b0abdd1c97c75f3f56/Dockerfile",
+      "raw_url": "https://github.com/souhaiel11/pfe-app-test/raw/b62c0d663268d87cc4c3c7b0abdd1c97c75f3f56/Dockerfile",
+      "contents_url": "https://api.github.com/repos/souhaiel11/pfe-app-test/contents/Dockerfile?ref=b62c0d663268d87cc4c3c7b0abdd1c97c75f3f56",
+      "patch": "@@ -1,13 +1,13 @@\n # Stage 1 \u2014 Build avec Maven\n-FROM maven:3.8.6-openjdk-11 AS builder\n+FROM maven:3.9.9-eclipse-temurin-17 AS builder\n WORKDIR /app\n COPY pom.xml .\n RUN mvn dependency:go-offline -B\n COPY src ./src\n RUN mvn clean package -DskipTests -B\n \n # Stage 2 \u2014 Runtime avec JRE Alpine l\u00e9ger\n-FROM eclipse-temurin:11-jre-alpine\n+FROM eclipse-temurin:17-jre-alpine\n WORKDIR /app\n \n # M\u00e9tadonn\u00e9es"
+    },
+    {
+      "sha": "7ba62fb888f450844a763969586f9c0beb1a7d0b",
+      "filename": "pom.xml",
+      "status": "modified",
+      "additions": 10,
+      "deletions": 9,
+      "changes": 19,
+      "blob_url": "https://github.com/souhaiel11/pfe-app-test/blob/b62c0d663268d87cc4c3c7b0abdd1c97c75f3f56/pom.xml",
+      "raw_url": "https://github.com/souhaiel11/pfe-app-test/raw/b62c0d663268d87cc4c3c7b0abdd1c97c75f3f56/pom.xml",
+      "contents_url": "https://api.github.com/repos/souhaiel11/pfe-app-test/contents/pom.xml?ref=b62c0d663268d87cc4c3c7b0abdd1c97c75f3f56",
+      "patch": "@@ -8,7 +8,7 @@\n     <parent>\n         <groupId>org.springframework.boot</groupId>\n         <artifactId>spring-boot-starter-parent</artifactId>\n-        <version>2.7.0</version>\n+        <version>3.5.15</version>\n         <relativePath/>\n     </parent>\n \n@@ -19,11 +19,9 @@\n     <description>Task Management API - Cobaye DevSecOps Platform</description>\n \n     <properties>\n-        <java.version>11</java.version>\n-        <lombok.version>1.18.32</lombok.version>\n+        <java.version>17</java.version>\n+        <tomcat.version>10.1.59</tomcat.version>\n         <!-- Versions vuln\u00e9rables intentionnelles -->\n-        <logback.version>1.2.11</logback.version>\n-        <snakeyaml.version>1.29</snakeyaml.version>\n     </properties>\n \n     <dependencies>\n@@ -37,7 +35,6 @@\n         <dependency>\n             <groupId>org.springframework.security</groupId>\n             <artifactId>spring-security-core</artifactId>\n-            <version>5.6.4</version>\n         </dependency>\n         <dependency>\n             <groupId>org.springframework.boot</groupId>\n@@ -61,14 +58,12 @@\n         <dependency>\n             <groupId>ch.qos.logback</groupId>\n             <artifactId>logback-classic</artifactId>\n-            <version>1.2.11</version>\n         </dependency>\n \n         <!-- SnakeYAML 1.29 \u2014 CVE-2022-25857 HIGH -->\n         <dependency>\n             <groupId>org.yaml</groupId>\n             <artifactId>snakeyaml</artifactId>\n-            <version>1.29</version>\n         </dependency>\n \n         <!-- JWT -->\n@@ -78,6 +73,13 @@\n             <version>0.9.1</version>\n         </dependency>\n \n+        <!-- JJWT 0.9.1 uses DatatypeConverter, removed from JDK 11+. -->\n+        <dependency>\n+            <groupId>javax.xml.bind</groupId>\n+            <artifactId>jaxb-api</artifactId>\n+            <version>2.3.1</version>\n+        </dependency>\n+\n         <!-- Lombok -->\n         <dependency>\n             <groupId>org.projectlombok</groupId>\n@@ -108,7 +110,6 @@\n         <dependency>\n             <groupId>org.springframework.security</groupId>\n             <artifactId>spring-security-test</artifactId>\n-            <version>5.6.4</version>\n             <scope>test</scope>\n         </dependency>\n     </dependencies>"
+    },
+    {
+      "sha": "93285c33fe251261d67c1560aa7e623763f7fabd",
+      "filename": "src/main/java/com/pfe/devsecops/config/SecurityConfig.java",
+      "status": "modified",
+      "additions": 11,
+      "deletions": 17,
+      "changes": 28,
+      "blob_url": "https://github.com/souhaiel11/pfe-app-test/blob/b62c0d663268d87cc4c3c7b0abdd1c97c75f3f56/src%2Fmain%2Fjava%2Fcom%2Fpfe%2Fdevsecops%2Fconfig%2FSecurityConfig.java",
+      "raw_url": "https://github.com/souhaiel11/pfe-app-test/raw/b62c0d663268d87cc4c3c7b0abdd1c97c75f3f56/src%2Fmain%2Fjava%2Fcom%2Fpfe%2Fdevsecops%2Fconfig%2FSecurityConfig.java",
+      "contents_url": "https://api.github.com/repos/souhaiel11/pfe-app-test/contents/src%2Fmain%2Fjava%2Fcom%2Fpfe%2Fdevsecops%2Fconfig%2FSecurityConfig.java?ref=b62c0d663268d87cc4c3c7b0abdd1c97c75f3f56",
+      "patch": "@@ -30,25 +30,19 @@ public class SecurityConfig {\n     @Bean\n     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {\n         http\n-            // VULNERABILITY Z1 \u2014 CORS compl\u00e8tement ouvert\n-            .cors().and()\n-            // D\u00e9sactiver CSRF (vuln\u00e9rabilit\u00e9 potentielle)\n-            .csrf().disable()\n-            .authorizeRequests()\n-                .antMatchers(\"/api/auth/**\").permitAll()\n-                .antMatchers(\"/h2-console/**\").permitAll()\n-                // VULNERABILITY Z4 \u2014 pas de restriction sur /api/tasks selon l'identifiant de la t\u00e2che\n-                // N'importe quel user authentifi\u00e9 peut acc\u00e9der aux t\u00e2ches des autres\n-                .antMatchers(\"/api/**\").authenticated()\n-                .anyRequest().authenticated()\n-            .and()\n-            .sessionManagement()\n-                .sessionCreationPolicy(SessionCreationPolicy.STATELESS)\n-            .and()\n+            .cors(cors -> {})\n+            .csrf(csrf -> csrf.disable())\n+            .authorizeHttpRequests(auth -> auth\n+                .requestMatchers(\"/api/auth/**\").permitAll()\n+                .requestMatchers(\"/h2-console/**\").permitAll()\n+                .requestMatchers(\"/api/**\").authenticated()\n+                .anyRequest().authenticated())\n+            .sessionManagement(session -> session\n+                .sessionCreationPolicy(SessionCreationPolicy.STATELESS))\n             .addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class);\n \n-        // Autoriser H2 console dans les frames (vuln\u00e9rabilit\u00e9 XSS/clickjacking)\n-        http.headers().frameOptions().disable();\n+        // Preserve the existing H2 console frame behavior.\n+        http.headers(headers -> headers.frameOptions(frame -> frame.disable()));\n \n         return http.build();\n     }"
+    },
+    {
+      "sha": "93594ecdb33ed0a50b42625c02e31be76d390377",
+      "filename": "src/main/java/com/pfe/devsecops/model/Task.java",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 1,
+      "changes": 2,
+      "blob_url": "https://github.com/souhaiel11/pfe-app-test/blob/b62c0d663268d87cc4c3c7b0abdd1c97c75f3f56/src%2Fmain%2Fjava%2Fcom%2Fpfe%2Fdevsecops%2Fmodel%2FTask.java",
+      "raw_url": "https://github.com/souhaiel11/pfe-app-test/raw/b62c0d663268d87cc4c3c7b0abdd1c97c75f3f56/src%2Fmain%2Fjava%2Fcom%2Fpfe%2Fdevsecops%2Fmodel%2FTask.java",
+      "contents_url": "https://api.github.com/repos/souhaiel11/pfe-app-test/contents/src%2Fmain%2Fjava%2Fcom%2Fpfe%2Fdevsecops%2Fmodel%2FTask.java?ref=b62c0d663268d87cc4c3c7b0abdd1c97c75f3f56",
+      "patch": "@@ -4,7 +4,7 @@\n import lombok.NoArgsConstructor;\n import lombok.AllArgsConstructor;\n \n-import javax.persistence.*;\n+import jakarta.persistence.*;\n import java.time.LocalDateTime;\n \n @Entity"
+    },
+    {
+      "sha": "40b1155b6867834e07ad1e5eb4edd7df42ae4075",
+      "filename": "src/main/java/com/pfe/devsecops/model/User.java",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 1,
+      "changes": 2,
+      "blob_url": "https://github.com/souhaiel11/pfe-app-test/blob/b62c0d663268d87cc4c3c7b0abdd1c97c75f3f56/src%2Fmain%2Fjava%2Fcom%2Fpfe%2Fdevsecops%2Fmodel%2FUser.java",
+      "raw_url": "https://github.com/souhaiel11/pfe-app-test/raw/b62c0d663268d87cc4c3c7b0abdd1c97c75f3f56/src%2Fmain%2Fjava%2Fcom%2Fpfe%2Fdevsecops%2Fmodel%2FUser.java",
+      "contents_url": "https://api.github.com/repos/souhaiel11/pfe-app-test/contents/src%2Fmain%2Fjava%2Fcom%2Fpfe%2Fdevsecops%2Fmodel%2FUser.java?ref=b62c0d663268d87cc4c3c7b0abdd1c97c75f3f56",
+      "patch": "@@ -4,7 +4,7 @@\n import lombok.NoArgsConstructor;\n import lombok.AllArgsConstructor;\n \n-import javax.persistence.*;\n+import jakarta.persistence.*;\n import java.util.List;\n \n @Entity"
+    },
+    {
+      "sha": "f448aab52653fd5299e162a7957e52690c7301aa",
+      "filename": "src/main/java/com/pfe/devsecops/security/JwtRequestFilter.java",
+      "status": "modified",
+      "additions": 4,
+      "deletions": 4,
+      "changes": 8,
+      "blob_url": "https://github.com/souhaiel11/pfe-app-test/blob/b62c0d663268d87cc4c3c7b0abdd1c97c75f3f56/src%2Fmain%2Fjava%2Fcom%2Fpfe%2Fdevsecops%2Fsecurity%2FJwtRequestFilter.java",
+      "raw_url": "https://github.com/souhaiel11/pfe-app-test/raw/b62c0d663268d87cc4c3c7b0abdd1c97c75f3f56/src%2Fmain%2Fjava%2Fcom%2Fpfe%2Fdevsecops%2Fsecurity%2FJwtRequestFilter.java",
+      "contents_url": "https://api.github.com/repos/souhaiel11/pfe-app-test/contents/src%2Fmain%2Fjava%2Fcom%2Fpfe%2Fdevsecops%2Fsecurity%2FJwtRequestFilter.java?ref=b62c0d663268d87cc4c3c7b0abdd1c97c75f3f56",
+      "patch": "@@ -9,10 +9,10 @@\n import org.springframework.stereotype.Component;\n import org.springframework.web.filter.OncePerRequestFilter;\n \n-import javax.servlet.FilterChain;\n-import javax.servlet.ServletException;\n-import javax.servlet.http.HttpServletRequest;\n-import javax.servlet.http.HttpServletResponse;\n+import jakarta.servlet.FilterChain;\n+import jakarta.servlet.ServletException;\n+import jakarta.servlet.http.HttpServletRequest;\n+import jakarta.servlet.http.HttpServletResponse;\n import java.io.IOException;\n \n @Component"
+    },
+    {
+      "sha": "17a8fa471d47b1b43e8de2eb9999a6baa437eb62",
+      "filename": "src/main/java/com/pfe/devsecops/service/TaskService.java",
+      "status": "modified",
+      "additions": 2,
+      "deletions": 2,
+      "changes": 4,
+      "blob_url": "https://github.com/souhaiel11/pfe-app-test/blob/b62c0d663268d87cc4c3c7b0abdd1c97c75f3f56/src%2Fmain%2Fjava%2Fcom%2Fpfe%2Fdevsecops%2Fservice%2FTaskService.java",
+      "raw_url": "https://github.com/souhaiel11/pfe-app-test/raw/b62c0d663268d87cc4c3c7b0abdd1c97c75f3f56/src%2Fmain%2Fjava%2Fcom%2Fpfe%2Fdevsecops%2Fservice%2FTaskService.java",
+      "contents_url": "https://api.github.com/repos/souhaiel11/pfe-app-test/contents/src%2Fmain%2Fjava%2Fcom%2Fpfe%2Fdevsecops%2Fservice%2FTaskService.java?ref=b62c0d663268d87cc4c3c7b0abdd1c97c75f3f56",
+      "patch": "@@ -12,8 +12,8 @@\n import org.springframework.stereotype.Service;\n import org.springframework.web.server.ResponseStatusException;\n \n-import javax.persistence.EntityManager;\n-import javax.persistence.PersistenceContext;\n+import jakarta.persistence.EntityManager;\n+import jakarta.persistence.PersistenceContext;\n import java.io.FileInputStream;\n import java.io.IOException;\n import java.time.LocalDateTime;"
+    },
+    {
+      "sha": "4897ddfd96906c7eb0c0eb776dbf95470d30f8b0",
+      "filename": "src/test/java/com/pfe/devsecops/controller/TaskControllerUpdateStatusSemanticsTest.java",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 1,
+      "changes": 2,
+      "blob_url": "https://github.com/souhaiel11/pfe-app-test/blob/b62c0d663268d87cc4c3c7b0abdd1c97c75f3f56/src%2Ftest%2Fjava%2Fcom%2Fpfe%2Fdevsecops%2Fcontroller%2FTaskControllerUpdateStatusSemanticsTest.java",
+      "raw_url": "https://github.com/souhaiel11/pfe-app-test/raw/b62c0d663268d87cc4c3c7b0abdd1c97c75f3f56/src%2Ftest%2Fjava%2Fcom%2Fpfe%2Fdevsecops%2Fcontroller%2FTaskControllerUpdateStatusSemanticsTest.java",
+      "contents_url": "https://api.github.com/repos/souhaiel11/pfe-app-test/contents/src%2Ftest%2Fjava%2Fcom%2Fpfe%2Fdevsecops%2Fcontroller%2FTaskControllerUpdateStatusSemanticsTest.java?ref=b62c0d663268d87cc4c3c7b0abdd1c97c75f3f56",
+      "patch": "@@ -62,7 +62,7 @@ class TaskControllerUpdateStatusSemanticsTest {\n     @MockBean\n     private UserDetailsService userDetailsService;\n     @MockBean\n-    private javax.persistence.EntityManagerFactory entityManagerFactory;\n+    private jakarta.persistence.EntityManagerFactory entityManagerFactory;\n \n     private Task existing;\n "
+    }
+  ]
+}

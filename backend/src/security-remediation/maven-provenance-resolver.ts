@@ -1,22 +1,8 @@
-// R-SEC-V1 §4 — pure Maven provenance resolver. Deliberately takes
-// ALREADY-FETCHED text (pom.xml content + `mvn dependency:tree` output) as
-// input rather than doing any I/O itself, exactly the same separation of
-// concerns as generated-comment-guard.ts/write-guard.ts: the *decision*
-// logic is pure and unit-testable against real captured fixtures; the
-// actual `mvn`/git invocation is a thin wrapper (candidate-verifier, which
-// already runs real Maven — see MavenBuildAdapter — and is the only place
-// in this platform with git/mvn/java, per R22-E2C2), not implemented here.
-//
-// Validated against REAL fixtures captured from the actual target
-// repository (souhaiel11/pfe-app-test), not synthetic guesses — see
-// fixtures/pfe-app-test.pom.xml and fixtures/pfe-app-test.dependency-tree.txt,
-// both produced by literally running `mvn dependency:tree`/reading the real
-// pom.xml against that repo's real HEAD (read-only, this session).
-
+// Regroupe les traitements de Maven provenance résolveur.
 import { DependencyProvenance, DependencyProvenanceKind } from './dependency-provenance.types';
 
 export interface MavenProvenanceInput {
-  /** groupId:artifactId — must already be a real Maven coordinate, never a jar filename (see report-normalizer's OWASP `pkg` gap, documented in the eligibility classifier). */
+  /** groupId:artifactId — doit déjà être une vraie coordonnée Maven, jamais un nom de fichier jar. */
   package: string;
   installedVersion: string;
   pomXmlText: string;
@@ -25,6 +11,7 @@ export interface MavenProvenanceInput {
   groundedSha: string;
 }
 
+/** Sépare une coordonnée Maven "groupId:artifactId" en ses deux parties ; null si le format n'est pas exactement ce format. */
 function splitCoordinate(pkg: string): { groupId: string; artifactId: string } | null {
   const parts = String(pkg || '').trim().split(':');
   if (parts.length !== 2 || !parts[0] || !parts[1]) return null;
@@ -35,20 +22,23 @@ interface XmlDependencyBlock {
   raw: string;
   groupId: string | null;
   artifactId: string | null;
-  versionRaw: string | null; // the literal text inside <version>...</version>, or null if absent
+  versionRaw: string | null;
 }
 
+/** Extrait le contenu de la balise <groupId> d'un bloc XML, ou null si absente. */
 function extractGroupId(block: string): string | null {
   return /<groupId>\s*([^<\s]+)\s*<\/groupId>/.exec(block)?.[1] ?? null;
 }
+/** Extrait le contenu de la balise <artifactId> d'un bloc XML, ou null si absente. */
 function extractArtifactId(block: string): string | null {
   return /<artifactId>\s*([^<\s]+)\s*<\/artifactId>/.exec(block)?.[1] ?? null;
 }
+/** Extrait le texte brut de la balise <version> d'un bloc XML (littéral ou référence ${propriété}), ou null si absente. */
 function extractVersion(block: string): string | null {
   return /<version>\s*([^<\s]+)\s*<\/version>/.exec(block)?.[1] ?? null;
 }
 
-/** All <dependency>...</dependency> blocks within a given region of pom.xml text. */
+/** Extrait tous les blocs <dependency>...</dependency> d'une région donnée du texte pom.xml. */
 function extractDependencyBlocks(regionText: string): XmlDependencyBlock[] {
   const blocks: XmlDependencyBlock[] = [];
   const re = /<dependency>([\s\S]*?)<\/dependency>/g;
@@ -60,7 +50,7 @@ function extractDependencyBlocks(regionText: string): XmlDependencyBlock[] {
   return blocks;
 }
 
-/** Narrow slice of pom.xml text between two top-level tag boundaries, non-greedy, first occurrence only. */
+/** Extrait le texte compris entre deux balises de premier niveau du pom.xml (première occurrence uniquement). */
 function sliceBetween(text: string, openTag: string, closeTag: string): string | null {
   const openIdx = text.indexOf(openTag);
   if (openIdx === -1) return null;
@@ -69,6 +59,7 @@ function sliceBetween(text: string, openTag: string, closeTag: string): string |
   return text.slice(openIdx + openTag.length, closeIdx);
 }
 
+/** Recherche la déclaration d'une propriété Maven dans le bloc <properties> du pom.xml. */
 function findPropertyDeclaration(pomXmlText: string, propertyName: string): { value: string; raw: string } | null {
   const propertiesRegion = sliceBetween(pomXmlText, '<properties>', '</properties>');
   if (!propertiesRegion) return null;
@@ -79,18 +70,12 @@ function findPropertyDeclaration(pomXmlText: string, propertyName: string): { va
 }
 
 interface TreeMatch {
-  depth: number; // 0 = direct child of the project; >=1 = transitive
+  depth: number;
   line: string;
   version: string;
 }
 
-/**
- * Locates groupId:artifactId in `mvn dependency:tree` text output and
- * returns its nesting depth. Maven's ASCII tree indents each level with a
- * 3-character group, either "|  " (an ancestor still has siblings below) or
- * "   " (an ancestor was the last child) — both count as one depth level.
- * The root project line itself (no leading marker) is never matched.
- */
+/** Localise une coordonnée groupId:artifactId dans la sortie texte de `mvn dependency:tree` et renvoie sa profondeur d'imbrication. */
 function findInDependencyTree(dependencyTreeText: string, groupId: string, artifactId: string): TreeMatch | null {
   const lineRe = /^((?:(?:\|  )|(?:   ))*)[+\\]- ([^\s:]+):([^\s:]+):[^\s:]+:([^\s:]+):[^\s:]+$/gm;
   let match: RegExpExecArray | null;
@@ -103,6 +88,7 @@ function findInDependencyTree(dependencyTreeText: string, groupId: string, artif
   return null;
 }
 
+/** Recherche une coordonnée dans les plugins déclarés sous <build><plugins> du pom.xml. */
 function findInPlugins(pomXmlText: string, groupId: string, artifactId: string): XmlDependencyBlock | null {
   const buildRegion = sliceBetween(pomXmlText, '<build>', '</build>');
   if (!buildRegion) return null;
@@ -117,6 +103,7 @@ function findInPlugins(pomXmlText: string, groupId: string, artifactId: string):
   return null;
 }
 
+/** Construit un résultat UNRESOLVED (provenance non déterminable) avec sa preuve explicative. */
 function unresolved(input: MavenProvenanceInput, evidence: string): DependencyProvenance {
   return {
     ecosystem: 'MAVEN', kind: 'UNRESOLVED', package: input.package, installedVersion: input.installedVersion,
@@ -125,38 +112,13 @@ function unresolved(input: MavenProvenanceInput, evidence: string): DependencyPr
   };
 }
 
-/**
- * R-SEC-V1.1 §6 — "old version must match the scanner's installedVersion or
- * [resolution] fails closed": the scanner's claim about what is installed
- * is never trusted on its own. Whatever version this resolver actually
- * finds at the grounded SHA (a literal <version>, a resolved property
- * value, or the version `mvn dependency:tree` itself reports) MUST match
- * `input.installedVersion` exactly, or the whole result degrades to
- * UNRESOLVED — never silently proceeds on a mismatched claim.
- */
+/** Vérifie que la version réellement trouvée dans le dépôt correspond exactement à celle déclarée par le scanner ; sinon le résultat dégrade en UNRESOLVED plutôt que de poursuivre sur une donnée non fiable. */
 function checkInstalledVersionMatches(input: MavenProvenanceInput, resolvedVersion: string, resolvedVersionSource: string): string | null {
   if (resolvedVersion === input.installedVersion) return null;
   return `Scanner-claimed installedVersion "${input.installedVersion}" does not match the version actually found at ${input.groundedSha} (${resolvedVersionSource}: "${resolvedVersion}") — never trusted blindly, resolution fails closed.`;
 }
 
-/**
- * Pure classification. Order of checks mirrors §4 A-F exactly:
- *   1. <dependencies> block with a literal <version> -> DIRECT_EXPLICIT.
- *   2. <dependencies> block with <version>${prop}</version>, prop declared
- *      in THIS pom's own <properties> -> PROPERTY_MANAGED. Prop not
- *      declared locally (inherited from parent) -> UNRESOLVED (ambiguous
- *      origin, never guessed).
- *   3. Found in dependency:tree at depth 0 (direct child of the project)
- *      but no explicit <version> in this pom -> BOM_MANAGED.
- *   4. Found in dependency:tree at depth >= 1 -> TRANSITIVE.
- *   5. Found only as a <build><plugins><plugin> -> PLUGIN.
- *   6. Not found anywhere -> UNRESOLVED.
- * At every branch that would otherwise succeed, the grounded resolved
- * version is cross-checked against input.installedVersion (see
- * checkInstalledVersionMatches) before returning — a mismatch always wins
- * and degrades the result to UNRESOLVED, regardless of how confidently the
- * declaration itself was located.
- */
+/** Classe la provenance d'une dépendance Maven en testant, dans l'ordre. */
 export function resolveMavenProvenance(input: MavenProvenanceInput): DependencyProvenance {
   const coordinate = splitCoordinate(input.package);
   if (!coordinate) {

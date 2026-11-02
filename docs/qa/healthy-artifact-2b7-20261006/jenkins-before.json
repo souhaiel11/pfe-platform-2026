@@ -1,0 +1,11 @@
+{
+  "_class": "org.jenkinsci.plugins.workflow.job.WorkflowJob",
+  "buildable": true,
+  "lastBuild": {
+    "_class": "org.jenkinsci.plugins.workflow.job.WorkflowRun",
+    "building": false,
+    "number": 150
+  },
+  "nextBuildNumber": 151,
+  "inQueue": false
+}

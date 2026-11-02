@@ -1,5 +1,4 @@
-// R-SEC-V1.1 §8/§11 — the decision-composition layer (real grounding +
-// pure classification, no writer, no routing).
+// Teste le composant « security-finding-decision » et ses cas d’erreur.
 import * as assert from 'node:assert/strict';
 import * as fs from 'fs';
 import * as os from 'os';
@@ -23,7 +22,9 @@ const provenanceService = new GroundedMavenProvenanceService(workspaceManager, r
 const decisionService = new SecurityFindingDecisionService(provenanceService);
 
 let requestIdCounter = 0;
+/** Prépare les données nécessaires à ce scénario. */
 const nextRequestId = () => `reqSecV11Decision-${++requestIdCounter}`;
+/** Prépare les données nécessaires à ce scénario. */
 const workspaceFor = () => ({
   repository: 'souhaiel11/pfe-app-test', candidateBaseSha: EXACT_SHA,
   requestId: nextRequestId(), batchId: 'r-sec-v1-1-decision', candidateAttempt: 0,
@@ -76,17 +77,6 @@ console.log('security-finding-decision K) OWASP, real always-null fixedVersion -
 }
 console.log('security-finding-decision L) ZAP -> non-auto, no wasted grounding: PASS');
 
-// ============================================================================
-// M. existing Sonar/Jenkins/Docker routing unchanged — remediationWorkflowFor()
-// lives in backend/src/incidents/incidents.service.ts, a file with heavy
-// NestJS/TypeORM dependencies deliberately NOT part of candidate-verifier's
-// curated tsconfig include list (see tsconfig.json) — pulling it in here
-// would risk far more than this one check is worth. The direct, real proof
-// (calling the actual unmodified function) already lives in backend/src/
-// security-remediation/security-eligibility-classifier.spec.ts (test K),
-// which ran clean in this same turn's regression pass. Not duplicated here;
-// this phase's own contribution to that invariant is simply that it never
-// imports or calls remediationWorkflowFor() at all — grep-verifiable.
 console.log('security-finding-decision M) existing WF2/WF4/WF5 routing: proven in backend/security-remediation specs (test K); this phase never imports remediationWorkflowFor at all');
 
 // ============================================================================

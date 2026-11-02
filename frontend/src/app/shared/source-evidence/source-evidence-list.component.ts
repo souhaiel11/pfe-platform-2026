@@ -1,26 +1,20 @@
+// Gère l’affichage et les actions de source preuve liste.
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { SourceEvidenceLinkComponent } from './source-evidence-link.component';
 import { EvidenceLoadState, EvidenceSection, SourceEvidence } from './source-evidence.types';
+import { ToolLogoComponent } from './tool-logo.component';
+import { SourceTool, sourceTool } from './tool-presentation';
 
-// ─────────────────────────────────────────────────────────────────────
-//  <app-source-evidence-list> — bloc « Sources & preuves ».
-//
-//  Rend les SECTIONS fournies par le backend, dans l'ordre fourni. Les
-//  sections représentent des ÉTAPES de preuve distinctes (constat d'origine,
-//  correctif vérifié, livraison…) et ne sont jamais fusionnées en une
-//  « Source » unique : ce sont des faits différents, vérifiables séparément.
-//
-//  Une section dont AUCUN emplacement ne porte d'information est masquée par
-//  défaut (`hideEmptySections`), pour ne pas noyer la vue sous des « Source
-//  non disponible ». Le bloc le dit alors explicitement plutôt que de
-//  disparaître sans explication.
-// ─────────────────────────────────────────────────────────────────────
+// Bloc « Sources & preuves » : rend les sections de preuve fournies par le backend (groupées par
+// outil source), dans l'ordre fourni, en masquant par défaut les sections entièrement vides.
+
+interface ToolEvidenceGroup { tool: SourceTool; sections: EvidenceSection[]; }
 
 @Component({
   selector: 'app-source-evidence-list',
   standalone: true,
-  imports: [CommonModule, SourceEvidenceLinkComponent],
+  imports: [CommonModule, SourceEvidenceLinkComponent, ToolLogoComponent],
   template: `
     <section class="sev-block" *ngIf="state !== 'ready' || sections?.length">
       <header class="sev-block-head" *ngIf="title">
@@ -43,17 +37,21 @@ import { EvidenceLoadState, EvidenceSection, SourceEvidence } from './source-evi
         <button type="button" class="sev-block-retry" (click)="retry.emit()">Réessayer</button>
       </div>
 
-      <div class="sev-section" *ngFor="let section of visibleSections()" [hidden]="state !== 'ready'">
-        <div class="sev-section-title">{{ section.title }}</div>
-        <ul class="sev-items">
-          <li class="sev-item" *ngFor="let slot of section.slots">
-            <app-source-evidence-link
-              [item]="slotOf(slot)"
-              [showProvider]="showProvider"
-              [showReason]="showReason">
-            </app-source-evidence-link>
-          </li>
-        </ul>
+      <div class="sev-tools" *ngIf="state === 'ready'">
+        <article class="sev-tool" *ngFor="let group of toolGroups(); trackBy: trackTool" [attr.aria-label]="group.tool.name">
+          <header class="sev-tool-head">
+            <span class="sev-tool-mark"><app-tool-logo [provider]="group.tool.provider" [size]="25"></app-tool-logo></span>
+            <div><h5>{{group.tool.name}}</h5><p>{{group.tool.description}}</p></div>
+          </header>
+          <div class="sev-tool-section" *ngFor="let section of group.sections; trackBy: trackSection" [attr.data-section]="section.id">
+            <div class="sev-section-title">{{section.title}}</div>
+            <ul class="sev-items">
+              <li class="sev-item" *ngFor="let slot of section.slots; trackBy: trackSlot">
+                <app-source-evidence-link [item]="slotOf(slot)" [showProvider]="false" [showReason]="showReason"></app-source-evidence-link>
+              </li>
+            </ul>
+          </div>
+        </article>
       </div>
 
       <!-- Vide discret (§15/§16) : une preuve facultative absente n'est pas un
@@ -65,23 +63,27 @@ import { EvidenceLoadState, EvidenceSection, SourceEvidence } from './source-evi
     </section>
   `,
   styles: [`
-    .sev-block {
-      border: 1px solid var(--border-color); border-radius: 6px;
-      background: var(--bg-secondary); padding: 14px 16px;
-    }
-    .sev-block-head { margin-bottom: 10px; }
+    .sev-block { border:1px solid var(--border-color);border-radius:6px;background:var(--bg-secondary);padding:20px; }
+    .sev-block-head { margin-bottom: 18px; }
     .sev-block-title {
       margin: 0; font-size: 12px; font-weight: 600; letter-spacing: .03em;
       text-transform: uppercase; color: var(--text-secondary);
     }
     .sev-block-note { margin: 4px 0 0; font-size: 11px; color: var(--text-muted); }
-    .sev-section + .sev-section { margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--border-color); }
+    .sev-tools{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,255px),1fr));gap:14px;align-items:start}
+    .sev-tool{min-width:0;padding:17px;border:1px solid var(--border-color);border-radius:5px;background:var(--bg-secondary)}
+    .sev-tool-head{display:flex;align-items:center;gap:12px;margin-bottom:18px}.sev-tool-head>div{min-width:0}
+    .sev-tool-mark{display:inline-flex;align-items:center;justify-content:center;width:43px;height:43px;flex:0 0 auto;background:var(--bg-tertiary);border:1px solid var(--border-color);border-radius:9px}
+    .sev-tool-head h5{margin:0;font-size:14px;font-weight:600;line-height:1.4;color:var(--text-primary)}
+    .sev-tool-head p{margin:3px 0 0;font-size:10px;line-height:1.5;color:var(--text-muted)}
+    .sev-tool-section+.sev-tool-section{margin-top:13px;padding-top:12px;border-top:1px solid var(--border-color)}
     .sev-section-title {
       font-size: 10px; font-family: var(--font-mono); letter-spacing: .05em;
-      text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px;
+      text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px;font-size:9px;
     }
-    .sev-items { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
-    .sev-item { display: flex; flex-wrap: wrap; align-items: baseline; }
+    .sev-items { list-style: none; margin: 0; padding: 0; display: grid; gap: 5px; }
+    .sev-item { display: flex; flex-wrap: wrap; align-items: center; min-width:0; }
+    @media(max-width:600px){.sev-block{padding:15px}.sev-tool{padding:15px}.sev-tools{grid-template-columns:minmax(0,1fr)}}
     .sev-block-empty { margin: 0; font-size: 11px; color: var(--text-muted); font-style: italic; }
     .sev-block-error { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
     .sev-block-error p { margin: 0; font-size: 12px; color: var(--color-warning); }
@@ -105,10 +107,12 @@ export class SourceEvidenceListComponent {
   @Input() state: EvidenceLoadState = 'ready';
   @Output() retry = new EventEmitter<void>();
 
+  /** Résout un identifiant d'emplacement vers son évidence réelle, ou null si rien n'a été fourni pour ce slot. */
   slotOf(slot: string): SourceEvidence | null {
     return (this.slots && this.slots[slot]) || null;
   }
 
+  /** Filtre les sections à afficher : ne garde que celles qui portent au moins un emplacement réellement disponible, si le masquage est actif. */
   visibleSections(): EvidenceSection[] {
     const sections = this.sections || [];
     if (!this.hideEmptySections) return sections;
@@ -118,4 +122,28 @@ export class SourceEvidenceListComponent {
         return !!item && item.availability !== 'UNAVAILABLE';
       }));
   }
+
+  // Regroupe les sections visibles par outil source (Jenkins/Sonar/Trivy…), en conservant pour chaque outil la section d'origine de chaque lien.
+  toolGroups(): ToolEvidenceGroup[] {
+    const groups = new Map<string, ToolEvidenceGroup>();
+    for (const section of this.visibleSections()) {
+      for (const slot of section.slots || []) {
+        const item = this.slotOf(slot);
+        if (!item) continue;
+        const tool = sourceTool(item.provider);
+        let group = groups.get(tool.key);
+        if (!group) { group = {tool, sections:[]}; groups.set(tool.key, group); }
+        let context = group.sections.find(value => value.id === section.id);
+        if (!context) { context = {...section, slots:[]}; group.sections.push(context); }
+        context.slots.push(slot);
+      }
+    }
+    return [...groups.values()].filter(group => !this.hideEmptySections || group.sections.some(section => section.slots.some(slot => this.slotOf(slot)?.availability !== 'UNAVAILABLE')));
+  }
+  // Fonctions trackBy pour *ngFor, afin que Angular ne recrée pas les éléments de liste inutilement.
+  trackTool(_index: number, group: ToolEvidenceGroup) { return group.tool.key; }
+  /** Identifie Section. */
+  trackSection(_index: number, section: EvidenceSection) { return section.id; }
+  /** Identifie Slot. */
+  trackSlot(_index: number, slot: string) { return slot; }
 }

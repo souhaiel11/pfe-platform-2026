@@ -1,7 +1,10 @@
-import { Injectable, Logger, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
+// Gère les projets et leurs paramètres, protège les secrets dans les réponses et vérifie l'exclusivité des cibles Azure.
+import { Injectable, Logger, NotFoundException, ConflictException, BadRequestException, OnModuleInit } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { buildDefaultAzureConfig, readPlatformDeploymentDefaults } from '../azure-deploy/default-deployment-target';
 import { Project } from './project.entity';
+import { isEncryptedToken } from './token-crypto';
 import { Incident, IncidentStatus } from '../incidents/incident.entity';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
@@ -10,30 +13,37 @@ import { firstValueFrom } from 'rxjs';
 import { sanitizeProject } from '../common/sanitize-project';
 import { resolveJenkinsInternalUrl, assertValidJenkinsUrlInput } from '../common/jenkins-url';
 import { computeBuildSuccessRate } from '../common/build-success-rate';
+import {
+  JenkinsBuildDetail, normalizeJenkinsBuildDetail, tailConsoleLines, unavailableBuildDetail,
+} from '../common/jenkins-build-detail';
 
 const OPEN_STATUSES = [IncidentStatus.PENDING, IncidentStatus.BLOCKED, IncidentStatus.FAILED];
 const ANALYZING_STATUSES = [IncidentStatus.ANALYZING, IncidentStatus.ANALYZED, IncidentStatus.FIX_GENERATED, IncidentStatus.VALIDATING];
 const RESOLVED_STATUSES = [IncidentStatus.APPROVED, IncidentStatus.COMPLETED];
 
+/** Normalise le code de disponibilité des journaux. */
 function normalizeLogCode(value: unknown): string {
   const text = String(value ?? '').trim();
   return /^[A-Za-z0-9._-]{1,40}$/.test(text) ? text : 'n/a';
 }
 
+/** Normalise le statut HTTP reçu. */
 function normalizeHttpStatus(value: unknown): string {
   const status = Number(value);
   return Number.isInteger(status) && status >= 100 && status <= 599 ? String(status) : 'n/a';
 }
 
+/** Normalise le type de contenu de la réponse. */
 function normalizeContentType(value: unknown): string {
   const mediaType = String(value ?? '').split(';', 1)[0].trim().toLowerCase();
   return /^[a-z0-9.+-]+\/[a-z0-9.+-]+$/.test(mediaType) ? mediaType : 'n/a';
 }
 
 @Injectable()
-export class ProjectsService {
+export class ProjectsService implements OnModuleInit {
   private readonly logger = new Logger(ProjectsService.name);
 
+  /** Initialise les dépendances et l’état de ce composant. */
   constructor(
     @InjectRepository(Project)
     private readonly repo: Repository<Project>,
@@ -42,15 +52,44 @@ export class ProjectsService {
     private readonly http: HttpService,
   ) {}
 
+  /** Au démarrage, chiffre les secrets de projet encore stockés en clair (migration idempotente). */
+  async onModuleInit() {
+    if (!process.env.TOKEN_ENCRYPTION_KEY) {
+      this.logger.warn('TOKEN_ENCRYPTION_KEY absente : les secrets de projet existants restent en clair.');
+      return;
+    }
+    const fields = ['jenkinsToken', 'githubToken', 'sonarqubeToken', 'slackToken'] as const;
+    const rows: any[] = await this.repo.query(`SELECT id, "jenkinsToken", "githubToken", "sonarqubeToken", "slackToken" FROM projects`);
+    let migrated = 0;
+    for (const row of rows) {
+      const patch: Partial<Project> = {};
+      for (const field of fields) if (row[field] && !isEncryptedToken(row[field])) (patch as any)[field] = row[field];
+      if (Object.keys(patch).length) { await this.repo.update(row.id, patch); migrated++; }
+    }
+    if (migrated) this.logger.log(`Secrets de projet chiffrés au repos pour ${migrated} projet(s).`);
+  }
+
+  /** Retire les informations sensibles de le projet. */
   private sanitizeProject(project: Project) {
     return sanitizeProject(project);
   }
 
+  /** Normalise Azure configuration. */
   private normalizeAzureConfig(input: any) {
     if (input === null) return null;
     if (!input || input.provider !== 'azure-container-instances') throw new BadRequestException('Ce fournisseur de déploiement Azure n’est pas pris en charge.');
     for (const key of ['resourceGroup', 'targetName', 'registry', 'imageRepository']) {
       if (typeof input[key] !== 'string' || !input[key].trim()) throw new BadRequestException(`Le champ technique azureConfig.${key} est requis.`);
+    }
+    if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,126}$/.test(input.resourceGroup.trim())
+      || !/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(input.targetName.trim())
+      || !/^[a-zA-Z0-9]{5,50}$/.test(input.registry.trim())
+      || !/^[a-z0-9][a-z0-9._/-]{0,254}$/.test(input.imageRepository.trim())
+      || (input.cpu !== undefined && !['0.5', '1', '2', '4'].includes(String(input.cpu)))
+      || (input.memoryInGb !== undefined && !['0.5', '1', '1.5', '2', '3', '4', '8'].includes(String(input.memoryInGb)))
+      || (input.ports !== undefined && (!Array.isArray(input.ports) || !input.ports.length
+        || input.ports.some(p => !/^\d+$/.test(String(p)) || Number(p) < 1 || Number(p) > 65535)))) {
+      throw new BadRequestException('Configuration Azure invalide (cible, registre, dépôt, ressources ou ports).');
     }
     // Allow-list stricte : aucun token/password/credential arbitraire ne peut
     // être persisté dans Project.azureConfig.
@@ -81,6 +120,18 @@ export class ProjectsService {
     };
   }
 
+  /** Vérifie Exclusive Azure cible. */
+  private assertExclusiveAzureTarget(config: Project['azureConfig'], projects: Pick<Project, 'azureConfig'>[]) {
+    if (!config) return;
+    /** Convertit le texte en minuscules. */
+    const lower = (v: string) => String(v ?? '').trim().toLowerCase();
+    if (projects.some(({ azureConfig: other }) => other && (
+      (lower(other.resourceGroup) === lower(config.resourceGroup) && lower(other.targetName) === lower(config.targetName)) ||
+      (lower(other.registry) === lower(config.registry) && lower(other.imageRepository) === lower(config.imageRepository))
+    ))) throw new ConflictException('Cette cible Azure ou ce dépôt d’images appartient déjà à un autre projet.');
+  }
+
+  /** Liste les éléments selon les filtres demandés. */
   async findAll(jenkinsJobName?: string) {
     const where = jenkinsJobName ? { jenkinsJobName } : {};
     const projects = await this.repo.find({ where, order: { createdAt: "DESC" } });
@@ -91,6 +142,7 @@ export class ProjectsService {
     }));
   }
 
+  /** Renvoie incident Counts par projet. */
   private async getIncidentCountsByProject(projectIds: string[]) {
     const counts = new Map<string, { openIncidents: number; analyzingIncidents: number; resolvedIncidents: number }>();
     if (projectIds.length === 0) return counts;
@@ -116,10 +168,17 @@ export class ProjectsService {
     return counts;
   }
 
+  /** Recherche l’élément correspondant à l’identifiant. */
   async findOne(id: string) {
     const p = await this.repo.findOne({ where: { id } });
     if (!p) throw new NotFoundException('Projet introuvable.');
     return this.sanitizeProject(p);
+  }
+
+  /** Recherche l’élément complet pour un traitement interne. */
+  /** Projet complet, secrets compris (usage serveur uniquement, jamais renvoyé à un client). */
+  async findOneWithSecrets(id: string) {
+    return this.findOneInternal(id);
   }
 
   private async findOneInternal(id: string) {
@@ -128,6 +187,7 @@ export class ProjectsService {
     return p;
   }
 
+  /** Résout SonarQube corrélation. */
   async resolveSonarCorrelation(projectId: string, ceTaskId: string) {
     const project = await this.findOneInternal(projectId);
     if (!ceTaskId || !/^[A-Za-z0-9_-]{8,128}$/.test(ceTaskId)) {
@@ -142,13 +202,16 @@ export class ProjectsService {
     // par WF1. Le projectKey/token restent strictement propres au projet.
     const baseUrl = (project.sonarqubeUrl || 'http://sonarqube:9000').replace(/\/$/, '');
     const headers = { Authorization: `Basic ${Buffer.from(`${sonarToken}:`).toString('base64')}` };
+    /** Attend le délai prévu avant de poursuivre. */
     const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
     for (let attempt = 1; attempt <= 60; attempt++) {
       let response: any;
       try {
         response = await firstValueFrom(this.http.get(`${baseUrl}/api/ce/task`, {
-          params: { id: ceTaskId }, headers, timeout: 10_000, validateStatus: () => true,
+          params: { id: ceTaskId }, headers, timeout: 10_000,
+          /** Valide le statut. */
+          validateStatus: () => true,
         }));
       } catch {
         return { ceTaskId, analysisId: null, qualityGate: 'API_ERROR', correlationVerified: false, state: 'API_ERROR', attempts: attempt };
@@ -173,7 +236,9 @@ export class ProjectsService {
       const analysisId = String(task.analysisId);
       try {
         const gate = await firstValueFrom(this.http.get(`${baseUrl}/api/qualitygates/project_status`, {
-          params: { analysisId }, headers, timeout: 10_000, validateStatus: () => true,
+          params: { analysisId }, headers, timeout: 10_000,
+          /** Valide le statut. */
+          validateStatus: () => true,
         }));
         const status = String(gate.data?.projectStatus?.status || '').toUpperCase();
         if (gate.status < 200 || gate.status >= 300) {
@@ -190,6 +255,7 @@ export class ProjectsService {
     return { ceTaskId, analysisId: null, qualityGate: 'SONAR_ANALYSIS_TIMEOUT', correlationVerified: false, state: 'TIMEOUT', attempts: 60 };
   }
 
+  /** Valide Jenkins URL champs. */
   private validateJenkinsUrlFields(dto: { jenkinsInternalUrl?: string; jenkinsPublicUrl?: string }) {
     try {
       if (dto.jenkinsInternalUrl) assertValidJenkinsUrlInput(dto.jenkinsInternalUrl, 'jenkinsInternalUrl');
@@ -199,6 +265,7 @@ export class ProjectsService {
     }
   }
 
+  /** Crée et enregistre un nouvel élément. */
   async create(dto: CreateProjectDto) {
     if (dto.jenkinsJobName) {
       const existing = await this.repo.findOne({ where: { jenkinsJobName: dto.jenkinsJobName } });
@@ -207,12 +274,33 @@ export class ProjectsService {
     this.validateJenkinsUrlFields(dto);
     const payload: any = { ...dto };
     for (const field of ['jenkinsToken', 'sonarqubeToken', 'githubToken', 'slackToken']) delete payload[field];
+    // 2026-10-19 — un projet qui vient d'être créé n'a jamais été analysé : il n'a donc pas de score de sécurité.
+    payload.securityScore = null;
     if (Object.prototype.hasOwnProperty.call(payload, 'azureConfig')) payload.azureConfig = this.normalizeAzureConfig(payload.azureConfig);
-    const p = this.repo.create(payload as Partial<Project>);
-    const saved = await this.repo.save(p);
+    const saved = await this.repo.manager.transaction(async manager => {
+      // Serialize target allocation across backend processes, including updates.
+      await manager.query("SELECT pg_advisory_xact_lock(73421, 1)");
+      const repository = manager.getRepository(Project);
+      const projects = await repository.find({ select: ['id', 'azureConfig'] });
+      if (!Object.prototype.hasOwnProperty.call(payload, 'azureConfig')) {
+        const derived = buildDefaultAzureConfig({
+          projectName: payload.name,
+          defaults: readPlatformDeploymentDefaults(),
+          takenTargetNames: projects.map(p => p.azureConfig?.targetName).filter(Boolean),
+          takenRepositories: projects.map(p => p.azureConfig?.imageRepository).filter(Boolean),
+        });
+        if (derived.ok === true) payload.azureConfig = this.normalizeAzureConfig(derived.azureConfig);
+        else if (derived.failureCode !== 'PLATFORM_DEFAULTS_NOT_CONFIGURED') {
+          throw new ConflictException({ code: derived.failureCode, message: derived.reason });
+        }
+      }
+      this.assertExclusiveAzureTarget(payload.azureConfig, projects);
+      return repository.save(repository.create(payload as Partial<Project>));
+    });
     return this.sanitizeProject(saved);
   }
 
+  /** Applique les modifications autorisées à l’élément. */
   async update(id: string, dto: UpdateProjectDto) {
     await this.findOneInternal(id);
     this.validateJenkinsUrlFields(dto);
@@ -224,17 +312,19 @@ export class ProjectsService {
     for (const field of ['jenkinsToken', 'sonarqubeToken', 'githubToken', 'slackToken']) delete payload[field];
     if (Object.prototype.hasOwnProperty.call(payload, 'azureConfig')) payload.azureConfig = this.normalizeAzureConfig(payload.azureConfig);
 
-    await this.repo.update(id, payload);
+    await this.repo.manager.transaction(async manager => {
+      await manager.query("SELECT pg_advisory_xact_lock(73421, 1)");
+      const repository = manager.getRepository(Project);
+      if (payload.azureConfig) {
+        const projects = await repository.find({ select: ['id', 'azureConfig'] });
+        this.assertExclusiveAzureTarget(payload.azureConfig, projects.filter(p => p.id !== id));
+      }
+      await repository.update(id, payload);
+    });
     return this.findOne(id);
   }
 
-  // ADMIN-ONLY, appelé par PUT /projects/:id/jenkins-credentials — jamais
-  // par l'update() général de configuration projet. Le nouveau credential
-  // n'est persisté QUE si une vérification lecture-seule réelle contre
-  // Jenkins (whoAmI) confirme une authentification effective — jamais un
-  // simple HTTP 200 (whoAmI répond 200 même en anonyme, avec
-  // authenticated:false). Le token n'est jamais journalisé, jamais
-  // renvoyé, jamais inclus dans une réponse GET.
+  /** ADMIN-ONLY, appelé par PUT /projects/:id/jenkins-credentials — jamais par l'update() général de configuration projet. */
   async updateJenkinsCredentials(id: string, dto: { username: string; token: string }) {
     const project = await this.findOneInternal(id);
     const jenkinsInternalUrl = resolveJenkinsInternalUrl(project);
@@ -267,13 +357,14 @@ export class ProjectsService {
     return { success: true, message: 'Connexion Jenkins vérifiée.', jenkinsUsername: identityName };
   }
 
+  /** Supprime l’élément ciblé et gère ses dépendances. */
   async remove(id: string) {
     const p = await this.findOneInternal(id);
     await this.repo.remove(p);
     return { message: 'Projet supprimé.' };
   }
 
-  // ── Validation Jenkins + SonarQube ────────────────────────
+  /** Valide le projet. */
   async validateProject(id: string) {
     const project = await this.findOneInternal(id);
     const results: any = {};
@@ -329,31 +420,7 @@ export class ProjectsService {
     };
   }
 
-  // ── Métriques SonarQube ───────────────────────────────────
-  /**
-   * Jeton Sonar effectif pour ce projet.
-   *
-   * Un jeton SonarQube est un jeton d'UTILISATEUR, pas un secret propre a un
-   * projet : la plateforme peut donc en porter un seul, exactement comme
-   * Jenkins le fait avec son credential SONAR_TOKEN. Sans ce repli, tout
-   * projet onboarde sans jeton propre voyait son controle qualite rapporte
-   * QUALITY_GATE_UNAVAILABLE alors que SonarQube le calculait bel et bien --
-   * et aucune route d'API ne permet de poser un sonarqubeToken (update() le
-   * retire volontairement pour ne jamais ecraser un secret existant).
-   *
-   * Le jeton du projet reste prioritaire : le repli ne s'applique qu'a son
-   * absence, jamais en remplacement.
-   */
-  /**
-   * Identifiant Jenkins effectif pour ce projet.
-   *
-   * Exactement le même raisonnement que resolveSonarToken() : la plateforme
-   * parle à UN Jenkins, avec un identifiant d'utilisateur. Le jeton du projet
-   * reste prioritaire ; le repli ne s'applique qu'à son absence et ne rend
-   * jamais un projet « configuré » (getJenkinsStatus exige un jenkinsJobName).
-   *
-   * Format attendu : "utilisateur:jeton", comme le champ par projet.
-   */
+  /** /** Jeton Sonar effectif pour ce projet. */
   private resolveJenkinsCredential(project: Project): string | null {
     const own = String(project.jenkinsToken || '').trim();
     if (own) return own;
@@ -361,6 +428,7 @@ export class ProjectsService {
     return platform || null;
   }
 
+  /** Résout SonarQube jeton. */
   private resolveSonarToken(project: Project): string | null {
     const own = String(project.sonarqubeToken || '').trim();
     if (own) return own;
@@ -368,20 +436,10 @@ export class ProjectsService {
     return platform || null;
   }
 
-  /**
-   * Mesures Sonar reelles, plus le controle qualite.
-   *
-   * Cette methode ne fabrique RIEN. Quand la source autoritaire ne repond pas,
-   * elle le dit (`available: false` + `reason`) au lieu de renvoyer des valeurs
-   * plausibles. La version precedente retombait sur des mesures inventees
-   * (couverture 85 %, 12 code smells, 1500 lignes) indistinguables de vraies
-   * donnees -- une valeur absente redevenait ainsi un constat propre.
-   *
-   * Le statut d'EXECUTION de l'analyse et le CONTROLE QUALITE sont deux choses
-   * distinctes : ils sont donc rapportes separement, jamais fusionnes.
-   */
+  /** Mesures Sonar reelles, plus le controle qualite. */
   async getSonarMetrics(id: string) {
     const project = await this.findOneInternal(id);
+    /** Construit le résultat indisponible. */
     const unavailable = (reason: string) => ({
       available: false, reason,
       projectKey: project.sonarqubeKey || null,
@@ -402,8 +460,11 @@ export class ProjectsService {
 
     const baseUrl = (project.sonarqubeUrl || 'http://sonarqube:9000').replace(/\/$/, '');
     const headers = { Authorization: `Basic ${Buffer.from(`${sonarToken}:`).toString('base64')}` };
+    /** Récupère les données demandées. */
     const get = (path: string, params: any) => firstValueFrom(this.http.get(`${baseUrl}${path}`, {
-      params, headers, timeout: 10_000, validateStatus: () => true,
+      params, headers, timeout: 10_000,
+      /** Valide le statut. */
+      validateStatus: () => true,
     }));
 
     try {
@@ -439,6 +500,7 @@ export class ProjectsService {
   // l'onglet Jenkins indéfiniment.
   private static readonly JENKINS_STATUS_TIMEOUT_MS = 5000;
 
+  /** Renvoie l’état Jenkins. */
   async getJenkinsStatus(id: string) {
     const project = await this.findOneInternal(id);
     const jenkinsInternalUrl = resolveJenkinsInternalUrl(project);
@@ -485,9 +547,7 @@ export class ProjectsService {
     }
   }
 
-  // État dégradé honnête — jamais un build fabriqué. message distingue les 2
-  // causes possibles (non configuré vs injoignable/timeout/erreur), pour que
-  // l'utilisateur sache quoi faire plutôt qu'un "Non disponible" générique.
+  /** État dégradé honnête — jamais un build fabriqué. */
   private emptyJenkinsStatus(project: Project, message: string) {
     return {
       result: null, duration: null, timestamp: null, url: null,
@@ -501,14 +561,138 @@ export class ProjectsService {
     };
   }
 
-  /**
-   * Trivy n'est pas interrogeable par API : ses resultats arrivent par le
-   * rapport de build, dans l'evidence de l'incident. Cette route ne peut donc
-   * rien produire d'autoritaire, et le dit explicitement.
-   *
-   * La version precedente renvoyait INCONDITIONNELLEMENT un rapport invente
-   * (3 elevees, 12 moyennes, 24 faibles) sans meme tenter un appel.
-   */
+  // ── Détail d'UN build ───────────────────────────────────── Pourquoi une route distincte de getJenkinsStatus().
+  private static readonly BUILD_DETAIL_TIMEOUT_MS = 6000;
+  private static readonly BUILD_CONSOLE_TIMEOUT_MS = 15000;
+  private static readonly BUILD_CONSOLE_MAX_BYTES = 8 * 1024 * 1024;
+
+  /** Contexte d'appel Jenkins pour un projet, ou null quand le projet n'est pas configuré. */
+  private jenkinsRequestContext(project: Project): { baseUrl: string; headers: Record<string, string>; jobPath: string } | null {
+    const baseUrl = resolveJenkinsInternalUrl(project);
+    if (!baseUrl || !project.jenkinsJobName) return null;
+    const credential = this.resolveJenkinsCredential(project);
+    const [user, token] = (credential || ':').split(':');
+    const headers = credential
+      ? { Authorization: `Basic ${Buffer.from(`${user}:${token}`).toString('base64')}` }
+      : {};
+    // Chemin URL du job (multibranch : "<dossier>/job/<branche>") — distinct
+    // de jenkinsJobName, qui est l'identité du job côté webhook.
+    return { baseUrl, headers, jobPath: project.jenkinsJobPath || project.jenkinsJobName };
+  }
+
+  /** Référence de build acceptée : un numéro, ou « last » pour le dernier. Tout le reste est refusé — ce fragment entre dans un chemin d'URL Jenkins, il n'est jamais interpolé tel quel. */
+  private resolveBuildRef(raw: unknown): string | null {
+    const value = String(raw ?? '').trim();
+    if (!value || value === 'last' || value === 'lastBuild') return 'lastBuild';
+    return /^[1-9][0-9]{0,8}$/.test(value) ? value : null;
+  }
+
+  /** Transforme une réponse Jenkins en diagnostic exploitable. */
+  private jenkinsHttpFailure(status: number): { reason: string; message: string } {
+    if (status === 404) return { reason: 'BUILD_NOT_FOUND', message: 'Ce build n’existe pas (ou plus) dans Jenkins.' };
+    if (status === 401 || status === 403) {
+      return { reason: 'JENKINS_UNAUTHORIZED', message: 'Jenkins refuse l’accès : identifiant ou jeton manquant pour ce projet.' };
+    }
+    return { reason: `JENKINS_API_STATUS_${status}`, message: `Jenkins a répondu ${status}.` };
+  }
+
+  /** Renvoie les détails du build. */
+  async getBuildDetail(id: string, rawRef: string): Promise<JenkinsBuildDetail> {
+    const project = await this.findOneInternal(id);
+    const ref = this.resolveBuildRef(rawRef);
+    if (!ref) throw new BadRequestException('La référence de build doit être un numéro ou « last ».');
+
+    const context = this.jenkinsRequestContext(project);
+    if (!context) {
+      return unavailableBuildDetail(project.jenkinsJobName, 'JENKINS_NOT_CONFIGURED', 'Jenkins non configuré pour ce projet');
+    }
+
+    const jobUrl = `${context.baseUrl}/job/${context.jobPath}`;
+    const timeout = ProjectsService.BUILD_DETAIL_TIMEOUT_MS;
+    /** Récupère les données demandées. */
+    const get = (path: string) => firstValueFrom(this.http.get(`${jobUrl}/${path}`, {
+      headers: context.headers, timeout,
+      /** Valide le statut. */
+      validateStatus: () => true,
+    }));
+
+    try {
+      const build = await get(`${ref}/api/json`);
+      if (build.status < 200 || build.status >= 300) {
+        const failure = this.jenkinsHttpFailure(build.status);
+        return unavailableBuildDetail(project.jenkinsJobName, failure.reason, failure.message);
+      }
+
+      // Enrichissements FACULTATIFS : l'échec de l'un n'invalide pas le build
+      // déjà obtenu. Les étages viennent du plugin Stage View (wfapi), absent
+      // des jobs non-pipeline ; les builds voisins ne servent qu'à naviguer.
+      const [workflow, history] = await Promise.all([
+        get(`${ref}/wfapi/describe`).catch(() => null),
+        get('api/json?tree=builds[number,result,building,timestamp]{0,20}').catch(() => null),
+      ]);
+      /** Vérifie si la valeur reçue peut être utilisée. */
+      const usable = (response: any) => (response && response.status >= 200 && response.status < 300 ? response.data : null);
+
+      return normalizeJenkinsBuildDetail({
+        build: build.data,
+        workflow: usable(workflow),
+        history: usable(history),
+        jobName: project.jenkinsJobName,
+        // Deux checkouts git coexistent (bibliothèque partagée + application) :
+        // le dépôt du projet est ce qui permet de désigner le bon commit.
+        repoHint: project.githubRepo,
+      });
+    } catch {
+      return unavailableBuildDetail(project.jenkinsJobName, 'JENKINS_UNREACHABLE', 'Jenkins est injoignable depuis la plateforme.');
+    }
+  }
+
+  /** Fin du journal de console d'un build — la preuve brute, telle que Jenkins la détient. */
+  async getBuildConsole(id: string, rawRef: string, rawTail: unknown) {
+    const project = await this.findOneInternal(id);
+    const ref = this.resolveBuildRef(rawRef);
+    if (!ref) throw new BadRequestException('La référence de build doit être un numéro ou « last ».');
+    const requested = Number(rawTail);
+    const tail = Number.isInteger(requested) && requested > 0 ? Math.min(requested, 1000) : 200;
+
+    /** Construit le résultat indisponible. */
+    const unavailable = (reason: string, message: string) => ({
+      available: false, reason, message,
+      jobName: project.jenkinsJobName || null,
+      number: ref === 'lastBuild' ? null : Number(ref),
+      lines: [] as string[], truncated: false, totalLines: null as number | null, tail,
+    });
+
+    const context = this.jenkinsRequestContext(project);
+    if (!context) return unavailable('JENKINS_NOT_CONFIGURED', 'Jenkins non configuré pour ce projet');
+
+    try {
+      const response = await firstValueFrom(this.http.get(`${context.baseUrl}/job/${context.jobPath}/${ref}/consoleText`, {
+        headers: context.headers,
+        timeout: ProjectsService.BUILD_CONSOLE_TIMEOUT_MS,
+        /** Valide le statut. */
+        validateStatus: () => true,
+        responseType: 'text',
+        transformResponse: [(data: any) => data],
+        maxContentLength: ProjectsService.BUILD_CONSOLE_MAX_BYTES,
+      }));
+      if (response.status < 200 || response.status >= 300) {
+        const failure = this.jenkinsHttpFailure(response.status);
+        return unavailable(failure.reason, failure.message);
+      }
+      const window = tailConsoleLines(response.data, tail);
+      return {
+        available: true, reason: null, message: null,
+        jobName: project.jenkinsJobName || null,
+        number: ref === 'lastBuild' ? null : Number(ref),
+        tail, ...window,
+      };
+    } catch {
+      return unavailable('JENKINS_UNREACHABLE', 'Jenkins est injoignable depuis la plateforme.');
+    }
+  }
+
+  /** Trivy n'est pas interrogeable par API : ses resultats arrivent par le rapport de build, dans l'evidence de l'incident. */
   async getTrivyReport(id: string) {
     await this.findOneInternal(id);
     return {
@@ -520,6 +704,7 @@ export class ProjectsService {
     };
   }
 
+  /** Renvoie les statistiques GitHub. */
   async getGithubStats(id: string) {
     const project = await this.findOneInternal(id);
     if (!project.githubRepo) return this.unavailableGithubStats('GITHUB_REPO_NOT_CONFIGURED');
@@ -554,6 +739,7 @@ export class ProjectsService {
       const value = Number(raw);
       return raw === undefined || raw === null || raw === '' || !Number.isFinite(value) ? null : value;
     };
+    /** Convertit la note reçue en valeur exploitable. */
     const rating = (raw: unknown) => {
       const letters: Record<string, string> = { '1': 'A', '2': 'B', '3': 'C', '4': 'D', '5': 'E' };
       const key = String(raw ?? '').trim().split('.')[0];
@@ -573,35 +759,12 @@ export class ProjectsService {
     };
   }
 
-  // Les trois replis fabriques precedents sont supprimes. Ils renvoyaient des
-  // valeurs plausibles -- couverture 85 %, 12 code smells, 1500 lignes, 3 CVE
-  // elevees, 18 PR fusionnees -- indistinguables de vraies donnees par
-  // n'importe quel consommateur. Une donnee absente doit se presenter comme
-  // absente, avec son motif.
+  /** Renvoie indisponible GitHub statistiques pour le traitement ou l’affichage. */
   private unavailableGithubStats(reason: string) {
     return { available: false, reason, openPRs: null, mergedPRs: null, totalPRs: null, recentPRs: null };
   }
 
-  /**
-   * Usage INTERNE uniquement (n8n via /api/projects/internal/by-job/:jobName).
-   * Retourne volontairement les tokens : la plateforme doit s'authentifier
-   * aupres de Jenkins/Sonar/GitHub au nom du projet.
-   * Cette route ne doit jamais etre exposee publiquement.
-   */
-  /**
-   * Résolution partagée jobName Jenkins -> projet(s), source unique de
-   * vérité utilisée par TOUS les points d'entrée internes (GET
-   * internal/by-job, POST webhooks/jenkins/by-job — voir leurs contrôleurs
-   * respectifs). Deux niveaux, jamais plus :
-   *   1. Match EXACT sur jenkinsJobName tel quel (couvre un jenkinsJobName
-   *      qui contiendrait déjà la forme complète, cas rare mais possible).
-   *   2. Repli sur la forme COURTE (premier segment) — Jenkins envoie le
-   *      JOB_NAME complet pour un pipeline multibranche ("<job>/<branche>"),
-   *      jamais stocké tel quel en base (jenkinsJobName y est toujours la
-   *      forme courte, voir le commentaire sur l'entité).
-   * Aucun appelant n'a besoin de connaître ce format — WF1 comme le webhook
-   * direct passent le jobName brut de Jenkins, point.
-   */
+  /** Résout par Job nom. */
   async resolveByJobName(jenkinsJobName: string) {
     const exact = await this.repo.find({ where: { jenkinsJobName }, order: { createdAt: "DESC" } });
     if (exact.length > 0) return exact;
@@ -611,6 +774,7 @@ export class ProjectsService {
     return this.repo.find({ where: { jenkinsJobName: shortName }, order: { createdAt: "DESC" } });
   }
 
+  /** Recherche par Job nom interne. */
   async findByJobNameInternal(jenkinsJobName: string) {
     return this.resolveByJobName(jenkinsJobName);
   }

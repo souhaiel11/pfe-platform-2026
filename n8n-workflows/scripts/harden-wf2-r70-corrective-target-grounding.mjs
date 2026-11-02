@@ -1,27 +1,18 @@
+// Rattache le correctif aux fichiers réellement identifiés.
 import fs from 'node:fs';
 
 const sourcePath = new URL('../pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.PROMOTION-TARGET.json', import.meta.url);
 const outputPath = new URL('../pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.R70-CORRECTIVE-TARGET-GROUNDING.json', import.meta.url);
 
+/** Rattache le correctif aux fichiers réellement identifiés. */
 export function hardenCorrectiveTargetGrounding(workflow) {
+  /** Retrouve ou construit le nœud du workflow demandé. */
   const node = name => {
     const found = workflow.nodes.find(candidate => candidate.name === name);
     if (!found) throw new Error('R70_NODE_NOT_FOUND:' + name);
     return found;
   };
 
-  // ── Fix 1 (the actual, empirically-proven root cause) ───────────────────
-  // Execution 2028 proved that `correctiveAttempt`/`correctiveContext` never
-  // reached the planner at all: `Adapt Webhook Payload`'s `incidentData`
-  // object literal never carried them, so every downstream node that reads
-  // `incidentData` (Apply Repository Metadata -> Policy Gate -> Prepare Batch
-  // Context -> Build Independent Repository Policy -> Prepare Generic
-  // Remediation Plan) silently lost them. The planner's LLM prompt for
-  // execution 2028 contained no "CORRECTIVE MODE" instruction and
-  // `remediationContract.correctiveContext` was `undefined` -- proven from
-  // the execution's own recorded node output, not inferred. Every other R70
-  // fix is inert without this one: there is no blockingCause evidence to
-  // ground a target against if it never arrives.
   const adaptWebhookPayload = node('Adapt Webhook Payload');
   {
     const before = adaptWebhookPayload.parameters.jsCode;
@@ -36,16 +27,6 @@ export function hardenCorrectiveTargetGrounding(workflow) {
     );
   }
 
-  // ── Fix 2 ────────────────────────────────────────────────────────────────
-  // Build Independent Repository Policy: for a corrective attempt, the
-  // corrective blocking cause's grounded file fields (sourceFile,
-  // candidateFile, mappingFile -- carried opaquely, R66/R68/R70 backend
-  // evidence) are equally-authorized planning targets alongside the
-  // original finding file(s), which remain authorized purely as historical
-  // context. A cause file that does not exist in the CURRENT repository
-  // tree is silently excluded here (not a hard failure of policy-building);
-  // the CORRECTIVE_TARGET_NOT_GROUNDED gate in Validate Generic Remediation
-  // Plan is what enforces that some real causal target was actually found.
   const buildPolicy = node('Build Independent Repository Policy');
   {
     const before = buildPolicy.parameters.jsCode;
@@ -62,15 +43,6 @@ const targetFiles=[...new Set([...findingTargetFiles,...correctiveGroundedFiles]
     if (buildPolicy.parameters.jsCode === before) throw new Error('R70_BUILD_POLICY_NOT_MODIFIED');
   }
 
-  // ── Fix 3 ────────────────────────────────────────────────────────────────
-  // Expand Finding Source Files: read the file list from
-  // repositoryPolicy.targetFiles (Fix 2's superset) instead of re-deriving
-  // it from ctx.findings directly, so a corrective grounded file's ACTUAL
-  // SOURCE CONTENT is fetched and reaches the planner's sourceSnapshots --
-  // without this the planner could never propose a confident, evidence-based
-  // change to that file even once it is an authorized target. For a
-  // non-corrective batch repositoryPolicy.targetFiles is byte-identical to
-  // the old finding-derived set, so this is a no-op for ordinary flow.
   const expandFindingSourceFiles = node('Expand Finding Source Files');
   {
     const before = expandFindingSourceFiles.parameters.jsCode;
@@ -82,14 +54,6 @@ if(!paths.length)throw new Error('NO_FINDING_SOURCE_FILES');
 return paths.map(target_file_path=>({json:{...ctx,target_file_path}}));`;
   }
 
-  // ── Fix 4 (Section 7 — planner input hardening) ─────────────────────────
-  // Prepare Generic Remediation Plan: strengthen the existing corrective
-  // instruction so the planner is explicitly told not to treat a historical
-  // finding file as the edit target merely because it was the ORIGINAL
-  // finding location, and to select targets from the causal corrective
-  // evidence / current authorized source instead. Deliberately does not
-  // prescribe a specific file or implementation -- it only states the
-  // generic authority rule from the CORRECTIVE_TARGET_INVARIANT.
   const preparePlan = node('Prepare Generic Remediation Plan');
   {
     const before = preparePlan.parameters.jsCode;
@@ -100,19 +64,6 @@ return paths.map(target_file_path=>({json:{...ctx,target_file_path}}));`;
     if (preparePlan.parameters.jsCode === before) throw new Error('R70_PREPARE_PLAN_NOT_MODIFIED');
   }
 
-  // ── Fix 5 (Section 8 — deterministic plan validation) ───────────────────
-  // Validate Generic Remediation Plan: for correctiveAttempt=true, require
-  // at least one planned file across the whole batch to be causally
-  // supported -- either by an explicit blockingCause file field, or by a
-  // deterministic, UNAMBIGUOUS match of blockingCause.mappingPath's exact
-  // snippet against the bounded, already-fetched source snapshots (Fix 3
-  // widened that fetch set to include any explicitly-grounded files, but
-  // this fallback also covers a cause with no explicit file field at all).
-  // Ambiguous (2+) or absent matches are never silently resolved. If the
-  // whole batch's planned files are ONLY historical finding files with no
-  // causal support at all, the plan is rejected before patch generation --
-  // WF2_PATCH_NOT_EFFECTIVE remains untouched as defense in depth for the
-  // case where a grounded target is proposed but not actually changed.
   const validatePlan = node('Validate Generic Remediation Plan');
   {
     const before = validatePlan.parameters.jsCode;

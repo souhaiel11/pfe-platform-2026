@@ -1,15 +1,4 @@
-// Offline contract tests for WF1's remediationType classification policy.
-//
-// Root cause (incident 754328c4-4351-4f44-985b-34b9a031dfb2, fixRequest
-// 88d58fc8-6056-43a5-a3de-28c1e1a9575c): java:S3305 was classified
-// AUTO_FIX_ELIGIBLE by severity alone, but WF2's own planner independently
-// and correctly scored it disposition=MANUAL_OR_SPECIALIST (confidence 0.4)
-// -- fixing it means changing a Spring bean-wiring method signature, a
-// structural risk the coarse severity-only classifier cannot see. This adds
-// an explicit rule denylist that overrides severity for known-unsafe rules,
-// reusing the existing DEVELOPER_ACTION_REQUIRED value (no new enum).
-//
-// No n8n execution, network or business action.
+// Teste le composant « wf1-remediation-policy » et ses cas d’erreur.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
@@ -24,28 +13,34 @@ assert.match(code, /ruleExcluded/, 'classification must consult the rule denylis
 
 // ── Harness: execute the real node code with a mocked $(nodeName) ──────────
 const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
+/** Simule l’échec attendu par ce scénario. */
 function dollar(overrides) {
   return (nodeName) => ({
+    /** Renvoie le premier élément disponible. */
     first: () => {
       if (!(nodeName in overrides)) throw new Error(`unmocked node reference: ${nodeName}`);
       return { json: overrides[nodeName] };
     },
   });
 }
+/** Prépare les données nécessaires à ce scénario. */
 const baseFixture = () => ({
   'Extract Project Config': { projectConfig: { sonarqubeKey: 'test-project' }, jenkins: {}, reports: {}, build_number: 1 },
   'Incident Webhook': { body: {} },
   'Prepare Fetch URLs': { incidentUUID: 'incident-test-uuid' },
   'Resolve Exact Sonar Correlation': { qualityGate: 'OK', ceTaskId: 'ce-task-test', analysisId: 'analysis-test', correlationVerified: true },
 });
+/** Prépare les données nécessaires à ce scénario. */
 async function runMerge(sonarConsolidated) {
   const fn = new AsyncFunction('$', code);
   const overrides = { ...baseFixture(), 'Consolidate Baseline Sonar Snapshot': sonarConsolidated };
   const sonar = (await fn(dollar(overrides)))[0].json.enrichedData.sonar;
   return sonar.issues;
 }
+/** Prépare les données nécessaires à ce scénario. */
 const sonarIssue = (key, rule, severity, type, component = 'proj:src/main/java/com/pfe/devsecops/config/SecurityConfig.java', line = 28) =>
   ({ key, rule, severity, type, component, line, message: `${rule} finding` });
+/** Prépare les données nécessaires à ce scénario. */
 const consolidated = (issues) => ({ issues, total: issues.length, collectedCount: issues.length, pageSize: 500, complete: true, snapshotError: null });
 
 // ── A. java:S3305 is NOT AUTO_FIX_ELIGIBLE ──────────────────────────────────

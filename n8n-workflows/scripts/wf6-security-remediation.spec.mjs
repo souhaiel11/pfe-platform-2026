@@ -1,6 +1,5 @@
 #!/usr/bin/env node
-// Execute the actual generated graph, expressions and Code-node bodies.
-// Only HTTP transport is stubbed. No independent copy of business routing.
+// Vérifie WF6 sécurité correction et ses cas d’erreur.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
@@ -9,7 +8,9 @@ import { test } from 'node:test';
 const [w] = JSON.parse(readFileSync(new URL('../pending-live-update/wf6-security-remediation-maven.OFFLINE-DRAFT.json', import.meta.url)));
 const nodes = new Map(w.nodes.map(n => [n.name, n]));
 const start = 'Webhook - Security Remediation Request';
+/** Prépare les données nécessaires à ce scénario. */
 const digest = s => createHash('sha1').update(s).digest('hex');
+/** Prépare les données nécessaires à ce scénario. */
 const blobSha = s => digest(Buffer.concat([Buffer.from(`blob ${Buffer.byteLength(s)}\0`), Buffer.from(s)]));
 const evaluated = 'a'.repeat(40), tip = 'b'.repeat(40), securityHead = 'c'.repeat(40);
 const baseTreeSha = 'd'.repeat(40), branchTreeSha = 'e'.repeat(40);
@@ -20,15 +21,20 @@ const candidate = {
  candidateManifest: { files: [{ path: 'pom.xml', operation: 'MODIFY', originalBlobSha: blobSha(oldContent), content }] },
  commitMessage: 'fix(security): safe metadata', prTitle: 'fix(security): safe metadata', prBody: 'Security remediation candidate',
 };
+/** Prépare les données nécessaires à ce scénario. */
 const envelope = (body, statusCode = 200) => ({ statusCode, body, headers: {} });
+/** Prépare les données nécessaires à ce scénario. */
 const branch = (name, sha) => ({ ref: `refs/heads/${name}`, object: { type: 'commit', sha } });
+/** Prépare les données nécessaires à ce scénario. */
 const pr = state => ({ number:12, state, html_url: 'https://github.com/trusted/repository/pull/12', merged_at: null,
  head: { ref: candidate.branchName, sha:securityHead, repo: { full_name: candidate.repository } },
  base: { ref: 'release/stable', repo: { full_name: candidate.repository } } });
+/** Prépare les données nécessaires à ce scénario. */
 const tree = (sha, fileSha) => ({sha, truncated: false, tree: [
  {path:'pom.xml',mode:'100644',type:'blob',sha:fileSha},
  {path:'README.md',mode:'100644',type:'blob',sha:'f'.repeat(40)},
 ]});
+/** Prépare les données nécessaires à ce scénario. */
 function fixtures(existing = false) {
  const f = {
   'Evaluate Security Remediation': envelope(structuredClone(candidate), 201),
@@ -61,18 +67,26 @@ function fixtures(existing = false) {
  for(const name of ['Authorized Branch Commit','Evaluated Base Tree','Authorized Branch Tree','Authorized Candidate Blob'])f['Historical '+name]=structuredClone(f[name]);
  return f;
 }
+/** Prépare les données nécessaires à ce scénario. */
 function historical(state='open', merged=false) {
  const f=fixtures(false),p=pr(state);if(merged)p.merged_at='2026-01-01T00:00:00Z';
  f['Early Historical PR Lookup']=envelope([structuredClone(p)]);f['Recheck Historical PR']=envelope(structuredClone(p));return f;
 }
+/** Prépare les données nécessaires à ce scénario. */
 function cleanupFixture() {const f=fixtures();f['Create Pull Request'].body.head.sha='9'.repeat(40);return f;}
 
+/** Prépare les données nécessaires à ce scénario. */
 const isWrite = n => n.type.endsWith('.httpRequest') && n.parameters.method !== 'GET' && n.parameters.url.includes('api.github.com');
+/** Exécute le traitement et collecte son résultat. */
 function run(responses = fixtures(), caller = {}) {
  let name = start, json = {body:{projectId:'project',findingTaskId:'finding', ...caller}};
  const history = new Map(), visited = [], writes = [], calls = [], output = [];
  const context = vm.createContext({Buffer, $env:{BACKEND_INTERNAL_URL:'http://offline-backend:3001',N8N_INTERNAL_SECRET:'TEST_INTERNAL_SECRET'},
-  $: key => ({first:() => ({json:history.get(key)})})});
+  /** Simule l’accès à un nœud n8n pour le scénario. */
+  $: key => ({
+  /** Renvoie le premier élément disponible. */
+  first:() => ({json:history.get(key)})})});
+ /** Prépare les données nécessaires à ce scénario. */
  const ev = text => { context.$json = json; return vm.runInContext('(' + text.slice(3,-2) + ')', context, {timeout:1000}); };
  while(name) {
   assert.ok(visited.length < 200, 'acyclic bounded execution');
@@ -100,11 +114,13 @@ function run(responses = fixtures(), caller = {}) {
  assert.doesNotMatch(JSON.stringify(output), /TEST_INTERNAL_SECRET|TEST_GITHUB_TOKEN|authorized<|Authorization|candidateManifest/);
  return {response:output[0],writes,calls,history,visited};
 }
+/** Vérifie les données dans ce scénario de test. */
 function expect(responses, state, writeCount = undefined) {
  const result = run(responses); assert.equal(result.response.state,state);
  if (writeCount !== undefined) assert.equal(result.writes.length,writeCount);
  return result;
 }
+/** Vérifie les résultats attendus dans ce scénario. */
 function zeroPr(result) {assert.ok(!result.writes.includes('Create Pull Request'));}
 
 test('A/G: eligible ancestor reaches exact authorized PR; trusted release/stable base, no main fallback', () => {
@@ -155,6 +171,7 @@ test('S/T: builder writes only WF6; no WF2 identity or routing mutation',()=>{
 });
 test('U: exhaustive structural traversal, every terminal has exactly one response',()=>{
  let terminal=0,withResponse=0,without=0,multiple=0;const reached=new Set();
+ /** Vérifie les résultats attendus dans ce scénario. */
  function walk(name,count,path=[]) {
   assert.ok(!path.includes(name),'no cycles');const n=nodes.get(name);assert.ok(n,`dangling ${name}`);reached.add(name);
   count+=Number(n.type.endsWith('.respondToWebhook'));
@@ -251,7 +268,9 @@ test('early NONE is required before every write; PR revalidation dominates creat
  }
 });
 test('two PR lookups remain on normal preparation path, in required order',()=>{
- const r=run();const at=n=>r.visited.indexOf(n);
+ const r=run();
+ /** Prépare les données nécessaires à ce scénario. */
+ const at=n=>r.visited.indexOf(n);
  assert.ok(at('Early Historical PR Lookup')<at('Create Missing Branch'));
  assert.ok(at('Write File To Branch')<at('Final PR Lookup'));
  assert.ok(at('Final PR Lookup')<at('Create Pull Request'));
@@ -353,14 +372,6 @@ test('V1.7 successful first-create path performs three full backend evaluations'
  console.log('V1.7 create-path HTTP calls: '+r.calls.length+'; full evaluations: '+backendCalls.length);
 });
 
-// V1.7 predeploy phase — the reconciled worker/backend/WF6 deadline
-// contract (900000/910000/920000ms, n8n-workflows/WF6-V1_7-RUNTIME-
-// INTEGRATION-AUDIT.md -- re-evaluated from scratch in the FINAL predeploy
-// phase, not kept merely because 600000/610000/620000 pre-existed): exactly
-// the four real security-evaluation/revalidation nodes carry the new
-// 920000ms timeout; every OTHER HTTP node in this workflow (GitHub reads/
-// writes, none of which invoke the real, long-running worker) is unchanged
-// at 30000ms.
 test('V1.7 security evaluation/revalidation nodes carry the reconciled 920000ms timeout',()=>{
  const SECURITY_NODES=['Evaluate Security Remediation','Revalidate Before Write (New Branch)','Revalidate Before Write (Reuse)','Revalidate Before Write (PR)'];
  for(const name of SECURITY_NODES){
@@ -376,4 +387,5 @@ test('V1.7 security evaluation/revalidation nodes carry the reconciled 920000ms 
  }
  console.log(`V1.7 timeout reconciliation: 4/4 security nodes at 920000ms; ${unaffected.length} other HTTP nodes unchanged at 30000ms`);
 });
+/** Prépare les données nécessaires à ce scénario. */
 function n8nTypeIsHttp(n){return n && n.type==='n8n-nodes-base.httpRequest';}

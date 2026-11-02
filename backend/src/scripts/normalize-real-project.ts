@@ -1,17 +1,4 @@
-// Script ponctuel et réversible — normalise le report "combined" le plus récent
-// de pfe-app-test (projet RÉEL) au format enrichedData v2.1, et réaligne les
-// scores de sécurité incohérents (riskScore 92 alors que riskLevel=CRITICAL,
-// safeToApply=false, 23 CVE critiques OWASP).
-//
-// Ne touche à AUCUNE autre donnée du projet : le JSON legacy existant
-// (security/rootCause/remediation) est conservé tel quel, enrichedData est
-// simplement ajouté à côté. Toutes les valeurs numériques ci-dessous sont
-// recopiées depuis le report legacy existant ou lues en direct depuis
-// l'API SonarQube (voir champ `note`) — aucune n'est inventée.
-//
-// Dry-run par défaut (affiche ce qui serait écrit). Écriture réelle avec --apply.
-//   npx ts-node src/scripts/normalize-real-project.ts           (dry-run)
-//   npx ts-node src/scripts/normalize-real-project.ts --apply   (écrit en base)
+// Script ponctuel : normalise le dernier report "combined" du projet réel pfe-app-test au format enrichedData v2.1 et réaligne son score de sécurité.
 import 'reflect-metadata';
 import { DataSource } from 'typeorm';
 import { Project } from '../projects/project.entity';
@@ -30,12 +17,11 @@ const dataSource = new DataSource({
 
 const PROJECT_NAME = 'pfe-app-test';
 
-// ── Nouveau score, cohérent avec le risque réel (0 crit/10 high Trivy,
-// 23 crit/58 high OWASP, quality gate ERROR) → CRITICAL (< 40). ──
 const NEW_SCORE = 35;
 const NEW_RISK_LEVEL = 'CRITICAL';
 const NEW_STATUS = 'critical';
 
+/** Construit l'objet enrichedData v2.1 à écrire pour ce projet, avec les totaux de CVE réellement observés. */
 function buildEnrichedData() {
   return {
     note:
@@ -51,7 +37,7 @@ function buildEnrichedData() {
 
     sonar: {
       quality_gate: 'ERROR',
-      bugs: 0, // confirmé live via GET /api/measures/component (SonarQube)
+      bugs: 0,
       vulnerabilities: 2,
       code_smells: 16,
       coverage: 0,
@@ -105,6 +91,7 @@ function buildEnrichedData() {
   };
 }
 
+/** Point d'entrée du script : affiche toujours le diff proposé, et n'écrit en base que si --apply est passé. */
 async function main() {
   const apply = process.argv.includes('--apply');
 

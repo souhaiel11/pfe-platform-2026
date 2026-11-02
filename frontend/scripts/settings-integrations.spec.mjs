@@ -1,18 +1,46 @@
+// Teste le composant « settings-integrations » et ses cas d’erreur.
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createRequire} from 'node:module';
 import vm from 'node:vm';
 const ts=createRequire(import.meta.url)('typescript');
+/** Lit les données depuis leur source. */
 const read=p=>readFileSync(new URL(p,import.meta.url),'utf8');
-function load(path,deps={}){const exports={};vm.runInNewContext(ts.transpileModule(read(path),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,experimentalDecorators:true}}).outputText,{exports,console,Intl,Date,URL,require:n=>deps[n] || (n==='@angular/core'?{Component:()=>v=>v}:{})});return exports;}
+/** Charge les données nécessaires au composant. */
+function load(path,deps={}){const exports={};vm.runInNewContext(ts.transpileModule(read(path),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,experimentalDecorators:true}}).outputText,{exports,console,Intl,Date,URL,
+/** Charge la dépendance prévue pour le scénario. */
+require:n=>deps[n] || (n==='@angular/core'?{
+/** Simule le décorateur de composant Angular. */
+Component:()=>v=>v}:{})});return exports;}
 const presentation=load('../src/app/shared/platform-capability-presentation.ts');
-const {SettingsComponent}=load('../src/app/features/settings/settings.component.ts',{'../../shared/platform-capability-presentation':presentation,'../../core/http-error-message':{userHttpError:()=> 'Vérifiez les champs puis réessayez.'}});
+const {SettingsComponent}=load('../src/app/features/settings/settings.component.ts',{'../../shared/platform-capability-presentation':presentation,'../../core/http-error-message':{
+/** Prépare les données nécessaires à ce scénario. */
+userHttpError:()=> 'Vérifiez les champs puis réessayez.'}});
 const fixtures=[{id:'first',name:'Alpha',githubRepo:'team/alpha',jenkinsInternalUrl:'https://ci.alpha.test',jenkinsJobName:'alpha',githubCredentialConfigured:true,jenkinsCredentialConfigured:true},{id:'second',name:'Beta',githubRepo:'other/beta',jenkinsInternalUrl:'https://ci.beta.test',jenkinsJobName:'beta',sonarqubeUrl:'https://sonar.beta.test',sonarqubeKey:'beta:key',azureConfig:{provider:'azure-container-instances',resourceGroup:'beta-group',targetName:'beta-target',registry:'beta.registry.test',imageRepository:'beta-image'}}];
 let pending,failed=false,saves=0,diagnostics=0,rotations=0;
-const response=value=>({subscribe:observer=>failed?observer.error({status:400}):observer.next(value)});
-const auth={currentUser:{role:'viewer'},get isAdmin(){return this.currentUser.role==='admin';}};
-const api={getProjects:()=>response(fixtures),getProject:id=>response(fixtures.find(p=>p.id===id)),updateProject:(id,payload)=>{saves++;return {subscribe:observer=>{pending={id,payload,observer};}};},validateProject:()=>{diagnostics++;return response({results:{jenkins:{valid:false,checkedAt:'2026-10-01T12:00:00Z'}}});},updateJenkinsCredentials:(_id,_user,token)=>{assert.equal(token,'write-only');rotations++;return response({success:true});}};
-const component=new SettingsComponent({success(){}},api,auth);
+/** Construit la réponse utilisée par le scénario. */
+const response=value=>({
+/** Prépare les données nécessaires à ce scénario. */
+subscribe:observer=>failed?observer.error({status:400}):observer.next(value)});
+const auth={currentUser:{role:'viewer'},
+/** Indique si l’utilisateur possède le rôle administrateur. */
+get isAdmin(){return this.currentUser.role==='admin';}};
+const api={
+/** Simule la lecture des données demandées par le composant. */
+getProjects:()=>response(fixtures),
+/** Simule la lecture des données demandées par le composant. */
+getProject:id=>response(fixtures.find(p=>p.id===id)),
+/** Simule la modification demandée par le composant. */
+updateProject:(id,payload)=>{saves++;return {
+/** Prépare les données nécessaires à ce scénario. */
+subscribe:observer=>{pending={id,payload,observer};}};},
+/** Prépare les données nécessaires à ce scénario. */
+validateProject:()=>{diagnostics++;return response({results:{jenkins:{valid:false,checkedAt:'2026-10-01T12:00:00Z'}}});},
+/** Vérifie les résultats attendus dans ce scénario. */
+updateJenkinsCredentials:(_id,_user,token)=>{assert.equal(token,'write-only');rotations++;return response({success:true});}};
+const component=new SettingsComponent({
+/** Prépare les données nécessaires à ce scénario. */
+success(){}},api,auth);
 component.loadProjects();assert.equal(component.projectsState,'LOADED');assert.equal(component.project.githubRepo,'team/alpha');
 component.projectDraft.githubRepo='new/repo';component.saveProject();assert.equal(saves,0,'read-only cannot persist');
 auth.currentUser.role='developer';component.saveProject();assert.equal(saves,1);assert.equal(component.projectSaving,true);assert.equal(component.project.githubRepo,'team/alpha','no optimistic success');assert.equal(pending.payload.githubRepo,'new/repo');
@@ -29,6 +57,7 @@ component.credentialUsername='admin';component.credentialToken='write-only';comp
 auth.currentUser.role='admin';component.replaceJenkinsCredential();assert.equal(rotations,1);assert.equal(component.credentialToken,'');assert.equal(component.credentialUsername,'');
 assert.equal(component.validUrl('https://user:password@ci.test'),false);assert.equal(component.validUrl('https://ci.test?token=secret'),false);
 failed=true;component.loadProjects();assert.equal(component.projectsState,'ERROR');assert.equal(component.project,null);failed=false;
+/** Prépare les données nécessaires à ce scénario. */
 api.getProjects=()=>response([]);component.loadProjects();assert.equal(component.projectsState,'EMPTY');
 const html=read('../src/app/features/settings/settings.component.html');
 assert.match(html,/\[disabled\]="!canEdit \|\| projectSaving/);assert.match(html,/!projectDirty \|\| projectInvalid/);assert.match(html,/type="password" \[\(ngModel\)\]="credentialToken"/);assert.doesNotMatch(html,/project\.(?:githubToken|jenkinsToken|sonarqubeToken)/);
@@ -36,13 +65,19 @@ assert.doesNotMatch(html,/souhaiel11|pfe-app-test|PR #41|localhost|2\.7\.18|valu
 console.log('Settings: two projects, persistence, readonly guards, dirty/invalid/cancel, write-only credential rotation, diagnostic/error/empty states PASS');
 
 let toolTests=0;
+/** Prépare les données nécessaires à ce scénario. */
 api.getIntegrations=()=>response([{id:'diag',toolType:'kubernetes',url:'https://diagnostic.test',hasToken:true,enabled:true,status:'connected',lastChecked:'2026-10-01'}]);
+/** Prépare les données nécessaires à ce scénario. */
 api.getIntegration=()=>response({lastChecked:'2026-10-01T12:00:00Z'});
+/** Vérifie les résultats attendus dans ce scénario. */
 api.updateIntegration=(_id,payload)=>{assert.equal(payload.token,'replacement-only');return response({id:'diag',status:'disconnected',hasToken:true});};
+/** Vérifie l’intégration dans ce scénario de test. */
 api.testIntegration=()=>{toolTests++;return response({success:true,status:'connected',metadata:{message:'Connexion vérifiée.'}});};
+/** Traite l’erreur reçue et termine le suivi de la demande. */
 component.toast.error=()=>{};
 component.loadIntegrations();const tool=component.tools[0];assert.equal(tool.token,'');assert.equal(component.toolDirty(tool),false);
 component.testTool(tool);assert.equal(toolTests,1);assert.equal(tool.testing,false);
 tool.token='replacement-only';component.testTool(tool);assert.equal(toolTests,1,'unsaved credentials cannot trigger test');component.saveTool(tool);assert.equal(tool.token,'');assert.equal(component.toolDirty(tool),false);
+/** Vérifie l’intégration dans ce scénario de test. */
 api.testIntegration=()=>response({success:false,status:'error'});component.testTool(tool);assert.equal(tool.status,'error');assert.equal(tool.testing,false);
 failed=true;component.testTool(tool);assert.equal(tool.testing,false);failed=false;

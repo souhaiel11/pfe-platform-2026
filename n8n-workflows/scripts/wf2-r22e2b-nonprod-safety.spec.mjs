@@ -1,8 +1,4 @@
-// R22-E2B — proves the R22-E TEST artifact is safe against the live
-// production WF2 (id 9adcV31eaIgJyMR0, name "WF2 - Git Patch & PR v4.1",
-// webhook "wf2-approve") before any future import is even considered.
-// Nothing here imports/publishes/activates anything -- pure static checks
-// against the JSON files on disk.
+// Teste le composant « wf2-r22e2b-nonprod-safety » et ses cas d’erreur.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -55,6 +51,7 @@ console.log('Test 5b PASS - TEST webhookId (' + webhookNodes[0].webhookId + ') d
 
 // --- Test 6/7: credential coverage + no unapproved credential IDs ---
 const githubCallingTypes = new Set(['n8n-nodes-base.github']);
+/** Prépare les données nécessaires à ce scénario. */
 const isGithubHttpCall = (n) => n.type === 'n8n-nodes-base.httpRequest' && typeof n.parameters?.url === 'string' && n.parameters.url.includes('api.github.com');
 const githubNodes = workflow.nodes.filter(n => githubCallingTypes.has(n.type) || isGithubHttpCall(n));
 assert.ok(githubNodes.length > 10, 'sanity - found a substantial number of GitHub-calling nodes to audit');
@@ -106,12 +103,13 @@ for (const [src, c] of Object.entries(workflow.connections)) {
 assert.deepEqual(dangling, [], 'Test 10 - no dangling connection references');
 console.log('Test 10 PASS - no dangling connections');
 
-// --- Tests 11-14: architecture invariants (graph reachability, mirroring wf2-r22e-two-pass.spec.mjs) ---
+/** Prépare les données nécessaires à ce scénario. */
 function successors(name) {
   const c = workflow.connections[name];
   if (!c) return [];
   return c.main.flatMap(outputArr => outputArr.map(t => t.node));
 }
+/** Prépare les données nécessaires à ce scénario. */
 function reachableFrom(startName, { stopAt = new Set() } = {}) {
   const seen = new Set(); const queue = [startName];
   while (queue.length) {

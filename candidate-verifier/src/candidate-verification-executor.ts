@@ -1,15 +1,4 @@
-// R22-E2C2 — execution-plane orchestrator. Moved verbatim in logic from
-// backend/src/candidate-verification/candidate-verification.service.ts
-// (R22-C), which becomes a thin HTTP client after this move (see
-// backend/src/candidate-verification/candidate-verification.service.ts).
-// The only semantic change: repoPath is no longer supplied by the caller --
-// this class now owns repository materialization itself via RepoCacheService
-// (also moved here, per R22-E2C1 Phase 8/9: "backend must no longer need
-// repository filesystem access for candidate execution").
-//
-// Never touches GitHub write APIs, never resolves a scanner finding, never
-// decides a business retry -- identical invariants to the code this was
-// moved from.
+// Exécute les contrôles du candidat et rassemble leurs preuves.
 import { Injectable, Optional } from '@nestjs/common';
 import { CandidateManifest, CandidateVerification, FailureClass, HeadVerificationRequest, HeadVerification, VerificationResult, VerificationMode, VerificationStep, assertHeadVerificationRequest } from '../../backend/src/candidate-verification/candidate-verification.types';
 import { computeCandidateDigest } from '../../backend/src/candidate-verification/candidate-digest';
@@ -31,6 +20,7 @@ export interface ExecuteVerifyOptions {
 }
 
 const DIAGNOSTIC_LIMIT = 12_000;
+/** Extrait les erreurs utiles de la sortie du compilateur. */
 export function compilerDiagnostics(raw: string, workspacePath = '') {
   let text = String(raw || '').replace(/\x1b\[[0-9;]*m/g, '');
   if (workspacePath) text = text.split(workspacePath).join('');
@@ -47,6 +37,7 @@ export function compilerDiagnostics(raw: string, workspacePath = '') {
   return { boundedCompilerTail: text || null, implicatedPaths: paths, implicatedSymbols: symbols };
 }
 
+/** Valide le manifeste. */
 function validateManifest(manifest: CandidateManifest): string[] {
   const errors: string[] = [];
   if (!manifest.files.length) errors.push('Candidate manifest has zero files.');
@@ -65,6 +56,7 @@ function validateManifest(manifest: CandidateManifest): string[] {
 export class CandidateVerificationExecutor {
   private readonly buildAdapters: BuildAdapter[];
 
+  /** Initialise les dépendances et l’état de ce composant. */
   constructor(
     @Optional() private readonly workspaceManager: WorkspaceManager = new WorkspaceManager(),
     @Optional() private readonly materializer: CandidateMaterializer = new CandidateMaterializer(),
@@ -74,15 +66,18 @@ export class CandidateVerificationExecutor {
     this.buildAdapters = buildAdapters ?? [new MavenBuildAdapter(), new GradleBuildAdapter(), new NpmBuildAdapter(), new PythonBuildAdapter()];
   }
 
+  /** Exécute les étapes de vérification et rassemble leurs résultats. */
   execute(manifest: CandidateManifest, options: ExecuteVerifyOptions = {}): CandidateVerification {
     return this.run(manifest, options) as CandidateVerification;
   }
 
+  /** Exécute la vérification du commit courant de la PR. */
   executeHead(request: HeadVerificationRequest): HeadVerification {
     assertHeadVerificationRequest(request);
     return this.run(null, { timeoutMs: request.options?.timeoutMs }, request) as HeadVerification;
   }
 
+  /** Exécute le traitement et collecte son résultat. */
   private run(manifest: CandidateManifest | null, options: ExecuteVerifyOptions, head?: HeadVerificationRequest): VerificationResult {
     const context = head || manifest;
     const targetSha = head ? head.targetSha.toLowerCase() : manifest.candidateBaseSha;
@@ -99,10 +94,12 @@ export class CandidateVerificationExecutor {
     };
     const targeted = { status: 'NOT_RUN' as const, reason: 'NO_HIGH_CONFIDENCE_TARGET_SELECTION' as const };
     const staticAnalysis = { status: 'NOT_RUN' as const, reason: 'SUPPORTED_STATIC_ADAPTER_NOT_CONFIGURED' as const, newIssues: [] as unknown[], evidenceRef: null };
+    /** Décrit l’espace et la révision utilisés pour vérifier le candidat. */
     const workspaceEvidence = (exactShaVerified: boolean, created: boolean, cleaned: boolean) => ({
       workspaceId, requestedSha: targetSha, checkoutSha, exactShaVerified, created, cleaned,
     });
 
+    /** Prépare les informations de base du résultat. */
     const base = (overrides: Partial<CandidateVerification>): VerificationResult => {
       const result: CandidateVerification = {
         mode,
@@ -129,18 +126,6 @@ export class CandidateVerificationExecutor {
       return base({ manifestValidation: { status: 'FAIL', errors: manifestErrors }, overall: 'FAIL', failureClass: 'CANDIDATE_MANIFEST_INVALID' });
     }
 
-    // Bounded-git-operations fix: previously ensureRepo() was called with no
-    // timeoutMs at all, so repo materialization always got the flat
-    // GIT_OPERATION_CAP_MS default regardless of what options.timeoutMs the
-    // caller actually requested for this run (backend's own
-    // candidate-verification.service.ts already treats options.timeoutMs as
-    // an overall per-call budget -- see its governingTimeoutMs = timeoutMs +
-    // slack HTTP wait). A WorkerDeadline seeded from options.timeoutMs is
-    // used ONLY to bound this repo-materialization step; it does NOT change
-    // compile/regression's own existing timeout semantics below (each still
-    // receives the full, undiminished options.timeoutMs, exactly as before
-    // -- that per-phase reuse is a separate, pre-existing, unchanged
-    // contract, not something this fix touches).
     const deadline = createWorkerDeadline(options.timeoutMs);
     let repoPath: string;
     try {

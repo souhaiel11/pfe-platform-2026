@@ -1,0 +1,32 @@
+{
+  "canonicalLedgerExists": false,
+  "ledgerType": "Standalone SQL migrations with durable operator execution/schema attestation; no TypeORM migrationsRun or migration ledger configuration",
+  "phase4gSchemaPresent": true,
+  "phase4gDatabaseHistoryExpected": false,
+  "fakeLedgerRowsInserted": 0,
+  "planMigrationUnchanged": true,
+  "planMigrationSHA256": "bb92891dfb53551d0f61c572b15aca3f803565e64121020886a670a0130bb862",
+  "table": "security_remediation_retry_e2e_plans",
+  "columns": [
+    "id",
+    "projectId",
+    "taskId",
+    "state",
+    "plan",
+    "createdAt",
+    "updatedAt"
+  ],
+  "unique": [
+    "primary key id",
+    "unique taskId",
+    "one ACTIVE plan globally"
+  ],
+  "states": [
+    "ACTIVE",
+    "COMPLETED",
+    "REVOKED",
+    "EXPIRED"
+  ],
+  "downMigrationSupported": false,
+  "permanentScopedLogicProjectAgnostic": true
+}

@@ -1,15 +1,4 @@
-# R22-E2C2 — execution-plane worker image. Debian/Bookworm-based (not
-# Alpine): musl-libc has documented friction with some JVM/Maven builds,
-# and Maven isn't in Alpine's default package set without extra repos
-# (R22-E2C1 Phase 3 recommendation). Pinned package versions where the
-# Debian archive makes that practical, to avoid floating-version drift.
-#
-# Build context is the repository ROOT (see ../docker-compose.yml's
-# `build.context: .`), not this directory -- required so this Dockerfile
-# can COPY the two shared-contract files (candidate-verification.types.ts,
-# candidate-digest.ts) and scope-lock.service.ts out of backend/src/,
-# which Docker cannot reach from a build context scoped to
-# ./candidate-verifier alone.
+# Prépare le service isolé qui compile et teste les candidats.
 FROM node:20-bookworm-slim
 
 # git: repository materialization (WorkspaceManager/RepoCacheService).
@@ -167,6 +156,12 @@ COPY backend/src/security-remediation/security-remediation-orchestration.types.t
 COPY backend/src/security-remediation/version-selection-policy.ts /backend/src/security-remediation/version-selection-policy.ts
 COPY backend/src/security-remediation/security-remediation-deadline-contract.ts /backend/src/security-remediation/security-remediation-deadline-contract.ts
 COPY backend/src/security-remediation/security-artifact-scan.ts /backend/src/security-remediation/security-artifact-scan.ts
+# Increment 1 (WF6 multi-CVE) -- same explicit-allowlist discipline as
+# every line above: the batch orchestrator's own pure building blocks,
+# nothing more.
+COPY backend/src/security-remediation/maven-security-patch-writer-batch.ts /backend/src/security-remediation/maven-security-patch-writer-batch.ts
+COPY backend/src/security-remediation/security-remediation-batch-closure.ts /backend/src/security-remediation/security-remediation-batch-closure.ts
+COPY backend/src/security-remediation/security-remediation-batch-orchestration.types.ts /backend/src/security-remediation/security-remediation-batch-orchestration.types.ts
 
 # scope-lock.service.ts's `import { Injectable } from '@nestjs/common'`
 # resolves via Node's normal upward node_modules search starting at

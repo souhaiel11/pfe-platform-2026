@@ -1,26 +1,13 @@
 // Liens de source / navigation de preuve — sémantique de vérité côté UI.
-//
-// Ce que ce test protège :
-//   — un chemin de source connu SANS URL ne devient jamais cliquable ;
-//   — une preuve absente s'affiche « Source non disponible », jamais un lien
-//     vers l'accueil d'un outil ;
-//   — tout lien externe s'ouvre en nouvel onglet avec noopener noreferrer ;
-//   — AUCUN composant ne construit d'URL d'outil : la seule origine est le
-//     contrat backend (GET /api/source-evidence/*) ;
-//   — une réponse de preuve qui ne porte pas le projet/incident affiché est
-//     rejetée, donc une fuite de lien entre projets est impossible.
 
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import { loadFrontend } from './security-lifecycle-test-loader.mjs';
 
+/** Lit les données depuis leur source. */
 const read = path => readFileSync(new URL(path, import.meta.url), 'utf8');
 
-// Les commentaires DÉCRIVENT les contrats d'URL (c'est leur rôle : expliquer
-// pourquoi tel lien est exact). Ils sont blanchis avant toute analyse de
-// code, blocs multi-lignes compris — sinon une explication correcte ferait
-// échouer le test qu'elle documente. Les retours à la ligne sont préservés
-// pour que les numéros de ligne restent exacts.
+/** Les commentaires DÉCRIVENT les contrats d'URL (c'est leur rôle : expliquer pourquoi tel lien est exact). */
 const stripComments = source => source
   .replace(/<!--[\s\S]*?-->/g, m => m.replace(/[^\n]/g, ' '))
   .replace(/\/\*[\s\S]*?\*\//g, m => m.replace(/[^\n]/g, ' '))
@@ -32,6 +19,7 @@ const stripComments = source => source
 // méthodes des vrais composants.
 const types = loadFrontend('../src/app/shared/source-evidence/source-evidence.types.ts', {}, { URL });
 const evidenceDeps = { './source-evidence.types': types, '../../shared/source-evidence/source-evidence.types': types };
+/** Simule la lecture des données demandées par le composant. */
 const loadComponent = (path, exportName, dependencies = {}) => {
   const module = loadFrontend(path, { ...evidenceDeps, ...dependencies }, { URL });
   return Object.create(module[exportName].prototype);
@@ -176,6 +164,7 @@ const { safeEvidenceUrl, normalizeEvidence, normalizeEvidenceSlots, normalizeEvi
 
 // ── 5. Aucun composant ne construit d'URL d'outil ───────────────────────
 {
+  /** Prépare les données nécessaires à ce scénario. */
   const walk = dir => readdirSync(new URL(dir, import.meta.url), { withFileTypes: true })
     .flatMap(e => e.isDirectory() ? walk(`${dir}${e.name}/`) : [`${dir}${e.name}`]);
   const files = walk('../src/app/').filter(f => /\.(ts|html)$/.test(f) && !/\/fixtures\//.test(f));
@@ -221,7 +210,8 @@ const { safeEvidenceUrl, normalizeEvidence, normalizeEvidenceSlots, normalizeEvi
   assert.match(apiSource, /source-evidence\/incident\/\$\{id\}/);
   // Lecture seule : aucun POST/PUT/DELETE sur cette route.
   const calls = apiSource.match(/this\.http\.\w+<[^>]*>\(`\$\{this\.base\}\/source-evidence[^`]*`/g) || [];
-  assert.equal(calls.length, 2);
+  assert.equal(calls.length, 3);
+  assert.match(apiSource, /local-reports\/\$\{encodeURIComponent\(scanner\)\}/);
   for (const call of calls) assert.match(call, /this\.http\.get</, 'la table de preuve est en lecture seule');
   console.log('6. origine unique des URL de preuve PASS');
 }
@@ -235,8 +225,18 @@ const { safeEvidenceUrl, normalizeEvidence, normalizeEvidenceSlots, normalizeEvi
   project.reportEvidence = null;
   const captured = {};
   project.api = {
-    getProjectSourceEvidence: () => ({ pipe: () => ({ subscribe: handlers => { captured.project = handlers; } }) }),
-    getIncidentSourceEvidence: () => ({ pipe: () => ({ subscribe: handlers => { captured.report = handlers; } }) }),
+    /** Simule la lecture des données demandées par le composant. */
+    getProjectSourceEvidence: () => ({
+    /** Prépare les données nécessaires à ce scénario. */
+    pipe: () => ({
+    /** Prépare les données nécessaires à ce scénario. */
+    subscribe: handlers => { captured.project = handlers; } }) }),
+    /** Simule la lecture des données demandées par le composant. */
+    getIncidentSourceEvidence: () => ({
+    /** Prépare les données nécessaires à ce scénario. */
+    pipe: () => ({
+    /** Prépare les données nécessaires à ce scénario. */
+    subscribe: handlers => { captured.report = handlers; } }) }),
   };
   project.projectScopeReset$ = {};
   project.loadSourceEvidence();
@@ -269,7 +269,13 @@ const { safeEvidenceUrl, normalizeEvidence, normalizeEvidenceSlots, normalizeEvi
   incident.id = 'incident-affiche';
   incident.sourceEvidence = null;
   let incidentHandlers;
-  incident.api = { getIncidentSourceEvidence: () => ({ pipe: () => ({ subscribe: h => { incidentHandlers = h; } }) }) };
+  incident.api = {
+  /** Simule la lecture des données demandées par le composant. */
+  getIncidentSourceEvidence: () => ({
+  /** Prépare les données nécessaires à ce scénario. */
+  pipe: () => ({
+  /** Prépare les données nécessaires à ce scénario. */
+  subscribe: h => { incidentHandlers = h; } }) }) };
   incident.incidentScopeReset$ = {};
   incident.loadSourceEvidence();
   incidentHandlers.next({ incidentId: 'UN-AUTRE-INCIDENT', slots: { JENKINS_BUILD: { kind: 'JENKINS_BUILD', label: 'L', url: 'http://localhost:8082/job/a/9/' } } });
@@ -312,7 +318,7 @@ const { safeEvidenceUrl, normalizeEvidence, normalizeEvidenceSlots, normalizeEvi
   const contract = new Set([
     'SONAR_PROJECT', 'JENKINS_JOB', 'JENKINS_BUILD', 'JENKINS_BUILD_LOGS', 'GIT_REPOSITORY', 'GIT_COMMIT',
     'TRIVY_REPORT', 'OWASP_REPORT', 'ZAP_REPORT', 'ZAP_TARGET',
-    'PUBLISHED_IMAGE', 'IMAGE_DIGEST', 'DOCKERFILE', 'ACR_REGISTRY', 'AZURE_TARGET', 'AZURE_RESOURCE_GROUP',
+    'PUBLISHED_IMAGE', 'IMAGE_DIGEST', 'DOCKERFILE', 'ACR_REGISTRY', 'ACR_IMAGE', 'AZURE_TARGET', 'AZURE_RESOURCE_GROUP',
   ]);
   for (const slot of declared) assert.ok(contract.has(slot), `emplacement hors contrat : ${slot}`);
   console.log('8. repli d’emplacement et conformité au contrat PASS');
@@ -434,6 +440,34 @@ const { safeEvidenceUrl, normalizeEvidence, normalizeEvidenceSlots, normalizeEvi
   assert.equal(shortIdentifier(null), null);
   assert.equal(shortIdentifier('   '), null);
   console.log('12. abréviation réservée aux empreintes opaques PASS');
+}
+
+// Tool cards retain each evidence context and never change link destinations.
+{
+  const presentation = loadFrontend('../src/app/shared/source-evidence/tool-presentation.ts');
+  const list = loadComponent('../src/app/shared/source-evidence/source-evidence-list.component.ts', 'SourceEvidenceListComponent', { './tool-presentation': presentation });
+  list.hideEmptySections = true;
+  list.sections = [{id:'origin',title:'Origine',slots:['BUILD','SONAR']},{id:'validation',title:'Validation',slots:['CHECK','LOG','MISSING']}];
+  list.slots = {
+    BUILD:{provider:'JENKINS',availability:'LINK',url:'http://localhost:8082/job/a/1/'},
+    LOG:{provider:'JENKINS',availability:'LINK',url:'http://localhost:8082/job/a/2/consoleText'},
+    CHECK:{provider:'JENKINS',availability:'LINK',url:'http://localhost:8082/job/a/2/'},
+    SONAR:{provider:'SONARQUBE',availability:'LINK',url:'http://localhost:9000/dashboard?id=a'},
+    MISSING:{provider:'N8N',availability:'UNAVAILABLE',url:null},
+  };
+  const before = JSON.stringify(list.slots);
+  const groups = list.toolGroups();
+  assert.equal(groups.length, 2);
+  const jenkins = groups.find(group => group.tool.key === 'JENKINS');
+  assert.equal(jenkins.sections.length, 2);
+  assert.equal(jenkins.sections[0].id, 'origin');
+  assert.equal(jenkins.sections[1].id, 'validation');
+  assert.equal(jenkins.sections[0].slots.join(','), 'BUILD');
+  assert.equal(jenkins.sections[1].slots.join(','), 'CHECK,LOG');
+  assert.equal(JSON.stringify(list.slots), before);
+  assert.doesNotMatch(linkSource, /class="sev-url"/);
+  assert.match(linkSource, /copy\(item\.url\)/);
+  console.log('13. regroupement par outil, contextes et destinations préservés PASS');
 }
 
 console.log('source-evidence.spec: ALL PASS');

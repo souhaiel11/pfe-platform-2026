@@ -1,0 +1,36 @@
+{
+  "date": "2026-10-22",
+  "baseImage": "local/pfe-wf4-analysis-state:20261022",
+  "image": "local/pfe-dockerfile-fetch:20261022",
+  "changedControllerMethods": [
+    "fetch",
+    "callFetch",
+    "optimize"
+  ],
+  "fetchTimeoutMs": 185000,
+  "fix": "Network and timeout failures no longer classified as a missing Dockerfile",
+  "tests": {
+    "typescript": "PASS",
+    "helperCases": "PASS",
+    "isolatedRuntimeController": "PASS",
+    "frontendMessages": "PASS",
+    "frontendBuild": "PASS, existing SCSS budget warning",
+    "servedBundle": "PASS"
+  },
+  "e2e": {
+    "workflowExecution": 2172,
+    "jobId": "c03dbf77-0adc-4fcf-8ef9-5db2f6de97a3",
+    "fetchHttp": 201,
+    "dockerfileCharacters": 4230,
+    "optimizeHttp": 201,
+    "status": "done",
+    "durationMs": 31241,
+    "score": 22,
+    "issueCount": 9
+  },
+  "files": {
+    "fetch-dockerfile.js": "b9ef95159f161cd4eff7bffe7e1786d024f6b1f1e4aca42948dc2db6c18bc54b",
+    "dockerfile-optimizer.module.js": "2b9c07af4c3c19a7a7b56841458c3e88cb69536ef829913c067552ff064d8791",
+    "Dockerfile": "211cbf0c185c53645f15ae76f242c86969f3d20da2178cd1f41999daf1a0632a"
+  }
+}

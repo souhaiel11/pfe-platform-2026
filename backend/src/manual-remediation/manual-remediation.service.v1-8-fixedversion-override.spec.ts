@@ -1,14 +1,5 @@
-// V1.8 Phase 7D — the ONE narrow exception to launchBatchRemediation()'s
-// pre-existing "incomplete data" rejection: a scanner-level missing
-// fixedVersion (OWASP's own, long-standing real-data characteristic) is
-// excused ONLY in ENFORCED mode, ONLY when canDispatchSecurityRemediationV1_8
-// already independently proves an authoritative, exact, currently-valid
-// plan exists -- reusing that SAME gate, never a second rule. Same
-// hand-rolled fake-repo convention as manual-remediation.service.v1-8-
-// enforcement.spec.ts, extended with a SYNTHETIC evidence-store fixture
-// (V1_8CompatibilityDecisionService accepts a custom path) so each BLOCK
-// reason can be exercised precisely, deterministically, never depending on
-// real evidence happening to carry the right shape.
+// Teste le composant « manual-remediation.service.v1-8-fixedversion-override » et ses cas d’erreur.
+import { attachLifecycleTestTransaction } from './lifecycle-test-transaction';
 import { strict as assert } from 'assert';
 import { join } from 'path';
 import { ManualRemediationService, Wf6BatchDispatchPayload, Wf6BatchDispatcher } from './manual-remediation.service';
@@ -20,19 +11,32 @@ const REAL_COMMIT_SHA = '7ae0f954f99628b69ce9b42f42c1e2acc8568d99';
 const PROJECT_ID = '3aa1c9b9-e114-40e4-884b-ebc7aa32e002';
 const FIXTURE_PATH = join(__dirname, 'fixtures', 'v1_8-fixedversion-override-fixture.json');
 
+/** Prépare les données nécessaires à ce scénario. */
 function makeService(seedTasks: any[], dispatcher: Wf6BatchDispatcher, v1_8Decisions?: V1_8CompatibilityDecisionService) {
   const rows: any[] = seedTasks.map(t => ({ ...t }));
   const repo: any = {
+    /** Compte les éléments correspondants. */
     count: async () => rows.length,
+    /** Recherche les éléments correspondants. */
     find: async ({ where }: any) => rows.filter(r => (where.id?.value ?? [r.id]).includes(r.id)),
+    /** Recherche l’élément correspondant à l’identifiant. */
     findOne: async ({ where }: any) => rows.find(r => r.id === where.id) || null,
+    /** Enregistre les données fournies. */
     save: async (value: any) => { for (const v of (Array.isArray(value) ? value : [value])) { const i = rows.findIndex(r => r.id === v.id); if (i < 0) rows.push(v); else rows[i] = v; } return value; },
   };
-  const incidents: any = { findOne: async ({ where }: any) => (where.id === 'incident-1' ? { id: 'incident-1', projectId: PROJECT_ID, metadata: { sourceCommitSha: REAL_COMMIT_SHA } } : null), find: async () => [] };
-  const projects: any = { findOne: async ({ where }: any) => (where.id === PROJECT_ID ? { id: PROJECT_ID, githubRepo: REAL_REPOSITORY } : null) };
+  const incidents: any = {
+  /** Recherche l’élément correspondant à l’identifiant. */
+  findOne: async ({ where }: any) => (where.id === 'incident-1' ? { id: 'incident-1', projectId: PROJECT_ID, metadata: { sourceCommitSha: REAL_COMMIT_SHA } } : null),
+  /** Recherche les éléments correspondants. */
+  find: async () => [] };
+  const projects: any = {
+  /** Recherche l’élément correspondant à l’identifiant. */
+  findOne: async ({ where }: any) => (where.id === PROJECT_ID ? { id: PROJECT_ID, githubRepo: REAL_REPOSITORY } : null) };
+  attachLifecycleTestTransaction(repo, projects);
   return { service: new ManualRemediationService(repo, incidents, dispatcher, v1_8Decisions, projects), rows };
 }
 
+/** Prépare les données nécessaires à ce scénario. */
 function seedTask(overrides: any = {}) {
   return {
     id: overrides.id || 'task-1', projectId: PROJECT_ID, incidentId: 'incident-1', findingId: 'x',
@@ -47,11 +51,14 @@ function seedTask(overrides: any = {}) {
   };
 }
 
+/** Exécute le traitement et collecte son résultat. */
 async function run() {
   const originalEnv = process.env.V1_8_SECURITY_ENFORCEMENT;
   try {
     const dev = { id: 'dev-1', role: 'developer' };
-    const noop: Wf6BatchDispatcher = { dispatch: async () => {} };
+    const noop: Wf6BatchDispatcher = {
+    /** Transmet la demande au service chargé de l’exécuter. */
+    dispatch: async () => {} };
 
     // 1. OWASP fixedVersion=null + complete, real VALIDATED_RECOMMENDED
     // PARENT_VERSION plan (real evidence store, real jackson-databind

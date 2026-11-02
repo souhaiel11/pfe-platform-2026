@@ -1,32 +1,4 @@
-// Base de connaissance déterministe (zéro LLM) : erreur de build Jenkins connue
-// -> classification + solution. Aucune correspondance trouvée = type='unknown',
-// solution=null, jamais une réponse inventée.
-//
-// MIROIR MANUEL de frontend/src/app/features/incidents/jenkins-known-fixes.ts —
-// nécessaire car le backend (NestJS) et le frontend (Angular) sont deux apps
-// distinctes sans package partagé configuré. Toute modification des patterns/
-// types doit être répercutée dans LES DEUX fichiers, sous peine de divergence
-// entre ce que le backend route automatiquement (ce fichier) et ce que le
-// frontend affiche/propose à l'utilisateur (l'original).
-//
-// type détermine ce que la plateforme a le droit de proposer :
-//   - 'jenkinsfile'   : erreur DANS le pipeline (syntaxe, chemin, wrapper absent)
-//     -> WF4 peut proposer une correction automatique du Jenkinsfile.
-//   - 'dockerfile'    : erreur DANS le Dockerfile (image de base incompatible,
-//     chemin COPY incohérent, syntaxe invalide) -> WF5 peut proposer une
-//     correction automatique du Dockerfile. Jamais WF4 : éditer le Jenkinsfile
-//     ne corrige rien ici, le problème est dans l'image/le fichier Docker.
-//   - 'vulnerability' : CVE / vulnérabilité détectée (Trivy) -> signalement
-//     SEULEMENT. GARDE-FOU CRITIQUE : ni WF4 ni WF5 ne doivent jamais être
-//     déclenchés sur ce type. Le vrai fix est dans le code applicatif ou les
-//     dépendances, pas dans le Jenkinsfile ni le Dockerfile — "corriger" en
-//     éditant l'un ou l'autre masquerait la vraie vulnérabilité.
-//   - 'infra'         : plugin Jenkins manquant, agent/service injoignable ->
-//     signalement seulement. Ni WF4 ni WF5 ne peuvent installer un plugin ni
-//     réparer un agent en éditant un fichier.
-//   - 'code'          : test applicatif échoué -> signalement seulement.
-//     GARDE-FOU CRITIQUE : ne JAMAIS proposer de "corriger" en modifiant le
-//     pipeline ou le Dockerfile — ça masquerait le vrai problème.
+// Base de connaissance déterministe (aucun LLM) : erreur de build Jenkins connue -> classification + solution.
 type FixType = 'jenkinsfile' | 'dockerfile' | 'vulnerability' | 'infra' | 'code';
 const KNOWN_FIXES: { pattern: RegExp; type: FixType; solution: string | null }[] = [
   {
@@ -34,13 +6,10 @@ const KNOWN_FIXES: { pattern: RegExp; type: FixType; solution: string | null }[]
     type: 'jenkinsfile',
     solution: "Le wrapper Maven mvnw est absent du dépôt. Utilisez 'mvn' (si un tool Maven est configuré dans Jenkins) ou committez le wrapper avec 'mvn -N wrapper:wrapper'.",
   },
-  // GARDE-FOU : vérifié AVANT les patterns 'dockerfile' — une sortie Trivy
-  // peut mentionner une image ou un chemin, mais reste une vulnérabilité,
-  // jamais une correction Dockerfile/Jenkinsfile.
   {
     pattern: /Trivy.*CRITICAL|vulnerabilities found|CVE-\d+/i,
     type: 'vulnerability',
-    solution: null, // jamais de "solution" pour une vulnérabilité — signalement seul, voir garde-fou
+    solution: null,
   },
   {
     pattern: /COPY failed|failed to compute cache key|no source files/i,
@@ -80,10 +49,12 @@ const KNOWN_FIXES: { pattern: RegExp; type: FixType; solution: string | null }[]
   {
     pattern: /There are test failures|Tests run:\s*\d+,\s*Failures:\s*[1-9]|Tests run:\s*\d+,.*Errors:\s*[1-9]/i,
     type: 'code',
-    solution: null, // jamais de "solution" pour du code applicatif — signalement seul, voir garde-fou
+    solution: null,
   },
 ];
 
+// Classe un message d'erreur Jenkins selon la base de connaissance ci-dessus ; renvoie 'unknown' sans
+// solution si rien ne correspond, jamais une classification ou une solution inventée.
 export function classify(
   errorMessage: string | null | undefined,
 ): { type: FixType | 'unknown'; solution: string | null } {

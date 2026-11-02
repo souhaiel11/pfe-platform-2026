@@ -1,9 +1,11 @@
+// Teste le composant « context-sufficiency.service » et ses cas d’erreur.
 import * as assert from 'node:assert/strict';
 import { ContextSufficiencyService } from './context-sufficiency.service';
 import { RemediationContext, ResearchResponse } from './context.types';
 
 const service = new ContextSufficiencyService();
 
+/** Prépare les données nécessaires à ce scénario. */
 function baseContext(overrides: Partial<RemediationContext> = {}): RemediationContext {
   return {
     repository: 'souhaiel11/pfe-app-test', revisionSha: 'sha1',
@@ -15,6 +17,7 @@ function baseContext(overrides: Partial<RemediationContext> = {}): RemediationCo
   };
 }
 
+/** Prépare les données nécessaires à ce scénario. */
 function resolved(state: ResearchResponse['state']): ResearchResponse {
   return { requestId: 'r1', revisionSha: 'sha1', state, facts: [], evidence: [] };
 }

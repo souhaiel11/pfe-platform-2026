@@ -1,14 +1,4 @@
-// V1.7 predeploy phase — extracted verbatim from candidate-verifier/src/
-// security-artifact-validator.ts (its original, single home) so BOTH
-// candidate-verifier (the orchestrator's own source-digest binding checks
-// and the SecurityArtifactValidator contract it calls through) and the NEW
-// dedicated builder/scanner (builder-scanner/, the only place that now
-// actually execs podman/trivy) can import the SAME pure, dependency-free
-// implementations instead of two independently-maintained copies. Nothing
-// here spawns a subprocess itself beyond `git ls-files` (read-only,
-// harmless, identical to what it always did) -- no podman, no trivy, no
-// network. That real execution lives ONLY in builder-scanner/src/
-// security-artifact-validator.ts now.
+/** Fonctions pures partagées (candidate-verifier et builder-scanner) de lecture et d'interprétation d'un scan Trivy d'image Docker, sans jamais exécuter podman/trivy ici. */
 import { execFileSync } from 'child_process';
 import { createHash } from 'crypto';
 import * as fs from 'fs';
@@ -27,11 +17,13 @@ export interface SecurityArtifactScan {
 }
 
 export class ArtifactRuntimeError extends Error {
+  /** Initialise l’erreur avec son contexte. */
   constructor(public readonly code: string, public readonly stage: string, public readonly exitCode?: number) {
     super(`${code}:${stage}`); this.name = 'ArtifactRuntimeError';
   }
 }
 
+/** Calcule une empreinte SHA-256 déterministe de tous les fichiers suivis par git dans un workspace (chemins + contenu), pour prouver l'identité exacte du code source scanné. */
 export function trackedSourceDigest(workspace: string): string {
   const paths = execFileSync('git', ['ls-files', '-z'], { cwd: workspace, encoding: 'utf8' }).split('\0').filter(Boolean).sort();
   if (!paths.length) throw new Error('NO_TRACKED_SOURCE');
@@ -44,6 +36,7 @@ export function trackedSourceDigest(workspace: string): string {
   return hash.digest('hex');
 }
 
+/** Extrait, depuis un rapport Trivy complet et valide, les cibles (paquet, version installée, versions corrigées) correspondant exactement à une CVE donnée. */
 export function cveTargets(scan: SecurityArtifactScan, cve: string): CveTarget[] {
   if (!scan.buildPassed || scan.mode !== 'TRIVY_IMAGE_ARCHIVE'
     || !/^[0-9a-f]{64}$/.test(scan.artifactDigest) || !/^[0-9a-f]{64}$/.test(scan.reportDigest)
@@ -72,6 +65,22 @@ export function cveTargets(scan: SecurityArtifactScan, cve: string): CveTarget[]
   return result.sort((a, b) => (a.package + a.location).localeCompare(b.package + b.location));
 }
 
+/** Compte le nombre de vulnérabilités Trivy de sévérité HIGH ou CRITICAL dans un rapport (0 si le rapport est absent ou malformé, jamais une exception). */
+export function countHighCriticalVulnerabilities(report: any): number {
+  try {
+    let count = 0;
+    for (const r of report?.Results ?? []) {
+      for (const v of r?.Vulnerabilities ?? []) {
+        if (v?.Severity === 'HIGH' || v?.Severity === 'CRITICAL') count++;
+      }
+    }
+    return count;
+  } catch {
+    return 0;
+  }
+}
+
+/** Vérifie qu'un scan d'image prouve bien la fermeture complète d'une CVE : plus aucune occurrence de la CVE, et chaque paquet affecté présent à la version cible exacte. */
 export function provesSecurityClosure(scan: SecurityArtifactScan, scope: MavenRemediationScope): boolean {
   try {
     if (cveTargets(scan, scope.targetCve).length !== 0) return false;

@@ -1,11 +1,8 @@
-/** V1.7 Phase B — Trivy DB bootstrap contract: unit tests for the
- * readiness check, using the SAME command-injection fault-test seam
- * convention as the rest of this codebase (a synthetic `trivy --version`
- * string in place of the real binary, so this test is deterministic and
- * needs no real Trivy installation). */
+// Teste le composant « trivy-readiness » et ses cas d’erreur.
 import * as assert from 'assert';
 import { checkTrivyCacheReadiness } from './trivy-readiness';
 
+/** Prépare les données nécessaires à ce scénario. */
 const REAL_SAMPLE_OUTPUT = (vulnUpdatedAt: string, vulnNextUpdate: string, javaUpdatedAt: string, javaNextUpdate: string) => `Version: 0.72.0
 Vulnerability DB:
   Version: 2
@@ -22,7 +19,9 @@ Java DB:
 const NO_DB_OUTPUT = `Version: 0.72.0\n`;
 
 const now = new Date();
+/** Prépare les données nécessaires à ce scénario. */
 const hoursAgo = (h: number) => new Date(now.getTime() - h * 60 * 60 * 1000).toISOString();
+/** Prépare les données nécessaires à ce scénario. */
 const hoursFromNow = (h: number) => new Date(now.getTime() + h * 60 * 60 * 1000).toISOString();
 
 // 1. Both DBs present and fresh -> ready.
@@ -79,6 +78,7 @@ const hoursFromNow = (h: number) => new Date(now.getTime() + h * 60 * 60 * 1000)
 // incomplete Java DB must never look "good enough" next to a fully-present
 // vuln DB.
 {
+  /** Prépare les données nécessaires à ce scénario. */
   const PARTIAL_OUTPUT = (vulnUpdatedAt: string, vulnNextUpdate: string) => `Version: 0.72.0
 Vulnerability DB:
   Version: 2

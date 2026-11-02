@@ -1,0 +1,480 @@
+{
+  "at": "2026-10-07T11:29:50.270446+00:00",
+  "allLegacyPRsClosedUnmerged": true,
+  "historyAccessible": true,
+  "historicalReferencePR": 37,
+  "preservedPRsUnchanged": [
+    33,
+    43,
+    44
+  ],
+  "boot3Unchanged": true,
+  "allUnrelatedPRsUnchanged": true,
+  "allUnrelatedBranchesUnchanged": true,
+  "noNewPR": true,
+  "noNewBranch": true,
+  "removedBranchRefs": [
+    {
+      "branch": "security/fix/a37e178f7ce1-1ebe4cecc872",
+      "expectedHeadSha": "4402e8977e4984f5ab759e0af0010901abd10a45",
+      "associatedPR": 36,
+      "condition": "Only after explicit approval, immutable history export, close-unmerged proof, and zero writers; required by unchanged qualified remote provider"
+    },
+    {
+      "branch": "security/fix/a37e178f7ce1-71531d5009b1",
+      "expectedHeadSha": "a27fc820efdb96a53d92834b17546f128392a735",
+      "associatedPR": 37,
+      "condition": "Only after explicit approval, immutable history export, close-unmerged proof, and zero writers; required by unchanged qualified remote provider"
+    },
+    {
+      "branch": "security/fix/3f712ca3bae0-55df917c8f87",
+      "expectedHeadSha": "1097ba035e6b2d88cd12f6af7cc1285e889f8aed",
+      "associatedPR": 38,
+      "condition": "Only after explicit approval, immutable history export, close-unmerged proof, and zero writers; required by unchanged qualified remote provider"
+    },
+    {
+      "branch": "security/fix/e9302805d352-0b27c921d9ca",
+      "expectedHeadSha": "cd3ab899af5ea1fca5cfa5b10f80348f8803430d",
+      "associatedPR": 39,
+      "condition": "Only after explicit approval, immutable history export, close-unmerged proof, and zero writers; required by unchanged qualified remote provider"
+    },
+    {
+      "branch": "security/fix/41a0eac4ecb4-022ff90775f4",
+      "expectedHeadSha": "c5a3846d40f8358737d8d76085564fc5fb4edb4b",
+      "associatedPR": 40,
+      "condition": "Only after explicit approval, immutable history export, close-unmerged proof, and zero writers; required by unchanged qualified remote provider"
+    },
+    {
+      "branch": "security/fix/5529fe26dcc4-a48178242bb4",
+      "expectedHeadSha": "cb1432c97f601ef1ffbf436a3f3f9215bdaa03f9",
+      "associatedPR": 41,
+      "condition": "Only after explicit approval, immutable history export, close-unmerged proof, and zero writers; required by unchanged qualified remote provider"
+    },
+    {
+      "branch": "security/fix/259beaee267e-3936026f7135",
+      "expectedHeadSha": "7f57eec0f47b5b47c7320c65662348ec6b2404b4",
+      "associatedPR": 42,
+      "condition": "Only after explicit approval, immutable history export, close-unmerged proof, and zero writers; required by unchanged qualified remote provider"
+    }
+  ],
+  "preservedBranchRefs": [
+    {
+      "name": "chore/sonar-comment-marker-cleanup",
+      "headSha": "c0c21af4024231d98117daa7f5989eceb39bb4cf"
+    },
+    {
+      "name": "fix/ai-devsecops-1783935617658",
+      "headSha": "5089198fab64a98ad1f1babe4b6c142bd2b811eb"
+    },
+    {
+      "name": "fix/ai-devsecops-1784109909998",
+      "headSha": "4aa4e15e4e49dd76e0db79be54687ae1c7e5834a"
+    },
+    {
+      "name": "fix/ai-patch-1784888077704",
+      "headSha": "4d661dbf304bf818e3d5fd557f0e5c05e81defaa"
+    },
+    {
+      "name": "fix/ai-patch-1784888119195",
+      "headSha": "bf9c0489d4fd38955c6895b717fe750336b31b21"
+    },
+    {
+      "name": "fix/ai-taskcontroller-1784886860401",
+      "headSha": "4d661dbf304bf818e3d5fd557f0e5c05e81defaa"
+    },
+    {
+      "name": "fix/ai-taskcontroller-1784887405583",
+      "headSha": "d0575c5da27b2e729a75dfb0f045525518211c78"
+    },
+    {
+      "name": "fix/ai-taskcontroller-1784888464944",
+      "headSha": "4d661dbf304bf818e3d5fd557f0e5c05e81defaa"
+    },
+    {
+      "name": "fix/ai-taskcontroller-1784888961461",
+      "headSha": "85a966069fe68ab96db0f6fe6d1386d7f6382cf7"
+    },
+    {
+      "name": "fix/ai-taskcontroller-1785954287703",
+      "headSha": "cc91ece607c28e735e793f11fa1619093c7f32f8"
+    },
+    {
+      "name": "fix/ai-taskcontroller-1785971478955",
+      "headSha": "98ed4cd4811d046016ca2f8ba0994991f78d8dca"
+    },
+    {
+      "name": "fix/pfe-5eaa2921-ee57-449f-a5d0-0a6dfcf29241-aa0932c8-e12f-4f31-932d-dc1f6efc66cb",
+      "headSha": "b9e55d20eecea1058aba622870107f17da875e9b"
+    },
+    {
+      "name": "fix/pfe-6edab0c8-64df-4bb7-ba9c-7dff9cbcd4f3-72ddba06-2f94-462c-a806-cb3053636d74",
+      "headSha": "9690613ecc5e87b33663ee8f82eea4f94d67bbfe"
+    },
+    {
+      "name": "fix/pfe-65e35d1b-212f-4153-bd63-fba6e8eebc2c-f1af3192-40f0-4400-869a-3854246d7a11",
+      "headSha": "8a315b0dd508eb9843bb3037fe2827f02f6faa78"
+    },
+    {
+      "name": "fix/pfe-15731c31-a3a4-42ca-953a-0d7eebc36f55-9ad1820d-a8d8-4ed3-8aec-6a3fc4c12d6f",
+      "headSha": "20494c250d4c98601e20f3a1616eb8935e6edd37"
+    },
+    {
+      "name": "fix/pfe-68865f3f-a04a-418f-8379-f99cc3f5005f-f70607ad-b6e8-442b-9358-51ce7656dfc6",
+      "headSha": "867a206adb5227e66b5dea008f46d546a3a6827a"
+    },
+    {
+      "name": "fix/pfe-73733ec0-4077-4c81-aed3-df3a3bca5245-dfcd0966-c81a-4726-b47c-2ee5a81b1029",
+      "headSha": "11ee62d1cdcdb9de20f2d1b0be453b9994ce9f9e"
+    },
+    {
+      "name": "fix/pfe-754328c4-4351-4f44-985b-34b9a031dfb2-4f3c88f0-fe71-464d-b2bf-62c850e0f8b3",
+      "headSha": "99987c1bdf0fad37f0e5e2a8d4af16efe693c208"
+    },
+    {
+      "name": "fix/pfe-a1cee307-dcca-49b4-a490-5d1fdfe55fb8-3fecb0d5-d88a-4548-815a-6d99e5f9e8a9",
+      "headSha": "47a9f01701a6518c56a05dcb99ca4aa25ed08868"
+    },
+    {
+      "name": "fix/pfe-c3d7c4eb-a73c-4fec-9762-66fca852b9c5-75ea0119-7620-4b91-8843-f49253e0447a",
+      "headSha": "1aded596713cbe8477a4bf652cd081b9aec00aa7"
+    },
+    {
+      "name": "fix/pfe-d1f5e9ce-f039-475d-9a50-41f217e6444b-9b62e087-02a8-409d-bfb1-a951629a8814",
+      "headSha": "29a12b5a77c8dfc279366f3f72461676708f4e49"
+    },
+    {
+      "name": "fix/pfe-d2fd5d60-a72e-461f-87fd-89a5a7a4fc79-d428335c-7067-4ed7-8c4d-fd6c3977a596",
+      "headSha": "46104bba51c0ad63047e10bedb9bc3d40a20bdde"
+    },
+    {
+      "name": "fix/pfe-d600b9dc-f23c-4ee7-bcdd-72701fa79e30-280ffabc-f088-4b5c-823e-22eec51e1a64",
+      "headSha": "bdc2547ada805851d3d96b36e08741635b73b8b3"
+    },
+    {
+      "name": "fix/pfe-d56558c9-b057-4fca-847a-bc69894cfb83-620f3b8f-a34c-4767-8274-dab7a64d7ade",
+      "headSha": "012911203be9fe727420c6b2cff7aaf4acf59e3e"
+    },
+    {
+      "name": "fix/pfe-dd7cdcc1-4596-4001-941d-a87774e3ff4f-1f7370cf-0222-4236-befc-4be60cc638af",
+      "headSha": "40b12135b7abb39549ec220c5c72e1e43399f8eb"
+    },
+    {
+      "name": "main",
+      "headSha": "393816c250f73d907eb5a2dd43b2ec2288c7abcb"
+    },
+    {
+      "name": "security/boot3-remediation",
+      "headSha": "b62c0d663268d87cc4c3c7b0abdd1c97c75f3f56"
+    }
+  ],
+  "finalPRs": [
+    {
+      "number": 44,
+      "state": "open",
+      "headSha": "47a9f01701a6518c56a05dcb99ca4aa25ed08868",
+      "mergedAt": null,
+      "closedAt": null
+    },
+    {
+      "number": 43,
+      "state": "open",
+      "headSha": "99987c1bdf0fad37f0e5e2a8d4af16efe693c208",
+      "mergedAt": null,
+      "closedAt": null
+    },
+    {
+      "number": 42,
+      "state": "closed",
+      "headSha": "7f57eec0f47b5b47c7320c65662348ec6b2404b4",
+      "mergedAt": null,
+      "closedAt": "2026-10-07T11:19:26Z"
+    },
+    {
+      "number": 41,
+      "state": "closed",
+      "headSha": "cb1432c97f601ef1ffbf436a3f3f9215bdaa03f9",
+      "mergedAt": null,
+      "closedAt": "2026-10-07T11:19:23Z"
+    },
+    {
+      "number": 40,
+      "state": "closed",
+      "headSha": "c5a3846d40f8358737d8d76085564fc5fb4edb4b",
+      "mergedAt": null,
+      "closedAt": "2026-10-07T11:19:21Z"
+    },
+    {
+      "number": 39,
+      "state": "closed",
+      "headSha": "cd3ab899af5ea1fca5cfa5b10f80348f8803430d",
+      "mergedAt": null,
+      "closedAt": "2026-10-07T11:19:18Z"
+    },
+    {
+      "number": 38,
+      "state": "closed",
+      "headSha": "1097ba035e6b2d88cd12f6af7cc1285e889f8aed",
+      "mergedAt": null,
+      "closedAt": "2026-10-07T11:19:16Z"
+    },
+    {
+      "number": 37,
+      "state": "closed",
+      "headSha": "a27fc820efdb96a53d92834b17546f128392a735",
+      "mergedAt": null,
+      "closedAt": "2026-10-07T11:19:13Z"
+    },
+    {
+      "number": 36,
+      "state": "closed",
+      "headSha": "4402e8977e4984f5ab759e0af0010901abd10a45",
+      "mergedAt": null,
+      "closedAt": "2026-10-07T11:19:11Z"
+    },
+    {
+      "number": 35,
+      "state": "closed",
+      "headSha": "c0c21af4024231d98117daa7f5989eceb39bb4cf",
+      "mergedAt": "2026-09-21T22:39:52Z",
+      "closedAt": "2026-09-21T22:39:52Z"
+    },
+    {
+      "number": 34,
+      "state": "closed",
+      "headSha": "11ee62d1cdcdb9de20f2d1b0be453b9994ce9f9e",
+      "mergedAt": "2026-09-20T22:19:53Z",
+      "closedAt": "2026-09-20T22:19:53Z"
+    },
+    {
+      "number": 33,
+      "state": "open",
+      "headSha": "9690613ecc5e87b33663ee8f82eea4f94d67bbfe",
+      "mergedAt": null,
+      "closedAt": null
+    },
+    {
+      "number": 32,
+      "state": "closed",
+      "headSha": "012911203be9fe727420c6b2cff7aaf4acf59e3e",
+      "mergedAt": "2026-09-15T23:08:39Z",
+      "closedAt": "2026-09-15T23:08:39Z"
+    },
+    {
+      "number": 31,
+      "state": "closed",
+      "headSha": "46104bba51c0ad63047e10bedb9bc3d40a20bdde",
+      "mergedAt": "2026-09-13T15:55:29Z",
+      "closedAt": "2026-09-13T15:55:29Z"
+    },
+    {
+      "number": 30,
+      "state": "closed",
+      "headSha": "40b12135b7abb39549ec220c5c72e1e43399f8eb",
+      "mergedAt": null,
+      "closedAt": "2026-09-13T10:03:24Z"
+    },
+    {
+      "number": 29,
+      "state": "closed",
+      "headSha": "bdc2547ada805851d3d96b36e08741635b73b8b3",
+      "mergedAt": null,
+      "closedAt": "2026-09-18T23:00:40Z"
+    },
+    {
+      "number": 28,
+      "state": "closed",
+      "headSha": "20494c250d4c98601e20f3a1616eb8935e6edd37",
+      "mergedAt": null,
+      "closedAt": "2026-09-18T23:00:40Z"
+    },
+    {
+      "number": 27,
+      "state": "closed",
+      "headSha": "867a206adb5227e66b5dea008f46d546a3a6827a",
+      "mergedAt": null,
+      "closedAt": "2026-09-18T23:00:40Z"
+    },
+    {
+      "number": 26,
+      "state": "closed",
+      "headSha": "b9e55d20eecea1058aba622870107f17da875e9b",
+      "mergedAt": null,
+      "closedAt": "2026-09-18T23:00:39Z"
+    },
+    {
+      "number": 25,
+      "state": "closed",
+      "headSha": "8a315b0dd508eb9843bb3037fe2827f02f6faa78",
+      "mergedAt": null,
+      "closedAt": "2026-09-18T23:00:39Z"
+    },
+    {
+      "number": 24,
+      "state": "closed",
+      "headSha": "29a12b5a77c8dfc279366f3f72461676708f4e49",
+      "mergedAt": "2026-09-02T09:39:10Z",
+      "closedAt": "2026-09-02T09:39:10Z"
+    },
+    {
+      "number": 23,
+      "state": "closed",
+      "headSha": "98ed4cd4811d046016ca2f8ba0994991f78d8dca",
+      "mergedAt": null,
+      "closedAt": "2026-09-18T23:00:38Z"
+    },
+    {
+      "number": 22,
+      "state": "closed",
+      "headSha": "cc91ece607c28e735e793f11fa1619093c7f32f8",
+      "mergedAt": null,
+      "closedAt": "2026-09-18T23:00:38Z"
+    },
+    {
+      "number": 21,
+      "state": "closed",
+      "headSha": "85a966069fe68ab96db0f6fe6d1386d7f6382cf7",
+      "mergedAt": null,
+      "closedAt": "2026-09-18T23:00:37Z"
+    },
+    {
+      "number": 20,
+      "state": "closed",
+      "headSha": "bf9c0489d4fd38955c6895b717fe750336b31b21",
+      "mergedAt": null,
+      "closedAt": "2026-09-18T23:00:37Z"
+    },
+    {
+      "number": 19,
+      "state": "closed",
+      "headSha": "4aa4e15e4e49dd76e0db79be54687ae1c7e5834a",
+      "mergedAt": null,
+      "closedAt": "2026-09-18T23:00:36Z"
+    },
+    {
+      "number": 18,
+      "state": "closed",
+      "headSha": "5089198fab64a98ad1f1babe4b6c142bd2b811eb",
+      "mergedAt": null,
+      "closedAt": "2026-09-18T23:00:36Z"
+    },
+    {
+      "number": 17,
+      "state": "closed",
+      "headSha": "74884c1377a1b2faadb513e147e0828fdd33cb8c",
+      "mergedAt": null,
+      "closedAt": "2026-07-11T14:25:17Z"
+    },
+    {
+      "number": 16,
+      "state": "closed",
+      "headSha": "714bb66911cf35109421d9f747ce011a628ccf01",
+      "mergedAt": "2026-07-07T09:04:35Z",
+      "closedAt": "2026-07-07T09:04:35Z"
+    },
+    {
+      "number": 15,
+      "state": "closed",
+      "headSha": "bd96a9526fbbe259144e608faed37da61a04f8c0",
+      "mergedAt": "2026-07-07T08:55:56Z",
+      "closedAt": "2026-07-07T08:55:56Z"
+    },
+    {
+      "number": 14,
+      "state": "closed",
+      "headSha": "d58239a69261af0553dd21ec462b4e784b949f88",
+      "mergedAt": null,
+      "closedAt": "2026-07-07T08:47:00Z"
+    },
+    {
+      "number": 13,
+      "state": "closed",
+      "headSha": "52ff17d5e22aaba229798b6ce8918880186a6b75",
+      "mergedAt": null,
+      "closedAt": "2026-07-11T14:17:39Z"
+    },
+    {
+      "number": 12,
+      "state": "closed",
+      "headSha": "1d9c95eeacfededefbccfb807a94f07a0acc5d74",
+      "mergedAt": null,
+      "closedAt": "2026-07-06T13:08:11Z"
+    },
+    {
+      "number": 11,
+      "state": "closed",
+      "headSha": "cdf9575b13b17b1b6b7ae58922666e2b3b140c86",
+      "mergedAt": "2026-07-06T09:10:30Z",
+      "closedAt": "2026-07-06T09:10:30Z"
+    },
+    {
+      "number": 10,
+      "state": "closed",
+      "headSha": "d009bc3141232938643cfd0e421edaf7a74537b7",
+      "mergedAt": null,
+      "closedAt": "2026-07-06T13:08:14Z"
+    },
+    {
+      "number": 9,
+      "state": "closed",
+      "headSha": "6be996219951cd70afb7f751ddf2dc161ec074d2",
+      "mergedAt": "2026-07-04T14:21:09Z",
+      "closedAt": "2026-07-04T14:21:09Z"
+    },
+    {
+      "number": 8,
+      "state": "closed",
+      "headSha": "12af0343256e7c76268fd1bad3219e51e4f7a76b",
+      "mergedAt": null,
+      "closedAt": "2026-07-06T13:08:17Z"
+    },
+    {
+      "number": 7,
+      "state": "closed",
+      "headSha": "f9fd9cc8a650dbf47faae81438c183684d47d684",
+      "mergedAt": null,
+      "closedAt": "2026-07-06T13:08:19Z"
+    },
+    {
+      "number": 6,
+      "state": "closed",
+      "headSha": "479100f86de8767bf6577d34d9ce145cc7f231de",
+      "mergedAt": null,
+      "closedAt": "2026-07-06T13:08:22Z"
+    },
+    {
+      "number": 5,
+      "state": "closed",
+      "headSha": "071fc43aac8a609eced3232aa523d27c18cccd1b",
+      "mergedAt": null,
+      "closedAt": "2026-07-06T13:08:24Z"
+    },
+    {
+      "number": 4,
+      "state": "closed",
+      "headSha": "7797ebc74a995f04e65f835f4647319cc629a95a",
+      "mergedAt": null,
+      "closedAt": "2026-07-06T13:08:27Z"
+    },
+    {
+      "number": 3,
+      "state": "closed",
+      "headSha": "28f4a7517d087700040d8b387a6fc89b429b0aa1",
+      "mergedAt": null,
+      "closedAt": "2026-07-06T13:08:29Z"
+    },
+    {
+      "number": 2,
+      "state": "closed",
+      "headSha": "11c9d5a4e99db090fcd8a2e29fe998eefbc97f7c",
+      "mergedAt": null,
+      "closedAt": "2026-06-30T09:41:17Z"
+    },
+    {
+      "number": 1,
+      "state": "closed",
+      "headSha": "455666fe9031b02039a8714254651fe3f0e6a226",
+      "mergedAt": null,
+      "closedAt": "2026-06-29T14:35:30Z"
+    }
+  ]
+}

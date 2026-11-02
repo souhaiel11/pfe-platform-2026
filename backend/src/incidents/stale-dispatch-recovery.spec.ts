@@ -1,3 +1,4 @@
+// Teste le composant « stale-dispatch-recovery » et ses cas d’erreur.
 import * as assert from 'node:assert/strict';
 import { IncidentsService } from './incidents.service';
 
@@ -5,6 +6,7 @@ const old = new Date(Date.now() - 60_000).toISOString();
 const admin = { id: 'admin-1', role: 'admin' };
 const developer = { id: 'developer-1', role: 'developer' };
 
+/** Prépare les données nécessaires à ce scénario. */
 const makeIncident = (overrides: any = {}) => ({
   id: 'incident-1', projectId: 'project-1', status: 'blocked', prUrl: null,
   metadata: { fixRequest: {
@@ -17,41 +19,56 @@ const makeIncident = (overrides: any = {}) => ({
   ...overrides.incident,
 });
 
+/** Prépare les données nécessaires à ce scénario. */
 const harness = (incident: any) => {
   const updates: any[] = [];
   const txRepo = {
+    /** Recherche l’élément correspondant à l’identifiant. */
     findOne: async ({ where }: any) => where.id === incident.id ? incident : null,
+    /** Applique les modifications autorisées à l’élément. */
     update: async (_id: string, patch: any) => { updates.push(patch); Object.assign(incident, patch); },
   };
   let tail = Promise.resolve();
   const repository: any = {
-    manager: { transaction: async (fn: any) => {
+    manager: {
+    /** Exécute les opérations dans le cadre transactionnel prévu. */
+    transaction: async (fn: any) => {
       const previous = tail;
       let release!: () => void;
       tail = new Promise<void>(resolve => { release = resolve; });
       await previous;
-      try { return await fn({ getRepository: () => txRepo }); } finally { release(); }
+      try { return await fn({
+      /** Simule la lecture des données demandées par le composant. */
+      getRepository: () => txRepo }); } finally { release(); }
     } },
+    /** Recherche l’élément correspondant à l’identifiant. */
     findOne: async ({ where }: any) => where.id === incident.id ? incident : null,
     update: txRepo.update,
   };
-  const service = new IncidentsService(repository, {} as any, { emit: () => undefined } as any,
-    { syncIncident: async () => undefined } as any, {} as any);
+  const service = new IncidentsService(repository, {} as any, {
+  /** Diffuse ou construit le résultat prévu. */
+  emit: () => undefined } as any,
+    {
+    /** Prépare les données nécessaires à ce scénario. */
+    syncIncident: async () => undefined } as any, {} as any);
   return { service, updates };
 };
 
 const recovery = { batchId: 'batch-1', attemptCount: 14 };
+/** Traite le retour de l’opération du scénario. */
 const callback = (status: 'FAILED' | 'PR_CREATED', attemptCount = 14) => ({
   status, workflowId: '9adcV31eaIgJyMR0', executionId: 'execution-14', incidentId: 'incident-1',
   requestId: 'request-1', batchId: 'batch-1', batchKey: 'batch-1', attemptCount,
   failureCode: 'WF2_EXECUTION_ERROR', failureSummary: 'late callback',
 });
 
+/** Vérifie récupération Rejected dans ce scénario de test. */
 async function expectRecoveryRejected(overrides: any, input: any = recovery, pattern = /récupér|correspond|Pull Request|callback/) {
   const { service } = harness(makeIncident(overrides));
   await assert.rejects(() => service.reconcileStaleDispatch('incident-1', 'request-1', input, admin), pattern);
 }
 
+/** Exécute les étapes principales de ce programme. */
 async function main() {
   const previousThreshold = process.env.WF2_STALE_DISPATCH_MS;
   process.env.WF2_STALE_DISPATCH_MS = '1000';

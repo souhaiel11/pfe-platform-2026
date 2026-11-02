@@ -1,3 +1,4 @@
+// Vérifie les résultats des scanners dans WF2.
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
@@ -5,8 +6,10 @@ import fs from 'node:fs';
 const workflow = JSON.parse(fs.readFileSync(new URL('../pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.PROMOTION-TARGET.json', import.meta.url)))[0];
 const preflight = workflow.nodes.find(node => node.name === 'Generic Candidate Preflight');
 assert.ok(preflight, 'Generic Candidate Preflight missing');
+/** Exécute le traitement et collecte son résultat. */
 const run = json => new Function('$json', '$', 'Buffer', preflight.parameters.jsCode)(json, () => { throw new Error('unexpected node lookup'); }, Buffer).json;
 const path = 'src/main/java/com/pfe/devsecops/service/TaskService.java';
+/** Prépare les informations de base du résultat. */
 const base = (baseline, candidate, operation = 'MODIFY', target = path) => ({
   targetFile: target,
   fileOperation: operation,
@@ -16,7 +19,9 @@ const base = (baseline, candidate, operation = 'MODIFY', target = path) => ({
   completePlan: { allPlannedFiles: [{ path: target, operation }], sourceApiContext: operation === 'MODIFY' ? [{ file: target, content: baseline }] : [] },
   approvedFindingsForFile: [], applicablePlans: [],
 });
+/** Vérifie les résultats attendus dans ce scénario. */
 const pass = fixture => assert.equal(run(fixture).genericPreflightPassed, true);
+/** Vérifie les résultats attendus dans ce scénario. */
 const block = fixture => assert.throws(() => run(fixture), /SCANNER_SUPPRESSION/);
 
 const baseline = `class TaskService {

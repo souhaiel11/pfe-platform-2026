@@ -1,0 +1,24 @@
+{
+  "path": "/home/souhaiel/pfe-2026/platform/.local-audit/chain2c-final-live-20261007",
+  "permissions": "directory0700/files0600; Git ignored",
+  "containsSecrets": true,
+  "files": [
+    "runner-live-apply.json",
+    "database-before.dump",
+    "tasks.json",
+    "live-apply-invocation.json",
+    "backend-inspect-after.json",
+    "backend-inspect-before.json",
+    "database-all-tables-after.json",
+    "runner-live-dry.json",
+    "frozen-container-create-spec.json",
+    "operator-review.json",
+    "settlement-receipts.json",
+    "database-all-tables-before.json",
+    "incidents.json",
+    "execution-data.json"
+  ],
+  "historyBundle": "/home/souhaiel/pfe-2026/platform/docs/qa/chain2c-final-live-20261007/history/legacy-seven-history.bundle",
+  "runnerAudit": "/home/souhaiel/pfe-2026/platform/.local-audit/chain2c-final-live-20261007/runner-live-apply.json",
+  "preMutationDBBackup": "/home/souhaiel/pfe-2026/platform/.local-audit/chain2c-final-live-20261007/database-before.dump"
+}

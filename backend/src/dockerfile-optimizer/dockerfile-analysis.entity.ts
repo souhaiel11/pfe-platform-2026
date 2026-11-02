@@ -1,3 +1,4 @@
+// Persiste l'analyse et les informations de suivi de l'optimisation Dockerfile.
 import {
   Entity, PrimaryGeneratedColumn, Column,
   CreateDateColumn, ManyToOne,

@@ -1,0 +1,63 @@
+{
+  "pass": true,
+  "checks": [
+    {
+      "taskId": "10fe9043-86f9-42eb-a0a2-ce5abaf26631",
+      "retryRejected": true
+    },
+    {
+      "taskId": "306e8b84-90fe-4344-8fd6-5c38fcabcf40",
+      "retryRejected": true
+    },
+    {
+      "taskId": "64deba0e-f6ab-4da8-a3c9-da8e1b0eb30d",
+      "retryRejected": true
+    },
+    {
+      "taskId": "6e6c3597-96bc-4f72-bcd8-eb0d4b8036db",
+      "retryRejected": true
+    },
+    {
+      "taskId": "70fd88ac-2011-437d-a387-57d0fb3fa65d",
+      "retryRejected": true
+    },
+    {
+      "taskId": "83555b3a-efa1-45e1-90a8-008debddba92",
+      "retryRejected": true
+    },
+    {
+      "taskId": "9dc3706b-aabd-4b9a-a888-854641a2e64e",
+      "retryRejected": true
+    },
+    {
+      "taskId": "a84a24c4-8673-4826-a4f2-4990ce7d118b",
+      "retryRejected": true
+    },
+    {
+      "taskId": "af1d6556-b782-4faf-b01b-4e87b119d033",
+      "retryRejected": true
+    },
+    {
+      "taskId": "b52ea617-f5c3-47a3-bc6e-6230ea648d63",
+      "retryRejected": true
+    },
+    {
+      "taskId": "bd9dc6f2-2202-4280-933e-4adb824dc695",
+      "retryRejected": true
+    },
+    {
+      "taskId": "c8fb2207-c8de-40af-acd4-1d2f96896715",
+      "retryRejected": true
+    },
+    {
+      "taskId": "ca8f57e7-3839-4914-8805-d518aafe4c4a",
+      "retryRejected": true
+    },
+    {
+      "taskId": "f21b69ba-922b-4ccb-8851-c2a43d9ce7ca",
+      "retryRejected": true
+    }
+  ],
+  "dispatchInvoked": false,
+  "databaseConnected": false
+}

@@ -1,0 +1,47 @@
+[
+  {
+    "name": "jenkins",
+    "source": "https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/jenkins.svg",
+    "sha256": "95ab5d541710c116d939f44e4e72c8b1503e78d04a1c298ad257c4e26d3a1873"
+  },
+  {
+    "name": "sonarqube",
+    "source": "https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/sonarqubeserver.svg",
+    "sha256": "c1ac466493a31c1432e04899e8fa5d7468ce4b94aa8c5783b2e0d98b9e06d0e4"
+  },
+  {
+    "name": "trivy",
+    "source": "https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/trivy.svg",
+    "sha256": "bef45d7760bb16e6d3379921220cd31753e8e3fbb6523066b166fcc9c8c8456d"
+  },
+  {
+    "name": "owasp",
+    "source": "https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/owasp.svg",
+    "sha256": "6dce6451a1853ceeb1634e321681a59334f6b5bdb70b2a5e8ac6243104fb1bbc"
+  },
+  {
+    "name": "zap",
+    "source": "https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/zap.svg",
+    "sha256": "a708b66fc74e8bbb8e0296f845de3b761fab068a6e425f8c74a17e0930f8968e"
+  },
+  {
+    "name": "github",
+    "source": "https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/github.svg",
+    "sha256": "3bf8cceead820aec50d4ee825a3fd02c5a1cd6665cc9cf4cbf3d9c8861a204bb"
+  },
+  {
+    "name": "n8n",
+    "source": "https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/n8n.svg",
+    "sha256": "f5a606188c78bf134fe7d85ae3d1310f6f4b7beafcd1d2fbdef2af02c92240a8"
+  },
+  {
+    "name": "docker",
+    "source": "https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/docker.svg",
+    "sha256": "65571291c261ef869c31540a38f3ca0f0ee3bb73f179c172211c8860f19a6359"
+  },
+  {
+    "name": "azure",
+    "source": "https://raw.githubusercontent.com/simple-icons/simple-icons/11.15.0/icons/microsoftazure.svg",
+    "sha256": "666f3d9597b7272e61e137bcdc88c99d689d2de7530f4a0a9a56d74d919f51c9"
+  }
+]

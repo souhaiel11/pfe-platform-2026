@@ -1,0 +1,70 @@
+   1 package com.pfe.devsecops.config;
+   2 
+   3 import com.pfe.devsecops.security.JwtRequestFilter;
+   4 import org.springframework.context.annotation.Bean;
+   5 import org.springframework.context.annotation.Configuration;
+   6 import org.springframework.security.authentication.AuthenticationManager;
+   7 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+   8 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+   9 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+  10 import org.springframework.security.config.http.SessionCreationPolicy;
+  11 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+  12 import org.springframework.security.crypto.password.PasswordEncoder;
+  13 import org.springframework.security.web.SecurityFilterChain;
+  14 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+  15 import org.springframework.web.cors.CorsConfiguration;
+  16 import org.springframework.web.cors.CorsConfigurationSource;
+  17 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+  18 
+  19 import java.util.Arrays;
+  20 import java.util.Collections;
+  21 
+  22 @Configuration
+  23 @EnableWebSecurity
+  24 public class SecurityConfig {
+  25 
+  26     @Bean
+  27     public SecurityFilterChain filterChain(HttpSecurity http, JwtRequestFilter jwtRequestFilter) throws Exception {
+  28         http
+  29             .cors(cors -> {})
+  30             .csrf(csrf -> csrf.disable())
+  31             .authorizeHttpRequests(auth -> auth
+  32                 .requestMatchers("/api/auth/**").permitAll()
+  33                 .requestMatchers("/h2-console/**").permitAll()
+  34                 .requestMatchers("/api/**").authenticated()
+  35                 .anyRequest().authenticated())
+  36             .sessionManagement(session -> session
+  37                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+  38             .addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class);
+  39 
+  40         // Preserve the existing H2 console frame behavior.
+  41         http.headers(headers -> headers.frameOptions(frame -> frame.disable()));
+  42 
+  43         return http.build();
+  44     }
+  45 
+  46     // VULNERABILITY Z1 — CORS avec allowedOrigins("*")
+  47     @Bean
+  48     public CorsConfigurationSource corsConfigurationSource() {
+  49         CorsConfiguration configuration = new CorsConfiguration();
+  50         // Origine wildcard — TOUT le monde peut appeler l'API
+  51         configuration.setAllowedOrigins(Collections.singletonList("*"));
+  52         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
+  53         configuration.setAllowedHeaders(Collections.singletonList("*"));
+  54         // Pas de restriction sur les headers exposés
+  55         configuration.setExposedHeaders(Arrays.asList("Authorization", "Content-Type"));
+  56         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+  57         source.registerCorsConfiguration("/**", configuration);
+  58         return source;
+  59     }
+  60 
+  61     @Bean
+  62     public PasswordEncoder passwordEncoder() {
+  63         return new BCryptPasswordEncoder();
+  64     }
+  65 
+  66     @Bean
+  67     public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
+  68         return config.getAuthenticationManager();
+  69     }
+  70 }

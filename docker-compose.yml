@@ -1,3 +1,4 @@
+# Assemble les services, réseaux et volumes de la plateforme.
 networks:
   pfe-network:
     external: true
@@ -23,6 +24,11 @@ networks:
     driver: bridge
 
 volumes:
+  scanner_reports:
+    external: true
+    # 2026-10-27 — volume réellement alimenté par Jenkins (/shared/reports) depuis la reconstruction
+    # de secours ; l'ancien `pfe-2026_shared_reports` n'existe plus.
+    name: vermeg_rescue_shared_reports
   postgres_data:
   # R22-E2C2 Phase 9 — worker-owned repository cache (clone-once/fetch-
   # thereafter git object database + ephemeral per-candidate worktrees).
@@ -52,6 +58,8 @@ volumes:
   # builder-scanner alone; never the host Docker daemon's own storage,
   # never docker.sock. Mounted only into builder-scanner.
   builder_podman_storage:
+  owasp_data:
+  candidate_maven_cache:
 
 services:
   postgres:
@@ -89,11 +97,22 @@ services:
       DB_NAME: devsecops
       JWT_SECRET: ${JWT_SECRET}
       N8N_URL: http://n8n:5678
+      N8N_API_URL: http://n8n:5678
       AZURE_DEPLOY_AGENT_URL: http://172.19.0.1:7799
+      AZURE_DEFAULT_RESOURCE_GROUP: ${AZURE_DEFAULT_RESOURCE_GROUP:-}
+      AZURE_DEFAULT_REGISTRY: ${AZURE_DEFAULT_REGISTRY:-}
+      AZURE_DEFAULT_REGION: ${AZURE_DEFAULT_REGION:-}
+      AZURE_DEFAULT_CPU: ${AZURE_DEFAULT_CPU:-}
+      AZURE_DEFAULT_MEMORY_GB: ${AZURE_DEFAULT_MEMORY_GB:-}
+      AZURE_DEFAULT_PORTS: ${AZURE_DEFAULT_PORTS:-}
       # R22-E2C2 — internal DNS name of the worker; not a secret, not a
       # credential, just an address. Backend never receives a worker
       # credential at all (see candidate-verification-net's own comment).
       CANDIDATE_VERIFIER_URL: http://candidate-verifier:4100/verify
+    volumes:
+      # Rapports Trivy / OWASP / ZAP écrits par Jenkins, lus par l'onglet Sécurité et les pages
+      # « Rapport Trivy / OWASP / ZAP » (racine par défaut de LocalScannerReportStore), en lecture seule.
+      - scanner_reports:/run/local-scanner-reports:ro
     networks:
       pfe-network:
         aliases:
@@ -150,8 +169,20 @@ services:
       # from the same untracked, gitignored root .env this file already
       # reads JWT_SECRET/POSTGRES_PASSWORD from.
       BUILDER_INTERNAL_SECRET: ${BUILDER_INTERNAL_SECRET}
+      # 2026-10-25 — base NVD de l'OWASP Dependency-Check 12.2.2 (odc.mv.db)
+      # utilisée par owasp-rescan.ts pour prouver qu'une CVE de source OWASP a
+      # disparu du candidat. Sans elle, toute remédiation OWASP échoue en
+      # RUNTIME_IO_FAILED:OWASP_DATABASE. Le scan tourne en autoUpdate=false :
+      # le volume est alimenté depuis /var/jenkins_home/dependency-check-data-v12
+      # (même moteur 12.2.2, mis à jour par chaque build Jenkins).
+      OWASP_DATA_DIRECTORY: /var/pfe-owasp-data
     volumes:
       - candidate_repo_cache:/var/pfe-remediation-repos
+      - owasp_data:/var/pfe-owasp-data
+      # Cache Maven persistant : sans lui, chaque recréation du conteneur
+      # retélécharge toutes les dépendances et le plugin OWASP, et un simple
+      # « Connection reset » réseau fait échouer la remédiation (cf. WF6 #2269).
+      - candidate_maven_cache:/home/node/.m2
       # V1.7 predeploy phase — shared with builder-scanner at the SAME
       # path (see that service's own volumes below): candidate-verifier
       # materializes/patches the candidate here; builder-scanner builds
@@ -271,10 +302,63 @@ services:
   frontend:
     image: nginx:alpine
     container_name: pfe-frontend
+    restart: unless-stopped
     ports:
       - "4200:80"
     volumes:
-      - ./frontend/dist/devsecops-frontend/browser:/usr/share/nginx/html
+      # 2026-10-12 — sert une RELEASE GELÉE, en lecture seule.
+      # Avant : `./frontend/dist/devsecops-frontend/browser` monté en
+      # lecture-écriture, c'est-à-dire le dossier de sortie de l'arbre de
+      # travail. Un simple `ng build` lancé pour vérifier quelque chose
+      # écrasait donc l'interface en production, sans avertissement. Le `:ro`
+      # empêche en plus toute écriture depuis le conteneur.
+      # Pour publier une nouvelle version : construire, copier le `browser/`
+      # obtenu dans un nouveau dossier de ../frontend-releases/, puis changer
+      # cette ligne. Le ROLLBACK.md de chaque release décrit le retour arrière.
+      # 2026-10-12 — release `tests-tab-20261012`. Remplace `errmap-20261012`,
+      # dont elle conserve l'intégralité du correctif (garde anti-régression
+      # vérifiée dans le bundle avant publication, voir son ROLLBACK.md).
+      # Publier / revenir en arrière : TOUJOURS avec `--no-deps`, sinon compose
+      # démarre aussi le service `backend` (conteneur r98 arrêté) qui réclame
+      # le même port hôte 3001 que `pfe-backend-r99`.
+      # 2026-10-12 — release `build-tab-20261012`. Remplace `tests-tab-20261012`,
+      # dont elle conserve l'intégralité du correctif (garde anti-régression
+      # vérifiée dans le bundle avant publication, voir son ROLLBACK.md).
+      # Elle ajoute l'onglet « Build » du projet, qui exige les deux routes
+      # GET /api/projects/:id/builds/:number[/console] publiées le même jour
+      # dans l'image backend local/pfe-build-view:20261012.
+      # 2026-10-12 — release `scanner-truth-20261012`. Remplace `build-tab-20261012`,
+      # dont elle conserve l'intégralité du correctif (garde anti-régression
+      # vérifiée dans le bundle avant publication, voir son ROLLBACK.md).
+      # Elle affiche la fraîcheur de la base de vulnérabilités OWASP, les
+      # constats écartés par le filtre de sévérité et la cible réelle de ZAP —
+      # trois champs produits par le correctif R101 du nœud WF1
+      # « Merge All Fetched Data », appliqué le même jour. Sans ces champs
+      # (rapports antérieurs), aucune mention ne s'affiche.
+      # 2026-10-13 — release `dast-coverage-20261013`. Remplace
+      # `scanner-truth-20261012`, dont elle conserve l'intégralité du correctif.
+      # Elle affiche la couverture du scan DAST (nombre d'URL explorées) et, quand
+      # le scan n'a trouvé aucune alerte, rappelle que cela ne prouve pas
+      # l'absence de vulnérabilité. Mesure produite par la bibliothèque partagée
+      # 778f882 et transportée par le correctif WF1 R102.
+      # 2026-10-20 — release `test-connexion-formulaire-20261020`. Remplace
+      # `resources-footer-final-20261019`, dont elle conserve tout le contenu.
+      # Dépend de la route POST /api/config-check/project côté backend.
+      # 2026-10-22 — release `wf4-apply-poll-20261022`. Reprend tout le contenu
+      # de `dockerfile-selection-20261022` et porte un seul correctif : le
+      # plafond de polling de l'apply WF4 passe de 60 s à 13 min, pour que le
+      # dashboard affiche enfin le lien de la PR produite (callback n8n plus lent
+      # que l'ancienne horloge navigateur). Voir le ROLLBACK.md de la release.
+      # 2026-10-22 — release `depfix-display-20261022` : includeV18=false, pour que
+      # la couche V1.8 (preuves d'un autre projet) ne force plus tous les findings en
+      # « manuel ». Reprend tout wf4-apply-poll-20261022. Voir son ROLLBACK.md.
+      # 2026-10-25 — release `merge-confirm-20261025` : bouton « Merge effectué » (libère le fichier traité
+      # après vérification GitHub du merge, sans build). Reprend wf6-evidence-slots-20261024. Voir son ROLLBACK.md.
+      # 2026-10-27 — release `sonar-file-lock-20261027-r2` (verrou de fichier Sonar + message clair
+      # du refus WF6 en attente de merge, voir son ROLLBACK.md).
+      # 2026-10-27 — release `sonar-same-incident-20261027` (refus « merge requis » puis nouveau cycle sur le
+      # même incident, voir son ROLLBACK.md).
+      - ./frontend/releases/security-score-label-r2-20261030/browser:/usr/share/nginx/html:ro
       - ./docker/nginx.conf:/etc/nginx/conf.d/default.conf:ro
     networks:
       - pfe-network

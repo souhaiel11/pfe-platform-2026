@@ -1,8 +1,9 @@
+// Regroupe les traitements de pytest rapport.
 import * as fs from 'fs';
 import { aggregateJunitXml } from './junit-aggregation';
 import type { SurefireAggregate } from './surefire-aggregation';
 
-/** Read the exact pytest --junitxml artifact, independent of Gradle paths. */
+/** Prépare le résultat lié à aggregate Pytest rapport. */
 export function aggregatePytestReport(reportFilePath: string): SurefireAggregate {
   try {
     return aggregateJunitXml(fs.readFileSync(reportFilePath, 'utf8'));

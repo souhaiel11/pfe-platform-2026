@@ -1,64 +1,4 @@
-// R79 — real production gap found on incident 73733ec0-4077-4c81-aed3-df3a3bca5245
-// / PR #34, attempt 13 (validated SHA 5ef66be30482042d9dd6802402692e3d03636c97):
-// mergeAuthorization reached MERGE_READY while the batch's OWN dedicated
-// default-value-semantics re-check sat at {verdict: 'VERIFICATION_REQUIRED',
-// checkedPairs: 0, evidence: []} for the exact same SHA — unresolved, not
-// proven, yet silently treated as a no-op even though this remediation's
-// entire stated purpose was fixing exactly that invariant. TWO real,
-// separate gaps were found and closed here:
-//
-// GAP 1 — wrong base sha (traced, not guessed): incidents.service.ts's two
-// buildDefaultValueSemanticsEvidence() call sites (saveValidation,
-// recomputePrValidationPolicy) passed `fixRequest.baselineSha` — the
-// ORIGINAL source-scan commit, used for the unrelated Sonar
-// scanner-regression diff (validation.regression.baselineSha) — as the
-// "candidateBaseSha" fetch anchor. That only equals a candidate's real git
-// parent on a batch's FIRST attempt; for a corrective (2nd+) attempt like
-// #13, the branch has already moved past it. Verified live: GitHub's
-// contents API 404s for TaskDTO.java at the real incident's baselineSha
-// (6ed56ff791acbf3e111431285bef7b30c8076084) — the fetch throws, and
-// buildDefaultValueSemanticsEvidence() correctly (by its own contract)
-// degrades to VERIFICATION_REQUIRED/checkedPairs:0/evidence:[], exactly
-// matching the persisted record. Fixed by resolveDefaultValueSemanticsBaseSha()
-// (prefers fixRequest.correctiveDispatch.blockedSha — the actual sha this
-// attempt's writes are based on — falling back to baselineSha only for a
-// batch's first attempt, when they coincide).
-//
-// GAP 2 — a "NO_DEFECT via zero relevant pairs checked" was indistinguishable
-// from "NO_DEFECT via the required pair being proven safe". Even AFTER fixing
-// GAP 1, a REAL live replay (fetching TaskDTO.java/TaskService.java at both
-// dc1aa978... and 5ef66be3... from GitHub and running the real
-// evaluateDefaultValueSemantics()) still returns {verdict: 'NO_DEFECT',
-// checkedPairs: 0, checkedFieldPairs: []} — NOT because the fix was proven
-// safe, but because discoverMigrations() finds zero @RequestBody type
-// changes in the compared text: the Entity->DTO migration itself already
-// happened in an EARLIER attempt, and attempt 13's diff (TaskDTO.java +
-// TaskService.java only, no controller change) never touches the
-// @RequestBody declaration site discoverMigrations looks for. Fixed by
-// making computeMergeAuthorization() require, when
-// defaultValueSemanticsRequired is true, that the verdict is 'NO_DEFECT'
-// via >=1 checked pair AND that at least one checked pair's own
-// (sourceType, sourceField, candidateType, candidateField) identity matches
-// the blocking cause's own — see checkedFieldPairs on
-// DefaultValueSemanticsAudit and defaultValueSemanticsRelevantPairWasChecked().
-//
-// Both gaps preserve BYTE-IDENTICAL behavior for every ordinary/unrelated
-// validation (defaultValueSemanticsRequired absent/false) — see test 9.
-//
-// A THIRD finding, NOT fixed here (out of scope, reported honestly rather
-// than silently worked around): a live proof-of-concept directly invoking
-// analyzeDefaultValueSemantics() with the EXACT (Task/status/TaskDTO/status)
-// tuple the blocking cause names — using the real candidate TaskDTO.java/
-// TaskService.java content at 5ef66be3... and the real Task.java baseline —
-// came back PROVEN_DEFECT, not NO_DEFECT. That is a FALSE POSITIVE relative
-// to the actual fix: scanPropagation()'s guard-detection only recognizes the
-// `get<Field>() != null` idiom, not the presence-tracking boolean
-// (`isStatusPresent()`) attempt 13's own fix actually uses, so it never sees
-// the real guard and reports the propagation as unconditional. This means a
-// naive "targeted single-pair re-check bypassing discoverMigrations" is NOT
-// safe to wire in as-is — it would incorrectly BLOCK a working fix. See the
-// R79 report for the recommended closure path (a real executed behavioral
-// test on the ABSENT case, not a static-analyzer extension, not LLM opinion).
+// Teste le composant « r79-default-value-semantics-merge-policy » et ses cas d’erreur.
 
 import * as assert from 'node:assert/strict';
 import { computeMergeAuthorization, MergeAuthorizationInput } from './merge-authorization';
@@ -183,14 +123,6 @@ const realFixRequest = {
   console.log('R79_7_RELEVANT_BUT_STALE_SHA_INCONCLUSIVE: PASS');
 }
 
-// 8. Current 5ef66be3 replay (real data, real helpers) cannot MERGE_READY
-// without relevant proof. Base-sha resolution and required-flag derivation
-// use the REAL incident 73733ec0 fixRequest.correctiveDispatch record; the
-// {verdict, checkedPairs, checkedFieldPairs} triple is exactly what a real,
-// live, end-to-end run of buildDefaultValueSemanticsEvidence() against real
-// GitHub content at the CORRECTED base sha actually returned (see the R79
-// report for the live command/output; reproduced verbatim here as a fixed
-// expectation, not re-fetched over the network by this spec).
 {
   assert.equal(resolveDefaultValueSemanticsBaseSha(realFixRequest), 'dc1aa978719ca40e6339e075cfe52a79875b2342');
   assert.equal(correctiveBlockingCausesDeclareDefaultValueSemanticsDefect(realFixRequest), true);

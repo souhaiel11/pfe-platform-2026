@@ -1,13 +1,4 @@
-// R-SEC-V1 §5 — pure, deterministic version-selection policy. No SemVer
-// library assumed (Maven/Debian-style versions routinely violate strict
-// SemVer — e.g. "1:8.2.2+ds-0ubuntu1.4"): this is a defensive, numeric-
-// prefix comparator, never a full SemVer parser.
-//
-// "Major" = the first numeric segment only (e.g. major(9.0.63) = 9,
-// major(1.2.11) = 1). This is deliberately the same convention already
-// used by the platform's own severity/risk tiering elsewhere (small,
-// explicit, no external dependency) rather than importing a SemVer package
-// for a domain (Maven versions) SemVer doesn't fully cover anyway.
+// Analyse et compare les versions candidates, puis sélectionne une cible admissible selon la politique de version.
 
 export interface ParsedVersion {
   raw: string;
@@ -17,7 +8,7 @@ export interface ParsedVersion {
   qualifier: string;
 }
 
-/** Ambiguous/unparseable input (no leading digit) -> null, never a guessed number. */
+/** Analyse la version. */
 export function parseVersion(raw: unknown): ParsedVersion | null {
   const trimmed = String(raw ?? '').trim();
   const match = /^(\d+(?:\.\d+)*)(.*)$/s.exec(trimmed);
@@ -27,6 +18,7 @@ export function parseVersion(raw: unknown): ParsedVersion | null {
   return { raw: trimmed, numericSegments, qualifier: match[2] };
 }
 
+/** Compare deux suites de segments numériques position par position (segment manquant traité comme 0). */
 function compareNumericSegments(a: number[], b: number[]): number {
   const len = Math.max(a.length, b.length);
   for (let i = 0; i < len; i++) {
@@ -36,7 +28,7 @@ function compareNumericSegments(a: number[], b: number[]): number {
   return 0;
 }
 
-/** -1 / 0 / 1, numeric-prefix first, qualifier as a last-resort lexical tiebreak. */
+/** Compare les versions. */
 export function compareVersions(a: ParsedVersion, b: ParsedVersion): number {
   const numeric = compareNumericSegments(a.numericSegments, b.numericSegments);
   if (numeric !== 0) return numeric > 0 ? 1 : -1;
@@ -44,6 +36,7 @@ export function compareVersions(a: ParsedVersion, b: ParsedVersion): number {
   return a.qualifier > b.qualifier ? 1 : -1;
 }
 
+/** Extrait le numéro de version majeure (premier segment numérique). */
 export function majorOf(version: ParsedVersion): number {
   return version.numericSegments[0] ?? 0;
 }
@@ -61,16 +54,7 @@ export interface VersionSelectionResult {
   reason: VersionSelectionReason;
 }
 
-/**
- * Pure. Picks the LOWEST fixed version that is (a) strictly greater than
- * installedVersion and (b) same major as installedVersion. Never crosses a
- * major boundary automatically (rule 6) — CROSS_MAJOR_ONLY is returned
- * (target null) when the only remediating versions require a major jump,
- * so the caller can distinguish "no fix needed direction exists" from
- * "a fix exists but needs human approval for the major jump".
- * Ambiguous/unparseable installedVersion fails closed (rule 7): never
- * guesses a major from a malformed string.
- */
+/** Sélectionne éligible cible version. */
 export function selectEligibleTargetVersion(
   installedVersion: string | null | undefined,
   fixedVersions: string[],

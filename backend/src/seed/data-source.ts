@@ -1,3 +1,4 @@
+// DataSource TypeORM autonome pour les scripts de seed (hors bootstrap NestJS) : accès direct aux repositories Project/Incident/Report/Bug.
 import 'reflect-metadata';
 import { DataSource } from 'typeorm';
 import { Project } from '../projects/project.entity';
@@ -5,11 +6,6 @@ import { Incident } from '../incidents/incident.entity';
 import { Report } from '../reports/report.entity';
 import { Bug } from '../bugs/bug.entity';
 
-// DataSource TypeORM autonome pour les scripts src/seed/*.
-// Ne bootstrap pas l'app Nest (pas de gateways Socket.IO, pas de seed AuthService,
-// pas d'appel n8n) : juste un accès direct aux repositories des 4 entités concernées.
-// Les valeurs par défaut reprennent celles de backend/.env (dev local, hors Docker) ;
-// surchargeables via les mêmes variables d'env que le backend.
 export const seedDataSource = new DataSource({
   type: 'postgres',
   host: process.env.DB_HOST || 'localhost',

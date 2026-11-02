@@ -1,11 +1,4 @@
-// Increment 1 — §4 "intersection des ensembles Trivy baseline/candidat".
-// Pure: takes two already-extracted sets of CVE ids (baseline scan, before
-// any patch; candidate scan, after the ONE shared build) and the list of
-// CVEs this batch targets, and derives a per-CVE closure status plus the
-// global tout-ou-rien verdict. No I/O, no scan parsing here — see
-// allVulnerabilityIds() below for the one bit of real extraction, reusing
-// the EXISTING SecurityArtifactScan shape (security-artifact-scan.ts)
-// unchanged.
+/** Dérive le verdict de fermeture d'un lot de CVE à partir de deux scans Trivy réels (baseline avant patch, candidat après le build partagé). */
 import { SecurityArtifactScan } from './security-artifact-scan';
 import { CveClosureStatus } from './security-remediation-batch-orchestration.types';
 
@@ -16,37 +9,25 @@ export interface BatchClosureFindingVerdict {
 
 export interface BatchClosureVerdict {
   perCve: BatchClosureFindingVerdict[];
-  /** true only when EVERY targetCve resolved to CLOSED — §3's global tout-ou-rien. */
+  /** true uniquement quand CHAQUE CVE cible a résolu à CLOSED. */
   allClosed: boolean;
 }
 
-/**
- * A CVE that was never proven present in the BASELINE scan can never be
- * honestly reported "CLOSED" by this batch (closure means "was present,
- * now absent") — NOT_OBSERVED reflects that the scanner never actually
- * confirmed this target, distinct from a genuine fix. Mirrors the same
- * "never claim more than was proven" discipline as provesSecurityClosure()
- * in the singular flow.
- */
+/** Détermine le statut de fermeture d'une CVE : STILL_OPEN si encore présente dans le candidat, CLOSED si présente en baseline mais absente du candidat, NOT_OBSERVED si jamais confirmée en baseline. */
 export function deriveCveClosureStatus(cveId: string, baselineCveIds: ReadonlySet<string>, candidateCveIds: ReadonlySet<string>): CveClosureStatus {
   const stillPresent = candidateCveIds.has(cveId);
   if (stillPresent) return 'STILL_OPEN';
   return baselineCveIds.has(cveId) ? 'CLOSED' : 'NOT_OBSERVED';
 }
 
+/** Calcule le verdict de fermeture global d'un lot de CVE cibles, en dérivant le statut de chacune puis le tout-ou-rien du lot entier. */
 export function deriveBatchClosureVerdict(targetCveIds: string[], baselineCveIds: Iterable<string>, candidateCveIds: Iterable<string>): BatchClosureVerdict {
   const baseline = new Set(baselineCveIds), candidate = new Set(candidateCveIds);
   const perCve = targetCveIds.map(cveId => ({ cveId, status: deriveCveClosureStatus(cveId, baseline, candidate) }));
   return { perCve, allClosed: perCve.length > 0 && perCve.every(x => x.status === 'CLOSED') };
 }
 
-/**
- * Every VulnerabilityID present anywhere in a Trivy image-archive scan
- * report, regardless of which CVE(s) this batch targets — the same
- * fail-closed shape checks as cveTargets() (security-artifact-scan.ts),
- * minus the single-CVE filter, since a batch verdict needs the FULL set to
- * intersect against N target CVEs at once, not one at a time.
- */
+/** Extrait l'ensemble complet des identifiants de vulnérabilité présents dans un scan Trivy d'image, sans filtrer sur une CVE particulière. */
 export function allVulnerabilityIds(scan: SecurityArtifactScan): Set<string> {
   if (!scan.buildPassed || scan.mode !== 'TRIVY_IMAGE_ARCHIVE'
     || scan.report?.SchemaVersion !== 2 || scan.report?.ArtifactType !== 'container_image'

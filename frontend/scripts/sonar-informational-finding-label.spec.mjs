@@ -1,3 +1,4 @@
+// Teste le composant « sonar-informational-finding-label » et ses cas d’erreur.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -7,24 +8,23 @@ const ts = require('typescript');
 const source = readFileSync(new URL('../src/app/features/projects/project-detail.component.ts', import.meta.url), 'utf8');
 const template = readFileSync(new URL('../src/app/features/projects/project-detail.component.html', import.meta.url), 'utf8');
 
-// Executes the REAL component method (findingActionLabel / findingCellStatus),
-// not a re-implementation -- proves the actual presentational fix, generic on
-// (severity, remediationType) only, with no rule/source/file/project literal.
-// The status-labels module is loaded for real (not stubbed): findingActionLabel
-// delegates to remediationLabel() -> remediationTypeLabel(), and the real
-// label text ('Action développeur requise', etc.) must come from the actual
-// shared module, not a re-typed copy in this test.
 const labelsSource = readFileSync(new URL('../src/app/shared/status-labels.ts', import.meta.url), 'utf8');
 const labelsExports = {};
 vm.runInNewContext(
   ts.transpileModule(labelsSource, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText,
-  { exports: labelsExports, require: () => ({}), console },
+  { exports: labelsExports,
+  /** Charge la dépendance prévue pour le scénario. */
+  require: () => ({}), console },
 );
 const exports = {};
 const code = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, experimentalDecorators: true } }).outputText;
 vm.runInNewContext(code, {
   exports,
-  require: (spec) => spec.endsWith('status-labels') ? labelsExports : new Proxy({}, { get: () => () => () => {} }),
+  /** Charge la dépendance prévue pour le scénario. */
+  require: (spec) => spec.endsWith('status-labels') ? labelsExports : new Proxy({}, {
+  /** Récupère les données demandées. */
+  get: () => () => () => {} }),
+  /** Simule la modification demandée par le composant. */
   setTimeout: () => 0, console,
 });
 const component = Object.create(exports.ProjectDetailComponent.prototype);

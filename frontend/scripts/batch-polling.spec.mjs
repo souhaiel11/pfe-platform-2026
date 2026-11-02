@@ -1,14 +1,6 @@
+// Teste le composant « batch-polling » et ses cas d’erreur.
 import { sharedDependency } from './security-lifecycle-test-loader.mjs';
-// Vérifie le rafraîchissement automatique pendant un lot de correction
-// Trivy/OWASP en cours (statut DISPATCHING) sur project-detail.component.ts :
-// démarrage après un lancement, arrêt dès que le lot est terminé, plafond de
-// sécurité, nettoyage à la destruction, reprise après rechargement de page.
-//
-// Même technique que merge-ready-success.spec.mjs : la vraie source .ts est
-// transpilée et exécutée dans un bac à sable, puis instanciée via
-// Object.create() (sans passer par le constructeur Angular). setInterval/
-// clearInterval sont remplacés par un faux minuteur contrôlable à la main
-// ("tick()") pour tester le plafond (~150 ticks) sans attendre 20 minutes.
+// Vérifie le rafraîchissement automatique pendant un lot de correction Trivy/OWASP en cours (statut DISPATCHING) sur project-detail.component.ts.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -16,29 +8,41 @@ import vm from 'node:vm';
 
 const require = createRequire(import.meta.url);
 const ts = require('typescript');
+/** Lit les données depuis leur source. */
 const read = path => readFileSync(new URL(path, import.meta.url), 'utf8');
-const angularStub = () => new Proxy({}, { get: () => (..._args) => target => target });
+/** Simule les dépendances nécessaires au scénario. */
+const angularStub = () => new Proxy({}, {
+/** Récupère les données demandées. */
+get: () => (..._args) => target => target });
 
 const projectSource = read('../src/app/features/projects/project-detail.component.ts');
 const projectTemplate = read('../src/app/features/projects/project-detail.component.html');
 
+/** Vérifie les résultats attendus dans ce scénario. */
 function fakeTimers() {
   const t = { fn: null, ms: null, cleared: true, id: 0 };
   return {
+    /** Simule la modification demandée par le composant. */
     setInterval: (fn, ms) => { t.fn = fn; t.ms = ms; t.cleared = false; return ++t.id; },
+    /** Prépare les données nécessaires à ce scénario. */
     clearInterval: () => { t.cleared = true; t.fn = null; },
+    /** Vérifie les résultats attendus dans ce scénario. */
     tick: () => { assert.ok(t.fn && !t.cleared, 'expected an active interval to tick'); t.fn(); },
     info: t,
   };
 }
 
+/** Simule la lecture des données demandées par le composant. */
 function loadProjectDetail(timers) {
   const exports = {};
   const code = ts.transpileModule(projectSource, {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, experimentalDecorators: true },
   }).outputText;
   vm.runInNewContext(code, {
-    exports, require: name => sharedDependency(name) || angularStub(),
+    exports,
+    /** Charge la dépendance prévue pour le scénario. */
+    require: name => sharedDependency(name) || angularStub(),
+    /** Simule la modification demandée par le composant. */
     setTimeout: () => 0,
     setInterval: timers.setInterval,
     clearInterval: timers.clearInterval,
@@ -47,20 +51,23 @@ function loadProjectDetail(timers) {
   return Object.create(exports['ProjectDetailComponent'].prototype);
 }
 
-// Object.create() ne passe jamais par le constructeur : les initialiseurs de
-// champs (dont les deux constantes readonly de polling) ne s'exécutent donc
-// pas -- on les fixe ici, exactement comme merge-ready-success.spec.mjs fixe
-// project.auth/project.latestReport à la main avant d'appeler une méthode.
+/** Object.create() ne passe jamais par le constructeur. */
 function freshProject(timers) {
   const project = loadProjectDetail(timers);
   project.BATCH_POLL_INTERVAL_MS = 8000;
   project.BATCH_POLL_MAX_MS = 20 * 60 * 1000;
   project.manualTasks = [];
-  project.projectScopeReset$ = {next() {}, complete() {}};
+  project.projectScopeReset$ = {
+  /** Traite le résultat reçu et actualise les données locales. */
+  next() {},
+  /** Marque la tâche comme terminée. */
+  complete() {}};
   return project;
 }
 
+/** Prépare les données nécessaires à ce scénario. */
 const dispatchingTask = id => ({ id, source:'TRIVY', findingSnapshot:{ruleOrCve:id,component:'a:b'}, securityFindingRemediation: { status: 'DISPATCHING' } });
+/** Prépare les données nécessaires à ce scénario. */
 const closedTask = id => ({ id, source:'TRIVY', findingSnapshot:{ruleOrCve:id,component:'a:b'}, securityFindingRemediation: { status: 'CLOSED' } });
 
 // ── CASE 1 : lancement réussi -> le polling démarre ───────────────────
@@ -105,6 +112,7 @@ const closedTask = id => ({ id, source:'TRIVY', findingSnapshot:{ruleOrCve:id,co
   project.manualTasks = [dispatchingTask('t1')];
   project.syncBatchPolling();
   let loadCalls = 0;
+  /** Prépare les données nécessaires à ce scénario. */
   project.loadManualRemediation = () => { loadCalls++; }; // tâche toujours DISPATCHING à chaque tick
 
   const totalTicksToCap = project.BATCH_POLL_MAX_MS / project.BATCH_POLL_INTERVAL_MS; // 150

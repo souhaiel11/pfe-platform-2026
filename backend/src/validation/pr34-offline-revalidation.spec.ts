@@ -1,18 +1,8 @@
+// Teste le composant « pr34-offline-revalidation » et ses cas d’erreur.
 import * as assert from 'node:assert/strict';
 import { analyzeDefaultValueSemantics } from './default-value-semantics';
 import { computeMergeAuthorization } from './merge-authorization';
 
-// R66 — offline, read-only end-to-end simulation of what PR #34's merge
-// authorization WOULD have been had the generic default-value-semantics
-// invariant been wired into the live pipeline at validation time. This file
-// performs NO IO: it re-derives the answer purely from (a) the exact PR #34
-// source text recovered during the earlier offline review (git show / raw
-// GitHub content at the base and head SHAs) and (b) the exact other
-// mergeAuthorization inputs already computed and persisted by the live
-// pipeline for this incident (read once, verbatim, from
-// incidents.metadata.validation — never re-fetched or mutated here). It does
-// not call GitHub, Jenkins, Sonar, n8n, or the database, and it never
-// touches PR #34, the FixRequest, or any live record.
 
 // ── Exact PR #34 source (unchanged from default-value-semantics.spec.ts's
 // PR34 fixture) ─────────────────────────────────────────────────────────

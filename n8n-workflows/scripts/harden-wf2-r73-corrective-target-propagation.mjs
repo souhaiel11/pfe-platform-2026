@@ -1,32 +1,18 @@
+// Transmet les cibles validées aux étapes correctives.
 import fs from 'node:fs';
 
 const sourcePath = new URL('../pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.R72-PLANNER-OUTPUT-BUDGET.json', import.meta.url);
 const outputPath = new URL('../pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.R73-CORRECTIVE-TARGET-PROPAGATION.json', import.meta.url);
 
+/** Transmet les cibles validées aux étapes correctives. */
 export function hardenCorrectiveTargetPropagation(workflow) {
+  /** Retrouve ou construit le nœud du workflow demandé. */
   const node = name => {
     const found = workflow.nodes.find(candidate => candidate.name === name);
     if (!found) throw new Error('R73_NODE_NOT_FOUND:' + name);
     return found;
   };
 
-  // Execution 2032 (attempt 8) proved R70's blockingCause grounding only
-  // resolves an EXPLICIT sourceFile/candidateFile/mappingFile/path field.
-  // This blockingCause instead carries candidateType:'TaskDTO' -- no file
-  // field at all -- so `correctiveGroundedFiles` stayed empty, TaskDTO.java
-  // never entered `repositoryPolicy.targetFiles`, and the planner's correct,
-  // causally-grounded target was rejected by the deterministic membership
-  // gate in Validate Generic Remediation Plan BEFORE R70's own
-  // CORRECTIVE_TARGET_NOT_GROUNDED causality gate ever ran (that gate
-  // executes only after the whole `normalized` plan list is built, and the
-  // membership check throws inside that same build step). This adds a
-  // second, deterministic grounding path -- exact type-to-source resolution
-  // against the current candidate's repository tree, keyed off the generic
-  // `candidateType` field already present in the corrective evidence
-  // contract -- alongside the existing explicit-field path. It authorizes
-  // ONLY the type the CANDIDATE actually needs changed (never `sourceType`,
-  // which is baseline-only comparison evidence and must never become an
-  // edit target, or S4684's DTO boundary would be undone).
   const buildPolicy = node('Build Independent Repository Policy');
   {
     const before = buildPolicy.parameters.jsCode;
@@ -39,13 +25,6 @@ const correctiveGroundedFiles=ctx.correctiveAttempt===true&&Array.isArray(ctx.co
     if (buildPolicy.parameters.jsCode === before) throw new Error('R73_BUILD_POLICY_NOT_MODIFIED');
   }
 
-  // Validate Generic Remediation Plan: consolidate grounding into ONE
-  // canonical set computed before plan validation (never a second,
-  // independently-computed allowlist), then require BOTH membership in the
-  // effective authorized set AND -- for every individual corrective plan,
-  // not merely "at least one across the batch" -- causal grounding. A
-  // historical finding file remains a valid member (lineage/context, R70)
-  // but is no longer sufficient authority on its own in corrective mode.
   const validatePlan = node('Validate Generic Remediation Plan');
   {
     const before = validatePlan.parameters.jsCode;

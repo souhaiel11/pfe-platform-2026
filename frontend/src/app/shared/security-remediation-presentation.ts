@@ -1,3 +1,5 @@
+// Présente les états et les résultats des corrections de sécurité.
+
 import { getV1_8Presentation } from './v1-8-compatibility-presentation';
 import { SecurityRemediationTask } from './security-remediation.types';
 import { CveSelectionEligibility, resolveFixedVersion, resolveInstalledVersion } from './cve-selection-eligibility';
@@ -8,6 +10,7 @@ export type SecurityRemediationState =
   | 'MANUAL_REVIEW_MULTIPLE_TARGETS'
   | 'MANUAL_REVIEW_NO_TARGET'
   | 'AUTO_FIX_AVAILABLE'
+  | 'MAJOR_UPGRADE_REQUIRES_REVIEW'
   | 'DISPATCHING'
   | 'CANDIDATE_READY'
   | 'PROJECT_FIX_VERIFIED'
@@ -16,43 +19,39 @@ export type SecurityRemediationState =
   | 'VERIFICATION_REQUIRED'
   | 'OPERATOR_TEST_STOPPED';
 
-/** Loose visual grouping only -- never used for any decision, purely a CSS hook. */
 export type SecurityRemediationStyleKey = 'success' | 'warning' | 'muted' | 'progress' | 'danger';
 
 export interface SecurityRemediationPresentation {
   state: SecurityRemediationState;
   label: string;
   explanation: string;
-  /** Initial-launch gate plus lifecycle restrictions; retry has its own action. */
   selectable: boolean;
   retryAllowed?: boolean;
   attemptNumber?: number;
   reasonCode?: string | null;
   historical?: boolean;
-  /** Resolved from the task's own snapshot for OWASP (the raw scan row never carries it) -- never the raw OWASP row directly. */
   installedVersion: string | null;
   targetVersion: string | null;
-  /** Human label for WHO supplied targetVersion -- never the detecting scanner. Null exactly when targetVersion is null. */
   targetSource: 'Trivy' | 'OWASP' | null;
   styleKey: SecurityRemediationStyleKey;
   prNumber?: number | null;
   prUrl?: string | null;
-  /** Non-technical tooltip detail, shown only when there is something worth expanding on (e.g. the raw Trivy evidence for a multi-target case). Never a raw stack trace or internal code. */
   tooltip?: string | null;
 }
 
 const MAVEN_COORDINATE_RE = /^[A-Za-z0-9_.-]+:[A-Za-z0-9_.-]+$/;
 
-// Unknown states fail closed. Backend retryable=true is required, and
-// only known terminal failure states can expose the dedicated retry action.
 const TERMINAL_FAILURE_STATUSES = new Set([
   'TECHNICAL_FAILURE', 'DISPATCH_FAILED', 'GROUNDING_FAILED', 'WORKSPACE_FAILURE',
   'MAVEN_RESOLUTION_FAILED', 'CANDIDATE_BUILD_FAILED', 'CANDIDATE_SECURITY_VALIDATION_FAILED',
 ]);
 export const MAX_AUTOMATIC_ATTEMPTS = 3;
+
+// Vrai seulement si un scan réel confirme la disparition de la vulnérabilité (vérifiée manuellement ET non détectée par le scanner).
 export function isProjectFixVerified(task: SecurityRemediationTask | null | undefined): boolean {
   return (task?.manualStatus ?? task?.status) === 'VERIFIED' && task?.scannerStatus === 'NOT_DETECTED';
 }
+
 const FAILURE_LABELS: Record<string, string> = {
   WARMUP_NETWORK_FAILURE: 'Service de validation temporairement indisponible',
   RUNTIME_OPERATION_TIMEOUT: 'La correction a dépassé le délai autorisé',
@@ -67,22 +66,31 @@ const FAILURE_LABELS: Record<string, string> = {
   TARGET_CVE_STILL_OPEN_AFTER_PATCH: 'La vulnérabilité reste présente dans le candidat',
   CANDIDATE_DRIFTED: 'Le candidat a changé depuis sa validation',
 };
-/** Never render raw reasonMessage/free text: older servers may include stacks/secrets. */
+
+// Traduit un code d'échec connu en message français sûr ; un code inconnu reçoit un message générique plutôt que le texte brut du serveur.
 export function safeFailureLabel(code?: string | null): string {
   return (typeof code === 'string' && Object.prototype.hasOwnProperty.call(FAILURE_LABELS, code) && FAILURE_LABELS[code]) || "La correction automatique n'a pas pu être validée.";
 }
+
+// Valide la forme d'un code de raison (majuscules/chiffres/underscore) avant de l'exposer, pour ne jamais afficher une valeur imprévue.
 export function safeReasonCode(code?: string | null): string | null {
   return typeof code === 'string' && /^[A-Z][A-Z0-9_]{0,79}$/.test(code) ? code : null;
 }
+
+// Calcule le numéro de la tentative de correction la plus avancée, en prenant le maximum entre le compteur courant et l'historique des tentatives.
 export function currentAttemptNumber(task: SecurityRemediationTask): number {
   const r = task.securityFindingRemediation;
   return Math.max(0, r?.attemptNumber ?? r?.attemptCount ?? 0,
     ...(r?.attempts ?? []).map(a => a.attemptNumber ?? a.attempt ?? 0));
 }
 
-/** A single scanner-neutral view. Initial eligibility cannot authorize retries
- * or override current lifecycle/scanner evidence. */
-/** PR metadata decorates every state; it never determines lifecycle category. */
+// Construit la présentation complète d'une tâche de remédiation (état, libellé, explication, versions) en y ajoutant les métadonnées de PR en décoration.
+/** Majeure numérique de tête d'une version Maven (ex. 2.2.220 -> 2, 32.0.0-jre -> 32) ; null si indéterminable. */
+function leadingMajor(v: string | null | undefined): number | null {
+  const m = /^\s*(\d+)/.exec(String(v ?? ''));
+  return m ? parseInt(m[1], 10) : null;
+}
+
 export function getSecurityRemediationPresentation(
   task: SecurityRemediationTask | null | undefined,
   eligibility: CveSelectionEligibility,
@@ -95,6 +103,7 @@ export function getSecurityRemediationPresentation(
   };
 }
 
+/** Classe sécurité correction Presentation. */
 function classifySecurityRemediationPresentation(
   task: SecurityRemediationTask | null | undefined,
   eligibility: CveSelectionEligibility,
@@ -140,10 +149,14 @@ function classifySecurityRemediationPresentation(
     selectable: false, retryAllowed: false, styleKey: 'success',
     prNumber: remediation?.prNumber ?? null, prUrl: remediation?.prUrl ?? null,
   };
-  // CLOSED is candidate evidence, not a pending proposal or project closure.
   if (status === 'CLOSED') return {
     ...versionFields, state: 'VERIFICATION_REQUIRED', label: 'Correction à vérifier',
     explanation: 'La CVE est absente du candidat. Seul un scan du projet peut confirmer la correction.',
+    selectable: false, retryAllowed: false, styleKey: 'warning',
+  };
+  if (status === 'ALREADY_MERGED') return {
+    ...versionFields, state: 'VERIFICATION_REQUIRED', label: 'Déjà corrigée sur main',
+    explanation: 'Cette correction a déjà été fusionnée par une Pull Request précédente : aucune nouvelle PR n’est nécessaire. Relancez un build Jenkins pour actualiser le scan.',
     selectable: false, retryAllowed: false, styleKey: 'warning',
   };
   if (status) {
@@ -178,15 +191,8 @@ function classifySecurityRemediationPresentation(
       installedVersion, targetVersion: decision.recommendedVersion, targetSource: null, styleKey: 'success' };
   }
 
-  // ── No remediation attempt yet: classify by what the data actually
-  // supports, fail-closed exactly like the server does. ──
   const component = String(snapshot.component ?? '').trim();
   if (!MAVEN_COORDINATE_RE.test(component)) {
-    // Same state for both sources (shared classification), but the human
-    // explanation must not say "Maven" for a Trivy finding whose component
-    // isn't a Maven dependency at all (e.g. an OS/image package such as
-    // openssl -- Trivy also reports real Maven coordinates for bundled
-    // jars, which DO pass the regex above and never reach this branch).
     const isTrivy = task.source === 'TRIVY';
     return {
       state: 'MAVEN_DATA_MISSING',
@@ -205,6 +211,21 @@ function classifySecurityRemediationPresentation(
       selectable: false, installedVersion, targetVersion: null, targetSource: null, styleKey: 'warning' };
   }
   if (targetVersion) {
+    const instMajor = leadingMajor(installedVersion);
+    const tgtMajor = leadingMajor(targetVersion);
+    // Correctif de MAJEURE SUPÉRIEURE (ex. snakeyaml 1.33 -> 2.0, guava 31 -> 32) :
+    // hors enveloppe auto-corrigeable (franchissement de majeure = revue humaine),
+    // aligné sur la politique déterministe du backend. Alimente le filtre
+    // « Migration majeure requise ».
+    if (instMajor != null && tgtMajor != null && tgtMajor > instMajor) {
+      return {
+        state: 'MAJOR_UPGRADE_REQUIRES_REVIEW', label: 'Migration majeure requise',
+        explanation: `La seule version corrigée disponible (${targetVersion}) appartient à une version majeure supérieure à la version installée (${installedVersion}). Un franchissement de version majeure exige une revue humaine et n'entre pas dans la correction automatique.`,
+        selectable: false, installedVersion, targetVersion,
+        targetSource: (snapshot.fixedVersionSource === 'TRIVY_CORRELATED' || task.source === 'TRIVY') ? 'Trivy' : 'OWASP',
+        styleKey: 'warning',
+      };
+    }
     return {
       state: 'AUTO_FIX_AVAILABLE', label: 'Correction automatique disponible',
       explanation: 'Une version corrigée unique a été identifiée. Cette vulnérabilité peut être soumise au processus automatique de correction et de validation.',
@@ -226,7 +247,6 @@ function classifySecurityRemediationPresentation(
     };
   }
 
-  // MANUAL_REVIEW_NO_TARGET -- the honest default when nothing above matched.
   return {
     state: 'MANUAL_REVIEW_NO_TARGET', label: 'Intervention manuelle requise',
     explanation: "Aucune version corrigée fiable n'a pu être déterminée automatiquement pour cette vulnérabilité. Elle reste suivie par la plateforme mais nécessite une analyse manuelle.",
@@ -236,6 +256,8 @@ function classifySecurityRemediationPresentation(
 }
 
 export type SecurityRemediationFilter = 'ALL' | 'AVAILABLE' | 'IN_PROGRESS' | 'PROPOSED' | 'FAILED' | 'CLOSED' | 'MANUAL';
+
+// Regroupe un état détaillé de remédiation dans l'une des catégories de filtre affichées à l'écran.
 export function remediationCategory(state: SecurityRemediationState): Exclude<SecurityRemediationFilter, 'ALL'> | 'OPERATOR_TEST' {
   switch (state) {
     case 'OPERATOR_TEST_STOPPED': return 'OPERATOR_TEST';
@@ -245,13 +267,17 @@ export function remediationCategory(state: SecurityRemediationState): Exclude<Se
     case 'RETRYABLE_FAILURE': return 'FAILED';
     case 'PROJECT_FIX_VERIFIED': return 'CLOSED';
     case 'VERIFICATION_REQUIRED': return 'MANUAL';
+    case 'MAJOR_UPGRADE_REQUIRES_REVIEW': return 'MANUAL';
     default: return 'MANUAL';
   }
 }
+
 export interface SecurityRemediationSummary {
   total: number; autoFixAvailable: number; dispatching: number; candidateReady: number;
   failedRetryable: number; verifiedFixed: number; manualRequired: number; operatorTests: number;
 }
+
+// Calcule les compteurs par catégorie (disponible/en cours/proposée/échec/corrigée/manuelle/test opérateur) sur l'ensemble des CVE affichées.
 export function summarizeSecurityRemediation<TCve extends { fixedVersion?: string; pkg?: string; historical?: boolean }>(
   cves: TCve[], taskFor: (cve: TCve) => SecurityRemediationTask | undefined,
   eligibilityFor: (task: SecurityRemediationTask | undefined, cve: TCve) => CveSelectionEligibility,

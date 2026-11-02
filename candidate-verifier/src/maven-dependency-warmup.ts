@@ -1,7 +1,4 @@
-// Online warm-up uses only the verified baseline checkout and approved GAVs.
-// The offline probe always runs; its usable output is the sufficiency gate.
-// A failed probe is classified using warm-up health before any cache-miss
-// diagnosis. Unknown warm-up failures remain infrastructure failures.
+// Regroupe les traitements de Maven dépendance warmup.
 import { MavenBuildAdapter, WarmupResult, DependencyTreeResult } from './maven-build-adapter';
 import { createWorkerDeadline } from './worker-deadline';
 
@@ -23,9 +20,7 @@ export interface WarmedDependencyTreeResult {
   infrastructureFailure?: WarmupFailureReason;
 }
 
-/** baselineWorkspacePath MUST be the verified baseline, never a patched
- * candidate. Targets are resolved there too, regardless of baseline warm-up
- * success. No build lifecycle goals are introduced. */
+/** Résout dépendance arbre Offline. */
 export function resolveDependencyTreeOffline(
   adapter: MavenBuildAdapter,
   baselineWorkspacePath: string,
@@ -37,6 +32,7 @@ export function resolveDependencyTreeOffline(
   // Reserve up to 60s (half of a short budget) for the probe. Share the
   // remaining warm-up allowance across baseline + targets, never reset it.
   const analysisReserveMs = Math.min(OFFLINE_ANALYSIS_STAGE_CAP_MS, deadline.totalBudgetMs / 2);
+  /** Borne le temps réservé à la préparation des dépendances. */
   const warmupBudget = (stepsLeft: number) => Math.max(1, Math.min(WARMUP_STAGE_CAP_MS,
     Math.floor((deadline.remainingMs() - analysisReserveMs) / stepsLeft)));
   const baselineWarmup = adapter.dependencyGoOffline(baselineWorkspacePath, warmupBudget(targetGavs.length + 1));

@@ -1,6 +1,5 @@
 #!/usr/bin/env node
-// V1.6. Offline only. Fixed IDs/order, no clock, no network, no import.
-// Code nodes validate transport/trust boundaries; they never author a patch.
+// Prépare construction WF6 sécurité correction pour les workflows n8n.
 import { writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 const output = fileURLToPath(new URL('../pending-live-update/wf6-security-remediation-maven.OFFLINE-DRAFT.json', import.meta.url));
@@ -9,37 +8,46 @@ const output = fileURLToPath(new URL('../pending-live-update/wf6-security-remedi
 const githubCredential = { id: 'YBO0vWrPlyoYx4Kr', name: 'GitHub n8n' };
 const inboundCredential = { id: 'c94e1a451dec86a4a7a351d4', name: 'Jenkins WF1 Callback' };
 const nodes = [], connections = {};
+/** Construit l’expression n8n attendue. */
 const expr = s => '={{ ' + s + ' }}';
+/** Retrouve la référence de l’élément. */
 const ref = name => `$("${name}").first().json`;
 const C = ref('Trusted Candidate');
 const F = `${C}.candidateManifest.files[0]`;
 const github = `"https://api.github.com/repos/" + ${C}.repository`;
+/** Vérifie et normalise l’identifiant de commit. */
 const sha = value => `/^[0-9a-f]{40}$/.test(${value} || '')`;
+/** Ajoute l’élément au résultat en cours. */
 function add(name, type, parameters, version = 1, extra = {}) {
   nodes.push({ id: `wf6-n${String(nodes.length + 1).padStart(3, '0')}`, name,
     type: `n8n-nodes-base.${type}`, typeVersion: version,
     position: [(nodes.length % 8) * 300, Math.floor(nodes.length / 8) * 200], parameters, ...extra });
   return name;
 }
+/** Construit le lien de navigation de l’élément. */
 function link(from, to, port = 0) {
   const main = (connections[from] ||= { main: [] }).main;
   while (main.length <= port) main.push([]);
   main[port].push({ node: to, type: 'main', index: 0 });
 }
+/** Lit le code du nœud de workflow. */
 function code(name, source) {
   return add(name, 'code', { mode: 'runOnceForAllItems', jsCode:
     `try {\n${source}\n} catch { return [{json: {ok: false}}]; }` }, 2, { continueOnFail: true });
 }
+/** Évalue la condition qui autorise l’étape suivante. */
 function gate(name, condition, failure) {
   const n = add(name, 'if', { conditions: { options: { caseSensitive: true, leftValue: '', typeValidation: 'strict', version: 2 },
     conditions: [{ id: name, leftValue: expr(`Boolean(${condition})`), rightValue: true,
       operator: { type: 'boolean', operation: 'true', singleValue: true } }], combinator: 'and' }, options: {} }, 2.2);
   link(n, failure, 1); return n;
 }
+/** Construit la réponse utilisée par le scénario. */
 function response(name, state, fields = '') {
   return add(name, 'respondToWebhook', { respondWith: 'json', responseBody: expr(`({state: "${state}"${fields}})`), options: {} }, 1.1);
 }
 const failures = new Map();
+/** Construit le résultat fail. */
 function fail(failureClass) {
   if (!failures.has(failureClass)) failures.set(failureClass,
     response(`Respond - ${failureClass}`, 'TECHNICAL_FAILURE', `, failureClass: "${failureClass}"`));
@@ -50,21 +58,8 @@ const drifted = response('Respond - Candidate Drifted', 'CANDIDATE_DRIFTED');
 const baseMissing = response('Respond - Base SHA Unresolvable', 'BASE_SHA_UNRESOLVABLE');
 const branchConflict = response('Respond - Branch Content Conflict', 'BRANCH_CONTENT_CONFLICT');
 const writeConflict = response('Respond - Write Conflict', 'WRITE_CONFLICT');
-// V1.7 predeploy phase — `timeoutMs` defaults to the SAME 30000 every
-// other (GitHub read/write) node here already used, unchanged. Only the
-// real security-evaluation/revalidation nodes below pass an explicit
-// override (WF6_SECURITY_EVALUATION_TIMEOUT_MS): those four are the only
-// ones that invoke the real, synchronous V1.7 worker (grounding + real
-// rootless Podman build + real Trivy scan), proven to legitimately need far
-// longer than 30s. V1.7 FINAL predeploy phase re-evaluated the deadline
-// from scratch (real evidence: successes at 464981/475195/576432ms, the
-// prior 600000ms ceiling legitimately reached twice under real transient
-// conditions, and one real uncapped-measurement outlier at 1,278,378ms) and
-// raised WORKER_DEADLINE_MS to 900000 -- see n8n-workflows/
-// WF6-V1_7-RUNTIME-INTEGRATION-AUDIT.md for the full real evidence and the
-// exact 900000/910000/920000ms contract this number is derived from. No
-// other HTTP node's timeout changes.
 const WF6_SECURITY_EVALUATION_TIMEOUT_MS = 920000;
+/** Construit l’appel HTTP du traitement. */
 function http(name, method, url, body, backend = false, timeoutMs = 30000) {
   return add(name, 'httpRequest', {
     method, url: expr(url), sendHeaders: true,
@@ -78,6 +73,7 @@ function http(name, method, url, body, backend = false, timeoutMs = 30000) {
   }, 4.2, { continueOnFail: true, retryOnFail: false, ...(!backend ? { credentials: { githubApi: githubCredential } } : {}),
     notes: 'Full response keeps arrays in body (including empty PR lists). HTTP and transport errors are explicitly gated. No redirect or automatic retry.' });
 }
+/** Récupère les données demandées. */
 function get(name, tail, previous, failure = fail('GITHUB_READ_FAILED')) {
   const n = http(name, 'GET', `${github} + ${tail}`);
   if (previous) link(previous, n);
@@ -118,9 +114,7 @@ const base = get('Verify Base Commit Still Exists', `"/commits/" + ${C}.decision
 const baseOk = gate('Base SHA Resolvable?', `$json.body?.sha === ${C}.decision.evaluatedSha && ${sha('$json.body?.commit?.tree?.sha')}`, baseMissing);
 link(base, baseOk);
 
-// Snapshot default name + exact tip. Later snapshots may advance the tip but
-// must retain the original default name and evaluatedSha ancestry. Direction
-// is evaluatedSha...defaultBranchTipSha, so only ahead/identical are valid.
+/** Résout base. */
 function resolveBase(prefix, previous, repeat = false) {
   const metadata = get(`${prefix} Repository Metadata`, '""', previous, fail('DEFAULT_BRANCH_UNRESOLVABLE'));
   const extract = code(`${prefix} Trusted Default Branch`, `
@@ -155,6 +149,7 @@ return [{json: {ok: valid, repositoryDefaultBranch: ${branch}.repositoryDefaultB
   const ancestryOk = gate(`${prefix} Ancestry Valid?`, '$json.ok === true', fail('ANCESTRY_INVALID'));
   link(evidence, ancestryOk); return ancestryOk;
 }
+/** Contrôle à nouveau les preuves avant l’écriture. */
 function revalidate(label, previous) {
   const n = http(`Revalidate Before Write (${label})`, 'POST', '$env.BACKEND_INTERNAL_URL + "/api/internal/security-remediation/revalidate"',
     `({...${request}, expectedCandidateIdentity: ${C}.candidateIdentity})`, true, WF6_SECURITY_EVALUATION_TIMEOUT_MS);
@@ -180,9 +175,9 @@ return [{json: {ok}}];`);
 // V1.6 lifecycle and immutable-proof builders follow.
 
 const headMismatch = response('Respond - PR Head SHA Mismatch', 'PR_HEAD_SHA_MISMATCH');
-// This function is used by historical and post-write proof paths; same exact
-// tree/blob policy, immutable head commit lookup, no version-only shortcuts.
+/** Prépare le résultat lié à immutable preuve. */
 function immutableProof(prefix, snapshotOk, S) {
+ /** Retrouve le nom de l’élément. */
  const name = n => prefix ? prefix + ' ' + n : n;
 const commit = get(name('Authorized Branch Commit'), `"/git/commits/" + ${S}`, snapshotOk, branchConflict);
 const commitOk = gate(name('Authorized Branch Commit Valid?'), `$json.body?.sha === ${S} && ${sha('$json.body?.tree?.sha')}`, branchConflict);
@@ -227,8 +222,7 @@ link(bytes, bytesOk);
  return sealed;
 }
 
-// Parse only safe PR identity fields. Ref/repository/base/URL/number/lifecycle
-// and a full immutable head SHA are required even for closed historical PRs.
+/** Renvoie PR Parser pour le traitement ou l’affichage. */
 function prParser(prefix, previous, listExpression, expectedHead = null, expectedNumber = null) {
  const n = code(`${prefix} Trusted PR State`, `
 const list = ${listExpression}, c = ${C};
@@ -252,6 +246,7 @@ return [{json: {ok, headMatches, state: !ok || !headMatches ? 'INVALID' : !p ? '
  link(valid, head);
  return { state: n, valid: head };
 }
+/** Décrit l’enchaînement des états de la tentative. */
 function lifecycle(prefix, previous, state) {
  const p = ref(state);
  const merged = gate(`${prefix} PR Merged?`, `${p}.state === 'MERGED'`, `${prefix} PR Open?`);

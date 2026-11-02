@@ -1,3 +1,4 @@
+-- Ajoute les tâches de correction manuelle dans PostgreSQL.
 BEGIN;
 
 DO $$

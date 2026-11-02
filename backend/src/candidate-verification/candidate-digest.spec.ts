@@ -1,7 +1,9 @@
+// Teste le composant « candidate-digest » et ses cas d’erreur.
 import * as assert from 'node:assert/strict';
 import { computeCandidateDigest, computeContentSha256, computeGitBlobSha1 } from './candidate-digest';
 import { CandidateManifest } from './candidate-verification.types';
 
+/** Prépare les données nécessaires à ce scénario. */
 function manifest(overrides: Partial<CandidateManifest> = {}): CandidateManifest {
   return {
     candidateId: 'c1', requestId: 'r1', batchId: 'b1', candidateAttempt: 0,
@@ -46,13 +48,6 @@ function manifest(overrides: Partial<CandidateManifest> = {}): CandidateManifest
   assert.notEqual(d1, d2, 'digest is bound to candidateBaseSha, not just file contents');
 }
 
-// ============================================================================
-// R81.3 — computeGitBlobSha1: verified byte-for-byte against REAL
-// `git hash-object` output (not merely assumed to match git's algorithm).
-// Reference values below were produced by actually running
-// `git hash-object --stdin` / `git hash-object <file>` on this exact
-// content, not hand-derived.
-// ============================================================================
 {
   assert.equal(computeGitBlobSha1('hello\n'), 'ce013625030ba8dba906f756967f9e9ca394464a', 'matches real `git hash-object` for "hello\\n"');
   assert.equal(computeGitBlobSha1('class X {}\n'), '91335d9690e8e22351e184d16045b76cf3032b79', 'matches real `git hash-object` for a small Java source snippet');

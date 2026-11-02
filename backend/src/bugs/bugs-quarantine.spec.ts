@@ -1,3 +1,4 @@
+// Teste le composant « bugs-quarantine » et ses cas d’erreur.
 import * as assert from 'node:assert/strict';
 import { GoneException } from '@nestjs/common';
 import { BugStatus } from './bug.entity';
@@ -16,20 +17,28 @@ let createCalls = 0;
 let updatedEvents = 0;
 let createdEvents = 0;
 const repo: any = {
+  /** Recherche les éléments correspondants. */
   find: async () => [existingBug],
+  /** Recherche l’élément correspondant à l’identifiant. */
   findOne: async ({ where }: any) => where.id === existingBug.id ? existingBug : null,
+  /** Crée et enregistre un nouvel élément. */
   create: (dto: any) => { createCalls++; return { id: 'bug-created', ...dto }; },
+  /** Enregistre les données fournies. */
   save: async (bug: any) => { saveCalls++; return bug; },
+  /** Supprime l’élément ciblé et gère ses dépendances. */
   remove: async () => undefined,
 };
 const gateway: any = {
+  /** Prépare les données nécessaires à ce scénario. */
   emitBugUpdated: () => { updatedEvents++; },
+  /** Prépare les données nécessaires à ce scénario. */
   emitBugCreated: () => { createdEvents++; },
 };
 
 const service = new BugsService(repo, gateway);
 const controller = new BugsController(service);
 
+/** Vérifie Gone dans ce scénario de test. */
 async function expectGone(action: () => Promise<unknown>) {
   await assert.rejects(action, (error: unknown) => {
     assert.ok(error instanceof GoneException);
@@ -39,9 +48,11 @@ async function expectGone(action: () => Promise<unknown>) {
   });
 }
 
+/** Exécute les étapes principales de ce programme. */
 async function main() {
   const originalSetTimeout = globalThis.setTimeout;
   let scheduledTimers = 0;
+  /** Prépare les données nécessaires à ce scénario. */
   (globalThis as any).setTimeout = (..._args: any[]) => { scheduledTimers++; return 0; };
 
   // Controller contract: these are the handlers behind the three HTTP routes.

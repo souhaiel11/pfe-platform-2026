@@ -1,19 +1,4 @@
-/** Bounded-git-operations fix, Part 3 items 1-2 — proves
- * SecurityRemediationOrchestratorService's SECOND repository materialization
- * (§4 step 9, the isolated worktree used for patch/build/scan) now:
- *   1. receives the ACTUAL reduced remaining `deadline` budget (not the old
- *      unconditional call, which always meant "no timeoutMs at all" and
- *      silently defaulted to RepoCacheService's own flat GIT_OPERATION_CAP_MS);
- *   2. is refused outright -- zero ensureRepo() calls -- once the deadline
- *      is already exhausted by the time this stage is reached, exactly like
- *      every other deadline-gated stage already proven in
- *      security-remediation-orchestrator.deadline.spec.ts.
- *
- * Same real-fixture pattern as that file (real WorkspaceManager, real git
- * checkout of the local fixture repo, injected decision/Maven/scanner
- * fakes) -- only the repoCache is a recording spy here, since that is the
- * one call site this fix changes.
- */
+// Teste le composant « security-remediation-orchestrator.repo-budget » et ses cas d’erreur.
 import * as assert from 'assert';
 import * as fs from 'fs';
 import * as os from 'os';
@@ -31,25 +16,29 @@ execFileSync('git', ['clone', '--no-hardlinks', process.env.SECURITY_TEST_REPO |
 const workspacesRoot = path.join(root, 'workspaces');
 const wm = new WorkspaceManager(workspacesRoot);
 let serial = 0;
+/** Prépare les données nécessaires à ce scénario. */
 const input = (overallDeadlineMs: number) => ({
   repository: 'souhaiel11/pfe-app-test', candidateBaseSha: f.sha, requestId: 'v17-repo-budget-' + ++serial, batchId: 'tests', candidateAttempt: 0,
   overallDeadlineMs,
   finding: { findingIdentity: 'a'.repeat(64), cveId: 'CVE-2023-6378', source: 'TRIVY', package: 'ch.qos.logback:logback-classic', expectedInstalledVersion: '1.2.11', fixedVersion: '1.3.12, 1.4.12, 1.2.13' },
 });
+/** Prépare les données nécessaires à ce scénario. */
 const decision = () => ({ findingIdentity: 'a'.repeat(64), evaluatedSha: f.sha, provenance: { ecosystem: 'MAVEN', kind: 'DIRECT_EXPLICIT', package: 'ch.qos.logback:logback-classic', installedVersion: '1.2.11', controllingFile: 'pom.xml', controllingElement: '<version>1.2.11</version>', controllingProperty: null, groundedSha: f.sha, evidence: 'fixture' }, fixedVersions: ['1.2.13'], selectedTargetVersion: '1.2.13', remediationType: 'AUTO_FIX_ELIGIBLE', reason: 'fixture' });
 
+/** Prépare les données nécessaires à ce scénario. */
 function busyWaitMs(ms: number): void {
   const start = process.hrtime.bigint();
   while (Number(process.hrtime.bigint() - start) / 1_000_000 < ms) { /* burn monotonic time, deterministic vs setTimeout */ }
 }
 
-// Spies on the REAL RepoCacheService's ensureRepo() -- records every
-// timeoutMs it was called with, still delegates to the real (local,
-// no-network) implementation so the rest of orchestration proceeds exactly
-// as it would in production.
+/** Prépare les données nécessaires à ce scénario. */
 function spyingRepoCache(calls: Array<number | undefined>) {
-  const real = { ensureRepo: (r: string) => repo }; // repo is already local + up to date; the real RepoCacheService isn't needed here, only its call contract
-  return { ensureRepo: (repository: string, timeoutMs?: number) => { calls.push(timeoutMs); return real.ensureRepo(repository); } } as any as RepoCacheService;
+  const real = {
+  /** Prépare le dépôt et la révision nécessaires. */
+  ensureRepo: (r: string) => repo }; // repo is already local + up to date; the real RepoCacheService isn't needed here, only its call contract
+  return {
+  /** Prépare le dépôt et la révision nécessaires. */
+  ensureRepo: (repository: string, timeoutMs?: number) => { calls.push(timeoutMs); return real.ensureRepo(repository); } } as any as RepoCacheService;
 }
 
 try {
@@ -61,15 +50,22 @@ try {
   {
     const calls: Array<number | undefined> = [];
     const adapter: any = {
+      /** Prépare les données nécessaires à ce scénario. */
       dependencyTree: (w: string) => ({ status: 'SUCCESS', text: f.baseTree }),
+      /** Produit le POM effectif pour établir les versions Maven. */
       effectivePom: (w: string) => ({ status: 'SUCCESS', text: f.baseEffective }),
+      /** Prépare les données nécessaires à ce scénario. */
       packageCandidateWithTests: () => ({ status: 'SUCCESS', testsExecuted: true, testsPassed: true, testsTotal: 1, testsFailures: 0, testsErrors: 0, testsSkipped: 0, durationMs: 1, evidenceTail: '', timedOut: false }),
     };
-    const scanner = { inspect: (w: string): SecurityArtifactScan => ({
+    const scanner = {
+    /** Inspecte les données ou l’artefact pour en tirer des preuves. */
+    inspect: (w: string): SecurityArtifactScan => ({
       mode: 'TRIVY_IMAGE_ARCHIVE', sourceDigest: trackedSourceDigest(w), artifactDigest: 'b'.repeat(64),
       reportDigest: 'c'.repeat(64), scannerVersion: 'unit-fixture', report: f.baseReport, buildPassed: true, timings: {},
     }) };
-    const slowDecision = { decide: () => { busyWaitMs(300); return decision(); } }; // consumes ~300ms of the total budget
+    const slowDecision = {
+    /** Détermine la décision à partir des preuves disponibles. */
+    decide: () => { busyWaitMs(300); return decision(); } }; // consumes ~300ms of the total budget
     const totalBudgetMs = 2_000;
     const reqInput = input(totalBudgetMs);
     new SecurityRemediationOrchestratorService(slowDecision as any, wm, spyingRepoCache(calls), adapter, scanner).orchestrate(reqInput);
@@ -88,12 +84,19 @@ try {
   {
     const calls: Array<number | undefined> = [];
     const adapter: any = {
+      /** Simule l’échec attendu par ce scénario. */
       dependencyTree: () => { throw new Error('MUST_NOT_RUN'); },
+      /** Produit le POM effectif pour établir les versions Maven. */
       effectivePom: () => { throw new Error('MUST_NOT_RUN'); },
+      /** Simule l’échec attendu par ce scénario. */
       packageCandidateWithTests: () => { throw new Error('MUST_NOT_RUN'); },
     };
-    const scanner = { inspect: () => { throw new Error('MUST_NOT_RUN'); } };
-    const slowDecision = { decide: () => { busyWaitMs(250); return decision(); } }; // consumes almost all of a 260ms budget
+    const scanner = {
+    /** Inspecte les données ou l’artefact pour en tirer des preuves. */
+    inspect: () => { throw new Error('MUST_NOT_RUN'); } };
+    const slowDecision = {
+    /** Détermine la décision à partir des preuves disponibles. */
+    decide: () => { busyWaitMs(250); return decision(); } }; // consumes almost all of a 260ms budget
     const result = new SecurityRemediationOrchestratorService(slowDecision as any, wm, spyingRepoCache(calls), adapter, scanner)
       .orchestrate(input(260));
     assert.equal(calls.length, 0, '2: ensureRepo() must never be called once the deadline is already exhausted -- refused outright, not attempted-then-timed-out');

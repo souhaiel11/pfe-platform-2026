@@ -1,3 +1,4 @@
+// Teste le composant « candidate-base-sha » et ses cas d’erreur.
 import * as assert from 'node:assert/strict';
 import { resolveCandidateBaseSha, CandidateBaseShaResolutionError } from './candidate-base-sha';
 

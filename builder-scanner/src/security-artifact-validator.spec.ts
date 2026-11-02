@@ -1,8 +1,4 @@
-/** Fault injection exercises the DEFAULT adapter's commands/cleanup, not a
- * replacement scanner. It is not evidence of an operational Podman runtime.
- * Moved verbatim from candidate-verifier/src/security-artifact-validator.
- * spec.ts (V1.7 predeploy phase, dedicated builder/scanner split) -- same
- * tests, same assertions, only the import paths changed. */
+// Teste le composant « security-artifact-validator » et ses cas d’erreur.
 import * as assert from 'assert';
 import * as fs from 'fs';
 import * as os from 'os';
@@ -33,6 +29,7 @@ try {
  for (const scenario of ['success', 'residual-cve', ...Object.keys(codes)]) {
   let imagePresent = false, scratch = '', buildAttempted = false;
   const calls: any[] = [];
+  /** Prépare les données nécessaires à ce scénario. */
   const fail = (status = 2, code?: string): never => { throw Object.assign(Error('injected'), { status, code }); };
   const adapter = new TrivyImageArtifactValidator((command, args, options) => {
    calls.push({ command, args, options }); scratch = options.cwd;
@@ -133,6 +130,10 @@ try {
   const adapter = new TrivyImageArtifactValidator((command, args, options) => {
    if (command === 'podman' && args[0] === 'build') { seen.push(options.timeout); return ''; }
    if (command === 'podman' && args[0] === 'info') return 'true';
+   // Image de base déclarée ABSENTE (code 1) : ce test porte sur la
+   // propagation du budget au build, et veut donc conserver le chemin
+   // complet pull -> build, pas le raccourci « déjà en cache ».
+   if (command === 'podman' && args[0] === 'image' && args[1] === 'exists') throw Object.assign(Error('absent'), { status: 1 });
    if (command === 'podman' && args[0] === 'pull') return '';
    if (command === 'trivy' && args[0] === '--version') return 'Version: 0.72.0';
    throw new ArtifactRuntimeError('RUNTIME_COMMAND_FAILED', 'STOP_AFTER_BUILD_TIMEOUT_CHECK');
@@ -152,6 +153,67 @@ try {
   });
   assert.throws(() => adapter.inspect(repo));
  }
+ // ── Image de base déjà en cache local -> le pull est SAUTÉ ────────────────
+ // Motivation réelle : l'étape de fermeture de sécurité échouait en
+ // RUNTIME_COMMAND_FAILED:PODMAN_BASE_IMAGE_PULL (« TLS handshake timeout »
+ // vers registry-1.docker.io, 3/3 tentatives) alors que les deux images de
+ // base étaient DÉJÀ dans le store podman. Le build tournant avec
+ // `--pull=never`, exiger un accès registre pour une image déjà présente
+ // rendait toute la chaîne dépendante d'une sortie réseau dont elle n'a pas
+ // besoin. Ce test fixe le contrat : présence locale prouvée -> aucun pull.
+ {
+  const calls: any[] = [];
+  let imagePresent = false;
+  const adapter = new TrivyImageArtifactValidator((command, args, options) => {
+   calls.push({ command, args });
+   if (command === 'podman' && args[0] === 'info') return 'true';
+   if (command === 'trivy' && args[0] === '--version') return 'Version: 0.72.0';
+   // Toutes les images de base répondent « présente » AVANT le build :
+   // c'est précisément la situation constatée en production.
+   if (command === 'podman' && args[0] === 'image' && args[1] === 'exists') {
+    const isTemporaryBuildTag = String(args[2] ?? '').startsWith('localhost/security-closure:');
+    if (isTemporaryBuildTag && !imagePresent) throw Object.assign(Error('absent'), { status: 1 });
+    return '';
+   }
+   if (command === 'podman' && args[0] === 'build') { imagePresent = true; return ''; }
+   if (command === 'podman' && args[0] === 'save') { fs.writeFileSync(args[args.indexOf('--output') + 1], 'synthetic-image'); return ''; }
+   if (command === 'trivy' && args[0] === 'image') {
+    fs.writeFileSync(args[args.indexOf('--output') + 1], JSON.stringify(f.coordinatedReport));
+    return '';
+   }
+   if (command === 'podman' && args[0] === 'image' && args[1] === 'rm') { imagePresent = false; return ''; }
+   throw Error('Unexpected command: ' + command + ' ' + args.join(' '));
+  });
+  const result = adapter.inspect(repo);
+  assert.equal(calls.some(c => c.command === 'podman' && c.args[0] === 'pull'), false,
+    'image de base déjà présente localement : aucun `podman pull` ne doit être tenté');
+  assert.ok(calls.some(c => c.command === 'podman' && c.args[0] === 'build'),
+    'le build doit quand même avoir lieu -- sauter le pull ne doit pas sauter le build');
+  assert.ok(result.timings!.BASE_IMAGE_EXISTS >= 0, 'la vérification de présence est chronométrée séparément');
+  assert.equal(result.timings!.PODMAN_BASE_IMAGE_PULL, undefined,
+    'aucun temps de pull ne doit être compté quand le pull est sauté');
+ }
+ // Et le contrôle négatif indissociable : image ABSENTE -> le pull reste
+ // obligatoire, et son échec reste bloquant. Sauter le pull ne doit jamais
+ // devenir « scanner une image qu'on n'a pas ».
+ {
+  const calls: any[] = [];
+  const adapter = new TrivyImageArtifactValidator((command, args, options) => {
+   calls.push({ command, args });
+   if (command === 'podman' && args[0] === 'info') return 'true';
+   if (command === 'trivy' && args[0] === '--version') return 'Version: 0.72.0';
+   if (command === 'podman' && args[0] === 'image' && args[1] === 'exists') throw Object.assign(Error('absent'), { status: 1 });
+   if (command === 'podman' && args[0] === 'pull') throw Object.assign(Error('injected'), { status: 2 });
+   if (command === 'podman' && args[0] === 'image' && args[1] === 'rm') return '';
+   throw Error('Unexpected command: ' + command + ' ' + args.join(' '));
+  });
+  assert.throws(() => adapter.inspect(repo),
+    (e: any) => e instanceof ArtifactRuntimeError && e.stage === 'PODMAN_BASE_IMAGE_PULL' && e.code === 'RUNTIME_COMMAND_FAILED',
+    'image de base absente : l\'échec du pull doit rester bloquant');
+  assert.equal(calls.some(c => c.command === 'podman' && c.args[0] === 'build'), false,
+    'aucun build ne doit suivre un pull échoué');
+ }
+ console.log('Base image cache: PASS (présence locale -> pull sauté, build conservé ; absence -> pull obligatoire et bloquant, aucun build)');
  console.log('Default artifact adapter: PASS (15 fault/success scenarios; secret allowlist, pinned version, cleanup and residual-CVE rejection; command-injected tests; V1.7 deadline-budget propagation and pre-stage refusal; runtime-stabilization-phase base-image-pull fault injection)');
 } finally {
  for (const key of secrets) { if (saved[key] === undefined) delete process.env[key]; else process.env[key] = saved[key]; }

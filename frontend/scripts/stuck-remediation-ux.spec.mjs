@@ -1,15 +1,6 @@
+// Teste le composant « stuck-remediation-ux » et ses cas d’erreur.
 import {Observable, Subject, takeUntil} from 'rxjs';
-// Vérifie le correctif "stuck remediation UX" (Phase 1, audit 2026-10-04) :
-// le polling et l'affichage de incident-detail.component.ts doivent suivre
-// metadata.fixRequest.status — pas seulement prUrl/prGenerationState — et
-// l'état visible doit être restauré depuis la vérité serveur à chaque
-// chargement, jamais depuis la seule mémoire du composant.
-//
-// Même technique que merge-ready-success.spec.mjs (chargement de la vraie
-// source .ts transpilée + exécutée dans un bac à sable, instanciation via
-// Object.create() sans passer par le constructeur Angular) combinée à la
-// technique de minuteur contrôlable de batch-polling.spec.mjs (setInterval/
-// clearInterval remplacés par un faux minuteur "tick()" manuel).
+// Vérifie le correctif "stuck remediation UX" (Phase 1, audit 2026-10-04).
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -17,56 +8,71 @@ import vm from 'node:vm';
 
 const require = createRequire(import.meta.url);
 const ts = require('typescript');
+/** Lit les données depuis leur source. */
 const read = path => readFileSync(new URL(path, import.meta.url), 'utf8');
-const angularStub = () => new Proxy({}, { get: () => (..._args) => target => target });
+/** Simule les dépendances nécessaires au scénario. */
+const angularStub = () => new Proxy({}, {
+/** Récupère les données demandées. */
+get: () => (..._args) => target => target });
 
 const incidentSource = read('../src/app/features/incidents/incident-detail.component.ts');
 const incidentTemplate = read('../src/app/features/incidents/incident-detail.component.html');
 
+/** Vérifie les résultats attendus dans ce scénario. */
 function fakeTimers() {
   const t = { fn: null, ms: null, cleared: true, id: 0 };
   return {
+    /** Simule la modification demandée par le composant. */
     setInterval: (fn, ms) => { t.fn = fn; t.ms = ms; t.cleared = false; return ++t.id; },
+    /** Prépare les données nécessaires à ce scénario. */
     clearInterval: () => { t.cleared = true; t.fn = null; },
+    /** Vérifie les résultats attendus dans ce scénario. */
     tick: () => { assert.ok(t.fn && !t.cleared, 'expected an active interval to tick'); t.fn(); },
     info: t,
   };
 }
 
+/** Simule la lecture des données demandées par le composant. */
 function loadComponent(timers) {
   const exports = {};
   const code = ts.transpileModule(incidentSource, {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, experimentalDecorators: true },
   }).outputText;
   vm.runInNewContext(code, {
-    exports, require: name => name === 'rxjs' ? {Observable, Subject, takeUntil} : angularStub(name),
+    exports,
+    /** Charge la dépendance prévue pour le scénario. */
+    require: name => name === 'rxjs' ? {Observable, Subject, takeUntil} : angularStub(name),
+    /** Simule la modification demandée par le composant. */
     setTimeout: () => 0,
     setInterval: timers.setInterval,
     clearInterval: timers.clearInterval,
     console,
-    globalThis: { confirm: () => true },
+    globalThis: {
+    /** Prépare les données nécessaires à ce scénario. */
+    confirm: () => true },
   });
   return Object.create(exports['IncidentDetailComponent'].prototype);
 }
 
-// Object.create() ne passe jamais par le constructeur : les champs
-// readonly/initialisés en ligne (TERMINAL_FIX_STATUSES, STALE_DISPATCH_
-// THRESHOLD_MS, POLL_*, auth, api, toast) doivent être fixés à la main,
-// exactement comme batch-polling.spec.mjs le fait pour ProjectDetailComponent.
+/** Object.create() ne passe jamais par le constructeur. */
 function fakeHttp() {
   const calls = [];
+  /** Prépare les données nécessaires à ce scénario. */
   const makeObservable = (url, body) => {
     const rec = { url, body, observer: null };
     calls.push(rec);
     return new Observable(observer => { rec.observer = observer; });
   };
   return {
+    /** Récupère les données demandées. */
     get: url => makeObservable(url, undefined),
+    /** Prépare les données nécessaires à ce scénario. */
     post: (url, body) => makeObservable(url, body),
     calls,
   };
 }
 
+/** Prépare les données nécessaires à ce scénario. */
 function freshIncident(timers, { isAdmin = false } = {}) {
   const c = loadComponent(timers);
   // @Input() id est compilé avec un descripteur non réassignable sous ce
@@ -84,16 +90,23 @@ function freshIncident(timers, { isAdmin = false } = {}) {
   c.requestedTab = null;
   const http = fakeHttp();
   c.api = {
+    /** Simule la lecture des données demandées par le composant. */
     getIncident: id => http.get(`/api/incidents/${id}`),
+    /** Prépare les données nécessaires à ce scénario. */
     reconcileStaleDispatch: (id, requestId, body) => http.post(`/api/incidents/${id}/remediation/${requestId}/reconcile-stale-dispatch`, body),
   };
-  c.toast = { success() {}, error() {} };
+  c.toast = {
+  /** Prépare les données nécessaires à ce scénario. */
+  success() {},
+  /** Traite l’erreur reçue et termine le suivi de la demande. */
+  error() {} };
   c.auth = { isAdmin };
   c.http = http;
   c.timers = timers;
   return c;
 }
 
+/** Prépare les données nécessaires à ce scénario. */
 const dispatched = (overrides = {}) => ({
   id: 'incident-1', prUrl: null,
   metadata: { fixRequest: {
@@ -121,6 +134,7 @@ console.log('--- T2: PR_CREATED -> polling stops, success ---');
 {
   const timers = fakeTimers();
   const c = freshIncident(timers);
+  /** Charge les données nécessaires au composant. */
   c.load = () => { c.incident = c.incident; }; // resynchronisation stub, non testée ici
   c.startPrPolling();
   timers.tick();
@@ -135,6 +149,7 @@ console.log('--- T3: FIX_FAILED -> polling stops IMMEDIATELY (not after 22 ticks
 {
   const timers = fakeTimers();
   const c = freshIncident(timers);
+  /** Charge les données nécessaires au composant. */
   c.load = () => {};
   c.startPrPolling();
   timers.tick(); // tick #1 only
@@ -206,12 +221,14 @@ console.log('--- T8: reconciliation failure -> error shown ---');
   const c = freshIncident(timers, { isAdmin: true });
   const old = new Date(Date.now() - 45 * 60 * 1000).toISOString();
   c.incident = dispatched({ attempts: [{ attempt: 1, dispatchedAt: old }] });
+  /** Prépare les données nécessaires à ce scénario. */
   globalThis.confirm = () => true;
   c.reconcileStaleDispatch();
   assert.equal(c.http.calls.length, 1);
   assert.equal(c.http.calls[0].url, '/api/incidents/incident-1/remediation/req-1/reconcile-stale-dispatch');
   assert.equal(c.http.calls[0].body.batchId, 'batch-1');
   assert.equal(c.http.calls[0].body.attemptCount, 1);
+  /** Charge les données nécessaires au composant. */
   c.load = () => {};
   c.http.calls[0].observer.error({ status: 409, error: { message: 'La récupération ne correspond pas au batch WF2 demandé.' } });
   assert.equal(c.reconcileBusy, false);

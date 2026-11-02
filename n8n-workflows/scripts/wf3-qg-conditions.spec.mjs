@@ -1,12 +1,4 @@
-// R22-A — proves the "Consolidate Validation Result" node in the
-// repo-tracked WF3 export (n8n-workflows/active/wf3-post-pr-validation-v4-
-// 4JiOKpyHhx1znTYw.json) forwards the Sonar Quality Gate's per-condition
-// breakdown (sonarQualityGateConditions/sonarQualityGatePeriod) instead of
-// discarding it after only extracting `.status` -- proven-missing live on
-// PR-25 build #3 (R21-AZ): the persisted backend payload had `sonarStatus:
-// "ERROR"` but no per-condition detail anywhere, forcing a manual SQLite/
-// n8n-execution-data read to find the exact failing condition. This is a
-// REPO-ONLY change: nothing here imports/publishes to the live n8n instance.
+// Teste le composant « wf3-qg-conditions » et ses cas d’erreur.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -19,8 +11,12 @@ const node = workflow.nodes.find(n => n.name === 'Consolidate Validation Result'
 assert.ok(node, 'Consolidate Validation Result node must exist in the repo-tracked WF3 export');
 const code = node.parameters.jsCode;
 
+/** Exécute le traitement et collecte son résultat. */
 function run(mockData) {
-  const mock = name => ({ first: () => ({ json: mockData[name] }) });
+  /** Simule les dépendances nécessaires au scénario. */
+  const mock = name => ({
+  /** Renvoie le premier élément disponible. */
+  first: () => ({ json: mockData[name] }) });
   const capturingCode = code
     .replace('return [{json:{', 'const __out = {')
     .replace(/\}\}\];\s*$/, '};\nreturn __out;');

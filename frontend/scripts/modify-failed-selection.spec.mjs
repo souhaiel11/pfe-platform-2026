@@ -1,3 +1,4 @@
+// Teste le composant « modify-failed-selection » et ses cas d’erreur.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -10,14 +11,32 @@ const template = readFileSync(new URL('../src/app/features/projects/project-deta
 // replaced with inert stubs. The production Angular build checks the template.
 const exports = {};
 const code = ts.transpileModule(source, {compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,experimentalDecorators:true}}).outputText;
-vm.runInNewContext(code,{exports,require:()=>new Proxy({}, {get:()=>()=>()=>{}}),setTimeout:()=>0,console});
+vm.runInNewContext(code,{exports,
+/** Charge la dépendance prévue pour le scénario. */
+require:()=>new Proxy({}, {
+/** Récupère les données demandées. */
+get:()=>()=>()=>{}}),
+/** Simule la modification demandée par le composant. */
+setTimeout:()=>0,console});
 const component = Object.create(exports.ProjectDetailComponent.prototype);
 const findings = ['A','B','C'].map(id=>({id,remediationType:'AUTO_FIX_ELIGIBLE'}));
 findings.push({id:'manual',remediationType:'DEVELOPER_ACTION_REQUIRED'});
 const old = {requestId:'FR1',batchId:'ABC',status:'FIX_FAILED',findingIds:['A','B','C'],attemptCount:5,retryEligible:true,lastError:'old failure',attempts:[{attempt:5,status:'FIX_FAILED'}]};
 const snapshot=JSON.stringify(old);
 let created=0,retried=0,complete;
-Object.assign(component,{auth:{currentUser:{role:'developer'}},latestReport:{id:'incident',metadata:{fixRequest:old,sourceCommitSha:'a'.repeat(40)}},ed:{sonar:{issues:findings}},selectedSonarIds:new Set(),approving:false,modifyingFailedSelection:false,toast:{success(){},error(){}},api:{approveFixBatch(id,ids){created++;assert.equal(id,'incident');assert.deepEqual([...ids],['A','C']);return {subscribe(callback){complete=callback.next;}};},retryFixBatch(){retried++;return {subscribe(){}};}}});
+Object.assign(component,{auth:{currentUser:{role:'developer'}},latestReport:{id:'incident',metadata:{fixRequest:old,sourceCommitSha:'a'.repeat(40)}},ed:{sonar:{issues:findings}},selectedSonarIds:new Set(),approving:false,modifyingFailedSelection:false,toast:{
+/** Prépare les données nécessaires à ce scénario. */
+success(){},
+/** Traite l’erreur reçue et termine le suivi de la demande. */
+error(){}},api:{
+/** Vérifie les résultats attendus dans ce scénario. */
+approveFixBatch(id,ids){created++;assert.equal(id,'incident');assert.deepEqual([...ids],['A','C']);return {
+/** Prépare les données nécessaires à ce scénario. */
+subscribe(callback){complete=callback.next;}};},
+/** Prépare les données nécessaires à ce scénario. */
+retryFixBatch(){retried++;return {
+/** Prépare les données nécessaires à ce scénario. */
+subscribe(){}};}}});
 assert.equal(component.canRetryFixRequest(),true);
 assert.equal(component.canModifySelection(),true);
 assert.match(template,/Réessayer les mêmes erreurs/);

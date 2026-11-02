@@ -1,10 +1,4 @@
 // R47 — la couverture n'est une mesure que si l'etape de tests a tourne.
-//
-// WF1 ecrit `coverage: 0` dans le bloc `tests` meme quand l'etape a ete sautee.
-// Afficher « 0 % » dans ce cas presente une absence de mesure comme une
-// couverture reellement nulle. Un zero d'une etape EXECUTEE reste un vrai zero.
-//
-//   node frontend/scripts/data-truth-coverage.spec.mjs
 
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -20,6 +14,7 @@ const strip = (s) => s
   .replace(/export function /g, 'function ')
   .replace(/: *number \| null/g, '').replace(/: *boolean/g, '')
   .replace(/: *string(?= *\{)/g, '').replace(/: *unknown/g, '').replace(/: *any/g, '');
+/** Sélectionne les champs utiles de la donnée. */
 const pick = (name) => {
   const start = src.indexOf(`export function ${name}`);
   assert.notEqual(start, -1, `${name} doit exister dans data-truth.ts`);

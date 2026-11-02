@@ -1,3 +1,5 @@
+// Teste le composant « manual-remediation.service.v1-8-enforcement » et ses cas d’erreur.
+import { attachLifecycleTestTransaction } from './lifecycle-test-transaction';
 // V1.8 Phase 5 ticket — launchBatchRemediation()'s new ENFORCED-mode gate.
 // Same hand-rolled fake-repo convention as manual-remediation.service.batch.spec.ts,
 // extended with a fake `projects` repo (the new 6th constructor argument)
@@ -12,19 +14,32 @@ const REAL_REPOSITORY = 'souhaiel11/pfe-app-test';
 const REAL_COMMIT_SHA = '7ae0f954f99628b69ce9b42f42c1e2acc8568d99';
 const PROJECT_ID = '3aa1c9b9-e114-40e4-884b-ebc7aa32e002';
 
+/** Prépare les données nécessaires à ce scénario. */
 function makeService(seedTasks: any[], dispatcher: Wf6BatchDispatcher) {
   const rows: any[] = seedTasks.map(t => ({ ...t }));
   const repo: any = {
+    /** Compte les éléments correspondants. */
     count: async () => rows.length,
+    /** Recherche les éléments correspondants. */
     find: async ({ where }: any) => rows.filter(r => (where.id?.value ?? [r.id]).includes(r.id)),
+    /** Recherche l’élément correspondant à l’identifiant. */
     findOne: async ({ where }: any) => rows.find(r => r.id === where.id) || null,
+    /** Enregistre les données fournies. */
     save: async (value: any) => { for (const v of (Array.isArray(value) ? value : [value])) { const i = rows.findIndex(r => r.id === v.id); if (i < 0) rows.push(v); else rows[i] = v; } return value; },
   };
-  const incidents: any = { findOne: async ({ where }: any) => (where.id === 'incident-1' ? { id: 'incident-1', projectId: PROJECT_ID, metadata: { sourceCommitSha: REAL_COMMIT_SHA } } : null), find: async () => [] };
-  const projects: any = { findOne: async ({ where }: any) => (where.id === PROJECT_ID ? { id: PROJECT_ID, githubRepo: REAL_REPOSITORY } : null) };
+  const incidents: any = {
+  /** Recherche l’élément correspondant à l’identifiant. */
+  findOne: async ({ where }: any) => (where.id === 'incident-1' ? { id: 'incident-1', projectId: PROJECT_ID, metadata: { sourceCommitSha: REAL_COMMIT_SHA } } : null),
+  /** Recherche les éléments correspondants. */
+  find: async () => [] };
+  const projects: any = {
+  /** Recherche l’élément correspondant à l’identifiant. */
+  findOne: async ({ where }: any) => (where.id === PROJECT_ID ? { id: PROJECT_ID, githubRepo: REAL_REPOSITORY } : null) };
+  attachLifecycleTestTransaction(repo, projects);
   return { service: new ManualRemediationService(repo, incidents, dispatcher, undefined, projects), rows };
 }
 
+/** Prépare les données nécessaires à ce scénario. */
 function seedTask(overrides: any = {}) {
   return {
     id: overrides.id || 'task-1', projectId: PROJECT_ID, incidentId: 'incident-1', findingId: 'x',
@@ -39,6 +54,7 @@ function seedTask(overrides: any = {}) {
   };
 }
 
+/** Exécute le traitement et collecte son résultat. */
 async function run() {
   const originalEnv = process.env.V1_8_SECURITY_ENFORCEMENT;
   try {
@@ -51,7 +67,9 @@ async function run() {
     delete process.env.V1_8_SECURITY_ENFORCEMENT;
     {
       let dispatchCalled = false;
-      const dispatcher: Wf6BatchDispatcher = { dispatch: async () => { dispatchCalled = true; } };
+      const dispatcher: Wf6BatchDispatcher = {
+      /** Transmet la demande au service chargé de l’exécuter. */
+      dispatch: async () => { dispatchCalled = true; } };
       const h2Task = seedTask({ id: 'h2-task', ruleOrCve: 'CVE-2022-45868', findingSnapshot: { component: 'com.h2database:h2', currentVersion: '2.1.212', fixedVersion: '2.2.220' } });
       const { service } = makeService([h2Task], dispatcher);
       const result = await service.launchBatchRemediation(PROJECT_ID, ['h2-task'], dev);
@@ -64,7 +82,9 @@ async function run() {
     process.env.V1_8_SECURITY_ENFORCEMENT = 'ENFORCED';
     {
       let dispatchCalled = false;
-      const dispatcher: Wf6BatchDispatcher = { dispatch: async () => { dispatchCalled = true; } };
+      const dispatcher: Wf6BatchDispatcher = {
+      /** Transmet la demande au service chargé de l’exécuter. */
+      dispatch: async () => { dispatchCalled = true; } };
       const { service } = makeService([seedTask()], dispatcher);
       const result = await service.launchBatchRemediation(PROJECT_ID, ['task-1'], dev);
       assert.equal(result.status, 'DISPATCHING');
@@ -76,7 +96,9 @@ async function run() {
     // BEFORE any state mutation or dispatcher call -- fail-closed.
     {
       let dispatchCalled = false;
-      const dispatcher: Wf6BatchDispatcher = { dispatch: async () => { dispatchCalled = true; } };
+      const dispatcher: Wf6BatchDispatcher = {
+      /** Transmet la demande au service chargé de l’exécuter. */
+      dispatch: async () => { dispatchCalled = true; } };
       const h2Task = seedTask({ id: 'h2-task', ruleOrCve: 'CVE-2022-45868', remediationType: 'DEVELOPER_ACTION_REQUIRED', findingSnapshot: { component: 'com.h2database:h2', currentVersion: '2.1.212', fixedVersion: '2.2.220' } });
       const { service, rows } = makeService([h2Task], dispatcher);
       await assert.rejects(() => service.launchBatchRemediation(PROJECT_ID, ['h2-task'], dev), /NO_COMPATIBLE_CANDIDATE/);
@@ -90,7 +112,9 @@ async function run() {
     // green light) must NOT rescue a finding V1.8 evidence blocks.
     {
       let dispatchCalled = false;
-      const dispatcher: Wf6BatchDispatcher = { dispatch: async () => { dispatchCalled = true; } };
+      const dispatcher: Wf6BatchDispatcher = {
+      /** Transmet la demande au service chargé de l’exécuter. */
+      dispatch: async () => { dispatchCalled = true; } };
       const h2Task = seedTask({ id: 'h2-task', ruleOrCve: 'CVE-2022-45868', remediationType: 'AUTO_FIX_ELIGIBLE', findingSnapshot: { component: 'com.h2database:h2', currentVersion: '2.1.212', fixedVersion: '2.2.220' } });
       const { service } = makeService([h2Task], dispatcher);
       await assert.rejects(() => service.launchBatchRemediation(PROJECT_ID, ['h2-task'], dev), /NO_COMPATIBLE_CANDIDATE/);
@@ -101,7 +125,9 @@ async function run() {
     // 5. ENFORCED mode, stale evidence (installed version changed since validation) -> BLOCK.
     {
       let dispatchCalled = false;
-      const dispatcher: Wf6BatchDispatcher = { dispatch: async () => { dispatchCalled = true; } };
+      const dispatcher: Wf6BatchDispatcher = {
+      /** Transmet la demande au service chargé de l’exécuter. */
+      dispatch: async () => { dispatchCalled = true; } };
       const staleTask = seedTask({ findingSnapshot: { component: 'org.yaml:snakeyaml', currentVersion: '1.30', fixedVersion: '1.31' } });
       const { service } = makeService([staleTask], dispatcher);
       await assert.rejects(() => service.launchBatchRemediation(PROJECT_ID, ['task-1'], dev), /V1_8_EVIDENCE_STALE/);
@@ -116,7 +142,9 @@ async function run() {
     // major" policy independently recomputing (possibly agreeing by
     // coincidence, never by construction) its own target version.
     {
-      const dispatcher: Wf6BatchDispatcher = { dispatch: async () => {} };
+      const dispatcher: Wf6BatchDispatcher = {
+      /** Transmet la demande au service chargé de l’exécuter. */
+      dispatch: async () => {} };
       const { service, rows } = makeService([seedTask()], dispatcher);
       await service.launchBatchRemediation(PROJECT_ID, ['task-1'], dev);
       const plan = rows[0].securityFindingRemediation?.v1_8Plan;
@@ -132,7 +160,9 @@ async function run() {
     // unchanged wire/state contract when enforcement is off).
     {
       delete process.env.V1_8_SECURITY_ENFORCEMENT;
-      const dispatcher: Wf6BatchDispatcher = { dispatch: async () => {} };
+      const dispatcher: Wf6BatchDispatcher = {
+      /** Transmet la demande au service chargé de l’exécuter. */
+      dispatch: async () => {} };
       const h2Task = seedTask({ id: 'h2-task', ruleOrCve: 'CVE-2022-45868', findingSnapshot: { component: 'com.h2database:h2', currentVersion: '2.1.212', fixedVersion: '2.2.220' } });
       const { service, rows } = makeService([h2Task], dispatcher);
       await service.launchBatchRemediation(PROJECT_ID, ['h2-task'], dev);

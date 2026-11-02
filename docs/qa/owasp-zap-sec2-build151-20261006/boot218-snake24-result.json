@@ -1,0 +1,20 @@
+{
+  "case": {
+    "name": "boot218-snake24",
+    "parent": "2.7.18",
+    "snake": "2.4",
+    "alignSecurity": true
+  },
+  "exitCode": 0,
+  "buildPass": true,
+  "testPass": true,
+  "descriptor": "/tmp/sec2-qualification/boot218-snake24/qualification.xml",
+  "originalPomUnchanged": true,
+  "tests": 18,
+  "yamlCompatibilityPass": true,
+  "startupPass": true,
+  "healthPass": true,
+  "running": true,
+  "runtimeJava": "11 (exact151 base runtime)",
+  "jarSha256": "17433f240a8516fbcaab6963646512feabeed5a7ddce2f7020e817a8a95dc11f"
+}

@@ -1,0 +1,6 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "outDir": "/tmp/pfe-local-reports-dist", "incremental": false },
+  "include": ["src/source-evidence/source-evidence.module.ts"],
+  "exclude": ["node_modules", "dist", "**/*.spec.ts"]
+}

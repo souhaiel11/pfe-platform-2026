@@ -1,3 +1,4 @@
+// Teste le composant « data-truth-jury » et ses cas d’erreur.
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {test} from 'node:test';
@@ -18,8 +19,18 @@ test('scanner missing states preserve semantics',()=>{
 });
 test('late project A reads are cancelled before project B can render',()=>{
  const first=new Subject(),second=new Subject();let calls=0;
- const c=new ProjectDetailComponent({getProject:()=>++calls===1?first:second,getProjectSourceEvidence:()=>new Subject(),getIncidentSourceEvidence:()=>new Subject()},{error(){}},{},{},{},{currentUser:{role:'viewer'}});
- for(const k of ['loadIncidents','loadReports','loadJenkinsBuilds','loadJudgeStatus','loadDeployReadiness','loadConvergence','loadManualRemediation'])c[k]=()=>{};
+ const c=new ProjectDetailComponent({
+ /** Simule la lecture des données demandées par le composant. */
+ getProject:()=>++calls===1?first:second,
+ /** Simule la lecture des données demandées par le composant. */
+ getProjectSourceEvidence:()=>new Subject(),
+ /** Simule la lecture des données demandées par le composant. */
+ getIncidentSourceEvidence:()=>new Subject()},{
+ /** Traite l’erreur reçue et termine le suivi de la demande. */
+ error(){}},{},{},{},{currentUser:{role:'viewer'}});
+ for(const k of ['loadIncidents','loadReports','loadJenkinsBuilds','loadJudgeStatus','loadDeployReadiness','loadConvergence','loadManualRemediation'])
+ /** Prépare les données nécessaires à ce scénario. */
+ c[k]=()=>{};
  c.id='A';c.loadProject();c.latestReport={id:'A'};c.ed={sonar:{project:'A'}};c.lastScore=100;
  c.id='B';c.ngOnChanges({id:{firstChange:false}});
  assert.equal(first.observed,false);assert.equal(c.project,null);assert.equal(c.latestReport,null);assert.equal(c.lastScore,null);assert.equal(c.scoreUnavailable,true);assert.equal(JSON.stringify(c.ed),'{}');
@@ -27,7 +38,11 @@ test('late project A reads are cancelled before project B can render',()=>{
 });
 test('incident reuse clears previous evidence and cancels late callbacks',()=>{
  const old=new Subject(),fresh=new Subject();let calls=0;
- const c=new IncidentDetailComponent({getIncident:()=>++calls===1?old:fresh,getIncidentSourceEvidence:()=>new Subject()},{},{},{},{currentUser:{role:'viewer'}});
+ const c=new IncidentDetailComponent({
+ /** Simule la lecture des données demandées par le composant. */
+ getIncident:()=>++calls===1?old:fresh,
+ /** Simule la lecture des données demandées par le composant. */
+ getIncidentSourceEvidence:()=>new Subject()},{},{},{},{currentUser:{role:'viewer'}});
  c.id='A';c.load();c.incident={id:'A'};c.aiAnalysis={securityLevel:'LOW'};
  c.id='B';c.ngOnChanges({id:{firstChange:false}});
  assert.equal(old.observed,false);assert.equal(c.incident,null);assert.equal(c.aiAnalysis,null);old.next({id:'A'});assert.equal(c.incident,null);c.ngOnDestroy();assert.equal(fresh.observed,false);
@@ -45,16 +60,7 @@ test('global scanner totals exclude failed, missing and source-less project obse
 
 test('unknown quality gates are neutral, and explicit scanner errors cannot inherit a past pass',()=>{assert.equal(truth.qualityGatePresentation({}).label,'Non disponible');assert.equal(truth.qualityGatePresentation({status:'FAILED',quality_gate:'OK'}).color,'var(--text-muted)');assert.equal(truth.qualityGatePresentation({status:'COMPLETED',quality_gate:'ERROR'}).label,'Échec');assert.equal(truth.qualityGatePresentation({quality_gate:'OK'}).label,'Réussi');});
 
-// ════════════════════════════════════════════════════════════════════════════
-// R46 — « mesure disponible » et « contrôle qualité résolu » sont deux faits
-// distincts. WF1 reporte la résolution du contrôle qualité dans
-// `resultAvailable` du bloc Sonar : sur un build de BRANCHE il vaut false
-// (l'analysisId n'est résolu que sur les builds de PR), alors que les mesures
-// sont bien présentes et réelles. Les masquer revenait à afficher « Non
-// disponible » sur des chiffres mesurés.
-// Constaté en réel sur app-test-pfe-vermeg build #2 : status COMPLETED,
-// code_smells 7, bugs 0, coverage mesurée, et resultAvailable false.
-// ════════════════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════════════════ R46 — « mesure disponible » et « contrôle qualité résolu » sont deux faits distincts.
 test('R46 les mesures Sonar restent lisibles quand seul le contrôle qualité est non résolu',()=>{
  const sonarBranchBuild={status:'COMPLETED',executed:true,resultAvailable:false,
    qualityGateResolved:false,quality_gate:'QUALITY_GATE_UNAVAILABLE',
@@ -105,18 +111,14 @@ test('R46 une couverture non mesurée ne se confond pas avec une couverture null
  assert.equal(truth.scannerMetric(notMeasured,'coverage'),null,'absence de mesure reste absence');
 });
 
-// ════════════════════════════════════════════════════════════════════════════
-// R46 — la couverture affichée doit venir d'UNE seule source autoritaire :
-// le rapport de couverture du build (`tests.coverage`), que la bibliothèque
-// partagée remplit depuis le XML de JaCoCo.
-//
-// Le bloc Sonar expose aussi un champ `coverage`, mais WF1 le lit sur la
-// réponse de l'API /issues, qui ne porte pas ce champ : il vaut 0 par
-// construction pour TOUS les projets. L'afficher revenait à montrer 0 % à des
-// projets dont la couverture réelle est de 88,9 %.
-// ════════════════════════════════════════════════════════════════════════════
 test('R46 la couverture affichée vient du rapport de build, pas du bloc Sonar',()=>{
- const c=new ProjectDetailComponent({getProject:()=>({subscribe(){}})},{error(){}},{},{},{},{currentUser:{role:'viewer'}});
+ const c=new ProjectDetailComponent({
+ /** Simule la lecture des données demandées par le composant. */
+ getProject:()=>({
+ /** Prépare les données nécessaires à ce scénario. */
+ subscribe(){}})},{
+ /** Traite l’erreur reçue et termine le suivi de la demande. */
+ error(){}},{},{},{},{currentUser:{role:'viewer'}});
  // Cas réel : Sonar porte 0 par construction, le build porte la vraie mesure.
  c.ed={sonar:{status:'COMPLETED',coverage:0},tests:{total:24,failures:0,coverage:92}};
  assert.equal(c.authoritativeCoverage(),92,'la mesure du build gagne');

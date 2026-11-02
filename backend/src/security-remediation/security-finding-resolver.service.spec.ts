@@ -1,3 +1,4 @@
+// Teste le composant « security-finding-resolver.service » et ses cas d’erreur.
 import * as assert from 'node:assert/strict';
 import { SecurityFindingResolverService } from './security-finding-resolver.service';
 
@@ -6,6 +7,7 @@ const INCIDENT_ID = 'incident-1';
 const TASK_ID = 'task-logback-1';
 const REAL_SHA = 'a81be45709aba07da50d44206d073c2eb55892b5';
 
+/** Simule les dépendances nécessaires au scénario. */
 function fakeRepos(overrides: { tasks?: any[]; incidents?: any[]; projects?: any[] } = {}) {
   const tasks = overrides.tasks ?? [
     { id: TASK_ID, projectId: PROJECT_ID, incidentId: INCIDENT_ID, findingFingerprint: 'fp-logback-1', source: 'TRIVY', ruleOrCve: 'CVE-2023-6378', title: 'logback: serialization vulnerability',
@@ -17,12 +19,19 @@ function fakeRepos(overrides: { tasks?: any[]; incidents?: any[]; projects?: any
   const projects = overrides.projects ?? [
     { id: PROJECT_ID, githubRepo: 'souhaiel11/pfe-app-test' },
   ];
-  const tasksRepo: any = { findOne: async ({ where }: any) => tasks.find(t => t.id === where.id) || null };
-  const incidentsRepo: any = { findOne: async ({ where }: any) => incidents.find(i => i.id === where.id) || null };
-  const projectsRepo: any = { findOne: async ({ where }: any) => projects.find(p => p.id === where.id) || null };
+  const tasksRepo: any = {
+  /** Recherche l’élément correspondant à l’identifiant. */
+  findOne: async ({ where }: any) => tasks.find(t => t.id === where.id) || null };
+  const incidentsRepo: any = {
+  /** Recherche l’élément correspondant à l’identifiant. */
+  findOne: async ({ where }: any) => incidents.find(i => i.id === where.id) || null };
+  const projectsRepo: any = {
+  /** Recherche l’élément correspondant à l’identifiant. */
+  findOne: async ({ where }: any) => projects.find(p => p.id === where.id) || null };
   return { tasksRepo, incidentsRepo, projectsRepo };
 }
 
+/** Exécute les étapes principales de ce programme. */
 async function main() {
   // Happy path.
   {
@@ -194,13 +203,6 @@ async function main() {
   }
   console.log('security-finding-resolver Q) non-parent V1.8 plan for a DIFFERENT edit target -> never forwarded, fails closed to pure policy: PASS');
 
-  // R. V1.8 Phase 7B — a PARENT_VERSION plan is forwarded as
-  // parentRemediationPlan UNCONDITIONALLY (never gated on
-  // actualEditTarget === this finding's own package): an owner/parent
-  // remediation's whole point is that the edit target differs from the
-  // finding's package (jackson-databind's CVE fixed by bumping the Spring
-  // Boot parent, never jackson-databind's own declaration). pinnedTargetVersion
-  // must stay undefined (mutually exclusive shapes).
   {
     const { tasksRepo, incidentsRepo, projectsRepo } = fakeRepos({ tasks: [{
       id: TASK_ID, projectId: PROJECT_ID, incidentId: INCIDENT_ID, findingFingerprint: 'fp-parent-1', source: 'OWASP', ruleOrCve: 'CVE-2022-42003',

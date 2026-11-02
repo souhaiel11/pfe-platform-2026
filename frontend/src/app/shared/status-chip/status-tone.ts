@@ -1,12 +1,4 @@
-// Tonalité visuelle d'un statut — SEULE définition, dérivée de la valeur
-// canonique du backend.
-//
-// Avant ce fichier, plusieurs gabarits écrivaient leur propre binaire
-// `status === 'SUCCESS' ? vert : rouge`. Ce raccourci est faux dans les deux
-// sens : il peint en ROUGE un build en cours, interrompu, ou dont on ne sait
-// rien — il transforme une absence d'information en échec constaté. Le même
-// principe que la discipline de données du reste de la plateforme : inconnu
-// reste inconnu.
+// Tonalité visuelle d'un statut — SEULE définition, dérivée de la valeur canonique du backend.
 
 export type StatusTone = 'success' | 'warning' | 'error' | 'pending' | 'neutral' | 'disabled';
 
@@ -30,6 +22,7 @@ const TONES: Record<string, StatusTone> = {
 
   // En cours / en attente — JAMAIS un échec
   RUNNING: 'pending', PENDING: 'pending', QUEUED: 'pending', IN_PROGRESS: 'pending',
+  PAUSED_PENDING_INPUT: 'pending',
   DISPATCHING: 'pending', ANALYZING: 'pending', VALIDATING: 'pending',
   REQUESTED: 'pending', TODO: 'pending',
 
@@ -44,17 +37,14 @@ const TONES: Record<string, StatusTone> = {
   NOT_CONFIGURED: 'disabled', NOT_APPLICABLE: 'disabled', CLOSED: 'disabled',
   NO_BUILD: 'disabled',
   ABORTED: 'disabled', EXITED: 'disabled', NOT_REACHED: 'disabled',
+  NOT_EXECUTED: 'disabled',
 
   // Information manquante — neutre, jamais rouge
   UNKNOWN: 'neutral', UNAVAILABLE: 'neutral', INDETERMINATE: 'neutral',
   INDETERMINE: 'neutral', LOW: 'neutral', MINOR: 'neutral', INFO: 'neutral',
 };
 
-/**
- * Tonalité d'un statut. Une valeur absente ou non répertoriée vaut `neutral`
- * — ne jamais la rendre en rouge : on ne constate pas d'échec, on constate
- * qu'on ne sait pas.
- */
+/** Tonalité d'un statut. Une valeur absente ou non répertoriée vaut neutral — ne jamais la rendre en rouge : on ne constate pas d'échec, on constate qu'on ne sait pas. */
 export function statusTone(raw: unknown): StatusTone {
   const key = String(raw ?? '').trim().toUpperCase();
   if (!key) return 'neutral';
@@ -66,6 +56,7 @@ const GLYPHS: Record<StatusTone, string> = {
   success: '✓', error: '✕', warning: '!', pending: '…', neutral: '–', disabled: '○',
 };
 
+/** Traduit une tonalité en repère non chromatique (✓ ✕ ! … – ○), pour que l'information ne repose jamais sur la seule couleur. */
 export function statusGlyph(tone: StatusTone): string {
   return GLYPHS[tone];
 }
@@ -80,6 +71,7 @@ const COLORS: Record<StatusTone, string> = {
   disabled: 'var(--text-muted)',
 };
 
+/** Résout la couleur de thème (claire/sombre) correspondant à la tonalité d'un statut brut. */
 export function statusColor(raw: unknown): string {
   return COLORS[statusTone(raw)];
 }

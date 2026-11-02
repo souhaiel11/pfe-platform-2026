@@ -1,0 +1,18 @@
+@@ -22,7 +22,7 @@
+         <java.version>11</java.version>
+         <lombok.version>1.18.32</lombok.version>
+         <!-- Versions vulnérables intentionnelles -->
+-        <logback.version>1.2.11</logback.version>
++        <logback.version>1.2.13</logback.version>
+         <snakeyaml.version>1.29</snakeyaml.version>
+     </properties>
+ 
+@@ -61,7 +61,7 @@
+         <dependency>
+             <groupId>ch.qos.logback</groupId>
+             <artifactId>logback-classic</artifactId>
+-            <version>1.2.11</version>
++            <version>1.2.13</version>
+         </dependency>
+ 
+         <!-- SnakeYAML 1.29 — CVE-2022-25857 HIGH -->

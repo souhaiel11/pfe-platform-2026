@@ -1,3 +1,4 @@
+// Teste le composant « security-scanner-filter » et ses cas d’erreur.
 import {sharedDependency} from './security-lifecycle-test-loader.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -6,6 +7,7 @@ import vm from 'node:vm';
 
 const require = createRequire(import.meta.url);
 const ts = require('typescript');
+/** Lit les données depuis leur source. */
 const read = path => readFileSync(new URL(path, import.meta.url), 'utf8');
 
 // Charge le VRAI composant (méthodes + template réels), pas une
@@ -14,19 +16,25 @@ const statusLabelsSource = read('../src/app/shared/status-labels.ts');
 const statusLabelsExports = {};
 vm.runInNewContext(
   ts.transpileModule(statusLabelsSource, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText,
-  { exports: statusLabelsExports, require: () => ({}), console },
+  { exports: statusLabelsExports,
+  /** Charge la dépendance prévue pour le scénario. */
+  require: () => ({}), console },
 );
 const findingPresentationSource = read('../src/app/shared/finding-presentation.ts');
 const findingPresentationExports = {};
 vm.runInNewContext(
   ts.transpileModule(findingPresentationSource, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText,
-  { exports: findingPresentationExports, require: () => ({}), console },
+  { exports: findingPresentationExports,
+  /** Charge la dépendance prévue pour le scénario. */
+  require: () => ({}), console },
 );
 const scoreDisplaySource = read('../src/app/shared/score-display.ts');
 const scoreDisplayExports = {};
 vm.runInNewContext(
   ts.transpileModule(scoreDisplaySource, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText,
-  { exports: scoreDisplayExports, require: () => ({}), console },
+  { exports: scoreDisplayExports,
+  /** Charge la dépendance prévue pour le scénario. */
+  require: () => ({}), console },
 );
 const componentSource = read('../src/app/features/projects/project-detail.component.ts');
 const componentTemplate = read('../src/app/features/projects/project-detail.component.html');
@@ -36,16 +44,21 @@ const componentCode = ts.transpileModule(componentSource, {
 }).outputText;
 vm.runInNewContext(componentCode, {
   exports: componentExports,
+  /** Charge la dépendance prévue pour le scénario. */
   require: (spec) => {
     if (spec.endsWith('data-truth')) return sharedDependency(spec);
     if (spec.endsWith('status-labels')) return statusLabelsExports;
     if (spec.endsWith('finding-presentation')) return findingPresentationExports;
     if (spec.endsWith('score-display')) return scoreDisplayExports;
-    return new Proxy({}, { get: () => () => () => {} });
+    return new Proxy({}, {
+    /** Récupère les données demandées. */
+    get: () => () => () => {} });
   },
+  /** Simule la modification demandée par le composant. */
   setTimeout: () => 0, console,
 });
 
+/** Prépare les données nécessaires à ce scénario. */
 function newComponentWithFindings() {
   const c = Object.create(componentExports.ProjectDetailComponent.prototype);
   c.ed = {
@@ -57,9 +70,7 @@ function newComponentWithFindings() {
   return c;
 }
 
-// Filtrage RÉEL des sections rendues, en interprétant EXACTEMENT les mêmes
-// conditions *ngIf que le template (pour prouver la composition scanner +
-// section, sans dupliquer une logique séparée non testée).
+/** Prépare les données nécessaires à ce scénario. */
 function visibleSections(c) {
   const visible = [];
   if ((c.securityFilter === 'all' || c.securityFilter === 'trivy') && c.ed.trivy?.cves?.length) visible.push('trivy');
@@ -110,13 +121,7 @@ console.log('security-scanner-filter C) OWASP -> uniquement OWASP: PASS');
 }
 console.log('security-scanner-filter D) ZAP -> uniquement ZAP: PASS');
 
-// ============================================================================
-// E. Trivy + CRITICAL -> intersection correcte (le filtre scanner sélectionne
-// la SECTION ; la sévérité, déjà gérée par CveTableComponent.filtered() via
-// [severityFilter]="manualSeverityFilter", s'applique ENSUITE aux lignes de
-// cette section -- composition prouvée en rejouant la même logique que
-// cve-table.component.ts sur les données de la section retenue.)
-// ============================================================================
+// E. Trivy + CRITICAL -> intersection correcte (le filtre scanner sélectionne la SECTION.
 {
   const c = newComponentWithFindings();
   c.setSecurityFilter('trivy');
@@ -149,14 +154,7 @@ console.log('security-scanner-filter E) Trivy + CRITICAL -> intersection correct
 }
 console.log('security-scanner-filter F) scanner sans résultat -> état vide lisible: PASS');
 
-// ============================================================================
-// G. source inconnue -> reste visible sous "Tous" (limite honnête de
-// l'architecture actuelle constatée, pas simulée artificiellement : le
-// contrat EnrichedData du backend est fermé à {trivy, owasp, sonar, zap} --
-// voir report-normalizer.ts. Le nouveau filtre n'introduit AUCUNE régression
-// sur ce point : il ne fait que basculer entre les MÊMES 3 sections déjà
-// rendues aujourd'hui, jamais en retirer une du panier "all".)
-// ============================================================================
+// G. source inconnue -> reste visible sous "Tous" (limite honnête de l'architecture actuelle constatée, pas simulée artificiellement.
 {
   const backendSource = read('../../backend/src/common/report-normalizer.ts');
   assert.match(backendSource, /export interface EnrichedData \{\s*trivy: ScannerBlock;\s*owasp: ScannerBlock;\s*sonar: SonarBlock;\s*zap: ZapBlock;/,
@@ -183,14 +181,7 @@ console.log('security-scanner-filter G) source inconnue -> architecture fermée 
 }
 console.log('security-scanner-filter H) changement de filtre -> aucune mutation des données: PASS');
 
-// ============================================================================
-// I. Pagination -- vérifié honnêtement : ni CveTableComponent ni
-// ZapTableComponent n'implémentent de pagination aujourd'hui (recherche
-// exhaustive de page/slice() dans les deux fichiers sources -- aucune
-// occurrence), donc "remettre la pagination à la première page" n'a
-// actuellement aucune logique à laquelle s'appliquer. Ce test le CONSTATE
-// plutôt que de fabriquer une pagination inexistante.
-// ============================================================================
+// I. Pagination -- vérifié honnêtement.
 {
   const cveSource = read('../src/app/features/projects/cve-table.component.ts');
   const zapSource = read('../src/app/features/projects/zap-table.component.ts');

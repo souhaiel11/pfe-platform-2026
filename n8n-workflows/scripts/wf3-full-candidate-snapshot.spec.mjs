@@ -1,8 +1,8 @@
-// Offline validation of the native HTTP full-snapshot path and its pure
-// consolidation node. No n8n execution or network access.
+// Teste le composant « wf3-full-candidate-snapshot » et ses cas d’erreur.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 const workflow = JSON.parse(readFileSync(new URL('../active/wf3-post-pr-validation-v4-4JiOKpyHhx1znTYw.json', import.meta.url)))[0];
+/** Retrouve ou construit le nœud du workflow demandé. */
 const node = name => workflow.nodes.find(n => n.name === name);
 const http = node('Get Full Candidate Sonar Snapshot');
 const consolidate = node('Consolidate Full Candidate Sonar Snapshot');
@@ -20,12 +20,20 @@ const code = consolidate.parameters.jsCode;
 const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
 const SHA = 'a'.repeat(40);
 const ctx = { sonarAnalysisMode: 'COMMUNITY_EXACT_SHA', validationSonarProjectKey: 'proj-pr-25', checkoutSha: SHA };
+/** Prépare les données nécessaires à ce scénario. */
 const issue = i => ({ key: `k${i}`, rule: 'java:S1', component: 'proj-pr-25:A.java' });
+/** Exécute le traitement et collecte son résultat. */
 async function run(pages, context = ctx) {
-  const dollar = name => ({ first: () => ({ json: name === 'Extract Validation Context' ? context : undefined }) });
-  const input = { all: () => pages.map(json => ({ json })) };
+  /** Prépare les données nécessaires à ce scénario. */
+  const dollar = name => ({
+  /** Renvoie le premier élément disponible. */
+  first: () => ({ json: name === 'Extract Validation Context' ? context : undefined }) });
+  const input = {
+  /** Renvoie tous les éléments disponibles. */
+  all: () => pages.map(json => ({ json })) };
   return (await new AsyncFunction('$', '$input', code)(dollar, input))[0].json;
 }
+/** Prépare les données nécessaires à ce scénario. */
 const page = (issues, total, p = 1) => ({ issues, total, paging: { total, pageIndex: p, pageSize: 500 } });
 {
  const out = await run([page(Array.from({length:15},(_,i)=>issue(i)),15)]);

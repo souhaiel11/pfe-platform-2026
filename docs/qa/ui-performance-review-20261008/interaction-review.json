@@ -1,0 +1,96 @@
+{
+  "errors": [],
+  "switches": [
+    {
+      "project": "7b8a91e6-d07c-4367-aaa7-dd300a424fe2",
+      "header": "devsecops-platform-testbed",
+      "noPreviousHeader": true
+    },
+    {
+      "project": "49bca390-3661-40b1-8f7e-c5dfa3a5cca6",
+      "header": "vuln-testapp",
+      "noPreviousHeader": true
+    },
+    {
+      "project": "75d13a2c-cf80-479c-8ec9-d5e1c01a4ce6",
+      "header": "devsecops-testbed",
+      "noPreviousHeader": true
+    },
+    {
+      "project": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+      "header": "pfe-app-test",
+      "noPreviousHeader": true
+    },
+    {
+      "project": "ebe3bd94-8240-4c30-a2d9-6de2106a28bc",
+      "header": "remediation-retry-e2e-fixture",
+      "noPreviousHeader": true
+    }
+  ],
+  "spotChecks": [
+    {
+      "element": "SonarQube quality gate / code smells",
+      "ui": "Échec / 12",
+      "api": "ERROR / 12",
+      "pass": true
+    },
+    {
+      "element": "Jenkins build",
+      "ui": "#151",
+      "api": 151,
+      "pass": true
+    },
+    {
+      "element": "Trivy / OWASP critical,total",
+      "ui": "14,111 / 23,146",
+      "api": "14,111 / 23,146",
+      "pass": true
+    },
+    {
+      "element": "governance / Azure identity",
+      "ui": "Risque critique / aci-pfe-app-test",
+      "api": "CRITICAL_RISK / aci-pfe-app-test",
+      "pass": true
+    },
+    {
+      "element": "remediation operator stop / missing scanners",
+      "ui": "Test opérateur terminé / Non disponible",
+      "api": "OPERATOR_TEST_STOPPED",
+      "pass": true
+    },
+    {
+      "element": "incident status",
+      "ui": "Bloqué",
+      "api": "blocked",
+      "pass": true
+    },
+    {
+      "element": "available scanner observations aggregate",
+      "ui": "39 critical / 109 high",
+      "apiTransformation": "exclude missingScanners and projectsWithoutData; sum source counters",
+      "pass": true
+    }
+  ],
+  "dialogs": [
+    {
+      "type": "incident Guide",
+      "opened": true
+    },
+    {
+      "type": "incident Validation",
+      "opened": true
+    },
+    {
+      "type": "incident Données",
+      "opened": true
+    },
+    {
+      "type": "admin create form",
+      "opened": true,
+      "fieldsLabelled": true,
+      "submission": "NOT_EXECUTED"
+    }
+  ],
+  "blockedWrites": [],
+  "pass": true
+}

@@ -1,14 +1,11 @@
+// Teste le composant « generated-comment-guard » et ses cas d’erreur.
 import * as assert from 'node:assert/strict';
 import { detectForbiddenGeneratedCommentMarkers } from './generated-comment-guard';
 import { assertCandidateStillValidForWrite } from './write-guard';
 import { CandidateManifest, CandidateVerification } from './candidate-verification.types';
 import { computeGitBlobSha1 } from './candidate-digest';
 
-// R81.3 — every MODIFY fixture below must supply a real, matching
-// `originalBlobSha` (GitHub's own git blob SHA for `sourceContent`) now that
-// the write-guard cryptographically binds the two. This helper is the only
-// thing that changed about how these fixtures are built; the assertions
-// themselves are unchanged from R81.2 unless a comment says otherwise.
+/** Prépare les données nécessaires à ce scénario. */
 const blobSha = (source: string) => computeGitBlobSha1(source);
 
 // R81 — proves the deterministic guard distinguishes comment text from
@@ -105,13 +102,6 @@ const blobSha = (source: string) => computeGitBlobSha1(source);
   assert.equal(violations.length, 1, 'H continued: an actually-edited comment (different exact text) is re-evaluated as new content');
 }
 
-// R81.1 — occurrence-aware hardening: a plain "have I seen this exact text
-// before" Set check silently accepts a DUPLICATED marker-bearing comment
-// (same text, added again elsewhere) because the string itself is not new.
-// Multiset (count-based) comparison must catch it: the count for that exact
-// text strictly increases, so the excess occurrence is checked. This is the
-// exact gap called out in R81.1's own example (a second identical
-// "// TODO legacy issue" appended below an untouched original).
 {
   const oldContent = 'class X {\n  // TODO legacy issue\n  int a;\n}\n';
   const newContent = 'class X {\n  // TODO legacy issue\n  int a;\n  // TODO legacy issue\n  int b;\n}\n';
@@ -188,7 +178,7 @@ const blobSha = (source: string) => computeGitBlobSha1(source);
 
 console.log('generated-comment-guard: PASS (A-H + scope-boundary proofs)');
 
-// --- End-to-end through the real write-guard entry point -------------------
+/** Prépare les données nécessaires à ce scénario. */
 
 function passingVerification(): CandidateVerification {
   return {
@@ -204,6 +194,7 @@ function passingVerification(): CandidateVerification {
     failureClass: null,
   };
 }
+/** Prépare les données nécessaires à ce scénario. */
 function manifest(files: CandidateManifest['files']): CandidateManifest {
   return { candidateId: 'c1', requestId: 'r1', batchId: 'b1', candidateAttempt: 0, repository: 'x/y', candidateBaseSha: 'a'.repeat(40), files, candidateDigest: 'digest-1' };
 }
@@ -423,13 +414,6 @@ console.log('R81.2 §4 fail-closed test matrix (A-K): PASS');
 }
 console.log('R81.2 §5 offline canonical WF2 contract replay: PASS');
 
-// R81.2 §6 — HONEST SCOPE BOUNDARY, proven not just declared: a Python
-// docstring is a STRING LITERAL syntactically (triple-quoted), never a `#`
-// comment, so it is never inspected -- PYTHON_DOCSTRING_PROTECTION is
-// NOT_IMPLEMENTED. This is a stated scope declaration ("TODO/FIXME markers
-// in recognized comment syntax/Javadoc-style comments for supported
-// extensions"), not a failure of the Java correction, and not silently
-// claimed otherwise anywhere in this file's documentation.
 {
   const violations = detectForbiddenGeneratedCommentMarkers(
     'def f():\n    pass\n',
@@ -448,15 +432,6 @@ console.log('R81.2 §5 offline canonical WF2 contract replay: PASS');
 }
 console.log('R81.2 §6 Python docstring scope boundary (NOT_IMPLEMENTED, proven): PASS');
 
-// ============================================================================
-// R81.3 — TRUST-BIND ORIGINAL CONTENT: sourceContent must now be
-// cryptographically bound to `originalBlobSha` (GitHub's own blob SHA for
-// that path/ref, captured before the writer LLM ran) before it is trusted
-// as "old content" for the comment-marker diff. R81.2 only asked "is SOME
-// string present" -- it could not detect a candidate/caller supplying its
-// OWN fabricated "pre-edit" text. §4 below proves the missing-trust-anchor
-// precondition; §6 proves the actual forgery attack is now caught.
-// ============================================================================
 
 // R81.3 §4 additions to the fail-closed matrix: originalBlobSha itself is a
 // required trust anchor, independently of sourceContent's own presence.
@@ -513,27 +488,6 @@ console.log('R81.3 §4 trust-anchor-required matrix: PASS');
     assert.equal(result.reason, 'ORIGINAL_CONTENT_INTEGRITY_MISMATCH', 'R81.3 B: any sourceContent not matching the trusted blob SHA is rejected, regardless of what it contains');
   }
 
-  // C. "Caller alters the trusted hash through candidate output" is
-  // impossible BY CONSTRUCTION in the real WF2 node graph, not merely by
-  // policy here: `originalBlobSha` (via CandidateFile.originalBlobSha) is
-  // never taken from the writer LLM's own output object -- it is threaded,
-  // in the actual proposed WF2 artifact, from oldSha := prepared.file_sha
-  // (itself GitHub's own file SHA, captured by "Fetch Repository Files"
-  // before the LLM runs) through an explicit spread-then-overlay in "Parse -
-  // Code Patch Output" that never re-lists oldSha/sourceContent among the
-  // fields copied FROM the parsed LLM JSON, AND the LLM's own JSON schema
-  // (enforced in that same node) rejects any response containing an extra
-  // key beyond {targetFile,processedFindingIds,patchedCode,patchDescription,
-  // conformanceEvidence} -- so the LLM cannot even SUBMIT a competing
-  // oldSha/sourceContent for that spread to prefer. See
-  // wf2-r81-3-trust-binding.spec.mjs for the executable proof against the
-  // actual workflow JSON text (not just this comment's claim).
-  // At the write-guard boundary itself, the analogous invariant is: no
-  // spread/merge in evaluateGeneratedCommentGuardForFile or the manifest
-  // shape ever derives originalBlobSha from `content` (the candidate's own
-  // new/LLM-authored text) -- proven by every case in this file where
-  // `content` and `sourceContent`/`originalBlobSha` differ yet the outcome
-  // still depends only on sourceContent vs. originalBlobSha, never on content.
   console.log('R81.3 C: trusted-hash-cannot-be-overridden-by-writer-output is a structural/spread-ordering proof, see wf2-r81-3-trust-binding.spec.mjs');
 
   // D. Correct originalContent + correct trusted hash + added TODO -> GENERATED_COMMENT_MARKER_FORBIDDEN

@@ -1,9 +1,9 @@
+// Construit la description des capacités réellement disponibles afin que le tableau de bord annonce les fonctions prises en charge par la plateforme.
 import { normalizeReport } from '../common/report-normalizer';
 import { v1_8EnforcementMode } from '../dependency-compatibility/v1_8-enforcement-mode';
 import { LIVE_WRITER_SUPPORTED_EDIT_TYPES } from '../dependency-compatibility/v1_8-security-remediation-gate';
 
-// Projection only: configuration is not health; a previous execution is not
-// proof that a scanner/service is currently reachable. No probes or writes.
+/** Fabrique l'objet "capacités de la plateforme" exposé par /dashboard/capabilities. */
 export function platformCapabilities(projects: any[], reports: any[], env = process.env) {
   const projectIds = new Set(projects.map(p => p.id));
   const scanners = new Map<string, any>();

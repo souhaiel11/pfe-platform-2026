@@ -1,3 +1,4 @@
+// Teste le composant « scope-lock.service » et ses cas d’erreur.
 import * as assert from 'node:assert/strict';
 import { ScopeLockService } from './scope-lock.service';
 

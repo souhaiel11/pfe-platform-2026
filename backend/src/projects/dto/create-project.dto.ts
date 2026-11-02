@@ -1,3 +1,4 @@
+// Définit et valide les champs admis pour créer un projet : nom et configuration des outils notamment. Le DTO transforme une saisie HTTP en données de création contrôlées.
 import { IsString, IsOptional, IsEnum, IsArray, IsBoolean, IsObject, IsUrl, Matches } from 'class-validator';
 import { AzureDeploymentConfig } from '../project.entity';
 import { ProjectEnvironment, CicdTool } from '../project.entity';

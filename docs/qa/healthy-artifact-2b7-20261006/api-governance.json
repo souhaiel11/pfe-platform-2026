@@ -1,0 +1,57 @@
+{
+  "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+  "incidentId": "70bc8f46-5cd2-48a3-9f8b-169cf2ba250b",
+  "mainBuildNumber": 151,
+  "decision": "CRITICAL_RISK",
+  "buildIdentity": {
+    "resolved": true,
+    "commitSha": "393816c250f73d907eb5a2dd43b2ec2288c7abcb"
+  },
+  "artifact": {
+    "provenanceVerified": true,
+    "digest": "sha256:6dc3cdba69592a91a5a1569978bcfca74d4080597a769ab368ed585ba397bcf5",
+    "registry": "acrpfedevsecops",
+    "repository": "pfe-app-test",
+    "tag": "151"
+  },
+  "environment": {
+    "resolved": true,
+    "identityHash": "bb61953c3dd7ef5abb33259ef24a0af176664969ac86b3989b0d014847099be7",
+    "targetName": "aci-pfe-app-test",
+    "region": "francecentral"
+  },
+  "securityValidation": {
+    "applicability": "MISSING",
+    "status": "MISSING"
+  },
+  "failedControls": [
+    "Validation de s\u00e9curit\u00e9 WF3 absente",
+    "Tests applicatifs non ex\u00e9cut\u00e9s",
+    "Quality Gate SonarQube en \u00e9chec (ERROR)",
+    "14 CVE critique(s) Trivy",
+    "23 CVE critique(s) OWASP Dependency-Check",
+    "D\u00e9cision de gouvernance : BLOCK",
+    "38 probl\u00e8me(s) bloquant(s) non r\u00e9solu(s)",
+    "\u00c9tape requise bloquante : owasp (FAILED)",
+    "\u00c9tape requise bloquante : sonar (FAILED)",
+    "\u00c9tape requise bloquante : trivy (FAILED)",
+    "\u00c9tape en avertissement, non bloquante : zap"
+  ],
+  "warnings": [
+    "zap: WARNING"
+  ],
+  "authorizationPolicy": {
+    "requiredMode": "CRITICAL_OVERRIDE",
+    "rolesAllowed": [
+      "admin"
+    ],
+    "adminRequired": true,
+    "reasonRequired": true,
+    "acknowledgementRequirements": [
+      "criticalRiskAccepted",
+      "securityControlsMayHaveFailed",
+      "deploymentMayExposeKnownRisk"
+    ],
+    "confirmationPhraseRequired": true
+  }
+}

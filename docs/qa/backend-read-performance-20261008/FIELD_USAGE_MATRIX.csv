@@ -1,0 +1,15 @@
+ENTITY,FIELD,LIST_REQUIRED,DETAIL_REQUIRED,CURRENT_SIZE_IMPACT_BYTES,OPTIMIZED_HANDLING
+incident,id/projectId/title/status/source/createdAt/updatedAt,YES,YES,small,20-row SQL projection
+incident,buildNumber,YES,YES,small,preserved
+incident,aiAnalysis.build/build_number/decision,YES,YES,subset of 1531527,compact original-field JSON preview
+incident,aiAnalysis other fields,NO,YES,dominates 1531527,existing GET /incidents/:id
+incident,metadata,NO,YES,13730305,existing GET /incidents/:id
+incident,metadata.enrichedData,NO,YES,12516210,existing GET /incidents/:id
+incident,description/logs/validation/history/error details,NO,YES,see source-measure-before.json,existing GET /incidents/:id
+incident,project relation,NO,YES,183280,parent already loads project; original detail retained
+report,id/projectId/type/createdAt,YES,YES,small,SQL projection
+report,securityScore/riskLevel/judgeDecision/judgeConfidence,YES,YES,small,preserved including null and zero
+report,rawData.enrichedData.build.number,YES,YES,subset of 12054194,JSONB path projected as buildNumber
+report,rawData other fields,NO,YES,dominates 12054194,existing GET /reports/:id
+report,aiSummary,NO,YES,1740,existing GET /reports/:id
+report,project relation,NO,YES,37920,parent already loads project; original detail retained

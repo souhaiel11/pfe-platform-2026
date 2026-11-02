@@ -1,11 +1,4 @@
-// R22-A Phase 9 tests #11/#12: prove the R22-A source itself never
-// introduces direct n8n DB access or any credential-extraction mechanism --
-// this whole migration phase exists partly BECAUSE those were the exact
-// workarounds used in R21-AZ (direct SQLite read) that this session was
-// explicitly told not to repeat again in R21-BA. Static source scan, same
-// technique already used in the Shared Library's offline test suite
-// (R2-TEST K: "no governance-classification field emitted anywhere in the
-// Shared Library source").
+// Teste le composant « r22a-governance » et ses cas d’erreur.
 import * as assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import * as path from 'node:path';
@@ -16,6 +9,7 @@ const validationDir = path.join(__dirname, '..', 'validation');
 // no secret extraction) rather than duplicating a second copy of it.
 const candidateVerificationDir = path.join(__dirname, '..', 'candidate-verification');
 
+/** Prépare les données nécessaires à ce scénario. */
 function sourceFiles(dir: string): string[] {
   return readdirSync(dir)
     .filter(f => f.endsWith('.ts') && !f.endsWith('.spec.ts'))

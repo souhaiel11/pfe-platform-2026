@@ -1,0 +1,7 @@
+{
+  "path": "/tmp/chain2c-final-private/database-before.dump",
+  "bytes": 5892229,
+  "sha256": "3f1384b99a60bc1a3c99425abf8f7e2fb26f251d1879b7476922860756eaf4ae",
+  "format": "PostgreSQL custom dump",
+  "timestamp": "2026-10-07T11:13:47.047146+00:00"
+}

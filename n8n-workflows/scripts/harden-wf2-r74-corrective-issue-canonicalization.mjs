@@ -1,32 +1,18 @@
+// Normalise l’identité des issues de la boucle corrective.
 import fs from 'node:fs';
 
 const sourcePath = new URL('../pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.R73-CORRECTIVE-TARGET-PROPAGATION.json', import.meta.url);
 const outputPath = new URL('../pending-live-update/wf2-git-patch-pr-u3eeMwTuhCsetfcS.R74-CORRECTIVE-ISSUE-CANONICALIZATION.json', import.meta.url);
 
+/** Normalise l’identité des issues de la boucle corrective. */
 export function hardenCorrectiveIssueCanonicalization(workflow) {
+  /** Retrouve ou construit le nœud du workflow demandé. */
   const node = name => {
     const found = workflow.nodes.find(candidate => candidate.name === name);
     if (!found) throw new Error('R74_NODE_NOT_FOUND:' + name);
     return found;
   };
 
-  // Attempt 8 (execution 2032) and attempt 9 (execution 2034) received the
-  // IDENTICAL blockingCause (candidateType:'TaskDTO', same sourceSha), yet
-  // attempt 9's plan cited historicalFindings[].target (TaskController.java
-  // lines 34/39, still returning raw Task/List<Task>) as grounds to conclude
-  // the blocking cause "does not correspond to this finding" and self-routed
-  // to MANUAL_OR_SPECIALIST -- even though correctiveContext.originalFindingResults
-  // already proved those two findingIds VALID/absent at this exact SHA. The
-  // planner had two structurally-equal-looking sources of "where the problem
-  // is" (historicalFindings[].target vs correctiveContext.blockingCauses) with
-  // no explicit priority between them. This introduces one canonical,
-  // deterministically-grounded `correctiveIssues[]` per blocking cause --
-  // reusing exactly the R73 grounding evidence (explicit fields, candidateType
-  // tree-resolution, mappingPath content-resolution) -- as the sole primary
-  // remediation object in corrective mode, demoting the historical finding
-  // list to an explicitly-labeled, non-authoritative `historicalFindings`
-  // lineage field. Normal (non-corrective) mode is untouched: `contract.findings`
-  // keeps its exact prior shape and remains primary.
   const preparePlan = node('Prepare Generic Remediation Plan');
   {
     const before = preparePlan.parameters.jsCode;
@@ -56,15 +42,6 @@ const contract={schemaVersion:'1.0',batchId:ctx.batchId,repository:{owner:ctx.re
     if (!preparePlan.parameters.jsCode.includes('(12) When contract.correctiveIssues')) throw new Error('R74_INSTRUCTION_NOT_MODIFIED');
   }
 
-  // Validate Generic Remediation Plan requires NO change: audited and
-  // confirmed it never authorized a target by cross-referencing
-  // historicalFindings[]/contract.findings[].target file/line identity --
-  // its membership (policy.targetFiles / effectiveTargetFiles) and causality
-  // (groundedTargetFiles, R73) gates operate purely on the LLM's own emitted
-  // plan.target.file against deterministically-resolved path sets. R74 only
-  // changes what is offered to the model as authoritative input; the
-  // validator's authorization logic is already target-set-based, not
-  // historical-identity-based, and is left untouched.
 
   return workflow;
 }

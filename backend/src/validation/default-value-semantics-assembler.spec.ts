@@ -1,3 +1,4 @@
+// Teste le composant « default-value-semantics-assembler » et ses cas d’erreur.
 import * as assert from 'node:assert/strict';
 import { evaluateDefaultValueSemantics, buildDefaultValueSemanticsEvidence, resolveTypeSourcePath, discoverMigrations, FetchedFile, CandidateFileRecord, AssemblyProvenance } from './default-value-semantics-assembler';
 
@@ -25,6 +26,7 @@ const provenance: AssemblyProvenance = {
   candidateBaseSha: BASE_SHA, prHeadSha: HEAD_SHA,
 };
 
+/** Exécute les étapes principales de ce programme. */
 async function main() {
 
 // ── resolveTypeSourcePath — proves the generic import->path convention ────
@@ -102,6 +104,7 @@ async function main() {
     { targetFile: 'TaskDTO.java', fileOperation: 'CREATE', oldSha: null, newSha: 'd'.repeat(40) },
     { targetFile: 'TaskService.java', fileOperation: 'MODIFY', oldSha: 'b'.repeat(40), newSha: 'e'.repeat(40) },
   ];
+  /** Simule l’échec attendu par ce scénario. */
   const failingFetcher = async (_path: string, _sha: string): Promise<{ sha: string; content: string }> => {
     throw new Error('simulated network failure');
   };
@@ -122,6 +125,7 @@ async function main() {
   ];
   const baselineByPath: Record<string, string> = { 'TaskController.java': baseControllerContent, 'TaskService.java': baseServiceContent };
   const candidateByPath: Record<string, string> = { 'TaskController.java': headControllerContent, 'TaskDTO.java': headDtoContent, 'TaskService.java': headServiceContent };
+  /** Simule l’échec attendu par ce scénario. */
   const referencedFetchFails = async (path: string, sha: string): Promise<{ sha: string; content: string }> => {
     if (path === TASK_MODEL_PATH) throw new Error('referenced file unavailable');
     if (sha === HEAD_SHA) return { sha: files.find(f => f.targetFile === path)!.newSha, content: candidateByPath[path] };
@@ -144,6 +148,7 @@ async function main() {
   const contentByPath: Record<string, string> = {
     'TaskController.java': headControllerContent, 'TaskDTO.java': headDtoContent, 'TaskService.java': headServiceContent,
   };
+  /** Prépare les données nécessaires à ce scénario. */
   const staleFetcher = async (path: string, _sha: string): Promise<{ sha: string; content: string }> => ({
     sha: 'f'.repeat(40), content: contentByPath[path],
   });
@@ -164,6 +169,7 @@ async function main() {
   ];
   const baselineByPath: Record<string, string> = { 'TaskController.java': baseControllerContent, 'TaskService.java': baseServiceContent };
   const candidateByPath: Record<string, string> = { 'TaskController.java': headControllerContent, 'TaskDTO.java': headDtoContent, 'TaskService.java': headServiceContent };
+  /** Prépare les données nécessaires à ce scénario. */
   const correctFetcher = async (path: string, sha: string): Promise<{ sha: string; content: string }> => {
     if (path === TASK_MODEL_PATH) return { sha: 'f'.repeat(40), content: taskModelContent };
     if (sha === HEAD_SHA) return { sha: files.find(f => f.targetFile === path)!.newSha, content: candidateByPath[path] };
@@ -184,6 +190,7 @@ async function main() {
   const manyFiles: CandidateFileRecord[] = Array.from({ length: 13 }, (_, i) => ({
     targetFile: `File${i}.java`, fileOperation: 'MODIFY', oldSha: 'a'.repeat(40), newSha: 'b'.repeat(40),
   }));
+  /** Simule l’échec attendu par ce scénario. */
   const neverCalled = async (): Promise<{ sha: string; content: string }> => {
     throw new Error('fetchFileAtSha must not be called when the file-count bound is exceeded');
   };

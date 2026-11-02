@@ -1,13 +1,16 @@
+// Teste le composant « candidate-verification.controller » et ses cas d’erreur.
 import * as assert from 'node:assert/strict';
 import { CandidateVerificationController } from './candidate-verification.controller';
 import { CandidateManifest } from './candidate-verification.types';
 
 const fakeVerification: any = { overall: 'PASS', identity: { candidateDigest: 'd1', candidateBaseSha: 'a'.repeat(40) }, workspace: { requestedSha: 'a'.repeat(40), checkoutSha: 'a'.repeat(40), exactShaVerified: true } };
 
+/** Prépare les données nécessaires à ce scénario. */
 function manifest(overrides: Partial<CandidateManifest> = {}): CandidateManifest {
   return { candidateId: 'c1', requestId: 'r1', batchId: 'b1', candidateAttempt: 0, repository: 'x/y', candidateBaseSha: 'a'.repeat(40), files: [], candidateDigest: 'd1', ...overrides };
 }
 
+/** Exécute les étapes principales de ce programme. */
 async function main() {
   // --- verify(): forwards the manifest/allowedPaths/timeoutMs to the (now-HTTP-client)
   // service unchanged -- no repoPath resolution happens in the backend at
@@ -16,7 +19,9 @@ async function main() {
   {
     let capturedManifest: any = null;
     let capturedOptions: any = null;
-    const fakeService: any = { verify: async (m: CandidateManifest, options: any) => { capturedManifest = m; capturedOptions = options; return fakeVerification; } };
+    const fakeService: any = {
+    /** Vérifie le candidat et retourne les preuves obtenues. */
+    verify: async (m: CandidateManifest, options: any) => { capturedManifest = m; capturedOptions = options; return fakeVerification; } };
     const controller = new CandidateVerificationController(fakeService);
 
     const result = await controller.verify({ manifest: manifest(), allowedPaths: ['A.java'], options: { timeoutMs: 1234 } });
@@ -27,7 +32,9 @@ async function main() {
 
   // --- verify(): rejects a request with no manifest.files array before calling the service ---
   {
-    const fakeService: any = { verify: () => { throw new Error('must not be called'); } };
+    const fakeService: any = {
+    /** Vérifie le candidat et retourne les preuves obtenues. */
+    verify: () => { throw new Error('must not be called'); } };
     const controller = new CandidateVerificationController(fakeService);
     assert.throws(() => controller.verify({ manifest: {} as any }), /files/, 'a manifest without files[] is rejected before calling the verification service');
   }

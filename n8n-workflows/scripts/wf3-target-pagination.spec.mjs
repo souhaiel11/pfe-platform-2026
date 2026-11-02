@@ -1,13 +1,21 @@
-// Offline contract tests: actual HTTP pagination expressions, collector and
-// verdict code from the artifact. No network, n8n engine or business actions.
+// Teste le composant « wf3-target-pagination » et ses cas d’erreur.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 const wf = JSON.parse(readFileSync(new URL('../active/wf3-post-pr-validation-v4-4JiOKpyHhx1znTYw.json', import.meta.url)))[0];
+/** Retrouve ou construit le nœud du workflow demandé. */
 const node = name => wf.nodes.find(n => n.name === name);
+/** Prépare les données nécessaires à ce scénario. */
 const runCode = (name, mocks, input = []) => new Function('$', '$input', node(name).parameters.jsCode)(
-  name => ({ first: () => ({ json: mocks[name] }) }), { all: () => input.map(json => ({ json })), first: () => ({ json: input[0] }) },
+  name => ({
+  /** Renvoie le premier élément disponible. */
+  first: () => ({ json: mocks[name] }) }), {
+  /** Renvoie tous les éléments disponibles. */
+  all: () => input.map(json => ({ json })),
+  /** Renvoie le premier élément disponible. */
+  first: () => ({ json: input[0] }) },
 )[0].json;
 const pagination = node('Get SonarQube Approved Findings').parameters.options.pagination.pagination;
+/** Construit l’expression n8n attendue. */
 const expr = code => new Function('$pageCount', '$response', `return (${code.slice(3, -2)});`);
 const nextPage = expr(pagination.parameters.parameters[0].value);
 const done = expr(pagination.completeExpression);
@@ -19,9 +27,13 @@ const ctx = {
   requiredStages: ['build', 'tests', 'sonar'].map(stage => ({ stage, required: true, status: 'PASSED' })),
 };
 const target = { findingId: 'finding', rule: 'scanner:rule', file: 'src/Target.ext', line: 3 };
+/** Prépare les données nécessaires à ce scénario. */
 const issue = (i, overrides = {}) => ({ key: `issue-${i}`, rule: target.rule, component: `project-candidate:src/Other${i}.ext`, line: 3, status: 'OPEN', ...overrides });
+/** Prépare les données nécessaires à ce scénario. */
 const list = (count, start = 0) => Array.from({ length: count }, (_, i) => issue(i + start));
+/** Prépare les données nécessaires à ce scénario. */
 const page = (issues, total, p = 1) => ({ issues, total, paging: { total, pageIndex: p, pageSize: 500 } });
+/** Exécute le traitement et collecte son résultat. */
 function run(pages, context = ctx, preparedOverride = {}) {
   const prepared = runCode('Prepare Approved Finding Validation', { 'Extract Validation Context': context }, [{
     sonarqubeKey: 'project-main', metadata: { fixRequest: { findings: [target], findingIds: [target.findingId] } },

@@ -1,11 +1,4 @@
-// Adaptateur unique de lecture des reports — normalise TOUT format de
-// rawData (v2.1 déjà structuré, legacy security.vulnerabilities[], ou vide)
-// vers une forme v2.1 stable. Fonction pure : pas d'accès DB, pas d'écriture.
-// Tous les consommateurs (dashboard, indicateurs de risque, détail projet)
-// doivent passer par normalizeReport() plutôt que lire rawData.enrichedData
-// directement, pour qu'un projet dans n'importe quel format s'affiche sans
-// intervention manuelle.
-
+// Adaptateur unique de lecture des reports : normalise tout format de rawData (v2.1 déjà structuré, legacy security.vulnerabilities[], ou vide) vers une forme v2.1 stable.
 import { deriveScannerTruth } from './scanner-diagnostics';
 import { parseFixedVersions } from '../security-remediation/fixed-version-normalizer';
 
@@ -19,34 +12,15 @@ export interface Cve {
   primaryUrl: string | null;
   fixedVersion: string | null;
   installedVersion: string | null;
-  // R-SEC-V1 — additive, derived from `fixedVersion` (see
-  // fixed-version-normalizer.ts). `fixedVersion` itself is UNCHANGED for
-  // backward compatibility (existing consumers keep reading it exactly as
-  // before) — this is purely an extra, pre-split view for the new
-  // eligibility classifier and any future UI. Never populated by WF1
-  // itself; computed here, once, so every consumer gets the same value
-  // instead of re-parsing `fixedVersion` independently.
   fixedVersions: string[];
 }
 
-// Vérité scanner orthogonale au statut de stage — voir scanner-diagnostics.ts.
-// Additive et partagée par les 3 blocs scanner (trivy/owasp/zap partagent
-// exactement ces champs ; sonar les hérite aussi et ajoute
-// analysisSubmitted/qualityGateResolved). Un consommateur existant qui
-// ignore ces champs continue de fonctionner sur critical/high/cves_count/
-// status/_source inchangés.
 export interface ScannerTruthFields {
-  // Statut réel du scanner sur CE report — absent (legacy/empty) = donnée de
-  // confiance historique ; présent et différent de 'COMPLETED' (ex. 'UNKNOWN')
-  // = le scanner n'a pas tourné, voir security-score.ts::isScannerComplete.
   status?: string;
   _source?: string;
   executed?: boolean | null;
   completed?: boolean | null;
   resultAvailable?: boolean | null;
-  // Distinct de cves_count/alerts_count (toujours un number, préservés pour
-  // compat) : findingCount est le SEUL champ qui peut valoir null pour dire
-  // "on ne sait pas" — jamais 0 par défaut sur un scan non complété.
   findingCount?: number | null;
   technicalCode?: string | null;
   problemClass?: 'PRODUCT_DEFECT' | 'FIXABLE_CONFIGURATION' | 'TECHNICAL_BLOCKER' | null;
@@ -77,10 +51,6 @@ export interface SonarBlock extends ScannerTruthFields {
   coverage: number;
   quality_gate: string;
   issues: SonarIssue[];
-  // Sonar seul : soumission de l'analyse vs résolution du quality gate —
-  // voir scanner-diagnostics.ts::SonarTruth. completed=false n'implique pas
-  // analysisSubmitted=false (build #11 : soumission réussie, corrélation
-  // ceTaskId jamais faite).
   analysisSubmitted?: boolean | null;
   qualityGateResolved?: boolean | null;
 }
@@ -102,10 +72,6 @@ export interface EnrichedData {
     blocking: boolean;
     executed: boolean;
     findings: unknown[];
-    // number|null : null = scanner non complété, décompte inconnu (jamais 0
-    // par défaut) — voir scanner-diagnostics.ts. Historiquement toujours un
-    // number ; les consommateurs existants lisent déjà via `?? 0` (voir
-    // azure-deploy-readiness.service.ts) donc null reste compatible.
     findingCount: number | null;
     source: string;
     message?: string;
@@ -122,36 +88,41 @@ export interface EnrichedData {
   _sourceFormat: 'v2.1' | 'legacy' | 'empty';
 }
 
+/** Construit un bloc Trivy/OWASP vide par défaut, utilisé quand le rapport brut ne porte pas encore ce scanner. */
 function emptyScannerBlock(): ScannerBlock {
   return { critical: 0, high: 0, cves_count: 0, cves: [] };
 }
 
+/** Construit un bloc Sonar vide par défaut. */
 function emptySonarBlock(): SonarBlock {
   return { bugs: 0, vulnerabilities: 0, code_smells: 0, coverage: 0, quality_gate: 'ERROR', issues: [] };
 }
 
+/** Construit un bloc ZAP vide par défaut. */
 function emptyZapBlock(): ZapBlock {
   return { alerts_high: 0, alerts_count: 0, alerts_medium: 0 };
 }
 
+/** Compte les CVE d'une sévérité donnée dans une liste. */
 function countBySeverity(cves: Cve[], severity: string): number {
   return cves.filter(c => c.severity === severity).length;
 }
 
-// "commons-collections-3.2.1.jar" → "3.2.1" ; pas de version détectable → null.
+/** Extrait un numéro de version d'un nom de composant (ex. "commons-collections-3.2.1.jar" → "3.2.1"), ou null si non détectable. */
 function versionFromComponent(component: string | undefined): string | null {
   if (!component) return null;
   const m = component.match(/(\d+\.\d+(?:\.\d+)?(?:\.\d+)?)/);
   return m ? m[1] : null;
 }
 
-// "TaskController.java:48" → 48 ; pas de ligne détectable → 0.
+/** Extrait un numéro de ligne d'un nom de composant (ex. "TaskController.java:48" → 48), ou 0 si non détectable. */
 function lineFromComponent(component: string | undefined): number {
   if (!component) return 0;
   const m = component.match(/:(\d+)\b/);
   return m ? parseInt(m[1], 10) : 0;
 }
 
+/** Déduit l'URL de référence publique d'une CVE/GHSA à partir de son identifiant, sans appel réseau. */
 function primaryUrlFor(ref: string | undefined): string | null {
   if (!ref) return null;
   if (ref.startsWith('CVE-')) return `https://nvd.nist.gov/vuln/detail/${ref}`;
@@ -159,9 +130,7 @@ function primaryUrlFor(ref: string | undefined): string | null {
   return null;
 }
 
-// n8n ("Merge All Fetched Data") écrit parfois coverage comme string
-// (fallback `sonarRaw.coverage || '0'`) — coercition ici, un seul endroit,
-// pour que tout consommateur (score, indicateur de risque) reçoive un number.
+/** Convertit une valeur (number ou string numérique) en nombre, avec une valeur de repli si elle n'est pas convertible. */
 function toNumber(value: unknown, fallback: number): number {
   if (typeof value === 'number') return value;
   if (typeof value === 'string') {
@@ -171,15 +140,7 @@ function toNumber(value: unknown, fallback: number): number {
   return fallback;
 }
 
-// Repli déterministe pour un bloc scanner (trivy/owasp/zap/sonar) qui ne
-// porte pas encore executed/completed/resultAvailable/findingCount (report
-// écrit par une version de WF1 antérieure à ce fix). N'écrase JAMAIS un
-// champ déjà présent sur le bloc — seulement complète les trous. Le
-// "scanState" réel (NOT_RUN/MISSING/FAILED/COMPLETED_ZERO_FINDINGS/
-// COMPLETED_WITH_FINDINGS) n'est pas conservé au-delà de WF1 : block.status
-// après legacyStatus() vaut soit 'COMPLETED' soit exactement le scanState
-// brut (NOT_RUN/MISSING/FAILED), ce qui suffit à retrouver la bonne ligne
-// de la table de repli.
+/** Complète la vérité scanner (executed/completed/resultAvailable/findingCount...) d'un bloc qui ne la porte pas encore, sans jamais écraser un champ déjà présent. */
 function fillScannerTruth<T extends ScannerTruthFields>(block: T, realFindingCount: number): T {
   const scanStateLike = block.status === 'COMPLETED'
     ? (realFindingCount > 0 ? 'COMPLETED_WITH_FINDINGS' : 'COMPLETED_ZERO_FINDINGS')
@@ -209,10 +170,7 @@ function fillScannerTruth<T extends ScannerTruthFields>(block: T, realFindingCou
   };
 }
 
-// Même repli pour une entrée `stages.<x>` — findingCount y est déjà toujours
-// écrit par WF1 (jamais undefined), donc seule la règle "0 sur un scan non
-// complété doit devenir null" s'applique (le bug confirmé par l'audit
-// build #11 dans stageFromScan()::`?? 0`, corrigé côté WF1 également).
+/** Applique la même règle de vérité scanner à une entrée `stages.<x>`, en remplaçant un findingCount=0 non fiable par null. */
 function fillStageTruth(stage: any): any {
   if (!stage || typeof stage !== 'object') return stage;
   const nonComplete = ['FAILED', 'NOT_RUN', 'NOT_REACHED', 'RUNNING'].includes(stage.status);
@@ -222,15 +180,12 @@ function fillStageTruth(stage: any): any {
   return { ...stage, findingCount };
 }
 
-// R-SEC-V1 — additive: populates Cve.fixedVersions from Cve.fixedVersion on
-// every CVE in a scanner block, once, here, so every consumer (dashboard,
-// project-detail, the new eligibility classifier) sees the same derived
-// value instead of re-parsing `fixedVersion` independently. Never touches
-// any other field on the Cve objects.
+/** Peuple le champ `fixedVersions` de chaque CVE d'un bloc scanner à partir de son `fixedVersion`, sans toucher aux autres champs. */
 function withFixedVersions(block: ScannerBlock): ScannerBlock {
   return { ...block, cves: (block.cves || []).map(c => ({ ...c, fixedVersions: parseFixedVersions(c.fixedVersion) })) };
 }
 
+/** Normalise un enrichedData déjà au format v2.1 : complète les blocs manquants, convertit les types et comble la vérité scanner absente. */
 function normalizeV21(enrichedData: any): EnrichedData {
   const sonarRaw: SonarBlock = { ...emptySonarBlock(), ...enrichedData.sonar };
   sonarRaw.coverage = toNumber(sonarRaw.coverage, 0);
@@ -256,6 +211,7 @@ function normalizeV21(enrichedData: any): EnrichedData {
   };
 }
 
+/** Convertit un ancien rapport `security.vulnerabilities[]` vers la forme v2.1, en répartissant chaque vulnérabilité par scanner d'origine. */
 function normalizeLegacy(security: any): EnrichedData {
   const vulnerabilities: any[] = Array.isArray(security.vulnerabilities) ? security.vulnerabilities : [];
 
@@ -288,8 +244,8 @@ function normalizeLegacy(security: any): EnrichedData {
       source,
       severity,
       primaryUrl: primaryUrlFor(ref),
-      fixedVersion: null, // jamais présent dans le legacy — ne pas inventer
-      fixedVersions: [], // idem — additif, jamais inventé pour le legacy
+      fixedVersion: null,
+      fixedVersions: [],
       installedVersion: versionFromComponent(v.component),
     };
 
@@ -316,9 +272,6 @@ function normalizeLegacy(security: any): EnrichedData {
     cves: owaspCves,
   };
 
-  // Champs non couverts par le schéma legacy documenté (pas de bugs/code_smells/
-  // coverage/quality_gate/zap dans security.*) : on lit security.* si un jour
-  // présent, sinon défaut neutre documenté — jamais une valeur inventée.
   const sonar: SonarBlock = {
     bugs: typeof security.sonarBugs === 'number' ? security.sonarBugs : 0,
     vulnerabilities: sonarIssues.length,
@@ -345,6 +298,7 @@ function normalizeLegacy(security: any): EnrichedData {
   };
 }
 
+/** Construit la forme v2.1 neutre (tout à zéro), utilisée quand le rapport brut ne porte aucune donnée d'analyse. */
 function normalizeEmpty(): EnrichedData {
   return {
     trivy: emptyScannerBlock(),
@@ -356,6 +310,7 @@ function normalizeEmpty(): EnrichedData {
   };
 }
 
+/** Point d'entrée unique : détecte le format du rawData d'un report (v2.1, legacy ou vide) et le normalise vers la forme v2.1 stable. */
 export function normalizeReport(rawData: any): EnrichedData {
   if (rawData?.enrichedData) {
     return normalizeV21(rawData.enrichedData);

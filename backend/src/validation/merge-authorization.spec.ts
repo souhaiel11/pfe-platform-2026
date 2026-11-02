@@ -1,3 +1,4 @@
+// Teste le composant « merge-authorization » et ses cas d’erreur.
 import * as assert from 'node:assert/strict';
 import {
   computeMergeAuthorization,
@@ -85,15 +86,6 @@ const base: MergeAuthorizationInput = {
   assert.deepEqual(r.technicalReasons, [], 'MERGE_READY carries no technical reasons either');
 }
 
-// --- R66 — defaultValueSemanticsResult wiring ---------------------------
-// Undefined/absent must be a complete no-op: every PR that never migrates an
-// entity/request-object field to a DTO must see IDENTICAL authorization to
-// before this field existed. Proven by literally reusing the MERGE_READY
-// fixture above with the field simply omitted (already true, `base` has no
-// such key) and re-asserting the same outcome for both NO_DEFECT and
-// VERIFICATION_REQUIRED, then proving PROVEN_DEFECT — and only
-// PROVEN_DEFECT — flips a would-be MERGE_READY candidate to BLOCKED with a
-// causally-correctable reason.
 {
   const readyInput = { ...base, remediationResult: 'VALIDATED' as const, regressionResult: 'CLEAN' as const };
   for (const defaultValueSemanticsResult of [undefined, 'NO_DEFECT', 'VERIFICATION_REQUIRED'] as const) {

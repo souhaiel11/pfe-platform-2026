@@ -1,3 +1,5 @@
+// DTO de création/upsert d'une intégration d'outil externe — valide le type d'outil et l'URL (HTTP(S),
+// sans identifiants ni paramètres). Aucune fonction, uniquement des propriétés décorées.
 import { IsString, IsOptional, IsEnum, IsBoolean, IsUrl, Matches } from 'class-validator';
 import { IntegrationTool } from '../integration.entity';
 

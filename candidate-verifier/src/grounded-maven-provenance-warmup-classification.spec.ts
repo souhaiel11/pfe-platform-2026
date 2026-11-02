@@ -1,5 +1,4 @@
-// Service contract test: deterministic workspace provider and real subprocess
-// Maven stand-in. No external repository mutation, network or WF6 execution.
+// Teste le composant « grounded-maven-provenance-warmup-classification » et ses cas d’erreur.
 import * as assert from 'node:assert/strict';
 import * as fs from 'fs';
 import * as os from 'os';
@@ -16,11 +15,16 @@ fs.writeFileSync(path.join(root, 'pom.xml'), '<project><modelVersion>4.0.0</mode
 const sha = 'a'.repeat(40);
 let cleanups = 0;
 const workspace = {
+  /** Construit l’identifiant de l’espace de travail. */
   workspaceId: () => 'test',
+  /** Crée un espace isolé pour la vérification. */
   createWorkspace: () => ({ path: root, checkoutSha: sha, exactShaVerified: true }),
+  /** Nettoie l’espace de travail après l’opération. */
   cleanupWorkspace: () => { cleanups++; },
 } as unknown as WorkspaceManager;
-const repo = { ensureRepo: () => root } as unknown as RepoCacheService;
+const repo = {
+/** Prépare le dépôt et la révision nécessaires. */
+ensureRepo: () => root } as unknown as RepoCacheService;
 const service = new GroundedMavenProvenanceService(workspace, repo, new MavenBuildAdapter());
 const originalPath = process.env.PATH;
 const miss = 'Cannot access central (https://repo.maven.apache.org/maven2) in offline mode and the artifact com.example:missing:jar:2 has not been downloaded from it before.';

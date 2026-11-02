@@ -1,3 +1,5 @@
+// Types et validations pour la récupération post-écriture GitHub : reconstitue et vérifie intégralement
+// la preuve qu'un patch a bien été écrit et validé avant de considérer une PR comme créée.
 import { BadRequestException, ConflictException } from '@nestjs/common';
 import { createHash } from 'crypto';
 
@@ -54,7 +56,6 @@ export interface PostWriteRecoveryInput {
   };
 }
 
-/** HTTP-boundary DTO; semantic validation remains fail-closed in the service. */
 export class PostWriteRecoveryDto implements PostWriteRecoveryInput {
   declare fixRequestId: string;
   declare sourceAttempt: number;
@@ -77,10 +78,13 @@ export interface VerifiedRecoveryEvidence {
   fileResults: RecoveryReceipt[];
 }
 
+/** Vérifie et normalise l’identifiant de commit. */
 const sha = (value: unknown, size: 40 | 64): boolean =>
   new RegExp(`^[a-f0-9]{${size}}$`, 'i').test(String(value || ''));
+/** Renvoie la forme normalisée de la valeur. */
 const normalized = (values: unknown[]): string[] => [...new Set(values.map(String).map(v => v.trim()).filter(Boolean))].sort();
 
+/** Calcule une identité déterministe pour une demande de récupération post-écriture, afin de détecter les doublons/rejeux. */
 export function postWriteRecoveryIdentity(input: Pick<PostWriteRecoveryInput,
   'fixRequestId' | 'sourceAttempt' | 'sourceExecutionId' | 'batchId' | 'candidateDigest' | 'expectedBranch' | 'expectedHeadSha' | 'prNumber'>): string {
   return createHash('sha256').update([
@@ -89,12 +93,14 @@ export function postWriteRecoveryIdentity(input: Pick<PostWriteRecoveryInput,
   ].join('\n')).digest('hex');
 }
 
+/** Calcule le digest canonique d'un candidat de récupération (SHA de base + liste triée des fichiers), pour comparer deux déclarations entre elles. */
 export function computeRecoveryCandidateDigest(candidateBaseSha: string, files: RecoveryManifestFile[]): string {
   const canonicalFiles = files.map(file => ({ path: file.path, operation: file.operation, contentSha256: file.contentSha256.toLowerCase() }))
     .sort((a, b) => a.path.localeCompare(b.path));
   return createHash('sha256').update(JSON.stringify({ candidateBaseSha: candidateBaseSha.toLowerCase(), files: canonicalFiles })).digest('hex');
 }
 
+/** Valide intégralement la preuve de récupération fournie (digest, fichiers, reçus, résultats de validation) et échoue de façon fermée au moindre doute. */
 export function validatePostWriteRecoveryEvidence(input: PostWriteRecoveryInput, expectedFindingIds: string[]): VerifiedRecoveryEvidence {
   if (!input || !input.evidence || !sha(input.candidateDigest, 64) || !sha(input.expectedHeadSha, 40)
     || !Number.isInteger(input.sourceAttempt) || input.sourceAttempt < 1
@@ -155,11 +161,13 @@ export function validatePostWriteRecoveryEvidence(input: PostWriteRecoveryInput,
   };
 }
 
+/** Indique si le nom de nœud n8n fourni correspond à un point d'échec connu du chemin d'écriture GitHub, pertinent pour la récupération. */
 export function isPostWriteFailureNode(value: unknown): boolean {
   return ['Validate Batch Completeness', 'Lookup Existing Batch PR', 'Select Existing PR', 'Existing PR?',
     'Use Existing PR', 'Create Pull Request1', 'Save Execution Result to Backend'].includes(String(value || ''));
 }
 
+/** Construit les champs communs à persister sur l'incident une fois une PR créée (via le flux normal ou via récupération). */
 export function commonPrCreatedFields(input: {
   prUrl: string; prNumber: number; prHeadSha: string; now: string; evidence: VerifiedRecoveryEvidence;
 }): Record<string, unknown> {

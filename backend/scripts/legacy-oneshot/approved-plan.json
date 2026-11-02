@@ -1,0 +1,220 @@
+{
+  "version": 1,
+  "projectId": "3aa1c9b9-e114-40e4-884b-ebc7aa32e002",
+  "repository": "souhaiel11/pfe-app-test",
+  "targetFile": "pom.xml",
+  "reason": "LEGACY_SINGLE_WRITER_RECONCILIATION",
+  "historicalReferencePR": 37,
+  "remoteReferences": [
+    {
+      "prNumber": 37,
+      "branch": "security/fix/a37e178f7ce1-71531d5009b1",
+      "headSha": "a27fc820efdb96a53d92834b17546f128392a735",
+      "state": "CLOSED_UNMERGED",
+      "merged": false,
+      "branchState": "MISSING"
+    },
+    {
+      "prNumber": 38,
+      "branch": "security/fix/3f712ca3bae0-55df917c8f87",
+      "headSha": "1097ba035e6b2d88cd12f6af7cc1285e889f8aed",
+      "state": "CLOSED_UNMERGED",
+      "merged": false,
+      "branchState": "MISSING"
+    },
+    {
+      "prNumber": 39,
+      "branch": "security/fix/e9302805d352-0b27c921d9ca",
+      "headSha": "cd3ab899af5ea1fca5cfa5b10f80348f8803430d",
+      "state": "CLOSED_UNMERGED",
+      "merged": false,
+      "branchState": "MISSING"
+    },
+    {
+      "prNumber": 40,
+      "branch": "security/fix/41a0eac4ecb4-022ff90775f4",
+      "headSha": "c5a3846d40f8358737d8d76085564fc5fb4edb4b",
+      "state": "CLOSED_UNMERGED",
+      "merged": false,
+      "branchState": "MISSING"
+    },
+    {
+      "prNumber": 41,
+      "branch": "security/fix/5529fe26dcc4-a48178242bb4",
+      "headSha": "cb1432c97f601ef1ffbf436a3f3f9215bdaa03f9",
+      "state": "CLOSED_UNMERGED",
+      "merged": false,
+      "branchState": "MISSING"
+    },
+    {
+      "prNumber": 42,
+      "branch": "security/fix/259beaee267e-3936026f7135",
+      "headSha": "7f57eec0f47b5b47c7320c65662348ec6b2404b4",
+      "state": "CLOSED_UNMERGED",
+      "merged": false,
+      "branchState": "MISSING"
+    }
+  ],
+  "groups": [
+    {
+      "groupId": "c8fb2207-c8de-40af-acd4-1d2f96896715",
+      "expectedGroupDigest": "20d8468869bb9ab733d28a62e592949d4eb7160227c8e64ab38de637b6b5a58c",
+      "tasks": [
+        {
+          "taskId": "c8fb2207-c8de-40af-acd4-1d2f96896715",
+          "findingId": "CVE-2023-6378",
+          "findingFingerprint": "a37e178f7ce1805b0b1b0e8ac2d41d20333041c26b4e88490f8af4e9885b7cf2",
+          "source": "TRIVY",
+          "cve": "CVE-2023-6378",
+          "findingSnapshotDigest": "0f95e4c96f302e887ce32d09c7c32af92adb2b5eee9a60fbdf541f67698150cc"
+        }
+      ]
+    },
+    {
+      "groupId": "sec-batch-181e0a6587c834e1",
+      "expectedGroupDigest": "3706f076612bac0d2a1ca95a9e017133247faddb5601f57d07883f200659ef40",
+      "tasks": [
+        {
+          "taskId": "64deba0e-f6ab-4da8-a3c9-da8e1b0eb30d",
+          "findingId": "CVE-2022-42004",
+          "findingFingerprint": "62ee90d0759af811b6c5c1f9b62c5c132f6270ccb2b6966056aeb7a9cc4bf955",
+          "source": "TRIVY",
+          "cve": "CVE-2022-42004",
+          "findingSnapshotDigest": "4fbb822b318431f1c66d0b72ed2b919a9d76167bd00c77463a1b03482d3bf845"
+        },
+        {
+          "taskId": "70fd88ac-2011-437d-a387-57d0fb3fa65d",
+          "findingId": "CVE-2023-41080",
+          "findingFingerprint": "0fe576e02411def8c06d24a07d740f2eeb825d6ce0c923b61205d612f03767c0",
+          "source": "TRIVY",
+          "cve": "CVE-2023-41080",
+          "findingSnapshotDigest": "e7c6040f934f448f9a505290fad9a39c14a3f5ecc02d53545915a4a3fbc89e47"
+        },
+        {
+          "taskId": "6e6c3597-96bc-4f72-bcd8-eb0d4b8036db",
+          "findingId": "CVE-2022-42252",
+          "findingFingerprint": "fab2898d901d0477e05e777d380b070600b39d9462771f249982e9fcf248048f",
+          "source": "TRIVY",
+          "cve": "CVE-2022-42252",
+          "findingSnapshotDigest": "089748cdaa457add98317ac338cccc535e00394f9dedb06310aef5a4727b59f1"
+        },
+        {
+          "taskId": "a84a24c4-8673-4826-a4f2-4990ce7d118b",
+          "findingId": "CVE-2022-42003",
+          "findingFingerprint": "5cb2e380a6174eeba2a10daf039d71f2ff22e71f094fbc55a3d60c7f5402d279",
+          "source": "TRIVY",
+          "cve": "CVE-2022-42003",
+          "findingSnapshotDigest": "49289f9779158f7113393b4d91a63540984c732cf1438a3cdd0a292cfb99cc80"
+        },
+        {
+          "taskId": "f21b69ba-922b-4ccb-8851-c2a43d9ce7ca",
+          "findingId": "CVE-2023-34034",
+          "findingFingerprint": "73931319f8772bf5255318d20bf2e0675ff53a83025ec0408452506e9d5c1264",
+          "source": "TRIVY",
+          "cve": "CVE-2023-34034",
+          "findingSnapshotDigest": "9f9fd36bcb6f96c434174b7b8a9c3ef7f54a868441cb8d5cde6c17ffcc5cc329"
+        },
+        {
+          "taskId": "10fe9043-86f9-42eb-a0a2-ce5abaf26631",
+          "findingId": "CVE-2022-45143",
+          "findingFingerprint": "504803c00c586c50e37995bf6c2378d23e7b6afcfcbd1ab72de6ee27f2b86156",
+          "source": "TRIVY",
+          "cve": "CVE-2022-45143",
+          "findingSnapshotDigest": "68c2ad9977d0855538616450c6f7f86a80a65ea214fb752c9ebe52ca07df2f9d"
+        }
+      ]
+    },
+    {
+      "groupId": "sec-batch-215851539abb7f37",
+      "expectedGroupDigest": "5b0950efc5bd82e8c9ef1876926921f3aec6abee3998fe5792ff101bf5b6ddc8",
+      "tasks": [
+        {
+          "taskId": "306e8b84-90fe-4344-8fd6-5c38fcabcf40",
+          "findingId": "CVE-2022-25857",
+          "findingFingerprint": "41a0eac4ecb4659ca37d7961d2d2de97654c1032d5eb70280d96c559bc3771e5",
+          "source": "OWASP",
+          "cve": "CVE-2022-25857",
+          "findingSnapshotDigest": "ccbc3eddd18094bf6b9d067d490b3019b08a04003728657a0e64b3cb71b347f5"
+        }
+      ]
+    },
+    {
+      "groupId": "sec-batch-a4646d8385306b84",
+      "expectedGroupDigest": "7543e0e8e034f610fa12b608ab0ef868b43b2e90644e99b0b42b84cc9ff25896",
+      "tasks": [
+        {
+          "taskId": "bd9dc6f2-2202-4280-933e-4adb824dc695",
+          "findingId": "CVE-2022-38752",
+          "findingFingerprint": "6c962cad556a99e77fa38c446f649be2e6c06cffc8b822744439a2817a90d92e",
+          "source": "TRIVY",
+          "cve": "CVE-2022-38752",
+          "findingSnapshotDigest": "51072520444c268283511a72e77f6dc206bd9634f542f5f8775eeb0d44a4fa50"
+        },
+        {
+          "taskId": "9dc3706b-aabd-4b9a-a888-854641a2e64e",
+          "findingId": "CVE-2022-31692",
+          "findingFingerprint": "bf6887dcccc4abe96221530a7a4d96e51d515d1868c84c76e8ce86250db926af",
+          "source": "TRIVY",
+          "cve": "CVE-2022-31692",
+          "findingSnapshotDigest": "f1d85e303f23057248880fe09e5d40b0098d7a07be8703104c7230e040ac374e"
+        }
+      ]
+    },
+    {
+      "groupId": "sec-batch-bd22285c1649ea80",
+      "expectedGroupDigest": "aa8356c09cfd181426aaabbcb12372e75b8b179af814319d4854ec013a9fccb9",
+      "tasks": [
+        {
+          "taskId": "b52ea617-f5c3-47a3-bc6e-6230ea648d63",
+          "findingId": "CVE-2022-38751",
+          "findingFingerprint": "1ed6889e4bb1863a515acab388bb4a6a1e794de4a646a57353859eebc3285b09",
+          "source": "TRIVY",
+          "cve": "CVE-2022-38751",
+          "findingSnapshotDigest": "058ebb4e8692c9ceb8ded3f1ceab002c7feed61cabeb41609047d6eef5c10b38"
+        }
+      ]
+    },
+    {
+      "groupId": "sec-batch-c808d8203ba03491",
+      "expectedGroupDigest": "cc324e1fd1f35d0258eced36fdb7d9ee6010cdf7098590bcc861d5435e9180d9",
+      "tasks": [
+        {
+          "taskId": "af1d6556-b782-4faf-b01b-4e87b119d033",
+          "findingId": "CVE-2022-25857",
+          "findingFingerprint": "3f712ca3bae0ea409021e9db06f26b6625552fd4a14791976a88b5f6d9b03411",
+          "source": "TRIVY",
+          "cve": "CVE-2022-25857",
+          "findingSnapshotDigest": "894258bf382842b87d8ec062d8dbc508fe139c741a9c6b66086098d678669a11"
+        }
+      ]
+    },
+    {
+      "groupId": "sec-batch-d359edf8f878f1dd",
+      "expectedGroupDigest": "d4acf7d37ebf06c26fd98810b061f3841e8e12e647888211014d4c7ac0eaa4f4",
+      "tasks": [
+        {
+          "taskId": "83555b3a-efa1-45e1-90a8-008debddba92",
+          "findingId": "CVE-2022-38749",
+          "findingFingerprint": "be0d3c1e9cecdda3e67406d883601ab851041127509f69f1ac8e1ddfa219a2e3",
+          "source": "TRIVY",
+          "cve": "CVE-2022-38749",
+          "findingSnapshotDigest": "545807b4f3bd081d9f9940dcbc4a648e5051c6dd5ec2dd13ce54a4a5d33ecfa1"
+        }
+      ]
+    },
+    {
+      "groupId": "sec-batch-fb980983352c6d7c",
+      "expectedGroupDigest": "bc8b8a1dfd62379c936161e2fe421273668f29a8d5b269fa89a7c1317072c571",
+      "tasks": [
+        {
+          "taskId": "ca8f57e7-3839-4914-8805-d518aafe4c4a",
+          "findingId": "CVE-2024-22257",
+          "findingFingerprint": "5529fe26dcc43c488b2dc9f3e0e094aeaa80325362c7ae568a23e092f46511c4",
+          "source": "TRIVY",
+          "cve": "CVE-2024-22257",
+          "findingSnapshotDigest": "6a327f8513c2d1f5a3a2ab0625a26a9bc6cb95443dabb4a5613ece3016d818a2"
+        }
+      ]
+    }
+  ]
+}

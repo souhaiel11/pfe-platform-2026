@@ -1,3 +1,5 @@
+// Entité d'un rapport de scan (Sonar/Trivy/Jenkins/combiné) : données brutes, résumé IA, score de
+// sécurité déterministe et décision du Judge Agent. Aucune fonction ici, juste la définition de table.
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne } from 'typeorm';
 import { Project } from '../projects/project.entity';
 
@@ -34,19 +36,14 @@ export class Report {
   @Column({ nullable: true })
   riskLevel: string;
 
-  // Décision du Judge Agent (BLOCK/AUTO_FIX/NOTIFY_ONLY) et sa confiance —
-  // exposées séparément du score, jamais mélangées dedans (voir
-  // calculateSecurityScore : 100% technique, aucune valeur LLM).
+  // Décision du Judge Agent (BLOCK/AUTO_FIX/NOTIFY_ONLY) et sa confiance.
   @Column({ nullable: true })
   judgeDecision: string;
 
   @Column({ type: 'float', nullable: true })
   judgeConfidence: number;
 
-  // Archivage MANUEL uniquement — create() ne le met jamais à true tout
-  // seul. L'historique complet est conservé par défaut (aucune suppression
-  // ni archivage automatique) ; ce champ existe pour un archivage à la
-  // demande, futur, pas encore branché à une action.
+  // Archivage manuel uniquement (jamais automatique à la création).
   @Column({ default: false })
   archived: boolean;
 
